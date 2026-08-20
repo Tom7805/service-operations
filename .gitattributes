@@ -1,0 +1,24 @@
+# Tự động chuẩn hoá line ending, tránh xung đột CRLF/LF giữa Windows và Linux/Mac
+* text=auto eol=lf
+
+# File Windows-only giữ nguyên CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+mvnw.cmd text eol=crlf
+
+# File nhị phân — không đụng vào, không diff theo dòng
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.pdf binary
+*.jar binary
+*.zip binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+
+# Giữ nguyên định dạng gốc cho các file cần chính xác byte-for-byte
+*.sql -text
