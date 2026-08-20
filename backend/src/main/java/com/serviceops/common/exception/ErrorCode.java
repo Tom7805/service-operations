@@ -1,0 +1,11 @@
+package com.serviceops.common.exception;
+
+public enum ErrorCode {
+    INVALID_CREDENTIALS,
+    ACCOUNT_LOCKED,
+    ACCOUNT_INACTIVE,
+    VALIDATION_ERROR,
+    RESOURCE_NOT_FOUND,
+    FORBIDDEN,
+    INTERNAL_ERROR
+}
