@@ -56,8 +56,8 @@ export const UserListPage: React.FC<UserListPageProps> = ({
     try {
       const data = await getUsers();
       setUsers(data);
-    } catch (err: any) {
-      setError(err.message || 'Không thể tải danh sách tài khoản người dùng.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể tải danh sách tài khoản người dùng.');
     } finally {
       setLoading(false);
     }
@@ -132,11 +132,11 @@ export const UserListPage: React.FC<UserListPageProps> = ({
       addAuditLog(actionText, updated.username, `Đổi trạng thái tài khoản thành ${nextStatus}`);
       setConfirmStatusUser(null);
       await fetchUsersList();
-    } catch (err: any) {
+    } catch (err) {
       if (err instanceof UserApiError && err.code === 'INVALID_STATE') {
         showToast(`Tài khoản đã ở trạng thái ${nextStatus}`, 'error');
       } else {
-        showToast(err.message || 'Không thể thay đổi trạng thái tài khoản', 'error');
+        showToast(err instanceof Error ? err.message : 'Không thể thay đổi trạng thái tài khoản', 'error');
       }
       setConfirmStatusUser(null);
     }

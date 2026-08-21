@@ -4,6 +4,7 @@ import type { AuthSession } from './modules/auth/types/authTypes';
 import UserListPage from './modules/users/pages/UserListPage';
 import UserDetailPage from './modules/users/pages/UserDetailPage';
 import RolePermissionPage from './modules/users/pages/RolePermissionPage';
+import DepartmentTreePage from './modules/departments/pages/DepartmentTreePage';
 
 function readStoredSession(): AuthSession | null {
   const raw = localStorage.getItem('session');
@@ -18,7 +19,7 @@ function readStoredSession(): AuthSession | null {
 export default function App() {
   const [session, setSession] = useState<AuthSession | null>(readStoredSession);
 
-  const [activeTab, setActiveTab] = useState<'PERMISSIONS' | 'USERS' | 'DETAIL'>('PERMISSIONS');
+  const [activeTab, setActiveTab] = useState<'DEPARTMENTS' | 'PERMISSIONS' | 'USERS' | 'DETAIL'>('DEPARTMENTS');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [simulatedRole, setSimulatedRole] = useState<'VT-07' | 'VT-03'>('VT-07');
 
@@ -44,6 +45,13 @@ export default function App() {
         <div className="header-left">
           <strong className="app-brand">⚡ ServiceOps</strong>
           <nav className="app-nav">
+            <button
+              type="button"
+              className={`nav-link ${activeTab === 'DEPARTMENTS' ? 'nav-link--active' : ''}`}
+              onClick={() => setActiveTab('DEPARTMENTS')}
+            >
+              🏛️ Khai báo cây tổ chức (NCL-01-CN-003)
+            </button>
             <button
               type="button"
               className={`nav-link ${activeTab === 'PERMISSIONS' ? 'nav-link--active' : ''}`}
@@ -84,7 +92,12 @@ export default function App() {
       </header>
 
       <main className="app-content">
-        {activeTab === 'PERMISSIONS' ? (
+        {activeTab === 'DEPARTMENTS' ? (
+          <DepartmentTreePage
+            currentUserRoles={currentRoles}
+            currentUserName={session.fullName}
+          />
+        ) : activeTab === 'PERMISSIONS' ? (
           <RolePermissionPage
             currentUserRoles={currentRoles}
             currentUserName={session.fullName}
@@ -105,4 +118,3 @@ export default function App() {
     </div>
   );
 }
-
