@@ -32,16 +32,16 @@ public class UserController {
 
     @PostMapping
     public BaseRes<UserRes> create(@Valid @RequestBody CreateUserReq request) {
-        return BaseRes.ok("Tao tai khoan thanh cong", userService.create(request));
+        return BaseRes.ok("Tạo tài khoản thành công", userService.create(request));
     }
 
     @PutMapping("/{id}")
     public BaseRes<UserRes> update(@PathVariable Long id, @Valid @RequestBody UpdateUserReq request) {
-        return BaseRes.ok("Cap nhat tai khoan thanh cong", userService.update(id, request));
+        return BaseRes.ok("Cập nhật tài khoản thành công", userService.update(id, request));
     }
 
     @PatchMapping("/{id}/status")
     public BaseRes<UserRes> updateStatus(@PathVariable Long id, @Valid @RequestBody UserStatusReq request) {
-        return BaseRes.ok("Cap nhat trang thai thanh cong", userService.updateStatus(id, request));
+        return BaseRes.ok("Cập nhật trạng thái thành công", userService.updateStatus(id, request));
     }
 }

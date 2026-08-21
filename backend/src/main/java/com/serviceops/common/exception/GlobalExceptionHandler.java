@@ -44,7 +44,7 @@ public class GlobalExceptionHandler {
         ErrorResponse body = ErrorResponse.builder()
                 .success(false)
                 .errorCode(ErrorCode.VALIDATION_ERROR.name())
-                .message("Du lieu khong hop le")
+                .message("Dữ liệu không hợp lệ")
                 .timestamp(LocalDateTime.now())
                 .fieldErrors(fieldErrors)
                 .build();

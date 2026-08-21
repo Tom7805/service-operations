@@ -8,20 +8,20 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record CreateUserReq(
-        @NotBlank(message = "Ten tai khoan khong duoc de trong")
-        @Size(max = 100, message = "Ten tai khoan khong qua 100 ky tu")
+        @NotBlank(message = "Tên tài khoản không được để trống")
+        @Size(max = 100, message = "Tên tài khoản không được quá 100 ký tự")
         String username,
-        @NotBlank(message = "Mat khau khong duoc de trong")
-        @Size(min = 8, max = 100, message = "Mat khau phai tu 8 den 100 ky tu")
+        @NotBlank(message = "Mật khẩu không được để trống")
+        @Size(min = 8, max = 100, message = "Mật khẩu phải có ít nhất 8 ký tự")
         String password,
-        @NotBlank(message = "Ho ten khong duoc de trong")
-        @Size(max = 255, message = "Ho ten khong qua 255 ky tu")
+        @NotBlank(message = "Họ tên không được để trống")
+        @Size(max = 255, message = "Họ tên không được quá 255 ký tự")
         String fullName,
-        @Email(message = "Email khong hop le")
-        @Size(max = 255, message = "Email khong qua 255 ky tu")
+        @Email(message = "Email không hợp lệ")
+        @Size(max = 255, message = "Email không được quá 255 ký tự")
         String email,
         Long departmentId,
-        @NotEmpty(message = "Phai chon it nhat mot vai tro")
-        List<@NotBlank(message = "Ma vai tro khong duoc de trong") String> roleCodes,
+        @NotEmpty(message = "Phải chọn ít nhất một vai trò")
+        List<@NotBlank(message = "Mã vai trò không được để trống") String> roleCodes,
         String scopeType
 ) {}
