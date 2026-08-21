@@ -94,4 +94,40 @@ Không cần token (endpoint công khai).
 
 ---
 
-> Các Epic/Story tiếp theo (`NCL-01-CN-002` trở đi) sẽ được bổ sung vào file này khi API tương ứng được xây dựng.
+### `NCL-01-CN-002` — Quản lý tài khoản người dùng
+
+Các endpoint dưới đây yêu cầu token của quản trị viên (`VT-07`).
+
+#### `GET /users?keyword={keyword}`
+
+Trả về danh sách tài khoản; `keyword` tùy chọn và tìm theo tên tài khoản hoặc họ tên.
+
+#### `POST /users`
+
+```json
+{
+  "username": "nguyenan",
+  "password": "Password@123",
+  "fullName": "Nguyen Van An",
+  "email": "an@example.com",
+  "departmentId": 2,
+  "roleCodes": ["VT-08"],
+  "scopeType": "COMPANY"
+}
+```
+
+Tên tài khoản là duy nhất. Mật khẩu được băm trước khi lưu; `passwordHash` không bao giờ xuất hiện trong response.
+
+#### `PUT /users/{id}`
+
+Cập nhật `fullName`, `email`, `departmentId`, `roleCodes` và tùy chọn `password`. `username` không đổi.
+
+#### `PATCH /users/{id}/status`
+
+```json
+{ "status": "LOCKED" }
+```
+
+`status` nhận `ACTIVE`, `LOCKED` hoặc `INACTIVE`. Khi mở lại bằng `ACTIVE`, hệ thống xóa bộ đếm đăng nhập sai và thời gian khóa tạm.
+
+Các lỗi riêng của story: `DUPLICATE_DATA` (409), `RESOURCE_NOT_FOUND` (404), `INVALID_STATE` (400), `FORBIDDEN` (403).

@@ -9,8 +9,10 @@ theo `errorCode`, không nên switch theo `message` (vì `message` có thể đ�
 | `INVALID_CREDENTIALS` | 401 | Sai tài khoản hoặc mật khẩu khi đăng nhập | `NCL-01-CN-001` |
 | `ACCOUNT_LOCKED` | 401 | Tài khoản đang tạm khóa (tự động, do nhập sai quá số lần cho phép) | `NCL-01-CN-001` |
 | `ACCOUNT_INACTIVE` | 401 | Tài khoản bị quản trị viên khóa thủ công | `NCL-01-CN-001` |
+| `DUPLICATE_DATA` | 409 | Tên tài khoản đã tồn tại | `NCL-01-CN-002` |
 | `VALIDATION_ERROR` | 400 | Dữ liệu đầu vào không hợp lệ — xem thêm mảng `fieldErrors` trong response | Toàn bộ API có `@Valid` |
-| `RESOURCE_NOT_FOUND` | 404 | Không tìm thấy bản ghi | Các API tra cứu theo id (sẽ dùng ở các story sau) |
+| `RESOURCE_NOT_FOUND` | 404 | Không tìm thấy bản ghi hoặc vai trò | `NCL-01-CN-002` và các API tra cứu theo id |
+| `INVALID_STATE` | 400 | Thao tác chuyển trạng thái không hợp lệ | `NCL-01-CN-002` |
 | `FORBIDDEN` | 403 | Có tài khoản hợp lệ nhưng không đủ quyền truy cập dữ liệu/chức năng | Các story áp dụng `QTN-01` (phân quyền theo vai trò và cây tổ chức) |
 | `INTERNAL_ERROR` | 500 | Lỗi hệ thống không lường trước — không phải lỗi do dữ liệu người dùng nhập | Toàn hệ thống |
 | `UNAUTHORIZED` | 401 | Gọi API cần đăng nhập nhưng chưa gửi hoặc gửi sai `Authorization: Bearer <token>` | Toàn hệ thống (áp dụng tự động bởi tầng bảo mật, không gắn với story cụ thể) |
