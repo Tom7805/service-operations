@@ -89,7 +89,7 @@ export const RoleScopeModal: React.FC<RoleScopeModalProps> = ({
         scopeType === 'DEPARTMENT' ? Number(scopeDepartmentId) : null
       );
       onClose();
-    } catch (err: any) {
+    } catch (err) {
       if (err instanceof UserApiError) {
         if (err.code === 'VALIDATION_ERROR') {
           setServerError(err.message || 'Dữ liệu phân quyền hoặc phạm vi không hợp lệ.');
@@ -99,7 +99,7 @@ export const RoleScopeModal: React.FC<RoleScopeModalProps> = ({
           setServerError(err.message);
         }
       } else {
-        setServerError(err.message || 'Đã có lỗi xảy ra khi cập nhật phân quyền.');
+        setServerError(err instanceof Error ? err.message : 'Đã có lỗi xảy ra khi cập nhật phân quyền.');
       }
     } finally {
       setSubmitting(false);

@@ -73,8 +73,8 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
       ]);
       setUsers(usersRes);
       setDepartments(deptsRes);
-    } catch (err: any) {
-      setError(err.message || 'Không thể tải dữ liệu phân quyền người dùng.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể tải dữ liệu phân quyền người dùng.');
     } finally {
       setLoading(false);
     }

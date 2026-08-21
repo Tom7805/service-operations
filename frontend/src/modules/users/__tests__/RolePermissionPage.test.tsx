@@ -3,8 +3,16 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import RolePermissionPage from '../pages/RolePermissionPage';
 import RoleScopeModal from '../components/RoleScopeModal';
-import RoleMatrixTable from '../components/RoleMatrixTable';
-import type { User } from '../types/userTypes';
+import type { ScopeType, User } from '../types/userTypes';
+
+interface UpdateUserRoleScopeParams {
+  fullName: string;
+  email?: string | null;
+  departmentId?: number | null;
+  roleCodes: string[];
+  scopeType: ScopeType;
+  scopeDepartmentId?: number | null;
+}
 
 const mockUsersList: User[] = [
   {
@@ -63,7 +71,7 @@ vi.mock('../api/usersApi', () => ({
       { id: 7, code: 'VT-07', name: 'Quản trị viên', description: 'Quản trị hệ thống' },
     ])
   ),
-  updateUserRoleScope: vi.fn((id: number, payload: any) =>
+  updateUserRoleScope: vi.fn((id: number, payload: UpdateUserRoleScopeParams) =>
     Promise.resolve({ id, ...payload, updatedAt: new Date().toISOString() })
   ),
   UserApiError: class UserApiError extends Error {
