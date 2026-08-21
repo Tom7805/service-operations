@@ -17,5 +17,6 @@ public record UpdateUserReq(
         @Size(min = 8, max = 100, message = "Mật khẩu phải có ít nhất 8 ký tự")
         String password,
         List<@NotBlank(message = "Mã vai trò không được để trống") String> roleCodes,
-        String scopeType
+        String scopeType,
+        Long scopeDepartmentId
 ) {}

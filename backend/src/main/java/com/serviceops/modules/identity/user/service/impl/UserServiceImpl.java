@@ -14,6 +14,8 @@ import com.serviceops.modules.identity.user.repository.RoleRepository;
 import com.serviceops.modules.identity.user.repository.UserRepository;
 import com.serviceops.modules.identity.user.repository.UserRoleScopeRepository;
 import com.serviceops.modules.identity.user.service.UserService;
+import com.serviceops.modules.identity.department.repository.DepartmentRepository;
+import com.serviceops.security.scope.DataScopeType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -30,6 +32,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final UserRoleScopeRepository userRoleScopeRepository;
     private final RoleRepository roleRepository;
+    private final DepartmentRepository departmentRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -60,7 +63,7 @@ public class UserServiceImpl implements UserService {
         user.setDepartmentId(request.departmentId());
         user.setStatus(UserStatus.ACTIVE);
         user = userRepository.save(user);
-        replaceRoles(user, request.roleCodes(), request.scopeType());
+        replaceRoles(user, request.roleCodes(), request.scopeType(), request.scopeDepartmentId());
         log.info("USER_CREATED userId={} username={}", user.getId(), user.getUsername());
         return toResponse(user);
     }
@@ -75,7 +78,7 @@ public class UserServiceImpl implements UserService {
             user.setPasswordHash(passwordEncoder.encode(request.password()));
         }
         if (request.roleCodes() != null && !request.roleCodes().isEmpty()) {
-            replaceRoles(user, request.roleCodes(), request.scopeType());
+            replaceRoles(user, request.roleCodes(), request.scopeType(), request.scopeDepartmentId());
         }
         log.info("USER_UPDATED userId={} username={}", user.getId(), user.getUsername());
         return toResponse(userRepository.save(user));
@@ -96,17 +99,40 @@ public class UserServiceImpl implements UserService {
         return toResponse(userRepository.save(user));
     }
 
-    private void replaceRoles(User user, List<String> roleCodes, String scopeType) {
+    private void replaceRoles(User user, List<String> roleCodes, String scopeType, Long scopeDepartmentId) {
+        DataScopeType type = DataScopeType.fromCode(scopeType);
+        if (type == null) {
+            throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR,
+                    "Pham vi du lieu khong hop le, chi chap nhan COMPANY, DEPARTMENT hoac SELF");
+        }
+        Long resolvedScopeDepartmentId;
+        if (type == DataScopeType.DEPARTMENT) {
+            if (scopeDepartmentId == null) {
+                throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR,
+                        "Phai chon bo phan khi pham vi la mot nhanh to chuc");
+            }
+            if (!departmentRepository.existsById(scopeDepartmentId)) {
+                throw new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Khong tim thay bo phan cho pham vi da chon");
+            }
+            resolvedScopeDepartmentId = scopeDepartmentId;
+        } else {
+            resolvedScopeDepartmentId = null;
+        }
+
         userRoleScopeRepository.deleteByUserId(user.getId());
+        userRoleScopeRepository.flush();
         for (String roleCode : roleCodes) {
             Role role = roleRepository.findByCode(roleCode.trim())
                     .orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Khong tim thay vai tro " + roleCode));
             UserRoleScope scope = new UserRoleScope();
             scope.setUser(user);
             scope.setRole(role);
-            scope.setScopeType(scopeType == null || scopeType.isBlank() ? "COMPANY" : scopeType);
+            scope.setScopeType(type.name());
+            scope.setScopeDepartmentId(resolvedScopeDepartmentId);
             userRoleScopeRepository.save(scope);
         }
+        log.info("USER_ROLE_SCOPE_CHANGED userId={} roles={} scopeType={} scopeDepartmentId={}",
+                user.getId(), roleCodes, type.name(), resolvedScopeDepartmentId);
     }
 
     private User getUser(Long id) {
@@ -115,8 +141,12 @@ public class UserServiceImpl implements UserService {
     }
 
     private UserRes toResponse(User user) {
+        List<UserRoleScope> scopes = userRoleScopeRepository.findByUser_Id(user.getId());
+        String scopeType = scopes.isEmpty() ? null : scopes.get(0).getScopeType();
+        Long scopeDepartmentId = scopes.isEmpty() ? null : scopes.get(0).getScopeDepartmentId();
+        List<String> roleCodes = scopes.stream().map(s -> s.getRole().getCode()).toList();
         return new UserRes(user.getId(), user.getUsername(), user.getFullName(), user.getEmail(), user.getDepartmentId(),
-                user.getStatus(), userRoleScopeRepository.findRoleCodesByUserId(user.getId()), user.getCreatedAt(), user.getUpdatedAt());
+                user.getStatus(), roleCodes, scopeType, scopeDepartmentId, user.getCreatedAt(), user.getUpdatedAt());
     }
 
     private String normalize(String value) {

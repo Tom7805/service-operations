@@ -14,14 +14,20 @@ import com.serviceops.modules.identity.department.service.DepartmentService;
 import com.serviceops.modules.identity.department.validator.DepartmentCycleValidator;
 import com.serviceops.modules.identity.user.entity.User;
 import com.serviceops.modules.identity.user.repository.UserRepository;
+import com.serviceops.security.scope.CurrentUserScopeProvider;
+import com.serviceops.security.scope.UserScope;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -30,32 +36,61 @@ public class DepartmentServiceImpl implements DepartmentService {
 	private final UserRepository userRepository;
 	private final DepartmentMapper departmentMapper;
 	private final DepartmentCycleValidator cycleValidator;
+	private final CurrentUserScopeProvider currentUserScopeProvider;
 
 	@Override
 	@Transactional(readOnly = true)
 	public List<DepartmentRes> findAll(String keyword) {
 		String normalizedKeyword = keyword == null ? null : keyword.trim().toLowerCase();
+		UserScope scope = currentUserScopeProvider.currentScope();
 		return departmentRepository.findAllByOrderByNameAsc().stream()
 				.filter(department -> normalizedKeyword == null || normalizedKeyword.isBlank()
 						|| department.getName().toLowerCase().contains(normalizedKeyword))
+				.filter(department -> scope.allowsDepartment(department.getId()))
 				.map(departmentMapper::toResponse).toList();
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public List<DepartmentTreeRes> findTree() {
-		List<Department> departments = departmentRepository.findAllByOrderByNameAsc();
+		UserScope scope = currentUserScopeProvider.currentScope();
+		List<Department> departments = departmentRepository.findAllByOrderByNameAsc().stream()
+				.filter(department -> scope.allowsDepartment(department.getId()))
+				.toList();
+		Set<Long> visibleIds = departments.stream().map(Department::getId).collect(Collectors.toSet());
 		Map<Long, List<Department>> childrenByParent = departments.stream()
-				.filter(department -> department.getParent() != null)
+				.filter(department -> department.getParent() != null && visibleIds.contains(department.getParent().getId()))
 				.collect(Collectors.groupingBy(department -> department.getParent().getId()));
-		return departments.stream().filter(department -> department.getParent() == null)
+		return departments.stream()
+				.filter(department -> department.getParent() == null || !visibleIds.contains(department.getParent().getId()))
 				.map(department -> toTree(department, childrenByParent)).toList();
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public DepartmentRes findById(Long id) {
-		return departmentMapper.toResponse(getDepartment(id));
+		Department department = getDepartment(id);
+		UserScope scope = currentUserScopeProvider.currentScope();
+		if (!scope.allowsDepartment(id)) {
+			log.warn("ACCESS_DENIED userId={} departmentId={} reason=OUT_OF_SCOPE", currentUserScopeProvider.currentUserId(), id);
+			throw new BusinessRuleException(ErrorCode.FORBIDDEN, "Ban khong co quyen xem bo phan nay");
+		}
+		return departmentMapper.toResponse(department);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public Set<Long> collectDescendantIds(Long departmentId) {
+		Set<Long> result = new HashSet<>();
+		if (departmentId == null) {
+			return result;
+		}
+		result.add(departmentId);
+		List<Department> children = departmentRepository.findByParentId(departmentId);
+		for (Department child : children) {
+			result.addAll(collectDescendantIds(child.getId()));
+		}
+		return result;
 	}
 
 	@Override

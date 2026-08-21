@@ -2,6 +2,7 @@ package com.serviceops.security;
 
 import com.serviceops.modules.identity.user.entity.User;
 import com.serviceops.modules.identity.user.enums.UserStatus;
+import com.serviceops.security.scope.UserScope;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -18,13 +19,17 @@ public class CustomUserDetails implements UserDetails {
     private final String passwordHash;
     private final boolean enabled;
     private final List<String> roleCodes;
+    private final Long departmentId;
+    private final UserScope scope;
 
-    public CustomUserDetails(User user, List<String> roleCodes) {
+    public CustomUserDetails(User user, List<String> roleCodes, UserScope scope) {
         this.id = user.getId();
         this.username = user.getUsername();
         this.passwordHash = user.getPasswordHash();
         this.enabled = user.getStatus() == UserStatus.ACTIVE;
         this.roleCodes = roleCodes;
+        this.departmentId = user.getDepartmentId();
+        this.scope = scope;
     }
 
     @Override

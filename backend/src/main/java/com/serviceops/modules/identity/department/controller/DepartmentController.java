@@ -17,10 +17,10 @@ import java.util.List;
 @RestController
 @RequestMapping("/departments")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('VT-07')")
 public class DepartmentController {
 	private final DepartmentService departmentService;
 
+	/** Doc cay to chuc: moi tai khoan da dang nhap deu xem duoc, nhung chi trong pham vi du lieu cua ho (QTN-01). */
 	@GetMapping
 	public BaseRes<List<DepartmentRes>> findAll(@RequestParam(required = false) String keyword) {
 		return BaseRes.ok(departmentService.findAll(keyword));
@@ -37,21 +37,25 @@ public class DepartmentController {
 	}
 
 	@PostMapping
+	@PreAuthorize("hasRole('VT-07')")
 	public BaseRes<DepartmentRes> create(@Valid @RequestBody DepartmentCreateReq request) {
 		return BaseRes.ok("Tao bo phan thanh cong", departmentService.create(request));
 	}
 
 	@PutMapping("/{id}")
+	@PreAuthorize("hasRole('VT-07')")
 	public BaseRes<DepartmentRes> update(@PathVariable Long id, @Valid @RequestBody DepartmentUpdateReq request) {
 		return BaseRes.ok("Cap nhat bo phan thanh cong", departmentService.update(id, request));
 	}
 
 	@PatchMapping("/{id}/move")
+	@PreAuthorize("hasRole('VT-07')")
 	public BaseRes<DepartmentRes> move(@PathVariable Long id, @RequestBody DepartmentMoveReq request) {
 		return BaseRes.ok("Di chuyen bo phan thanh cong", departmentService.move(id, request));
 	}
 
 	@DeleteMapping("/{id}")
+	@PreAuthorize("hasRole('VT-07')")
 	public BaseRes<Void> delete(@PathVariable Long id) {
 		departmentService.delete(id);
 		return BaseRes.ok("Xoa bo phan thanh cong", null);
