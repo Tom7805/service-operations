@@ -1,35 +1,94 @@
 import { useState } from 'react';
 import LoginPage from './modules/auth/pages/LoginPage';
 import type { AuthSession } from './modules/auth/types/authTypes';
+import UserListPage from './modules/users/pages/UserListPage';
+import UserDetailPage from './modules/users/pages/UserDetailPage';
 
-const ROLE_HOME: Record<string, string> = {
-  'VT-01': 'Tổng quan điều hành',
-  'VT-02': 'Không gian dự án',
-  'VT-03': 'Công việc của tôi',
-  'VT-04': 'Cơ hội kinh doanh',
-  'VT-05': 'Tài chính & công nợ',
-  'VT-06': 'Nhân sự',
-  'VT-07': 'Quản trị hệ thống',
-  'VT-08': 'Không gian làm việc',
-  'VT-09': 'Cổng khách hàng',
-};
+function readStoredSession(): AuthSession | null {
+  const raw = localStorage.getItem('session');
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as AuthSession;
+  } catch {
+    return null;
+  }
+}
 
 export default function App() {
-  const [session, setSession] = useState<AuthSession | null>(null);
+  const [session, setSession] = useState<AuthSession | null>(readStoredSession);
 
-  if (!session) return <LoginPage onAuthenticated={setSession} />;
+  const [activeTab, setActiveTab] = useState<'USERS' | 'DETAIL'>('USERS');
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [simulatedRole, setSimulatedRole] = useState<'VT-07' | 'VT-03'>('VT-07');
 
-  const destination = ROLE_HOME[session.roles[0]] ?? 'Không gian làm việc';
+  function handleAuthenticated(newSession: AuthSession) {
+    localStorage.setItem('token', newSession.accessToken);
+    localStorage.setItem('session', JSON.stringify(newSession));
+    setSession(newSession);
+  }
+
+  function handleLogout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('session');
+    setSession(null);
+  }
+
+  if (!session) return <LoginPage onAuthenticated={handleAuthenticated} />;
+
+  const currentRoles = simulatedRole === 'VT-07' ? ['VT-07'] : ['VT-03'];
+
   return (
-    <main className="signed-in" aria-live="polite">
-      <div className="signed-in__orb" />
-      <section>
-        <span className="eyebrow">Đăng nhập thành công</span>
-        <h1>Chào mừng trở lại, {session.fullName}.</h1>
-        <p>Bạn đang được chuyển đến <strong>{destination}</strong> theo vai trò được cấp.</p>
-        <div className="signed-in__progress"><span /></div>
-        <button type="button" onClick={() => setSession(null)}>Đăng xuất</button>
-      </section>
-    </main>
+    <div className="app-shell">
+      <header className="app-header">
+        <div className="header-left">
+          <strong className="app-brand">⚡ ServiceOps</strong>
+          <nav className="app-nav">
+            <button
+              type="button"
+              className={`nav-link ${activeTab === 'USERS' ? 'nav-link--active' : ''}`}
+              onClick={() => setActiveTab('USERS')}
+            >
+              👤 Quản lý tài khoản (NCL-01-CN-002)
+            </button>
+          </nav>
+        </div>
+
+        <div className="header-right">
+          <div className="role-switcher">
+            <span className="switcher-label">Giả lập vai trò (TC-04):</span>
+            <select
+              className="switcher-select"
+              value={simulatedRole}
+              onChange={(e) => setSimulatedRole(e.target.value as 'VT-07' | 'VT-03')}
+            >
+              <option value="VT-07">Quản trị viên (VT-07)</option>
+              <option value="VT-03">Nhân viên chuyên môn (VT-03)</option>
+            </select>
+          </div>
+
+          <span className="user-greeting">
+            Xin chào, <strong>{session.fullName}</strong>
+          </span>
+          <button type="button" className="btn-logout" onClick={handleLogout}>
+            Đăng xuất
+          </button>
+        </div>
+      </header>
+
+      <main className="app-content">
+        {activeTab === 'DETAIL' && selectedUserId ? (
+          <UserDetailPage userId={selectedUserId} onBack={() => setActiveTab('USERS')} />
+        ) : (
+          <UserListPage
+            currentUserRoles={currentRoles}
+            currentUserName={session.fullName}
+            onNavigateDetail={(id) => {
+              setSelectedUserId(id);
+              setActiveTab('DETAIL');
+            }}
+          />
+        )}
+      </main>
+    </div>
   );
 }
