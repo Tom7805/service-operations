@@ -4,21 +4,36 @@ import type { AuthSession } from './modules/auth/types/authTypes';
 import UserListPage from './modules/users/pages/UserListPage';
 import UserDetailPage from './modules/users/pages/UserDetailPage';
 
+function readStoredSession(): AuthSession | null {
+  const raw = localStorage.getItem('session');
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as AuthSession;
+  } catch {
+    return null;
+  }
+}
+
 export default function App() {
-  const [session, setSession] = useState<AuthSession | null>({
-    accessToken: 'demo-token',
-    tokenType: 'Bearer',
-    userId: 1,
-    username: 'admin',
-    fullName: 'Nguyễn Văn Quản Trị',
-    roles: ['VT-07'],
-  });
+  const [session, setSession] = useState<AuthSession | null>(readStoredSession);
 
   const [activeTab, setActiveTab] = useState<'USERS' | 'DETAIL'>('USERS');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [simulatedRole, setSimulatedRole] = useState<'VT-07' | 'VT-03'>('VT-07');
 
-  if (!session) return <LoginPage onAuthenticated={setSession} />;
+  function handleAuthenticated(newSession: AuthSession) {
+    localStorage.setItem('token', newSession.accessToken);
+    localStorage.setItem('session', JSON.stringify(newSession));
+    setSession(newSession);
+  }
+
+  function handleLogout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('session');
+    setSession(null);
+  }
+
+  if (!session) return <LoginPage onAuthenticated={handleAuthenticated} />;
 
   const currentRoles = simulatedRole === 'VT-07' ? ['VT-07'] : ['VT-03'];
 
@@ -54,7 +69,7 @@ export default function App() {
           <span className="user-greeting">
             Xin chào, <strong>{session.fullName}</strong>
           </span>
-          <button type="button" className="btn-logout" onClick={() => setSession(null)}>
+          <button type="button" className="btn-logout" onClick={handleLogout}>
             Đăng xuất
           </button>
         </div>
