@@ -70,6 +70,34 @@ cp frontend/.env.example frontend/.env
 
 Chi tiết từng biến môi trường: xem [docs/07-operations/environment-variables.md](docs/07-operations/environment-variables.md).
 
+### 2.1. Cách thay thế — set biến môi trường thủ công trong máy (nếu không dùng `.env`)
+
+Cách này hữu ích khi bạn chạy backend trực tiếp bằng `mvnw`/IDE mà không qua `.env` (ví dụ mật khẩu MySQL
+của máy bạn không phải mặc định và bạn muốn set cố định, không cần sửa file mỗi lần pull code).
+
+**Windows:**
+
+1. Bấm Start, gõ **"Edit environment variables for your account"** rồi mở.
+2. Ở bảng **User variables**, bấm **New...**.
+3. Thêm lần lượt các biến cần thiết, ví dụ:
+   - `DB_USERNAME` = `root`
+   - `DB_PASSWORD` = *(mật khẩu MySQL thật của máy bạn)*
+4. Bấm **OK** ở tất cả cửa sổ để lưu.
+5. **Đóng và mở lại terminal/IDE** đang mở — biến môi trường chỉ có hiệu lực với terminal/process mở **sau** khi lưu.
+
+**macOS / Linux:**
+
+Thêm vào cuối file `~/.zshrc` (hoặc `~/.bashrc` nếu dùng bash):
+```bash
+export DB_USERNAME=root
+export DB_PASSWORD=mat_khau_that_cua_ban
+```
+Sau đó chạy `source ~/.zshrc` (hoặc mở terminal mới) để áp dụng.
+
+> **Biến môi trường set theo cách này sẽ ghi đè giá trị trong `.env`** — nên nếu backend chạy sai giá trị
+> mong đợi dù đã sửa `.env`, hãy kiểm tra lại xem máy có đang set trùng tên biến ở cấp hệ điều hành không
+> (xem thêm Bước 3 ở Mục 0).
+
 ## 3. Khởi động Database
 
 ### Cách 1 — Dùng XAMPP (khuyến dùng cho team, đơn giản nhất)
