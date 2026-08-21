@@ -116,7 +116,7 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
         await onSubmitCreate(payload);
       }
       onClose();
-    } catch (err: any) {
+    } catch (err) {
       if (err instanceof DepartmentApiError) {
         if (err.code === 'DUPLICATE_DATA') {
           setServerError('Tên bộ phận đã tồn tại trong cùng cấp tổ chức. Vui lòng đặt tên khác.');
@@ -126,7 +126,7 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
           setServerError(err.message);
         }
       } else {
-        setServerError(err.message || 'Không thể lưu thông tin bộ phận.');
+        setServerError(err instanceof Error ? err.message : 'Không thể lưu thông tin bộ phận.');
       }
     } finally {
       setSubmitting(false);

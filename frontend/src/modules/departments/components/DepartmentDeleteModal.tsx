@@ -34,7 +34,7 @@ export const DepartmentDeleteModal: React.FC<DepartmentDeleteModalProps> = ({
     try {
       await onConfirmDelete(department.id);
       onClose();
-    } catch (err: any) {
+    } catch (err) {
       if (err instanceof DepartmentApiError) {
         if (err.code === 'INVALID_STATE') {
           if (err.message.includes('bo phan con') || err.message.includes('bộ phận con')) {
@@ -48,7 +48,7 @@ export const DepartmentDeleteModal: React.FC<DepartmentDeleteModalProps> = ({
           setServerError(err.message);
         }
       } else {
-        setServerError(err.message || 'Không thể xóa bộ phận.');
+        setServerError(err instanceof Error ? err.message : 'Không thể xóa bộ phận.');
       }
     } finally {
       setDeleting(false);

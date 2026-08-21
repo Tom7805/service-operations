@@ -63,7 +63,7 @@ export const DepartmentMoveModal: React.FC<DepartmentMoveModalProps> = ({
     try {
       await onConfirmMove(department.id, { parentId: newParentId });
       onClose();
-    } catch (err: any) {
+    } catch (err) {
       if (err instanceof DepartmentApiError) {
         if (err.code === 'INVALID_STATE') {
           setServerError('Không thể di chuyển: Hành động này tạo vòng lặp trong cây tổ chức.');
@@ -73,7 +73,7 @@ export const DepartmentMoveModal: React.FC<DepartmentMoveModalProps> = ({
           setServerError(err.message);
         }
       } else {
-        setServerError(err.message || 'Không thể di chuyển vị trí bộ phận.');
+        setServerError(err instanceof Error ? err.message : 'Không thể di chuyển vị trí bộ phận.');
       }
     } finally {
       setSubmitting(false);

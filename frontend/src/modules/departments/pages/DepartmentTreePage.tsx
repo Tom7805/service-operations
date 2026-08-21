@@ -108,8 +108,8 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
         departmentId: u.departmentId,
       }));
       setManagersList(managerOpts);
-    } catch (err: any) {
-      setError(err.message || 'Không thể tải cấu trúc cây tổ chức từ máy chủ.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể tải cấu trúc cây tổ chức từ máy chủ.');
     } finally {
       setLoading(false);
     }

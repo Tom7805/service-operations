@@ -4,7 +4,13 @@ import { describe, it, expect, vi } from 'vitest';
 import DepartmentTreePage from '../pages/DepartmentTreePage';
 import DepartmentTree from '../components/DepartmentTree';
 import DepartmentFormModal from '../components/DepartmentFormModal';
-import type { Department, DepartmentTreeNode } from '../types/departmentTypes';
+import type {
+  CreateDepartmentPayload,
+  Department,
+  DepartmentTreeNode,
+  MoveDepartmentPayload,
+  UpdateDepartmentPayload,
+} from '../types/departmentTypes';
 
 const mockTreeList: DepartmentTreeNode[] = [
   {
@@ -42,9 +48,9 @@ vi.mock('../api/departmentsApi', () => ({
   getDepartmentTree: vi.fn(() => Promise.resolve(mockTreeList)),
   getDepartments: vi.fn(() => Promise.resolve(mockFlatList)),
   getDepartmentById: vi.fn((id: number) => Promise.resolve(mockFlatList.find((d) => d.id === id) || mockFlatList[0])),
-  createDepartment: vi.fn((payload: any) => Promise.resolve({ id: 99, ...payload, managerName: 'Người quản lý mới' })),
-  updateDepartment: vi.fn((id: number, payload: any) => Promise.resolve({ id, ...payload, managerName: 'Cập nhật' })),
-  moveDepartment: vi.fn((id: number, payload: any) => Promise.resolve({ id, name: 'Đơn vị di chuyển', parentId: payload.parentId })),
+  createDepartment: vi.fn((payload: CreateDepartmentPayload) => Promise.resolve({ id: 99, ...payload, managerName: 'Người quản lý mới' })),
+  updateDepartment: vi.fn((id: number, payload: UpdateDepartmentPayload) => Promise.resolve({ id, ...payload, managerName: 'Cập nhật' })),
+  moveDepartment: vi.fn((id: number, payload: MoveDepartmentPayload) => Promise.resolve({ id, name: 'Đơn vị di chuyển', parentId: payload.parentId })),
   deleteDepartment: vi.fn(() => Promise.resolve()),
   DepartmentApiError: class DepartmentApiError extends Error {
     constructor(public code: string, message: string) {
