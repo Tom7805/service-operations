@@ -17,7 +17,7 @@ import java.time.temporal.ChronoUnit;
 public class LoginAttemptService {
 
     public static final int MAX_FAILED_ATTEMPTS = 5;
-    public static final int LOCK_MINUTES = 15;
+    public static final int LOCK_SECONDS = 10;
 
     private final UserRepository userRepository;
     private final LoginAttemptRepository loginAttemptRepository;
@@ -26,12 +26,12 @@ public class LoginAttemptService {
         return user.getLockedUntil() != null && user.getLockedUntil().isAfter(LocalDateTime.now());
     }
 
-    public long remainingLockMinutes(User user) {
+    public long remainingLockSeconds(User user) {
         if (user.getLockedUntil() == null) {
             return 0;
         }
         long seconds = ChronoUnit.SECONDS.between(LocalDateTime.now(), user.getLockedUntil());
-        return Math.max(1, (seconds + 59) / 60);
+        return Math.max(1, seconds);
     }
 
     /**
@@ -58,7 +58,7 @@ public class LoginAttemptService {
             int attempts = user.getFailedLoginAttempts() + 1;
             user.setFailedLoginAttempts(attempts);
             if (attempts >= MAX_FAILED_ATTEMPTS) {
-                user.setLockedUntil(LocalDateTime.now().plusMinutes(LOCK_MINUTES));
+                user.setLockedUntil(LocalDateTime.now().plusSeconds(LOCK_SECONDS));
             }
             userRepository.save(user);
         }
