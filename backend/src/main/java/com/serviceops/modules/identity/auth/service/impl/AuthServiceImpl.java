@@ -34,10 +34,10 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByUsername(request.getUsername()).orElse(null);
 
         if (user != null && loginAttemptService.isLocked(user)) {
-            long minutes = loginAttemptService.remainingLockMinutes(user);
+            long seconds = loginAttemptService.remainingLockSeconds(user);
             loginAttemptService.recordRejectedWhileLocked(user, ipAddress);
             throw new BusinessRuleException(ErrorCode.ACCOUNT_LOCKED,
-                    "Tai khoan tam khoa do nhap sai mat khau nhieu lan. Vui long thu lai sau " + minutes + " phut.");
+                    "Tai khoan tam khoa do nhap sai mat khau nhieu lan. Vui long thu lai sau " + seconds + " giay.");
         }
 
         if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
