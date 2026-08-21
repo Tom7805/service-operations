@@ -13,4 +13,6 @@ public interface UserRoleScopeRepository extends JpaRepository<UserRoleScope, Lo
 
     @Query("select urs.role.code from UserRoleScope urs where urs.user.id = :userId")
     List<String> findRoleCodesByUserId(@Param("userId") Long userId);
+
+    List<UserRoleScope> findByUser_Id(Long userId);
 }

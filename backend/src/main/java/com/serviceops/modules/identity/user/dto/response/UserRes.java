@@ -13,6 +13,8 @@ public record UserRes(
         Long departmentId,
         UserStatus status,
         List<String> roleCodes,
+        String scopeType,
+        Long scopeDepartmentId,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {}
