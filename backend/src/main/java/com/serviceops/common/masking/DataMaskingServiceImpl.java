@@ -1,11 +1,13 @@
 package com.serviceops.common.masking;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.Set;
 
+@Slf4j
 @Service
 public class DataMaskingServiceImpl implements DataMaskingService {
 	static final Set<String> SENSITIVE_DATA_ROLES = Set.of("VT-01", "VT-05", "VT-06");
@@ -18,7 +20,11 @@ public class DataMaskingServiceImpl implements DataMaskingService {
 
 	@Override
 	public Object mask(Object value) {
-		return canViewSensitiveData() ? value : MaskingJsonSerializer.MASKED_VALUE;
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		boolean allowed = hasSensitiveDataRole(authentication);
+		String username = authentication != null ? authentication.getName() : "anonymous";
+		log.info("SENSITIVE_DATA_ACCESS username={} masked={}", username, !allowed);
+		return allowed ? value : MaskingJsonSerializer.MASKED_VALUE;
 	}
 
 	static boolean hasSensitiveDataRole(Authentication authentication) {
