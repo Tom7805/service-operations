@@ -9,6 +9,8 @@ import java.util.List;
 
 public interface UserRoleScopeRepository extends JpaRepository<UserRoleScope, Long> {
 
+    void deleteByUserId(Long userId);
+
     @Query("select urs.role.code from UserRoleScope urs where urs.user.id = :userId")
     List<String> findRoleCodesByUserId(@Param("userId") Long userId);
 }

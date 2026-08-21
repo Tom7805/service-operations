@@ -20,6 +20,7 @@ public class GlobalExceptionHandler {
         HttpStatus status = switch (ex.getErrorCode()) {
             case INVALID_CREDENTIALS, ACCOUNT_LOCKED, ACCOUNT_INACTIVE -> HttpStatus.UNAUTHORIZED;
             case RESOURCE_NOT_FOUND -> HttpStatus.NOT_FOUND;
+            case DUPLICATE_DATA -> HttpStatus.CONFLICT;
             case FORBIDDEN -> HttpStatus.FORBIDDEN;
             default -> HttpStatus.BAD_REQUEST;
         };
