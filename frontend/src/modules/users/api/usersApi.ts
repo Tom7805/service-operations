@@ -1,4 +1,12 @@
-import type { CreateUserPayload, UpdateUserPayload, User, UserStatus } from '../types/userTypes';
+import type {
+  CreateUserPayload,
+  DepartmentInfo,
+  RoleItem,
+  ScopeType,
+  UpdateUserPayload,
+  User,
+  UserStatus,
+} from '../types/userTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -7,7 +15,7 @@ export class UserApiError extends Error {
     public readonly code: string,
     message: string,
     public readonly statusCode?: number,
-    public readonly fieldErrors?: Array<{ field: string; message: string }>,
+    public readonly fieldErrors?: Array<{ field: string; message: string }>
   ) {
     super(message);
     this.name = 'UserApiError';
@@ -18,7 +26,7 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
   const token = localStorage.getItem('token') || sessionStorage.getItem('token');
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string> || {}),
+    ...((options.headers as Record<string, string>) || {}),
   };
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -76,9 +84,39 @@ export async function updateUser(id: number, payload: UpdateUserPayload): Promis
   });
 }
 
+export async function updateUserRoleScope(
+  id: number,
+  params: {
+    fullName: string;
+    email?: string | null;
+    departmentId?: number | null;
+    roleCodes: string[];
+    scopeType: ScopeType;
+    scopeDepartmentId?: number | null;
+  }
+): Promise<User> {
+  const payload: UpdateUserPayload = {
+    fullName: params.fullName,
+    email: params.email,
+    departmentId: params.departmentId,
+    roleCodes: params.roleCodes,
+    scopeType: params.scopeType === 'PERSONAL' ? 'SELF' : params.scopeType,
+    scopeDepartmentId: params.scopeType === 'DEPARTMENT' ? params.scopeDepartmentId : null,
+  };
+  return updateUser(id, payload);
+}
+
 export async function updateUserStatus(id: number, status: UserStatus): Promise<User> {
   return requestBackend<User>(`${API_BASE_URL}/users/${id}/status`, {
     method: 'PATCH',
     body: JSON.stringify({ status }),
   });
+}
+
+export async function getRoles(): Promise<RoleItem[]> {
+  return requestBackend<RoleItem[]>(`${API_BASE_URL}/roles`, { method: 'GET' });
+}
+
+export async function getDepartmentsList(): Promise<DepartmentInfo[]> {
+  return requestBackend<DepartmentInfo[]>(`${API_BASE_URL}/departments`, { method: 'GET' });
 }

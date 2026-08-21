@@ -3,6 +3,7 @@ import LoginPage from './modules/auth/pages/LoginPage';
 import type { AuthSession } from './modules/auth/types/authTypes';
 import UserListPage from './modules/users/pages/UserListPage';
 import UserDetailPage from './modules/users/pages/UserDetailPage';
+import RolePermissionPage from './modules/users/pages/RolePermissionPage';
 
 function readStoredSession(): AuthSession | null {
   const raw = localStorage.getItem('session');
@@ -17,7 +18,7 @@ function readStoredSession(): AuthSession | null {
 export default function App() {
   const [session, setSession] = useState<AuthSession | null>(readStoredSession);
 
-  const [activeTab, setActiveTab] = useState<'USERS' | 'DETAIL'>('USERS');
+  const [activeTab, setActiveTab] = useState<'PERMISSIONS' | 'USERS' | 'DETAIL'>('PERMISSIONS');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [simulatedRole, setSimulatedRole] = useState<'VT-07' | 'VT-03'>('VT-07');
 
@@ -45,7 +46,14 @@ export default function App() {
           <nav className="app-nav">
             <button
               type="button"
-              className={`nav-link ${activeTab === 'USERS' ? 'nav-link--active' : ''}`}
+              className={`nav-link ${activeTab === 'PERMISSIONS' ? 'nav-link--active' : ''}`}
+              onClick={() => setActiveTab('PERMISSIONS')}
+            >
+              🛡️ Phân quyền & Phạm vi (NCL-01-CN-004)
+            </button>
+            <button
+              type="button"
+              className={`nav-link ${activeTab === 'USERS' || activeTab === 'DETAIL' ? 'nav-link--active' : ''}`}
               onClick={() => setActiveTab('USERS')}
             >
               👤 Quản lý tài khoản (NCL-01-CN-002)
@@ -76,7 +84,12 @@ export default function App() {
       </header>
 
       <main className="app-content">
-        {activeTab === 'DETAIL' && selectedUserId ? (
+        {activeTab === 'PERMISSIONS' ? (
+          <RolePermissionPage
+            currentUserRoles={currentRoles}
+            currentUserName={session.fullName}
+          />
+        ) : activeTab === 'DETAIL' && selectedUserId ? (
           <UserDetailPage userId={selectedUserId} onBack={() => setActiveTab('USERS')} />
         ) : (
           <UserListPage
@@ -92,3 +105,4 @@ export default function App() {
     </div>
   );
 }
+
