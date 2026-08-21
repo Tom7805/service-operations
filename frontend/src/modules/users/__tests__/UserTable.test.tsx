@@ -4,7 +4,7 @@ import { describe, it, expect, vi } from 'vitest';
 import UserListPage from '../pages/UserListPage';
 import UserTable from '../components/UserTable';
 import UserFormModal from '../components/UserFormModal';
-import type { User } from '../types/userTypes';
+import type { CreateUserPayload, UpdateUserPayload, User } from '../types/userTypes';
 
 const mockUsersList: User[] = [
   {
@@ -34,8 +34,8 @@ const mockUsersList: User[] = [
 vi.mock('../api/usersApi', () => ({
   getUsers: vi.fn(() => Promise.resolve(mockUsersList)),
   getUserById: vi.fn((id: number) => Promise.resolve(mockUsersList.find((u) => u.id === id) || mockUsersList[0])),
-  createUser: vi.fn((payload: any) => Promise.resolve({ id: 99, ...payload, status: 'ACTIVE', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() })),
-  updateUser: vi.fn((id: number, payload: any) => Promise.resolve({ id, ...payload, updatedAt: new Date().toISOString() })),
+  createUser: vi.fn((payload: CreateUserPayload) => Promise.resolve({ id: 99, ...payload, status: 'ACTIVE', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() })),
+  updateUser: vi.fn((id: number, payload: UpdateUserPayload) => Promise.resolve({ id, ...payload, updatedAt: new Date().toISOString() })),
   updateUserStatus: vi.fn((id: number, status: string) => Promise.resolve({ id, status, updatedAt: new Date().toISOString() })),
   UserApiError: class UserApiError extends Error {
     constructor(public code: string, message: string) {

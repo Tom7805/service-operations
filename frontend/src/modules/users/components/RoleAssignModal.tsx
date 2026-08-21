@@ -54,8 +54,8 @@ export const RoleAssignModal: React.FC<RoleAssignModalProps> = ({
     try {
       await onSave(user.id, selectedRoles, scopeType);
       onClose();
-    } catch (err: any) {
-      setError(err.message || 'Không thể cập nhật quyền tài khoản.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể cập nhật quyền tài khoản.');
     } finally {
       setSubmitting(false);
     }

@@ -19,8 +19,8 @@ export const UserDetailPage: React.FC<UserDetailPageProps> = ({ userId, onBack }
       try {
         const data = await getUserById(userId);
         setUser(data);
-      } catch (err: any) {
-        setError(err.message || 'Không thể tải chi tiết thông tin người dùng.');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Không thể tải chi tiết thông tin người dùng.');
       } finally {
         setLoading(false);
       }

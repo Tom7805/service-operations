@@ -89,8 +89,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       try {
         await onSubmitCreate(payload);
         onClose();
-      } catch (err: any) {
-        setServerError(err.message || 'Không thể tạo tài khoản người dùng.');
+      } catch (err) {
+        setServerError(err instanceof Error ? err.message : 'Không thể tạo tài khoản người dùng.');
       } finally {
         setSubmitting(false);
       }
@@ -111,8 +111,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       try {
         await onSubmitUpdate(editingUser!.id, payload);
         onClose();
-      } catch (err: any) {
-        setServerError(err.message || 'Không thể cập nhật thông tin người dùng.');
+      } catch (err) {
+        setServerError(err instanceof Error ? err.message : 'Không thể cập nhật thông tin người dùng.');
       } finally {
         setSubmitting(false);
       }
