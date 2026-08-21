@@ -219,5 +219,51 @@
 .role-code { font-family: monospace; font-size: 12px; font-weight: 700; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 6px; }
 .role-title { font-weight: 700; color: #0f172a; font-size: 13.5px; }
 
+/* Organization Tree Module Styling (NCL-01-CN-003) */
+.department-tree-container { display: flex; flex-direction: column; gap: 12px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 0 0 16px 16px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
 
+.tree-loading-state, .tree-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; color: #64748b; text-align: center; gap: 12px; }
+.empty-icon { font-size: 48px; }
 
+.tree-node-wrapper { position: relative; margin-bottom: 8px; }
+.tree-node-wrapper.level-1 { margin-left: 28px; border-left: 2px dashed #cbd5e1; padding-left: 16px; }
+.tree-node-wrapper.level-2 { margin-left: 56px; border-left: 2px dashed #94a3b8; padding-left: 16px; }
+.tree-node-wrapper.level-3 { margin-left: 84px; border-left: 2px dashed #64748b; padding-left: 16px; }
+
+.tree-node-card { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
+.tree-node-card:hover { border-color: #10b981; box-shadow: 0 8px 24px rgba(16,185,129,0.08); transform: translateY(-1px); }
+.tree-node-card--highlight { border-color: #10b981 !important; background: #f0fdf4 !important; box-shadow: 0 0 0 2px rgba(16,185,129,0.2) !important; }
+
+.tree-node-left { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+.tree-toggle-btn { width: 26px; height: 26px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #475569; transition: all 0.2s; flex-shrink: 0; }
+.tree-toggle-btn:hover { background: #10b981; color: #ffffff; border-color: #10b981; }
+.tree-node-dot { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; margin: 0 9px; flex-shrink: 0; }
+.tree-node-icon { font-size: 22px; flex-shrink: 0; }
+
+.tree-node-info { display: flex; flex-direction: column; gap: 2px; }
+.tree-node-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tree-node-title { font-size: 15px; font-weight: 700; color: #0f172a; }
+.tree-node-manager { font-size: 12px; color: #64748b; display: flex; gap: 6px; align-items: center; }
+.tree-node-manager strong { color: #334155; }
+
+.badge-level { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+.badge-level--root { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.badge-children { font-size: 11px; font-weight: 600; color: #2563eb; background: #eff6ff; border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 12px; }
+
+.tree-node-actions { display: flex; align-items: center; gap: 6px; opacity: 0.9; transition: opacity 0.2s; }
+.tree-node-card:hover .tree-node-actions { opacity: 1; }
+
+.action-btn--add { background: #ecfdf5 !important; color: #059669 !important; border-color: #a7f3d0 !important; font-weight: 700 !important; }
+.action-btn--add:hover { background: #10b981 !important; color: #ffffff !important; }
+.action-btn--danger { background: #fff5f5 !important; color: #dc2626 !important; border-color: #fecaca !important; }
+.action-btn--danger:hover { background: #dc2626 !important; color: #ffffff !important; }
+
+.tree-children-container { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+
+/* Move Department Location Box */
+.move-location-preview { display: flex; flex-direction: column; align-items: center; gap: 8px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 12px; }
+.location-box { width: 100%; padding: 10px 14px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; }
+.location-box--active { border-color: #10b981; background: #f0fdf4; }
+.location-label { font-size: 11px; text-transform: uppercase; font-weight: 700; color: #64748b; display: block; margin-bottom: 2px; }
+.location-value { color: #0f172a; font-size: 14px; }
+.arrow-down { font-size: 16px; color: #10b981; }
