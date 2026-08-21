@@ -3,6 +3,7 @@ import LoginPage from './modules/auth/pages/LoginPage';
 import type { AuthSession } from './modules/auth/types/authTypes';
 import UserListPage from './modules/users/pages/UserListPage';
 import UserDetailPage from './modules/users/pages/UserDetailPage';
+import RolePermissionPage from './modules/users/pages/RolePermissionPage';
 import DepartmentTreePage from './modules/departments/pages/DepartmentTreePage';
 
 function readStoredSession(): AuthSession | null {
@@ -18,7 +19,7 @@ function readStoredSession(): AuthSession | null {
 export default function App() {
   const [session, setSession] = useState<AuthSession | null>(readStoredSession);
 
-  const [activeTab, setActiveTab] = useState<'USERS' | 'DETAIL' | 'DEPARTMENTS'>('DEPARTMENTS');
+  const [activeTab, setActiveTab] = useState<'DEPARTMENTS' | 'PERMISSIONS' | 'USERS' | 'DETAIL'>('DEPARTMENTS');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [simulatedRole, setSimulatedRole] = useState<'VT-07' | 'VT-03'>('VT-07');
 
@@ -50,6 +51,13 @@ export default function App() {
               onClick={() => setActiveTab('DEPARTMENTS')}
             >
               🏛️ Khai báo cây tổ chức (NCL-01-CN-003)
+            </button>
+            <button
+              type="button"
+              className={`nav-link ${activeTab === 'PERMISSIONS' ? 'nav-link--active' : ''}`}
+              onClick={() => setActiveTab('PERMISSIONS')}
+            >
+              🛡️ Phân quyền & Phạm vi (NCL-01-CN-004)
             </button>
             <button
               type="button"
@@ -89,6 +97,11 @@ export default function App() {
             currentUserRoles={currentRoles}
             currentUserName={session.fullName}
           />
+        ) : activeTab === 'PERMISSIONS' ? (
+          <RolePermissionPage
+            currentUserRoles={currentRoles}
+            currentUserName={session.fullName}
+          />
         ) : activeTab === 'DETAIL' && selectedUserId ? (
           <UserDetailPage userId={selectedUserId} onBack={() => setActiveTab('USERS')} />
         ) : (
@@ -105,4 +118,3 @@ export default function App() {
     </div>
   );
 }
-
