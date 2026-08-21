@@ -24,7 +24,7 @@ export default function LoginForm({ onAuthenticated }: LoginFormProps) {
     catch (reason) {
       const requestError = reason instanceof LoginRequestError ? reason : null;
       const message = requestError?.message ?? 'Đăng nhập chưa thành công. Vui lòng thử lại.';
-      setError(requestError?.details.errorCode === 'ACCOUNT_LOCKED' ? message : message);
+      setError(message);
     } finally { setLoading(false); }
   }
 
