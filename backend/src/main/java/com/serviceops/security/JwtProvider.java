@@ -24,6 +24,10 @@ public class JwtProvider {
     }
 
     public String generateToken(Long userId, String username, List<String> roles) {
+        return generateToken(userId, username, roles, 0);
+    }
+
+    public String generateToken(Long userId, String username, List<String> roles, int tokenVersion) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + jwtProperties.getExpirationMs());
 
@@ -31,6 +35,7 @@ public class JwtProvider {
                 .subject(username)
                 .claim("userId", userId)
                 .claim("roles", roles)
+                .claim("tokenVersion", tokenVersion)
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(secretKey)
@@ -56,5 +61,10 @@ public class JwtProvider {
 
     public String getUsername(String token) {
         return parseClaims(token).getSubject();
+    }
+
+    public int getTokenVersion(String token) {
+        Integer version = parseClaims(token).get("tokenVersion", Integer.class);
+        return version != null ? version : 0;
     }
 }

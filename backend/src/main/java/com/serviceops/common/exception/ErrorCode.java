@@ -9,5 +9,6 @@ public enum ErrorCode {
     VALIDATION_ERROR,
     RESOURCE_NOT_FOUND,
     FORBIDDEN,
+    RESET_TOKEN_INVALID,
     INTERNAL_ERROR
 }

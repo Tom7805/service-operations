@@ -21,6 +21,7 @@ public class CustomUserDetails implements UserDetails {
     private final List<String> roleCodes;
     private final Long departmentId;
     private final UserScope scope;
+    private final int tokenVersion;
 
     public CustomUserDetails(User user, List<String> roleCodes, UserScope scope) {
         this.id = user.getId();
@@ -30,6 +31,7 @@ public class CustomUserDetails implements UserDetails {
         this.roleCodes = roleCodes;
         this.departmentId = user.getDepartmentId();
         this.scope = scope;
+        this.tokenVersion = user.getTokenVersion();
     }
 
     @Override

@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:service_operations_test;MODE=MySQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+app:
+  jwt:
+    secret: test_only_secret_do_not_use_in_prod_1234567890
+    expiration-ms: 3600000
+  password-reset:
+    token-ttl-minutes: 30

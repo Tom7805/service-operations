@@ -52,7 +52,7 @@ public class AuthServiceImpl implements AuthService {
         loginAttemptService.recordSuccess(user, ipAddress);
 
         List<String> roles = userRoleScopeRepository.findRoleCodesByUserId(user.getId());
-        String token = jwtProvider.generateToken(user.getId(), user.getUsername(), roles);
+        String token = jwtProvider.generateToken(user.getId(), user.getUsername(), roles, user.getTokenVersion());
 
         return new LoginRes(token, "Bearer", user.getId(), user.getUsername(), user.getFullName(), roles);
     }

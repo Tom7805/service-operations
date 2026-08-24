@@ -14,6 +14,7 @@ theo `errorCode`, không nên switch theo `message` (vì `message` có thể đ�
 | `RESOURCE_NOT_FOUND` | 404 | Không tìm thấy bản ghi hoặc vai trò | `NCL-01-CN-002` và các API tra cứu theo id |
 | `INVALID_STATE` | 400 | Thao tác chuyển trạng thái không hợp lệ, hoặc vi phạm ràng buộc nghiệp vụ (ví dụ ngày kết thúc sớm hơn ngày bắt đầu) | `NCL-01-CN-002`, `NCL-01-CN-003`, `NCL-01-CN-007` |
 | `FORBIDDEN` | 403 | Có tài khoản hợp lệ nhưng không đủ quyền truy cập dữ liệu/chức năng | Các story áp dụng `QTN-01` (phân quyền theo vai trò và cây tổ chức) và `QTN-03` — ví dụ `NCL-01-CN-002`, `NCL-01-CN-006` |
+| `RESET_TOKEN_INVALID` | 400 | Liên kết khôi phục mật khẩu không tồn tại, đã hết hạn, hoặc đã được dùng | `NCL-01-CN-008` |
 | `INTERNAL_ERROR` | 500 | Lỗi hệ thống không lường trước — không phải lỗi do dữ liệu người dùng nhập | Toàn hệ thống |
 | `UNAUTHORIZED` | 401 | Gọi API cần đăng nhập nhưng chưa gửi hoặc gửi sai `Authorization: Bearer <token>` | Toàn hệ thống (áp dụng tự động bởi tầng bảo mật, không gắn với story cụ thể) |
 
