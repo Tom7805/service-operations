@@ -24,7 +24,9 @@ export default function MaskingRulePage({
   const [error, setError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
-  // TC-05: Nhật ký truy cập dữ liệu nhạy cảm
+  // Hoạt động trong phiên hiện tại — chỉ để tham khảo trên màn hình, KHÔNG phải nhật ký
+  // truy cập thật (nhật ký thật ghi ở server, xem tại màn hình "Nhật ký truy cập dữ liệu
+  // nhạy cảm" dành cho Quản trị viên).
   const [auditLogs, setAuditLogs] = useState<MaskingAuditLog[]>([
     {
       id: 'audit-mask-1',
@@ -126,9 +128,9 @@ export default function MaskingRulePage({
             <span>Hệ thống</span> / <span>Bảo mật dữ liệu</span> /{' '}
             <span className="active">Che dữ liệu lương & giá vốn</span>
           </div>
-          <h1 className="page-title">Che dữ liệu lương & giá vốn (NCL-01-CN-005)</h1>
+          <h1 className="page-title">Che dữ liệu lương & giá vốn</h1>
           <p className="page-subtitle">
-            Cấu hình quy tắc che dữ liệu lương/chi phí giờ công và giá vốn theo vai trò (QTN-02).
+            Cấu hình quy tắc che dữ liệu lương, chi phí giờ công và giá vốn theo vai trò.
             Chỉ nhân sự, kế toán và ban giám đốc mới được xem dữ liệu thật.
           </p>
         </div>
@@ -156,7 +158,7 @@ export default function MaskingRulePage({
         <div className="stat-card">
           <div className="stat-card__icon stat-card__icon--blue">📋</div>
           <div>
-            <span className="stat-card__label">Lượt truy cập gần đây</span>
+            <span className="stat-card__label">Hoạt động trong phiên này</span>
             <strong className="stat-card__value">{auditLogs.length}</strong>
           </div>
         </div>
@@ -177,7 +179,7 @@ export default function MaskingRulePage({
           <h3 style={{ margin: 0, fontSize: '15px', color: '#0f172a' }}>
             📋 Danh sách quy tắc che dữ liệu
           </h3>
-          <span className="badge-pulse">Đang áp dụng QTN-02</span>
+          <span className="badge-pulse">Đang áp dụng</span>
         </div>
         <div className="table-responsive">
           <table className="user-data-table">
@@ -235,11 +237,11 @@ export default function MaskingRulePage({
         </div>
       </div>
 
-      {/* Audit Log TC-05 */}
+      {/* Hoạt động trong phiên hiện tại — nhật ký truy cập thật nằm ở server, không hiển thị ở đây */}
       <div className="audit-log-card" style={{ marginTop: '24px' }}>
         <div className="audit-log-header">
-          <h3 className="audit-log-title">📋 Nhật ký truy cập dữ liệu nhạy cảm (Audit Log)</h3>
-          <span className="badge-pulse">Lưu vết 100% realtime</span>
+          <h3 className="audit-log-title">📋 Hoạt động trong phiên làm việc này</h3>
+          <span className="badge-pulse">Chỉ trên trình duyệt, mất khi tải lại trang</span>
         </div>
         <div className="audit-log-list">
           {auditLogs.map((log) => (
