@@ -1,13 +1,18 @@
 package com.serviceops.modules.identity.auth.dto.response;
 
-import lombok.Builder;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.util.List;
+
 @Getter
-@Builder
+@AllArgsConstructor
 public class LoginRes {
-    private final String accessToken;
-    private final String tokenType;
-    private final long expiresInMs;
-    private final CurrentUserRes user;
+
+    private String accessToken;
+    private String tokenType;
+    private Long userId;
+    private String username;
+    private String fullName;
+    private List<String> roles;
 }

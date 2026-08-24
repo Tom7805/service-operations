@@ -2,84 +2,67 @@ package com.serviceops.common.exception;
 
 import com.serviceops.common.api.ErrorResponse;
 import com.serviceops.common.api.FieldError;
-import com.serviceops.modules.identity.auth.exception.ResetTokenExpiredException;
 import jakarta.servlet.http.HttpServletRequest;
-import java.time.Instant;
-import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-/**
- * Chuẩn hóa mọi lỗi ném ra từ controller thành {@link ErrorResponse} thống nhất.
- */
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex,
-                                                            HttpServletRequest request) {
-        List<FieldError> fieldErrors = ex.getBindingResult().getFieldErrors().stream()
-                .map(fe -> new FieldError(fe.getField(), fe.getDefaultMessage()))
-                .toList();
-        return build(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR,
-                "Dữ liệu gửi lên không hợp lệ", request, fieldErrors);
-    }
-
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex,
-                                                          HttpServletRequest request) {
-        return build(HttpStatus.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND, ex.getMessage(), request, null);
-    }
-
     @ExceptionHandler(BusinessRuleException.class)
-    public ResponseEntity<ErrorResponse> handleBusinessRule(BusinessRuleException ex,
-                                                              HttpServletRequest request) {
-        return build(HttpStatus.BAD_REQUEST, ex.getErrorCode(), ex.getMessage(), request, null);
-    }
-
-    @ExceptionHandler(ResetTokenExpiredException.class)
-    public ResponseEntity<ErrorResponse> handleResetTokenExpired(ResetTokenExpiredException ex,
-                                                                   HttpServletRequest request) {
-        return build(HttpStatus.GONE, ErrorCode.RESET_TOKEN_EXPIRED, ex.getMessage(), request, null);
-    }
-
-    @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex,
-                                                                HttpServletRequest request) {
-        return build(HttpStatus.UNAUTHORIZED, ErrorCode.INVALID_CREDENTIALS, ex.getMessage(), request, null);
+    public ResponseEntity<ErrorResponse> handleBusinessRule(BusinessRuleException ex) {
+        HttpStatus status = switch (ex.getErrorCode()) {
+            case INVALID_CREDENTIALS, ACCOUNT_LOCKED, ACCOUNT_INACTIVE -> HttpStatus.UNAUTHORIZED;
+            case RESOURCE_NOT_FOUND -> HttpStatus.NOT_FOUND;
+            case DUPLICATE_DATA -> HttpStatus.CONFLICT;
+            case FORBIDDEN -> HttpStatus.FORBIDDEN;
+            default -> HttpStatus.BAD_REQUEST;
+        };
+        return ResponseEntity.status(status)
+                .body(ErrorResponse.of(ex.getErrorCode().name(), ex.getMessage()));
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex,
-                                                              HttpServletRequest request) {
-        return build(HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN,
-                "Bạn không có quyền thực hiện thao tác này", request, null);
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication != null ? authentication.getName() : "anonymous";
+        log.warn("ACCESS_DENIED username={} method={} uri={}", username, request.getMethod(), request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ErrorResponse.of(ErrorCode.FORBIDDEN.name(), "Ban khong co quyen thuc hien thao tac nay"));
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
+        List<FieldError> fieldErrors = ex.getBindingResult().getFieldErrors().stream()
+                .map(fe -> new FieldError(fe.getField(), fe.getDefaultMessage()))
+                .collect(Collectors.toList());
+
+        ErrorResponse body = ErrorResponse.builder()
+                .success(false)
+                .errorCode(ErrorCode.VALIDATION_ERROR.name())
+                .message("Dữ liệu không hợp lệ")
+                .timestamp(LocalDateTime.now())
+                .fieldErrors(fieldErrors)
+                .build();
+
+        return ResponseEntity.badRequest().body(body);
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex, HttpServletRequest request) {
-        log.error("Lỗi không mong muốn tại {}", request.getRequestURI(), ex);
-        return build(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.INTERNAL_ERROR,
-                "Hệ thống gặp sự cố, vui lòng thử lại sau", request, null);
-    }
-
-    private ResponseEntity<ErrorResponse> build(HttpStatus status, ErrorCode errorCode, String message,
-                                                 HttpServletRequest request, List<FieldError> fieldErrors) {
-        ErrorResponse body = ErrorResponse.builder()
-                .timestamp(Instant.now())
-                .status(status.value())
-                .errorCode(errorCode.name())
-                .message(message)
-                .path(request.getRequestURI())
-                .fieldErrors(fieldErrors)
-                .build();
-        return ResponseEntity.status(status).body(body);
+    public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex) {
+        return ResponseEntity.internalServerError()
+                .body(ErrorResponse.of(ErrorCode.INTERNAL_ERROR.name(), "Da co loi xay ra, vui long thu lai sau"));
     }
 }

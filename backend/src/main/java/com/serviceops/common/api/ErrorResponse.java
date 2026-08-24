@@ -1,20 +1,29 @@
 package com.serviceops.common.api;
 
-import java.time.Instant;
-import java.util.List;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
-/**
- * Định dạng lỗi trả về thống nhất cho toàn bộ API, dùng bởi GlobalExceptionHandler.
- */
+import java.time.LocalDateTime;
+import java.util.List;
+
 @Getter
 @Builder
+@AllArgsConstructor
 public class ErrorResponse {
-    private final Instant timestamp;
-    private final int status;
-    private final String errorCode;
-    private final String message;
-    private final String path;
-    private final List<FieldError> fieldErrors;
+
+    private boolean success;
+    private String errorCode;
+    private String message;
+    private LocalDateTime timestamp;
+    private List<FieldError> fieldErrors;
+
+    public static ErrorResponse of(String errorCode, String message) {
+        return ErrorResponse.builder()
+                .success(false)
+                .errorCode(errorCode)
+                .message(message)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
 }
