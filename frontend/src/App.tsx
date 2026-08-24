@@ -9,6 +9,7 @@ import MaskingRulePage from './modules/masking/pages/MaskingRulePage';
 import SensitiveAccessLogPage from './modules/auditLog/pages/SensitiveAccessLogPage';
 import EmployeeListPage from './modules/employees/pages/EmployeeListPage';
 import EmployeeDetailPage from './modules/employees/pages/EmployeeDetailPage';
+import ChangePasswordPage from './modules/auth/pages/ChangePasswordPage';
 
 function readStoredSession(): AuthSession | null {
   const raw = localStorage.getItem('session');
@@ -24,7 +25,15 @@ export default function App() {
   const [session, setSession] = useState<AuthSession | null>(readStoredSession);
 
   const [activeTab, setActiveTab] = useState<
-    'DEPARTMENTS' | 'PERMISSIONS' | 'USERS' | 'DETAIL' | 'MASKING' | 'AUDIT_LOG' | 'EMPLOYEES' | 'EMPLOYEE_DETAIL'
+    | 'DEPARTMENTS'
+    | 'PERMISSIONS'
+    | 'USERS'
+    | 'DETAIL'
+    | 'MASKING'
+    | 'AUDIT_LOG'
+    | 'EMPLOYEES'
+    | 'EMPLOYEE_DETAIL'
+    | 'CHANGE_PASSWORD'
   >('DEPARTMENTS');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
@@ -114,6 +123,9 @@ export default function App() {
           <span className="user-greeting">
             Xin chào, <strong>{session.fullName}</strong>
           </span>
+          <button type="button" className="btn-logout" onClick={() => setActiveTab('CHANGE_PASSWORD')}>
+            🔑 Đổi mật khẩu
+          </button>
           <button type="button" className="btn-logout" onClick={handleLogout}>
             Đăng xuất
           </button>
@@ -121,7 +133,9 @@ export default function App() {
       </header>
 
       <main className="app-content">
-        {activeTab === 'DEPARTMENTS' ? (
+        {activeTab === 'CHANGE_PASSWORD' ? (
+          <ChangePasswordPage onBack={() => setActiveTab('DEPARTMENTS')} onPasswordChanged={handleLogout} />
+        ) : activeTab === 'DEPARTMENTS' ? (
           <DepartmentTreePage
             currentUserRoles={currentRoles}
             currentUserName={session.fullName}

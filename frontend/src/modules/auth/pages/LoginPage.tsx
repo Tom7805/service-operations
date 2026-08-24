@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { AuthSession } from '../types/authTypes';
 import LoginForm from '../components/LoginForm';
+import ForgotPasswordForm from '../components/ForgotPasswordForm';
+import ResetPasswordForm from '../components/ResetPasswordForm';
 
 interface LoginPageProps { onAuthenticated: (session: AuthSession) => void }
 
@@ -39,7 +41,29 @@ function Highlights() {
   );
 }
 
+type AuthView = 'LOGIN' | 'FORGOT' | 'RESET';
+
 export default function LoginPage({ onAuthenticated }: LoginPageProps) {
+  const [view, setView] = useState<AuthView>('LOGIN');
+  const [resetToken, setResetToken] = useState<string | null>(null);
+
+  // Liên kết khôi phục mật khẩu (mô phỏng qua log backend — QTN-04) đưa người dùng thẳng
+  // vào đây kèm ?token=..., không cần đăng nhập trước.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    if (token) {
+      setResetToken(token);
+      setView('RESET');
+    }
+  }, []);
+
+  const handleResetDone = () => {
+    window.history.replaceState({}, '', window.location.pathname);
+    setResetToken(null);
+    setView('LOGIN');
+  };
+
   return (
     <main className="login-shell">
       <div className="ambient ambient--one" />
@@ -62,7 +86,9 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
         <p className="brand-footer">© {new Date().getFullYear()} Vận Hành Dịch Vụ</p>
       </section>
       <section className="login-panel">
-        <LoginForm onAuthenticated={onAuthenticated} />
+        {view === 'LOGIN' && <LoginForm onAuthenticated={onAuthenticated} onForgotPassword={() => setView('FORGOT')} />}
+        {view === 'FORGOT' && <ForgotPasswordForm onBackToLogin={() => setView('LOGIN')} />}
+        {view === 'RESET' && resetToken && <ResetPasswordForm token={resetToken} onDone={handleResetDone} />}
       </section>
     </main>
   );
