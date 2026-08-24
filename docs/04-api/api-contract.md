@@ -190,3 +190,70 @@ Yêu cầu token của Nhân sự / Kế toán / Ban giám đốc (`VT-06`, `VT-
 - TC-01 (báo cáo hiệu quả dự án hiện doanh thu nhưng che giá vốn) và TC-02 (tệp xuất không có cột bị che) sẽ được
   thể hiện đầy đủ khi các API báo cáo/dự án thật (`NCL-09`, `NCL-11`) được triển khai; cơ chế `"***"` ở trên áp
   dụng y hệt cho các API đó khi có.
+
+---
+
+### `NCL-01-CN-006` — Nhật ký truy cập dữ liệu nhạy cảm
+
+Chỉ **Quản trị viên** (`VT-07`) được truy cập (TC-03). Yêu cầu token `Authorization: Bearer <accessToken>`.
+
+#### `GET /sensitive-access-logs`
+
+Tra cứu nhật ký truy cập dữ liệu nhạy cảm (lương, chi phí, giá vốn, biên lợi nhuận) theo bộ lọc và phân trang.
+
+**Query params:**
+
+| Tham số | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `userId` | number | không | Lọc theo mã người dùng thực hiện truy cập |
+| `username` | string | không | Lọc theo tên tài khoản (tìm chứa, không phân biệt hoa thường) |
+| `dataType` | string | không | `SALARY`, `COST`, `COST_OF_GOODS` hoặc `MARGIN` |
+| `from` | datetime | không | Ngày giờ bắt đầu (ISO-8601), bao gồm |
+| `to` | datetime | không | Ngày giờ kết thúc (ISO-8601), bao gồm |
+| `page` | number | không | Số trang, bắt đầu từ 0 (mặc định `0`) |
+| `size` | number | không | Số bản ghi mỗi trang, từ 1–200 (mặc định `20`) |
+
+**Ví dụ:**
+```
+GET /api/v1/sensitive-access-logs?userId=1&from=2026-08-01T00:00:00&to=2026-08-31T23:59:59&page=0&size=20
+```
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "content": [
+      {
+        "id": 12,
+        "userId": 1,
+        "username": "admin",
+        "action": "EXPORT",
+        "dataType": "MARGIN",
+        "targetId": 5,
+        "targetRef": "DuAn/5",
+        "ipAddress": "203.0.113.25",
+        "detail": "Xuat bao cao bien loi nhuan",
+        "accessedAt": "2026-08-20T16:44:42"
+      }
+    ],
+    "page": 0,
+    "size": 20,
+    "totalElements": 1,
+    "totalPages": 1
+  }
+}
+```
+
+- `action` nhận `VIEW` (xem), `EXPORT` (xuất), hoặc `DENIED` (bị từ chối).
+- `dataType` nhận `SALARY`, `COST`, `COST_OF_GOODS`, `MARGIN`.
+- Khi không có bản ghi thỏa bộ lọc, `content` rỗng và `totalElements = 0` (TC-02).
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải quản trị viên (`VT-07`) — hệ thống cũng ghi nhật ký lần từ chối (TC-03) |
+| 400 | `VALIDATION_ERROR` | Tham số `page`/`size` không hợp lệ |
