@@ -17,6 +17,7 @@ import com.serviceops.modules.identity.user.repository.RoleRepository;
 import com.serviceops.modules.identity.user.repository.UserRepository;
 import com.serviceops.modules.identity.user.repository.UserRoleScopeRepository;
 import com.serviceops.security.JwtProvider;
+import com.serviceops.security.LoginAttemptService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -61,6 +62,7 @@ public class TwoFactorServiceImpl implements TwoFactorService {
     private final UserRepository userRepository;
     private final UserRoleScopeRepository userRoleScopeRepository;
     private final JwtProvider jwtProvider;
+    private final LoginAttemptService loginAttemptService;
 
     @Value("${app.two-factor.otp-ttl-minutes:5}")
     private long otpTtlMinutes;
@@ -125,8 +127,7 @@ public class TwoFactorServiceImpl implements TwoFactorService {
             if (session.getOtpAttempts() >= MAX_OTP_ATTEMPTS) {
                 // TC-02: nhap sai 3 lan lien tiep -> tam khoa dang nhap va canh bao quan tri vien.
                 User user = session.getUser();
-                user.setLockedUntil(LocalDateTime.now().plusMinutes(lockMinutes));
-                userRepository.save(user);
+                loginAttemptService.lockForTwoFactor(user, lockMinutes);
 
                 log.warn("TWO_FACTOR_MAX_ATTEMPTS userId={} username={} - tam khoa dang nhap. Canh bao quan tri vien (TC-02).",
                         user.getId(), user.getUsername());
