@@ -28,7 +28,7 @@ public class EmploymentContract extends BaseEntity {
     private Employee employee;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "contract_type", nullable = false, length = 50)
+    @Column(name = "contract_type", nullable = false, columnDefinition = "VARCHAR(50)")
     private EmploymentType contractType;
 
     @Column(name = "start_date", nullable = false)
