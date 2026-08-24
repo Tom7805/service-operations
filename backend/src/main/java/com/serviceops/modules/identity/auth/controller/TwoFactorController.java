@@ -7,6 +7,8 @@ import com.serviceops.modules.identity.auth.dto.response.LoginRes;
 import com.serviceops.modules.identity.auth.dto.response.TwoFactorSetupRes;
 import com.serviceops.modules.identity.auth.service.TwoFactorService;
 import com.serviceops.security.CustomUserDetails;
+import com.serviceops.security.TwoFactorRateLimiter;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,9 +29,12 @@ import java.util.List;
 public class TwoFactorController {
 
 	private final TwoFactorService twoFactorService;
+	private final TwoFactorRateLimiter twoFactorRateLimiter;
 
 	@PostMapping("/verify")
-	public BaseRes<LoginRes> verify(@Valid @RequestBody TwoFactorVerifyReq request) {
+	public BaseRes<LoginRes> verify(@Valid @RequestBody TwoFactorVerifyReq request,
+									 HttpServletRequest httpRequest) {
+		twoFactorRateLimiter.check(httpRequest.getRemoteAddr(), request.getChallengeToken());
 		return BaseRes.ok(twoFactorService.verifyTwoFactor(request));
 	}
 

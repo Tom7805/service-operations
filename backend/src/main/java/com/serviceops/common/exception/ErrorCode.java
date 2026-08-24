@@ -11,5 +11,6 @@ public enum ErrorCode {
     FORBIDDEN,
     RESET_TOKEN_INVALID,
     TWO_FACTOR_INVALID,
+    TOO_MANY_REQUESTS,
     INTERNAL_ERROR
 }

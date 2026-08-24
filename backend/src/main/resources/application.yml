@@ -24,6 +24,9 @@ app:
   two-factor:
     otp-ttl-minutes: ${TWO_FACTOR_OTP_TTL_MINUTES:5}
     lock-minutes: ${TWO_FACTOR_LOCK_MINUTES:15}
+    rate-limit:
+      max-attempts: ${TWO_FACTOR_RATE_LIMIT_MAX_ATTEMPTS:5}
+      window-seconds: ${TWO_FACTOR_RATE_LIMIT_WINDOW_SECONDS:60}
 
 springdoc:
   api-docs:

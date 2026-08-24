@@ -27,6 +27,7 @@ public class GlobalExceptionHandler {
             case INVALID_CREDENTIALS, ACCOUNT_LOCKED, ACCOUNT_INACTIVE -> HttpStatus.UNAUTHORIZED;
             case RESOURCE_NOT_FOUND -> HttpStatus.NOT_FOUND;
             case DUPLICATE_DATA -> HttpStatus.CONFLICT;
+            case TOO_MANY_REQUESTS -> HttpStatus.TOO_MANY_REQUESTS;
             case FORBIDDEN -> HttpStatus.FORBIDDEN;
             default -> HttpStatus.BAD_REQUEST;
         };
