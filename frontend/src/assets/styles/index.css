@@ -81,6 +81,7 @@
 .badge--teal { background: #ccfbf1; color: #0f766e; border-color: #99f6e4; }
 .badge--pink { background: #fce7f3; color: #be185d; border-color: #fbcfe8; }
 .badge--gray { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
+.badge--red { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
 
 .status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
 .status-pill__dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
