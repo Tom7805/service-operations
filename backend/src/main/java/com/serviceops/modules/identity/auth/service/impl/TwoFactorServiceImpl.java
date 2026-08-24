@@ -13,6 +13,7 @@ import com.serviceops.modules.identity.auth.repository.UserSessionRepository;
 import com.serviceops.modules.identity.auth.service.TwoFactorService;
 import com.serviceops.modules.identity.user.entity.Role;
 import com.serviceops.modules.identity.user.entity.User;
+import com.serviceops.modules.identity.user.enums.UserStatus;
 import com.serviceops.modules.identity.user.repository.RoleRepository;
 import com.serviceops.modules.identity.user.repository.UserRepository;
 import com.serviceops.modules.identity.user.repository.UserRoleScopeRepository;
@@ -121,12 +122,29 @@ public class TwoFactorServiceImpl implements TwoFactorService {
                     "Ma xac thuc da het han, vui long dang nhap lai de gui ma moi");
         }
 
+        User user = userRepository.findById(session.getUser().getId())
+            .orElseThrow(() -> new BusinessRuleException(ErrorCode.TWO_FACTOR_INVALID,
+                "Tai khoan khong con ton tai, vui long dang nhap lai"));
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new BusinessRuleException(ErrorCode.ACCOUNT_INACTIVE,
+                "Tai khoan khong con duoc phep dang nhap");
+        }
+        if (loginAttemptService.isLocked(user)) {
+            throw new BusinessRuleException(ErrorCode.ACCOUNT_LOCKED,
+                "Tai khoan dang tam khoa, vui long thu lai sau");
+        }
+
+        List<String> currentRoles = userRoleScopeRepository.findRoleCodesByUserId(user.getId());
+        if (!requiresTwoFactor(currentRoles)) {
+            throw new BusinessRuleException(ErrorCode.TWO_FACTOR_INVALID,
+                "Chinh sach xac thuc hai buoc da thay doi, vui long dang nhap lai");
+        }
+
         if (!hashOtp(request.getOtp()).equals(session.getOtpHash())) {
             session.setOtpAttempts(session.getOtpAttempts() + 1);
 
             if (session.getOtpAttempts() >= MAX_OTP_ATTEMPTS) {
                 // TC-02: nhap sai 3 lan lien tiep -> tam khoa dang nhap va canh bao quan tri vien.
-                User user = session.getUser();
                 loginAttemptService.lockForTwoFactor(user, lockMinutes);
 
                 log.warn("TWO_FACTOR_MAX_ATTEMPTS userId={} username={} - tam khoa dang nhap. Canh bao quan tri vien (TC-02).",
@@ -147,9 +165,7 @@ public class TwoFactorServiceImpl implements TwoFactorService {
 
         log.info("TWO_FACTOR_VERIFIED userId={} username={}", session.getUser().getId(), session.getUser().getUsername());
 
-        User user = session.getUser();
-        List<String> roles = userRoleScopeRepository.findRoleCodesByUserId(user.getId());
-        return issueLoginRes(user, roles);
+        return issueLoginRes(user, currentRoles);
     }
 
     @Override
