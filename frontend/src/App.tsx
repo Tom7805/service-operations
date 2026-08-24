@@ -6,6 +6,7 @@ import UserDetailPage from './modules/users/pages/UserDetailPage';
 import RolePermissionPage from './modules/users/pages/RolePermissionPage';
 import DepartmentTreePage from './modules/departments/pages/DepartmentTreePage';
 import MaskingRulePage from './modules/masking/pages/MaskingRulePage';
+import SensitiveAccessLogPage from './modules/auditLog/pages/SensitiveAccessLogPage';
 
 function readStoredSession(): AuthSession | null {
   const raw = localStorage.getItem('session');
@@ -20,7 +21,7 @@ function readStoredSession(): AuthSession | null {
 export default function App() {
   const [session, setSession] = useState<AuthSession | null>(readStoredSession);
 
-  const [activeTab, setActiveTab] = useState<'DEPARTMENTS' | 'PERMISSIONS' | 'USERS' | 'DETAIL' | 'MASKING'>('DEPARTMENTS');
+  const [activeTab, setActiveTab] = useState<'DEPARTMENTS' | 'PERMISSIONS' | 'USERS' | 'DETAIL' | 'MASKING' | 'AUDIT_LOG'>('DEPARTMENTS');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [simulatedRole, setSimulatedRole] = useState<'VT-07' | 'VT-03' | 'VT-06'>('VT-07');
 
@@ -74,6 +75,13 @@ export default function App() {
             >
               🔐 Che dữ liệu nhạy cảm
             </button>
+            <button
+              type="button"
+              className={`nav-link ${activeTab === 'AUDIT_LOG' ? 'nav-link--active' : ''}`}
+              onClick={() => setActiveTab('AUDIT_LOG')}
+            >
+              🕵️ Nhật ký truy cập
+            </button>
           </nav>
         </div>
 
@@ -113,6 +121,11 @@ export default function App() {
           />
         ) : activeTab === 'MASKING' ? (
           <MaskingRulePage
+            currentUserRoles={currentRoles}
+            currentUserName={session.fullName}
+          />
+        ) : activeTab === 'AUDIT_LOG' ? (
+          <SensitiveAccessLogPage
             currentUserRoles={currentRoles}
             currentUserName={session.fullName}
           />
