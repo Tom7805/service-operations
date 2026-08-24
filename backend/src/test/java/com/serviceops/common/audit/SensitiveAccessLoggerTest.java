@@ -6,6 +6,7 @@ import com.serviceops.common.audit.enums.SensitiveDataType;
 import com.serviceops.modules.identity.user.entity.User;
 import com.serviceops.common.audit.repository.SensitiveDataAccessLogRepository;
 import com.serviceops.security.CustomUserDetails;
+import com.serviceops.security.scope.UserScope;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -43,7 +44,7 @@ class SensitiveAccessLoggerTest {
         User userEntity = new User();
         userEntity.setId(1L);
         userEntity.setUsername("admin");
-        user = new CustomUserDetails(userEntity, List.of());
+        user = new CustomUserDetails(userEntity, List.of(), UserScope.company());
         // đặt người dùng hiện tại vào SecurityContext
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(user, null, List.of()));
