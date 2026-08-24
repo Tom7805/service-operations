@@ -260,6 +260,9 @@
 
 .tree-children-container { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
 
+/* Masked Cell (NCL-01-CN-005) */
+.masked-cell { display: inline-block; padding: 2px 10px; background: #f1f5f9; border: 1px dashed #94a3b8; border-radius: 6px; color: #64748b; font-weight: 700; letter-spacing: 2px; cursor: help; user-select: none; }
+
 /* Move Department Location Box */
 .move-location-preview { display: flex; flex-direction: column; align-items: center; gap: 8px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 12px; }
 .location-box { width: 100%; padding: 10px 14px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; }

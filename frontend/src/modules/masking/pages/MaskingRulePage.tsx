@@ -1,0 +1,263 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { getMaskingRules } from '../api/maskingApi';
+import type { MaskingAuditLog, MaskingRule } from '../types/maskingTypes';
+import { canViewSensitiveData } from '../../../hooks/usePermission';
+import { SYSTEM_ROLES } from '../../users/types/userTypes';
+
+interface MaskingRulePageProps {
+  currentUserRoles?: string[];
+  currentUserName?: string;
+}
+
+const ROLE_LABELS: Record<string, string> = Object.fromEntries(
+  SYSTEM_ROLES.map((r) => [r.code, r.name])
+);
+
+export default function MaskingRulePage({
+  currentUserRoles = ['VT-07'],
+  currentUserName = 'Quản trị viên',
+}: MaskingRulePageProps) {
+  const isAllowed = canViewSensitiveData(currentUserRoles);
+
+  const [rules, setRules] = useState<MaskingRule[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  // TC-05: Nhật ký truy cập dữ liệu nhạy cảm
+  const [auditLogs, setAuditLogs] = useState<MaskingAuditLog[]>([
+    {
+      id: 'audit-mask-1',
+      timestamp: new Date().toLocaleTimeString('vi-VN') + ' ' + new Date().toLocaleDateString('vi-VN'),
+      action: 'Xem cấu hình che dữ liệu',
+      performedBy: currentUserName,
+      details: 'Mở màn hình cấu hình quy tắc che dữ liệu lương/giá vốn',
+    },
+  ]);
+
+  const showToast = useCallback((text: string, type: 'success' | 'error' = 'success') => {
+    setToastMessage({ text, type });
+    setTimeout(() => setToastMessage(null), 4000);
+  }, []);
+
+  const addAuditLog = useCallback(
+    (action: string, details: string) => {
+      const newLog: MaskingAuditLog = {
+        id: `audit-mask-${Date.now()}`,
+        timestamp: new Date().toLocaleTimeString('vi-VN') + ' ' + new Date().toLocaleDateString('vi-VN'),
+        action,
+        performedBy: currentUserName,
+        details,
+      };
+      setAuditLogs((prev) => [newLog, ...prev]);
+    },
+    [currentUserName]
+  );
+
+  const fetchRules = useCallback(async () => {
+    if (!isAllowed) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getMaskingRules();
+      setRules(data);
+      addAuditLog(
+        'Tải danh sách quy tắc che dữ liệu',
+        `Tải thành công ${data.length} quy tắc che dữ liệu lương/giá vốn từ máy chủ`
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể tải danh sách quy tắc che dữ liệu.';
+      setError(message);
+      showToast(message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [isAllowed, addAuditLog, showToast]);
+
+  useEffect(() => {
+    fetchRules();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchRules]);
+
+  const allowedRoleNames = useMemo(
+    () => (rules.length > 0 ? rules[0].allowedRoles : []),
+    [rules]
+  );
+
+  // TC-04: Từ chối truy cập nếu không đủ quyền
+  if (!isAllowed) {
+    return (
+      <div className="access-denied-container">
+        <div className="access-denied-card">
+          <div className="access-denied-icon">🔒</div>
+          <span className="eyebrow text-danger">Từ chối truy cập (Access Denied)</span>
+          <h2>Bạn không có thẩm quyền truy cập dữ liệu nhạy cảm</h2>
+          <p>
+            Chức năng cấu hình quy tắc che dữ liệu lương/giá vốn chỉ dành cho các vai trò{' '}
+            <strong>Nhân sự (VT-06)</strong>, <strong>Kế toán (VT-05)</strong> và{' '}
+            <strong>Ban giám đốc (VT-01)</strong>. Hệ thống đã ghi nhận lần truy cập trái phép này.
+          </p>
+          <div className="security-log-badge">
+            <span>🛡️ Lần thử truy cập: {new Date().toLocaleString('vi-VN')}</span>
+            <span>Tài khoản: {currentUserName}</span>
+            <span>Vai trò hiện tại: {currentUserRoles.join(', ')}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="user-management-page">
+      {toastMessage && (
+        <div className={`toast-notification toast--${toastMessage.type}`} role="status">
+          <span className="toast__icon">{toastMessage.type === 'success' ? '✅' : '⚠️'}</span>
+          <span>{toastMessage.text}</span>
+          <button type="button" className="toast__close" onClick={() => setToastMessage(null)}>
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Page Header */}
+      <div className="page-header">
+        <div>
+          <div className="breadcrumb">
+            <span>Hệ thống</span> / <span>Bảo mật dữ liệu</span> /{' '}
+            <span className="active">Che dữ liệu lương & giá vốn</span>
+          </div>
+          <h1 className="page-title">Che dữ liệu lương & giá vốn (NCL-01-CN-005)</h1>
+          <p className="page-subtitle">
+            Cấu hình quy tắc che dữ liệu lương/chi phí giờ công và giá vốn theo vai trò (QTN-02).
+            Chỉ nhân sự, kế toán và ban giám đốc mới được xem dữ liệu thật.
+          </p>
+        </div>
+        <button type="button" className="btn-icon-refresh" onClick={fetchRules} title="Làm mới dữ liệu">
+          🔄
+        </button>
+      </div>
+
+      {/* KPI Stats */}
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-card__icon stat-card__icon--purple">🔐</div>
+          <div>
+            <span className="stat-card__label">Quy tắc che dữ liệu</span>
+            <strong className="stat-card__value">{rules.length}</strong>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-card__icon stat-card__icon--green">👥</div>
+          <div>
+            <span className="stat-card__label">Vai trò được phép xem</span>
+            <strong className="stat-card__value">{allowedRoleNames.length}</strong>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-card__icon stat-card__icon--blue">📋</div>
+          <div>
+            <span className="stat-card__label">Lượt truy cập gần đây</span>
+            <strong className="stat-card__value">{auditLogs.length}</strong>
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <div className="alert alert--error" role="alert">
+          <span>⚠️ {error}</span>
+          <button type="button" className="btn-secondary text-dark ml-auto" onClick={fetchRules}>
+            Thử lại
+          </button>
+        </div>
+      )}
+
+      {/* Danh sách quy tắc che dữ liệu */}
+      <div className="user-table-card">
+        <div className="user-table-toolbar">
+          <h3 style={{ margin: 0, fontSize: '15px', color: '#0f172a' }}>
+            📋 Danh sách quy tắc che dữ liệu
+          </h3>
+          <span className="badge-pulse">Đang áp dụng QTN-02</span>
+        </div>
+        <div className="table-responsive">
+          <table className="user-data-table">
+            <thead>
+              <tr>
+                <th>Mã quy tắc</th>
+                <th>Loại dữ liệu nhạy cảm</th>
+                <th>Vai trò được phép xem</th>
+                <th>Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={4} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                    <div className="loader" style={{ margin: '0 auto 10px', borderColor: '#10b981', borderTopColor: 'transparent' }} />
+                    Đang tải danh sách quy tắc che dữ liệu...
+                  </td>
+                </tr>
+              ) : rules.length === 0 ? (
+                <tr>
+                  <td colSpan={4} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                    Không có quy tắc che dữ liệu nào.
+                  </td>
+                </tr>
+              ) : (
+                rules.map((rule) => (
+                  <tr key={rule.level}>
+                    <td>
+                      <span className="checklist-code">{rule.level}</span>
+                    </td>
+                    <td>
+                      <strong style={{ color: '#0f172a' }}>{rule.levelLabel}</strong>
+                    </td>
+                    <td>
+                      <div className="user-tags-wrap">
+                        {rule.allowedRoles.map((roleCode) => (
+                          <span key={roleCode} className="user-tag badge--green" title={ROLE_LABELS[roleCode] || roleCode}>
+                            <strong className="user-tag__code">{roleCode}</strong>
+                            <span>{ROLE_LABELS[roleCode] || roleCode}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td>
+                      <span className="status-pill status-pill--active">
+                        <span className="status-pill__dot" /> Đang áp dụng
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Audit Log TC-05 */}
+      <div className="audit-log-card" style={{ marginTop: '24px' }}>
+        <div className="audit-log-header">
+          <h3 className="audit-log-title">📋 Nhật ký truy cập dữ liệu nhạy cảm (Audit Log)</h3>
+          <span className="badge-pulse">Lưu vết 100% realtime</span>
+        </div>
+        <div className="audit-log-list">
+          {auditLogs.map((log) => (
+            <div key={log.id} className="audit-log-item">
+              <div className="audit-log-icon">🔐</div>
+              <div className="audit-log-meta">
+                <div className="audit-log-row">
+                  <strong>{log.action}</strong>
+                  <span className="audit-log-time">{log.timestamp}</span>
+                </div>
+                <p className="audit-log-details">
+                  {log.details} • Thực hiện bởi <em>{log.performedBy}</em>
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

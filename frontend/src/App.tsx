@@ -5,6 +5,7 @@ import UserListPage from './modules/users/pages/UserListPage';
 import UserDetailPage from './modules/users/pages/UserDetailPage';
 import RolePermissionPage from './modules/users/pages/RolePermissionPage';
 import DepartmentTreePage from './modules/departments/pages/DepartmentTreePage';
+import MaskingRulePage from './modules/masking/pages/MaskingRulePage';
 
 function readStoredSession(): AuthSession | null {
   const raw = localStorage.getItem('session');
@@ -19,7 +20,7 @@ function readStoredSession(): AuthSession | null {
 export default function App() {
   const [session, setSession] = useState<AuthSession | null>(readStoredSession);
 
-  const [activeTab, setActiveTab] = useState<'DEPARTMENTS' | 'PERMISSIONS' | 'USERS' | 'DETAIL'>('DEPARTMENTS');
+  const [activeTab, setActiveTab] = useState<'DEPARTMENTS' | 'PERMISSIONS' | 'USERS' | 'DETAIL' | 'MASKING'>('DEPARTMENTS');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [simulatedRole, setSimulatedRole] = useState<'VT-07' | 'VT-03'>('VT-07');
 
@@ -66,6 +67,13 @@ export default function App() {
             >
               👤 Quản lý tài khoản (NCL-01-CN-002)
             </button>
+            <button
+              type="button"
+              className={`nav-link ${activeTab === 'MASKING' ? 'nav-link--active' : ''}`}
+              onClick={() => setActiveTab('MASKING')}
+            >
+              🔐 Che dữ liệu lương & giá vốn (NCL-01-CN-005)
+            </button>
           </nav>
         </div>
 
@@ -99,6 +107,11 @@ export default function App() {
           />
         ) : activeTab === 'PERMISSIONS' ? (
           <RolePermissionPage
+            currentUserRoles={currentRoles}
+            currentUserName={session.fullName}
+          />
+        ) : activeTab === 'MASKING' ? (
+          <MaskingRulePage
             currentUserRoles={currentRoles}
             currentUserName={session.fullName}
           />
