@@ -111,7 +111,7 @@ public class TwoFactorServiceImpl implements TwoFactorService {
                 .orElseThrow(() -> new BusinessRuleException(ErrorCode.TWO_FACTOR_INVALID,
                         "Ma xac thuc khong hop le, vui long dang nhap lai"));
 
-        if (session.isVerified()) {
+        if (session.isVerified() || session.getRevokedAt() != null) {
             throw new BusinessRuleException(ErrorCode.TWO_FACTOR_INVALID,
                     "Ma xac thuc da duoc su dung, vui long dang nhap lai");
         }
