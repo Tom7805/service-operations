@@ -7,6 +7,8 @@ import RolePermissionPage from './modules/users/pages/RolePermissionPage';
 import DepartmentTreePage from './modules/departments/pages/DepartmentTreePage';
 import MaskingRulePage from './modules/masking/pages/MaskingRulePage';
 import SensitiveAccessLogPage from './modules/auditLog/pages/SensitiveAccessLogPage';
+import EmployeeListPage from './modules/employees/pages/EmployeeListPage';
+import EmployeeDetailPage from './modules/employees/pages/EmployeeDetailPage';
 
 function readStoredSession(): AuthSession | null {
   const raw = localStorage.getItem('session');
@@ -21,8 +23,11 @@ function readStoredSession(): AuthSession | null {
 export default function App() {
   const [session, setSession] = useState<AuthSession | null>(readStoredSession);
 
-  const [activeTab, setActiveTab] = useState<'DEPARTMENTS' | 'PERMISSIONS' | 'USERS' | 'DETAIL' | 'MASKING' | 'AUDIT_LOG'>('DEPARTMENTS');
+  const [activeTab, setActiveTab] = useState<
+    'DEPARTMENTS' | 'PERMISSIONS' | 'USERS' | 'DETAIL' | 'MASKING' | 'AUDIT_LOG' | 'EMPLOYEES' | 'EMPLOYEE_DETAIL'
+  >('DEPARTMENTS');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
   const [simulatedRole, setSimulatedRole] = useState<'VT-07' | 'VT-03' | 'VT-06'>('VT-07');
 
   function handleAuthenticated(newSession: AuthSession) {
@@ -67,6 +72,13 @@ export default function App() {
               onClick={() => setActiveTab('USERS')}
             >
               👤 Tài khoản
+            </button>
+            <button
+              type="button"
+              className={`nav-link ${activeTab === 'EMPLOYEES' || activeTab === 'EMPLOYEE_DETAIL' ? 'nav-link--active' : ''}`}
+              onClick={() => setActiveTab('EMPLOYEES')}
+            >
+              🧑‍💼 Hồ sơ nhân sự
             </button>
             <button
               type="button"
@@ -128,6 +140,17 @@ export default function App() {
           <SensitiveAccessLogPage
             currentUserRoles={currentRoles}
             currentUserName={session.fullName}
+          />
+        ) : activeTab === 'EMPLOYEE_DETAIL' && selectedEmployeeId ? (
+          <EmployeeDetailPage employeeId={selectedEmployeeId} onBack={() => setActiveTab('EMPLOYEES')} />
+        ) : activeTab === 'EMPLOYEES' ? (
+          <EmployeeListPage
+            currentUserRoles={currentRoles}
+            currentUserName={session.fullName}
+            onNavigateDetail={(id) => {
+              setSelectedEmployeeId(id);
+              setActiveTab('EMPLOYEE_DETAIL');
+            }}
           />
         ) : activeTab === 'DETAIL' && selectedUserId ? (
           <UserDetailPage userId={selectedUserId} onBack={() => setActiveTab('USERS')} />
