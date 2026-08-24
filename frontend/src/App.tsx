@@ -5,6 +5,7 @@ import UserListPage from './modules/users/pages/UserListPage';
 import UserDetailPage from './modules/users/pages/UserDetailPage';
 import RolePermissionPage from './modules/users/pages/RolePermissionPage';
 import DepartmentTreePage from './modules/departments/pages/DepartmentTreePage';
+import MaskingRulePage from './modules/masking/pages/MaskingRulePage';
 
 function readStoredSession(): AuthSession | null {
   const raw = localStorage.getItem('session');
@@ -19,9 +20,9 @@ function readStoredSession(): AuthSession | null {
 export default function App() {
   const [session, setSession] = useState<AuthSession | null>(readStoredSession);
 
-  const [activeTab, setActiveTab] = useState<'DEPARTMENTS' | 'PERMISSIONS' | 'USERS' | 'DETAIL'>('DEPARTMENTS');
+  const [activeTab, setActiveTab] = useState<'DEPARTMENTS' | 'PERMISSIONS' | 'USERS' | 'DETAIL' | 'MASKING'>('DEPARTMENTS');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
-  const [simulatedRole, setSimulatedRole] = useState<'VT-07' | 'VT-03'>('VT-07');
+  const [simulatedRole, setSimulatedRole] = useState<'VT-07' | 'VT-03' | 'VT-06'>('VT-07');
 
   function handleAuthenticated(newSession: AuthSession) {
     localStorage.setItem('token', newSession.accessToken);
@@ -37,7 +38,7 @@ export default function App() {
 
   if (!session) return <LoginPage onAuthenticated={handleAuthenticated} />;
 
-  const currentRoles = simulatedRole === 'VT-07' ? ['VT-07'] : ['VT-03'];
+  const currentRoles = [simulatedRole];
 
   return (
     <div className="app-shell">
@@ -50,34 +51,42 @@ export default function App() {
               className={`nav-link ${activeTab === 'DEPARTMENTS' ? 'nav-link--active' : ''}`}
               onClick={() => setActiveTab('DEPARTMENTS')}
             >
-              🏛️ Khai báo cây tổ chức (NCL-01-CN-003)
+              🏛️ Cây tổ chức
             </button>
             <button
               type="button"
               className={`nav-link ${activeTab === 'PERMISSIONS' ? 'nav-link--active' : ''}`}
               onClick={() => setActiveTab('PERMISSIONS')}
             >
-              🛡️ Phân quyền & Phạm vi (NCL-01-CN-004)
+              🛡️ Phân quyền & Phạm vi
             </button>
             <button
               type="button"
               className={`nav-link ${activeTab === 'USERS' || activeTab === 'DETAIL' ? 'nav-link--active' : ''}`}
               onClick={() => setActiveTab('USERS')}
             >
-              👤 Quản lý tài khoản (NCL-01-CN-002)
+              👤 Tài khoản
+            </button>
+            <button
+              type="button"
+              className={`nav-link ${activeTab === 'MASKING' ? 'nav-link--active' : ''}`}
+              onClick={() => setActiveTab('MASKING')}
+            >
+              🔐 Che dữ liệu nhạy cảm
             </button>
           </nav>
         </div>
 
         <div className="header-right">
           <div className="role-switcher">
-            <span className="switcher-label">Giả lập vai trò (TC-04):</span>
+            <span className="switcher-label">Giả lập vai trò:</span>
             <select
               className="switcher-select"
               value={simulatedRole}
-              onChange={(e) => setSimulatedRole(e.target.value as 'VT-07' | 'VT-03')}
+              onChange={(e) => setSimulatedRole(e.target.value as 'VT-07' | 'VT-03' | 'VT-06')}
             >
               <option value="VT-07">Quản trị viên (VT-07)</option>
+              <option value="VT-06">Nhân sự (VT-06)</option>
               <option value="VT-03">Nhân viên chuyên môn (VT-03)</option>
             </select>
           </div>
@@ -99,6 +108,11 @@ export default function App() {
           />
         ) : activeTab === 'PERMISSIONS' ? (
           <RolePermissionPage
+            currentUserRoles={currentRoles}
+            currentUserName={session.fullName}
+          />
+        ) : activeTab === 'MASKING' ? (
+          <MaskingRulePage
             currentUserRoles={currentRoles}
             currentUserName={session.fullName}
           />

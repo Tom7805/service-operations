@@ -25,3 +25,20 @@ WHERE u.username = 'admin'
   AND NOT EXISTS (
       SELECT 1 FROM user_role_scopes urs WHERE urs.user_id = u.id AND urs.role_id = r.id
   );
+
+-- Tai khoan demo: nhansu / Password@123, vai tro Nhan su (VT-06), pham vi toan cong ty.
+-- Dung de kiem thu cac man hinh chi Nhan su/Ke toan/Ban giam doc duoc xem (vi du NCL-01-CN-005
+-- che du lieu luong va gia von) - tai khoan admin (VT-07) khong nam trong nhom nay nen khong
+-- du de kiem thu day du luong thanh cong cua cac man hinh do.
+INSERT INTO users (username, password_hash, full_name, email, status)
+SELECT 'nhansu', '$2b$10$9RL/bjC8S5hpxlpSDCrhO.f5ALK15DnyexpdEbc.hy2ouUJk0DUtK', 'Nhan su demo', 'nhansu@service-operations.local', 'ACTIVE'
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'nhansu');
+
+INSERT INTO user_role_scopes (user_id, role_id, scope_type)
+SELECT u.id, r.id, 'COMPANY'
+FROM users u
+JOIN roles r ON r.code = 'VT-06'
+WHERE u.username = 'nhansu'
+  AND NOT EXISTS (
+      SELECT 1 FROM user_role_scopes urs WHERE urs.user_id = u.id AND urs.role_id = r.id
+  );

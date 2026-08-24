@@ -1,8 +1,8 @@
 package com.serviceops.common.masking;
 
 public enum MaskingLevel {
-	SALARY("Luong / chi phi gio cong noi bo"),
-	COST("Gia von");
+	SALARY("Lương / chi phí giờ công nội bộ"),
+	COST("Giá vốn");
 
 	private final String label;
 

@@ -91,6 +91,9 @@ Không cần token (endpoint công khai).
 - Khi bất kỳ API nào trả về `401` với `errorCode` khác `INVALID_CREDENTIALS`/`ACCOUNT_LOCKED` (ví dụ token hết hạn),
   điều hướng người dùng quay lại màn hình đăng nhập (đáp ứng AC-03 của story).
 - Tài khoản mẫu để test: `admin` / `Password@123` (vai trò Quản trị viên, phạm vi toàn công ty).
+- Tài khoản mẫu vai trò Nhân sự: `nhansu` / `Password@123` (vai trò `VT-06`, phạm vi toàn công ty) — dùng để test
+  các màn hình chỉ Nhân sự/Kế toán/Ban giám đốc được xem, ví dụ `GET /masking-rules` ở `NCL-01-CN-005` (tài khoản
+  `admin` mang vai trò `VT-07`, không nằm trong nhóm này nên không thấy được luồng thành công).
 
 ---
 
@@ -177,8 +180,8 @@ Yêu cầu token của Nhân sự / Kế toán / Ban giám đốc (`VT-06`, `VT-
 {
   "success": true,
   "data": [
-    { "level": "SALARY", "levelLabel": "Luong / chi phi gio cong noi bo", "allowedRoles": ["VT-01", "VT-05", "VT-06"] },
-    { "level": "COST", "levelLabel": "Gia von", "allowedRoles": ["VT-01", "VT-05", "VT-06"] }
+    { "level": "SALARY", "levelLabel": "Lương / chi phí giờ công nội bộ", "allowedRoles": ["VT-01", "VT-05", "VT-06"] },
+    { "level": "COST", "levelLabel": "Giá vốn", "allowedRoles": ["VT-01", "VT-05", "VT-06"] }
   ]
 }
 ```
