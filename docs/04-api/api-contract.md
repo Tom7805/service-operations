@@ -257,3 +257,101 @@ GET /api/v1/sensitive-access-logs?userId=1&from=2026-08-01T00:00:00&to=2026-08-3
 | 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
 | 403 | `FORBIDDEN` | Không phải quản trị viên (`VT-07`) — hệ thống cũng ghi nhật ký lần từ chối (TC-03) |
 | 400 | `VALIDATION_ERROR` | Tham số `page`/`size` không hợp lệ |
+
+---
+
+### `NCL-01-CN-007` — Quản lý hồ sơ nhân sự và giờ làm việc chuẩn
+
+Yêu cầu token của **Nhân sự** (`VT-06`) hoặc **Quản trị viên** (`VT-07`); vai trò khác nhận `403 FORBIDDEN` (TC-04).
+
+`standardHoursPerWeek` là **mẫu số của tỷ lệ giờ tính phí** (dùng ở báo cáo `NCL-11-CN-002` sau này) — nếu
+không truyền khi tạo hồ sơ, hệ thống mặc định `40.00`; nếu truyền giá trị khác (ví dụ `20.00` cho nhân sự bán
+thời gian) thì hệ thống lưu đúng giá trị đó, **không tự làm tròn về 40** (TC-01, TC-02).
+
+#### `GET /employees?keyword={keyword}&departmentId={departmentId}`
+
+Danh sách hồ sơ nhân sự, cả hai tham số đều tùy chọn. `keyword` tìm theo tên tài khoản hoặc họ tên.
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "userId": 5,
+      "username": "nhanvien01",
+      "fullName": "Nguyen Van A",
+      "departmentId": 2,
+      "departmentName": "Phong ky thuat",
+      "professionalRole": "Ky su phan mem",
+      "standardHoursPerWeek": 40.00,
+      "hireDate": "2026-01-01",
+      "endDate": null
+    }
+  ]
+}
+```
+
+#### `GET /employees/{id}`
+
+Chi tiết một hồ sơ, kèm danh sách hợp đồng lao động (`contracts`) — xem cấu trúc `EmploymentContractRes` ở mục
+`POST /employees/{id}/contracts` bên dưới.
+
+#### `POST /employees`
+
+```json
+{
+  "userId": 5,
+  "departmentId": 2,
+  "professionalRole": "Ky su phan mem",
+  "hireDate": "2026-01-01",
+  "endDate": null,
+  "standardHoursPerWeek": 40.00
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `userId` | number | có | Tài khoản phải tồn tại và **chưa có hồ sơ nhân sự nào khác** gắn với nó |
+| `departmentId` | number | không | |
+| `professionalRole` | string | không | Tối đa 255 ký tự |
+| `hireDate` | date (`yyyy-MM-dd`) | có | Ngày vào làm |
+| `endDate` | date | không | Phải **không sớm hơn** `hireDate`, nếu không hệ thống trả lỗi và không lưu (TC-03) |
+| `standardHoursPerWeek` | number | không | Bỏ trống → mặc định `40.00`; nếu truyền phải > 0 |
+
+#### `PUT /employees/{id}`
+
+Cùng cấu trúc `POST /employees` nhưng bỏ `userId` (không đổi được tài khoản gắn với hồ sơ).
+
+#### `POST /employees/{id}/contracts`
+
+Ghi nhận một hợp đồng lao động cho hồ sơ.
+
+```json
+{ "contractType": "PART_TIME", "startDate": "2026-01-01", "endDate": "2026-12-31" }
+```
+
+`contractType` nhận `FULL_TIME` hoặc `PART_TIME`. `endDate` (nếu có) không được sớm hơn `startDate`.
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "data": { "id": 10, "employeeId": 1, "contractType": "PART_TIME", "startDate": "2026-01-01", "endDate": "2026-12-31", "createdAt": "2026-08-24T10:00:00" }
+}
+```
+
+#### `GET /employees/{id}/contracts`
+
+Danh sách hợp đồng lao động của một hồ sơ, mới nhất trước.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 403 | `FORBIDDEN` | Không phải Nhân sự/Quản trị viên — hệ thống ghi nhật ký lần từ chối (TC-04) |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy tài khoản, bộ phận hoặc hồ sơ nhân sự |
+| 409 | `DUPLICATE_DATA` | Tài khoản đã có hồ sơ nhân sự |
+| 400 | `INVALID_STATE` | `endDate` sớm hơn ngày bắt đầu (TC-03) |
+| 400 | `VALIDATION_ERROR` | Thiếu `userId`/`hireDate` hoặc `standardHoursPerWeek` ≤ 0 |
