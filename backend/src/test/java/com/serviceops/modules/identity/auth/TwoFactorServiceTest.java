@@ -4,10 +4,12 @@ import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.identity.auth.dto.request.TwoFactorVerifyReq;
 import com.serviceops.modules.identity.auth.entity.UserSession;
+import com.serviceops.modules.identity.auth.entity.TwoFactorSetting;
 import com.serviceops.modules.identity.auth.repository.TwoFactorSettingRepository;
 import com.serviceops.modules.identity.auth.repository.UserSessionRepository;
 import com.serviceops.modules.identity.auth.service.impl.TwoFactorServiceImpl;
 import com.serviceops.modules.identity.user.entity.User;
+import com.serviceops.modules.identity.user.entity.Role;
 import com.serviceops.modules.identity.user.enums.UserStatus;
 import com.serviceops.modules.identity.user.repository.RoleRepository;
 import com.serviceops.modules.identity.user.repository.UserRepository;
@@ -19,12 +21,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -59,6 +65,8 @@ class TwoFactorServiceTest {
 	void setUp() {
 		twoFactorService = new TwoFactorServiceImpl(userSessionRepository, twoFactorSettingRepository,
 				roleRepository, userRepository, userRoleScopeRepository, jwtProvider, loginAttemptService);
+		ReflectionTestUtils.setField(twoFactorService, "lockMinutes", 15L);
+		ReflectionTestUtils.setField(twoFactorService, "otpTtlMinutes", 5L);
 
 		user = new User();
 		user.setId(1L);
@@ -99,10 +107,77 @@ class TwoFactorServiceTest {
 				.isEqualTo(ErrorCode.TWO_FACTOR_INVALID);
 	}
 
+	@Test
+	void verifyTwoFactor_expiredOtp_rejectsBeforeCheckingAccount() {
+		session.setOtpExpiresAt(LocalDateTime.now().minusMinutes(1));
+		when(userSessionRepository.findByTokenId("challenge-token")).thenReturn(Optional.of(session));
+
+		assertThatThrownBy(() -> twoFactorService.verifyTwoFactor(request()))
+				.isInstanceOf(BusinessRuleException.class)
+				.extracting("errorCode")
+				.isEqualTo(ErrorCode.TWO_FACTOR_INVALID);
+	}
+
+	@Test
+	void verifyTwoFactor_revokedChallenge_rejectsAsAlreadyUsed() {
+		session.setRevokedAt(LocalDateTime.now().minusSeconds(1));
+		when(userSessionRepository.findByTokenId("challenge-token")).thenReturn(Optional.of(session));
+
+		assertThatThrownBy(() -> twoFactorService.verifyTwoFactor(request()))
+				.isInstanceOf(BusinessRuleException.class)
+				.extracting("errorCode")
+				.isEqualTo(ErrorCode.TWO_FACTOR_INVALID);
+	}
+
+	@Test
+	void verifyTwoFactor_thirdInvalidOtp_locksAccountAndDoesNotIssueJwt() {
+		TwoFactorSetting setting = new TwoFactorSetting();
+		Role role = new Role();
+		role.setCode("VT-01");
+		setting.setRole(role);
+		setting.setEnabled(true);
+
+		session.setOtpHash(sha256("654321"));
+		when(userSessionRepository.findByTokenId("challenge-token")).thenReturn(Optional.of(session));
+		when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+		when(loginAttemptService.isLocked(user)).thenReturn(false);
+		when(userRoleScopeRepository.findRoleCodesByUserId(1L)).thenReturn(List.of("VT-01"));
+		when(twoFactorSettingRepository.findByEnabledTrue()).thenReturn(List.of(setting));
+
+		assertThatThrownBy(() -> twoFactorService.verifyTwoFactor(request()))
+				.isInstanceOf(BusinessRuleException.class)
+				.extracting("errorCode")
+				.isEqualTo(ErrorCode.TWO_FACTOR_INVALID);
+		assertThatThrownBy(() -> twoFactorService.verifyTwoFactor(request()))
+				.isInstanceOf(BusinessRuleException.class)
+				.extracting("errorCode")
+				.isEqualTo(ErrorCode.TWO_FACTOR_INVALID);
+		assertThatThrownBy(() -> twoFactorService.verifyTwoFactor(request()))
+				.isInstanceOf(BusinessRuleException.class)
+				.extracting("errorCode")
+				.isEqualTo(ErrorCode.ACCOUNT_LOCKED);
+
+		verify(loginAttemptService).lockForTwoFactor(user, 15L);
+	}
+
 	private TwoFactorVerifyReq request() {
 		TwoFactorVerifyReq request = new TwoFactorVerifyReq();
 		request.setChallengeToken("challenge-token");
 		request.setOtp("123456");
 		return request;
+	}
+
+	private String sha256(String value) {
+		try {
+			byte[] digest = MessageDigest.getInstance("SHA-256")
+					.digest(value.getBytes(StandardCharsets.UTF_8));
+			StringBuilder result = new StringBuilder();
+			for (byte item : digest) {
+				result.append(String.format("%02x", item));
+			}
+			return result.toString();
+		} catch (Exception exception) {
+			throw new AssertionError(exception);
+		}
 	}
 }
