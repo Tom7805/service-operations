@@ -27,6 +27,11 @@ public class DataMaskingServiceImpl implements DataMaskingService {
 		return allowed ? value : MaskingJsonSerializer.MASKED_VALUE;
 	}
 
+	@Override
+	public Set<String> allowedRoles() {
+		return SENSITIVE_DATA_ROLES;
+	}
+
 	static boolean hasSensitiveDataRole(Authentication authentication) {
 		return authentication != null && authentication.isAuthenticated()
 				&& authentication.getAuthorities().stream()

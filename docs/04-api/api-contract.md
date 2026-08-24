@@ -131,3 +131,62 @@ Cập nhật `fullName`, `email`, `departmentId`, `roleCodes` và tùy chọn `p
 `status` nhận `ACTIVE`, `LOCKED` hoặc `INACTIVE`. Khi mở lại bằng `ACTIVE`, hệ thống xóa bộ đếm đăng nhập sai và thời gian khóa tạm.
 
 Các lỗi riêng của story: `DUPLICATE_DATA` (409), `RESOURCE_NOT_FOUND` (404), `INVALID_STATE` (400), `FORBIDDEN` (403).
+
+---
+
+### `NCL-01-CN-005` — Che dữ liệu lương và giá vốn theo cấp quản lý
+
+Đây là một **cơ chế dùng chung**, không phải một màn hình riêng: bất kỳ trường JSON nào ở bất kỳ API nào
+(hiện tại và sau này — báo giá, chấm công, chi phí, báo cáo hiệu quả dự án...) nếu backend đánh dấu là dữ liệu
+lương/giá vốn thì sẽ tự động được che, không cần Frontend làm gì thêm ở tầng gọi API.
+
+**Quy tắc áp dụng (cố định, không cấu hình theo từng người dùng):**
+
+| Vai trò được xem dữ liệu thật | Mã |
+|---|---|
+| Nhân sự | `VT-06` |
+| Kế toán | `VT-05` |
+| Ban giám đốc | `VT-01` |
+
+Mọi vai trò khác (quản lý dự án, nhân viên chuyên môn, nhân viên kinh doanh...) sẽ nhận giá trị bị che.
+
+**Cách nhận biết một trường bị che ở phía Frontend:**
+
+Trường bị che luôn trả về đúng chuỗi ký tự `"***"` thay cho giá trị thật (số, chuỗi...), ví dụ:
+
+```json
+{ "success": true, "data": { "revenue": 500000000, "laborCost": "***" } }
+```
+
+so với cùng API đó khi gọi bằng tài khoản Kế toán:
+
+```json
+{ "success": true, "data": { "revenue": 500000000, "laborCost": 320000000 } }
+```
+
+Frontend nên viết một hàm dùng chung: nếu giá trị của một ô tiền tệ đúng bằng chuỗi `"***"` thì hiển thị icon khóa
+kèm tooltip "Không có quyền xem", thay vì cố gắng format nó như một con số.
+
+#### `GET /masking-rules`
+
+Trả về danh sách quy tắc che dữ liệu đang hiệu lực — dùng cho màn hình "Cấu hình quy tắc che dữ liệu" (TC-04).
+Yêu cầu token của Nhân sự / Kế toán / Ban giám đốc (`VT-06`, `VT-05`, `VT-01`); vai trò khác nhận `403 FORBIDDEN`.
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "data": [
+    { "level": "SALARY", "levelLabel": "Luong / chi phi gio cong noi bo", "allowedRoles": ["VT-01", "VT-05", "VT-06"] },
+    { "level": "COST", "levelLabel": "Gia von", "allowedRoles": ["VT-01", "VT-05", "VT-06"] }
+  ]
+}
+```
+
+**Lưu ý cho Frontend:**
+- Mọi lần một trường bị che được đọc (qua JSON) hoặc một tài khoản không đủ quyền cố mở `GET /masking-rules`,
+  backend đều ghi log hệ thống (đáp ứng TC-05 và TC-04 của story) — Frontend không cần gọi thêm API nào để việc
+  ghi log này xảy ra, chỉ cần gọi API bình thường.
+- TC-01 (báo cáo hiệu quả dự án hiện doanh thu nhưng che giá vốn) và TC-02 (tệp xuất không có cột bị che) sẽ được
+  thể hiện đầy đủ khi các API báo cáo/dự án thật (`NCL-09`, `NCL-11`) được triển khai; cơ chế `"***"` ở trên áp
+  dụng y hệt cho các API đó khi có.
