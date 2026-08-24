@@ -7,6 +7,7 @@ import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -45,6 +46,43 @@ class DataMaskingServiceTest {
 		assertThat(json).contains("\"laborCost\":\"***\"");
 	}
 
+	@Test
+	void masksEachSensitiveFieldIndependentlyInAReportRow() throws Exception {
+		authenticateAs("VT-02");
+
+		String json = new ObjectMapper().writeValueAsString(
+				new ProjectMarginRow(new BigDecimal("500000000"), new BigDecimal("320000000")));
+
+		assertThat(json).contains("\"revenue\":500000000");
+		assertThat(json).contains("\"laborCost\":\"***\"");
+	}
+
+	@Test
+	void masksSensitiveFieldInsideAListForNonPermittedRole() throws Exception {
+		authenticateAs("VT-04");
+
+		String json = new ObjectMapper().writeValueAsString(
+				List.of(new SensitiveResponse(new BigDecimal("1000000")), new SensitiveResponse(new BigDecimal("2000000"))));
+
+		assertThat(json).doesNotContain("1000000", "2000000");
+		assertThat(json).contains("\"laborCost\":\"***\"");
+	}
+
+	@Test
+	void revealsSensitiveFieldInsideAListForPermittedRole() throws Exception {
+		authenticateAs("VT-06");
+
+		String json = new ObjectMapper().writeValueAsString(
+				List.of(new SensitiveResponse(new BigDecimal("1000000"))));
+
+		assertThat(json).contains("\"laborCost\":1000000");
+	}
+
+	@Test
+	void exposesTheSetOfRolesAllowedToViewSensitiveData() {
+		assertThat(service.allowedRoles()).containsExactlyInAnyOrder("VT-01", "VT-05", "VT-06");
+	}
+
 	private void authenticateAs(String roleCode) {
 		TestingAuthenticationToken authentication = new TestingAuthenticationToken(
 				"user", "password", "ROLE_" + roleCode);
@@ -53,4 +91,6 @@ class DataMaskingServiceTest {
 	}
 
 	record SensitiveResponse(@MaskSensitive(MaskingLevel.COST) BigDecimal laborCost) {}
+
+	record ProjectMarginRow(BigDecimal revenue, @MaskSensitive(MaskingLevel.COST) BigDecimal laborCost) {}
 }
