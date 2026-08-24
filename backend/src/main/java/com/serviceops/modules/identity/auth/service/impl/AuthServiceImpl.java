@@ -5,6 +5,7 @@ import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.identity.auth.dto.request.LoginReq;
 import com.serviceops.modules.identity.auth.dto.response.LoginRes;
 import com.serviceops.modules.identity.auth.service.AuthService;
+import com.serviceops.modules.identity.auth.service.TwoFactorService;
 import com.serviceops.modules.identity.user.entity.User;
 import com.serviceops.modules.identity.user.enums.UserStatus;
 import com.serviceops.modules.identity.user.repository.UserRepository;
@@ -27,6 +28,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
     private final LoginAttemptService loginAttemptService;
+    private final TwoFactorService twoFactorService;
 
     @Override
     @Transactional
@@ -52,6 +54,12 @@ public class AuthServiceImpl implements AuthService {
         loginAttemptService.recordSuccess(user, ipAddress);
 
         List<String> roles = userRoleScopeRepository.findRoleCodesByUserId(user.getId());
+        if (twoFactorService.requiresTwoFactor(roles)) {
+            String challengeToken = twoFactorService.createChallenge(user);
+            return new LoginRes(null, null, user.getId(), user.getUsername(), user.getFullName(),
+                roles, true, challengeToken);
+        }
+
         String token = jwtProvider.generateToken(user.getId(), user.getUsername(), roles, user.getTokenVersion());
 
         return new LoginRes(token, "Bearer", user.getId(), user.getUsername(), user.getFullName(), roles);
