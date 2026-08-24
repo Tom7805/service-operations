@@ -21,6 +21,9 @@ app:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
   password-reset:
     token-ttl-minutes: ${PASSWORD_RESET_TOKEN_TTL_MINUTES:30}
+  two-factor:
+    otp-ttl-minutes: ${TWO_FACTOR_OTP_TTL_MINUTES:5}
+    lock-minutes: ${TWO_FACTOR_LOCK_MINUTES:15}
 
 springdoc:
   api-docs:
