@@ -2,10 +2,13 @@ package com.serviceops.modules.identity.auth;
 
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
+import com.serviceops.modules.identity.auth.dto.request.TwoFactorConfigReq;
 import com.serviceops.modules.identity.auth.dto.request.TwoFactorVerifyReq;
+import com.serviceops.modules.identity.auth.entity.TwoFactorConfigAudit;
 import com.serviceops.modules.identity.auth.entity.UserSession;
 import com.serviceops.modules.identity.auth.entity.TwoFactorSetting;
 import com.serviceops.modules.identity.auth.repository.TwoFactorSettingRepository;
+import com.serviceops.modules.identity.auth.repository.TwoFactorConfigAuditRepository;
 import com.serviceops.modules.identity.auth.repository.UserSessionRepository;
 import com.serviceops.modules.identity.auth.service.impl.TwoFactorServiceImpl;
 import com.serviceops.modules.identity.user.entity.User;
@@ -29,7 +32,9 @@ import java.security.MessageDigest;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -41,6 +46,9 @@ class TwoFactorServiceTest {
 
 	@Mock
 	private TwoFactorSettingRepository twoFactorSettingRepository;
+
+	@Mock
+	private TwoFactorConfigAuditRepository twoFactorConfigAuditRepository;
 
 	@Mock
 	private RoleRepository roleRepository;
@@ -64,7 +72,8 @@ class TwoFactorServiceTest {
 	@BeforeEach
 	void setUp() {
 		twoFactorService = new TwoFactorServiceImpl(userSessionRepository, twoFactorSettingRepository,
-				roleRepository, userRepository, userRoleScopeRepository, jwtProvider, loginAttemptService);
+				twoFactorConfigAuditRepository, roleRepository, userRepository, userRoleScopeRepository,
+				jwtProvider, loginAttemptService);
 		ReflectionTestUtils.setField(twoFactorService, "lockMinutes", 15L);
 		ReflectionTestUtils.setField(twoFactorService, "otpTtlMinutes", 5L);
 
@@ -158,6 +167,36 @@ class TwoFactorServiceTest {
 				.isEqualTo(ErrorCode.ACCOUNT_LOCKED);
 
 		verify(loginAttemptService).lockForTwoFactor(user, 15L);
+	}
+
+	@Test
+	void updateConfig_persistsBeforeAndAfterStateAudit() {
+		Role role = new Role();
+		role.setId(7L);
+		role.setCode("VT-05");
+		role.setName("Ke toan");
+		User updater = new User();
+		updater.setId(9L);
+		updater.setUsername("admin");
+		TwoFactorConfigReq request = new TwoFactorConfigReq();
+		request.setEnabled(true);
+
+		when(roleRepository.findById(7L)).thenReturn(Optional.of(role));
+		when(twoFactorSettingRepository.findByRole_Id(7L)).thenReturn(Optional.empty());
+		when(userRepository.findById(9L)).thenReturn(Optional.of(updater));
+
+		twoFactorService.updateConfig(7L, request, 9L);
+
+		var captor = forClass(TwoFactorConfigAudit.class);
+		verify(twoFactorConfigAuditRepository).save(captor.capture());
+		TwoFactorConfigAudit audit = captor.getValue();
+		assertThat(audit.getRoleId()).isEqualTo(7L);
+		assertThat(audit.getRoleCode()).isEqualTo("VT-05");
+		assertThat(audit.getUpdatedByUserId()).isEqualTo(9L);
+		assertThat(audit.getUpdatedByUsername()).isEqualTo("admin");
+		assertThat(audit.isPreviousEnabled()).isFalse();
+		assertThat(audit.isNewEnabled()).isTrue();
+		assertThat(audit.getChangedAt()).isNotNull();
 	}
 
 	private TwoFactorVerifyReq request() {

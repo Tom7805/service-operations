@@ -7,7 +7,9 @@ import com.serviceops.modules.identity.auth.dto.request.TwoFactorVerifyReq;
 import com.serviceops.modules.identity.auth.dto.response.LoginRes;
 import com.serviceops.modules.identity.auth.dto.response.TwoFactorSetupRes;
 import com.serviceops.modules.identity.auth.entity.TwoFactorSetting;
+import com.serviceops.modules.identity.auth.entity.TwoFactorConfigAudit;
 import com.serviceops.modules.identity.auth.entity.UserSession;
+import com.serviceops.modules.identity.auth.repository.TwoFactorConfigAuditRepository;
 import com.serviceops.modules.identity.auth.repository.TwoFactorSettingRepository;
 import com.serviceops.modules.identity.auth.repository.UserSessionRepository;
 import com.serviceops.modules.identity.auth.service.TwoFactorService;
@@ -59,6 +61,7 @@ public class TwoFactorServiceImpl implements TwoFactorService {
 
     private final UserSessionRepository userSessionRepository;
     private final TwoFactorSettingRepository twoFactorSettingRepository;
+    private final TwoFactorConfigAuditRepository twoFactorConfigAuditRepository;
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
     private final UserRoleScopeRepository userRoleScopeRepository;
@@ -70,6 +73,9 @@ public class TwoFactorServiceImpl implements TwoFactorService {
 
     @Value("${app.two-factor.lock-minutes:15}")
     private long lockMinutes;
+
+    @Value("${app.two-factor.mock-otp-logging:false}")
+    private boolean mockOtpLogging;
 
     @Override
     @Transactional(readOnly = true)
@@ -98,9 +104,13 @@ public class TwoFactorServiceImpl implements TwoFactorService {
         session.setExpiresAt(LocalDateTime.now().plusMinutes(otpTtlMinutes));
         userSessionRepository.save(session);
 
-        // QTN-04: he thong chi dung du lieu mo phong - "gui OTP" duoc mo phong bang log.
-        log.info("[MOCK OTP] user={} challenge={} otp={} (het han sau {} phut)",
+        if (mockOtpLogging) {
+            log.info("[MOCK OTP] user={} challenge={} otp={} (het han sau {} phut)",
                 user.getUsername(), tokenId, rawOtp, otpTtlMinutes);
+        } else {
+            log.info("TWO_FACTOR_CHALLENGE_CREATED user={} challenge={} (otp delivery handled externally)",
+                user.getUsername(), tokenId);
+        }
 
         return tokenId;
     }
@@ -188,12 +198,24 @@ public class TwoFactorServiceImpl implements TwoFactorService {
             return s;
         });
 
-        setting.setEnabled(Boolean.TRUE.equals(request.getEnabled()));
+        boolean previousEnabled = setting.isEnabled();
+        boolean newEnabled = Boolean.TRUE.equals(request.getEnabled());
+        setting.setEnabled(newEnabled);
         User updater = updatedByUserId != null
                 ? userRepository.findById(updatedByUserId).orElse(null)
                 : null;
         setting.setUpdatedBy(updater);
         twoFactorSettingRepository.save(setting);
+
+        TwoFactorConfigAudit audit = new TwoFactorConfigAudit();
+        audit.setRoleId(role.getId());
+        audit.setRoleCode(role.getCode());
+        audit.setUpdatedByUserId(updatedByUserId);
+        audit.setUpdatedByUsername(updater != null ? updater.getUsername() : null);
+        audit.setPreviousEnabled(previousEnabled);
+        audit.setNewEnabled(newEnabled);
+        audit.setChangedAt(LocalDateTime.now());
+        twoFactorConfigAuditRepository.save(audit);
 
         log.info("TWO_FACTOR_CONFIG roleCode={} enabled={} updatedBy={} (TC-04)",
                 role.getCode(), setting.isEnabled(),
