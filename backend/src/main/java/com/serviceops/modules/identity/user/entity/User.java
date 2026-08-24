@@ -40,6 +40,9 @@ public class User extends BaseEntity {
     @Column(name = "failed_login_attempts", nullable = false)
     private int failedLoginAttempts = 0;
 
+    @Column(name = "token_version", nullable = false)
+    private int tokenVersion = 0;
+
     @Column(name = "locked_until")
     private LocalDateTime lockedUntil;
 
@@ -48,4 +51,9 @@ public class User extends BaseEntity {
 
     @Column(name = "updated_at", insertable = false, updatable = false)
     private LocalDateTime updatedAt;
+
+    /** NCL-01-CN-008-TC-01: tang khi doi/khoi phuc mat khau de vo hieu hoa cac JWT da phat hanh truoc do. */
+    public void bumpTokenVersion() {
+        this.tokenVersion++;
+    }
 }

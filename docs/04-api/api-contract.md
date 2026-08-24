@@ -357,4 +357,78 @@ Danh sách hợp đồng lao động của một hồ sơ, mới nhất trước
 | 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy tài khoản, bộ phận hoặc hồ sơ nhân sự |
 | 409 | `DUPLICATE_DATA` | Tài khoản đã có hồ sơ nhân sự |
 | 400 | `INVALID_STATE` | `endDate` sớm hơn ngày bắt đầu (TC-03) |
+
+---
+
+### `NCL-01-CN-008` — Đổi mật khẩu và khôi phục mật khẩu
+
+Bốn endpoint: đổi mật khẩu (cần đăng nhập), quên/khôi phục mật khẩu (công khai — chưa đăng nhập được vẫn cần dùng).
+
+**Lưu ý quan trọng cho Frontend:** sau khi đổi mật khẩu (TC-01) hoặc khôi phục mật khẩu thành công, **`accessToken`
+hiện tại (kể cả token vừa dùng để gọi API đổi mật khẩu) cũng bị vô hiệu hóa ngay lập tức** — không chỉ "các phiên
+khác". Mọi request tiếp theo dùng token cũ sẽ nhận `401`. Vì vậy sau khi nhận response thành công từ
+`/auth/change-password` hoặc `/auth/reset-password`, Frontend phải chủ động xóa token đang lưu và điều hướng người
+dùng về màn hình đăng nhập, không chờ đến khi request kế tiếp trả về `401`.
+
+#### `POST /auth/change-password`
+
+Yêu cầu header `Authorization: Bearer <token>`.
+
+```json
+{ "currentPassword": "Password@123", "newPassword": "MatKhauMoi456" }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `currentPassword` | string | có | |
+| `newPassword` | string | có | Tối thiểu 8 ký tự, có ít nhất một chữ cái và một chữ số; phải khác mật khẩu hiện tại |
+
+**Response thành công — `200 OK`:** `{ "success": true, "data": null }`
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa đăng nhập (thiếu/sai token) |
+| 401 | `INVALID_CREDENTIALS` | `currentPassword` không đúng |
+| 400 | `VALIDATION_ERROR` | `newPassword` không đạt chính sách mật khẩu, hoặc trùng mật khẩu hiện tại |
+
+#### `POST /auth/forgot-password`
+
+Không cần token. Luôn trả `200 OK` bất kể email có tồn tại trong hệ thống hay không (tránh lộ danh sách tài khoản
+hợp lệ) — Frontend chỉ nên hiển thị một thông báo chung dạng "Nếu email tồn tại, liên kết khôi phục đã được gửi".
+
+```json
+{ "email": "nhanvien01@service-operations.local" }
+```
+
+**Response thành công — `200 OK`:** `{ "success": true, "data": null }`
+
+QTN-04 (hệ thống chỉ dùng dữ liệu mô phỏng): "gửi email" ở giai đoạn hiện tại là ghi log phía backend
+(`[MOCK EMAIL] ...` kèm token), chưa gọi dịch vụ email thật. Liên kết khôi phục có hạn dùng mặc định 30 phút.
+
+#### `GET /auth/reset-password/validate?token={token}`
+
+Không cần token đăng nhập. Dùng để kiểm tra liên kết khôi phục còn hiệu lực **trước khi** hiển thị form đặt mật khẩu
+mới (TC-02) — tránh để người dùng nhập mật khẩu mới rồi mới báo lỗi liên kết hết hạn.
+
+**Response thành công — `200 OK`:** `{ "success": true, "data": true }` hoặc `{ "success": true, "data": false }`
+(`false` khi token không tồn tại, đã hết hạn, hoặc đã được dùng).
+
+#### `POST /auth/reset-password`
+
+Không cần token đăng nhập.
+
+```json
+{ "token": "5xx3fqt1fdJkjjA7a9iRjkl8YPyUmtfFiooskWpQOzA", "newPassword": "MatKhauMoi456" }
+```
+
+**Response thành công — `200 OK`:** `{ "success": true, "data": null }`
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `RESET_TOKEN_INVALID` | Token không tồn tại, đã hết hạn, hoặc đã được dùng trước đó (TC-02) |
+| 400 | `VALIDATION_ERROR` | `newPassword` không đạt chính sách mật khẩu |
 | 400 | `VALIDATION_ERROR` | Thiếu `userId`/`hireDate` hoặc `standardHoursPerWeek` ≤ 0 |

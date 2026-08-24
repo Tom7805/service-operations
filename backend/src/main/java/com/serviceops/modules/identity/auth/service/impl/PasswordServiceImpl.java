@@ -1,40 +1,36 @@
 package com.serviceops.modules.identity.auth.service.impl;
 
-import com.serviceops.common.audit.AuditAction;
-import com.serviceops.common.audit.AuditLogService;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
-import com.serviceops.common.exception.ResourceNotFoundException;
 import com.serviceops.modules.identity.auth.dto.request.ChangePasswordReq;
 import com.serviceops.modules.identity.auth.dto.request.ForgotPasswordReq;
 import com.serviceops.modules.identity.auth.dto.request.ResetPasswordReq;
 import com.serviceops.modules.identity.auth.entity.PasswordResetToken;
-import com.serviceops.modules.identity.auth.exception.ResetTokenExpiredException;
 import com.serviceops.modules.identity.auth.repository.PasswordResetTokenRepository;
 import com.serviceops.modules.identity.auth.service.PasswordService;
 import com.serviceops.modules.identity.auth.validator.PasswordPolicyValidator;
 import com.serviceops.modules.identity.user.entity.User;
 import com.serviceops.modules.identity.user.repository.UserRepository;
 import java.security.SecureRandom;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
+import java.time.LocalDateTime;
 import java.util.Base64;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Hiện thực NCL-01-CN-008-CV-03 — xem phân tích nghiệp vụ (CV-01) đầy đủ tại
- * {@code docs/01-backlog/tasks/NCL-01-CN-008-doi-khoi-phuc-mat-khau.md}.
+ * NCL-01-CN-008 — đổi mật khẩu (đang đăng nhập) và khôi phục mật khẩu (quên
+ * mật khẩu → liên kết mô phỏng qua log → đặt lại).
  *
- * <p>Chấm dứt "các phiên đăng nhập khác" (TC-01) được hiện thực bằng cách
- * tăng {@code User.tokenVersion}: mọi JWT phát hành trước thời điểm đổi mật
- * khẩu mang tokenVersion cũ nên bị {@link com.serviceops.common.security.JwtAuthenticationFilter}
- * từ chối ngay từ lần gọi kế tiếp, không cần kho lưu phiên tập trung.</p>
+ * <p>TC-01 "chấm dứt các phiên đăng nhập khác" được hiện thực bằng cách tăng
+ * {@link User#bumpTokenVersion()}: mọi JWT phát hành trước đó mang tokenVersion
+ * cũ nên bị {@link com.serviceops.security.JwtAuthFilter} từ chối ngay từ lần
+ * gọi kế tiếp — kể cả token của chính request đang đổi mật khẩu, nên client
+ * cần điều hướng người dùng về màn hình đăng nhập sau khi đổi/khôi phục thành
+ * công (xem docs/04-api/api-contract.md).</p>
  */
 @Slf4j
 @Service
@@ -47,7 +43,6 @@ public class PasswordServiceImpl implements PasswordService {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final PasswordPolicyValidator passwordPolicyValidator;
-    private final AuditLogService auditLogService;
 
     @Value("${app.password-reset.token-ttl-minutes:30}")
     private long resetTokenTtlMinutes;
@@ -56,25 +51,23 @@ public class PasswordServiceImpl implements PasswordService {
     @Transactional
     public void changePassword(Long currentUserId, ChangePasswordReq request) {
         User user = userRepository.findById(currentUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
+                .orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Khong tim thay nguoi dung"));
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
-            throw new BadCredentialsException("Mật khẩu hiện tại không đúng");
+            throw new BusinessRuleException(ErrorCode.INVALID_CREDENTIALS, "Mat khau hien tai khong dung");
         }
 
         passwordPolicyValidator.validate(request.getNewPassword());
 
         if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
-            throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR,
-                    "Mật khẩu mới phải khác mật khẩu hiện tại");
+            throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR, "Mat khau moi phai khac mat khau hien tai");
         }
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         user.bumpTokenVersion();
         userRepository.save(user);
 
-        auditLogService.record(user.getId(), user.getFullName(), AuditAction.CHANGE_PASSWORD,
-                "User", user.getId(), "Người dùng tự đổi mật khẩu, các phiên đăng nhập khác đã bị chấm dứt");
+        log.info("PASSWORD_CHANGED userId={} username={}", user.getId(), user.getUsername());
     }
 
     @Override
@@ -86,23 +79,18 @@ public class PasswordServiceImpl implements PasswordService {
             PasswordResetToken resetToken = new PasswordResetToken();
             resetToken.setUser(user);
             resetToken.setToken(rawToken);
-            resetToken.setExpiresAt(Instant.now().plus(resetTokenTtlMinutes, ChronoUnit.MINUTES));
+            resetToken.setExpiresAt(LocalDateTime.now().plusMinutes(resetTokenTtlMinutes));
             passwordResetTokenRepository.save(resetToken);
 
-            // Hệ thống chỉ chạy trên dữ liệu mô phỏng (QTN-04): "gửi email" ở đây là
-            // ghi log liên kết khôi phục thay vì gọi dịch vụ email thật. Khi module
-            // notification (NCL-14) sẵn sàng, thay lời gọi log.info bên dưới bằng
-            // NotificationDispatcher để gửi qua kênh email thật.
-            log.info("[MOCK EMAIL] Gửi liên kết khôi phục mật khẩu tới {} — token={} (hết hạn sau {} phút)",
+            // QTN-04: he thong chi dung du lieu mo phong - "gui email" o day la ghi log
+            // lien ket khoi phuc thay vi goi dich vu email that.
+            log.info("[MOCK EMAIL] Gui lien ket khoi phuc mat khau toi {} - token={} (het han sau {} phut)",
                     user.getEmail(), rawToken, resetTokenTtlMinutes);
-
-            auditLogService.record(user.getId(), user.getFullName(), AuditAction.FORGOT_PASSWORD_REQUEST,
-                    "User", user.getId(), "Yêu cầu khôi phục mật khẩu, liên kết hết hạn sau "
-                            + resetTokenTtlMinutes + " phút");
-        }, () -> log.info("Yêu cầu khôi phục mật khẩu cho email không tồn tại: {} — bỏ qua để tránh "
-                + "lộ thông tin tài khoản nào đang tồn tại trong hệ thống", request.getEmail()));
-        // Cố ý không phân biệt "email không tồn tại" với "đã gửi liên kết" ra ngoài
-        // API để tránh kẻ tấn công dò danh sách tài khoản hợp lệ.
+            log.info("FORGOT_PASSWORD_REQUESTED userId={} username={}", user.getId(), user.getUsername());
+        }, () -> log.info("FORGOT_PASSWORD_REQUESTED email khong ton tai: {} - bo qua de tranh lo thong tin tai khoan",
+                request.getEmail()));
+        // Co y khong phan biet "email khong ton tai" voi "da gui lien ket" ra ngoai API
+        // de tranh ke tan cong do danh sach tai khoan hop le.
     }
 
     @Override
@@ -117,13 +105,13 @@ public class PasswordServiceImpl implements PasswordService {
     @Transactional
     public void resetPassword(ResetPasswordReq request) {
         PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(request.getToken())
-                .orElseThrow(() -> new ResetTokenExpiredException(
-                        "Liên kết khôi phục không hợp lệ, vui lòng gửi yêu cầu mới"));
+                .orElseThrow(() -> new BusinessRuleException(ErrorCode.RESET_TOKEN_INVALID,
+                        "Lien ket khoi phuc khong hop le, vui long gui yeu cau moi"));
 
-        // NCL-01-CN-008-TC-02: đường dẫn đã quá hạn dùng hoặc đã được dùng trước đó.
+        // NCL-01-CN-008-TC-02: duong dan da qua han dung hoac da duoc dung truoc do.
         if (!resetToken.isUsable()) {
-            throw new ResetTokenExpiredException(
-                    "Đường dẫn khôi phục đã hết hạn, vui lòng gửi yêu cầu mới");
+            throw new BusinessRuleException(ErrorCode.RESET_TOKEN_INVALID,
+                    "Duong dan khoi phuc da het han, vui long gui yeu cau moi");
         }
 
         passwordPolicyValidator.validate(request.getNewPassword());
@@ -133,11 +121,10 @@ public class PasswordServiceImpl implements PasswordService {
         user.bumpTokenVersion();
         userRepository.save(user);
 
-        resetToken.setUsedAt(Instant.now());
+        resetToken.setUsedAt(LocalDateTime.now());
         passwordResetTokenRepository.save(resetToken);
 
-        auditLogService.record(user.getId(), user.getFullName(), AuditAction.RESET_PASSWORD,
-                "User", user.getId(), "Khôi phục mật khẩu qua liên kết, các phiên đăng nhập khác đã bị chấm dứt");
+        log.info("PASSWORD_RESET userId={} username={}", user.getId(), user.getUsername());
     }
 
     private String generateSecureToken() {
