@@ -1,4 +1,16 @@
-import type { ApiError, AuthSession, ChangePasswordPayload, ForgotPasswordPayload, ResetPasswordPayload } from '../types/authTypes';
+import type {
+  ApiError,
+  AuthSession,
+  ChangePasswordPayload,
+  ForgotPasswordPayload,
+  LoginResponseDto,
+  LoginResult,
+  ResetPasswordPayload,
+  TwoFactorChallenge,
+  TwoFactorConfigPayload,
+  TwoFactorRoleConfig,
+  TwoFactorVerifyPayload,
+} from '../types/authTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -8,7 +20,12 @@ export class LoginRequestError extends Error {
   }
 }
 
-export async function login(username: string, password: string): Promise<AuthSession> {
+/** Type guard: phân biệt kết quả login() là phiên đã đăng nhập hay còn chờ nhập OTP (NCL-01-CN-009). */
+export function isTwoFactorChallenge(result: LoginResult): result is TwoFactorChallenge {
+  return (result as TwoFactorChallenge).requiresTwoFactor === true;
+}
+
+export async function login(username: string, password: string): Promise<LoginResult> {
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -20,9 +37,23 @@ export async function login(username: string, password: string): Promise<AuthSes
     throw new LoginRequestError({}, 'Không thể kết nối tới máy chủ. Vui lòng kiểm tra lại và thử lại.');
   }
 
-  const payload = await response.json().catch(() => ({})) as { data?: AuthSession } & ApiError;
+  const payload = (await response.json().catch(() => ({}))) as { data?: LoginResponseDto } & ApiError;
   if (!response.ok || !payload.data) throw new LoginRequestError(payload, 'Đăng nhập chưa thành công. Vui lòng thử lại.');
-  return payload.data;
+
+  const data = payload.data;
+  // NCL-01-CN-009-TC-01: vai trò đang bật 2FA → chưa cấp JWT, phải nộp OTP trước.
+  if (data.requiresTwoFactor && data.challengeToken) {
+    return { requiresTwoFactor: true, challengeToken: data.challengeToken, username: data.username };
+  }
+
+  return {
+    accessToken: data.accessToken as string,
+    tokenType: data.tokenType as string,
+    userId: data.userId,
+    username: data.username,
+    fullName: data.fullName,
+    roles: data.roles,
+  };
 }
 
 /** NCL-01-CN-008: đổi mật khẩu và khôi phục mật khẩu. */
@@ -103,4 +134,38 @@ export async function resetPassword(payload: ResetPasswordPayload): Promise<void
     method: 'POST',
     body: JSON.stringify(payload),
   });
+}
+
+/** NCL-01-CN-009-TC-01/TC-02: nộp mã OTP để hoàn tất đăng nhập; sai quá 3 lần → ACCOUNT_LOCKED. */
+export async function verifyTwoFactor(payload: TwoFactorVerifyPayload): Promise<AuthSession> {
+  const data = await requestAuthBackend<LoginResponseDto>(`${API_BASE_URL}/auth/two-factor/verify`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+  return {
+    accessToken: data.accessToken as string,
+    tokenType: data.tokenType as string,
+    userId: data.userId,
+    username: data.username,
+    fullName: data.fullName,
+    roles: data.roles,
+  };
+}
+
+/** Danh sách trạng thái 2FA của toàn bộ vai trò — chỉ quản trị viên (VT-07) được gọi (TC-03). */
+export async function getTwoFactorConfigs(): Promise<TwoFactorRoleConfig[]> {
+  return requestAuthBackend<TwoFactorRoleConfig[]>(`${API_BASE_URL}/auth/two-factor/configs`, { method: 'GET' }, true);
+}
+
+/** Bật/tắt 2FA cho một vai trò — ghi lại người thực hiện và thời điểm (TC-04). */
+export async function updateTwoFactorConfig(
+  roleId: number,
+  payload: TwoFactorConfigPayload
+): Promise<TwoFactorRoleConfig> {
+  return requestAuthBackend<TwoFactorRoleConfig>(
+    `${API_BASE_URL}/auth/two-factor/configs/${roleId}`,
+    { method: 'PATCH', body: JSON.stringify(payload) },
+    true
+  );
 }

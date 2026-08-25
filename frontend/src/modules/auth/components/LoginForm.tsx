@@ -1,12 +1,17 @@
 import { FormEvent, useState } from 'react';
-import { login, LoginRequestError } from '../api/authApi';
+import { isTwoFactorChallenge, login, LoginRequestError } from '../api/authApi';
 import type { AuthSession } from '../types/authTypes';
 
-interface LoginFormProps { onAuthenticated: (session: AuthSession) => void; onForgotPassword?: () => void }
+interface LoginFormProps {
+  onAuthenticated: (session: AuthSession) => void;
+  onForgotPassword?: () => void;
+  /** NCL-01-CN-009: vai trò đang bật 2FA — chuyển sang màn hình nhập OTP thay vì đăng nhập thẳng. */
+  onTwoFactorRequired?: (challengeToken: string, username: string) => void;
+}
 
 const EyeIcon = ({ visible }: { visible: boolean }) => visible ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.2 12s3.3-5.8 9.8-5.8S21.8 12 21.8 12s-3.3 5.8-9.8 5.8S2.2 12 2.2 12Z" /><circle cx="12" cy="12" r="2.6" /></svg> : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18M10.6 6.3A10.7 10.7 0 0 1 12 6.2c6.5 0 9.8 5.8 9.8 5.8a17 17 0 0 1-3.4 3.9M6.1 6.1A17 17 0 0 0 2.2 12s3.3 5.8 9.8 5.8a10.5 10.5 0 0 0 3.1-.5" /><path d="M9.7 9.7a3.3 3.3 0 0 0 4.6 4.6" /></svg>;
 
-export default function LoginForm({ onAuthenticated, onForgotPassword }: LoginFormProps) {
+export default function LoginForm({ onAuthenticated, onForgotPassword, onTwoFactorRequired }: LoginFormProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -20,7 +25,14 @@ export default function LoginForm({ onAuthenticated, onForgotPassword }: LoginFo
       return;
     }
     setLoading(true); setError('');
-    try { onAuthenticated(await login(username.trim(), password)); }
+    try {
+      const result = await login(username.trim(), password);
+      if (isTwoFactorChallenge(result)) {
+        onTwoFactorRequired?.(result.challengeToken, result.username);
+      } else {
+        onAuthenticated(result);
+      }
+    }
     catch (reason) {
       const requestError = reason instanceof LoginRequestError ? reason : null;
       const message = requestError?.message ?? 'Đăng nhập chưa thành công. Vui lòng thử lại.';

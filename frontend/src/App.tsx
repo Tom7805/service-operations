@@ -10,6 +10,7 @@ import SensitiveAccessLogPage from './modules/auditLog/pages/SensitiveAccessLogP
 import EmployeeListPage from './modules/employees/pages/EmployeeListPage';
 import EmployeeDetailPage from './modules/employees/pages/EmployeeDetailPage';
 import ChangePasswordPage from './modules/auth/pages/ChangePasswordPage';
+import TwoFactorSetupPage from './modules/auth/pages/TwoFactorSetupPage';
 
 function readStoredSession(): AuthSession | null {
   const raw = localStorage.getItem('session');
@@ -34,6 +35,7 @@ export default function App() {
     | 'EMPLOYEES'
     | 'EMPLOYEE_DETAIL'
     | 'CHANGE_PASSWORD'
+    | 'TWO_FACTOR_SETTINGS'
   >('DEPARTMENTS');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
@@ -103,6 +105,13 @@ export default function App() {
             >
               🕵️ Nhật ký truy cập
             </button>
+            <button
+              type="button"
+              className={`nav-link ${activeTab === 'TWO_FACTOR_SETTINGS' ? 'nav-link--active' : ''}`}
+              onClick={() => setActiveTab('TWO_FACTOR_SETTINGS')}
+            >
+              🔐 Xác thực hai bước
+            </button>
           </nav>
         </div>
 
@@ -152,6 +161,11 @@ export default function App() {
           />
         ) : activeTab === 'AUDIT_LOG' ? (
           <SensitiveAccessLogPage
+            currentUserRoles={currentRoles}
+            currentUserName={session.fullName}
+          />
+        ) : activeTab === 'TWO_FACTOR_SETTINGS' ? (
+          <TwoFactorSetupPage
             currentUserRoles={currentRoles}
             currentUserName={session.fullName}
           />
