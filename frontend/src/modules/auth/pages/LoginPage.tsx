@@ -3,6 +3,7 @@ import type { AuthSession } from '../types/authTypes';
 import LoginForm from '../components/LoginForm';
 import ForgotPasswordForm from '../components/ForgotPasswordForm';
 import ResetPasswordForm from '../components/ResetPasswordForm';
+import TwoFactorVerifyForm from '../components/TwoFactorVerifyForm';
 
 interface LoginPageProps { onAuthenticated: (session: AuthSession) => void }
 
@@ -41,11 +42,13 @@ function Highlights() {
   );
 }
 
-type AuthView = 'LOGIN' | 'FORGOT' | 'RESET';
+type AuthView = 'LOGIN' | 'FORGOT' | 'RESET' | 'TWO_FACTOR';
 
 export default function LoginPage({ onAuthenticated }: LoginPageProps) {
   const [view, setView] = useState<AuthView>('LOGIN');
   const [resetToken, setResetToken] = useState<string | null>(null);
+  // NCL-01-CN-009: bước 1 (mật khẩu đúng) trả về challengeToken khi vai trò đang bật 2FA.
+  const [twoFactorChallenge, setTwoFactorChallenge] = useState<{ token: string; username: string } | null>(null);
 
   // Liên kết khôi phục mật khẩu (mô phỏng qua log backend — QTN-04) đưa người dùng thẳng
   // vào đây kèm ?token=..., không cần đăng nhập trước.
@@ -86,9 +89,29 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
         <p className="brand-footer">© {new Date().getFullYear()} Vận Hành Dịch Vụ</p>
       </section>
       <section className="login-panel">
-        {view === 'LOGIN' && <LoginForm onAuthenticated={onAuthenticated} onForgotPassword={() => setView('FORGOT')} />}
+        {view === 'LOGIN' && (
+          <LoginForm
+            onAuthenticated={onAuthenticated}
+            onForgotPassword={() => setView('FORGOT')}
+            onTwoFactorRequired={(token, username) => {
+              setTwoFactorChallenge({ token, username });
+              setView('TWO_FACTOR');
+            }}
+          />
+        )}
         {view === 'FORGOT' && <ForgotPasswordForm onBackToLogin={() => setView('LOGIN')} />}
         {view === 'RESET' && resetToken && <ResetPasswordForm token={resetToken} onDone={handleResetDone} />}
+        {view === 'TWO_FACTOR' && twoFactorChallenge && (
+          <TwoFactorVerifyForm
+            challengeToken={twoFactorChallenge.token}
+            username={twoFactorChallenge.username}
+            onVerified={onAuthenticated}
+            onBackToLogin={() => {
+              setTwoFactorChallenge(null);
+              setView('LOGIN');
+            }}
+          />
+        )}
       </section>
     </main>
   );

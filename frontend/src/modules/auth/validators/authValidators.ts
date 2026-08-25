@@ -13,10 +13,15 @@ export interface ResetPasswordFormErrors {
   confirmPassword?: string;
 }
 
+export interface TwoFactorVerifyFormErrors {
+  otp?: string;
+}
+
 const PASSWORD_MIN_LENGTH = 8;
 const HAS_LETTER = /[A-Za-z]/;
 const HAS_DIGIT = /[0-9]/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const OTP_REGEX = /^[0-9]{6}$/;
 
 /** Khớp với PasswordPolicyValidator phía backend: tối thiểu 8 ký tự, có chữ và số. */
 function isValidPasswordShape(password: string): boolean {
@@ -75,6 +80,19 @@ export function validateResetPasswordForm(values: {
 
   if (values.newPassword && values.confirmPassword !== values.newPassword) {
     errors.confirmPassword = 'Xác nhận mật khẩu không khớp';
+  }
+
+  return errors;
+}
+
+/** NCL-01-CN-009: mã một lần luôn gồm đúng 6 chữ số (khớp TwoFactorServiceImpl#generateOtp). */
+export function validateTwoFactorVerifyForm(values: { otp: string }): TwoFactorVerifyFormErrors {
+  const errors: TwoFactorVerifyFormErrors = {};
+
+  if (!values.otp || !values.otp.trim()) {
+    errors.otp = 'Vui lòng nhập mã xác thực';
+  } else if (!OTP_REGEX.test(values.otp.trim())) {
+    errors.otp = 'Mã xác thực gồm đúng 6 chữ số';
   }
 
   return errors;
