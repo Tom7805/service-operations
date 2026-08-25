@@ -65,6 +65,12 @@ public class LoginAttemptService {
         saveAttempt(user, usernameAttempted, false, ipAddress);
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void lockForTwoFactor(User user, long lockMinutes) {
+        user.setLockedUntil(LocalDateTime.now().plusMinutes(lockMinutes));
+        userRepository.save(user);
+    }
+
     private void saveAttempt(User user, String usernameAttempted, boolean success, String ipAddress) {
         LoginAttempt attempt = new LoginAttempt();
         attempt.setUser(user);
