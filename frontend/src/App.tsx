@@ -34,44 +34,16 @@ interface NavItem {
   matches?: Tab[];
 }
 
-interface NavGroup {
-  label: string;
-  items: NavItem[];
-}
-
-const NAV_GROUPS: NavGroup[] = [
-  {
-    label: 'Tổ chức',
-    items: [
-      { tab: 'DEPARTMENTS', icon: '🏛️', label: 'Cây tổ chức' },
-      { tab: 'USERS', icon: '👤', label: 'Tài khoản', matches: ['DETAIL'] },
-      { tab: 'EMPLOYEES', icon: '🧑‍💼', label: 'Hồ sơ nhân sự', matches: ['EMPLOYEE_DETAIL'] },
-    ],
-  },
-  {
-    label: 'Bảo mật & tuân thủ',
-    items: [
-      { tab: 'PERMISSIONS', icon: '🛡️', label: 'Phân quyền & phạm vi' },
-      { tab: 'TWO_FACTOR_SETTINGS', icon: '🔐', label: 'Xác thực hai bước' },
-      { tab: 'MASKING', icon: '🕶️', label: 'Che dữ liệu nhạy cảm' },
-      { tab: 'AUDIT_LOG', icon: '🕵️', label: 'Nhật ký truy cập' },
-    ],
-  },
+/** Thanh điều hướng dạng pill nằm ngang — nhãn rút gọn để vừa một hàng, đầy đủ ngữ cảnh nằm trong tiêu đề từng trang. */
+const NAV_ITEMS: NavItem[] = [
+  { tab: 'DEPARTMENTS', icon: '🏛️', label: 'Tổ chức' },
+  { tab: 'USERS', icon: '👤', label: 'Tài khoản', matches: ['DETAIL'] },
+  { tab: 'EMPLOYEES', icon: '🧑‍💼', label: 'Nhân sự', matches: ['EMPLOYEE_DETAIL'] },
+  { tab: 'PERMISSIONS', icon: '🛡️', label: 'Phân quyền' },
+  { tab: 'TWO_FACTOR_SETTINGS', icon: '🔐', label: '2FA' },
+  { tab: 'MASKING', icon: '🕶️', label: 'Che dữ liệu' },
+  { tab: 'AUDIT_LOG', icon: '🕵️', label: 'Nhật ký' },
 ];
-
-/** Tiêu đề hiển thị trên thanh trên cùng — bao gồm cả các tab không có mặt trong sidebar. */
-const PAGE_HEADING: Record<Tab, { section: string; title: string }> = {
-  DEPARTMENTS: { section: 'Tổ chức', title: 'Cây tổ chức' },
-  USERS: { section: 'Tổ chức', title: 'Tài khoản người dùng' },
-  DETAIL: { section: 'Tổ chức', title: 'Chi tiết tài khoản' },
-  EMPLOYEES: { section: 'Tổ chức', title: 'Hồ sơ nhân sự' },
-  EMPLOYEE_DETAIL: { section: 'Tổ chức', title: 'Chi tiết nhân sự' },
-  PERMISSIONS: { section: 'Bảo mật & tuân thủ', title: 'Phân quyền & phạm vi dữ liệu' },
-  TWO_FACTOR_SETTINGS: { section: 'Bảo mật & tuân thủ', title: 'Xác thực hai bước' },
-  MASKING: { section: 'Bảo mật & tuân thủ', title: 'Che dữ liệu nhạy cảm' },
-  AUDIT_LOG: { section: 'Bảo mật & tuân thủ', title: 'Nhật ký truy cập' },
-  CHANGE_PASSWORD: { section: 'Tài khoản của tôi', title: 'Đổi mật khẩu' },
-};
 
 const ROLE_LABELS: Record<SimulatedRole, string> = {
   'VT-07': 'Quản trị viên (VT-07)',
@@ -130,75 +102,57 @@ export default function App() {
   if (!session) return <LoginPage onAuthenticated={handleAuthenticated} />;
 
   const currentRoles = [simulatedRole];
-  const heading = PAGE_HEADING[activeTab];
 
   return (
     <div className="app-shell">
-      <aside className="app-sidebar">
-        <div className="sidebar-brand">
-          <span className="sidebar-brand__mark">
-            <i />
-            <i />
-            <i />
-          </span>
-          <span>
-            Vận hành <b>dịch vụ</b>
-          </span>
-        </div>
-
-        <nav className="sidebar-nav" aria-label="Điều hướng chính">
-          {NAV_GROUPS.map((group) => (
-            <div className="sidebar-nav__group" key={group.label}>
-              <span className="sidebar-nav__group-label">{group.label}</span>
-              {group.items.map((item) => {
-                const isActive = activeTab === item.tab || (item.matches ?? []).includes(activeTab);
-                return (
-                  <button
-                    key={item.tab}
-                    type="button"
-                    className={`sidebar-link ${isActive ? 'sidebar-link--active' : ''}`}
-                    onClick={() => setActiveTab(item.tab)}
-                    aria-current={isActive ? 'page' : undefined}
-                  >
-                    <span className="sidebar-link__icon" aria-hidden="true">
-                      {item.icon}
-                    </span>
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          ))}
-        </nav>
-
-        <div className="sidebar-footer">
-          <div className="sidebar-devmode">
-            <div className="sidebar-devmode__label">
-              <span className="sidebar-devmode__dot" />
-              Giả lập vai trò (demo)
-            </div>
-            <select
-              value={simulatedRole}
-              onChange={(e) => setSimulatedRole(e.target.value as SimulatedRole)}
-            >
-              {(Object.keys(ROLE_LABELS) as SimulatedRole[]).map((role) => (
-                <option key={role} value={role}>
-                  {ROLE_LABELS[role]}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </aside>
-
       <div className="app-main">
         <header className="app-topbar">
-          <div className="topbar-heading">
-            <span className="topbar-heading__section">{heading.section}</span>
-            <span className="topbar-heading__title">{heading.title}</span>
+          <div className="topbar-brand">
+            <span className="topbar-brand__mark">
+              <i />
+              <i />
+              <i />
+            </span>
+            <span>
+              Vận hành <b>dịch vụ</b>
+            </span>
           </div>
 
+          <nav className="topbar-nav" aria-label="Điều hướng chính">
+            {NAV_ITEMS.map((item) => {
+              const isActive = activeTab === item.tab || (item.matches ?? []).includes(activeTab);
+              return (
+                <button
+                  key={item.tab}
+                  type="button"
+                  className={`topbar-nav__item ${isActive ? 'topbar-nav__item--active' : ''}`}
+                  onClick={() => setActiveTab(item.tab)}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  <span className="topbar-nav__item__icon" aria-hidden="true">
+                    {item.icon}
+                  </span>
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+
           <div className="topbar-actions">
+            <div className="topbar-devmode" title="Chỉ dùng để xem thử giao diện theo từng vai trò, không phải chức năng thật của sản phẩm">
+              <span className="topbar-devmode__dot" />
+              <select
+                value={simulatedRole}
+                onChange={(e) => setSimulatedRole(e.target.value as SimulatedRole)}
+              >
+                {(Object.keys(ROLE_LABELS) as SimulatedRole[]).map((role) => (
+                  <option key={role} value={role}>
+                    {ROLE_LABELS[role]}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="topbar-user" ref={userMenuRef}>
               <button
                 type="button"

@@ -168,42 +168,37 @@
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
 /* ==========================================================================
-   App Shell — sidebar layout (thay cho top-bar tab cũ)
+   App Shell — thanh điều hướng dạng pill nằm ngang, mềm mại kiểu SaaS hiện đại
    ========================================================================== */
-.app-shell { min-height: 100vh; background: #f5f7f5; display: grid; grid-template-columns: 260px 1fr; }
-
-/* --- Sidebar --- */
-.app-sidebar { background: #0b2130; color: #cbd5e1; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; border-right: 1px solid rgba(255,255,255,0.06); }
-.sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 22px 22px 18px; color: #f8faf8; font-weight: 700; font-size: 15px; letter-spacing: -0.02em; border-bottom: 1px solid rgba(255,255,255,0.07); }
-.sidebar-brand__mark { height: 32px; width: 32px; display: flex; align-items: end; gap: 3px; padding: 5px; background: #59cf94; border-radius: 9px; box-shadow: 0 7px 20px rgba(85,201,144,.25); flex-shrink: 0; }
-.sidebar-brand__mark i { display: block; background: #0b2130; width: 5px; border-radius: 3px; }
-.sidebar-brand__mark i:nth-child(1) { height: 8px; } .sidebar-brand__mark i:nth-child(2) { height: 15px; } .sidebar-brand__mark i:nth-child(3) { height: 20px; }
-.sidebar-brand span b { color: #9edcb6; font-weight: 600; }
-
-.sidebar-nav { flex: 1; padding: 18px 12px; display: flex; flex-direction: column; gap: 20px; }
-.sidebar-nav__group-label { padding: 0 10px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: #5f7a71; margin-bottom: 6px; display: block; }
-.sidebar-nav__group { display: flex; flex-direction: column; gap: 2px; }
-
-.sidebar-link { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; background: transparent; border: none; border-radius: 9px; padding: 9px 10px; color: #c3d1cb; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: background 0.16s, color 0.16s; position: relative; }
-.sidebar-link__icon { display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; font-size: 15px; flex-shrink: 0; opacity: 0.9; }
-.sidebar-link:hover { background: rgba(255,255,255,0.06); color: #ffffff; }
-.sidebar-link--active { background: rgba(16,185,129,0.14); color: #ffffff; }
-.sidebar-link--active::before { content: ''; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: #34d399; }
-.sidebar-link--active .sidebar-link__icon { opacity: 1; }
-
-.sidebar-footer { padding: 14px 16px 18px; border-top: 1px solid rgba(255,255,255,0.07); }
-.sidebar-devmode { border: 1px dashed rgba(158,220,182,0.35); border-radius: 10px; padding: 9px 10px; }
-.sidebar-devmode__label { display: flex; align-items: center; gap: 6px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #f0c978; margin-bottom: 7px; }
-.sidebar-devmode__dot { width: 6px; height: 6px; border-radius: 50%; background: #f0c978; box-shadow: 0 0 0 3px rgba(240,201,120,.15); flex-shrink: 0; }
-.sidebar-devmode select { width: 100%; background: #142c38; color: #e2e8f0; border: 1px solid #2d4a54; border-radius: 6px; padding: 6px 8px; font-size: 12px; outline: none; }
-
-/* --- Topbar + content column --- */
+.app-shell { min-height: 100vh; background: #eef0f2; }
 .app-main { display: flex; flex-direction: column; min-width: 0; }
-.app-topbar { height: 64px; flex-shrink: 0; background: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 0 28px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 20; }
-.topbar-heading { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.topbar-heading__section { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; }
-.topbar-heading__title { font-size: 15.5px; font-weight: 700; color: #0f172a; }
-.topbar-actions { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+
+.app-topbar {
+  position: sticky; top: 0; z-index: 20; margin: 14px 20px 0; padding: 8px 10px 8px 20px;
+  background: #ffffff; border: 1px solid #eaecef; border-radius: 20px;
+  box-shadow: 0 1px 2px rgba(15,23,42,0.03), 0 12px 30px -18px rgba(15,23,42,0.12);
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+
+.topbar-brand { display: flex; align-items: center; gap: 9px; padding: 6px 16px 6px 8px; border: 1px solid #e5e7eb; border-radius: 999px; flex-shrink: 0; }
+.topbar-brand__mark { height: 26px; width: 26px; display: flex; align-items: end; gap: 2px; padding: 4px; background: #10b981; border-radius: 8px; flex-shrink: 0; }
+.topbar-brand__mark i { display: block; background: #0b2130; width: 4px; border-radius: 3px; }
+.topbar-brand__mark i:nth-child(1) { height: 6px; } .topbar-brand__mark i:nth-child(2) { height: 11px; } .topbar-brand__mark i:nth-child(3) { height: 15px; }
+.topbar-brand span { font-size: 13.5px; font-weight: 700; color: #0f172a; letter-spacing: -0.01em; white-space: nowrap; }
+.topbar-brand span b { color: #059669; font-weight: 700; }
+
+.topbar-nav { display: flex; align-items: center; gap: 2px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; padding: 2px; }
+.topbar-nav::-webkit-scrollbar { display: none; }
+.topbar-nav__item { flex-shrink: 0; display: flex; align-items: center; gap: 6px; background: transparent; border: none; border-radius: 999px; padding: 9px 16px; font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer; transition: background 0.15s, color 0.15s; white-space: nowrap; }
+.topbar-nav__item:hover { color: #0f172a; background: #f1f5f9; }
+.topbar-nav__item--active { background: #10202c; color: #ffffff; }
+.topbar-nav__item--active:hover { background: #10202c; color: #ffffff; }
+.topbar-nav__item__icon { font-size: 13.5px; line-height: 1; }
+
+.topbar-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.topbar-devmode { display: flex; align-items: center; gap: 7px; border: 1px dashed #fbbf24; background: #fffbeb; border-radius: 999px; padding: 5px 12px 5px 10px; }
+.topbar-devmode__dot { width: 6px; height: 6px; border-radius: 50%; background: #f59e0b; flex-shrink: 0; }
+.topbar-devmode select { background: transparent; border: none; color: #92400e; font-size: 11.5px; font-weight: 700; outline: none; max-width: 150px; }
 
 .topbar-user { position: relative; }
 .topbar-user__trigger { display: flex; align-items: center; gap: 10px; background: transparent; border: 1px solid transparent; border-radius: 10px; padding: 5px 8px 5px 5px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
@@ -224,13 +219,13 @@
 .topbar-user__menu-item--danger:hover { background: #fef2f2; }
 @keyframes menu-enter { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 
-.app-content { flex: 1; min-width: 0; }
+.app-content { flex: 1; min-width: 0; padding-top: 8px; }
 
-@media (max-width: 980px) {
-  .app-shell { grid-template-columns: 76px 1fr; }
-  .sidebar-brand span:not(.sidebar-brand__mark), .sidebar-nav__group-label, .sidebar-link span:last-child, .sidebar-footer { display: none; }
-  .sidebar-link { justify-content: center; }
-  .topbar-heading__section { display: none; }
+@media (max-width: 900px) {
+  .app-topbar { margin: 10px 12px 0; padding: 8px; flex-wrap: wrap; border-radius: 18px; }
+  .topbar-brand span:not(.topbar-brand__mark) { display: none; }
+  .topbar-nav { order: 3; width: 100%; justify-content: flex-start; border-top: 1px solid #f1f5f9; margin-top: 4px; padding-top: 6px; }
+  .topbar-devmode span:not(.topbar-devmode__dot) { display: none; }
 }
 
 /* Role Assign Modal & Scope Selection */
