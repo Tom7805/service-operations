@@ -86,6 +86,45 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
     return node.children.some((child) => nodeMatchesSearch(child, keyword));
   };
 
+  // Shared row of labeled action buttons, reused by both Tree and Branch-List views
+  const renderActionButtons = (dept: Department) => (
+    <div className="tree-node-actions">
+      <button type="button" className="action-btn action-btn--add" onClick={() => onAddChild(dept.id)} title="Thêm bộ phận con trực thuộc">
+        ➕ Con
+      </button>
+      <button type="button" className="action-btn action-btn--edit" onClick={() => onEdit(dept)} title="Chỉnh sửa bộ phận">
+        ✏️ Sửa
+      </button>
+      <button type="button" className="action-btn action-btn--move" onClick={() => onMove(dept)} title="Di chuyển vị trí bộ phận">
+        ↕️ Di chuyển
+      </button>
+      <button type="button" className="action-btn action-btn--danger" onClick={() => onDelete(dept)} title="Xóa bộ phận">
+        🗑️ Xóa
+      </button>
+    </div>
+  );
+
+  // Flatten the tree into a depth-first, non-nested row list for "Danh sách Nhánh" —
+  // unlike the Tree view, rows are NOT indented and carry a breadcrumb path instead,
+  // so the whole org can be scanned/searched top-to-bottom without expanding nodes.
+  const flattenForList = (): Array<{ dept: Department; level: number; path: string; childCount: number }> => {
+    const rows: Array<{ dept: Department; level: number; path: string; childCount: number }> = [];
+    const walk = (nodes: DepartmentTreeNode[], level: number, parentId: number | null, ancestorNames: string[]) => {
+      nodes.forEach((node) => {
+        if (searchKeyword.trim() !== '' && !nodeMatchesSearch(node, searchKeyword)) return;
+        rows.push({
+          dept: nodeToDepartment(node, parentId),
+          level,
+          path: ancestorNames.join(' › '),
+          childCount: node.children.length,
+        });
+        walk(node.children, level + 1, node.id, [...ancestorNames, node.name]);
+      });
+    };
+    walk(treeData, 0, null, []);
+    return rows;
+  };
+
   // Render recursive Tree Node component
   const renderTreeNode = (node: DepartmentTreeNode, level: number = 0, parentId: number | null = null) => {
     const hasChildren = node.children && node.children.length > 0;
@@ -130,40 +169,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
             </div>
           </div>
 
-          <div className="tree-node-actions">
-            <button
-              type="button"
-              className="action-btn action-btn--add"
-              onClick={() => onAddChild(node.id)}
-              title="Thêm bộ phận con trực thuộc"
-            >
-              ➕ Con
-            </button>
-            <button
-              type="button"
-              className="action-btn"
-              onClick={() => onEdit(departmentObj)}
-              title="Chỉnh sửa bộ phận"
-            >
-              ✏️ Sửa
-            </button>
-            <button
-              type="button"
-              className="action-btn"
-              onClick={() => onMove(departmentObj)}
-              title="Di chuyển vị trí bộ phận"
-            >
-              ↕️ Di chuyển
-            </button>
-            <button
-              type="button"
-              className="action-btn action-btn--danger"
-              onClick={() => onDelete(departmentObj)}
-              title="Xóa bộ phận"
-            >
-              🗑️ Xóa
-            </button>
-          </div>
+          {renderActionButtons(departmentObj)}
         </div>
 
         {/* Render child nodes if not collapsed */}
@@ -253,7 +259,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
                           </button>
                           <button
                             type="button"
-                            className="action-btn"
+                            className="action-btn action-btn--edit"
                             onClick={() => onEdit(dept)}
                             title="Chỉnh sửa"
                           >
@@ -261,7 +267,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
                           </button>
                           <button
                             type="button"
-                            className="action-btn"
+                            className="action-btn action-btn--move"
                             onClick={() => onMove(dept)}
                             title="Di chuyển"
                           >
@@ -288,9 +294,55 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
     );
   }
 
-  // TREE & LIST VIEW RENDER
+  // BRANCH LIST VIEW RENDER — flat rows in hierarchical (depth-first) order, no indentation,
+  // no expand/collapse; each row shows its breadcrumb path instead so every branch of the
+  // org is visible on one scroll, which is what distinguishes it from the Tree diagram view.
+  if (viewMode === 'LIST') {
+    const listRows = flattenForList();
+
+    if (listRows.length === 0) {
+      return (
+        <div className="tree-empty-state">
+          <div className="empty-icon">🔍</div>
+          <h3>Không tìm thấy bộ phận nào phù hợp</h3>
+          <p>Không có bộ phận nào khớp với từ khóa "{searchKeyword}". Hãy thử một từ khóa khác.</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="department-tree-container mode-list">
+        {listRows.map(({ dept, level, path, childCount }) => (
+          <div key={dept.id} className="dept-list-row">
+            <div className="tree-node-left">
+              <span className="tree-node-icon">{level === 0 ? '🏛️' : level === 1 ? '🏢' : '📂'}</span>
+              <div className="tree-node-info">
+                <div className="tree-node-header">
+                  <span className="tree-node-title">{dept.name}</span>
+                  {level === 0 ? (
+                    <span className="badge-level badge-level--root">Cấp Gốc</span>
+                  ) : (
+                    <span className="badge-level badge-level--branch">Cấp {level + 1}</span>
+                  )}
+                  {childCount > 0 && <span className="badge-children">{childCount} bộ phận con</span>}
+                </div>
+                {path && <div className="dept-list-path">📍 {path}</div>}
+                <div className="tree-node-manager">
+                  <span>👤 Trưởng bộ phận:</span>
+                  <strong>{dept.managerName ? dept.managerName : 'Chưa phân công'}</strong>
+                </div>
+              </div>
+            </div>
+            {renderActionButtons(dept)}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // TREE (Sơ Đồ Cây) VIEW RENDER — nested cards with indentation + expand/collapse per branch
   return (
-    <div className={`department-tree-container mode-${viewMode.toLowerCase()}`}>
+    <div className="department-tree-container mode-tree">
       {treeData.map((rootNode) => renderTreeNode(rootNode, 0, null))}
     </div>
   );
