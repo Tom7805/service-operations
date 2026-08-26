@@ -432,3 +432,63 @@ Không cần token đăng nhập.
 | 400 | `RESET_TOKEN_INVALID` | Token không tồn tại, đã hết hạn, hoặc đã được dùng trước đó (TC-02) |
 | 400 | `VALIDATION_ERROR` | `newPassword` không đạt chính sách mật khẩu |
 | 400 | `VALIDATION_ERROR` | Thiếu `userId`/`hireDate` hoặc `standardHoursPerWeek` ≤ 0 |
+
+---
+
+## Epic `NCL-02` — Quản lý khách hàng
+
+### `NCL-02-CN-001` — Tạo hồ sơ khách hàng
+
+Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`) hoặc **Quản lý dự án** (`VT-02`); vai trò khác nhận
+`403 FORBIDDEN` (TC-03).
+
+#### `POST /customers`
+
+```json
+{
+  "name": "Cong ty TNHH ABC",
+  "taxCode": "0101234567",
+  "industry": "Cong nghe thong tin",
+  "address": "Ha Noi"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `name` | string | có | Tên khách hàng, tối đa 255 ký tự — bỏ trống thì bị từ chối (TC-02) |
+| `taxCode` | string | không | Mã số thuế, tối đa 50 ký tự |
+| `industry` | string | không | Lĩnh vực/ngành nghề, tối đa 255 ký tự |
+| `address` | string | không | Địa chỉ, tối đa 500 ký tự |
+
+Hệ thống **tự sinh** `code` (mã khách hàng) duy nhất dạng `KH-xxxxxx`, không truyền lên và không tự đặt được (QTN-05).
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Tao ho so khach hang thanh cong",
+  "data": {
+    "id": 1,
+    "code": "KH-227265",
+    "name": "Cong ty TNHH ABC",
+    "taxCode": "0101234567",
+    "industry": "Cong nghe thong tin",
+    "address": "Ha Noi",
+    "createdAt": "2026-08-26T10:00:00"
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh/Quản lý dự án — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 400 | `VALIDATION_ERROR` | Thiếu hoặc để trống `name` (TC-02) |
+
+**Lưu ý cho Frontend:**
+- `code` chỉ có sau khi tạo thành công — không hiển thị ô nhập mã khách hàng trên form tạo, chỉ hiển thị `code`
+  trả về sau khi lưu (ví dụ ở toast thông báo hoặc bảng danh sách).
+- Đây mới chỉ là bước tạo hồ sơ đơn (TC-01, TC-02, TC-03, TC-04 của story); các API tra cứu danh sách, chống
+  trùng (`NCL-02-CN-002`), quản lý người liên hệ (`NCL-02-CN-003`) sẽ được bổ sung ở các story tiếp theo cùng Epic.
