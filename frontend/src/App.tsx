@@ -11,8 +11,10 @@ import EmployeeListPage from './modules/employees/pages/EmployeeListPage';
 import EmployeeDetailPage from './modules/employees/pages/EmployeeDetailPage';
 import ChangePasswordPage from './modules/auth/pages/ChangePasswordPage';
 import TwoFactorSetupPage from './modules/auth/pages/TwoFactorSetupPage';
+import CustomerListPage from './modules/customers/pages/CustomerListPage';
 
 type Tab =
+  | 'CUSTOMERS'
   | 'DEPARTMENTS'
   | 'PERMISSIONS'
   | 'USERS'
@@ -34,6 +36,7 @@ interface NavItem {
 
 /** Thanh điều hướng dạng pill nằm ngang — nhãn rút gọn để vừa một hàng, đầy đủ ngữ cảnh nằm trong tiêu đề từng trang. */
 const NAV_ITEMS: NavItem[] = [
+  { tab: 'CUSTOMERS', icon: '🏢', label: 'Khách hàng' },
   { tab: 'DEPARTMENTS', icon: '🏛️', label: 'Tổ chức' },
   { tab: 'USERS', icon: '👤', label: 'Tài khoản', matches: ['DETAIL'] },
   { tab: 'EMPLOYEES', icon: '🧑‍💼', label: 'Nhân sự', matches: ['EMPLOYEE_DETAIL'] },
@@ -199,6 +202,11 @@ export default function App() {
         <main className="app-content">
           {activeTab === 'CHANGE_PASSWORD' ? (
             <ChangePasswordPage onBack={() => setActiveTab('DEPARTMENTS')} onPasswordChanged={handleLogout} />
+          ) : activeTab === 'CUSTOMERS' ? (
+            <CustomerListPage
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+            />
           ) : activeTab === 'DEPARTMENTS' ? (
             <DepartmentTreePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'PERMISSIONS' ? (
