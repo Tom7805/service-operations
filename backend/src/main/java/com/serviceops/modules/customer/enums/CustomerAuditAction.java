@@ -13,6 +13,9 @@ public enum CustomerAuditAction {
     /** He thong chan tao moi vi phat hien trung giong cao (TC-01). */
     BLOCKED_DUPLICATE,
 
+    /** Xem ho so tong hop cua khach hang (NCL-02-CN-004, TC-03). */
+    VIEW_OVERVIEW,
+
     /** Truy cap bi tu choi vi nguoi dung khong phai sales (VT-04) hoac PM (VT-02) (TC-04). */
     DENIED_ACCESS
 }

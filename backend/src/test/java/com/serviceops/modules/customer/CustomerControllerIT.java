@@ -7,7 +7,9 @@ import com.serviceops.modules.customer.dto.request.CustomerCreateReq;
 import com.serviceops.modules.customer.dto.request.CustomerCreateWithOverrideReq;
 import com.serviceops.modules.customer.dto.request.DuplicateOverrideReq;
 import com.serviceops.modules.customer.dto.response.CustomerRes;
+import com.serviceops.modules.customer.dto.response.CustomerOverviewRes;
 import com.serviceops.modules.customer.dto.response.DuplicateCandidateRes;
+import com.serviceops.modules.customer.service.CustomerOverviewService;
 import com.serviceops.modules.customer.service.CustomerService;
 import com.serviceops.security.CustomUserDetailsService;
 import com.serviceops.security.JwtAuthFilter;
@@ -27,6 +29,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -48,6 +51,9 @@ class CustomerControllerIT {
 
 	@MockBean
 	private CustomerService customerService;
+
+	@MockBean
+	private CustomerOverviewService customerOverviewService;
 
 	@MockBean
 	private JwtProvider jwtProvider;
@@ -166,6 +172,30 @@ class CustomerControllerIT {
 		mockMvc.perform(post("/customers/create-with-override")
 						.contentType("application/json")
 						.content(objectMapper.writeValueAsString(req)))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+	}
+
+	@Test
+	@DisplayName("NCL-02-CN-004 TC-01: PM xem duoc ho so tong hop khach hang")
+	@WithMockUser(authorities = "ROLE_VT-02")
+	void projectManagerCanViewCustomerOverview() throws Exception {
+		CustomerRes customer = new CustomerRes(1L, "KH-000001", "Cong ty TNHH ABC", null, null, null, null, null);
+		when(customerOverviewService.getOverview(1L)).thenReturn(
+				new CustomerOverviewRes(customer, List.of(), List.of(), List.of(), List.of(), List.of()));
+
+		mockMvc.perform(get("/customers/1/overview"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.data.customer.code").value("KH-000001"))
+				.andExpect(jsonPath("$.data.opportunities").isArray());
+	}
+
+	@Test
+	@DisplayName("NCL-02-CN-004 TC-03: vai tro khong phu hop khong xem duoc ho so tong hop")
+	@WithMockUser(authorities = "ROLE_VT-05")
+	void overviewDeniesOtherRoles() throws Exception {
+		mockMvc.perform(get("/customers/1/overview"))
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
 	}
