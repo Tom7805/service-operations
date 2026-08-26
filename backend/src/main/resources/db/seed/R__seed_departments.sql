@@ -4,10 +4,10 @@
 -- Trung Tam Cong Nghe & Giai Phap (id 6) la don vi cap goc rieng (trung tam, khong phai "phong").
 
 INSERT INTO departments (id, name, parent_id) VALUES
-    (1, 'Ban Giam Doc', NULL),
-    (2, 'Phong Quan Ly Du An (PMO)', 1),
-    (3, 'Phong Kinh Doanh & Phat Trien Thi Truong', 1),
-    (4, 'Phong Ke Toan - Tai Chinh', 1),
-    (5, 'Phong Nhan Su', 1),
-    (6, 'Trung Tam Cong Nghe & Giai Phap', NULL)
+    (1, 'Ban Giám Đốc', NULL),
+    (2, 'Phòng Quản Lý Dự Án (PMO)', 1),
+    (3, 'Phòng Kinh Doanh & Phát Triển Thị Trường', 1),
+    (4, 'Phòng Kế Toán - Tài Chính', 1),
+    (5, 'Phòng Nhân Sự', 1),
+    (6, 'Trung Tâm Công Nghệ & Giải Pháp', NULL)
 ON DUPLICATE KEY UPDATE name = VALUES(name), parent_id = VALUES(parent_id);

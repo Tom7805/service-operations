@@ -17,7 +17,6 @@ export const RoleMatrixTable: React.FC<RoleMatrixTableProps> = ({
         <table className="user-data-table">
           <thead>
             <tr>
-              <th>Mã Vai Trò</th>
               <th>Tên Vai Trò & Chức Năng</th>
               <th>Mô Tả Nghiệp Vụ</th>
               <th>Phạm Vi & Quyền Hạn Chi Tiết</th>
@@ -31,11 +30,6 @@ export const RoleMatrixTable: React.FC<RoleMatrixTableProps> = ({
 
               return (
                 <tr key={role.code}>
-                  <td>
-                    <span className={`user-tag ${role.badgeClass}`} style={{ fontSize: '12px', padding: '4px 8px', fontWeight: 700 }}>
-                      {role.code}
-                    </span>
-                  </td>
                   <td>
                     <strong style={{ fontSize: '14px', color: '#0f172a' }}>{role.name}</strong>
                   </td>
@@ -69,7 +63,7 @@ export const RoleMatrixTable: React.FC<RoleMatrixTableProps> = ({
                         className="btn-secondary"
                         style={{ padding: '4px 10px', fontSize: '12px' }}
                         onClick={() => onSelectRoleFilter(role.code)}
-                        title={`Lọc danh sách người dùng có vai trò ${role.code}`}
+                        title={`Lọc danh sách người dùng có vai trò ${role.name}`}
                       >
                         🔍 Xem tài khoản
                       </button>

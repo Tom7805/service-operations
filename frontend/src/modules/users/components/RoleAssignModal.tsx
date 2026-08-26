@@ -152,7 +152,6 @@ export const RoleAssignModal: React.FC<RoleAssignModalProps> = ({
                         checked={isChecked}
                         onChange={() => {}}
                       />
-                      <span className="checklist-code">{role.code}</span>
                       <div className="checklist-info">
                         <strong>{role.name}</strong>
                         <p>{role.description}</p>

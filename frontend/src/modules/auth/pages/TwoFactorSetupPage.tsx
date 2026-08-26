@@ -89,7 +89,7 @@ export default function TwoFactorSetupPage({
           <span className="eyebrow text-danger">Từ chối truy cập (Access Denied)</span>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Chức năng cấu hình xác thực hai bước chỉ dành riêng cho vai trò <strong>Quản trị viên (VT-07)</strong>.
+            Chức năng cấu hình xác thực hai bước chỉ dành riêng cho vai trò <strong>Quản trị viên</strong>.
             Hệ thống đã lưu lại lần truy cập trái phép này vào nhật ký an ninh.
           </p>
           <div className="security-log-badge">

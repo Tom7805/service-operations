@@ -83,8 +83,8 @@ export default function EmployeeListPage({
           <span className="eyebrow text-danger">Từ chối truy cập (Access Denied)</span>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Chức năng Quản lý hồ sơ nhân sự chỉ dành riêng cho vai trò <strong>Nhân sự (VT-06)</strong> hoặc{' '}
-            <strong>Quản trị viên (VT-07)</strong>. Hệ thống đã ghi lại lần truy cập trái phép này vào nhật ký
+            Chức năng Quản lý hồ sơ nhân sự chỉ dành riêng cho vai trò <strong>Nhân sự</strong> hoặc{' '}
+            <strong>Quản trị viên</strong>. Hệ thống đã ghi lại lần truy cập trái phép này vào nhật ký
             bảo mật.
           </p>
           <div className="security-log-badge">

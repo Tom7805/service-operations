@@ -261,7 +261,6 @@ export const RoleScopeModal: React.FC<RoleScopeModalProps> = ({
                         checked={isChecked}
                         onChange={() => {}}
                       />
-                      <span className={`checklist-code ${role.badgeClass}`}>{role.code}</span>
                       <div className="checklist-info">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <strong>{role.name}</strong>

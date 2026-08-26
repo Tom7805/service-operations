@@ -119,7 +119,7 @@ export default function SensitiveAccessLogPage({
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
             Chức năng tra cứu nhật ký truy cập dữ liệu nhạy cảm chỉ dành riêng cho vai trò{' '}
-            <strong>Quản trị viên (VT-07)</strong>. Hệ thống đã ghi nhận lần truy cập trái phép này vào
+            <strong>Quản trị viên</strong>. Hệ thống đã ghi nhận lần truy cập trái phép này vào
             nhật ký bảo mật phía máy chủ.
           </p>
           <div className="security-log-badge">

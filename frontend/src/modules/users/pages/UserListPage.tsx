@@ -151,7 +151,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
           <span className="eyebrow text-danger">Từ chối truy cập (Access Denied)</span>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Chức năng Quản lý tài khoản người dùng chỉ dành riêng cho vai trò <strong>Quản trị viên (VT-07)</strong>.
+            Chức năng Quản lý tài khoản người dùng chỉ dành riêng cho vai trò <strong>Quản trị viên</strong>.
             Hệ thống đã ghi lại lần truy cập trái phép này vào nhật ký bảo mật.
           </p>
           <div className="security-log-badge">
@@ -227,7 +227,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
         <div className="stat-card">
           <div className="stat-card__icon stat-card__icon--purple">⚡</div>
           <div>
-            <span className="stat-card__label">Quản trị viên (VT-07)</span>
+            <span className="stat-card__label">Quản trị viên</span>
             <strong className="stat-card__value">{adminCount}</strong>
           </div>
         </div>

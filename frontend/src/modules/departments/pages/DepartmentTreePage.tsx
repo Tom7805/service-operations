@@ -188,7 +188,7 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
           <span className="eyebrow text-danger">Từ chối truy cập (Access Denied)</span>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Chức năng Khai báo cây tổ chức chỉ dành riêng cho vai trò <strong>Quản trị viên (VT-07)</strong>.
+            Chức năng Khai báo cây tổ chức chỉ dành riêng cho vai trò <strong>Quản trị viên</strong>.
             Hệ thống đã ghi lại lần truy cập này vào nhật ký bảo mật.
           </p>
           <div className="security-log-badge">
@@ -225,7 +225,7 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
           <div className="breadcrumb">
             <span>Hệ thống</span> / <span>Quản trị & Phân quyền</span> / <span className="active">Khai báo cây tổ chức</span>
           </div>
-          <h1 className="page-title">Màn hình khai báo cây tổ chức (NCL-01-CN-003)</h1>
+          <h1 className="page-title">Màn hình khai báo cây tổ chức</h1>
           <p className="page-subtitle">
             Thiết lập sơ đồ thứ bậc phòng ban, đơn vị trực thuộc, gán người quản lý và quản lý mối quan hệ cây tổ chức công ty.
           </p>

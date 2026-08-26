@@ -96,8 +96,8 @@ export default function MaskingRulePage({
           <h2>Bạn không có thẩm quyền truy cập dữ liệu nhạy cảm</h2>
           <p>
             Chức năng cấu hình quy tắc che dữ liệu lương/giá vốn chỉ dành cho các vai trò{' '}
-            <strong>Nhân sự (VT-06)</strong>, <strong>Kế toán (VT-05)</strong> và{' '}
-            <strong>Ban giám đốc (VT-01)</strong>. Hệ thống đã ghi nhận lần truy cập trái phép này.
+            <strong>Nhân sự</strong>, <strong>Kế toán</strong> và{' '}
+            <strong>Ban giám đốc</strong>. Hệ thống đã ghi nhận lần truy cập trái phép này.
           </p>
           <div className="security-log-badge">
             <span>🛡️ Lần thử truy cập: {new Date().toLocaleString('vi-VN')}</span>

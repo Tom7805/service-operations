@@ -277,7 +277,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                         />
                         <div className="role-choice-info">
                           <div className="role-choice-header">
-                            <span className="role-code-badge">{role.code}</span>
                             <span className="role-name">{role.name}</span>
                           </div>
                           <p className="role-desc">{role.description}</p>

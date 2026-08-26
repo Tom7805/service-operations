@@ -51,7 +51,7 @@ export const UserTable: React.FC<UserTableProps> = ({
     const name = role ? role.name : code;
     return (
       <span key={code} className={`user-tag ${role?.badgeClass || 'badge--gray'}`} title={role?.description || name}>
-        <strong className="user-tag__code">{code}</strong> {name}
+        {name}
       </span>
     );
   };
@@ -104,7 +104,7 @@ export const UserTable: React.FC<UserTableProps> = ({
               <option value="ALL">Tất cả vai trò</option>
               {SYSTEM_ROLES.map((role) => (
                 <option key={role.code} value={role.code}>
-                  [{role.code}] {role.name}
+                  {role.name}
                 </option>
               ))}
             </select>

@@ -41,7 +41,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
       action: 'Cấu hình phân quyền',
       performedBy: 'Quản trị viên',
       targetUser: 'admin',
-      details: 'Gán vai trò [VT-07] với phạm vi Toàn công ty (COMPANY)',
+      details: 'Gán vai trò Quản trị viên với phạm vi Toàn công ty',
     },
   ]);
 
@@ -133,7 +133,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
           <span className="eyebrow text-danger">Từ chối truy cập (Access Denied)</span>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Chức năng Phân quyền theo vai trò và phạm vi dữ liệu chỉ dành riêng cho vai trò <strong>Quản trị viên (VT-07)</strong>.
+            Chức năng Phân quyền theo vai trò và phạm vi dữ liệu chỉ dành riêng cho vai trò <strong>Quản trị viên</strong>.
             Hệ thống đã lưu lại lần truy cập trái phép này vào nhật ký an ninh.
           </p>
           <div className="security-log-badge">
@@ -189,9 +189,9 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
           <div className="breadcrumb">
             <span>Hệ thống</span> / <span>Quản trị & Phân quyền</span> / <span className="active">Phân quyền vai trò & Phạm vi dữ liệu</span>
           </div>
-          <h1 className="page-title">Phân quyền vai trò & Phạm vi dữ liệu (NCL-01-CN-004)</h1>
+          <h1 className="page-title">Phân quyền vai trò & Phạm vi dữ liệu</h1>
           <p className="page-subtitle">
-            Thiết lập vai trò chức năng (VT-01..VT-09) và phạm vi truy cập dữ liệu (Toàn công ty, Nhánh bộ phận, Cá nhân) theo chuẩn QTN-01.
+            Thiết lập vai trò chức năng và phạm vi truy cập dữ liệu (Toàn công ty, Nhánh bộ phận, Cá nhân).
           </p>
         </div>
       </div>
@@ -301,7 +301,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
                   <option value="ALL">-- Tất cả vai trò --</option>
                   {SYSTEM_ROLES.map((r) => (
                     <option key={r.code} value={r.code}>
-                      {r.code} - {r.name}
+                      {r.name}
                     </option>
                   ))}
                 </select>

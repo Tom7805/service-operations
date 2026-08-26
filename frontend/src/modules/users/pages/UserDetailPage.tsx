@@ -107,7 +107,6 @@ export const UserDetailPage: React.FC<UserDetailPageProps> = ({ userId, onBack }
               const role = SYSTEM_ROLES.find((r) => r.code === code);
               return (
                 <div key={code} className="role-detail-card">
-                  <strong className="role-code">{code}</strong>
                   <div>
                     <span className="role-title">{role ? role.name : code}</span>
                     <p className="role-desc">{role ? role.description : ''}</p>
