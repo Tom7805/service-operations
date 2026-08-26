@@ -11,5 +11,8 @@ public enum CustomerAuditAction {
     CREATE_WITH_OVERRIDE,
 
     /** He thong chan tao moi vi phat hien trung giong cao (TC-01). */
-    BLOCKED_DUPLICATE
+    BLOCKED_DUPLICATE,
+
+    /** Truy cap bi tu choi vi nguoi dung khong phai sales (VT-04) hoac PM (VT-02) (TC-04). */
+    DENIED_ACCESS
 }
