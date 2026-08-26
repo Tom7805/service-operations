@@ -7,6 +7,7 @@ public record CustomerRes(
 	String code,
 	String name,
 	String taxCode,
+	String phone,
 	String industry,
 	String address,
 	LocalDateTime createdAt

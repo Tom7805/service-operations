@@ -3,10 +3,15 @@ package com.serviceops.modules.customer.service.impl;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.customer.dto.request.CustomerCreateReq;
+import com.serviceops.modules.customer.dto.request.DuplicateOverrideReq;
 import com.serviceops.modules.customer.dto.response.CustomerRes;
+import com.serviceops.modules.customer.dto.response.DuplicateCandidateRes;
 import com.serviceops.modules.customer.entity.Customer;
+import com.serviceops.modules.customer.entity.CustomerDuplicateOverrideLog;
 import com.serviceops.modules.customer.mapper.CustomerMapper;
+import com.serviceops.modules.customer.repository.CustomerDuplicateOverrideLogRepository;
 import com.serviceops.modules.customer.repository.CustomerRepository;
+import com.serviceops.modules.customer.service.CustomerDuplicateService;
 import com.serviceops.modules.customer.service.CustomerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * NCL-02-CN-001: Tao ho so khach hang. Ma khach hang duoc he thong tu cap va bat buoc
@@ -30,6 +36,8 @@ public class CustomerServiceImpl implements CustomerService {
 
 	private final CustomerRepository customerRepository;
 	private final CustomerMapper customerMapper;
+	private final CustomerDuplicateService customerDuplicateService;
+	private final CustomerDuplicateOverrideLogRepository overrideLogRepository;
 
 	@Override
 	public CustomerRes create(CustomerCreateReq request) {
@@ -42,6 +50,7 @@ public class CustomerServiceImpl implements CustomerService {
 		customer.setCode(generateUniqueCode());
 		customer.setName(name);
 		customer.setTaxCode(blankToNull(request.taxCode()));
+		customer.setPhone(blankToNull(request.phone()));
 		customer.setIndustry(blankToNull(request.industry()));
 		customer.setAddress(blankToNull(request.address()));
 		customer.setCreatedBy(currentUsername());
@@ -50,6 +59,44 @@ public class CustomerServiceImpl implements CustomerService {
 		Customer saved = customerRepository.save(customer);
 		log.info("CUSTOMER_CREATED code={} createdBy={}", saved.getCode(), saved.getCreatedBy());
 		return customerMapper.toResponse(saved);
+	}
+
+	@Override
+	public List<DuplicateCandidateRes> checkDuplicates(CustomerCreateReq request) {
+		return customerDuplicateService.findDuplicates(request.name(), request.taxCode(), request.phone());
+	}
+
+	@Override
+	public CustomerRes createWithOverride(CustomerCreateReq request, DuplicateOverrideReq override) {
+		Customer customer = buildCustomer(request);
+		Customer saved = customerRepository.save(customer);
+
+		CustomerDuplicateOverrideLog audit = new CustomerDuplicateOverrideLog();
+		audit.setCustomerId(saved.getId());
+		audit.setReason(override.reason().trim());
+		audit.setOverriddenByUserId(currentUserId());
+		overrideLogRepository.save(audit);
+
+		log.info("CUSTOMER_CREATED_WITH_OVERRIDE code={} customerId={} by={}", saved.getCode(),
+			saved.getId(), currentUserId());
+		return customerMapper.toResponse(saved);
+	}
+
+	private Customer buildCustomer(CustomerCreateReq request) {
+		String name = request.name().trim();
+		if (name.isEmpty()) {
+			throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR, "Ten khach hang khong duoc de trong");
+		}
+		Customer customer = new Customer();
+		customer.setCode(generateUniqueCode());
+		customer.setName(name);
+		customer.setTaxCode(blankToNull(request.taxCode()));
+		customer.setPhone(blankToNull(request.phone()));
+		customer.setIndustry(blankToNull(request.industry()));
+		customer.setAddress(blankToNull(request.address()));
+		customer.setCreatedBy(currentUsername());
+		customer.setCreatedAt(LocalDateTime.now());
+		return customer;
 	}
 
 	private String generateUniqueCode() {
@@ -71,5 +118,13 @@ public class CustomerServiceImpl implements CustomerService {
 	private String currentUsername() {
 		var authentication = SecurityContextHolder.getContext().getAuthentication();
 		return authentication == null ? null : authentication.getName();
+	}
+
+	private Long currentUserId() {
+		var authentication = SecurityContextHolder.getContext().getAuthentication();
+		if (authentication == null || !(authentication.getPrincipal() instanceof com.serviceops.security.CustomUserDetails details)) {
+			return null;
+		}
+		return details.getId();
 	}
 }

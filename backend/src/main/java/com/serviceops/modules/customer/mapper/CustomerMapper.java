@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 public class CustomerMapper {
 	public CustomerRes toResponse(Customer customer) {
 		return new CustomerRes(customer.getId(), customer.getCode(), customer.getName(),
-				customer.getTaxCode(), customer.getIndustry(), customer.getAddress(), customer.getCreatedAt());
+				customer.getTaxCode(), customer.getPhone(), customer.getIndustry(), customer.getAddress(),
+				customer.getCreatedAt());
 	}
 }
