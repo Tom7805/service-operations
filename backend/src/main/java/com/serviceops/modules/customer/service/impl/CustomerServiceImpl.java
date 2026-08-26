@@ -7,8 +7,11 @@ import com.serviceops.modules.customer.dto.request.DuplicateOverrideReq;
 import com.serviceops.modules.customer.dto.response.CustomerRes;
 import com.serviceops.modules.customer.dto.response.DuplicateCandidateRes;
 import com.serviceops.modules.customer.entity.Customer;
+import com.serviceops.modules.customer.entity.CustomerAuditLog;
 import com.serviceops.modules.customer.entity.CustomerDuplicateOverrideLog;
+import com.serviceops.modules.customer.enums.CustomerAuditAction;
 import com.serviceops.modules.customer.mapper.CustomerMapper;
+import com.serviceops.modules.customer.repository.CustomerAuditLogRepository;
 import com.serviceops.modules.customer.repository.CustomerDuplicateOverrideLogRepository;
 import com.serviceops.modules.customer.repository.CustomerRepository;
 import com.serviceops.modules.customer.service.CustomerDuplicateService;
@@ -39,6 +42,7 @@ public class CustomerServiceImpl implements CustomerService {
 	private final CustomerMapper customerMapper;
 	private final CustomerDuplicateService customerDuplicateService;
 	private final CustomerDuplicateOverrideLogRepository overrideLogRepository;
+	private final CustomerAuditLogRepository auditLogRepository;
 	private final CustomerDuplicateValidator customerDuplicateValidator;
 
 	@Override
@@ -64,6 +68,7 @@ public class CustomerServiceImpl implements CustomerService {
 		customer.setCreatedAt(LocalDateTime.now());
 
 		Customer saved = customerRepository.save(customer);
+		recordAudit(saved.getId(), CustomerAuditAction.CREATE, "Tao ho so khach hang: " + saved.getName());
 		log.info("CUSTOMER_CREATED code={} createdBy={}", saved.getCode(), saved.getCreatedBy());
 		return customerMapper.toResponse(saved);
 	}
@@ -84,6 +89,9 @@ public class CustomerServiceImpl implements CustomerService {
 		audit.setReason(override.reason().trim());
 		audit.setOverriddenByUserId(currentUserId());
 		overrideLogRepository.save(audit);
+
+		recordAudit(saved.getId(), CustomerAuditAction.CREATE_WITH_OVERRIDE,
+				"Tao ho so moi bo qua canh bao trung. Ly do: " + override.reason().trim());
 
 		log.info("CUSTOMER_CREATED_WITH_OVERRIDE code={} customerId={} by={}", saved.getCode(),
 			saved.getId(), currentUserId());
@@ -134,5 +142,15 @@ public class CustomerServiceImpl implements CustomerService {
 			return null;
 		}
 		return details.getId();
+	}
+
+	private void recordAudit(Long customerId, CustomerAuditAction action, String detail) {
+		CustomerAuditLog log = new CustomerAuditLog();
+		log.setCustomerId(customerId);
+		log.setActionType(action);
+		log.setDetail(detail);
+		log.setActorUserId(currentUserId());
+		log.setActorUsername(currentUsername());
+		auditLogRepository.save(log);
 	}
 }
