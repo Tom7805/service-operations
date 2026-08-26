@@ -14,5 +14,8 @@ public enum CustomerAuditAction {
     BLOCKED_DUPLICATE,
 
     /** Truy cap bi tu choi vi nguoi dung khong phai sales (VT-04) hoac PM (VT-02) (TC-04). */
-    DENIED_ACCESS
+    DENIED_ACCESS,
+
+    /** Gop ho so khach hang trung, ghi tren ho so "giu lai" (NCL-02-CN-006, TC-04). */
+    MERGE
 }

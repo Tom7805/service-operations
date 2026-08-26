@@ -5,5 +5,8 @@ package com.serviceops.modules.customer.enums;
  */
 public enum CustomerStatus {
     ACTIVE,
-    INACTIVE
+    INACTIVE,
+
+    /** Ho so da bi gop vao ho so khac (NCL-02-CN-006) - khong con duoc dung cho thao tac nghiep vu moi. */
+    MERGED
 }
