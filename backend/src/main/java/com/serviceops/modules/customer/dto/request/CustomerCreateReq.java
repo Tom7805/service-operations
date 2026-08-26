@@ -9,6 +9,8 @@ public record CustomerCreateReq(
 	String name,
 	@Size(max = 50, message = "Ma so thue khong qua 50 ky tu")
 	String taxCode,
+	@Size(max = 30, message = "So dien thoai khong qua 30 ky tu")
+	String phone,
 	@Size(max = 255, message = "Linh vuc khong qua 255 ky tu")
 	String industry,
 	@Size(max = 500, message = "Dia chi khong qua 500 ky tu")

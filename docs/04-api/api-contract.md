@@ -448,6 +448,7 @@ Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`) hoặc **Quản lý 
 {
   "name": "Cong ty TNHH ABC",
   "taxCode": "0101234567",
+  "phone": "0987654321",
   "industry": "Cong nghe thong tin",
   "address": "Ha Noi"
 }
@@ -457,10 +458,16 @@ Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`) hoặc **Quản lý 
 |---|---|---|---|
 | `name` | string | có | Tên khách hàng, tối đa 255 ký tự — bỏ trống thì bị từ chối (TC-02) |
 | `taxCode` | string | không | Mã số thuế, tối đa 50 ký tự |
+| `phone` | string | không | Số điện thoại, tối đa 30 ký tự — dùng thêm để đối chiếu chống trùng ở `NCL-02-CN-002` |
 | `industry` | string | không | Lĩnh vực/ngành nghề, tối đa 255 ký tự |
 | `address` | string | không | Địa chỉ, tối đa 500 ký tự |
 
 Hệ thống **tự sinh** `code` (mã khách hàng) duy nhất dạng `KH-xxxxxx`, không truyền lên và không tự đặt được (QTN-05).
+
+**Trước khi gọi `POST /customers`, Frontend nên gọi `POST /customers/check-duplicate` trước** (xem mục
+`NCL-02-CN-002` bên dưới) để hiển thị cảnh báo hồ sơ nghi trùng cho người dùng xác nhận — vì bản thân
+`POST /customers` cũng tự kiểm tra và **chặn lưu ngay** (`409 DUPLICATE_DATA`) nếu phát hiện hồ sơ giống cao,
+không đợi Frontend gọi trước.
 
 **Response thành công — `200 OK`:**
 ```json
@@ -472,6 +479,7 @@ Hệ thống **tự sinh** `code` (mã khách hàng) duy nhất dạng `KH-xxxxx
     "code": "KH-227265",
     "name": "Cong ty TNHH ABC",
     "taxCode": "0101234567",
+    "phone": "0987654321",
     "industry": "Cong nghe thong tin",
     "address": "Ha Noi",
     "createdAt": "2026-08-26T10:00:00"
@@ -486,9 +494,129 @@ Hệ thống **tự sinh** `code` (mã khách hàng) duy nhất dạng `KH-xxxxx
 | 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
 | 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh/Quản lý dự án — hệ thống ghi nhật ký lần từ chối (TC-03) |
 | 400 | `VALIDATION_ERROR` | Thiếu hoặc để trống `name` (TC-02) |
+| 409 | `DUPLICATE_DATA` | Phát hiện hồ sơ đã có mức độ giống cao (`NCL-02-CN-002`, TC-01) — xem cách xử lý ở mục dưới |
 
 **Lưu ý cho Frontend:**
 - `code` chỉ có sau khi tạo thành công — không hiển thị ô nhập mã khách hàng trên form tạo, chỉ hiển thị `code`
   trả về sau khi lưu (ví dụ ở toast thông báo hoặc bảng danh sách).
-- Đây mới chỉ là bước tạo hồ sơ đơn (TC-01, TC-02, TC-03, TC-04 của story); các API tra cứu danh sách, chống
-  trùng (`NCL-02-CN-002`), quản lý người liên hệ (`NCL-02-CN-003`) sẽ được bổ sung ở các story tiếp theo cùng Epic.
+- Quản lý người liên hệ (`NCL-02-CN-003`) sẽ được bổ sung ở story tiếp theo cùng Epic.
+
+---
+
+### `NCL-02-CN-002` — Chống trùng hồ sơ khách hàng
+
+Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`) hoặc **Quản lý dự án** (`VT-02`), giống hệt `NCL-02-CN-001`;
+vai trò khác nhận `403 FORBIDDEN` (TC-04).
+
+**Luồng khuyến nghị cho Frontend (form tạo khách hàng):**
+1. Người dùng điền form → gọi `POST /customers/check-duplicate` trước khi submit thật.
+2. Nếu `data` rỗng → gọi luôn `POST /customers` như bình thường (TC-03).
+3. Nếu `data` có phần tử với `similarity` cao → hiển thị danh sách hồ sơ nghi trùng cho người dùng xem, kèm nút
+   "Vẫn tạo mới" yêu cầu nhập **lý do bắt buộc** → gọi `POST /customers/create-with-override` (TC-01, TC-02).
+4. Kể cả khi Frontend bỏ qua bước 1 và gọi thẳng `POST /customers`, backend vẫn tự chặn (`409 DUPLICATE_DATA`)
+   nếu phát hiện trùng cao — bước check-duplicate chỉ để hiển thị cảnh báo *trước* cho người dùng, không phải
+   điều kiện bắt buộc để backend chặn.
+
+#### `POST /customers/check-duplicate`
+
+Kiểm tra hồ sơ dự định tạo có nghi trùng với hồ sơ đã có không — **không tạo hồ sơ**, chỉ trả về danh sách gợi ý.
+Body giống hệt `POST /customers` (dùng lại `CustomerCreateReq`).
+
+```json
+{ "name": "Cong Ty TNHH ABC", "taxCode": "0101234567", "phone": "0987654321", "industry": null, "address": null }
+```
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 9,
+      "code": "KH-000009",
+      "name": "Cong ty TNHH ABC",
+      "taxCode": "0101234567",
+      "phone": "0987654321",
+      "similarity": 0.95,
+      "matchedFields": ["maSoThue"]
+    }
+  ]
+}
+```
+
+- `data` là mảng **rỗng** khi không có hồ sơ nào nghi trùng (TC-03) — Frontend cho tạo luôn, không hiện cảnh báo.
+- `similarity` từ `0.0` đến `1.0` (`1.0` là trùng tuyệt đối); ngưỡng **`>= 0.9`** là mức mà `POST /customers` sẽ
+  tự chặn lưu (TC-01) — Frontend nên tô đỏ/nhấn mạnh các hồ sơ có `similarity >= 0.9` vì chắc chắn sẽ bị chặn
+  nếu người dùng bấm lưu bình thường, phải đi qua `create-with-override`.
+- `matchedFields` cho biết trường nào khớp: `"ten"`, `"maSoThue"`, `"soDienThoai"` — dùng để giải thích lý do
+  nghi trùng cho người dùng (ví dụ tô đậm ô mã số thuế nếu `matchedFields` chứa `"maSoThue"`).
+- Danh sách sắp xếp giảm dần theo `similarity`.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh/Quản lý dự án — hệ thống ghi nhật ký lần từ chối (TC-04) |
+| 400 | `VALIDATION_ERROR` | Thiếu hoặc để trống `name` |
+
+#### `POST /customers/create-with-override`
+
+Xác nhận tạo hồ sơ mới **bất chấp cảnh báo trùng**, bắt buộc kèm lý do (TC-02).
+
+```json
+{
+  "customer": {
+    "name": "Cong ty TNHH ABC",
+    "taxCode": "0101234567",
+    "phone": null,
+    "industry": null,
+    "address": null
+  },
+  "override": {
+    "reason": "Hai phap nhan khac nhau, chi trung ten viet tat"
+  }
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `customer` | object | có | Giống hệt body của `POST /customers` |
+| `override.reason` | string | có | Lý do xác nhận đây không phải trùng lặp thật, tối đa 1000 ký tự — để trống bị từ chối |
+
+Endpoint này **không tự kiểm tra lại** xem có thực sự tồn tại hồ sơ nghi trùng hay không — nó luôn tạo hồ sơ mới
+kèm ghi lại lý do, dùng đúng lúc người dùng đã thấy cảnh báo từ `check-duplicate` (hoặc từ lỗi `409` của
+`POST /customers`) và chủ động xác nhận đây là hai khách hàng khác nhau.
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Tao ho so khach hang thanh cong (bo qua canh bao trung)",
+  "data": {
+    "id": 2,
+    "code": "KH-000002",
+    "name": "Cong ty TNHH ABC",
+    "taxCode": "0101234567",
+    "phone": null,
+    "industry": null,
+    "address": null,
+    "createdAt": "2026-08-26T10:05:00"
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh/Quản lý dự án — hệ thống ghi nhật ký lần từ chối (TC-04) |
+| 400 | `VALIDATION_ERROR` | Thiếu `customer.name` hoặc để trống `override.reason` (TC-02) |
+
+**Lưu ý cho Frontend:**
+- Sau khi override thành công, hồ sơ được tạo bình thường như `POST /customers` — không có gì khác biệt ở phía
+  hiển thị, chỉ khác ở chỗ lý do bỏ qua cảnh báo đã được lưu lại phía backend để tra soát sau này (TC-05), không
+  cần Frontend hiển thị hay xử lý gì thêm với lý do đó sau khi gửi.
+- Mọi lần tạo (kể cả bình thường lẫn override) và mọi lần bị từ chối truy cập đều được backend tự ghi nhật ký —
+  Frontend không cần gọi thêm API nào để việc ghi log này xảy ra.
