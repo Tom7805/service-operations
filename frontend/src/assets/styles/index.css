@@ -196,9 +196,9 @@
 .topbar-nav__item__icon { font-size: 13.5px; line-height: 1; }
 
 .topbar-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-.topbar-devmode { display: flex; align-items: center; gap: 7px; border: 1px dashed #fbbf24; background: #fffbeb; border-radius: 999px; padding: 5px 12px 5px 10px; }
-.topbar-devmode__dot { width: 6px; height: 6px; border-radius: 50%; background: #f59e0b; flex-shrink: 0; }
-.topbar-devmode select { background: transparent; border: none; color: #92400e; font-size: 11.5px; font-weight: 700; outline: none; max-width: 150px; }
+.topbar-role-badge { display: flex; align-items: center; gap: 7px; border: 1px solid #a7f3d0; background: #ecfdf5; border-radius: 999px; padding: 5px 12px 5px 10px; }
+.topbar-devmode__dot { width: 6px; height: 6px; border-radius: 50%; background: #10b981; flex-shrink: 0; }
+.topbar-role-badge span:not(.topbar-devmode__dot) { color: #047857; font-size: 11.5px; font-weight: 700; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .topbar-user { position: relative; }
 .topbar-user__trigger { display: flex; align-items: center; gap: 10px; background: transparent; border: 1px solid transparent; border-radius: 10px; padding: 5px 8px 5px 5px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
@@ -225,7 +225,7 @@
   .app-topbar { margin: 10px 12px 0; padding: 8px; flex-wrap: wrap; border-radius: 18px; }
   .topbar-brand span:not(.topbar-brand__mark) { display: none; }
   .topbar-nav { order: 3; width: 100%; justify-content: flex-start; border-top: 1px solid #f1f5f9; margin-top: 4px; padding-top: 6px; }
-  .topbar-devmode span:not(.topbar-devmode__dot) { display: none; }
+  .topbar-role-badge span:not(.topbar-devmode__dot) { display: none; }
 }
 
 /* Role Assign Modal & Scope Selection */

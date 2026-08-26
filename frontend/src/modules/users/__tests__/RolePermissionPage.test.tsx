@@ -158,7 +158,7 @@ describe('Role & Data Scope Module — Acceptance Criteria Tests (NCL-01-CN-004)
     render(<RolePermissionPage currentUserRoles={['VT-07']} currentUserName="Quản trị viên" />);
 
     await waitFor(() => {
-      expect(screen.getByText('Phân quyền vai trò & Phạm vi dữ liệu')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Phân quyền vai trò & Phạm vi dữ liệu' })).toBeInTheDocument();
       expect(screen.getByText('9 Vai trò')).toBeInTheDocument();
       expect(screen.getByText(/Nhật ký phân quyền & phạm vi dữ liệu/i)).toBeInTheDocument();
     });
