@@ -33,7 +33,12 @@ public class CustomerAuditLog extends BaseEntity {
     @Column(name = "detail", length = 1000)
     private String detail;
 
-    @Column(name = "actor_id", nullable = false)
+    /**
+     * Nguoi thuc hien. Co the la NULL khi ghi nhan lan tu choi truy cap tu
+     * mot request chua xac thuc (khong co JWT) — truong hop nay khong co
+     * CustomUserDetails de lay id, nhung van phai ghi lai duoc su kien (TC-04).
+     */
+    @Column(name = "actor_id")
     private Long actorUserId;
 
     @Column(name = "actor_username", length = 100)

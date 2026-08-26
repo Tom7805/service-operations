@@ -1,7 +1,5 @@
 package com.serviceops.modules.customer.service.impl;
 
-import com.serviceops.common.exception.BusinessRuleException;
-import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.customer.dto.response.DuplicateCandidateRes;
 import com.serviceops.modules.customer.entity.Customer;
 import com.serviceops.modules.customer.repository.CustomerRepository;
@@ -23,7 +21,6 @@ import java.util.Map;
 public class CustomerDuplicateServiceImpl implements CustomerDuplicateService {
 
     private static final double MIN_SIMILARITY = 0.6;
-    private static final double BLOCKING_SIMILARITY = 0.9;
     private static final double TAX_CODE_WEIGHT = 0.95;
     private static final double PHONE_WEIGHT = 0.85;
     private static final double NAME_MATCH_FIELD = 0.7;
@@ -57,17 +54,6 @@ public class CustomerDuplicateServiceImpl implements CustomerDuplicateService {
         return result.values().stream()
                 .sorted((a, b) -> Double.compare(b.similarity(), a.similarity()))
                 .toList();
-    }
-
-    @Override
-    public void assertNoBlockingDuplicate(List<DuplicateCandidateRes> candidates) {
-        boolean blocking = candidates.stream()
-                .anyMatch(c -> c.similarity() >= BLOCKING_SIMILARITY);
-        if (blocking) {
-            throw new BusinessRuleException(ErrorCode.DUPLICATE_DATA,
-                    "Ho so khach hang co the trung voi ho so da co (muc do giong cao). "
-                            + "Vui long kiem tra va xac nhan tao moi kem ly do (TC-02).");
-        }
     }
 
     private List<Customer> collectCandidates(String normalizedName, String normalizedTax) {

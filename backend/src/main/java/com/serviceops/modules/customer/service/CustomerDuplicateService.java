@@ -8,9 +8,9 @@ import java.util.List;
  * Chong trung ho so khach hang (NCL-02-CN-002).
  *
  * <p>So khop gan dung theo ten, ma so thue va so dien thoai de de xuat danh sach
- * ho so nghi trung ke kem muc do giong nhau (TC-01). Luc co uoi trung manh
- * (vi du cung ma so thue) thi chan luu (TC-01) tru khi nguoi dung xac nhan
- * tao moi kem ly do (TC-02).</p>
+ * ho so nghi trung ke kem muc do giong nhau (TC-01). Quyet dinh co chan luu hay
+ * khong (nguong giong cao, TC-01) thuoc ve {@link com.serviceops.modules.customer.validator.CustomerDuplicateValidator} —
+ * service nay chi chiu trach nhiem tinh diem giong nhau, khong tu quyet dinh chan.</p>
  */
 public interface CustomerDuplicateService {
 
@@ -23,12 +23,4 @@ public interface CustomerDuplicateService {
      * @return danh sach ho so nghi trung, giam dan theo muc do giong nhau.
      */
     List<DuplicateCandidateRes> findDuplicates(String name, String taxCode, String phone);
-
-    /**
-     * Kiem tra co ton tai ho so bi chan khong (muc do giong nhau cao, vi du cung ma so thue).
-     *
-     * @param candidates danh sach ho so nghi trung da tinh ({@link #findDuplicates}).
-     * @throws com.serviceops.common.exception.BusinessRuleException khi co ho so chan (TC-01).
-     */
-    void assertNoBlockingDuplicate(List<DuplicateCandidateRes> candidates);
 }

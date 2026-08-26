@@ -1,7 +1,5 @@
 package com.serviceops.modules.customer;
 
-import com.serviceops.common.exception.BusinessRuleException;
-import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.customer.dto.response.DuplicateCandidateRes;
 import com.serviceops.modules.customer.entity.Customer;
 import com.serviceops.modules.customer.repository.CustomerRepository;
@@ -17,13 +15,15 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 /**
- * Unit test CustomerDuplicateServiceImpl - cover TC-01, TC-03 cua NCL-02-CN-002.
+ * Unit test CustomerDuplicateServiceImpl - thuat toan tinh diem giong nhau cho
+ * NCL-02-CN-002 (TC-01, TC-03). Quyet dinh co chan luu hay khong dua tren diem nay
+ * thuoc ve {@link com.serviceops.modules.customer.validator.CustomerDuplicateValidator},
+ * duoc test rieng o {@link CustomerDuplicateValidatorTest}.
  */
 @ExtendWith(MockitoExtension.class)
 class CustomerDuplicateServiceTest {
@@ -51,7 +51,7 @@ class CustomerDuplicateServiceTest {
 	}
 
 	@Test
-	@DisplayName("TC-01: cung ma so thue thi phai hien ho so nghi trung va chan")
+	@DisplayName("TC-01: cung ma so thue thi phai hien ho so nghi trung voi diem giong cao")
 	void findsBlockingDuplicateByTaxCode() {
 		when(customerRepository.findByTaxCode("0101234567"))
 				.thenReturn(Optional.of(customer(1L, "Cong ty TNHH ABC", "0101234567", "0987654321")));
@@ -62,20 +62,13 @@ class CustomerDuplicateServiceTest {
 		assertThat(candidates).hasSize(1);
 		assertThat(candidates.get(0).similarity()).isGreaterThanOrEqualTo(0.9);
 		assertThat(candidates.get(0).matchedFields()).contains("maSoThue");
-
-		assertThatThrownBy(() -> service.assertNoBlockingDuplicate(candidates))
-				.isInstanceOf(BusinessRuleException.class)
-				.extracting(ex -> ((BusinessRuleException) ex).getErrorCode())
-				.isEqualTo(ErrorCode.DUPLICATE_DATA);
 	}
 
 	@Test
-	@DisplayName("TC-03: khong co ho so tuong tu -> tra ve rong, khong chan")
+	@DisplayName("TC-03: khong co ho so tuong tu -> tra ve rong")
 	void noDuplicateWhenNothingMatches() {
 		List<DuplicateCandidateRes> candidates = service.findDuplicates("Cong ty hoan toan moi", "99", "8888888888");
 
 		assertThat(candidates).isEmpty();
-		assertThatThrownBy(() -> service.assertNoBlockingDuplicate(candidates))
-				.doesNotThrowAnyException();
 	}
 }
