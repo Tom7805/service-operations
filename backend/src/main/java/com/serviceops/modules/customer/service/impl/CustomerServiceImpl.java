@@ -13,6 +13,7 @@ import com.serviceops.modules.customer.repository.CustomerDuplicateOverrideLogRe
 import com.serviceops.modules.customer.repository.CustomerRepository;
 import com.serviceops.modules.customer.service.CustomerDuplicateService;
 import com.serviceops.modules.customer.service.CustomerService;
+import com.serviceops.modules.customer.validator.CustomerDuplicateValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -38,6 +39,7 @@ public class CustomerServiceImpl implements CustomerService {
 	private final CustomerMapper customerMapper;
 	private final CustomerDuplicateService customerDuplicateService;
 	private final CustomerDuplicateOverrideLogRepository overrideLogRepository;
+	private final CustomerDuplicateValidator customerDuplicateValidator;
 
 	@Override
 	public CustomerRes create(CustomerCreateReq request) {
@@ -45,6 +47,11 @@ public class CustomerServiceImpl implements CustomerService {
 		if (name.isEmpty()) {
 			throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR, "Ten khach hang khong duoc de trong");
 		}
+
+		// NCL-02-CN-002 (TC-01): chan luu khi co ho so nghi trung giong cao.
+		List<DuplicateCandidateRes> candidates =
+				customerDuplicateService.findDuplicates(name, request.taxCode(), request.phone());
+		customerDuplicateValidator.validate(candidates);
 
 		Customer customer = new Customer();
 		customer.setCode(generateUniqueCode());
@@ -68,6 +75,7 @@ public class CustomerServiceImpl implements CustomerService {
 
 	@Override
 	public CustomerRes createWithOverride(CustomerCreateReq request, DuplicateOverrideReq override) {
+		customerDuplicateValidator.validateOverrideReason(override.reason());
 		Customer customer = buildCustomer(request);
 		Customer saved = customerRepository.save(customer);
 
