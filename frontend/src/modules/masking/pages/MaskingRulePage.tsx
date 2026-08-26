@@ -112,10 +112,10 @@ export default function MaskingRulePage({
   return (
     <div className="user-management-page">
       {toastMessage && (
-        <div className={`toast-notification toast--${toastMessage.type}`} role="status">
-          <span className="toast__icon">{toastMessage.type === 'success' ? '✅' : '⚠️'}</span>
+        <div className={`toast-banner toast-banner--${toastMessage.type}`} role="status">
+          <span className="toast-banner__icon">{toastMessage.type === 'success' ? '✅' : '⚠️'}</span>
           <span>{toastMessage.text}</span>
-          <button type="button" className="toast__close" onClick={() => setToastMessage(null)}>
+          <button type="button" className="toast-banner__close" onClick={() => setToastMessage(null)}>
             ✕
           </button>
         </div>

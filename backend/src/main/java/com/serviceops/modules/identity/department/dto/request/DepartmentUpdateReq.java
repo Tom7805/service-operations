@@ -1,5 +1,6 @@
 package com.serviceops.modules.identity.department.dto.request;
 
+import com.serviceops.modules.identity.department.enums.DepartmentType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -10,5 +11,7 @@ public record DepartmentUpdateReq(
 	String name,
 	Long parentId,
 	@NotNull(message = "Phai chon nguoi quan ly")
-	Long managerId
+	Long managerId,
+	@NotNull(message = "Phai chon loai don vi")
+	DepartmentType unitType
 ) {}

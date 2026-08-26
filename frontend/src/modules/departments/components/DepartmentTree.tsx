@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { Department, DepartmentTreeNode } from '../types/departmentTypes';
+import { getUnitTypeLabel, getUnitTypeMonogram } from '../constants/departmentUnitTypes';
 
 export type ViewMode = 'TREE' | 'LIST' | 'TABLE';
 
@@ -51,6 +52,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
       parentId,
       managerId: node.managerId,
       managerName: node.managerName,
+      unitType: node.unitType,
     };
   };
 
@@ -153,17 +155,16 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
               <span className="tree-node-dot" />
             )}
 
-            <span className="tree-node-icon">{level === 0 ? '🏛️' : level === 1 ? '🏢' : '📂'}</span>
-
             <div className="tree-node-info">
               <div className="tree-node-header">
                 <span className="tree-node-title">{node.name}</span>
+                <span className="user-tag badge--blue">{getUnitTypeLabel(node.unitType)}</span>
                 {level === 0 && <span className="badge-level badge-level--root">Cấp Gốc</span>}
                 {hasChildren && <span className="badge-children">{node.children.length} bộ phận con</span>}
               </div>
 
               <div className="tree-node-manager">
-                <span>👤 Trưởng bộ phận:</span>
+                <span>Trưởng bộ phận:</span>
                 <strong>{node.managerName ? node.managerName : 'Chưa phân công'}</strong>
               </div>
             </div>
@@ -216,11 +217,11 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
                       <td>
                         <div className="user-profile-cell">
                           <span className="avatar-circle avatar-circle--lg" style={{ background: isRoot ? '#059669' : '#0284c7' }}>
-                            {isRoot ? '🏛️' : '🏢'}
+                            {getUnitTypeMonogram(dept.unitType)}
                           </span>
                           <div className="user-profile-meta">
                             <span className="user-profile-fullname">{dept.name}</span>
-                            <span className="user-profile-username">ID: DEPT-{dept.id}</span>
+                            <span className="user-profile-username">ID: DEPT-{dept.id} • {getUnitTypeLabel(dept.unitType)}</span>
                           </div>
                         </div>
                       </td>
@@ -233,14 +234,13 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
                       </td>
                       <td>
                         {parentDept ? (
-                          <span className="cell-dept">📂 {parentDept.name}</span>
+                          <span className="cell-dept">{parentDept.name}</span>
                         ) : (
                           <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>-- Cấp cao nhất --</span>
                         )}
                       </td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span>👤</span>
                           <strong style={{ color: '#0f172a' }}>{dept.managerName || 'Chưa gán'}</strong>
                         </div>
                       </td>
@@ -315,10 +315,10 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
         {listRows.map(({ dept, level, path, childCount }) => (
           <div key={dept.id} className="dept-list-row">
             <div className="tree-node-left">
-              <span className="tree-node-icon">{level === 0 ? '🏛️' : level === 1 ? '🏢' : '📂'}</span>
               <div className="tree-node-info">
                 <div className="tree-node-header">
                   <span className="tree-node-title">{dept.name}</span>
+                  <span className="user-tag badge--blue">{getUnitTypeLabel(dept.unitType)}</span>
                   {level === 0 ? (
                     <span className="badge-level badge-level--root">Cấp Gốc</span>
                   ) : (
@@ -326,9 +326,9 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
                   )}
                   {childCount > 0 && <span className="badge-children">{childCount} bộ phận con</span>}
                 </div>
-                {path && <div className="dept-list-path">📍 {path}</div>}
+                {path && <div className="dept-list-path">{path}</div>}
                 <div className="tree-node-manager">
-                  <span>👤 Trưởng bộ phận:</span>
+                  <span>Trưởng bộ phận:</span>
                   <strong>{dept.managerName ? dept.managerName : 'Chưa phân công'}</strong>
                 </div>
               </div>
