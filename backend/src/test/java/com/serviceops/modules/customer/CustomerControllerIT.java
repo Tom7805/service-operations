@@ -50,9 +50,9 @@ class CustomerControllerIT {
 	@Test
 	@WithMockUser(authorities = "ROLE_VT-04")
 	void allowsSalesRoleToCreateCustomer() throws Exception {
-		CustomerCreateReq req = new CustomerCreateReq("Cong ty TNHH ABC", "0101234567", "Cong nghe", "Ha Noi");
+		CustomerCreateReq req = new CustomerCreateReq("Cong ty TNHH ABC", "0101234567", "0987654321", "Cong nghe", "Ha Noi");
 		when(customerService.create(any())).thenReturn(
-				new CustomerRes(1L, "KH-000001", "Cong ty TNHH ABC", "0101234567", "Cong nghe", "Ha Noi", null));
+				new CustomerRes(1L, "KH-000001", "Cong ty TNHH ABC", "0101234567", "0987654321", "Cong nghe", "Ha Noi", null));
 
 		mockMvc.perform(post("/customers")
 						.contentType("application/json")
@@ -65,7 +65,7 @@ class CustomerControllerIT {
 	@Test
 	@WithMockUser(authorities = "ROLE_VT-05")
 	void deniesOtherRoles() throws Exception {
-		CustomerCreateReq req = new CustomerCreateReq("Cong ty TNHH ABC", null, null, null);
+		CustomerCreateReq req = new CustomerCreateReq("Cong ty TNHH ABC", null, null, null, null);
 
 		mockMvc.perform(post("/customers")
 						.contentType("application/json")
@@ -77,7 +77,7 @@ class CustomerControllerIT {
 	@Test
 	@WithMockUser(authorities = "ROLE_VT-04")
 	void rejectsBlankName() throws Exception {
-		CustomerCreateReq req = new CustomerCreateReq("", null, null, null);
+		CustomerCreateReq req = new CustomerCreateReq("", null, null, null, null);
 
 		mockMvc.perform(post("/customers")
 						.contentType("application/json")
