@@ -1,8 +1,16 @@
 import { useState, useMemo } from 'react';
-import { createCustomer, CustomerApiError } from '../api/customersApi';
+import {
+  createCustomer,
+  createCustomerWithOverride,
+  CustomerApiError,
+} from '../api/customersApi';
 import CustomerFormModal from '../components/CustomerFormModal';
 import CustomerTable from '../components/CustomerTable';
-import type { Customer, CustomerCreatePayload } from '../types/customerTypes';
+import type {
+  Customer,
+  CustomerCreatePayload,
+  CustomerCreateWithOverridePayload,
+} from '../types/customerTypes';
 
 interface CustomerListPageProps {
   currentUserRoles?: string[];
@@ -61,6 +69,30 @@ export default function CustomerListPage({
     }
   };
 
+  const handleCreateCustomerWithOverride = async (
+    payload: CustomerCreateWithOverridePayload
+  ) => {
+    try {
+      const newCustomer = await createCustomerWithOverride(payload);
+      setCustomers((prev) => [newCustomer, ...prev]);
+      showToast(
+        `Tạo hồ sơ khách hàng "${newCustomer.name}" thành công (Đã ghi nhận lý do bỏ qua cảnh báo)!`,
+        'success',
+        newCustomer.code
+      );
+      return newCustomer;
+    } catch (err) {
+      const message =
+        err instanceof CustomerApiError
+          ? err.message
+          : err instanceof Error
+          ? err.message
+          : 'Không thể tạo hồ sơ khách hàng.';
+      showToast(message, 'error');
+      throw err;
+    }
+  };
+
   // Lọc danh sách theo từ khóa tìm kiếm và ngành nghề
   const filteredCustomers = useMemo(() => {
     return customers.filter((cust) => {
@@ -69,6 +101,7 @@ export default function CustomerListPage({
         cust.name.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
         cust.code.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
         (cust.taxCode && cust.taxCode.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (cust.phone && cust.phone.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
         (cust.industry && cust.industry.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
         (cust.address && cust.address.toLowerCase().includes(searchTerm.toLowerCase().trim()));
 
@@ -206,7 +239,7 @@ export default function CustomerListPage({
             <input
               type="text"
               className="search-box__input"
-              placeholder="Tìm theo tên KH, mã KH (KH-xxxxxx), MST..."
+              placeholder="Tìm theo tên KH, mã KH (KH-xxxxxx), MST, SĐT..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               aria-label="Tìm kiếm khách hàng"
@@ -278,7 +311,9 @@ export default function CustomerListPage({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleCreateCustomer}
+        onOverrideSubmit={handleCreateCustomerWithOverride}
       />
     </div>
   );
 }
+

@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   CUSTOMER_VALIDATION_LIMITS,
   validateCustomerCreate,
+  validateDuplicateOverrideReason,
 } from '../validators/customerValidators';
 
-describe('Customer Validators (NCL-02-CN-001-CV-05)', () => {
+describe('Customer Validators (NCL-02-CN-001 & NCL-02-CN-002)', () => {
   describe('validateCustomerCreate', () => {
     it('báo lỗi khi trường tên khách hàng bị trống hoặc undefined', () => {
       const resultEmpty = validateCustomerCreate({ name: '' });
@@ -40,6 +41,15 @@ describe('Customer Validators (NCL-02-CN-001-CV-05)', () => {
       expect(result.taxCode).toContain('không được vượt quá 50 ký tự');
     });
 
+    it('báo lỗi khi số điện thoại vượt quá 30 ký tự (NCL-02-CN-002)', () => {
+      const longPhone = '0987654321'.repeat(4); // 40 chars
+      const result = validateCustomerCreate({
+        name: 'Công ty Hợp lệ',
+        phone: longPhone,
+      });
+      expect(result.phone).toContain('không được vượt quá 30 ký tự');
+    });
+
     it('báo lỗi khi ngành nghề vượt quá 255 ký tự', () => {
       const longIndustry = 'Công nghệ '.repeat(30); // > 255 chars
       const result = validateCustomerCreate({
@@ -62,6 +72,7 @@ describe('Customer Validators (NCL-02-CN-001-CV-05)', () => {
       const result = validateCustomerCreate({
         name: 'Công ty TNHH Phần mềm ABC',
         taxCode: '0101234567',
+        phone: '0987654321',
         industry: 'Công nghệ thông tin',
         address: 'Hà Nội, Việt Nam',
       });
@@ -75,4 +86,27 @@ describe('Customer Validators (NCL-02-CN-001-CV-05)', () => {
       expect(Object.keys(result).length).toBe(0);
     });
   });
+
+  describe('validateDuplicateOverrideReason (NCL-02-CN-002, TC-02)', () => {
+    it('báo lỗi khi để trống lý do hoặc chỉ toàn khoảng trắng', () => {
+      expect(validateDuplicateOverrideReason('')).toBe(
+        'Phải ghi lý do khi bỏ qua cảnh báo trùng hồ sơ'
+      );
+      expect(validateDuplicateOverrideReason('   \t\n  ')).toBe(
+        'Phải ghi lý do khi bỏ qua cảnh báo trùng hồ sơ'
+      );
+    });
+
+    it('báo lỗi khi lý do vượt quá 1000 ký tự', () => {
+      const longReason = 'A'.repeat(CUSTOMER_VALIDATION_LIMITS.OVERRIDE_REASON_MAX_LENGTH + 1);
+      const error = validateDuplicateOverrideReason(longReason);
+      expect(error).toContain('không được vượt quá 1000 ký tự');
+    });
+
+    it('hợp lệ khi nhập lý do đầy đủ và đúng quy chuẩn', () => {
+      const validReason = 'Hai công ty khác nhau, chỉ cùng người đại diện pháp luật';
+      expect(validateDuplicateOverrideReason(validReason)).toBeNull();
+    });
+  });
 });
+
