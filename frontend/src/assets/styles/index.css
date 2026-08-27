@@ -765,4 +765,22 @@
 .contact-empty-state { padding: 40px 20px; text-align: center; }
 .spinner-sm { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.4); border-top-color: currentColor; border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; }
 
+/* Missing pieces found in review (NCL-02-CN-003 frontend) */
+.cell-muted { color: #94a3b8; font-style: italic; }
+.cell-date { color: #475569; font-size: 12.5px; white-space: nowrap; }
+.form-field { display: flex; flex-direction: column; }
+.meta-item { display: flex; flex-direction: column; }
+.contact-table-row { transition: background 0.15s; }
+.contact-header-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.btn-add-contact { display: inline-flex; align-items: center; gap: 6px; }
+.btn-back { display: inline-flex; align-items: center; gap: 6px; }
+.contact-modal-card { }
+.contact-audit-card { margin-top: 24px; }
+.modal-subtitle-text { font-size: 12.5px; color: #64748b; margin: 4px 0 0; }
+.badge-star-icon, .star-icon, .user-icon, .tab-icon { font-size: 13px; line-height: 1; }
+.table-loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 48px 20px; color: #64748b; font-size: 13.5px; }
+.spinner-lg { width: 32px; height: 32px; border: 3px solid #e2e8f0; border-top-color: #10b981; border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; }
+.customer-tab-content { margin-top: 4px; }
+.overview-tab-pane, .audit-tab-pane { }
+
 
