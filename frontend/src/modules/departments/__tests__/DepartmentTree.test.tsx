@@ -18,18 +18,21 @@ const mockTreeList: DepartmentTreeNode[] = [
     name: 'Ban Giám Đốc',
     managerId: 10,
     managerName: 'Nguyễn Văn Giám Đốc',
+    unitType: 'BAN',
     children: [
       {
         id: 2,
         name: 'Trung Tâm Công Nghệ & Giải Pháp',
         managerId: 11,
         managerName: 'Trần Trưởng Phòng Tech',
+        unitType: 'TRUNG_TAM',
         children: [
           {
             id: 3,
             name: 'Phát Triển Phần Mềm',
             managerId: 12,
             managerName: 'Lê Trưởng Nhóm Dev',
+            unitType: 'PHONG',
             children: [],
           },
         ],
@@ -39,9 +42,9 @@ const mockTreeList: DepartmentTreeNode[] = [
 ];
 
 const mockFlatList: Department[] = [
-  { id: 1, name: 'Ban Giám Đốc', parentId: null, managerId: 10, managerName: 'Nguyễn Văn Giám Đốc' },
-  { id: 2, name: 'Trung Tâm Công Nghệ & Giải Pháp', parentId: 1, managerId: 11, managerName: 'Trần Trưởng Phòng Tech' },
-  { id: 3, name: 'Phát Triển Phần Mềm', parentId: 2, managerId: 12, managerName: 'Lê Trưởng Nhóm Dev' },
+  { id: 1, name: 'Ban Giám Đốc', parentId: null, managerId: 10, managerName: 'Nguyễn Văn Giám Đốc', unitType: 'BAN' },
+  { id: 2, name: 'Trung Tâm Công Nghệ & Giải Pháp', parentId: 1, managerId: 11, managerName: 'Trần Trưởng Phòng Tech', unitType: 'TRUNG_TAM' },
+  { id: 3, name: 'Phát Triển Phần Mềm', parentId: 2, managerId: 12, managerName: 'Lê Trưởng Nhóm Dev', unitType: 'PHONG' },
 ];
 
 vi.mock('../api/departmentsApi', () => ({

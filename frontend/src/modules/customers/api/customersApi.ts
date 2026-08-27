@@ -1,4 +1,11 @@
-import type { Customer, CustomerCreatePayload } from '../types/customerTypes';
+import type {
+  Customer,
+  CustomerCreatePayload,
+  CustomerCreateWithOverridePayload,
+  DuplicateCandidate,
+  CustomerContact,
+  CustomerContactPayload,
+} from '../types/customerTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -44,9 +51,11 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
 
     if (!message) {
       if (response.status === 403) {
-        message = 'Bạn không có quyền tạo hồ sơ khách hàng. Chức năng yêu cầu vai trò Nhân viên kinh doanh (VT-04) hoặc Quản lý dự án (VT-02).';
+        message = 'Bạn không có quyền thực hiện thao tác này. Chức năng yêu cầu vai trò Nhân viên kinh doanh (VT-04) hoặc Quản lý dự án (VT-02).';
       } else if (response.status === 401) {
         message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+      } else if (response.status === 409) {
+        message = 'Hệ thống phát hiện hồ sơ khách hàng đã có độ trùng lặp cao (NCL-02-CN-002). Vui lòng xác nhận tạo mới kèm lý do.';
       } else if (response.status === 400) {
         message = 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại các trường thông tin.';
       } else {
@@ -65,20 +74,111 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
   return payload.data as T;
 }
 
+function cleanCustomerPayload(payload: CustomerCreatePayload): CustomerCreatePayload {
+  return {
+    name: payload.name.trim(),
+    taxCode: payload.taxCode?.trim() || undefined,
+    phone: payload.phone?.trim() || undefined,
+    industry: payload.industry?.trim() || undefined,
+    address: payload.address?.trim() || undefined,
+  };
+}
+
 /**
  * NCL-02-CN-001: Tạo hồ sơ khách hàng mới (POST /customers)
  * Backend tự sinh mã `code` dạng `KH-xxxxxx`.
  */
 export async function createCustomer(payload: CustomerCreatePayload): Promise<Customer> {
-  const cleanPayload: CustomerCreatePayload = {
-    name: payload.name.trim(),
-    taxCode: payload.taxCode?.trim() || undefined,
-    industry: payload.industry?.trim() || undefined,
-    address: payload.address?.trim() || undefined,
-  };
+  const cleanPayload = cleanCustomerPayload(payload);
 
   return requestBackend<Customer>(`${API_BASE_URL}/customers`, {
     method: 'POST',
     body: JSON.stringify(cleanPayload),
   });
 }
+
+/**
+ * NCL-02-CN-002: Kiểm tra hồ sơ mới có nghi trùng với hồ sơ đã có không (POST /customers/check-duplicate)
+ * Trả về danh sách ứng viên nghi trùng kèm mức độ tương đồng và các trường khớp.
+ */
+export async function checkCustomerDuplicate(
+  payload: CustomerCreatePayload
+): Promise<DuplicateCandidate[]> {
+  const cleanPayload = cleanCustomerPayload(payload);
+
+  return requestBackend<DuplicateCandidate[]>(`${API_BASE_URL}/customers/check-duplicate`, {
+    method: 'POST',
+    body: JSON.stringify(cleanPayload),
+  });
+}
+
+/**
+ * NCL-02-CN-002: Xác nhận tạo mới hồ sơ khách hàng bỏ qua cảnh báo trùng (POST /customers/create-with-override)
+ * Bắt buộc truyền kèm lý do (override.reason).
+ */
+export async function createCustomerWithOverride(
+  payload: CustomerCreateWithOverridePayload
+): Promise<Customer> {
+  const cleanPayload: CustomerCreateWithOverridePayload = {
+    customer: cleanCustomerPayload(payload.customer),
+    override: {
+      reason: payload.override.reason.trim(),
+    },
+  };
+
+  return requestBackend<Customer>(`${API_BASE_URL}/customers/create-with-override`, {
+    method: 'POST',
+    body: JSON.stringify(cleanPayload),
+  });
+}
+
+/**
+ * NCL-02-CN-003 (TC-01, TC-03): Lấy danh sách người liên hệ của khách hàng
+ * Backend tự động đưa đầu mối chính lên đầu danh sách.
+ * Bắt buộc vai trò VT-04.
+ */
+export async function fetchCustomerContacts(customerId: number): Promise<CustomerContact[]> {
+  return requestBackend<CustomerContact[]>(`${API_BASE_URL}/customers/${customerId}/contacts`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * NCL-02-CN-003 (TC-01, TC-03): Thêm người liên hệ cho khách hàng
+ * Bắt buộc vai trò VT-04.
+ */
+export async function addCustomerContact(
+  customerId: number,
+  payload: CustomerContactPayload
+): Promise<CustomerContact> {
+  const cleanPayload = {
+    fullName: payload.fullName.trim(),
+    title: payload.title?.trim() || undefined,
+    email: payload.email?.trim() || undefined,
+    phone: payload.phone?.trim() || undefined,
+    isPrimary: Boolean(payload.isPrimary),
+  };
+
+  return requestBackend<CustomerContact>(`${API_BASE_URL}/customers/${customerId}/contacts`, {
+    method: 'POST',
+    body: JSON.stringify(cleanPayload),
+  });
+}
+
+/**
+ * NCL-02-CN-003 (TC-02, TC-03): Đặt người liên hệ làm đầu mối chính
+ * Backend tự động chuyển đầu mối cũ thành đầu mối phụ và chỉ giữ 1 đầu mối chính.
+ * Bắt buộc vai trò VT-04.
+ */
+export async function setPrimaryCustomerContact(
+  customerId: number,
+  contactId: number
+): Promise<CustomerContact> {
+  return requestBackend<CustomerContact>(
+    `${API_BASE_URL}/customers/${customerId}/contacts/${contactId}/primary`,
+    {
+      method: 'PATCH',
+    }
+  );
+}
+

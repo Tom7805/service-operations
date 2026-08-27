@@ -13,12 +13,14 @@ public class DepartmentMapper {
 		return new DepartmentRes(department.getId(), department.getName(),
 				department.getParent() == null ? null : department.getParent().getId(),
 				department.getManager() == null ? null : department.getManager().getId(),
-				department.getManager() == null ? null : department.getManager().getFullName());
+				department.getManager() == null ? null : department.getManager().getFullName(),
+				department.getType().name());
 	}
 
 	public DepartmentTreeRes toTreeResponse(Department department, List<DepartmentTreeRes> children) {
 		return new DepartmentTreeRes(department.getId(), department.getName(),
 				department.getManager() == null ? null : department.getManager().getId(),
-				department.getManager() == null ? null : department.getManager().getFullName(), children);
+				department.getManager() == null ? null : department.getManager().getFullName(),
+				department.getType().name(), children);
 	}
 }

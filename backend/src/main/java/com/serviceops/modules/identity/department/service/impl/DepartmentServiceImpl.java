@@ -12,6 +12,7 @@ import com.serviceops.modules.identity.department.mapper.DepartmentMapper;
 import com.serviceops.modules.identity.department.repository.DepartmentRepository;
 import com.serviceops.modules.identity.department.service.DepartmentService;
 import com.serviceops.modules.identity.department.validator.DepartmentCycleValidator;
+import com.serviceops.modules.identity.department.validator.DepartmentHierarchyValidator;
 import com.serviceops.modules.identity.user.entity.User;
 import com.serviceops.modules.identity.user.repository.UserRepository;
 import com.serviceops.security.scope.CurrentUserScopeProvider;
@@ -36,6 +37,7 @@ public class DepartmentServiceImpl implements DepartmentService {
 	private final UserRepository userRepository;
 	private final DepartmentMapper departmentMapper;
 	private final DepartmentCycleValidator cycleValidator;
+	private final DepartmentHierarchyValidator hierarchyValidator;
 	private final CurrentUserScopeProvider currentUserScopeProvider;
 
 	@Override
@@ -97,10 +99,12 @@ public class DepartmentServiceImpl implements DepartmentService {
 	public DepartmentRes create(DepartmentCreateReq request) {
 		String name = request.name().trim();
 		ensureUniqueName(name, request.parentId(), null);
+		hierarchyValidator.validate(request.unitType(), request.parentId());
 		Department department = new Department();
 		department.setName(name);
 		department.setParent(findParent(request.parentId()));
 		department.setManager(getManager(request.managerId()));
+		department.setType(request.unitType());
 		return departmentMapper.toResponse(departmentRepository.save(department));
 	}
 
@@ -109,9 +113,11 @@ public class DepartmentServiceImpl implements DepartmentService {
 		Department department = getDepartment(id);
 		cycleValidator.validate(id, request.parentId());
 		ensureUniqueName(request.name().trim(), request.parentId(), id);
+		hierarchyValidator.validate(request.unitType(), request.parentId());
 		department.setName(request.name().trim());
 		department.setParent(findParent(request.parentId()));
 		department.setManager(getManager(request.managerId()));
+		department.setType(request.unitType());
 		return departmentMapper.toResponse(departmentRepository.save(department));
 	}
 
@@ -120,6 +126,7 @@ public class DepartmentServiceImpl implements DepartmentService {
 		Department department = getDepartment(id);
 		cycleValidator.validate(id, request.parentId());
 		ensureUniqueName(department.getName(), request.parentId(), id);
+		hierarchyValidator.validate(department.getType(), request.parentId());
 		department.setParent(findParent(request.parentId()));
 		return departmentMapper.toResponse(departmentRepository.save(department));
 	}

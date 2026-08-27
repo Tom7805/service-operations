@@ -1,9 +1,12 @@
 package com.serviceops.modules.identity.department.entity;
 
 import com.serviceops.common.entity.BaseEntity;
+import com.serviceops.modules.identity.department.enums.DepartmentType;
 import com.serviceops.modules.identity.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -26,4 +29,8 @@ public class Department extends BaseEntity {
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "manager_id")
 	private User manager;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "unit_type", nullable = false, columnDefinition = "VARCHAR(20)")
+	private DepartmentType type;
 }

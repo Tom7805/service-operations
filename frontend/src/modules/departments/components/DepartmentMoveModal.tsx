@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { Department, MoveDepartmentPayload } from '../types/departmentTypes';
 import { DepartmentApiError } from '../api/departmentsApi';
+import { getUnitTypeRank } from '../constants/departmentUnitTypes';
 
 interface DepartmentMoveModalProps {
   isOpen: boolean;
@@ -50,6 +51,11 @@ export const DepartmentMoveModal: React.FC<DepartmentMoveModalProps> = ({
 
   const disabledParents = getDisabledParentIds(department.id);
 
+  // Cấp bậc: không cho di chuyển một đơn vị vào làm con của đơn vị cấp thấp hơn
+  // (vd: Ban không thể trực thuộc Phòng) — chặn ngay từ UI, khớp với validate ở backend.
+  const isHierarchyInvalidParent = (parentDept: Department): boolean =>
+    getUnitTypeRank(department.unitType) < getUnitTypeRank(parentDept.unitType);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setServerError(null);
@@ -69,6 +75,8 @@ export const DepartmentMoveModal: React.FC<DepartmentMoveModalProps> = ({
           setServerError('Không thể di chuyển: Hành động này tạo vòng lặp trong cây tổ chức.');
         } else if (err.code === 'DUPLICATE_DATA') {
           setServerError('Tên bộ phận này đã tồn tại tại vị trí bộ phận cha được chọn.');
+        } else if (err.code === 'HIERARCHY_VIOLATION') {
+          setServerError(`Không thể di chuyển: "${department.name}" không thể trực thuộc một bộ phận có cấp thấp hơn.`);
         } else {
           setServerError(err.message);
         }
@@ -122,10 +130,10 @@ export const DepartmentMoveModal: React.FC<DepartmentMoveModalProps> = ({
                 >
                   <option value="">-- Chuyển thành bộ phận cấp gốc (Root Level) --</option>
                   {departmentsList.map((dept) => {
-                    const isDisabled = disabledParents.has(dept.id);
+                    const isDisabled = disabledParents.has(dept.id) || isHierarchyInvalidParent(dept);
                     return (
                       <option key={dept.id} value={dept.id} disabled={isDisabled}>
-                        {dept.name} {isDisabled ? '(Vòng lặp / Không hợp lệ)' : ''}
+                        {dept.name} {disabledParents.has(dept.id) ? '(Vòng lặp / Không hợp lệ)' : isHierarchyInvalidParent(dept) ? '(Cấp thấp hơn, không hợp lệ)' : ''}
                       </option>
                     );
                   })}

@@ -1,24 +1,36 @@
 import { useState, useMemo } from 'react';
-import { createCustomer, CustomerApiError } from '../api/customersApi';
+import {
+  createCustomer,
+  createCustomerWithOverride,
+  CustomerApiError,
+} from '../api/customersApi';
 import CustomerFormModal from '../components/CustomerFormModal';
 import CustomerTable from '../components/CustomerTable';
-import type { Customer, CustomerCreatePayload } from '../types/customerTypes';
+import CustomerDetailPage from './CustomerDetailPage';
+import type {
+  Customer,
+  CustomerCreatePayload,
+  CustomerCreateWithOverridePayload,
+} from '../types/customerTypes';
 
 interface CustomerListPageProps {
   currentUserRoles?: string[];
   currentUserName?: string;
   initialCustomers?: Customer[];
+  onNavigateDetail?: (customer: Customer) => void;
 }
 
 export default function CustomerListPage({
   currentUserRoles = ['VT-04'],
   currentUserName = 'Người dùng',
   initialCustomers = [],
+  onNavigateDetail,
 }: CustomerListPageProps) {
   // NCL-02-CN-001: Chỉ Nhân viên kinh doanh (VT-04) hoặc Quản lý dự án (VT-02) được phép thao tác.
   const isAllowed = currentUserRoles.includes('VT-04') || currentUserRoles.includes('VT-02');
 
   const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [industryFilter, setIndustryFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -61,6 +73,30 @@ export default function CustomerListPage({
     }
   };
 
+  const handleCreateCustomerWithOverride = async (
+    payload: CustomerCreateWithOverridePayload
+  ) => {
+    try {
+      const newCustomer = await createCustomerWithOverride(payload);
+      setCustomers((prev) => [newCustomer, ...prev]);
+      showToast(
+        `Tạo hồ sơ khách hàng "${newCustomer.name}" thành công (Đã ghi nhận lý do bỏ qua cảnh báo)!`,
+        'success',
+        newCustomer.code
+      );
+      return newCustomer;
+    } catch (err) {
+      const message =
+        err instanceof CustomerApiError
+          ? err.message
+          : err instanceof Error
+          ? err.message
+          : 'Không thể tạo hồ sơ khách hàng.';
+      showToast(message, 'error');
+      throw err;
+    }
+  };
+
   // Lọc danh sách theo từ khóa tìm kiếm và ngành nghề
   const filteredCustomers = useMemo(() => {
     return customers.filter((cust) => {
@@ -69,6 +105,7 @@ export default function CustomerListPage({
         cust.name.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
         cust.code.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
         (cust.taxCode && cust.taxCode.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (cust.phone && cust.phone.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
         (cust.industry && cust.industry.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
         (cust.address && cust.address.toLowerCase().includes(searchTerm.toLowerCase().trim()));
 
@@ -107,6 +144,26 @@ export default function CustomerListPage({
           </div>
         </div>
       </div>
+    );
+  }
+
+  const handleSelectCustomer = (customer: Customer) => {
+    if (onNavigateDetail) {
+      onNavigateDetail(customer);
+    } else {
+      setSelectedCustomer(customer);
+    }
+  };
+
+  // Nếu đang chọn một khách hàng, hiển thị trang chi tiết & quản lý người liên hệ
+  if (selectedCustomer) {
+    return (
+      <CustomerDetailPage
+        customer={selectedCustomer}
+        currentUserRoles={currentUserRoles}
+        currentUserName={currentUserName}
+        onBack={() => setSelectedCustomer(null)}
+      />
     );
   }
 
@@ -206,7 +263,7 @@ export default function CustomerListPage({
             <input
               type="text"
               className="search-box__input"
-              placeholder="Tìm theo tên KH, mã KH (KH-xxxxxx), MST..."
+              placeholder="Tìm theo tên KH, mã KH (KH-xxxxxx), MST, SĐT..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               aria-label="Tìm kiếm khách hàng"
@@ -264,6 +321,7 @@ export default function CustomerListPage({
           customers={filteredCustomers}
           canCreate={isAllowed}
           onOpenCreate={() => setIsModalOpen(true)}
+          onNavigateDetail={handleSelectCustomer}
         />
 
         <div className="table-footer">
@@ -278,7 +336,10 @@ export default function CustomerListPage({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleCreateCustomer}
+        onOverrideSubmit={handleCreateCustomerWithOverride}
       />
     </div>
   );
 }
+
+
