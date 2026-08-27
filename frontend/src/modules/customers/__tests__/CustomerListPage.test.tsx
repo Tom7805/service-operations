@@ -5,6 +5,8 @@ import * as customersApi from '../api/customersApi';
 
 vi.mock('../api/customersApi', () => ({
   createCustomer: vi.fn(),
+  checkCustomerDuplicate: vi.fn().mockResolvedValue([]),
+  createCustomerWithOverride: vi.fn(),
   CustomerApiError: class extends Error {
     constructor(public code: string, message: string, public statusCode?: number) {
       super(message);
@@ -16,6 +18,7 @@ vi.mock('../api/customersApi', () => ({
 describe('CustomerListPage Component (NCL-02-CN-001-CV-05)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(customersApi.checkCustomerDuplicate).mockResolvedValue([]);
   });
 
   describe('Kiểm tra phân quyền vai trò (TC-03)', () => {
@@ -100,6 +103,7 @@ describe('CustomerListPage Component (NCL-02-CN-001-CV-05)', () => {
         expect(customersApi.createCustomer).toHaveBeenCalledWith({
           name: 'Tập đoàn Công nghệ FPT',
           taxCode: undefined,
+          phone: undefined,
           industry: undefined,
           address: undefined,
         });
@@ -153,3 +157,4 @@ describe('CustomerListPage Component (NCL-02-CN-001-CV-05)', () => {
     });
   });
 });
+
