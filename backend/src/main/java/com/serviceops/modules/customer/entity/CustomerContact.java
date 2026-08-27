@@ -39,7 +39,7 @@ public class CustomerContact extends BaseEntity {
 	private String phone;
 
 	@Enumerated(EnumType.STRING)
-	@Column(name = "role", nullable = false, length = 20)
+	@Column(name = "role", nullable = false, columnDefinition = "VARCHAR(20)")
 	private ContactRole role;
 
 	@Column(name = "created_by", length = 100)
