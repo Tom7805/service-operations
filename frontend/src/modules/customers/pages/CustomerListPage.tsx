@@ -6,6 +6,7 @@ import {
 } from '../api/customersApi';
 import CustomerFormModal from '../components/CustomerFormModal';
 import CustomerTable from '../components/CustomerTable';
+import CustomerDetailPage from './CustomerDetailPage';
 import type {
   Customer,
   CustomerCreatePayload,
@@ -16,17 +17,20 @@ interface CustomerListPageProps {
   currentUserRoles?: string[];
   currentUserName?: string;
   initialCustomers?: Customer[];
+  onNavigateDetail?: (customer: Customer) => void;
 }
 
 export default function CustomerListPage({
   currentUserRoles = ['VT-04'],
   currentUserName = 'Người dùng',
   initialCustomers = [],
+  onNavigateDetail,
 }: CustomerListPageProps) {
   // NCL-02-CN-001: Chỉ Nhân viên kinh doanh (VT-04) hoặc Quản lý dự án (VT-02) được phép thao tác.
   const isAllowed = currentUserRoles.includes('VT-04') || currentUserRoles.includes('VT-02');
 
   const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [industryFilter, setIndustryFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -140,6 +144,26 @@ export default function CustomerListPage({
           </div>
         </div>
       </div>
+    );
+  }
+
+  const handleSelectCustomer = (customer: Customer) => {
+    if (onNavigateDetail) {
+      onNavigateDetail(customer);
+    } else {
+      setSelectedCustomer(customer);
+    }
+  };
+
+  // Nếu đang chọn một khách hàng, hiển thị trang chi tiết & quản lý người liên hệ
+  if (selectedCustomer) {
+    return (
+      <CustomerDetailPage
+        customer={selectedCustomer}
+        currentUserRoles={currentUserRoles}
+        currentUserName={currentUserName}
+        onBack={() => setSelectedCustomer(null)}
+      />
     );
   }
 
@@ -297,6 +321,7 @@ export default function CustomerListPage({
           customers={filteredCustomers}
           canCreate={isAllowed}
           onOpenCreate={() => setIsModalOpen(true)}
+          onNavigateDetail={handleSelectCustomer}
         />
 
         <div className="table-footer">
@@ -316,4 +341,5 @@ export default function CustomerListPage({
     </div>
   );
 }
+
 

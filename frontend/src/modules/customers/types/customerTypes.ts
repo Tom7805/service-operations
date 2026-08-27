@@ -66,3 +66,41 @@ export interface CustomerCreateWithOverridePayload {
 export type CustomerSortField = 'code' | 'name' | 'taxCode' | 'phone' | 'industry' | 'createdAt';
 export type SortOrder = 'asc' | 'desc';
 
+/**
+ * Định nghĩa kiểu dữ liệu người liên hệ khách hàng (NCL-02-CN-003)
+ */
+export interface CustomerContact {
+  id: number;
+  customerId: number;
+  fullName: string;
+  title?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  isPrimary: boolean;
+  createdAt?: string;
+}
+
+export interface CustomerContactPayload {
+  fullName: string;
+  title?: string;
+  email?: string;
+  phone?: string;
+  isPrimary?: boolean;
+}
+
+export interface CustomerContactFormErrors {
+  fullName?: string;
+  title?: string;
+  email?: string;
+  phone?: string;
+  general?: string;
+}
+
+export interface ContactAuditItem {
+  id: string;
+  action: string;
+  actor: string;
+  timestamp: string;
+  detail: string;
+}
+

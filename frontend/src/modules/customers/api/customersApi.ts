@@ -3,6 +3,8 @@ import type {
   CustomerCreatePayload,
   CustomerCreateWithOverridePayload,
   DuplicateCandidate,
+  CustomerContact,
+  CustomerContactPayload,
 } from '../types/customerTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
@@ -128,5 +130,55 @@ export async function createCustomerWithOverride(
     method: 'POST',
     body: JSON.stringify(cleanPayload),
   });
+}
+
+/**
+ * NCL-02-CN-003 (TC-01, TC-03): Lấy danh sách người liên hệ của khách hàng
+ * Backend tự động đưa đầu mối chính lên đầu danh sách.
+ * Bắt buộc vai trò VT-04.
+ */
+export async function fetchCustomerContacts(customerId: number): Promise<CustomerContact[]> {
+  return requestBackend<CustomerContact[]>(`${API_BASE_URL}/customers/${customerId}/contacts`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * NCL-02-CN-003 (TC-01, TC-03): Thêm người liên hệ cho khách hàng
+ * Bắt buộc vai trò VT-04.
+ */
+export async function addCustomerContact(
+  customerId: number,
+  payload: CustomerContactPayload
+): Promise<CustomerContact> {
+  const cleanPayload = {
+    fullName: payload.fullName.trim(),
+    title: payload.title?.trim() || undefined,
+    email: payload.email?.trim() || undefined,
+    phone: payload.phone?.trim() || undefined,
+    isPrimary: Boolean(payload.isPrimary),
+  };
+
+  return requestBackend<CustomerContact>(`${API_BASE_URL}/customers/${customerId}/contacts`, {
+    method: 'POST',
+    body: JSON.stringify(cleanPayload),
+  });
+}
+
+/**
+ * NCL-02-CN-003 (TC-02, TC-03): Đặt người liên hệ làm đầu mối chính
+ * Backend tự động chuyển đầu mối cũ thành đầu mối phụ và chỉ giữ 1 đầu mối chính.
+ * Bắt buộc vai trò VT-04.
+ */
+export async function setPrimaryCustomerContact(
+  customerId: number,
+  contactId: number
+): Promise<CustomerContact> {
+  return requestBackend<CustomerContact>(
+    `${API_BASE_URL}/customers/${customerId}/contacts/${contactId}/primary`,
+    {
+      method: 'PATCH',
+    }
+  );
 }
 
