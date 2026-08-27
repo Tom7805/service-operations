@@ -499,7 +499,7 @@ không đợi Frontend gọi trước.
 **Lưu ý cho Frontend:**
 - `code` chỉ có sau khi tạo thành công — không hiển thị ô nhập mã khách hàng trên form tạo, chỉ hiển thị `code`
   trả về sau khi lưu (ví dụ ở toast thông báo hoặc bảng danh sách).
-- Quản lý người liên hệ (`NCL-02-CN-003`) sẽ được bổ sung ở story tiếp theo cùng Epic.
+- Quản lý người liên hệ (`NCL-02-CN-003`) xem mục riêng bên dưới.
 
 ---
 
@@ -620,3 +620,129 @@ kèm ghi lại lý do, dùng đúng lúc người dùng đã thấy cảnh báo 
   cần Frontend hiển thị hay xử lý gì thêm với lý do đó sau khi gửi.
 - Mọi lần tạo (kể cả bình thường lẫn override) và mọi lần bị từ chối truy cập đều được backend tự ghi nhật ký —
   Frontend không cần gọi thêm API nào để việc ghi log này xảy ra.
+
+---
+
+### `NCL-02-CN-003` — Quản lý người liên hệ của khách hàng
+
+Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`) — khác với `NCL-02-CN-001`/`002`, vai trò **Quản lý dự án
+không được truy cập** nhóm API này; vai trò khác (kể cả `VT-02`) nhận `403 FORBIDDEN` (TC-03).
+
+Mỗi khách hàng có thể có nhiều người liên hệ nhưng **chỉ duy nhất một người là đầu mối chính** tại một thời điểm
+(`isPrimary = true`). Có hai cách để một người liên hệ trở thành đầu mối chính, cả hai đều tự động chuyển đầu
+mối chính hiện tại (nếu có) thành đầu mối phụ (TC-02):
+1. Đánh dấu `isPrimary: true` ngay khi thêm mới (`POST .../contacts`).
+2. Đặt lại đầu mối chính cho một người liên hệ đã tồn tại (`PATCH .../contacts/{contactId}/primary`).
+
+#### `GET /customers/{customerId}/contacts`
+
+Danh sách người liên hệ của một khách hàng — **đầu mối chính luôn hiện ở đầu danh sách** (TC-01), phần còn lại
+sắp theo thời điểm thêm vào (`createdAt` tăng dần).
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 2,
+      "customerId": 10,
+      "fullName": "Nguyen Van A",
+      "title": "Giam doc mua hang",
+      "email": "a@congty.vn",
+      "phone": "0901234567",
+      "isPrimary": true,
+      "createdAt": "2026-08-27T09:00:00"
+    },
+    {
+      "id": 1,
+      "customerId": 10,
+      "fullName": "Nguyen Van B",
+      "title": "Ke toan",
+      "email": null,
+      "phone": null,
+      "isPrimary": false,
+      "createdAt": "2026-08-26T14:00:00"
+    }
+  ]
+}
+```
+
+#### `POST /customers/{customerId}/contacts`
+
+```json
+{
+  "fullName": "Nguyen Van A",
+  "title": "Giam doc mua hang",
+  "email": "a@congty.vn",
+  "phone": "0901234567",
+  "isPrimary": true
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `fullName` | string | có | Họ tên người liên hệ, tối đa 255 ký tự — bỏ trống thì bị từ chối |
+| `title` | string | không | Chức danh, tối đa 255 ký tự |
+| `email` | string | không | Thư điện tử hợp lệ, tối đa 255 ký tự |
+| `phone` | string | không | Số điện thoại, tối đa 30 ký tự |
+| `isPrimary` | boolean | không (mặc định `false`) | Đánh dấu là đầu mối chính — nếu khách hàng đã có đầu mối chính khác, người cũ tự chuyển thành đầu mối phụ (TC-02) |
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Them nguoi lien he thanh cong",
+  "data": {
+    "id": 2,
+    "customerId": 10,
+    "fullName": "Nguyen Van A",
+    "title": "Giam doc mua hang",
+    "email": "a@congty.vn",
+    "phone": "0901234567",
+    "isPrimary": true,
+    "createdAt": "2026-08-27T09:00:00"
+  }
+}
+```
+
+#### `PATCH /customers/{customerId}/contacts/{contactId}/primary`
+
+Đặt một người liên hệ **đã tồn tại** làm đầu mối chính — không cần body. Đầu mối chính hiện tại của khách hàng
+(nếu có và khác người này) tự động chuyển thành đầu mối phụ (TC-02).
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Cap nhat dau moi chinh thanh cong",
+  "data": {
+    "id": 1,
+    "customerId": 10,
+    "fullName": "Nguyen Van B",
+    "title": "Ke toan",
+    "email": null,
+    "phone": null,
+    "isPrimary": true,
+    "createdAt": "2026-08-26T14:00:00"
+  }
+}
+```
+
+**Response lỗi (áp dụng cho cả ba endpoint trên):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh (`VT-04`) — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 400 | `VALIDATION_ERROR` | Thiếu hoặc để trống `fullName`, hoặc `email` sai định dạng |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy `customerId`, hoặc `contactId` không thuộc về khách hàng này |
+
+**Lưu ý cho Frontend:**
+- Khác với `NCL-02-CN-001`/`002`, nhóm API này **chỉ** cho phép vai trò Nhân viên kinh doanh (`VT-04`) — Quản lý
+  dự án (`VT-02`) sẽ nhận `403 FORBIDDEN` dù được phép tạo khách hàng.
+- Trên bảng danh sách người liên hệ, Frontend nên gắn nhãn "Đầu mối chính" cho phần tử đầu tiên (`isPrimary`
+  luôn `true` duy nhất ở một phần tử) và cho phép bấm nút "Đặt làm đầu mối chính" trên các dòng còn lại, gọi
+  `PATCH .../contacts/{contactId}/primary`.
+- Mọi lần thêm mới và mọi lần đổi đầu mối chính đều được backend tự ghi nhật ký vào cùng bảng nhật ký khách
+  hàng dùng chung với `NCL-02-CN-002` (TC-04) — Frontend không cần gọi thêm API nào để việc ghi log này xảy ra.
