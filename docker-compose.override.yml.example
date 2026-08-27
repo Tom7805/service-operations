@@ -1,0 +1,16 @@
+# Sao chep file nay thanh docker-compose.override.yml de tuy chinh moi truong local
+# (file docker-compose.override.yml KHONG duoc commit len Git)
+#
+# Vi du: chi chay MySQL bang Docker, con backend/frontend chay native (npm run dev / mvnw spring-boot:run)
+# thi comment 2 service backend/frontend lai bang cach dung "profiles"
+
+services:
+  mysql:
+    ports:
+      - "3307:3306"   # doi port neu may local da co MySQL chay san o 3306
+
+  backend:
+    profiles: ["full-stack"]   # chi chay khi: docker compose --profile full-stack up
+
+  frontend:
+    profiles: ["full-stack"]
