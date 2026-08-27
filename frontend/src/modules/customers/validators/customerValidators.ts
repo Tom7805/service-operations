@@ -1,4 +1,9 @@
-import type { CustomerCreatePayload, CustomerFormErrors } from '../types/customerTypes';
+import type {
+  CustomerCreatePayload,
+  CustomerFormErrors,
+  CustomerContactPayload,
+  CustomerContactFormErrors,
+} from '../types/customerTypes';
 
 export const CUSTOMER_VALIDATION_LIMITS = {
   NAME_MAX_LENGTH: 255,
@@ -7,6 +12,10 @@ export const CUSTOMER_VALIDATION_LIMITS = {
   INDUSTRY_MAX_LENGTH: 255,
   ADDRESS_MAX_LENGTH: 500,
   OVERRIDE_REASON_MAX_LENGTH: 1000,
+  CONTACT_NAME_MAX_LENGTH: 255,
+  CONTACT_TITLE_MAX_LENGTH: 255,
+  CONTACT_EMAIL_MAX_LENGTH: 255,
+  CONTACT_PHONE_MAX_LENGTH: 30,
 } as const;
 
 /**
@@ -62,5 +71,53 @@ export function validateDuplicateOverrideReason(reason: string): string | null {
     return `Lý do không được vượt quá ${CUSTOMER_VALIDATION_LIMITS.OVERRIDE_REASON_MAX_LENGTH} ký tự (hiện có: ${reason.length})`;
   }
   return null;
+}
+
+/**
+ * Kiểm tra hợp lệ dữ liệu người liên hệ khách hàng (NCL-02-CN-003, TC-01)
+ * @param payload Dữ liệu người liên hệ
+ * @returns Object chứa danh sách lỗi (nếu có)
+ */
+export function validateCustomerContact(
+  payload: Partial<CustomerContactPayload>
+): CustomerContactFormErrors {
+  const errors: CustomerContactFormErrors = {};
+
+  // 1. Họ tên (bắt buộc, max 255 ký tự)
+  const trimmedName = payload.fullName?.trim();
+  if (!payload.fullName || trimmedName === '') {
+    errors.fullName = 'Họ tên người liên hệ không được để trống';
+  } else if (payload.fullName.length > CUSTOMER_VALIDATION_LIMITS.CONTACT_NAME_MAX_LENGTH) {
+    errors.fullName = `Họ tên không được vượt quá ${CUSTOMER_VALIDATION_LIMITS.CONTACT_NAME_MAX_LENGTH} ký tự`;
+  }
+
+  // 2. Chức danh (tùy chọn, max 255 ký tự)
+  if (
+    payload.title &&
+    payload.title.length > CUSTOMER_VALIDATION_LIMITS.CONTACT_TITLE_MAX_LENGTH
+  ) {
+    errors.title = `Chức danh không được vượt quá ${CUSTOMER_VALIDATION_LIMITS.CONTACT_TITLE_MAX_LENGTH} ký tự`;
+  }
+
+  // 3. Email (tùy chọn, đúng định dạng, max 255 ký tự)
+  if (payload.email && payload.email.trim() !== '') {
+    const trimmedEmail = payload.email.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      errors.email = 'Thư điện tử không hợp lệ';
+    } else if (trimmedEmail.length > CUSTOMER_VALIDATION_LIMITS.CONTACT_EMAIL_MAX_LENGTH) {
+      errors.email = `Thư điện tử không được vượt quá ${CUSTOMER_VALIDATION_LIMITS.CONTACT_EMAIL_MAX_LENGTH} ký tự`;
+    }
+  }
+
+  // 4. Số điện thoại (tùy chọn, max 30 ký tự)
+  if (
+    payload.phone &&
+    payload.phone.length > CUSTOMER_VALIDATION_LIMITS.CONTACT_PHONE_MAX_LENGTH
+  ) {
+    errors.phone = `Số điện thoại không được vượt quá ${CUSTOMER_VALIDATION_LIMITS.CONTACT_PHONE_MAX_LENGTH} ký tự`;
+  }
+
+  return errors;
 }
 

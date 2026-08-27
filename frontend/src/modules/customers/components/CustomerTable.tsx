@@ -6,6 +6,7 @@ interface CustomerTableProps {
   loading?: boolean;
   onOpenCreate?: () => void;
   canCreate?: boolean;
+  onNavigateDetail?: (customer: Customer) => void;
 }
 
 export default function CustomerTable({
@@ -13,6 +14,7 @@ export default function CustomerTable({
   loading = false,
   onOpenCreate,
   canCreate = false,
+  onNavigateDetail,
 }: CustomerTableProps) {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
@@ -82,7 +84,7 @@ export default function CustomerTable({
             <th style={{ width: '170px' }}>Lĩnh vực / Ngành</th>
             <th style={{ minWidth: '240px' }}>Địa chỉ trụ sở</th>
             <th style={{ width: '150px' }}>Ngày tạo</th>
-            <th style={{ width: '80px', textAlign: 'center' }}>Thao tác</th>
+            <th style={{ width: '170px', textAlign: 'center' }}>Thao tác</th>
           </tr>
         </thead>
         <tbody>
@@ -103,7 +105,11 @@ export default function CustomerTable({
                 </div>
               </td>
               <td>
-                <div className="customer-name-cell">
+                <div
+                  className={`customer-name-cell ${onNavigateDetail ? 'customer-name-cell--clickable' : ''}`}
+                  onClick={() => onNavigateDetail?.(cust)}
+                  title={onNavigateDetail ? 'Nhấp để xem chi tiết & người liên hệ' : undefined}
+                >
                   <div className="customer-avatar-icon">🏢</div>
                   <div className="customer-name-meta">
                     <span className="customer-company-name">{cust.name}</span>
@@ -138,7 +144,19 @@ export default function CustomerTable({
                 <span className="cell-date">{formatDate(cust.createdAt)}</span>
               </td>
               <td style={{ textAlign: 'center' }}>
-                <div className="table-actions" style={{ justifyContent: 'center' }}>
+                <div className="table-actions" style={{ justifyContent: 'center', gap: '8px' }}>
+                  {onNavigateDetail && (
+                    <button
+                      type="button"
+                      className="btn-manage-contacts-link"
+                      onClick={() => onNavigateDetail(cust)}
+                      title="Quản lý danh bạ & người liên hệ của khách hàng (NCL-02-CN-003)"
+                      data-testid={`btn-manage-contacts-${cust.id}`}
+                    >
+                      <span>👥</span>
+                      <span>Người liên hệ</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="action-btn"
@@ -156,3 +174,4 @@ export default function CustomerTable({
     </div>
   );
 }
+
