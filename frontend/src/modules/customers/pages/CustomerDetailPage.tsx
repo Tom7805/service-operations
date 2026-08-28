@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { Customer, CustomerContact, ContactAuditItem } from '../types/customerTypes';
 import ContactList from '../components/ContactList';
+import CustomerOverviewPanel from '../components/CustomerOverviewPanel';
 
 interface CustomerDetailPageProps {
   customer?: Customer;
@@ -32,7 +33,7 @@ export default function CustomerDetailPage({
     }
   );
 
-  const [activeTab, setActiveTab] = useState<'CONTACTS' | 'OVERVIEW' | 'AUDIT'>('CONTACTS');
+  const [activeTab, setActiveTab] = useState<'CONTACTS' | 'SUMMARY' | 'OVERVIEW' | 'AUDIT'>('CONTACTS');
   const [auditLogs, setAuditLogs] = useState<ContactAuditItem[]>([]);
   const [copiedCode, setCopiedCode] = useState(false);
 
@@ -177,6 +178,16 @@ export default function CustomerDetailPage({
 
         <button
           type="button"
+          className={`customer-tab-btn ${activeTab === 'SUMMARY' ? 'customer-tab-btn--active' : ''}`}
+          onClick={() => setActiveTab('SUMMARY')}
+          data-testid="tab-btn-summary"
+        >
+          <span className="tab-icon">📊</span>
+          <span>Hồ sơ tổng hợp</span>
+        </button>
+
+        <button
+          type="button"
           className={`customer-tab-btn ${activeTab === 'OVERVIEW' ? 'customer-tab-btn--active' : ''}`}
           onClick={() => setActiveTab('OVERVIEW')}
           data-testid="tab-btn-overview"
@@ -206,6 +217,23 @@ export default function CustomerDetailPage({
             currentUserName={currentUserName}
             initialContacts={initialContacts}
             onAuditLogged={handleAuditLogged}
+          />
+        )}
+
+        {activeTab === 'SUMMARY' && (
+          <CustomerOverviewPanel
+            customerId={customer.id}
+            customerName={customer.name}
+            currentUserRoles={currentUserRoles}
+            onLoaded={({ at, itemCount }) =>
+              handleAuditLogged({
+                id: `overview-${Date.now()}`,
+                action: 'Xem hồ sơ tổng hợp',
+                actor: currentUserName,
+                timestamp: at,
+                detail: `Đã mở hồ sơ tổng hợp của khách hàng ${customer.code} — tải ${itemCount} bản ghi liên quan`,
+              })
+            }
           />
         )}
 

@@ -2,6 +2,7 @@ import type {
   Customer,
   CustomerCreatePayload,
   CustomerCreateWithOverridePayload,
+  CustomerOverview,
   DuplicateCandidate,
   CustomerContact,
   CustomerContactPayload,
@@ -142,6 +143,18 @@ export async function createCustomerWithOverride(
   return requestBackend<Customer>(`${API_BASE_URL}/customers/create-with-override`, {
     method: 'POST',
     body: JSON.stringify(cleanPayload),
+  });
+}
+
+/**
+ * NCL-02-CN-004 (TC-01): Lấy hồ sơ tổng hợp của một khách hàng (GET /customers/{id}/overview).
+ * Trả về khách hàng + cơ hội, hợp đồng, dự án, hóa đơn, công nợ — mỗi nhóm đã sắp theo thứ tự thời gian.
+ * Bắt buộc vai trò VT-04 hoặc VT-02; mỗi lần gọi Backend ghi Audit Log (TC-03).
+ * 403 → không đủ quyền · 404 → không tìm thấy hồ sơ khách hàng.
+ */
+export async function fetchCustomerOverview(customerId: number): Promise<CustomerOverview> {
+  return requestBackend<CustomerOverview>(`${API_BASE_URL}/customers/${customerId}/overview`, {
+    method: 'GET',
   });
 }
 

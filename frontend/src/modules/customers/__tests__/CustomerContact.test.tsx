@@ -9,6 +9,14 @@ vi.mock('../api/customersApi', () => ({
   fetchCustomerContacts: vi.fn(),
   addCustomerContact: vi.fn(),
   setPrimaryCustomerContact: vi.fn(),
+  fetchCustomerOverview: vi.fn().mockResolvedValue({
+    customer: {},
+    opportunities: [],
+    contracts: [],
+    projects: [],
+    invoices: [],
+    receivables: [],
+  }),
   CustomerApiError: class extends Error {
     constructor(public code: string, message: string, public statusCode?: number) {
       super(message);
@@ -302,6 +310,32 @@ describe('Customer Contact Management Frontend (NCL-02-CN-003)', () => {
       // Chuyển sang Tab Nhật ký kiểm toán
       fireEvent.click(screen.getByTestId('tab-btn-audit'));
       expect(screen.getByText(/Toàn bộ nhật ký kiểm toán khách hàng/i)).toBeInTheDocument();
+    });
+
+    it('NCL-02-CN-004: mở tab "Hồ sơ tổng hợp" gọi API overview và ghi một dòng vào nhật ký kiểm toán', async () => {
+      render(
+        <CustomerDetailPage
+          customer={mockCustomer}
+          currentUserRoles={['VT-02']}
+          currentUserName="Trần Quản Lý"
+          initialContacts={initialMockContacts}
+          onBack={vi.fn()}
+        />
+      );
+
+      fireEvent.click(screen.getByTestId('tab-btn-summary'));
+
+      await waitFor(() => {
+        expect(customersApi.fetchCustomerOverview).toHaveBeenCalledWith(10);
+        expect(screen.getByTestId('customer-summary-empty')).toBeInTheDocument();
+      });
+
+      // TC-03: thao tác xem đã được ghi vào luồng nhật ký của trang
+      fireEvent.click(screen.getByTestId('tab-btn-audit'));
+      await waitFor(() => {
+        expect(screen.getByText(/Đã mở hồ sơ tổng hợp của khách hàng KH-123456/i)).toBeInTheDocument();
+        expect(screen.getByText(/Trần Quản Lý/i)).toBeInTheDocument();
+      });
     });
   });
 });
