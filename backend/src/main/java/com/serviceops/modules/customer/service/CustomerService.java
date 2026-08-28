@@ -2,6 +2,7 @@ package com.serviceops.modules.customer.service;
 
 import com.serviceops.modules.customer.dto.request.CustomerCreateReq;
 import com.serviceops.modules.customer.dto.request.CustomerSearchReq;
+import com.serviceops.modules.customer.dto.request.CustomerSegmentReq;
 import com.serviceops.modules.customer.dto.request.DuplicateOverrideReq;
 import com.serviceops.modules.customer.dto.response.CustomerRes;
 import com.serviceops.modules.customer.dto.response.DuplicateCandidateRes;
@@ -17,6 +18,8 @@ public interface CustomerService {
 	 * Chi Nhan vien kinh doanh (VT-04) va Quan ly du an (VT-02) duoc goi (QTN-01).
 	 */
 	List<CustomerRes> findAll(CustomerSearchReq request);
+
+	CustomerRes updateSegment(Long customerId, CustomerSegmentReq request);
 
 	/**
 	 * Kiem tra ho so moi co nghi trung voi ho so da co khong (NCL-02-CN-002).

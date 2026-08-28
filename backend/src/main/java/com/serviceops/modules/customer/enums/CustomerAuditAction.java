@@ -25,5 +25,8 @@ public enum CustomerAuditAction {
     CONTACT_ADD,
 
     /** Danh dau mot nguoi lien he la dau moi chinh, chuyen nguoi cu thanh dau moi phu (NCL-02-CN-003, TC-02). */
-    CONTACT_SET_PRIMARY
+    CONTACT_SET_PRIMARY,
+
+    /** Cap nhat nganh nghe, quy mo va muc do uu tien khach hang (NCL-02-CN-005). */
+    SEGMENT_UPDATE
 }
