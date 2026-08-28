@@ -14,4 +14,7 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
 	/** Tim ho so theo ma so thue chinh xac (chong trung ho so - TC-01). */
 	Optional<Customer> findByTaxCode(String taxCode);
+
+	/** Lay toan bo ho so khach hang, ho so moi nhat len truoc (NCL-02-CN-001 buoc D: hien thi danh sach khach hang). */
+	List<Customer> findAllByOrderByCreatedAtDesc();
 }

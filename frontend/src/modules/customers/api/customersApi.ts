@@ -85,6 +85,19 @@ function cleanCustomerPayload(payload: CustomerCreatePayload): CustomerCreatePay
 }
 
 /**
+ * NCL-02-CN-001 (bước D/P): Lấy danh sách hồ sơ khách hàng hiện có trong hệ thống (GET /customers).
+ * Hỗ trợ tìm theo tên, mã KH (KH-xxxxxx), MST hoặc SĐT qua tham số `keyword` (lọc phía máy chủ).
+ * Bắt buộc vai trò VT-04 hoặc VT-02.
+ */
+export async function fetchCustomers(keyword?: string): Promise<Customer[]> {
+  const url = new URL(`${API_BASE_URL}/customers`);
+  if (keyword && keyword.trim()) {
+    url.searchParams.append('keyword', keyword.trim());
+  }
+  return requestBackend<Customer[]>(url.toString(), { method: 'GET' });
+}
+
+/**
  * NCL-02-CN-001: Tạo hồ sơ khách hàng mới (POST /customers)
  * Backend tự sinh mã `code` dạng `KH-xxxxxx`.
  */

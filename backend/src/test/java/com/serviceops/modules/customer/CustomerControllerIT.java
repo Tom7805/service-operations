@@ -199,4 +199,41 @@ class CustomerControllerIT {
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
 	}
+
+	@Test
+	@DisplayName("NCL-02-CN-001 (buoc D): Sales (VT-04) lay duoc danh sach ho so khach hang")
+	@WithMockUser(authorities = "ROLE_VT-04")
+	void listReturnsCustomersForSales() throws Exception {
+		when(customerService.findAll(any())).thenReturn(List.of(
+				new CustomerRes(2L, "KH-000002", "Cong ty CP XYZ", null, null, null, null, null),
+				new CustomerRes(1L, "KH-000001", "Cong ty TNHH ABC", "0101234567", "0987654321", "Cong nghe", "Ha Noi", null)));
+
+		mockMvc.perform(get("/customers"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.data").isArray())
+				.andExpect(jsonPath("$.data.length()").value(2))
+				.andExpect(jsonPath("$.data[0].code").value("KH-000002"));
+	}
+
+	@Test
+	@DisplayName("NCL-02-CN-001: PM (VT-02) cung lay duoc danh sach (co the rong)")
+	@WithMockUser(authorities = "ROLE_VT-02")
+	void listReturnsEmptyArrayForProjectManager() throws Exception {
+		when(customerService.findAll(any())).thenReturn(List.of());
+
+		mockMvc.perform(get("/customers"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data").isArray())
+				.andExpect(jsonPath("$.data.length()").value(0));
+	}
+
+	@Test
+	@DisplayName("NCL-02-CN-001 / QTN-01: vai tro khong phu hop bi tu choi xem danh sach")
+	@WithMockUser(authorities = "ROLE_VT-05")
+	void listDeniesOtherRoles() throws Exception {
+		mockMvc.perform(get("/customers"))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+	}
 }

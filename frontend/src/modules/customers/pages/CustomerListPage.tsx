@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   createCustomer,
   createCustomerWithOverride,
+  fetchCustomers,
   CustomerApiError,
 } from '../api/customersApi';
 import CustomerFormModal from '../components/CustomerFormModal';
@@ -30,6 +31,8 @@ export default function CustomerListPage({
   const isAllowed = currentUserRoles.includes('VT-04') || currentUserRoles.includes('VT-02');
 
   const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
+  const [isLoading, setIsLoading] = useState(initialCustomers.length === 0);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [industryFilter, setIndustryFilter] = useState('');
@@ -50,6 +53,37 @@ export default function CustomerListPage({
       setToastMessage(null);
     }, 6000);
   };
+
+  // NCL-02-CN-001 (bước D/P): tải danh sách hồ sơ khách hàng đã lưu trong hệ thống từ Backend.
+  const loadCustomers = useCallback(async () => {
+    if (!isAllowed) return;
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const data = await fetchCustomers();
+      setCustomers(data);
+    } catch (err) {
+      const message =
+        err instanceof CustomerApiError
+          ? err.message
+          : err instanceof Error
+          ? err.message
+          : 'Không thể tải danh sách hồ sơ khách hàng từ máy chủ.';
+      setLoadError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isAllowed]);
+
+  useEffect(() => {
+    // Cho phép truyền sẵn danh sách (test / preload) — khi đó bỏ qua lần gọi API khởi tạo.
+    if (initialCustomers.length > 0) {
+      setIsLoading(false);
+      return;
+    }
+    loadCustomers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadCustomers]);
 
   const handleCreateCustomer = async (payload: CustomerCreatePayload) => {
     try {
@@ -305,28 +339,52 @@ export default function CustomerListPage({
             <button
               type="button"
               className="btn-icon-refresh"
-              title="Làm mới bộ lọc"
+              title="Tải lại danh sách & làm mới bộ lọc"
               onClick={() => {
                 setSearchTerm('');
                 setIndustryFilter('');
+                loadCustomers();
               }}
-              aria-label="Làm mới bộ lọc"
+              aria-label="Tải lại danh sách khách hàng"
+              data-testid="btn-reload-customers"
             >
               🔄
             </button>
           </div>
         </div>
 
-        <CustomerTable
-          customers={filteredCustomers}
-          canCreate={isAllowed}
-          onOpenCreate={() => setIsModalOpen(true)}
-          onNavigateDetail={handleSelectCustomer}
-        />
+        {loadError && !isLoading && (
+          <div className="table-error-state" role="alert" data-testid="customer-load-error">
+            <div className="table-error-state__icon">⚠️</div>
+            <div className="table-error-state__body">
+              <h3>Không tải được danh sách hồ sơ khách hàng</h3>
+              <p>{loadError}</p>
+            </div>
+            <button type="button" className="btn btn-secondary" onClick={loadCustomers}>
+              Thử lại
+            </button>
+          </div>
+        )}
+
+        {!loadError && (
+          <CustomerTable
+            customers={filteredCustomers}
+            loading={isLoading}
+            canCreate={isAllowed}
+            onOpenCreate={() => setIsModalOpen(true)}
+            onNavigateDetail={handleSelectCustomer}
+          />
+        )}
 
         <div className="table-footer">
           <span>
-            Hiển thị <strong>{filteredCustomers.length}</strong> / <strong>{customers.length}</strong> hồ sơ khách hàng
+            {isLoading
+              ? 'Đang tải danh sách hồ sơ khách hàng...'
+              : (
+                <>
+                  Hiển thị <strong>{filteredCustomers.length}</strong> / <strong>{customers.length}</strong> hồ sơ khách hàng
+                </>
+              )}
           </span>
         </div>
       </div>
