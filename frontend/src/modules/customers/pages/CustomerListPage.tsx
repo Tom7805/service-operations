@@ -34,8 +34,12 @@ export default function CustomerListPage({
   const [isLoading, setIsLoading] = useState(initialCustomers.length === 0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [detailInitialTab, setDetailInitialTab] = useState<'CONTACTS' | 'SEGMENT'>('CONTACTS');
   const [searchTerm, setSearchTerm] = useState('');
   const [industryFilter, setIndustryFilter] = useState('');
+  // NCL-02-CN-005 (TC-01, TC-02): lọc danh mục khách hàng theo quy mô và mức độ ưu tiên đã gán.
+  const [companySizeFilter, setCompanySizeFilter] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<{
     text: string;
@@ -131,7 +135,7 @@ export default function CustomerListPage({
     }
   };
 
-  // Lọc danh sách theo từ khóa tìm kiếm và ngành nghề
+  // Lọc danh sách theo từ khóa tìm kiếm, ngành nghề, quy mô và mức độ ưu tiên (NCL-02-CN-005, TC-01)
   const filteredCustomers = useMemo(() => {
     return customers.filter((cust) => {
       const matchSearch =
@@ -146,9 +150,16 @@ export default function CustomerListPage({
       const matchIndustry =
         !industryFilter || (cust.industry && cust.industry.toLowerCase() === industryFilter.toLowerCase());
 
-      return matchSearch && matchIndustry;
+      const matchCompanySize =
+        !companySizeFilter ||
+        (cust.companySize && cust.companySize.toLowerCase() === companySizeFilter.toLowerCase());
+
+      const matchPriority =
+        !priorityFilter || (cust.priority && cust.priority.toLowerCase() === priorityFilter.toLowerCase());
+
+      return matchSearch && matchIndustry && matchCompanySize && matchPriority;
     });
-  }, [customers, searchTerm, industryFilter]);
+  }, [customers, searchTerm, industryFilter, companySizeFilter, priorityFilter]);
 
   // Danh sách ngành nghề duy nhất để làm filter
   const uniqueIndustries = useMemo(() => {
@@ -157,6 +168,30 @@ export default function CustomerListPage({
       .filter((ind): ind is string => Boolean(ind));
     return Array.from(new Set(list));
   }, [customers]);
+
+  // NCL-02-CN-005: danh sách quy mô và mức độ ưu tiên duy nhất đã được gán, dùng làm bộ lọc
+  const uniqueCompanySizes = useMemo(() => {
+    const list = customers
+      .map((c) => c.companySize?.trim())
+      .filter((size): size is string => Boolean(size));
+    return Array.from(new Set(list));
+  }, [customers]);
+
+  const uniquePriorities = useMemo(() => {
+    const list = customers
+      .map((c) => c.priority?.trim())
+      .filter((priority): priority is string => Boolean(priority));
+    return Array.from(new Set(list));
+  }, [customers]);
+
+  const hasActiveSegmentFilter = Boolean(industryFilter || companySizeFilter || priorityFilter);
+
+  const clearAllFilters = () => {
+    setSearchTerm('');
+    setIndustryFilter('');
+    setCompanySizeFilter('');
+    setPriorityFilter('');
+  };
 
   // TC-03: Từ chối truy cập nếu không có vai trò VT-04 hoặc VT-02
   if (!isAllowed) {
@@ -181,12 +216,21 @@ export default function CustomerListPage({
     );
   }
 
-  const handleSelectCustomer = (customer: Customer) => {
+  const handleSelectCustomer = (customer: Customer, tab: 'CONTACTS' | 'SEGMENT' = 'CONTACTS') => {
     if (onNavigateDetail) {
       onNavigateDetail(customer);
     } else {
+      setDetailInitialTab(tab);
       setSelectedCustomer(customer);
     }
+  };
+
+  // NCL-02-CN-005 (TC-01): mở thẳng tab "Phân nhóm" từ nút thao tác nhanh trên bảng danh sách.
+  const handleOpenSegment = (customer: Customer) => handleSelectCustomer(customer, 'SEGMENT');
+
+  // NCL-02-CN-005: đồng bộ nhãn phân nhóm mới nhất từ trang chi tiết trở lại danh sách.
+  const handleCustomerUpdated = (updated: Customer) => {
+    setCustomers((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
   };
 
   // Nếu đang chọn một khách hàng, hiển thị trang chi tiết & quản lý người liên hệ
@@ -197,6 +241,8 @@ export default function CustomerListPage({
         currentUserRoles={currentUserRoles}
         currentUserName={currentUserName}
         onBack={() => setSelectedCustomer(null)}
+        initialTab={detailInitialTab}
+        onCustomerUpdated={handleCustomerUpdated}
       />
     );
   }
@@ -336,13 +382,56 @@ export default function CustomerListPage({
               </div>
             )}
 
+            {/* NCL-02-CN-005 (TC-01): lọc theo quy mô công ty đã gán */}
+            {uniqueCompanySizes.length > 0 && (
+              <div className="filter-group">
+                <label htmlFor="company-size-filter" className="filter-label">
+                  Quy mô:
+                </label>
+                <select
+                  id="company-size-filter"
+                  className="filter-select"
+                  value={companySizeFilter}
+                  onChange={(e) => setCompanySizeFilter(e.target.value)}
+                >
+                  <option value="">Tất cả quy mô ({uniqueCompanySizes.length})</option>
+                  {uniqueCompanySizes.map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* NCL-02-CN-005 (TC-01): lọc theo mức độ ưu tiên đã gán */}
+            {uniquePriorities.length > 0 && (
+              <div className="filter-group">
+                <label htmlFor="priority-filter" className="filter-label">
+                  Ưu tiên:
+                </label>
+                <select
+                  id="priority-filter"
+                  className="filter-select"
+                  value={priorityFilter}
+                  onChange={(e) => setPriorityFilter(e.target.value)}
+                >
+                  <option value="">Tất cả mức ưu tiên ({uniquePriorities.length})</option>
+                  {uniquePriorities.map((level) => (
+                    <option key={level} value={level}>
+                      {level}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <button
               type="button"
               className="btn-icon-refresh"
               title="Tải lại danh sách & làm mới bộ lọc"
               onClick={() => {
-                setSearchTerm('');
-                setIndustryFilter('');
+                clearAllFilters();
                 loadCustomers();
               }}
               aria-label="Tải lại danh sách khách hàng"
@@ -366,13 +455,37 @@ export default function CustomerListPage({
           </div>
         )}
 
-        {!loadError && (
+        {/* NCL-02-CN-005 (TC-02): không có khách hàng nào thuộc nhóm được lọc */}
+        {!loadError && !isLoading && customers.length > 0 && filteredCustomers.length === 0 && (
+          <div className="table-empty-state" data-testid="segment-filter-empty-state">
+            <div className="table-empty-state__icon">🔎</div>
+            <h3>Không có kết quả phù hợp</h3>
+            <p>
+              Không tìm thấy khách hàng nào khớp với từ khóa hoặc nhóm đã chọn
+              {hasActiveSegmentFilter ? ' (ngành nghề / quy mô / mức độ ưu tiên).' : '.'} Vui lòng thử
+              từ khóa khác hoặc bỏ bớt bộ lọc.
+            </p>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={clearAllFilters}
+              style={{ marginTop: '16px' }}
+              data-testid="btn-clear-segment-filters"
+            >
+              Xóa toàn bộ bộ lọc
+            </button>
+          </div>
+        )}
+
+        {!loadError && !(customers.length > 0 && filteredCustomers.length === 0) && (
           <CustomerTable
             customers={filteredCustomers}
             loading={isLoading}
             canCreate={isAllowed}
             onOpenCreate={() => setIsModalOpen(true)}
             onNavigateDetail={handleSelectCustomer}
+            canManageSegment={isAllowed}
+            onOpenSegment={handleOpenSegment}
           />
         )}
 

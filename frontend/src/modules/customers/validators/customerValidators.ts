@@ -3,6 +3,8 @@ import type {
   CustomerFormErrors,
   CustomerContactPayload,
   CustomerContactFormErrors,
+  CustomerSegmentPayload,
+  CustomerSegmentFormErrors,
 } from '../types/customerTypes';
 
 export const CUSTOMER_VALIDATION_LIMITS = {
@@ -16,6 +18,8 @@ export const CUSTOMER_VALIDATION_LIMITS = {
   CONTACT_TITLE_MAX_LENGTH: 255,
   CONTACT_EMAIL_MAX_LENGTH: 255,
   CONTACT_PHONE_MAX_LENGTH: 30,
+  SEGMENT_COMPANY_SIZE_MAX_LENGTH: 50,
+  SEGMENT_PRIORITY_MAX_LENGTH: 50,
 } as const;
 
 /**
@@ -116,6 +120,44 @@ export function validateCustomerContact(
     payload.phone.length > CUSTOMER_VALIDATION_LIMITS.CONTACT_PHONE_MAX_LENGTH
   ) {
     errors.phone = `Số điện thoại không được vượt quá ${CUSTOMER_VALIDATION_LIMITS.CONTACT_PHONE_MAX_LENGTH} ký tự`;
+  }
+
+  return errors;
+}
+
+/**
+ * Kiểm tra hợp lệ dữ liệu phân nhóm khách hàng (NCL-02-CN-005, TC-01)
+ * Cả ba nhãn — ngành nghề, quy mô, mức độ ưu tiên — đều bắt buộc để lọc và phân tích nhất quán.
+ * @param payload Dữ liệu phân nhóm
+ * @returns Object chứa danh sách lỗi (nếu có)
+ */
+export function validateCustomerSegment(
+  payload: Partial<CustomerSegmentPayload>
+): CustomerSegmentFormErrors {
+  const errors: CustomerSegmentFormErrors = {};
+
+  // 1. Ngành nghề (bắt buộc, max 255 ký tự)
+  const trimmedIndustry = payload.industry?.trim();
+  if (!payload.industry || trimmedIndustry === '') {
+    errors.industry = 'Ngành nghề không được để trống';
+  } else if (payload.industry.length > CUSTOMER_VALIDATION_LIMITS.INDUSTRY_MAX_LENGTH) {
+    errors.industry = `Ngành nghề không được vượt quá ${CUSTOMER_VALIDATION_LIMITS.INDUSTRY_MAX_LENGTH} ký tự`;
+  }
+
+  // 2. Quy mô công ty (bắt buộc, max 50 ký tự)
+  const trimmedSize = payload.companySize?.trim();
+  if (!payload.companySize || trimmedSize === '') {
+    errors.companySize = 'Quy mô công ty không được để trống';
+  } else if (payload.companySize.length > CUSTOMER_VALIDATION_LIMITS.SEGMENT_COMPANY_SIZE_MAX_LENGTH) {
+    errors.companySize = `Quy mô công ty không được vượt quá ${CUSTOMER_VALIDATION_LIMITS.SEGMENT_COMPANY_SIZE_MAX_LENGTH} ký tự`;
+  }
+
+  // 3. Mức độ ưu tiên (bắt buộc, max 50 ký tự)
+  const trimmedPriority = payload.priority?.trim();
+  if (!payload.priority || trimmedPriority === '') {
+    errors.priority = 'Mức độ ưu tiên không được để trống';
+  } else if (payload.priority.length > CUSTOMER_VALIDATION_LIMITS.SEGMENT_PRIORITY_MAX_LENGTH) {
+    errors.priority = `Mức độ ưu tiên không được vượt quá ${CUSTOMER_VALIDATION_LIMITS.SEGMENT_PRIORITY_MAX_LENGTH} ký tự`;
   }
 
   return errors;
