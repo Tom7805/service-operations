@@ -507,11 +507,16 @@ Bước D/P của wireframe `NCL-02-CN-001` (“Hiển thị / Cập nhật bả
 `POST /customers`: token của **Nhân viên kinh doanh** (`VT-04`) hoặc **Quản lý dự án** (`VT-02`); vai trò khác
 nhận `403 FORBIDDEN` và bị ghi nhật ký (QTN-01).
 
-**Query params (không bắt buộc):**
+**Query params (không bắt buộc, kết hợp với nhau theo AND):**
 
 | Trường | Kiểu | Ghi chú |
 |---|---|---|
-| `keyword` | string | Lọc phía máy chủ theo `name` / `code` (KH-xxxxxx) / `taxCode` / `phone` — khớp chứa, không phân biệt hoa thường. Bỏ trống thì trả toàn bộ. |
+| `keyword` | string | Lọc theo `name` / `code` (KH-xxxxxx) / `taxCode` / `phone` — **khớp chứa**, không phân biệt hoa thường. |
+| `industry` | string | Lọc theo nhãn ngành nghề (`NCL-02-CN-005`) — **khớp chính xác** (đã cắt khoảng trắng), không phân biệt hoa thường. |
+| `companySize` | string | Lọc theo nhãn quy mô (`NCL-02-CN-005`) — khớp chính xác, không phân biệt hoa thường. |
+| `priority` | string | Lọc theo nhãn mức độ ưu tiên (`NCL-02-CN-005`) — khớp chính xác, không phân biệt hoa thường. |
+
+Bỏ trống hết → trả toàn bộ. Không có hồ sơ nào khớp → `data: []` (không phải lỗi — dùng cho `NCL-02-CN-005` TC-02).
 
 **Response thành công — `200 OK`** (danh sách sắp theo `createdAt` giảm dần, hồ sơ mới nhất lên đầu):
 ```json
@@ -527,7 +532,9 @@ nhận `403 FORBIDDEN` và bị ghi nhật ký (QTN-01).
       "phone": null,
       "industry": null,
       "address": null,
-      "createdAt": "2026-08-27T09:00:00"
+      "createdAt": "2026-08-27T09:00:00",
+      "companySize": null,
+      "priority": null
     },
     {
       "id": 1,
@@ -537,11 +544,16 @@ nhận `403 FORBIDDEN` và bị ghi nhật ký (QTN-01).
       "phone": "0987654321",
       "industry": "Cong nghe thong tin",
       "address": "Ha Noi",
-      "createdAt": "2026-08-26T10:00:00"
+      "createdAt": "2026-08-26T10:00:00",
+      "companySize": "Vua",
+      "priority": "Cao"
     }
   ]
 }
 ```
+
+> Mọi response `CustomerRes` (ở tất cả endpoint khách hàng) từ nay có thêm hai trường `companySize` và `priority`
+> (có thể `null` khi hồ sơ chưa được phân nhóm — xem `NCL-02-CN-005`).
 
 **Response lỗi:**
 
@@ -800,3 +812,71 @@ sắp theo thời điểm thêm vào (`createdAt` tăng dần).
   `PATCH .../contacts/{contactId}/primary`.
 - Mọi lần thêm mới và mọi lần đổi đầu mối chính đều được backend tự ghi nhật ký vào cùng bảng nhật ký khách
   hàng dùng chung với `NCL-02-CN-002` (TC-04) — Frontend không cần gọi thêm API nào để việc ghi log này xảy ra.
+
+---
+
+### `NCL-02-CN-005` — Phân nhóm khách hàng theo ngành và quy mô
+
+Gắn nhãn **ngành nghề**, **quy mô** và **mức độ ưu tiên** cho một hồ sơ khách hàng đã tồn tại, để lọc và phân
+tích theo nhóm. Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`) hoặc **Quản lý dự án** (`VT-02`) — giống
+`NCL-02-CN-001`/`004`; vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối (TC-03).
+
+#### `PATCH /customers/{customerId}/segment`
+
+```json
+{
+  "industry": "Cong nghe thong tin",
+  "companySize": "Vua",
+  "priority": "Cao"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `industry` | string | có | Nhãn ngành nghề, tối đa 255 ký tự — không được để trống (TC-01). Ghi đè giá trị `industry` hiện có của hồ sơ. |
+| `companySize` | string | có | Nhãn quy mô, tối đa 50 ký tự — không được để trống. |
+| `priority` | string | có | Nhãn mức độ ưu tiên, tối đa 50 ký tự — không được để trống. |
+
+Đây là thao tác **thay cả ba nhãn cùng lúc** (không phải patch từng phần): mỗi lần gọi phải gửi đủ ba trường.
+
+Ba nhãn hiện là **văn bản tự do** (chưa gắn danh mục cứng ở backend). Frontend nên dựng dropdown với bộ giá trị
+thống nhất, gợi ý:
+- `companySize`: `Nhỏ` · `Vừa` · `Lớn`
+- `priority`: `Cao` · `Trung bình` · `Thấp`
+- `industry`: dùng lại danh sách ngành đã hiển thị ở form tạo hồ sơ (`NCL-02-CN-001`).
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Cap nhat phan nhom khach hang thanh cong",
+  "data": {
+    "id": 1,
+    "code": "KH-227265",
+    "name": "Cong ty TNHH ABC",
+    "taxCode": "0101234567",
+    "phone": "0987654321",
+    "industry": "Cong nghe thong tin",
+    "address": "Ha Noi",
+    "createdAt": "2026-08-26T10:00:00",
+    "companySize": "Vua",
+    "priority": "Cao"
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải `VT-04`/`VT-02` — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 400 | `VALIDATION_ERROR` | Thiếu / để trống một trong ba nhãn, hoặc vượt quá độ dài cho phép |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy `customerId` |
+
+**Lưu ý cho Frontend:**
+- Sau khi gán nhãn, lọc danh sách bằng `GET /customers?industry=...&companySize=...&priority=...` (khớp **chính
+  xác**, không phân biệt hoa thường; kết hợp AND với nhau và với `keyword`). Xem mục `GET /customers` ở trên.
+- Nhóm lọc không có khách hàng nào → `data: []`; Frontend hiển thị trạng thái "không có kết quả phù hợp" (TC-02).
+- Mỗi lần cập nhật phân nhóm được backend tự ghi nhật ký (`SEGMENT_UPDATE`: người thực hiện · nội dung · thời
+  điểm) vào bảng nhật ký khách hàng dùng chung với `NCL-02-CN-002` (TC-04) — Frontend không cần gọi thêm API.

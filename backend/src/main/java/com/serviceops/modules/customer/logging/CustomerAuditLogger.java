@@ -14,14 +14,22 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
-
+/**
+ * Ghi nhat ky khach hang (NCL-02-CN-002, TC-05).
+ *
+ * <p>Lan <b>tu choi truy cap</b> (TC-04) dung {@code REQUIRES_NEW} de nhat ky luon
+ * duoc ghi doc lap, khong bi rollback theo thao tac bi chan (giong logic
+ * {@code SensitiveAccessLogger.logDenied}).</p>
+ */
 @Service
 @RequiredArgsConstructor
 public class CustomerAuditLogger {
 
     private final CustomerAuditLogRepository repository;
 
-
+    /**
+     * Ghi nhat ky truy cap bi tu choi (TC-04). Doc lap transaction de khong bi rollback.
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logDeniedAccess(String targetRef, String detail) {
         CustomerAuditLog log = new CustomerAuditLog();
