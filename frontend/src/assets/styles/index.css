@@ -787,4 +787,27 @@
 .customer-tab-content { margin-top: 4px; }
 .overview-tab-pane, .audit-tab-pane { }
 
+/* NCL-02-CN-004 — Hồ sơ tổng hợp của khách hàng */
+.customer-summary-panel { padding: 20px 24px; }
+.customer-summary-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.customer-summary-title { margin: 0; font-size: 16px; color: #0f172a; }
+.customer-summary-subtitle { margin: 4px 0 0; font-size: 12.5px; color: #64748b; }
+.customer-summary-stats { margin-bottom: 8px; }
+.customer-summary-section { margin-top: 22px; }
+.customer-summary-section__title { margin: 0 0 10px; font-size: 13.5px; font-weight: 700; color: #0f172a; }
+.customer-summary-section__empty { font-size: 12.5px; margin: 0; padding: 8px 0; }
+.customer-timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.customer-timeline__item { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-left: 3px solid #10b981; border-radius: 10px; font-size: 12.5px; }
+.customer-timeline__date { min-width: 84px; color: #475569; font-variant-numeric: tabular-nums; }
+.customer-timeline__tag { padding: 2px 8px; border-radius: 999px; background: #eef2ff; color: #3730a3; font-weight: 600; font-size: 11px; white-space: nowrap; }
+.customer-timeline__tag--opportunities { background: #eff6ff; color: #1d4ed8; }
+.customer-timeline__tag--contracts { background: #f5f3ff; color: #6d28d9; }
+.customer-timeline__tag--projects { background: #ecfdf5; color: #047857; }
+.customer-timeline__tag--invoices { background: #eff6ff; color: #1d4ed8; }
+.customer-timeline__tag--receivables { background: #fef2f2; color: #b91c1c; }
+.customer-timeline__name { flex: 1; min-width: 160px; color: #0f172a; font-weight: 600; }
+.customer-timeline__code { color: #64748b; font-weight: 400; }
+.customer-timeline__amount { margin-left: auto; color: #0f172a; font-weight: 700; font-variant-numeric: tabular-nums; }
+.customer-summary-scope-note { display: block; margin-top: 22px; padding-top: 14px; border-top: 1px dashed #e2e8f0; font-size: 11.5px; line-height: 1.6; }
+
 

@@ -104,3 +104,38 @@ export interface ContactAuditItem {
   detail: string;
 }
 
+/**
+ * NCL-02-CN-004 — Xem hồ sơ tổng hợp của khách hàng.
+ * Một dòng trong bức tranh toàn cảnh (cơ hội / hợp đồng / dự án / hóa đơn / công nợ).
+ * Khớp `CustomerOverviewItemRes` phía Backend.
+ */
+export interface CustomerOverviewItem {
+  id: number;
+  code: string | null;
+  name: string | null;
+  status: string | null;
+  amount: number | null;
+  date: string | null; // ISO date (yyyy-MM-dd)
+}
+
+/**
+ * NCL-02-CN-004 — Toàn bộ dữ liệu liên quan tới một khách hàng, đã được Backend
+ * sắp theo thứ tự thời gian (TC-01). Khớp `CustomerOverviewRes`.
+ * GET /customers/{id}/overview — chỉ vai trò VT-04 hoặc VT-02, mỗi lần gọi Backend ghi Audit Log (TC-03).
+ */
+export interface CustomerOverview {
+  customer: Customer;
+  opportunities: CustomerOverviewItem[];
+  contracts: CustomerOverviewItem[];
+  projects: CustomerOverviewItem[];
+  invoices: CustomerOverviewItem[];
+  receivables: CustomerOverviewItem[];
+}
+
+export type CustomerOverviewSectionKey =
+  | 'opportunities'
+  | 'contracts'
+  | 'projects'
+  | 'invoices'
+  | 'receivables';
+
