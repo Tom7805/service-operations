@@ -467,6 +467,42 @@
   border-radius: 12px;
 }
 
+/* NCL-02-CN-005: nhãn quy mô công ty và mức độ ưu tiên khi phân nhóm khách hàng */
+.company-size-tag {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f766e;
+  background: #ccfbf1;
+  border: 1px solid #99f6e4;
+  padding: 3px 9px;
+  border-radius: 12px;
+}
+
+.priority-tag {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+}
+.priority-tag--low { color: #475569; background: #f1f5f9; border-color: #e2e8f0; }
+.priority-tag--medium { color: #b45309; background: #fef3c7; border-color: #fde68a; }
+.priority-tag--high { color: #b91c1c; background: #fee2e2; border-color: #fecaca; }
+
+.segment-current-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+  padding: 18px 20px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+.segment-current-item { display: flex; flex-direction: column; gap: 6px; }
+
 .address-text {
   font-size: 13px;
   color: #475569;

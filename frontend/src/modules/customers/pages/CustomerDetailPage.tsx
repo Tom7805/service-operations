@@ -2,6 +2,9 @@ import { useState } from 'react';
 import type { Customer, CustomerContact, ContactAuditItem } from '../types/customerTypes';
 import ContactList from '../components/ContactList';
 import CustomerOverviewPanel from '../components/CustomerOverviewPanel';
+import CustomerSegmentPanel from '../components/CustomerSegmentPanel';
+
+type CustomerDetailTab = 'CONTACTS' | 'SEGMENT' | 'SUMMARY' | 'OVERVIEW' | 'AUDIT';
 
 interface CustomerDetailPageProps {
   customer?: Customer;
@@ -10,6 +13,9 @@ interface CustomerDetailPageProps {
   currentUserName?: string;
   onBack: () => void;
   initialContacts?: CustomerContact[];
+  onCustomerUpdated?: (updated: Customer) => void;
+  // NCL-02-CN-005: cho phép mở thẳng tab "Phân nhóm" từ nút thao tác nhanh ở danh sách.
+  initialTab?: CustomerDetailTab;
 }
 
 export default function CustomerDetailPage({
@@ -19,8 +25,10 @@ export default function CustomerDetailPage({
   currentUserName = 'Người dùng',
   onBack,
   initialContacts,
+  onCustomerUpdated,
+  initialTab = 'CONTACTS',
 }: CustomerDetailPageProps) {
-  const [customer] = useState<Customer>(
+  const [customer, setCustomer] = useState<Customer>(
     propCustomer || {
       id: propCustomerId || 1,
       code: 'KH-000001',
@@ -33,7 +41,7 @@ export default function CustomerDetailPage({
     }
   );
 
-  const [activeTab, setActiveTab] = useState<'CONTACTS' | 'SUMMARY' | 'OVERVIEW' | 'AUDIT'>('CONTACTS');
+  const [activeTab, setActiveTab] = useState<CustomerDetailTab>(initialTab);
   const [auditLogs, setAuditLogs] = useState<ContactAuditItem[]>([]);
   const [copiedCode, setCopiedCode] = useState(false);
 
@@ -46,6 +54,12 @@ export default function CustomerDetailPage({
 
   const handleAuditLogged = (log: ContactAuditItem) => {
     setAuditLogs((prev) => [log, ...prev]);
+  };
+
+  // NCL-02-CN-005 (TC-01): đồng bộ nhãn phân nhóm mới nhất vào hồ sơ chi tiết và trả về danh sách.
+  const handleSegmentUpdated = (updated: Customer) => {
+    setCustomer(updated);
+    onCustomerUpdated?.(updated);
   };
 
   const formatDate = (isoString?: string) => {
@@ -178,6 +192,16 @@ export default function CustomerDetailPage({
 
         <button
           type="button"
+          className={`customer-tab-btn ${activeTab === 'SEGMENT' ? 'customer-tab-btn--active' : ''}`}
+          onClick={() => setActiveTab('SEGMENT')}
+          data-testid="tab-btn-segment"
+        >
+          <span className="tab-icon">🏷️</span>
+          <span>Phân nhóm</span>
+        </button>
+
+        <button
+          type="button"
           className={`customer-tab-btn ${activeTab === 'SUMMARY' ? 'customer-tab-btn--active' : ''}`}
           onClick={() => setActiveTab('SUMMARY')}
           data-testid="tab-btn-summary"
@@ -216,6 +240,16 @@ export default function CustomerDetailPage({
             currentUserRoles={currentUserRoles}
             currentUserName={currentUserName}
             initialContacts={initialContacts}
+            onAuditLogged={handleAuditLogged}
+          />
+        )}
+
+        {activeTab === 'SEGMENT' && (
+          <CustomerSegmentPanel
+            customer={customer}
+            currentUserRoles={currentUserRoles}
+            currentUserName={currentUserName}
+            onSegmentUpdated={handleSegmentUpdated}
             onAuditLogged={handleAuditLogged}
           />
         )}
@@ -260,6 +294,14 @@ export default function CustomerDetailPage({
               <div className="form-field">
                 <span className="form-label">Ngành nghề kinh doanh:</span>
                 <p style={{ margin: 0 }}>{customer.industry || '—'}</p>
+              </div>
+              <div className="form-field">
+                <span className="form-label">Quy mô công ty:</span>
+                <p style={{ margin: 0 }}>{customer.companySize || '—'}</p>
+              </div>
+              <div className="form-field">
+                <span className="form-label">Mức độ ưu tiên:</span>
+                <p style={{ margin: 0 }}>{customer.priority || '—'}</p>
               </div>
               <div className="form-field form-field--full">
                 <span className="form-label">Địa chỉ đăng ký kinh doanh:</span>

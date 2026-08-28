@@ -7,6 +7,17 @@ interface CustomerTableProps {
   onOpenCreate?: () => void;
   canCreate?: boolean;
   onNavigateDetail?: (customer: Customer) => void;
+  // NCL-02-CN-005: mở biểu mẫu gán ngành nghề, quy mô và mức độ ưu tiên cho một khách hàng.
+  canManageSegment?: boolean;
+  onOpenSegment?: (customer: Customer) => void;
+}
+
+/** Trả về sắc thái hiển thị (màu) tương ứng mức độ ưu tiên đã chọn. */
+function priorityTone(priority?: string | null): 'low' | 'medium' | 'high' {
+  const normalized = priority?.trim().toLowerCase() ?? '';
+  if (normalized === 'cao') return 'high';
+  if (normalized === 'thấp') return 'low';
+  return 'medium';
 }
 
 export default function CustomerTable({
@@ -15,6 +26,8 @@ export default function CustomerTable({
   onOpenCreate,
   canCreate = false,
   onNavigateDetail,
+  canManageSegment = false,
+  onOpenSegment,
 }: CustomerTableProps) {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
@@ -82,9 +95,11 @@ export default function CustomerTable({
             <th style={{ minWidth: '220px' }}>Tên khách hàng</th>
             <th style={{ width: '150px' }}>Mã số thuế</th>
             <th style={{ width: '170px' }}>Lĩnh vực / Ngành</th>
+            <th style={{ width: '110px' }}>Quy mô</th>
+            <th style={{ width: '130px' }}>Ưu tiên</th>
             <th style={{ minWidth: '240px' }}>Địa chỉ trụ sở</th>
             <th style={{ width: '150px' }}>Ngày tạo</th>
-            <th style={{ width: '170px', textAlign: 'center' }}>Thao tác</th>
+            <th style={{ width: '220px', textAlign: 'center' }}>Thao tác</th>
           </tr>
         </thead>
         <tbody>
@@ -132,6 +147,27 @@ export default function CustomerTable({
                 )}
               </td>
               <td>
+                {cust.companySize ? (
+                  <span className="company-size-tag" data-testid={`segment-size-${cust.id}`}>
+                    {cust.companySize}
+                  </span>
+                ) : (
+                  <span className="cell-muted">—</span>
+                )}
+              </td>
+              <td>
+                {cust.priority ? (
+                  <span
+                    className={`priority-tag priority-tag--${priorityTone(cust.priority)}`}
+                    data-testid={`segment-priority-${cust.id}`}
+                  >
+                    {cust.priority}
+                  </span>
+                ) : (
+                  <span className="cell-muted">—</span>
+                )}
+              </td>
+              <td>
                 {cust.address ? (
                   <span className="address-text" title={cust.address}>
                     {cust.address}
@@ -155,6 +191,18 @@ export default function CustomerTable({
                     >
                       <span>👥</span>
                       <span>Người liên hệ</span>
+                    </button>
+                  )}
+                  {canManageSegment && onOpenSegment && (
+                    <button
+                      type="button"
+                      className="btn-manage-contacts-link"
+                      onClick={() => onOpenSegment(cust)}
+                      title="Gán ngành nghề, quy mô và mức độ ưu tiên (NCL-02-CN-005)"
+                      data-testid={`btn-open-segment-${cust.id}`}
+                    >
+                      <span>🏷️</span>
+                      <span>Phân nhóm</span>
                     </button>
                   )}
                   <button

@@ -6,6 +6,7 @@ import type {
   DuplicateCandidate,
   CustomerContact,
   CustomerContactPayload,
+  CustomerSegmentPayload,
 } from '../types/customerTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
@@ -208,3 +209,23 @@ export async function setPrimaryCustomerContact(
   );
 }
 
+/**
+ * NCL-02-CN-005 (TC-01): Gán ngành nghề, quy mô và mức độ ưu tiên cho khách hàng
+ * (PATCH /customers/{id}/segment). Bắt buộc vai trò VT-04 hoặc VT-02.
+ * Backend ghi Audit Log hành động `SEGMENT_UPDATE` (TC-04).
+ */
+export async function updateCustomerSegment(
+  customerId: number,
+  payload: CustomerSegmentPayload
+): Promise<Customer> {
+  const cleanPayload: CustomerSegmentPayload = {
+    industry: payload.industry.trim(),
+    companySize: payload.companySize.trim(),
+    priority: payload.priority.trim(),
+  };
+
+  return requestBackend<Customer>(`${API_BASE_URL}/customers/${customerId}/segment`, {
+    method: 'PATCH',
+    body: JSON.stringify(cleanPayload),
+  });
+}

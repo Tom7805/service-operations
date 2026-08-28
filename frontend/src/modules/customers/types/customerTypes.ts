@@ -13,6 +13,9 @@ export interface Customer {
   address?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  // NCL-02-CN-005: nhãn phân nhóm khách hàng — quy mô công ty và mức độ ưu tiên chăm sóc.
+  companySize?: string | null;
+  priority?: string | null;
 }
 
 export interface CustomerCreatePayload {
@@ -138,4 +141,28 @@ export type CustomerOverviewSectionKey =
   | 'projects'
   | 'invoices'
   | 'receivables';
+
+/**
+ * NCL-02-CN-005 — Phân nhóm khách hàng theo ngành và quy mô.
+ * Payload gửi PATCH /customers/{id}/segment (khớp `CustomerSegmentReq` phía Backend).
+ * Bắt buộc vai trò VT-04 hoặc VT-02; Backend ghi Audit Log hành động `SEGMENT_UPDATE` (TC-04).
+ */
+export interface CustomerSegmentPayload {
+  industry: string;
+  companySize: string;
+  priority: string;
+}
+
+export interface CustomerSegmentFormErrors {
+  industry?: string;
+  companySize?: string;
+  priority?: string;
+  general?: string;
+}
+
+/** Quy mô công ty gợi ý để phân nhóm — vẫn nhận giá trị khác nếu khách hàng đã có sẵn. */
+export const COMPANY_SIZE_OPTIONS = ['Nhỏ', 'Vừa', 'Lớn'] as const;
+
+/** Mức độ ưu tiên chăm sóc gợi ý để phân nhóm khách hàng. */
+export const CUSTOMER_PRIORITY_OPTIONS = ['Thấp', 'Trung bình', 'Cao'] as const;
 
