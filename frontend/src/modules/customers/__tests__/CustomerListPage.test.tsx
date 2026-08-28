@@ -4,6 +4,7 @@ import CustomerListPage from '../pages/CustomerListPage';
 import * as customersApi from '../api/customersApi';
 
 vi.mock('../api/customersApi', () => ({
+  fetchCustomers: vi.fn().mockResolvedValue([]),
   createCustomer: vi.fn(),
   checkCustomerDuplicate: vi.fn().mockResolvedValue([]),
   createCustomerWithOverride: vi.fn(),
@@ -19,6 +20,7 @@ describe('CustomerListPage Component (NCL-02-CN-001-CV-05)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(customersApi.checkCustomerDuplicate).mockResolvedValue([]);
+    vi.mocked(customersApi.fetchCustomers).mockResolvedValue([]);
   });
 
   describe('Kiểm tra phân quyền vai trò (TC-03)', () => {
@@ -117,6 +119,63 @@ describe('CustomerListPage Component (NCL-02-CN-001-CV-05)', () => {
 
       // Kiểm tra bảng hiển thị khách hàng mới tạo
       expect(screen.getAllByText('Tập đoàn Công nghệ FPT').length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  describe('NCL-02-CN-001 (bước D/P): Tải danh sách hồ sơ khách hàng từ Backend', () => {
+    it('gọi GET /customers khi mount và hiển thị các hồ sơ đã lưu trong hệ thống', async () => {
+      vi.mocked(customersApi.fetchCustomers).mockResolvedValue([
+        { id: 10, code: 'KH-000010', name: 'Công ty Đã Lưu Trước', taxCode: '0105555555', industry: 'Kiểm toán', address: 'Đà Nẵng' },
+      ]);
+
+      render(<CustomerListPage currentUserRoles={['VT-04']} />);
+
+      expect(customersApi.fetchCustomers).toHaveBeenCalledTimes(1);
+      await waitFor(() => {
+        expect(screen.getByText('Công ty Đã Lưu Trước')).toBeInTheDocument();
+        expect(screen.getByText('KH-000010')).toBeInTheDocument();
+      });
+    });
+
+    it('hiển thị trạng thái rỗng khi Backend chưa có hồ sơ khách hàng nào', async () => {
+      vi.mocked(customersApi.fetchCustomers).mockResolvedValue([]);
+
+      render(<CustomerListPage currentUserRoles={['VT-02']} />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Chưa có hồ sơ khách hàng nào/i)).toBeInTheDocument();
+      });
+    });
+
+    it('hiển thị trạng thái lỗi kèm nút "Thử lại" khi gọi API thất bại', async () => {
+      vi.mocked(customersApi.fetchCustomers).mockRejectedValueOnce(
+        new customersApi.CustomerApiError('NETWORK_ERROR', 'Không thể kết nối đến máy chủ Backend.', 503)
+      );
+
+      render(<CustomerListPage currentUserRoles={['VT-04']} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('customer-load-error')).toBeInTheDocument();
+        expect(screen.getByText('Không thể kết nối đến máy chủ Backend.')).toBeInTheDocument();
+      });
+
+      // Bấm "Thử lại" -> gọi lại API và tải được danh sách
+      vi.mocked(customersApi.fetchCustomers).mockResolvedValueOnce([
+        { id: 1, code: 'KH-000001', name: 'Công ty Phục Hồi', taxCode: null, industry: null, address: null },
+      ]);
+      fireEvent.click(screen.getByRole('button', { name: /Thử lại/i }));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('customer-load-error')).toBeNull();
+        expect(screen.getByText('Công ty Phục Hồi')).toBeInTheDocument();
+      });
+    });
+
+    it('không gọi API tải danh sách khi người dùng không đủ quyền (VT-06)', () => {
+      render(<CustomerListPage currentUserRoles={['VT-06']} />);
+
+      expect(customersApi.fetchCustomers).not.toHaveBeenCalled();
+      expect(screen.getByTestId('access-denied-view')).toBeInTheDocument();
     });
   });
 

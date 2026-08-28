@@ -3,6 +3,7 @@ package com.serviceops.modules.customer.service.impl;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.customer.dto.request.CustomerCreateReq;
+import com.serviceops.modules.customer.dto.request.CustomerSearchReq;
 import com.serviceops.modules.customer.dto.request.DuplicateOverrideReq;
 import com.serviceops.modules.customer.dto.response.CustomerRes;
 import com.serviceops.modules.customer.dto.response.DuplicateCandidateRes;
@@ -74,6 +75,16 @@ public class CustomerServiceImpl implements CustomerService {
 	}
 
 	@Override
+	@Transactional(readOnly = true)
+	public List<CustomerRes> findAll(CustomerSearchReq request) {
+		String keyword = normalizeKeyword(request == null ? null : request.getKeyword());
+		return customerRepository.findAllByOrderByCreatedAtDesc().stream()
+				.filter(customer -> keyword == null || matchesKeyword(customer, keyword))
+				.map(customerMapper::toResponse)
+				.toList();
+	}
+
+	@Override
 	public List<DuplicateCandidateRes> checkDuplicates(CustomerCreateReq request) {
 		return customerDuplicateService.findDuplicates(request.name(), request.taxCode(), request.phone());
 	}
@@ -129,6 +140,25 @@ public class CustomerServiceImpl implements CustomerService {
 		}
 		String trimmed = value.trim();
 		return trimmed.isEmpty() ? null : trimmed;
+	}
+
+	private String normalizeKeyword(String keyword) {
+		if (keyword == null) {
+			return null;
+		}
+		String trimmed = keyword.trim().toLowerCase();
+		return trimmed.isEmpty() ? null : trimmed;
+	}
+
+	private boolean matchesKeyword(Customer customer, String keyword) {
+		return containsIgnoreCase(customer.getName(), keyword)
+				|| containsIgnoreCase(customer.getCode(), keyword)
+				|| containsIgnoreCase(customer.getTaxCode(), keyword)
+				|| containsIgnoreCase(customer.getPhone(), keyword);
+	}
+
+	private boolean containsIgnoreCase(String value, String keyword) {
+		return value != null && value.toLowerCase().contains(keyword);
 	}
 
 	private String currentUsername() {

@@ -3,6 +3,7 @@ package com.serviceops.modules.customer.controller;
 import com.serviceops.common.api.BaseRes;
 import com.serviceops.modules.customer.dto.request.CustomerCreateReq;
 import com.serviceops.modules.customer.dto.request.CustomerCreateWithOverrideReq;
+import com.serviceops.modules.customer.dto.request.CustomerSearchReq;
 import com.serviceops.modules.customer.dto.response.CustomerRes;
 import com.serviceops.modules.customer.dto.response.CustomerOverviewRes;
 import com.serviceops.modules.customer.dto.response.DuplicateCandidateRes;
@@ -27,6 +28,16 @@ public class CustomerController {
 
 	private final CustomerService customerService;
 	private final CustomerOverviewService customerOverviewService;
+
+	/**
+	 * NCL-02-CN-001 (buoc D/P): Sales (VT-04) va PM (VT-02) xem danh sach ho so khach hang hien co,
+	 * lam diem vao man hinh Xem ho so tong hop (NCL-02-CN-004). Ho tro tim theo ten / ma KH / MST / SDT.
+	 */
+	@GetMapping
+	@PreAuthorize("hasRole('VT-04') or hasRole('VT-02')")
+	public BaseRes<List<CustomerRes>> list(CustomerSearchReq request) {
+		return BaseRes.ok(customerService.findAll(request));
+	}
 
 	/** NCL-02-CN-004: Sales va PM duoc xem du lieu tong hop trong pham vi khach hang. */
 	@GetMapping("/{customerId}/overview")

@@ -501,6 +501,60 @@ không đợi Frontend gọi trước.
   trả về sau khi lưu (ví dụ ở toast thông báo hoặc bảng danh sách).
 - Quản lý người liên hệ (`NCL-02-CN-003`) xem mục riêng bên dưới.
 
+#### `GET /customers`
+
+Bước D/P của wireframe `NCL-02-CN-001` (“Hiển thị / Cập nhật bảng danh sách khách hàng”). Cùng phân quyền với
+`POST /customers`: token của **Nhân viên kinh doanh** (`VT-04`) hoặc **Quản lý dự án** (`VT-02`); vai trò khác
+nhận `403 FORBIDDEN` và bị ghi nhật ký (QTN-01).
+
+**Query params (không bắt buộc):**
+
+| Trường | Kiểu | Ghi chú |
+|---|---|---|
+| `keyword` | string | Lọc phía máy chủ theo `name` / `code` (KH-xxxxxx) / `taxCode` / `phone` — khớp chứa, không phân biệt hoa thường. Bỏ trống thì trả toàn bộ. |
+
+**Response thành công — `200 OK`** (danh sách sắp theo `createdAt` giảm dần, hồ sơ mới nhất lên đầu):
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": 2,
+      "code": "KH-000002",
+      "name": "Cong ty CP XYZ",
+      "taxCode": null,
+      "phone": null,
+      "industry": null,
+      "address": null,
+      "createdAt": "2026-08-27T09:00:00"
+    },
+    {
+      "id": 1,
+      "code": "KH-227265",
+      "name": "Cong ty TNHH ABC",
+      "taxCode": "0101234567",
+      "phone": "0987654321",
+      "industry": "Cong nghe thong tin",
+      "address": "Ha Noi",
+      "createdAt": "2026-08-26T10:00:00"
+    }
+  ]
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh/Quản lý dự án |
+
+**Lưu ý cho Frontend:**
+- `data` là mảng thuần, **không phân trang** — Frontend tự lọc/sắp trên máy khách nếu cần.
+- Khi `data` rỗng → hiển thị trạng thái rỗng (“Chưa có hồ sơ khách hàng nào”), không phải lỗi.
+- Đây là nguồn dữ liệu để mở màn hình Xem hồ sơ tổng hợp (`GET /customers/{customerId}/overview`, `NCL-02-CN-004`).
+
 ---
 
 ### `NCL-02-CN-002` — Chống trùng hồ sơ khách hàng
