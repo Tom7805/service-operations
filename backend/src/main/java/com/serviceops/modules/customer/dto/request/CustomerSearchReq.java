@@ -13,4 +13,10 @@ public class CustomerSearchReq {
 
 	/** Tim theo ten, ma khach hang (KH-xxxxxx), ma so thue hoac so dien thoai (tim chua, khong phan biet hoa thuong). */
 	private String keyword;
+
+	private String industry;
+
+	private String companySize;
+
+	private String priority;
 }
