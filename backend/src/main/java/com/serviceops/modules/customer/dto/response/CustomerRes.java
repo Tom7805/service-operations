@@ -10,5 +10,12 @@ public record CustomerRes(
 	String phone,
 	String industry,
 	String address,
-	LocalDateTime createdAt
-) {}
+	LocalDateTime createdAt,
+	String companySize,
+	String priority
+) {
+	public CustomerRes(Long id, String code, String name, String taxCode, String phone,
+			String industry, String address, LocalDateTime createdAt) {
+		this(id, code, name, taxCode, phone, industry, address, createdAt, null, null);
+	}
+}

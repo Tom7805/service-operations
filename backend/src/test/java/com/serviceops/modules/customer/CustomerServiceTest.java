@@ -4,6 +4,8 @@ import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.customer.dto.request.CustomerCreateReq;
 import com.serviceops.modules.customer.dto.request.DuplicateOverrideReq;
+import com.serviceops.modules.customer.dto.request.CustomerSearchReq;
+import com.serviceops.modules.customer.dto.request.CustomerSegmentReq;
 import com.serviceops.modules.customer.dto.response.CustomerRes;
 import com.serviceops.modules.customer.dto.response.DuplicateCandidateRes;
 import com.serviceops.modules.customer.entity.Customer;
@@ -177,5 +179,46 @@ class CustomerServiceTest {
 		verify(customerRepository, never()).save(any());
 		verify(overrideLogRepository, never()).save(any());
 		verify(auditLogRepository, never()).save(any());
+	}
+
+	@Test
+	@DisplayName("NCL-02-CN-005 TC-01: cap nhat nganh, quy mo va uu tien thanh cong")
+	void updatesCustomerSegmentAndRecordsAudit() {
+		Customer customer = new Customer();
+		customer.setId(1L);
+		customer.setName("Cong ty ABC");
+		when(customerRepository.findById(1L)).thenReturn(java.util.Optional.of(customer));
+		when(customerRepository.save(any(Customer.class))).thenAnswer(inv -> inv.getArgument(0));
+
+		CustomerRes result = service.updateSegment(1L,
+				new CustomerSegmentReq("Cong nghe", "Vua", "Uu tien"));
+
+		assertThat(result.industry()).isEqualTo("Cong nghe");
+		assertThat(result.companySize()).isEqualTo("Vua");
+		assertThat(result.priority()).isEqualTo("Uu tien");
+		ArgumentCaptor<CustomerAuditLog> auditCaptor = ArgumentCaptor.forClass(CustomerAuditLog.class);
+		verify(auditLogRepository).save(auditCaptor.capture());
+		assertThat(auditCaptor.getValue().getActionType()).isEqualTo(CustomerAuditAction.SEGMENT_UPDATE);
+	}
+
+	@Test
+	@DisplayName("NCL-02-CN-005 TC-01: loc danh sach theo nganh, quy mo va uu tien")
+	void filtersCustomersBySegment() {
+		Customer matching = new Customer();
+		matching.setIndustry("Cong nghe");
+		matching.setCompanySize("Vua");
+		matching.setPriority("Uu tien");
+		Customer other = new Customer();
+		other.setIndustry("Tai chinh");
+		other.setCompanySize("Lon");
+		other.setPriority("Thuong");
+		when(customerRepository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of(matching, other));
+
+		CustomerSearchReq request = new CustomerSearchReq();
+		request.setIndustry("cong nghe");
+		request.setCompanySize("vua");
+		request.setPriority("uu tien");
+
+		assertThat(service.findAll(request)).hasSize(1);
 	}
 }

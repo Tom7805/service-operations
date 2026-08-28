@@ -27,6 +27,12 @@ public class Customer extends BaseEntity {
 	@Column(length = 255)
 	private String industry;
 
+	@Column(name = "company_size", length = 50)
+	private String companySize;
+
+	@Column(length = 50)
+	private String priority;
+
 	@Column(length = 500)
 	private String address;
 
