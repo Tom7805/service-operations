@@ -221,4 +221,23 @@ class CustomerServiceTest {
 
 		assertThat(service.findAll(request)).hasSize(1);
 	}
+
+	@Test
+	@DisplayName("NCL-02-CN-005 TC-02: loc theo nhom khong co khach hang nao -> tra ve rong")
+	void filterBySegmentReturnsEmptyWhenNoMatch() {
+		Customer c1 = new Customer();
+		c1.setIndustry("Cong nghe");
+		c1.setCompanySize("Vua");
+		c1.setPriority("Cao");
+		Customer c2 = new Customer();
+		c2.setIndustry("Tai chinh");
+		c2.setCompanySize("Lon");
+		c2.setPriority("Thap");
+		when(customerRepository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of(c1, c2));
+
+		CustomerSearchReq request = new CustomerSearchReq();
+		request.setCompanySize("Sieu nho");
+
+		assertThat(service.findAll(request)).isEmpty();
+	}
 }

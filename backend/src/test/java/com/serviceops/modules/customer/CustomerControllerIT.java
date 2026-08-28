@@ -258,6 +258,23 @@ class CustomerControllerIT {
 	}
 
 	@Test
+	@DisplayName("NCL-02-CN-005: Quan ly du an (VT-02) cung duoc cap nhat phan nhom")
+	@WithMockUser(authorities = "ROLE_VT-02")
+	void projectManagerCanUpdateCustomerSegment() throws Exception {
+		when(customerService.updateSegment(any(Long.class), any(CustomerSegmentReq.class))).thenReturn(
+				new CustomerRes(1L, "KH-000001", "Cong ty ABC", null, null,
+						"Tai chinh", null, null, "Lon", "Cao"));
+
+		mockMvc.perform(patch("/customers/1/segment")
+					.contentType("application/json")
+					.content(objectMapper.writeValueAsString(
+							new CustomerSegmentReq("Tai chinh", "Lon", "Cao"))))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.companySize").value("Lon"))
+				.andExpect(jsonPath("$.data.priority").value("Cao"));
+	}
+
+	@Test
 	@DisplayName("NCL-02-CN-005 TC-03: vai tro khac Sales/PM bi tu choi cap nhat phan nhom")
 	@WithMockUser(authorities = "ROLE_VT-05")
 	void segmentUpdateDeniesOtherRoles() throws Exception {
