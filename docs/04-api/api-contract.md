@@ -90,10 +90,29 @@ Không cần token (endpoint công khai).
   hiển thị (`userId`, `username`, `fullName`, `roles`) backend đã trả sẵn trong `data`.
 - Khi bất kỳ API nào trả về `401` với `errorCode` khác `INVALID_CREDENTIALS`/`ACCOUNT_LOCKED` (ví dụ token hết hạn),
   điều hướng người dùng quay lại màn hình đăng nhập (đáp ứng AC-03 của story).
-- Tài khoản mẫu để test: `admin` / `Password@123` (vai trò Quản trị viên, phạm vi toàn công ty).
-- Tài khoản mẫu vai trò Nhân sự: `nhansu` / `Password@123` (vai trò `VT-06`, phạm vi toàn công ty) — dùng để test
-  các màn hình chỉ Nhân sự/Kế toán/Ban giám đốc được xem, ví dụ `GET /masking-rules` ở `NCL-01-CN-005` (tài khoản
-  `admin` mang vai trò `VT-07`, không nằm trong nhóm này nên không thấy được luồng thành công).
+- **Tài khoản mẫu (data seed) — mật khẩu tất cả là `Password@123`.** Nguồn: `backend/src/main/resources/db/seed/`.
+  Cây tổ chức: Ban Giám Đốc [1] › {PMO [2], Kinh Doanh [3], Kế Toán [4], Nhân Sự [5], Trung Tâm Công Nghệ [6]};
+  Trung Tâm Công Nghệ [6] › {Nhóm Phát Triển [7], Nhóm Tư Vấn [8], Nhóm Kiểm Thử [9]}.
+
+  | username | Vai trò | Phòng | Phạm vi dữ liệu | Ghi chú |
+  |---|---|---|---|---|
+  | `admin` | `VT-07` Quản trị viên | Trung Tâm Công Nghệ | COMPANY | Tài khoản hệ thống, không có hồ sơ nhân sự |
+  | `giamdoc` | `VT-01` Ban giám đốc | Ban Giám Đốc | COMPANY | |
+  | `pm.lead` | `VT-02` Quản lý dự án | PMO | DEPARTMENT → PMO | Trưởng phòng |
+  | `pm01` | `VT-02` Quản lý dự án | PMO | SELF | |
+  | `sale.lead` | `VT-04` Kinh doanh | Kinh Doanh | DEPARTMENT → Kinh Doanh | Trưởng phòng |
+  | `sale01` | `VT-04` Kinh doanh | Kinh Doanh | SELF | |
+  | `ketoan.lead` / `ketoan01` | `VT-05` Kế toán | Kế Toán | COMPANY | |
+  | `nhansu` / `hr01` | `VT-06` Nhân sự | Nhân Sự | COMPANY | |
+  | `tcn.director` | `VT-02` Quản lý dự án | Trung Tâm Công Nghệ | DEPARTMENT → Trung Tâm Công Nghệ (gồm cả 3 nhóm con) | |
+  | `dev.lead` / `dev01` | `VT-03` Chuyên môn | Nhóm Phát Triển Phần Mềm | SELF | |
+  | `dev02` | `VT-03` Chuyên môn | Nhóm Phát Triển Phần Mềm | SELF | **Bán thời gian — 20h/tuần** |
+  | `consult.lead` | `VT-03` Chuyên môn | Nhóm Tư Vấn Giải Pháp | SELF | |
+  | `qa.lead` | `VT-03` Chuyên môn | Nhóm Kiểm Thử & QA | SELF | |
+  | `khachhang01` | `VT-09` Khách hàng | *(ngoài cây tổ chức)* | SELF | Tài khoản cổng khách hàng |
+
+  Ví dụ dùng: kiểm thử màn hình chỉ Nhân sự/Kế toán/Ban giám đốc được xem (`GET /masking-rules`, `NCL-01-CN-005`)
+  bằng `nhansu` hoặc `ketoan01`; kiểm thử phạm vi "một nhánh + con cháu" bằng `tcn.director`.
 
 ---
 
