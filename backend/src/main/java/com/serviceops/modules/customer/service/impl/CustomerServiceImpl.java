@@ -3,6 +3,8 @@ package com.serviceops.modules.customer.service.impl;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.customer.dto.request.CustomerCreateReq;
+import com.serviceops.modules.customer.dto.request.CustomerSearchReq;
+import com.serviceops.modules.customer.dto.request.CustomerSegmentReq;
 import com.serviceops.modules.customer.dto.request.DuplicateOverrideReq;
 import com.serviceops.modules.customer.dto.response.CustomerRes;
 import com.serviceops.modules.customer.dto.response.DuplicateCandidateRes;
@@ -74,6 +76,37 @@ public class CustomerServiceImpl implements CustomerService {
 	}
 
 	@Override
+	@Transactional(readOnly = true)
+	public List<CustomerRes> findAll(CustomerSearchReq request) {
+		String keyword = normalizeKeyword(request == null ? null : request.getKeyword());
+		String industry = normalizeKeyword(request == null ? null : request.getIndustry());
+		String companySize = normalizeKeyword(request == null ? null : request.getCompanySize());
+		String priority = normalizeKeyword(request == null ? null : request.getPriority());
+		return customerRepository.findAllByOrderByCreatedAtDesc().stream()
+				.filter(customer -> keyword == null || matchesKeyword(customer, keyword))
+				.filter(customer -> industry == null || equalsIgnoreCase(customer.getIndustry(), industry))
+				.filter(customer -> companySize == null || equalsIgnoreCase(customer.getCompanySize(), companySize))
+				.filter(customer -> priority == null || equalsIgnoreCase(customer.getPriority(), priority))
+				.map(customerMapper::toResponse)
+				.toList();
+	}
+
+	@Override
+	public CustomerRes updateSegment(Long customerId, CustomerSegmentReq request) {
+		Customer customer = customerRepository.findById(customerId)
+				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
+						"Khong tim thay ho so khach hang"));
+		customer.setIndustry(request.industry().trim());
+		customer.setCompanySize(request.companySize().trim());
+		customer.setPriority(request.priority().trim());
+		Customer saved = customerRepository.save(customer);
+		recordAudit(saved.getId(), CustomerAuditAction.SEGMENT_UPDATE,
+				"Cap nhat phan nhom: nganh=" + saved.getIndustry()
+						+ ", quy mo=" + saved.getCompanySize() + ", uu tien=" + saved.getPriority());
+		return customerMapper.toResponse(saved);
+	}
+
+	@Override
 	public List<DuplicateCandidateRes> checkDuplicates(CustomerCreateReq request) {
 		return customerDuplicateService.findDuplicates(request.name(), request.taxCode(), request.phone());
 	}
@@ -129,6 +162,29 @@ public class CustomerServiceImpl implements CustomerService {
 		}
 		String trimmed = value.trim();
 		return trimmed.isEmpty() ? null : trimmed;
+	}
+
+	private String normalizeKeyword(String keyword) {
+		if (keyword == null) {
+			return null;
+		}
+		String trimmed = keyword.trim().toLowerCase();
+		return trimmed.isEmpty() ? null : trimmed;
+	}
+
+	private boolean matchesKeyword(Customer customer, String keyword) {
+		return containsIgnoreCase(customer.getName(), keyword)
+				|| containsIgnoreCase(customer.getCode(), keyword)
+				|| containsIgnoreCase(customer.getTaxCode(), keyword)
+				|| containsIgnoreCase(customer.getPhone(), keyword);
+	}
+
+	private boolean containsIgnoreCase(String value, String keyword) {
+		return value != null && value.toLowerCase().contains(keyword);
+	}
+
+	private boolean equalsIgnoreCase(String value, String expected) {
+		return value != null && value.trim().equalsIgnoreCase(expected);
 	}
 
 	private String currentUsername() {

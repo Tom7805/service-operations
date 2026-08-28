@@ -2,10 +2,16 @@ import React, { useEffect, useState } from 'react';
 import type {
   CreateDepartmentPayload,
   Department,
+  DepartmentUnitType,
   ManagerUserOption,
   UpdateDepartmentPayload,
 } from '../types/departmentTypes';
 import { DepartmentApiError } from '../api/departmentsApi';
+import {
+  DEPARTMENT_UNIT_TYPE_META,
+  DEPARTMENT_UNIT_TYPE_OPTIONS,
+  getUnitTypeRank,
+} from '../constants/departmentUnitTypes';
 
 interface DepartmentFormModalProps {
   isOpen: boolean;
@@ -31,6 +37,7 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
   const [name, setName] = useState('');
   const [parentId, setParentId] = useState<number | null>(null);
   const [managerId, setManagerId] = useState<number | ''>('');
+  const [unitType, setUnitType] = useState<DepartmentUnitType>('PHONG');
 
   const [fieldErrors, setFieldErrors] = useState<{ name?: string; managerId?: string }>({});
   const [serverError, setServerError] = useState<string | null>(null);
@@ -42,10 +49,12 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
         setName(editingDepartment.name);
         setParentId(editingDepartment.parentId);
         setManagerId(editingDepartment.managerId ?? '');
+        setUnitType(editingDepartment.unitType);
       } else {
         setName('');
         setParentId(defaultParentId);
         setManagerId(managersList.length > 0 ? managersList[0].id : '');
+        setUnitType('PHONG');
       }
       setFieldErrors({});
       setServerError(null);
@@ -74,6 +83,11 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
   };
 
   const disabledParents = editingDepartment ? getDisabledParentIds(editingDepartment.id) : new Set<number>();
+
+  // Cấp bậc: một đơn vị không được trực thuộc đơn vị có cấp thấp hơn mình
+  // (vd: Ban không thể là con của Phòng) — chặn ngay từ UI, khớp với validate ở backend.
+  const isHierarchyInvalidParent = (parentDept: Department): boolean =>
+    getUnitTypeRank(unitType) < getUnitTypeRank(parentDept.unitType);
 
   const validateForm = (): boolean => {
     const errors: { name?: string; managerId?: string } = {};
@@ -105,6 +119,7 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
           name: name.trim(),
           parentId: parentId ? Number(parentId) : null,
           managerId: Number(managerId),
+          unitType,
         };
         await onSubmitUpdate(editingDepartment.id, payload);
       } else {
@@ -112,6 +127,7 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
           name: name.trim(),
           parentId: parentId ? Number(parentId) : null,
           managerId: Number(managerId),
+          unitType,
         };
         await onSubmitCreate(payload);
       }
@@ -122,6 +138,8 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
           setServerError('Tên bộ phận đã tồn tại trong cùng cấp tổ chức. Vui lòng đặt tên khác.');
         } else if (err.code === 'INVALID_STATE') {
           setServerError('Không thể tạo vòng lặp trong cây tổ chức (Bộ phận cha không hợp lệ).');
+        } else if (err.code === 'HIERARCHY_VIOLATION') {
+          setServerError('Loại đơn vị này không thể trực thuộc bộ phận cấp thấp hơn đã chọn. Vui lòng chọn lại bộ phận cha hoặc loại đơn vị phù hợp.');
         } else {
           setServerError(err.message);
         }
@@ -181,6 +199,33 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
                 <span className="field-hint">Nhập tên chính thức của bộ phận trong sơ đồ cây tổ chức (Tối đa 255 ký tự).</span>
               </div>
 
+              {/* Unit Type */}
+              <div className="form-field--full">
+                <label className="form-label" htmlFor="dept-unit-type-select">
+                  Loại đơn vị <span className="req">*</span>
+                </label>
+                <select
+                  id="dept-unit-type-select"
+                  className="form-select"
+                  value={unitType}
+                  onChange={(e) => {
+                    const nextType = e.target.value as DepartmentUnitType;
+                    setUnitType(nextType);
+                    const currentParent = departmentsList.find((d) => d.id === parentId);
+                    if (currentParent && getUnitTypeRank(nextType) < getUnitTypeRank(currentParent.unitType)) {
+                      setParentId(null);
+                    }
+                  }}
+                >
+                  {DEPARTMENT_UNIT_TYPE_OPTIONS.map((type) => (
+                    <option key={type} value={type}>
+                      {DEPARTMENT_UNIT_TYPE_META[type].label}
+                    </option>
+                  ))}
+                </select>
+                <span className="field-hint">Quyết định cấp bậc trong cây tổ chức: Trung tâm/Ban là cấp cao nhất, rồi đến Phòng, rồi Tổ/Nhóm.</span>
+              </div>
+
               {/* Parent Department */}
               <div className="form-field--full">
                 <label className="form-label" htmlFor="parent-dept-select">
@@ -194,10 +239,10 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
                 >
                   <option value="">-- Bộ phận cấp gốc (Root / Ban giám đốc) --</option>
                   {departmentsList.map((dept) => {
-                    const isDisabled = disabledParents.has(dept.id);
+                    const isDisabled = disabledParents.has(dept.id) || isHierarchyInvalidParent(dept);
                     return (
                       <option key={dept.id} value={dept.id} disabled={isDisabled}>
-                        {dept.name} {isDisabled ? '(Không hợp lệ / Vòng lặp)' : ''}
+                        {dept.name} {disabledParents.has(dept.id) ? '(Không hợp lệ / Vòng lặp)' : isHierarchyInvalidParent(dept) ? '(Cấp thấp hơn, không hợp lệ)' : ''}
                       </option>
                     );
                   })}

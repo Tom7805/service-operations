@@ -226,9 +226,9 @@ export default function TwoFactorSetupPage({
       )}
 
       {toastMessage && (
-        <div className={`toast-notification toast--${toastMessage.type}`} role="status">
+        <div className={`toast-banner toast-banner--${toastMessage.type}`} role="status">
           <span>{toastMessage.type === 'success' ? '✅' : '⚠️'} {toastMessage.text}</span>
-          <button type="button" className="toast__close" onClick={() => setToastMessage(null)}>
+          <button type="button" className="toast-banner__close" onClick={() => setToastMessage(null)}>
             ✕
           </button>
         </div>

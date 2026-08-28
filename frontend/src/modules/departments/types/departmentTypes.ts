@@ -1,9 +1,12 @@
+export type DepartmentUnitType = 'TRUNG_TAM' | 'BAN' | 'PHONG' | 'TO';
+
 export interface Department {
   id: number;
   name: string;
   parentId: number | null;
   managerId: number | null;
   managerName: string | null;
+  unitType: DepartmentUnitType;
 }
 
 export interface DepartmentTreeNode {
@@ -11,6 +14,7 @@ export interface DepartmentTreeNode {
   name: string;
   managerId: number | null;
   managerName: string | null;
+  unitType: DepartmentUnitType;
   children: DepartmentTreeNode[];
 }
 
@@ -18,12 +22,14 @@ export interface CreateDepartmentPayload {
   name: string;
   parentId?: number | null;
   managerId: number;
+  unitType: DepartmentUnitType;
 }
 
 export interface UpdateDepartmentPayload {
   name: string;
   parentId?: number | null;
   managerId: number;
+  unitType: DepartmentUnitType;
 }
 
 export interface MoveDepartmentPayload {

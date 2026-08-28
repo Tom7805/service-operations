@@ -35,7 +35,7 @@ public class CustomerAuditLog extends BaseEntity {
     private Long originalCustomerId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "action_type", nullable = false, length = 30)
+    @Column(name = "action_type", nullable = false, columnDefinition = "VARCHAR(30)")
     private CustomerAuditAction actionType;
 
     @Column(name = "detail", length = 1000)

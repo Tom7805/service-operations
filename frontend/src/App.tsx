@@ -11,8 +11,10 @@ import EmployeeListPage from './modules/employees/pages/EmployeeListPage';
 import EmployeeDetailPage from './modules/employees/pages/EmployeeDetailPage';
 import ChangePasswordPage from './modules/auth/pages/ChangePasswordPage';
 import TwoFactorSetupPage from './modules/auth/pages/TwoFactorSetupPage';
+import CustomerListPage from './modules/customers/pages/CustomerListPage';
 
 type Tab =
+  | 'CUSTOMERS'
   | 'DEPARTMENTS'
   | 'PERMISSIONS'
   | 'USERS'
@@ -24,8 +26,6 @@ type Tab =
   | 'CHANGE_PASSWORD'
   | 'TWO_FACTOR_SETTINGS';
 
-type SimulatedRole = 'VT-07' | 'VT-03' | 'VT-06';
-
 interface NavItem {
   tab: Tab;
   icon: string;
@@ -36,6 +36,7 @@ interface NavItem {
 
 /** Thanh điều hướng dạng pill nằm ngang — nhãn rút gọn để vừa một hàng, đầy đủ ngữ cảnh nằm trong tiêu đề từng trang. */
 const NAV_ITEMS: NavItem[] = [
+  { tab: 'CUSTOMERS', icon: '🏢', label: 'Khách hàng' },
   { tab: 'DEPARTMENTS', icon: '🏛️', label: 'Tổ chức' },
   { tab: 'USERS', icon: '👤', label: 'Tài khoản', matches: ['DETAIL'] },
   { tab: 'EMPLOYEES', icon: '🧑‍💼', label: 'Nhân sự', matches: ['EMPLOYEE_DETAIL'] },
@@ -45,10 +46,16 @@ const NAV_ITEMS: NavItem[] = [
   { tab: 'AUDIT_LOG', icon: '🕵️', label: 'Nhật ký' },
 ];
 
-const ROLE_LABELS: Record<SimulatedRole, string> = {
-  'VT-07': 'Quản trị viên (VT-07)',
-  'VT-06': 'Nhân sự (VT-06)',
-  'VT-03': 'Nhân viên chuyên môn (VT-03)',
+const ROLE_LABELS: Record<string, string> = {
+  'VT-01': 'Ban giám đốc',
+  'VT-02': 'Quản lý dự án',
+  'VT-03': 'Nhân viên chuyên môn',
+  'VT-04': 'Nhân viên kinh doanh',
+  'VT-05': 'Kế toán',
+  'VT-06': 'Nhân sự',
+  'VT-07': 'Quản trị viên',
+  'VT-08': 'Nhân viên công ty',
+  'VT-09': 'Khách hàng',
 };
 
 function readStoredSession(): AuthSession | null {
@@ -73,7 +80,6 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('DEPARTMENTS');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
-  const [simulatedRole, setSimulatedRole] = useState<SimulatedRole>('VT-07');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -101,7 +107,9 @@ export default function App() {
 
   if (!session) return <LoginPage onAuthenticated={handleAuthenticated} />;
 
-  const currentRoles = [simulatedRole];
+  // Quyền truy cập luôn theo vai trò thật của tài khoản đang đăng nhập (trả về từ backend lúc dang nhap),
+  // khong dung bat ky co che gia lap nao o phia giao dien.
+  const currentRoles = session.roles;
 
   return (
     <div className="app-shell">
@@ -139,18 +147,9 @@ export default function App() {
           </nav>
 
           <div className="topbar-actions">
-            <div className="topbar-devmode" title="Chỉ dùng để xem thử giao diện theo từng vai trò, không phải chức năng thật của sản phẩm">
+            <div className="topbar-role-badge" title="Vai trò thật của tài khoản đang đăng nhập, do máy chủ xác định khi đăng nhập">
               <span className="topbar-devmode__dot" />
-              <select
-                value={simulatedRole}
-                onChange={(e) => setSimulatedRole(e.target.value as SimulatedRole)}
-              >
-                {(Object.keys(ROLE_LABELS) as SimulatedRole[]).map((role) => (
-                  <option key={role} value={role}>
-                    {ROLE_LABELS[role]}
-                  </option>
-                ))}
-              </select>
+              <span>{currentRoles.map((role) => ROLE_LABELS[role] ?? role).join(', ')}</span>
             </div>
 
             <div className="topbar-user" ref={userMenuRef}>
@@ -203,6 +202,11 @@ export default function App() {
         <main className="app-content">
           {activeTab === 'CHANGE_PASSWORD' ? (
             <ChangePasswordPage onBack={() => setActiveTab('DEPARTMENTS')} onPasswordChanged={handleLogout} />
+          ) : activeTab === 'CUSTOMERS' ? (
+            <CustomerListPage
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+            />
           ) : activeTab === 'DEPARTMENTS' ? (
             <DepartmentTreePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'PERMISSIONS' ? (

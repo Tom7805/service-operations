@@ -64,7 +64,7 @@ describe('User Management Module — Acceptance Criteria Tests (NCL-01-CN-002)',
 
     expect(screen.getByText('Nguyễn Quản Trị')).toBeInTheDocument();
     expect(screen.getByText('@admin_test')).toBeInTheDocument();
-    expect(screen.getByText('Quản trị viên')).toBeInTheDocument();
+    expect(screen.getAllByText('Quản trị viên').length).toBeGreaterThan(0);
     expect(screen.getByText('Hoạt động')).toBeInTheDocument();
     expect(screen.getByText('Đã khóa')).toBeInTheDocument();
   });

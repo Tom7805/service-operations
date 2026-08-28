@@ -90,10 +90,29 @@ Không cần token (endpoint công khai).
   hiển thị (`userId`, `username`, `fullName`, `roles`) backend đã trả sẵn trong `data`.
 - Khi bất kỳ API nào trả về `401` với `errorCode` khác `INVALID_CREDENTIALS`/`ACCOUNT_LOCKED` (ví dụ token hết hạn),
   điều hướng người dùng quay lại màn hình đăng nhập (đáp ứng AC-03 của story).
-- Tài khoản mẫu để test: `admin` / `Password@123` (vai trò Quản trị viên, phạm vi toàn công ty).
-- Tài khoản mẫu vai trò Nhân sự: `nhansu` / `Password@123` (vai trò `VT-06`, phạm vi toàn công ty) — dùng để test
-  các màn hình chỉ Nhân sự/Kế toán/Ban giám đốc được xem, ví dụ `GET /masking-rules` ở `NCL-01-CN-005` (tài khoản
-  `admin` mang vai trò `VT-07`, không nằm trong nhóm này nên không thấy được luồng thành công).
+- **Tài khoản mẫu (data seed) — mật khẩu tất cả là `Password@123`.** Nguồn: `backend/src/main/resources/db/seed/`.
+  Cây tổ chức: Ban Giám Đốc [1] › {PMO [2], Kinh Doanh [3], Kế Toán [4], Nhân Sự [5], Trung Tâm Công Nghệ [6]};
+  Trung Tâm Công Nghệ [6] › {Nhóm Phát Triển [7], Nhóm Tư Vấn [8], Nhóm Kiểm Thử [9]}.
+
+  | username | Vai trò | Phòng | Phạm vi dữ liệu | Ghi chú |
+  |---|---|---|---|---|
+  | `admin` | `VT-07` Quản trị viên | Trung Tâm Công Nghệ | COMPANY | Tài khoản hệ thống, không có hồ sơ nhân sự |
+  | `giamdoc` | `VT-01` Ban giám đốc | Ban Giám Đốc | COMPANY | |
+  | `pm.lead` | `VT-02` Quản lý dự án | PMO | DEPARTMENT → PMO | Trưởng phòng |
+  | `pm01` | `VT-02` Quản lý dự án | PMO | SELF | |
+  | `sale.lead` | `VT-04` Kinh doanh | Kinh Doanh | DEPARTMENT → Kinh Doanh | Trưởng phòng |
+  | `sale01` | `VT-04` Kinh doanh | Kinh Doanh | SELF | |
+  | `ketoan.lead` / `ketoan01` | `VT-05` Kế toán | Kế Toán | COMPANY | |
+  | `nhansu` / `hr01` | `VT-06` Nhân sự | Nhân Sự | COMPANY | |
+  | `tcn.director` | `VT-02` Quản lý dự án | Trung Tâm Công Nghệ | DEPARTMENT → Trung Tâm Công Nghệ (gồm cả 3 nhóm con) | |
+  | `dev.lead` / `dev01` | `VT-03` Chuyên môn | Nhóm Phát Triển Phần Mềm | SELF | |
+  | `dev02` | `VT-03` Chuyên môn | Nhóm Phát Triển Phần Mềm | SELF | **Bán thời gian — 20h/tuần** |
+  | `consult.lead` | `VT-03` Chuyên môn | Nhóm Tư Vấn Giải Pháp | SELF | |
+  | `qa.lead` | `VT-03` Chuyên môn | Nhóm Kiểm Thử & QA | SELF | |
+  | `khachhang01` | `VT-09` Khách hàng | *(ngoài cây tổ chức)* | SELF | Tài khoản cổng khách hàng |
+
+  Ví dụ dùng: kiểm thử màn hình chỉ Nhân sự/Kế toán/Ban giám đốc được xem (`GET /masking-rules`, `NCL-01-CN-005`)
+  bằng `nhansu` hoặc `ketoan01`; kiểm thử phạm vi "một nhánh + con cháu" bằng `tcn.director`.
 
 ---
 
@@ -499,7 +518,73 @@ không đợi Frontend gọi trước.
 **Lưu ý cho Frontend:**
 - `code` chỉ có sau khi tạo thành công — không hiển thị ô nhập mã khách hàng trên form tạo, chỉ hiển thị `code`
   trả về sau khi lưu (ví dụ ở toast thông báo hoặc bảng danh sách).
-- Quản lý người liên hệ (`NCL-02-CN-003`) sẽ được bổ sung ở story tiếp theo cùng Epic.
+- Quản lý người liên hệ (`NCL-02-CN-003`) xem mục riêng bên dưới.
+
+#### `GET /customers`
+
+Bước D/P của wireframe `NCL-02-CN-001` (“Hiển thị / Cập nhật bảng danh sách khách hàng”). Cùng phân quyền với
+`POST /customers`: token của **Nhân viên kinh doanh** (`VT-04`) hoặc **Quản lý dự án** (`VT-02`); vai trò khác
+nhận `403 FORBIDDEN` và bị ghi nhật ký (QTN-01).
+
+**Query params (không bắt buộc, kết hợp với nhau theo AND):**
+
+| Trường | Kiểu | Ghi chú |
+|---|---|---|
+| `keyword` | string | Lọc theo `name` / `code` (KH-xxxxxx) / `taxCode` / `phone` — **khớp chứa**, không phân biệt hoa thường. |
+| `industry` | string | Lọc theo nhãn ngành nghề (`NCL-02-CN-005`) — **khớp chính xác** (đã cắt khoảng trắng), không phân biệt hoa thường. |
+| `companySize` | string | Lọc theo nhãn quy mô (`NCL-02-CN-005`) — khớp chính xác, không phân biệt hoa thường. |
+| `priority` | string | Lọc theo nhãn mức độ ưu tiên (`NCL-02-CN-005`) — khớp chính xác, không phân biệt hoa thường. |
+
+Bỏ trống hết → trả toàn bộ. Không có hồ sơ nào khớp → `data: []` (không phải lỗi — dùng cho `NCL-02-CN-005` TC-02).
+
+**Response thành công — `200 OK`** (danh sách sắp theo `createdAt` giảm dần, hồ sơ mới nhất lên đầu):
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": 2,
+      "code": "KH-000002",
+      "name": "Cong ty CP XYZ",
+      "taxCode": null,
+      "phone": null,
+      "industry": null,
+      "address": null,
+      "createdAt": "2026-08-27T09:00:00",
+      "companySize": null,
+      "priority": null
+    },
+    {
+      "id": 1,
+      "code": "KH-227265",
+      "name": "Cong ty TNHH ABC",
+      "taxCode": "0101234567",
+      "phone": "0987654321",
+      "industry": "Cong nghe thong tin",
+      "address": "Ha Noi",
+      "createdAt": "2026-08-26T10:00:00",
+      "companySize": "Vua",
+      "priority": "Cao"
+    }
+  ]
+}
+```
+
+> Mọi response `CustomerRes` (ở tất cả endpoint khách hàng) từ nay có thêm hai trường `companySize` và `priority`
+> (có thể `null` khi hồ sơ chưa được phân nhóm — xem `NCL-02-CN-005`).
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh/Quản lý dự án |
+
+**Lưu ý cho Frontend:**
+- `data` là mảng thuần, **không phân trang** — Frontend tự lọc/sắp trên máy khách nếu cần.
+- Khi `data` rỗng → hiển thị trạng thái rỗng (“Chưa có hồ sơ khách hàng nào”), không phải lỗi.
+- Đây là nguồn dữ liệu để mở màn hình Xem hồ sơ tổng hợp (`GET /customers/{customerId}/overview`, `NCL-02-CN-004`).
 
 ---
 
@@ -623,6 +708,7 @@ kèm ghi lại lý do, dùng đúng lúc người dùng đã thấy cảnh báo 
 
 ---
 
+<<<<<<< HEAD
 ### `NCL-02-CN-006` — Gộp hai hồ sơ khách hàng trùng
 
 Yêu cầu token của **Quản trị viên** (`VT-07`) — khác với `NCL-02-CN-001`/`002` (Sales/PM), vì thao tác này ảnh
@@ -641,27 +727,202 @@ Xem trước ảnh hưởng trước khi gộp thật — **không làm thay đ�
 |---|---|---|---|
 | `targetCustomerId` | number | có | Hồ sơ **giữ lại** (hồ sơ chính) — sẽ nhận toàn bộ dữ liệu liên quan |
 | `sourceCustomerId` | number | có | Hồ sơ **bị gộp** (hồ sơ phụ) — sẽ chuyển sang trạng thái đã gộp sau khi gộp thật |
+=======
+### `NCL-02-CN-003` — Quản lý người liên hệ của khách hàng
+
+Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`) — khác với `NCL-02-CN-001`/`002`, vai trò **Quản lý dự án
+không được truy cập** nhóm API này; vai trò khác (kể cả `VT-02`) nhận `403 FORBIDDEN` (TC-03).
+
+Mỗi khách hàng có thể có nhiều người liên hệ nhưng **chỉ duy nhất một người là đầu mối chính** tại một thời điểm
+(`isPrimary = true`). Có hai cách để một người liên hệ trở thành đầu mối chính, cả hai đều tự động chuyển đầu
+mối chính hiện tại (nếu có) thành đầu mối phụ (TC-02):
+1. Đánh dấu `isPrimary: true` ngay khi thêm mới (`POST .../contacts`).
+2. Đặt lại đầu mối chính cho một người liên hệ đã tồn tại (`PATCH .../contacts/{contactId}/primary`).
+
+#### `GET /customers/{customerId}/contacts`
+
+Danh sách người liên hệ của một khách hàng — **đầu mối chính luôn hiện ở đầu danh sách** (TC-01), phần còn lại
+sắp theo thời điểm thêm vào (`createdAt` tăng dần).
+>>>>>>> develop
 
 **Response thành công — `200 OK`:**
 ```json
 {
   "success": true,
+<<<<<<< HEAD
   "data": {
     "targetCustomer": { "id": 1, "code": "KH-000001", "name": "Cong ty TNHH ABC", "...": "..." },
     "sourceCustomer": { "id": 2, "code": "KH-000002", "name": "Cong ty TNHH ABC (chi nhanh)", "...": "..." },
     "relatedRecordCount": 3
+=======
+  "data": [
+    {
+      "id": 2,
+      "customerId": 10,
+      "fullName": "Nguyen Van A",
+      "title": "Giam doc mua hang",
+      "email": "a@congty.vn",
+      "phone": "0901234567",
+      "isPrimary": true,
+      "createdAt": "2026-08-27T09:00:00"
+    },
+    {
+      "id": 1,
+      "customerId": 10,
+      "fullName": "Nguyen Van B",
+      "title": "Ke toan",
+      "email": null,
+      "phone": null,
+      "isPrimary": false,
+      "createdAt": "2026-08-26T14:00:00"
+    }
+  ]
+}
+```
+
+#### `POST /customers/{customerId}/contacts`
+
+```json
+{
+  "fullName": "Nguyen Van A",
+  "title": "Giam doc mua hang",
+  "email": "a@congty.vn",
+  "phone": "0901234567",
+  "isPrimary": true
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `fullName` | string | có | Họ tên người liên hệ, tối đa 255 ký tự — bỏ trống thì bị từ chối |
+| `title` | string | không | Chức danh, tối đa 255 ký tự |
+| `email` | string | không | Thư điện tử hợp lệ, tối đa 255 ký tự |
+| `phone` | string | không | Số điện thoại, tối đa 30 ký tự |
+| `isPrimary` | boolean | không (mặc định `false`) | Đánh dấu là đầu mối chính — nếu khách hàng đã có đầu mối chính khác, người cũ tự chuyển thành đầu mối phụ (TC-02) |
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Them nguoi lien he thanh cong",
+  "data": {
+    "id": 2,
+    "customerId": 10,
+    "fullName": "Nguyen Van A",
+    "title": "Giam doc mua hang",
+    "email": "a@congty.vn",
+    "phone": "0901234567",
+    "isPrimary": true,
+    "createdAt": "2026-08-27T09:00:00"
+>>>>>>> develop
   }
 }
 ```
 
+<<<<<<< HEAD
 - `relatedRecordCount`: tổng số bản ghi hiện có của hồ sơ bị gộp (nhật ký khách hàng + lý do bỏ qua cảnh báo
   trùng) sẽ được chuyển về hồ sơ giữ lại khi gộp thật.
+=======
+#### `PATCH /customers/{customerId}/contacts/{contactId}/primary`
+
+Đặt một người liên hệ **đã tồn tại** làm đầu mối chính — không cần body. Đầu mối chính hiện tại của khách hàng
+(nếu có và khác người này) tự động chuyển thành đầu mối phụ (TC-02).
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Cap nhat dau moi chinh thanh cong",
+  "data": {
+    "id": 1,
+    "customerId": 10,
+    "fullName": "Nguyen Van B",
+    "title": "Ke toan",
+    "email": null,
+    "phone": null,
+    "isPrimary": true,
+    "createdAt": "2026-08-26T14:00:00"
+  }
+}
+```
+
+**Response lỗi (áp dụng cho cả ba endpoint trên):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh (`VT-04`) — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 400 | `VALIDATION_ERROR` | Thiếu hoặc để trống `fullName`, hoặc `email` sai định dạng |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy `customerId`, hoặc `contactId` không thuộc về khách hàng này |
+
+**Lưu ý cho Frontend:**
+- Khác với `NCL-02-CN-001`/`002`, nhóm API này **chỉ** cho phép vai trò Nhân viên kinh doanh (`VT-04`) — Quản lý
+  dự án (`VT-02`) sẽ nhận `403 FORBIDDEN` dù được phép tạo khách hàng.
+- Trên bảng danh sách người liên hệ, Frontend nên gắn nhãn "Đầu mối chính" cho phần tử đầu tiên (`isPrimary`
+  luôn `true` duy nhất ở một phần tử) và cho phép bấm nút "Đặt làm đầu mối chính" trên các dòng còn lại, gọi
+  `PATCH .../contacts/{contactId}/primary`.
+- Mọi lần thêm mới và mọi lần đổi đầu mối chính đều được backend tự ghi nhật ký vào cùng bảng nhật ký khách
+  hàng dùng chung với `NCL-02-CN-002` (TC-04) — Frontend không cần gọi thêm API nào để việc ghi log này xảy ra.
+
+---
+
+### `NCL-02-CN-005` — Phân nhóm khách hàng theo ngành và quy mô
+
+Gắn nhãn **ngành nghề**, **quy mô** và **mức độ ưu tiên** cho một hồ sơ khách hàng đã tồn tại, để lọc và phân
+tích theo nhóm. Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`) hoặc **Quản lý dự án** (`VT-02`) — giống
+`NCL-02-CN-001`/`004`; vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối (TC-03).
+
+#### `PATCH /customers/{customerId}/segment`
+
+```json
+{
+  "industry": "Cong nghe thong tin",
+  "companySize": "Vua",
+  "priority": "Cao"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `industry` | string | có | Nhãn ngành nghề, tối đa 255 ký tự — không được để trống (TC-01). Ghi đè giá trị `industry` hiện có của hồ sơ. |
+| `companySize` | string | có | Nhãn quy mô, tối đa 50 ký tự — không được để trống. |
+| `priority` | string | có | Nhãn mức độ ưu tiên, tối đa 50 ký tự — không được để trống. |
+
+Đây là thao tác **thay cả ba nhãn cùng lúc** (không phải patch từng phần): mỗi lần gọi phải gửi đủ ba trường.
+
+Ba nhãn hiện là **văn bản tự do** (chưa gắn danh mục cứng ở backend). Frontend nên dựng dropdown với bộ giá trị
+thống nhất, gợi ý:
+- `companySize`: `Nhỏ` · `Vừa` · `Lớn`
+- `priority`: `Cao` · `Trung bình` · `Thấp`
+- `industry`: dùng lại danh sách ngành đã hiển thị ở form tạo hồ sơ (`NCL-02-CN-001`).
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Cap nhat phan nhom khach hang thanh cong",
+  "data": {
+    "id": 1,
+    "code": "KH-227265",
+    "name": "Cong ty TNHH ABC",
+    "taxCode": "0101234567",
+    "phone": "0987654321",
+    "industry": "Cong nghe thong tin",
+    "address": "Ha Noi",
+    "createdAt": "2026-08-26T10:00:00",
+    "companySize": "Vua",
+    "priority": "Cao"
+  }
+}
+```
+>>>>>>> develop
 
 **Response lỗi:**
 
 | HTTP | `errorCode` | Khi nào xảy ra |
 |---|---|---|
 | 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+<<<<<<< HEAD
 | 403 | `FORBIDDEN` | Không phải Quản trị viên — hệ thống ghi nhật ký lần từ chối (TC-03) |
 | 400 | `VALIDATION_ERROR` | Thiếu `targetCustomerId`/`sourceCustomerId`, hoặc hai giá trị này trùng nhau |
 | 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy hồ sơ giữ lại hoặc hồ sơ bị gộp |
@@ -709,3 +970,15 @@ gộp (ví dụ còn công nợ chưa thanh toán); dữ liệu đó vẫn đư�
 - Không có API "hoàn tác gộp" — cần thao tác thủ công phía dữ liệu nếu gộp nhầm.
 - Mọi lần gộp và mọi lần bị từ chối truy cập đều được backend tự ghi nhật ký (TC-04) — Frontend không cần gọi
   thêm API nào để việc ghi log này xảy ra.
+=======
+| 403 | `FORBIDDEN` | Không phải `VT-04`/`VT-02` — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 400 | `VALIDATION_ERROR` | Thiếu / để trống một trong ba nhãn, hoặc vượt quá độ dài cho phép |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy `customerId` |
+
+**Lưu ý cho Frontend:**
+- Sau khi gán nhãn, lọc danh sách bằng `GET /customers?industry=...&companySize=...&priority=...` (khớp **chính
+  xác**, không phân biệt hoa thường; kết hợp AND với nhau và với `keyword`). Xem mục `GET /customers` ở trên.
+- Nhóm lọc không có khách hàng nào → `data: []`; Frontend hiển thị trạng thái "không có kết quả phù hợp" (TC-02).
+- Mỗi lần cập nhật phân nhóm được backend tự ghi nhật ký (`SEGMENT_UPDATE`: người thực hiện · nội dung · thời
+  điểm) vào bảng nhật ký khách hàng dùng chung với `NCL-02-CN-002` (TC-04) — Frontend không cần gọi thêm API.
+>>>>>>> develop

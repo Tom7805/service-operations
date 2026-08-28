@@ -138,11 +138,17 @@ export const SYSTEM_ROLES: RoleInfo[] = [
   },
 ];
 
+// Phải khớp cây tổ chức seed ở backend: db/seed/R__seed_departments.sql
+// Một cây thống nhất quy về Ban Giám Đốc; Trung tâm Công nghệ (id 6) có 3 Tổ/Nhóm con (7-9)
+// là nơi bố trí lực lượng "Nhân viên chuyên môn" (VT-03).
 export const SYSTEM_DEPARTMENTS: DepartmentInfo[] = [
-  { id: 1, name: 'Ban Giám Đốc', code: 'BGD' },
-  { id: 2, name: 'Phòng Quản Lý Dự Án (PMO)', code: 'PMO' },
-  { id: 3, name: 'Phòng Kinh Doanh & Phát Triển Thị Trường', code: 'KDH' },
-  { id: 4, name: 'Phòng Kế Toán - Tài Chính', code: 'KTT' },
-  { id: 5, name: 'Phòng Nhân Sự', code: 'NSU' },
-  { id: 6, name: 'Trung Tâm Công Nghệ & Giải Pháp', code: 'TCN' },
+  { id: 1, name: 'Ban Giám Đốc', code: 'BGD', parentId: null },
+  { id: 2, name: 'Phòng Quản Lý Dự Án (PMO)', code: 'PMO', parentId: 1 },
+  { id: 3, name: 'Phòng Kinh Doanh & Phát Triển Thị Trường', code: 'KDH', parentId: 1 },
+  { id: 4, name: 'Phòng Kế Toán - Tài Chính', code: 'KTT', parentId: 1 },
+  { id: 5, name: 'Phòng Nhân Sự', code: 'NSU', parentId: 1 },
+  { id: 6, name: 'Trung Tâm Công Nghệ & Giải Pháp', code: 'TCN', parentId: 1 },
+  { id: 7, name: 'Nhóm Phát Triển Phần Mềm', code: 'TCN-DEV', parentId: 6 },
+  { id: 8, name: 'Nhóm Tư Vấn Giải Pháp', code: 'TCN-CS', parentId: 6 },
+  { id: 9, name: 'Nhóm Kiểm Thử & Đảm Bảo Chất Lượng', code: 'TCN-QA', parentId: 6 },
 ];
