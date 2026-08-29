@@ -16,6 +16,9 @@ export interface Customer {
   // NCL-02-CN-005: nhãn phân nhóm khách hàng — quy mô công ty và mức độ ưu tiên chăm sóc.
   companySize?: string | null;
   priority?: string | null;
+  // NCL-02-CN-006: trạng thái hồ sơ — 'MERGED' khi hồ sơ đã bị gộp vào hồ sơ khác (mergedIntoId).
+  status?: 'ACTIVE' | 'INACTIVE' | 'MERGED' | string | null;
+  mergedIntoId?: number | null;
 }
 
 export interface CustomerCreatePayload {
@@ -165,4 +168,31 @@ export const COMPANY_SIZE_OPTIONS = ['Nhỏ', 'Vừa', 'Lớn'] as const;
 
 /** Mức độ ưu tiên chăm sóc gợi ý để phân nhóm khách hàng. */
 export const CUSTOMER_PRIORITY_OPTIONS = ['Thấp', 'Trung bình', 'Cao'] as const;
+
+/**
+ * NCL-02-CN-006 — Gộp hai hồ sơ khách hàng trùng.
+ * Payload gửi POST /customers/merge/preview và POST /customers/merge (khớp `CustomerMergeReq`).
+ * Bắt buộc vai trò VT-07 (Quản trị viên); Backend ghi Audit Log hành động `MERGE` (TC-04).
+ */
+export interface CustomerMergePayload {
+  /** Hồ sơ "giữ lại" — nhận toàn bộ dữ liệu liên quan. */
+  targetCustomerId: number;
+  /** Hồ sơ "bị gộp" — chuyển sang trạng thái đã gộp sau khi gộp thật. */
+  sourceCustomerId: number;
+}
+
+/**
+ * Xem trước ảnh hưởng trước khi gộp thật (TC-01) — khớp `MergePreviewRes` phía Backend.
+ */
+export interface CustomerMergePreview {
+  targetCustomer: Customer;
+  sourceCustomer: Customer;
+  relatedRecordCount: number;
+}
+
+export interface CustomerMergeFormErrors {
+  targetCustomerId?: string;
+  sourceCustomerId?: string;
+  general?: string;
+}
 

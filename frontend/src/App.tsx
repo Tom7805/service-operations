@@ -12,9 +12,11 @@ import EmployeeDetailPage from './modules/employees/pages/EmployeeDetailPage';
 import ChangePasswordPage from './modules/auth/pages/ChangePasswordPage';
 import TwoFactorSetupPage from './modules/auth/pages/TwoFactorSetupPage';
 import CustomerListPage from './modules/customers/pages/CustomerListPage';
+import CustomerMergePage from './modules/customers/pages/CustomerMergePage';
 
 type Tab =
   | 'CUSTOMERS'
+  | 'CUSTOMER_MERGE'
   | 'DEPARTMENTS'
   | 'PERMISSIONS'
   | 'USERS'
@@ -37,6 +39,7 @@ interface NavItem {
 /** Thanh điều hướng dạng pill nằm ngang — nhãn rút gọn để vừa một hàng, đầy đủ ngữ cảnh nằm trong tiêu đề từng trang. */
 const NAV_ITEMS: NavItem[] = [
   { tab: 'CUSTOMERS', icon: '🏢', label: 'Khách hàng' },
+  { tab: 'CUSTOMER_MERGE', icon: '🔗', label: 'Gộp KH trùng' },
   { tab: 'DEPARTMENTS', icon: '🏛️', label: 'Tổ chức' },
   { tab: 'USERS', icon: '👤', label: 'Tài khoản', matches: ['DETAIL'] },
   { tab: 'EMPLOYEES', icon: '🧑‍💼', label: 'Nhân sự', matches: ['EMPLOYEE_DETAIL'] },
@@ -207,6 +210,8 @@ export default function App() {
               currentUserRoles={currentRoles}
               currentUserName={session.fullName}
             />
+          ) : activeTab === 'CUSTOMER_MERGE' ? (
+            <CustomerMergePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'DEPARTMENTS' ? (
             <DepartmentTreePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'PERMISSIONS' ? (

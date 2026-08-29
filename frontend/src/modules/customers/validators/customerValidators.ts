@@ -5,6 +5,7 @@ import type {
   CustomerContactFormErrors,
   CustomerSegmentPayload,
   CustomerSegmentFormErrors,
+  CustomerMergeFormErrors,
 } from '../types/customerTypes';
 
 export const CUSTOMER_VALIDATION_LIMITS = {
@@ -158,6 +159,36 @@ export function validateCustomerSegment(
     errors.priority = 'Mức độ ưu tiên không được để trống';
   } else if (payload.priority.length > CUSTOMER_VALIDATION_LIMITS.SEGMENT_PRIORITY_MAX_LENGTH) {
     errors.priority = `Mức độ ưu tiên không được vượt quá ${CUSTOMER_VALIDATION_LIMITS.SEGMENT_PRIORITY_MAX_LENGTH} ký tự`;
+  }
+
+  return errors;
+}
+
+/**
+ * Kiểm tra hợp lệ lựa chọn gộp hai hồ sơ khách hàng trùng (NCL-02-CN-006).
+ * Cả hai ID đều bắt buộc, phải là số nguyên dương và không được trùng nhau.
+ * @returns Object chứa danh sách lỗi (nếu có)
+ */
+export function validateCustomerMergeSelection(
+  targetCustomerId: number | null,
+  sourceCustomerId: number | null
+): CustomerMergeFormErrors {
+  const errors: CustomerMergeFormErrors = {};
+
+  if (!targetCustomerId || targetCustomerId <= 0) {
+    errors.targetCustomerId = 'Phải chọn ID hồ sơ giữ lại (số nguyên dương)';
+  }
+
+  if (!sourceCustomerId || sourceCustomerId <= 0) {
+    errors.sourceCustomerId = 'Phải chọn ID hồ sơ bị gộp (số nguyên dương)';
+  }
+
+  if (
+    !errors.targetCustomerId &&
+    !errors.sourceCustomerId &&
+    targetCustomerId === sourceCustomerId
+  ) {
+    errors.general = 'Hồ sơ giữ lại và hồ sơ bị gộp không được trùng nhau';
   }
 
   return errors;

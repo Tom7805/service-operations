@@ -7,6 +7,8 @@ import type {
   CustomerContact,
   CustomerContactPayload,
   CustomerSegmentPayload,
+  CustomerMergePayload,
+  CustomerMergePreview,
 } from '../types/customerTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
@@ -227,5 +229,28 @@ export async function updateCustomerSegment(
   return requestBackend<Customer>(`${API_BASE_URL}/customers/${customerId}/segment`, {
     method: 'PATCH',
     body: JSON.stringify(cleanPayload),
+  });
+}
+
+/**
+ * NCL-02-CN-006 (TC-01): Xem trước ảnh hưởng trước khi gộp hai hồ sơ khách hàng trùng
+ * (POST /customers/merge/preview) — chỉ đọc, không làm thay đổi dữ liệu. Bắt buộc vai trò VT-07.
+ */
+export async function previewCustomerMerge(payload: CustomerMergePayload): Promise<CustomerMergePreview> {
+  return requestBackend<CustomerMergePreview>(`${API_BASE_URL}/customers/merge/preview`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * NCL-02-CN-006 (TC-01, TC-02): Gộp hai hồ sơ khách hàng trùng (POST /customers/merge).
+ * Luôn thực hiện gộp, không chặn theo dữ liệu liên quan của hồ sơ bị gộp. Bắt buộc vai trò VT-07.
+ * Backend ghi Audit Log hành động `MERGE` (TC-04).
+ */
+export async function mergeCustomers(payload: CustomerMergePayload): Promise<Customer> {
+  return requestBackend<Customer>(`${API_BASE_URL}/customers/merge`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
   });
 }
