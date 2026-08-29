@@ -15,14 +15,6 @@ public enum CustomerAuditAction {
     /** He thong chan tao moi vi phat hien trung giong cao (NCL-02-CN-002, TC-01). */
     BLOCKED_DUPLICATE,
 
-<<<<<<< HEAD
-    /** Truy cap bi tu choi vi nguoi dung khong phai sales (VT-04) hoac PM (VT-02) (TC-04). */
-    DENIED_ACCESS,
-
-    /** Gop ho so khach hang trung, ghi tren ho so "giu lai" (NCL-02-CN-006, TC-04). */
-    MERGE
-}
-=======
     /** Xem ho so tong hop cua khach hang (NCL-02-CN-004, TC-03). */
     VIEW_OVERVIEW,
 
@@ -36,6 +28,8 @@ public enum CustomerAuditAction {
     CONTACT_SET_PRIMARY,
 
     /** Cap nhat nganh nghe, quy mo va muc do uu tien khach hang (NCL-02-CN-005). */
-    SEGMENT_UPDATE
+    SEGMENT_UPDATE,
+
+    /** Gop ho so khach hang trung, ghi tren ho so "giu lai" (NCL-02-CN-006, TC-04). */
+    MERGE
 }
->>>>>>> develop
