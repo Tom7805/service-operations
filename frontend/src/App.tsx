@@ -13,12 +13,14 @@ import ChangePasswordPage from './modules/auth/pages/ChangePasswordPage';
 import TwoFactorSetupPage from './modules/auth/pages/TwoFactorSetupPage';
 import CustomerListPage from './modules/customers/pages/CustomerListPage';
 import CustomerMergePage from './modules/customers/pages/CustomerMergePage';
+import PipelineBoardPage from './modules/opportunities/pages/PipelineBoardPage';
 import { ICONS } from './components/common/icons';
 import type { ReactNode } from 'react';
 
 type Tab =
   | 'CUSTOMERS'
   | 'CUSTOMER_MERGE'
+  | 'PIPELINE'
   | 'DEPARTMENTS'
   | 'PERMISSIONS'
   | 'USERS'
@@ -42,6 +44,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { tab: 'CUSTOMERS', icon: ICONS.building, label: 'Khách hàng' },
   { tab: 'CUSTOMER_MERGE', icon: ICONS.merge, label: 'Gộp KH trùng' },
+  { tab: 'PIPELINE', icon: ICONS.target, label: 'Cơ hội kinh doanh' },
   { tab: 'DEPARTMENTS', icon: ICONS.tree, label: 'Tổ chức' },
   { tab: 'USERS', icon: ICONS.user, label: 'Tài khoản', matches: ['DETAIL'] },
   { tab: 'EMPLOYEES', icon: ICONS.users, label: 'Nhân sự', matches: ['EMPLOYEE_DETAIL'] },
@@ -314,6 +317,8 @@ export default function App() {
             />
           ) : activeTab === 'CUSTOMER_MERGE' ? (
             <CustomerMergePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+          ) : activeTab === 'PIPELINE' ? (
+            <PipelineBoardPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'DEPARTMENTS' ? (
             <DepartmentTreePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'PERMISSIONS' ? (
