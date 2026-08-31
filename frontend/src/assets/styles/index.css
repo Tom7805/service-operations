@@ -392,24 +392,39 @@ body {
 .pill-tabbar__item:active { transform: scale(.97); }
 
 .pill-tabbar__item--active {
-  color: #17181a; font-weight: 700;
-  background: linear-gradient(165deg, #ffffff 0%, #f1f0ee 55%, #e6e5e2 100%);
+  color: #131417; font-weight: 700; transform: scale(1.015);
+  background: linear-gradient(168deg, #ffffff 0%, #f4f3f1 40%, #e2e1dd 78%, #d8d7d2 100%);
+  border: 1px solid rgba(255,255,255,.9);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.95),
-    inset 0 -1px 2px rgba(0,0,0,.06),
-    0 1px 1px rgba(0,0,0,.04),
-    0 10px 20px -8px rgba(15,15,20,.18),
-    0 3px 8px -3px rgba(15,15,20,.10);
+    inset 0 2px 1px rgba(255,255,255,1),
+    inset 0 -4px 6px rgba(0,0,0,.10),
+    inset 1px 0 1px rgba(255,255,255,.5),
+    inset -1px 0 1px rgba(0,0,0,.04),
+    0 1px 1px rgba(0,0,0,.05),
+    0 18px 34px -10px rgba(15,15,20,.34),
+    0 6px 14px -4px rgba(15,15,20,.20);
 }
+/* Vệt bóng láng (specular) trắng chiếm nửa trên viên kính — đây là thứ khiến nó "đọc" ra là kính. */
 .pill-tabbar__item--active::before {
+  content: ''; position: absolute; inset: 1px 1px 50% 1px; border-radius: 999px / 100% 100% 0 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.35) 70%, transparent 100%);
+}
+/* Vệt ánh sáng ngũ sắc — rõ nét, không làm mờ đi để lên đúng màu như ảnh. */
+.pill-tabbar__item--active::after {
   content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
   background:
-    radial-gradient(ellipse 60% 55% at 24% 0%, rgba(255,150,220,.28), transparent 70%),
-    radial-gradient(ellipse 55% 50% at 68% 0%, rgba(140,190,255,.26), transparent 70%),
-    radial-gradient(ellipse 50% 45% at 90% 10%, rgba(180,255,190,.22), transparent 70%);
-  filter: blur(2px); opacity: .8; mix-blend-mode: overlay;
+    radial-gradient(ellipse 55% 60% at 18% 0%, rgba(255,120,210,.45), transparent 65%),
+    radial-gradient(ellipse 50% 55% at 55% -5%, rgba(120,170,255,.4), transparent 65%),
+    radial-gradient(ellipse 45% 50% at 88% 5%, rgba(150,255,180,.35), transparent 65%);
+  mix-blend-mode: soft-light; opacity: .95;
 }
-.pill-tabbar__item--active:hover { transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255,255,255,.95), inset 0 -1px 2px rgba(0,0,0,.06), 0 14px 26px -8px rgba(15,15,20,.22), 0 4px 10px -3px rgba(15,15,20,.12); }
+.pill-tabbar__item--active:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow:
+    inset 0 2px 1px rgba(255,255,255,1), inset 0 -4px 6px rgba(0,0,0,.10),
+    0 26px 44px -12px rgba(15,15,20,.38), 0 8px 18px -4px rgba(15,15,20,.22);
+}
+.pill-tabbar__item--active:active { transform: translateY(0) scale(.99); }
 .pill-tabbar__item__icon { display: inline-flex; flex-shrink: 0; opacity: .7; position: relative; z-index: 1; }
 .pill-tabbar__item span { position: relative; z-index: 1; }
 .pill-tabbar__item__icon svg { width: 15px; height: 15px; }
