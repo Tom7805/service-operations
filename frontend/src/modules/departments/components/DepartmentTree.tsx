@@ -110,6 +110,18 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
 
   const isCollapsed = (nodeId: number) => collapsedNodes.has(nodeId);
 
+  // Độ sâu thực tế của một bộ phận trong cây (0 = cấp gốc) — dùng để hiển thị "Cấp N" đúng vị trí
+  // thay vì chỉ ghi chung chung "Trực thuộc" cho mọi hàng không phải gốc ở chế độ Bảng Dữ Liệu.
+  const getDepth = (deptId: number): number => {
+    let depth = 0;
+    let current = flatData.find((d) => d.id === deptId);
+    while (current && current.parentId) {
+      depth += 1;
+      current = flatData.find((d) => d.id === current!.parentId);
+    }
+    return depth;
+  };
+
   // Convert tree node to flat Department object helper
   const nodeToDepartment = (node: DepartmentTreeNode, parentId: number | null): Department => {
     return {
@@ -272,6 +284,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
                   const parentDept = flatData.find((d) => d.id === dept.parentId);
                   const childCount = flatData.filter((d) => d.parentId === dept.id).length;
                   const isRoot = !dept.parentId;
+                  const depth = getDepth(dept.id);
 
                   return (
                     <tr key={dept.id}>
@@ -290,14 +303,14 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
                         {isRoot ? (
                           <span className="badge-level badge-level--root">Cấp 1 (Gốc)</span>
                         ) : (
-                          <span className="user-tag badge--blue">Trực thuộc</span>
+                          <span className="badge-level badge-level--branch">Cấp {depth + 1}</span>
                         )}
                       </td>
                       <td>
                         {parentDept ? (
                           <span className="cell-dept">{parentDept.name}</span>
                         ) : (
-                          <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>-- Cấp cao nhất --</span>
+                          <span style={{ color: '#7c8a9c', fontStyle: 'italic' }}>-- Cấp cao nhất --</span>
                         )}
                       </td>
                       <td>
@@ -308,41 +321,8 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
                       <td>
                         <span className="badge-children">{childCount} bộ phận con</span>
                       </td>
-                      <td>
-                        <div className="table-actions">
-                          <button
-                            type="button"
-                            className="action-btn"
-                            onClick={() => onAddChild(dept.id)}
-                            title="Thêm bộ phận con"
-                          >
-                            {ICONS.plus}
-                          </button>
-                          <button
-                            type="button"
-                            className="action-btn action-btn--edit"
-                            onClick={() => onEdit(dept)}
-                            title="Chỉnh sửa"
-                          >
-                            {ICONS.edit}
-                          </button>
-                          <button
-                            type="button"
-                            className="action-btn action-btn--move"
-                            onClick={() => onMove(dept)}
-                            title="Di chuyển"
-                          >
-                            {ICONS.moveVertical}
-                          </button>
-                          <button
-                            type="button"
-                            className="action-btn"
-                            onClick={() => onDelete(dept)}
-                            title="Xóa"
-                          >
-                            {ICONS.trash}
-                          </button>
-                        </div>
+                      <td style={{ textAlign: 'right' }}>
+                        {renderActionButtons(dept)}
                       </td>
                     </tr>
                   );
