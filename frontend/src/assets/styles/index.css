@@ -358,6 +358,11 @@ body { background: radial-gradient(120% 100% at 50% -10%, #b9bec4 0%, #9aa1a9 55
 .side-nav__item__icon svg { width: 17px; height: 17px; }
 .side-nav__item--active .side-nav__item__icon { opacity: 1; color: #6366f1; }
 .side-nav__item__label { overflow: hidden; text-overflow: ellipsis; }
+.side-nav__group-label {
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #9aa1ab;
+  padding: 16px 10px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 12px;
+}
+.side-nav--collapsed .side-nav__group-label { padding: 14px 0 4px; border-top: 1px solid #eef0ef; margin: 0 6px; }
 
 @media (max-width: 900px) {
   .app-shell { flex-direction: column; }

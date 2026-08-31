@@ -38,7 +38,7 @@ interface NavItem {
   matches?: Tab[];
 }
 
-/** Thanh điều hướng dạng pill nằm ngang — nhãn rút gọn để vừa một hàng, đầy đủ ngữ cảnh nằm trong tiêu đề từng trang. */
+/** Điều hướng chính — vận hành nghiệp vụ hàng ngày. */
 const NAV_ITEMS: NavItem[] = [
   { tab: 'CUSTOMERS', icon: ICONS.building, label: 'Khách hàng' },
   { tab: 'CUSTOMER_MERGE', icon: ICONS.merge, label: 'Gộp KH trùng' },
@@ -46,10 +46,17 @@ const NAV_ITEMS: NavItem[] = [
   { tab: 'USERS', icon: ICONS.user, label: 'Tài khoản', matches: ['DETAIL'] },
   { tab: 'EMPLOYEES', icon: ICONS.users, label: 'Nhân sự', matches: ['EMPLOYEE_DETAIL'] },
   { tab: 'PERMISSIONS', icon: ICONS.shield, label: 'Phân quyền' },
+];
+
+/** Bảo mật & Hệ thống — nhóm riêng, tách khỏi điều hướng nghiệp vụ hàng ngày (theo mẫu "Favorites"
+ * của tham chiếu: một nhãn xám nhỏ đứng trên nhóm mục phụ). */
+const SYSTEM_NAV_ITEMS: NavItem[] = [
   { tab: 'TWO_FACTOR_SETTINGS', icon: ICONS.key, label: '2FA' },
   { tab: 'MASKING', icon: ICONS.eyeOff, label: 'Che dữ liệu' },
   { tab: 'AUDIT_LOG', icon: ICONS.history, label: 'Nhật ký' },
 ];
+
+const ALL_NAV_ITEMS: NavItem[] = [...NAV_ITEMS, ...SYSTEM_NAV_ITEMS];
 
 const ROLE_LABELS: Record<string, string> = {
   'VT-01': 'Ban giám đốc',
@@ -130,8 +137,28 @@ export default function App() {
   const currentRoles = session.roles;
 
   const activeNavItem =
-    NAV_ITEMS.find((item) => item.tab === activeTab) ??
-    NAV_ITEMS.find((item) => (item.matches ?? []).includes(activeTab));
+    ALL_NAV_ITEMS.find((item) => item.tab === activeTab) ??
+    ALL_NAV_ITEMS.find((item) => (item.matches ?? []).includes(activeTab));
+
+  const renderNavGroup = (items: NavItem[]) =>
+    items.map((item) => {
+      const isActive = activeTab === item.tab || (item.matches ?? []).includes(activeTab);
+      return (
+        <button
+          key={item.tab}
+          type="button"
+          className={`side-nav__item ${isActive ? 'side-nav__item--active' : ''}`}
+          onClick={() => setActiveTab(item.tab)}
+          aria-current={isActive ? 'page' : undefined}
+          title={sidebarCollapsed ? item.label : undefined}
+        >
+          <span className="side-nav__item__icon" aria-hidden="true">
+            {item.icon}
+          </span>
+          {!sidebarCollapsed && <span className="side-nav__item__label">{item.label}</span>}
+        </button>
+      );
+    });
 
   return (
     <div className="app-frame">
@@ -162,24 +189,10 @@ export default function App() {
           </div>
 
           <nav className="side-nav__list" aria-label="Điều hướng chính">
-            {NAV_ITEMS.map((item) => {
-              const isActive = activeTab === item.tab || (item.matches ?? []).includes(activeTab);
-              return (
-                <button
-                  key={item.tab}
-                  type="button"
-                  className={`side-nav__item ${isActive ? 'side-nav__item--active' : ''}`}
-                  onClick={() => setActiveTab(item.tab)}
-                  aria-current={isActive ? 'page' : undefined}
-                  title={sidebarCollapsed ? item.label : undefined}
-                >
-                  <span className="side-nav__item__icon" aria-hidden="true">
-                    {item.icon}
-                  </span>
-                  {!sidebarCollapsed && <span className="side-nav__item__label">{item.label}</span>}
-                </button>
-              );
-            })}
+            {renderNavGroup(NAV_ITEMS)}
+
+            <div className="side-nav__group-label">{!sidebarCollapsed ? 'Bảo mật & Hệ thống' : ''}</div>
+            {renderNavGroup(SYSTEM_NAV_ITEMS)}
           </nav>
         </aside>
 
