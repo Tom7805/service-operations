@@ -369,8 +369,9 @@ body { background: linear-gradient(135deg, #eef6ee 0%, #eef1f6 45%, #f1eef6 100%
 
 /* Thanh điều hướng dạng pill — mục đang chọn nổi bằng nền trắng bo tròn + đổ bóng nhẹ trên nền xám be. */
 .pill-tabbar {
-  display: flex; align-items: center; gap: 2px; flex-wrap: wrap; margin: 0 28px 4px; padding: 4px;
-  background: #f5f4f1; border-radius: 999px; flex-shrink: 0; width: fit-content; max-width: calc(100% - 56px);
+  display: flex; align-items: center; gap: 2px; flex-wrap: wrap; margin: 0 28px 4px auto; padding: 4px;
+  background: #f5f4f1; border: 1px solid #ececea; border-radius: 999px; flex-shrink: 0;
+  width: fit-content; max-width: calc(100% - 56px); box-shadow: var(--shadow-xs);
 }
 .pill-tabbar__item {
   display: flex; align-items: center; gap: 7px; background: transparent; border: none; border-radius: 999px;
