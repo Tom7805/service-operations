@@ -103,8 +103,10 @@ export default function CustomerTable({
           </tr>
         </thead>
         <tbody>
-          {customers.map((cust) => (
-            <tr key={cust.id ?? cust.code} className="customer-table-row">
+          {customers.map((cust) => {
+            const isMerged = cust.status === 'MERGED';
+            return (
+            <tr key={cust.id ?? cust.code} className={`customer-table-row ${isMerged ? 'customer-table-row--merged' : ''}`}>
               <td>
                 <div className="customer-code-cell">
                   <span className="customer-code-pill">{cust.code}</span>
@@ -127,7 +129,22 @@ export default function CustomerTable({
                 >
                   <div className="customer-avatar-icon">🏢</div>
                   <div className="customer-name-meta">
-                    <span className="customer-company-name">{cust.name}</span>
+                    <span className="customer-company-name">
+                      {cust.name}
+                      {isMerged && (
+                        <span
+                          className="merged-status-badge"
+                          data-testid={`merged-badge-${cust.id}`}
+                          title={
+                            cust.mergedIntoId
+                              ? `Đã gộp vào hồ sơ #${cust.mergedIntoId}`
+                              : 'Hồ sơ đã bị gộp'
+                          }
+                        >
+                          Đã gộp
+                        </span>
+                      )}
+                    </span>
                     <span className="customer-id-sub">ID: #{cust.id}</span>
                   </div>
                 </div>
@@ -186,7 +203,12 @@ export default function CustomerTable({
                       type="button"
                       className="btn-manage-contacts-link"
                       onClick={() => onNavigateDetail(cust)}
-                      title="Quản lý danh bạ & người liên hệ của khách hàng (NCL-02-CN-003)"
+                      title={
+                        isMerged
+                          ? 'Hồ sơ đã bị gộp — không thể quản lý người liên hệ tiếp'
+                          : 'Quản lý danh bạ & người liên hệ của khách hàng (NCL-02-CN-003)'
+                      }
+                      disabled={isMerged}
                       data-testid={`btn-manage-contacts-${cust.id}`}
                     >
                       <span>👥</span>
@@ -198,7 +220,12 @@ export default function CustomerTable({
                       type="button"
                       className="btn-manage-contacts-link"
                       onClick={() => onOpenSegment(cust)}
-                      title="Gán ngành nghề, quy mô và mức độ ưu tiên (NCL-02-CN-005)"
+                      title={
+                        isMerged
+                          ? 'Hồ sơ đã bị gộp — không thể phân nhóm tiếp (NCL-02-CN-006)'
+                          : 'Gán ngành nghề, quy mô và mức độ ưu tiên (NCL-02-CN-005)'
+                      }
+                      disabled={isMerged}
                       data-testid={`btn-open-segment-${cust.id}`}
                     >
                       <span>🏷️</span>
@@ -216,7 +243,8 @@ export default function CustomerTable({
                 </div>
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>

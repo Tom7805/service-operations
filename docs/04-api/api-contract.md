@@ -553,7 +553,9 @@ Bỏ trống hết → trả toàn bộ. Không có hồ sơ nào khớp → `da
       "address": null,
       "createdAt": "2026-08-27T09:00:00",
       "companySize": null,
-      "priority": null
+      "priority": null,
+      "status": "ACTIVE",
+      "mergedIntoId": null
     },
     {
       "id": 1,
@@ -565,14 +567,18 @@ Bỏ trống hết → trả toàn bộ. Không có hồ sơ nào khớp → `da
       "address": "Ha Noi",
       "createdAt": "2026-08-26T10:00:00",
       "companySize": "Vua",
-      "priority": "Cao"
+      "priority": "Cao",
+      "status": "ACTIVE",
+      "mergedIntoId": null
     }
   ]
 }
 ```
 
-> Mọi response `CustomerRes` (ở tất cả endpoint khách hàng) từ nay có thêm hai trường `companySize` và `priority`
-> (có thể `null` khi hồ sơ chưa được phân nhóm — xem `NCL-02-CN-005`).
+> Mọi response `CustomerRes` (ở tất cả endpoint khách hàng) từ nay có thêm bốn trường `companySize`, `priority`
+> (có thể `null` khi hồ sơ chưa được phân nhóm — xem `NCL-02-CN-005`), cùng `status`
+> (`ACTIVE` · `INACTIVE` · `MERGED`) và `mergedIntoId` (id hồ sơ đã nhận dữ liệu khi hồ sơ này đã bị gộp — xem
+> `NCL-02-CN-006`). Frontend nên ẩn hoặc gắn nhãn "Đã gộp" và khoá thao tác với hồ sơ có `status = MERGED`.
 
 **Response lỗi:**
 
@@ -899,3 +905,100 @@ thống nhất, gợi ý:
 - Nhóm lọc không có khách hàng nào → `data: []`; Frontend hiển thị trạng thái "không có kết quả phù hợp" (TC-02).
 - Mỗi lần cập nhật phân nhóm được backend tự ghi nhật ký (`SEGMENT_UPDATE`: người thực hiện · nội dung · thời
   điểm) vào bảng nhật ký khách hàng dùng chung với `NCL-02-CN-002` (TC-04) — Frontend không cần gọi thêm API.
+
+---
+
+### `NCL-02-CN-006` — Gộp hai hồ sơ khách hàng trùng
+
+Yêu cầu token của **Quản trị viên** (`VT-07`) — khác với `NCL-02-CN-001`/`002` (Sales/PM), vì thao tác này ảnh
+hưởng toàn bộ dữ liệu liên quan của khách hàng. Vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối
+(TC-03), dùng chung cơ chế với `NCL-02-CN-001`/`002`.
+
+#### `POST /customers/merge/preview`
+
+Xem trước ảnh hưởng trước khi gộp thật — **không làm thay đổi dữ liệu**, chỉ đọc.
+
+```json
+{ "targetCustomerId": 1, "sourceCustomerId": 2 }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `targetCustomerId` | number | có | Hồ sơ **giữ lại** (hồ sơ chính) — sẽ nhận toàn bộ dữ liệu liên quan |
+| `sourceCustomerId` | number | có | Hồ sơ **bị gộp** (hồ sơ phụ) — sẽ chuyển sang trạng thái đã gộp sau khi gộp thật |
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "data": {
+    "targetCustomer": { "id": 1, "code": "KH-000001", "name": "Cong ty TNHH ABC", "...": "..." },
+    "sourceCustomer": { "id": 2, "code": "KH-000002", "name": "Cong ty TNHH ABC (chi nhanh)", "...": "..." },
+    "relatedRecordCount": 3
+  }
+}
+```
+
+- `relatedRecordCount`: tổng số bản ghi hiện có của hồ sơ bị gộp (nhật ký khách hàng + lý do bỏ qua cảnh báo
+  trùng) sẽ được chuyển về hồ sơ giữ lại khi gộp thật.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Quản trị viên — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 400 | `VALIDATION_ERROR` | Thiếu `targetCustomerId`/`sourceCustomerId`, hoặc hai giá trị này trùng nhau |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy hồ sơ giữ lại hoặc hồ sơ bị gộp |
+| 400 | `INVALID_STATE` | Một trong hai hồ sơ đã ở trạng thái đã gộp từ trước |
+
+#### `POST /customers/merge`
+
+Thực hiện gộp hai hồ sơ (TC-01). Body giống hệt `POST /customers/merge/preview`.
+
+```json
+{ "targetCustomerId": 1, "sourceCustomerId": 2 }
+```
+
+Luôn thực hiện gộp — **không kiểm tra hay chặn** theo bất kỳ điều kiện nào của dữ liệu liên quan của hồ sơ bị
+gộp (ví dụ còn công nợ chưa thanh toán); dữ liệu đó vẫn được chuyển về hồ sơ giữ lại kèm dấu vết nguồn gốc (TC-02).
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Gop ho so khach hang thanh cong",
+  "data": {
+    "id": 1,
+    "code": "KH-000001",
+    "name": "Cong ty TNHH ABC",
+    "taxCode": "0101234567",
+    "phone": "0987654321",
+    "industry": "Cong nghe thong tin",
+    "address": "Ha Noi",
+    "createdAt": "2026-08-26T10:00:00",
+    "companySize": null,
+    "priority": null,
+    "status": "ACTIVE",
+    "mergedIntoId": null
+  }
+}
+```
+
+`data` là hồ sơ **giữ lại** (không phải hồ sơ vừa bị gộp) sau khi đã nhận dữ liệu.
+
+**Response lỗi:** giống hệt `POST /customers/merge/preview`.
+
+**Lưu ý cho Frontend:**
+- Luồng khuyến nghị: người dùng chọn hai hồ sơ nghi trùng (ví dụ từ kết quả `POST /customers/check-duplicate`)
+  → gọi `POST /customers/merge/preview` để hiển thị xác nhận → người dùng đồng ý → gọi `POST /customers/merge`.
+- Sau khi gộp, hồ sơ bị gộp (`sourceCustomerId`) **không còn dùng được** cho các thao tác nghiệp vụ khác (trạng
+  thái chuyển sang đã gộp) — nếu màn hình danh sách khách hàng còn hiển thị hồ sơ này, nên ẩn đi hoặc gắn nhãn
+  "đã gộp", không cho thao tác tiếp.
+- `GET /customers` (và mọi endpoint trả về `CustomerRes` khác) nay có thêm hai trường `status`
+  (`ACTIVE` · `INACTIVE` · `MERGED`) và `mergedIntoId` (id hồ sơ đã nhận dữ liệu khi `status = MERGED`, ngược
+  lại `null`) — Frontend dùng trực tiếp hai trường này để gắn nhãn "Đã gộp" và khoá thao tác, không cần tự suy
+  luận hay gọi thêm API.
+- Không có API "hoàn tác gộp" — cần thao tác thủ công phía dữ liệu nếu gộp nhầm.
+- Mọi lần gộp và mọi lần bị từ chối truy cập đều được backend tự ghi nhật ký (TC-04) — Frontend không cần gọi
+  thêm API nào để việc ghi log này xảy ra.

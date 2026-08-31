@@ -28,5 +28,8 @@ public enum CustomerAuditAction {
     CONTACT_SET_PRIMARY,
 
     /** Cap nhat nganh nghe, quy mo va muc do uu tien khach hang (NCL-02-CN-005). */
-    SEGMENT_UPDATE
+    SEGMENT_UPDATE,
+
+    /** Gop ho so khach hang trung, ghi tren ho so "giu lai" (NCL-02-CN-006, TC-04). */
+    MERGE
 }

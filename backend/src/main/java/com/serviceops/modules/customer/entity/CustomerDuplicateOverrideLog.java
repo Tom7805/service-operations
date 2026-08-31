@@ -25,6 +25,14 @@ public class CustomerDuplicateOverrideLog extends BaseEntity {
     @Column(name = "customer_id", nullable = false)
     private Long customerId;
 
+    /**
+     * Id ho so goc truoc khi ban ghi nay bi chuyen sang ho so khac do gop trung
+     * (NCL-02-CN-006, TC-02: "ghi vet nguon goc tung ban ghi"). NULL voi ban ghi
+     * chua tung bi chuyen.
+     */
+    @Column(name = "original_customer_id")
+    private Long originalCustomerId;
+
     @Column(name = "reason", nullable = false, length = 1000)
     private String reason;
 
