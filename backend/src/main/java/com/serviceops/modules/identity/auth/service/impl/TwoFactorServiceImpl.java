@@ -99,9 +99,17 @@ public class TwoFactorServiceImpl implements TwoFactorService {
 	@Transactional
 	public TwoFactorChallengeRes createChallenge(User user) {
 		String tokenId = generateSecureToken();
-		boolean isFirstSetup = user.getTotpSecret() == null;
+		// "Chưa thiết lập xong" phải xét theo totpConfirmedAt (đã nhập đúng mã lần đầu chưa), KHÔNG
+		// phải theo totpSecret còn null hay không: secret được sinh ngay ở lần bấm "Đăng nhập" đầu
+		// tiên (trước khi người dùng kịp quét QR/xác nhận gì cả); nếu xét theo secret thì chỉ cần
+		// người dùng thử đăng nhập 2 lần (kể cả lần đầu chưa quét xong) là lần sau đã bị coi là
+		// "đã thiết lập" và mất luôn màn hình QR dù chưa từng liên kết app nào.
+		boolean isFirstSetup = user.getTotpConfirmedAt() == null;
 
-		if (isFirstSetup) {
+		if (isFirstSetup && user.getTotpSecret() == null) {
+			// Chỉ sinh khóa mới khi CHƯA có sẵn — còn nếu đã có (lần trước sinh ra nhưng chưa xác
+			// nhận xong) thì dùng lại đúng khóa đó, để nếu người dùng đã lỡ quét QR cũ, mã trên app
+			// vẫn tiếp tục đúng thay vì bị đổi khóa ngầm mỗi lần thử lại.
 			user.setTotpSecret(TotpUtil.generateSecret());
 			userRepository.save(user);
 		}

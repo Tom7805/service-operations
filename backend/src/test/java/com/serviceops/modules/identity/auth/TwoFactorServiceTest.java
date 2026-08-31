@@ -148,6 +148,33 @@ class TwoFactorServiceTest {
 	}
 
 	@Test
+	@DisplayName("BUG that: goi createChallenge nhieu lan truoc khi xac nhan lan dau van phai tiep tuc hien QR, khong duoc coi la da thiet lap")
+	void createChallenge_calledTwiceBeforeConfirming_stillReturnsEnrollmentWithSameSecret() {
+		// Mo phong dung tinh huong loi: nguoi dung go dung mat khau (sinh challenge lan 1, sinh
+		// khoa moi) nhung CHUA nhap ma nao ca - vi du dong tab, F5, hoac chi la thu dang nhap lai.
+		User freshUser = new User();
+		freshUser.setId(3L);
+		freshUser.setUsername("newbie2");
+		freshUser.setStatus(UserStatus.ACTIVE);
+		// totpSecret va totpConfirmedAt deu con null - chua tung thiet lap gi
+
+		TwoFactorChallengeRes first = twoFactorService.createChallenge(freshUser);
+		assertThat(first.enrollment()).isTrue();
+		String secretAfterFirstCall = freshUser.getTotpSecret();
+		assertThat(secretAfterFirstCall).isNotBlank();
+
+		// Lan goi thu hai (F5 / thu dang nhap lai) - VAN phai enrollment=true vi chua xac nhan lan nao.
+		TwoFactorChallengeRes second = twoFactorService.createChallenge(freshUser);
+
+		assertThat(second.enrollment())
+				.as("Chua tung xac nhan ma nao thi lan goi sau van phai tiep tuc hien QR")
+				.isTrue();
+		assertThat(second.otpauthUri()).isNotNull();
+		// Dung lai dung mot khoa - khong sinh khoa moi lam hong QR/app da quet truoc do.
+		assertThat(freshUser.getTotpSecret()).isEqualTo(secretAfterFirstCall);
+	}
+
+	@Test
 	@DisplayName("TC-01: nhap dung ma TOTP hien tai thi cap JWT")
 	void verifyTwoFactor_validCode_issuesJwt() {
 		when(userSessionRepository.findByTokenId("challenge-token")).thenReturn(Optional.of(session));
