@@ -194,7 +194,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
         </div>
 
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--red">{ICONS.user}</div>
+          <div className="stat-card__icon stat-card__icon--amber">{ICONS.user}</div>
           <div>
             <span className="stat-card__label">Phạm vi Chỉ cá nhân</span>
             <strong className="stat-card__value text-warning">{selfScopeUsers}</strong>
