@@ -174,8 +174,16 @@
 .form-field--full { grid-column: 1 / -1; }
 .form-label { display: block; font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 6px; }
 .form-label .req { color: #dc2626; }
-.form-input, .form-select { width: 100%; height: 42px; padding: 0 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13.5px; outline: none; background: #ffffff; color: #0f172a; transition: border-color 0.2s var(--ease-out); }
-.form-input:focus, .form-select:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.12); }
+/* Ô nhập kính nhẹ — chỉ lấy phần "trong, viền sáng, bóng đổ mềm" của kính, KHÔNG dùng backdrop-blur
+   (chữ đang gõ cần rõ tuyệt đối, blur phía sau ô nhập không có ý nghĩa gì khi luôn nằm trên nền trắng). */
+.form-input, .form-select {
+  width: 100%; height: 44px; padding: 0 16px; border: 1px solid rgba(15,23,42,.10); border-radius: 999px;
+  font-size: 13.5px; outline: none; color: #0f172a;
+  background: linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(255,255,255,.4) 50%, transparent 55%), #fbfbfa;
+  box-shadow: inset 0 1px 2px rgba(15,23,42,.04), inset 0 -1px 0 rgba(255,255,255,.8);
+  transition: border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+}
+.form-input:focus, .form-select:focus { border-color: #10b981; box-shadow: inset 0 1px 2px rgba(15,23,42,.04), 0 0 0 3px rgba(16,185,129,0.14); }
 .form-input--error { border-color: #dc2626 !important; }
 .field-error { color: #dc2626; font-size: 12px; margin-top: 4px; display: block; font-weight: 500; }
 .field-hint { color: #64748b; font-size: 11.5px; margin-top: 4px; display: block; }
@@ -193,23 +201,40 @@
 .role-name { font-size: 13px; font-weight: 700; color: #0f172a; }
 .role-desc { font-size: 11.5px; color: #64748b; margin: 3px 0 0; line-height: 1.4; }
 
-/* Buttons & Alerts — độ sâu mềm + easing giảm tốc kiểu Apple: nổi nhẹ lên khi hover, lún nhẹ khi bấm. */
+/* Buttons — kính lỏng (liquid glass) kiểu Apple: khối trong mờ, bóng láng nửa trên, viền sáng mảnh,
+   đổ bóng mềm khuếch tán. Bóng láng nằm ngay trong layer `background` (không dùng pseudo-element)
+   để không bao giờ đè lên chữ, dù nút có 1 dòng text trần hay bọc span/icon — an toàn với mọi nút
+   sẵn có trong dự án mà không cần sửa từng file. */
+.btn-primary, .btn-secondary {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  border-radius: 999px; padding: 11px 22px; font-size: 13.5px; font-weight: 700; color: #14161a; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.85);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.85) 0%, rgba(255,255,255,.1) 55%, transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.92) 0%, rgba(246,247,247,.62) 55%, rgba(232,234,233,.75) 100%);
+  backdrop-filter: blur(10px) saturate(180%); -webkit-backdrop-filter: blur(10px) saturate(180%);
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,1), inset 0 -2px 4px rgba(15,23,42,.05),
+    0 1px 1px rgba(15,23,42,.04), 0 12px 24px -12px rgba(15,23,42,.22), 0 3px 8px -3px rgba(15,23,42,.10);
+  transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+}
+.btn-primary:hover, .btn-secondary:hover { transform: translateY(-2px); }
+.btn-primary:active, .btn-secondary:active { transform: translateY(0) scale(.97); }
+.btn-lg { padding: 13px 26px; font-size: 14.5px; }
+
+/* Primary: thêm quầng sáng ngoài màu nhấn thương hiệu (emerald) bên dưới — đúng cách ảnh tham chiếu
+   dùng quầng sáng ấm để phân biệt nút chính với nút phụ, chỉ đổi màu quầng theo brand thay vì hổ phách. */
 .btn-primary {
-  background: #10b981; color: #ffffff; border: none; border-radius: var(--radius-sm); padding: 10px 18px;
-  font-size: 13.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
-  box-shadow: var(--shadow-xs);
-  transition: background var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,1), inset 0 -2px 4px rgba(15,23,42,.05),
+    0 1px 1px rgba(15,23,42,.04), 0 16px 30px -12px rgba(16,185,129,.30), 0 5px 12px -3px rgba(16,185,129,.20);
 }
-.btn-primary:hover { background: #059669; box-shadow: var(--shadow-sm); transform: translateY(-1px); }
-.btn-primary:active { transform: translateY(0) scale(.98); box-shadow: var(--shadow-xs); }
-.btn-lg { padding: 12px 22px; font-size: 14.5px; }
-.btn-secondary {
-  background: #ffffff; color: #475569; border: 1px solid #dfe3e8; border-radius: var(--radius-sm); padding: 10px 16px;
-  font-size: 13.5px; font-weight: 600; cursor: pointer;
-  transition: background var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+.btn-primary:hover {
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,1), inset 0 -2px 4px rgba(15,23,42,.05),
+    0 1px 1px rgba(15,23,42,.04), 0 20px 38px -12px rgba(16,185,129,.36), 0 6px 16px -4px rgba(16,185,129,.24);
 }
-.btn-secondary:hover { background: #fafafa; color: #0f172a; border-color: #d3d8de; box-shadow: var(--shadow-xs); }
-.btn-secondary:active { transform: scale(.98); }
+.btn-secondary:hover { box-shadow: inset 0 1px 1px rgba(255,255,255,1), inset 0 -2px 4px rgba(15,23,42,.05), 0 16px 30px -12px rgba(15,23,42,.26), 0 4px 10px -3px rgba(15,23,42,.14); }
 .btn-danger { background: #dc2626 !important; color: #ffffff !important; }
 .btn-success { background: #16a34a !important; color: #ffffff !important; }
 
@@ -264,11 +289,9 @@
    Header sạch (logo tròn + tiêu đề trang + cụm hành động bên phải) và một
    thanh điều hướng dạng pill ngay dưới header — không dùng sidebar dọc nữa.
    ========================================================================== */
-body {
-  background: radial-gradient(circle at 12% 8%, #dbe7ff 0%, transparent 42%),
-    radial-gradient(circle at 88% 92%, #ece3ff 0%, transparent 48%),
-    linear-gradient(135deg, #eef2fb 0%, #eef1fb 45%, #f1edfb 100%);
-}
+/* Nền phẳng, trung tính, sáng đều — đúng backdrop của ảnh tham chiếu bộ component kính: kính cần
+   một nền sáng/trơn để "trong" đọc rõ, một nền nhiều màu loang lổ sẽ làm nhiễu độ trong của kính. */
+body { background: radial-gradient(120% 100% at 50% -10%, #ffffff 0%, #eff0ef 55%, #e8eae8 100%); }
 
 .app-frame { min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 22px; }
 .app-shell {
@@ -287,12 +310,17 @@ body {
 
 .app-topbar__actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .icon-btn {
-  width: 38px; height: 38px; border-radius: 50%; border: 1px solid #e6e8f5; background: #ffffff; color: #55606e;
+  width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,.85); color: #55606e;
   display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
-  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.9) 0%, rgba(255,255,255,.15) 55%, transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.9) 0%, rgba(240,241,240,.6) 100%);
+  backdrop-filter: blur(10px) saturate(180%); -webkit-backdrop-filter: blur(10px) saturate(180%);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,1), inset 0 -1px 2px rgba(15,23,42,.05), 0 8px 16px -8px rgba(15,23,42,.20), 0 2px 5px -2px rgba(15,23,42,.10);
+  transition: color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
 }
 .icon-btn svg { width: 17px; height: 17px; }
-.icon-btn:hover { background: #eef2fd; border-color: #dde3f7; color: #0f172a; }
+.icon-btn:hover { color: #0f172a; transform: translateY(-1px); box-shadow: inset 0 1px 1px rgba(255,255,255,1), inset 0 -1px 2px rgba(15,23,42,.05), 0 12px 22px -8px rgba(15,23,42,.24), 0 3px 8px -2px rgba(15,23,42,.14); }
 .icon-btn:active { transform: scale(.94); }
 
 /* Bảng thông báo — nổi lên bên phải ngay dưới chuông, tab gạch chân + danh sách dòng có icon tròn tối màu. */

@@ -78,6 +78,28 @@ thông tin đã chốt ở Product Principles. Cũng có chủ đích không d�
 Timeline" trong ảnh — hệ thống chưa có engine AI/phân tích, dựng giao diện cho tính năng không tồn tại là
 lừa người dùng thật.
 
+**Mood nền (v4)**: theo bộ tham chiếu component kính (nút/ô nhập/select/icon button dạng "liquid glass"),
+nền trang đổi từ gradient xanh lam-lavender sang **nền phẳng trung tính sáng đều** (radial trắng→xám be rất
+nhạt) — kính cần một nền trơn để đọc rõ độ trong; nền nhiều màu loang lổ làm nhiễu hiệu ứng kính.
+
+## Nút & Ô nhập — Liquid Glass
+
+`.btn-primary`, `.btn-secondary`, `.icon-btn` dùng chung một công thức kính: nhiều lớp `background`
+(gradient bóng láng nửa trên xếp TRƯỚC gradient nền trong `background` shorthand — layer đầu vẽ trên cùng)
++ `backdrop-filter: blur+saturate` + viền sáng mảnh + đổ bóng mềm khuếch tán nhiều lớp. **Quyết định kỹ
+thuật quan trọng**: bóng láng nằm trong chính layer `background` của nút, KHÔNG dùng pseudo-element
+`::before` — vì hầu hết nút trong dự án chỉ chứa text trần (không bọc `<span>`), và một `::before` định vị
+`absolute` sẽ luôn vẽ ĐÈ LÊN text trần theo thứ tự stacking của CSS bất kể thứ tự trong DOM, làm mờ chữ.
+Dùng layer `background` tránh hoàn toàn vấn đề này, an toàn với mọi nút sẵn có mà không cần sửa từng file.
+
+`.btn-primary` giữ **quầng sáng emerald** bên dưới (không phải hổ phách như ảnh gốc) để vẫn đọc được là
+hành động chính theo đúng màu nhấn thương hiệu đã chốt — bản thân khối kính (nền, viền, chữ đen) giống hệt
+`.btn-secondary`, chỉ khác quầng sáng, đúng cách ảnh tham chiếu phân biệt nút chính/phụ.
+
+`.form-input`/`.form-select` chỉ lấy phần "trong, viền sáng, bóng mềm" của kính — cố ý **không** dùng
+`backdrop-filter` cho ô nhập vì luôn nằm trên nền trắng của card/modal, blur không có gì để "trong" ra, chỉ
+tốn hiệu năng; và chữ đang gõ cần độ rõ tuyệt đối, ưu tiên trên hiệu ứng thị giác.
+
 ## Elevation & Motion
 
 Mọi bề mặt nổi lên (card, nút, menu, modal) dùng chung một "nguồn sáng" — bóng mềm nhiều lớp, không dùng bóng
