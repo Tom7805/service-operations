@@ -2,6 +2,7 @@ import React, { FormEvent, useEffect, useState } from 'react';
 import type { CreateUserPayload, UpdateUserPayload, User } from '../types/userTypes';
 import { SYSTEM_DEPARTMENTS, SYSTEM_ROLES } from '../types/userTypes';
 import { validateCreateUser, validateUpdateUser, FormErrors } from '../validators/userValidators';
+import { ICONS } from './icons';
 
 interface UserFormModalProps {
   isOpen: boolean;
@@ -138,7 +139,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           <div className="modal-body">
             {serverError && (
               <div className="alert alert--error" role="alert">
-                <span className="alert__icon">⚠️</span>
+                <span className="alert__icon">{ICONS.alertTriangle}</span>
                 <div className="alert__content">
                   <strong>Thao tác thất bại</strong>
                   <p>{serverError}</p>
@@ -249,7 +250,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                     onClick={() => setShowPassword(!showPassword)}
                     tabIndex={-1}
                   >
-                    {showPassword ? '🙈' : '👁️'}
+                    {showPassword ? ICONS.eyeOff : ICONS.eye}
                   </button>
                 </div>
                 {errors.password && <span className="field-error">{errors.password}</span>}

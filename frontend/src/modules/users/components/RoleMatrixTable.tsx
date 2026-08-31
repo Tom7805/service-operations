@@ -1,6 +1,7 @@
 import React from 'react';
 import { SYSTEM_ROLES } from '../types/userTypes';
 import type { User } from '../types/userTypes';
+import { ICONS } from './icons';
 
 interface RoleMatrixTableProps {
   users: User[];
@@ -65,7 +66,7 @@ export const RoleMatrixTable: React.FC<RoleMatrixTableProps> = ({
                         onClick={() => onSelectRoleFilter(role.code)}
                         title={`Lọc danh sách người dùng có vai trò ${role.name}`}
                       >
-                        🔍 Xem tài khoản
+                        <span className="icon-xs">{ICONS.search}</span> Xem tài khoản
                       </button>
                     )}
                   </td>

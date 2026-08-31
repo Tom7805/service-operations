@@ -249,7 +249,7 @@ export const UserTable: React.FC<UserTableProps> = ({
               <tr>
                 <td colSpan={7}>
                   <div className="table-empty-state">
-                    <div className="empty-icon">👤</div>
+                    <div className="empty-icon">{ICONS.user}</div>
                     <h3>Không tìm thấy tài khoản người dùng nào</h3>
                     <p>Thử điều chỉnh từ khóa tìm kiếm hoặc bộ lọc vai trò, trạng thái.</p>
                     {(search || roleFilter !== 'ALL' || statusFilter !== 'ALL') && (
