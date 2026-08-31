@@ -90,6 +90,13 @@ export default function App() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifTab, setNotifTab] = useState<'ALL' | 'MENTIONS' | 'SYSTEM'>('ALL');
   const notifRef = useRef<HTMLDivElement>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(
+    () => localStorage.getItem('sidebarCollapsed') === '1'
+  );
+
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', sidebarCollapsed ? '1' : '0');
+  }, [sidebarCollapsed]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -129,14 +136,57 @@ export default function App() {
   return (
     <div className="app-frame">
       <div className="app-shell">
+        <aside className={`side-nav ${sidebarCollapsed ? 'side-nav--collapsed' : ''}`}>
+          <div className="side-nav__header">
+            <div className="side-nav__brand">
+              <span className="side-nav__brand-mark">
+                <i />
+                <i />
+                <i />
+              </span>
+              {!sidebarCollapsed && (
+                <span className="side-nav__brand-text">
+                  Vận hành <b>dịch vụ</b>
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              className="side-nav__toggle"
+              onClick={() => setSidebarCollapsed((v) => !v)}
+              title={sidebarCollapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
+              aria-label={sidebarCollapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
+            >
+              {ICONS.panelToggle}
+            </button>
+          </div>
+
+          <nav className="side-nav__list" aria-label="Điều hướng chính">
+            {NAV_ITEMS.map((item) => {
+              const isActive = activeTab === item.tab || (item.matches ?? []).includes(activeTab);
+              return (
+                <button
+                  key={item.tab}
+                  type="button"
+                  className={`side-nav__item ${isActive ? 'side-nav__item--active' : ''}`}
+                  onClick={() => setActiveTab(item.tab)}
+                  aria-current={isActive ? 'page' : undefined}
+                  title={sidebarCollapsed ? item.label : undefined}
+                >
+                  <span className="side-nav__item__icon" aria-hidden="true">
+                    {item.icon}
+                  </span>
+                  {!sidebarCollapsed && <span className="side-nav__item__label">{item.label}</span>}
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
+
+        <div className="app-main">
         <div className="app-topbar-glow" aria-hidden="true" />
         <header className="app-topbar">
           <div className="app-topbar__brand">
-            <span className="app-topbar__mark">
-              <i />
-              <i />
-              <i />
-            </span>
             <h1 className="app-topbar__title">{activeNavItem?.label ?? 'Vận hành dịch vụ'}</h1>
           </div>
 
@@ -241,26 +291,6 @@ export default function App() {
           </div>
         </header>
 
-        <nav className="pill-tabbar" aria-label="Điều hướng chính">
-          {NAV_ITEMS.map((item) => {
-            const isActive = activeTab === item.tab || (item.matches ?? []).includes(activeTab);
-            return (
-              <button
-                key={item.tab}
-                type="button"
-                className={`pill-tabbar__item ${isActive ? 'pill-tabbar__item--active' : ''}`}
-                onClick={() => setActiveTab(item.tab)}
-                aria-current={isActive ? 'page' : undefined}
-              >
-                <span className="pill-tabbar__item__icon" aria-hidden="true">
-                  {item.icon}
-                </span>
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-
         <main className="app-content">
           {activeTab === 'CHANGE_PASSWORD' ? (
             <ChangePasswordPage onBack={() => setActiveTab('DEPARTMENTS')} onPasswordChanged={handleLogout} />
@@ -305,6 +335,7 @@ export default function App() {
             />
           )}
         </main>
+        </div>
       </div>
     </div>
   );

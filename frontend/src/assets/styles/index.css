@@ -298,8 +298,9 @@
 /* ==========================================================================
    App Frame — toàn bộ app nổi trên nền gradient nhạt, bên trong một khối bo
    góc lớn có viền + đổ bóng sâu, kiểu cửa sổ ứng dụng desktop (macOS window).
-   Header sạch (logo tròn + tiêu đề trang + cụm hành động bên phải) và một
-   thanh điều hướng dạng pill ngay dưới header — không dùng sidebar dọc nữa.
+   v5: quay lại sidebar dọc bên trái (thu/mở được), theo đúng tham chiếu người
+   dùng cung cấp — main content (header + nội dung) là flex:1 nên tự co giãn
+   theo chiều rộng còn lại mỗi khi sidebar đổi trạng thái, không cần tính tay.
    ========================================================================== */
 /* Nền phẳng, trung tính, sáng đều — đúng backdrop của ảnh tham chiếu bộ component kính: kính cần
    một nền sáng/trơn để "trong" đọc rõ, một nền nhiều màu loang lổ sẽ làm nhiễu độ trong của kính. */
@@ -312,7 +313,59 @@ body { background: radial-gradient(120% 100% at 50% -10%, #b9bec4 0%, #9aa1a9 55
   width: 100%; max-width: 1600px; min-height: calc(100vh - 44px);
   background: #ffffff; border: 1px solid #e6e8f5; border-radius: 28px;
   box-shadow: 0 1px 2px rgba(79,70,229,.04), var(--shadow-lg);
-  display: flex; flex-direction: column; overflow: hidden; position: relative;
+  display: flex; flex-direction: row; overflow: hidden; position: relative;
+}
+.app-main { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
+
+/* --- Sidebar thu/mở (side-nav) --- */
+.side-nav {
+  width: 260px; flex-shrink: 0; display: flex; flex-direction: column;
+  background: #fbfbfa; border-right: 1px solid #eef0ef; padding: 16px 10px;
+  transition: width var(--dur-base) var(--ease-out), padding var(--dur-base) var(--ease-out);
+  overflow: hidden;
+}
+.side-nav--collapsed { width: 76px; padding: 16px 10px; }
+
+.side-nav__header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 6px 18px; flex-shrink: 0; }
+.side-nav--collapsed .side-nav__header { flex-direction: column; gap: 14px; }
+.side-nav__brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.side-nav__brand-mark { height: 30px; width: 30px; border-radius: var(--radius-sm); background: #17181a; display: flex; align-items: end; justify-content: center; gap: 2px; padding: 7px 0 6px; flex-shrink: 0; }
+.side-nav__brand-mark i { display: block; background: #10b981; width: 3.5px; border-radius: 3px; }
+.side-nav__brand-mark i:nth-child(1) { height: 6px; } .side-nav__brand-mark i:nth-child(2) { height: 10px; } .side-nav__brand-mark i:nth-child(3) { height: 14px; }
+.side-nav__brand-text { font-size: 13.5px; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.side-nav__brand-text b { color: #059669; }
+.side-nav__toggle {
+  width: 30px; height: 30px; border-radius: var(--radius-sm); border: 1px solid #eef0ef; background: #ffffff;
+  color: #6b7280; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.side-nav__toggle svg { width: 15px; height: 15px; }
+.side-nav__toggle:hover { background: #f4f5f7; color: #0f172a; }
+.side-nav--collapsed .side-nav__toggle { transform: rotate(180deg); }
+.side-nav--collapsed .side-nav__toggle:hover { transform: rotate(180deg) scale(1.05); }
+
+.side-nav__list { display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+.side-nav__item {
+  display: flex; align-items: center; gap: 11px; width: 100%; background: transparent; border: none;
+  border-radius: var(--radius-sm); padding: 9px 10px; font-size: 13.5px; font-weight: 600; color: #55606e;
+  cursor: pointer; text-align: left; white-space: nowrap;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.side-nav--collapsed .side-nav__item { justify-content: center; padding: 10px; }
+.side-nav__item:hover { background: #f0f1f0; color: #0f172a; }
+.side-nav__item--active { background: #eef0ef; color: #0f172a; font-weight: 700; }
+.side-nav__item__icon { display: inline-flex; flex-shrink: 0; opacity: .75; }
+.side-nav__item__icon svg { width: 17px; height: 17px; }
+.side-nav__item--active .side-nav__item__icon { opacity: 1; color: #10b981; }
+.side-nav__item__label { overflow: hidden; text-overflow: ellipsis; }
+
+@media (max-width: 900px) {
+  .app-shell { flex-direction: column; }
+  .side-nav { width: 100% !important; flex-direction: row; align-items: center; padding: 10px 12px; overflow-x: auto; border-right: none; border-bottom: 1px solid #eef0ef; }
+  .side-nav__header { padding: 0 10px 0 0; border-right: 1px solid #eef0ef; margin-right: 8px; flex-shrink: 0; }
+  .side-nav--collapsed .side-nav__header { flex-direction: row; }
+  .side-nav__brand-text, .side-nav__item__label { display: none; }
+  .side-nav__list { flex-direction: row; overflow-y: visible; }
 }
 
 .app-topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 28px 14px; flex-shrink: 0; position: relative; z-index: 1; }
@@ -429,63 +482,6 @@ body { background: radial-gradient(120% 100% at 50% -10%, #b9bec4 0%, #9aa1a9 55
   filter: blur(10px); pointer-events: none; z-index: 0;
 }
 
-.pill-tabbar {
-  display: flex; align-items: center; gap: 2px; flex-wrap: wrap; margin: 0 28px 4px auto; padding: 6px;
-  flex-shrink: 0; width: fit-content; max-width: calc(100% - 56px); position: relative; z-index: 1;
-  background: rgba(255,255,255,.86); border: 1px solid rgba(255,255,255,.8); border-radius: 999px;
-  backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%);
-  box-shadow: inset 0 1px 2px rgba(15,23,42,.05), inset 0 -1px 0 rgba(255,255,255,.8), 0 1px 2px rgba(15,23,42,.04);
-}
-.pill-tabbar__item {
-  display: flex; align-items: center; gap: 7px; background: transparent; border: none;
-  border-radius: 999px; padding: 10px 18px; font-size: 13px; font-weight: 600; color: #57595c; cursor: pointer;
-  white-space: nowrap; position: relative;
-  transition: color var(--dur-fast) var(--ease-out), background var(--dur-base) var(--ease-out),
-    box-shadow var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
-}
-.pill-tabbar__item:hover { color: #17181a; }
-.pill-tabbar__item:active { transform: scale(.97); }
-
-.pill-tabbar__item--active {
-  color: #12141c; font-weight: 700; transform: scale(1.015); overflow: hidden;
-  background: linear-gradient(168deg, rgba(255,255,255,.97) 0%, rgba(255,255,255,.82) 55%, rgba(255,255,255,.9) 100%);
-  backdrop-filter: blur(10px) saturate(150%); -webkit-backdrop-filter: blur(10px) saturate(150%);
-  border: 1px solid rgba(255,255,255,.85);
-  box-shadow:
-    inset 0 1px 1px rgba(255,255,255,1),
-    inset 0 -3px 5px rgba(15,23,60,.06),
-    inset 1px 0 1px rgba(255,255,255,.5),
-    0 1px 1px rgba(15,23,60,.04),
-    0 14px 28px -12px rgba(15,23,60,.20),
-    0 4px 10px -3px rgba(15,23,60,.10);
-}
-/* overflow:hidden ở trên cắt mọi lớp phủ theo đúng viền bo tròn — sửa lỗi góc vuông lòi ra ngoài viên kính. */
-/* Vệt bóng láng (specular) trắng chiếm nửa trên viên kính — đây là thứ khiến nó "đọc" ra là kính. */
-.pill-tabbar__item--active::before {
-  content: ''; position: absolute; inset: 0 0 55% 0; pointer-events: none;
-  background: linear-gradient(180deg, rgba(255,255,255,.9) 0%, rgba(255,255,255,.25) 75%, transparent 100%);
-}
-/* Vệt ánh sáng ngũ sắc rất nhẹ — chỉ điểm xuyết, để độ trong suốt của kính là yếu tố chính, không bị màu lấn át. */
-.pill-tabbar__item--active::after {
-  content: ''; position: absolute; inset: 0; pointer-events: none;
-  background:
-    radial-gradient(ellipse 55% 60% at 12% 0%, rgba(120,150,255,.18), transparent 65%),
-    radial-gradient(ellipse 50% 55% at 55% -10%, rgba(160,120,255,.14), transparent 65%),
-    radial-gradient(ellipse 45% 50% at 92% 5%, rgba(110,220,220,.12), transparent 65%);
-  mix-blend-mode: soft-light; opacity: .6;
-}
-.pill-tabbar__item--active:hover {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow:
-    inset 0 1px 1px rgba(255,255,255,1), inset 0 -3px 5px rgba(15,23,60,.06),
-    0 22px 40px -14px rgba(15,23,60,.24), 0 6px 14px -4px rgba(15,23,60,.12);
-}
-.pill-tabbar__item--active:active { transform: translateY(0) scale(.99); }
-.pill-tabbar__item__icon { display: inline-flex; flex-shrink: 0; opacity: .7; position: relative; z-index: 1; }
-.pill-tabbar__item span { position: relative; z-index: 1; }
-.pill-tabbar__item__icon svg { width: 15px; height: 15px; }
-.pill-tabbar__item--active .pill-tabbar__item__icon { opacity: 1; color: #10b981; }
-
 .app-content { flex: 1; min-width: 0; }
 
 @media (max-width: 900px) {
@@ -494,7 +490,6 @@ body { background: radial-gradient(120% 100% at 50% -10%, #b9bec4 0%, #9aa1a9 55
   .app-topbar { padding: 14px 16px 10px; }
   .app-topbar__title { font-size: 18px; }
   .user-chip__name { display: none; }
-  .pill-tabbar { margin: 0 16px 4px; max-width: calc(100% - 32px); overflow-x: auto; }
   .app-content { padding: 16px; }
 }
 

@@ -49,7 +49,24 @@ Các badge màu ngữ nghĩa hiện có (`--badge-purple/gold/blue/green/orange/
   - Nhãn phụ, breadcrumb, badge: 11–12.5px / 600–700 / uppercase khi là nhãn cột hoặc eyebrow
 - Số liệu quan trọng (thẻ thống kê) dùng `font-variant-numeric: tabular-nums` khi xuất hiện nhiều số cạnh nhau.
 
-## Navigation Shell (v2 — "windowed app")
+## Navigation Shell (v5 — sidebar thu/mở, thay cho pill-tabbar)
+
+Quyết định mới nhất, thay thế bản pill-tabbar ngang (v2-v4), theo tham chiếu người dùng cung cấp
+("Percipto" — sidebar trắng, icon nét mảnh, danh sách hàng bo góc). `.app-shell` chuyển sang
+`flex-direction: row`: `.side-nav` (sidebar) bên trái + `.app-main` (header + nội dung) bên phải,
+`.app-main` là `flex: 1` nên tự co giãn theo chiều rộng còn lại — không cần tính toán tay mỗi khi
+sidebar đổi trạng thái.
+
+- **Thu/mở được** (`sidebarCollapsed` state, lưu `localStorage` để nhớ lựa chọn giữa các phiên):
+  260px ↔ 76px, chuyển động bằng `transition: width` theo `--ease-out`. Mở: icon + nhãn đầy đủ.
+  Thu: chỉ icon, căn giữa, nhãn hiện qua `title` (tooltip trình duyệt) khi hover.
+  Nút thu/mở (`.side-nav__toggle`) nằm cạnh logo, icon xoay 180° khi ở trạng thái thu để gợi ý chiều
+  bấm tiếp theo.
+- Mục đang chọn: nền xám nhạt `#eef0ef` + icon nhuộm màu nhấn emerald — tối giản, không dùng viền
+  hay nền đen như các bản thử trước, đúng tinh thần "hàng list phẳng" của ảnh tham chiếu.
+- Trên màn hình hẹp (<900px): sidebar chuyển ngang thành thanh cuộn ở trên, ẩn nhãn chữ, chỉ còn icon.
+
+## Navigation Shell (v2 — "windowed app", ĐÃ THAY THẾ BỞI v5 — giữ lại để tham chiếu lịch sử)
 
 Quyết định mới nhất, thay thế bản sidebar dọc trước đó, theo tham chiếu người dùng cung cấp (dashboard dạng
 "Settings: Email accounts" — nền gradient pastel, app nổi trong khối bo góc lớn, header sạch + thanh tab pill).

@@ -341,6 +341,12 @@ export const ICONS = {
       <path d="M17.2 10H7.5" />
     </svg>
   ),
+  panelToggle: (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2.5" y="3.5" width="15" height="13" rx="2.5" />
+      <path d="M12.5 3.5v13" />
+    </svg>
+  ),
   chevronDown: (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M5 7.5 10 12.5 15 7.5" />
