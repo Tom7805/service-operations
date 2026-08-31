@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import ChangePasswordForm from '../components/ChangePasswordForm';
+import { ICONS } from '../../../components/common/icons';
 
 interface ChangePasswordPageProps {
   onBack: () => void;
@@ -38,7 +39,8 @@ export default function ChangePasswordPage({ onBack, onPasswordChanged }: Change
             style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d' }}
             role="status"
           >
-            <span>✅ Đổi mật khẩu thành công! Đang chuyển về màn hình đăng nhập...</span>
+            <span className="alert__icon">{ICONS.checkCircle}</span>
+            <span>Đổi mật khẩu thành công! Đang chuyển về màn hình đăng nhập...</span>
           </div>
         ) : (
           <ChangePasswordForm onSuccess={handleSuccess} />

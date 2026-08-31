@@ -130,6 +130,7 @@
 .table-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
 .action-btn { width: 32px; height: 32px; border-radius: 6px; border: 1px solid #e2e8f0; background: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; font-size: 14px; }
 .action-btn:hover { background: #f8fafc; border-color: #cbd5e1; transform: scale(1.05); }
+.action-btn svg { width: 15px; height: 15px; }
 
 .table-footer { padding: 12px 20px; border-top: 1px solid #f1f5f9; background: #f8fafc; font-size: 12.5px; color: #64748b; }
 
@@ -160,7 +161,8 @@
 .field-error { color: #dc2626; font-size: 12px; margin-top: 4px; display: block; font-weight: 500; }
 .field-hint { color: #64748b; font-size: 11.5px; margin-top: 4px; display: block; }
 .password-input-wrap { position: relative; }
-.password-toggle-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 16px; }
+.password-toggle-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 16px; color: #78877f; display: flex; }
+.password-toggle-btn svg { width: 17px; height: 17px; }
 
 .roles-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-height: 250px; overflow-y: auto; padding: 4px; }
 .role-choice-card { border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; display: flex; align-items: flex-start; gap: 10px; cursor: pointer; transition: all 0.2s; background: #ffffff; min-height: 72px; }
@@ -251,7 +253,8 @@
 .topbar-nav__item:hover { color: #0f172a; background: #f1f5f9; }
 .topbar-nav__item--active { background: #10202c; color: #ffffff; }
 .topbar-nav__item--active:hover { background: #10202c; color: #ffffff; }
-.topbar-nav__item__icon { font-size: 13.5px; line-height: 1; }
+.topbar-nav__item__icon { font-size: 13.5px; line-height: 1; display: inline-flex; }
+.topbar-nav__item__icon svg { width: 15px; height: 15px; }
 
 .topbar-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .topbar-role-badge { display: flex; align-items: center; gap: 7px; border: 1px solid #a7f3d0; background: #ecfdf5; border-radius: 999px; padding: 5px 12px 5px 10px; }
@@ -330,7 +333,8 @@
 .department-tree-container { display: flex; flex-direction: column; gap: 12px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 0 0 16px 16px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
 
 .tree-loading-state, .tree-empty-state, .table-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; color: #64748b; text-align: center; gap: 12px; }
-.empty-icon, .table-empty-state__icon { font-size: 48px; }
+.empty-icon, .table-empty-state__icon { font-size: 48px; display: flex; justify-content: center; color: #cbd5e1; }
+.empty-icon svg, .table-empty-state__icon svg { width: 44px; height: 44px; }
 
 .tree-node-wrapper { position: relative; margin-bottom: 8px; }
 .tree-node-wrapper.level-1 { margin-left: 28px; border-left: 2px dashed #cbd5e1; padding-left: 16px; }
@@ -401,7 +405,8 @@
 .location-box--active { border-color: #10b981; background: #f0fdf4; }
 .location-label { font-size: 11px; text-transform: uppercase; font-weight: 700; color: #64748b; display: block; margin-bottom: 2px; }
 .location-value { color: #0f172a; font-size: 14px; }
-.arrow-down { font-size: 16px; color: #10b981; }
+.arrow-down { font-size: 16px; color: #10b981; display: flex; justify-content: center; }
+.arrow-down svg { width: 18px; height: 18px; }
 
 /* ==========================================================================
    Customer Profile Module (NCL-02-CN-001) Styling

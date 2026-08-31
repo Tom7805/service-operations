@@ -13,6 +13,8 @@ import ChangePasswordPage from './modules/auth/pages/ChangePasswordPage';
 import TwoFactorSetupPage from './modules/auth/pages/TwoFactorSetupPage';
 import CustomerListPage from './modules/customers/pages/CustomerListPage';
 import CustomerMergePage from './modules/customers/pages/CustomerMergePage';
+import { ICONS } from './components/common/icons';
+import type { ReactNode } from 'react';
 
 type Tab =
   | 'CUSTOMERS'
@@ -30,7 +32,7 @@ type Tab =
 
 interface NavItem {
   tab: Tab;
-  icon: string;
+  icon: ReactNode;
   label: string;
   /** Các tab con cũng nên tô sáng mục điều hướng này (ví dụ trang chi tiết). */
   matches?: Tab[];
@@ -38,15 +40,15 @@ interface NavItem {
 
 /** Thanh điều hướng dạng pill nằm ngang — nhãn rút gọn để vừa một hàng, đầy đủ ngữ cảnh nằm trong tiêu đề từng trang. */
 const NAV_ITEMS: NavItem[] = [
-  { tab: 'CUSTOMERS', icon: '🏢', label: 'Khách hàng' },
-  { tab: 'CUSTOMER_MERGE', icon: '🔗', label: 'Gộp KH trùng' },
-  { tab: 'DEPARTMENTS', icon: '🏛️', label: 'Tổ chức' },
-  { tab: 'USERS', icon: '👤', label: 'Tài khoản', matches: ['DETAIL'] },
-  { tab: 'EMPLOYEES', icon: '🧑‍💼', label: 'Nhân sự', matches: ['EMPLOYEE_DETAIL'] },
-  { tab: 'PERMISSIONS', icon: '🛡️', label: 'Phân quyền' },
-  { tab: 'TWO_FACTOR_SETTINGS', icon: '🔐', label: '2FA' },
-  { tab: 'MASKING', icon: '🕶️', label: 'Che dữ liệu' },
-  { tab: 'AUDIT_LOG', icon: '🕵️', label: 'Nhật ký' },
+  { tab: 'CUSTOMERS', icon: ICONS.building, label: 'Khách hàng' },
+  { tab: 'CUSTOMER_MERGE', icon: ICONS.merge, label: 'Gộp KH trùng' },
+  { tab: 'DEPARTMENTS', icon: ICONS.tree, label: 'Tổ chức' },
+  { tab: 'USERS', icon: ICONS.user, label: 'Tài khoản', matches: ['DETAIL'] },
+  { tab: 'EMPLOYEES', icon: ICONS.users, label: 'Nhân sự', matches: ['EMPLOYEE_DETAIL'] },
+  { tab: 'PERMISSIONS', icon: ICONS.shield, label: 'Phân quyền' },
+  { tab: 'TWO_FACTOR_SETTINGS', icon: ICONS.key, label: '2FA' },
+  { tab: 'MASKING', icon: ICONS.eyeOff, label: 'Che dữ liệu' },
+  { tab: 'AUDIT_LOG', icon: ICONS.history, label: 'Nhật ký' },
 ];
 
 const ROLE_LABELS: Record<string, string> = {

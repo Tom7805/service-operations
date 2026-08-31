@@ -7,6 +7,7 @@ import {
   type SensitiveAccessLogEntry,
   type SensitiveDataTypeCode,
 } from '../types/auditLogTypes';
+import { ICONS } from '../../../components/common/icons';
 
 interface SensitiveAccessLogPageProps {
   currentUserRoles?: string[];
@@ -114,7 +115,7 @@ export default function SensitiveAccessLogPage({
     return (
       <div className="access-denied-container">
         <div className="access-denied-card">
-          <div className="access-denied-icon">🕵️</div>
+          <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <span className="eyebrow text-danger">Từ chối truy cập (Access Denied)</span>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
@@ -123,9 +124,9 @@ export default function SensitiveAccessLogPage({
             nhật ký bảo mật phía máy chủ.
           </p>
           <div className="security-log-badge">
-            <span>🛡️ Lần thử truy cập: {new Date().toLocaleString('vi-VN')}</span>
-            <span>Tài khoản: {currentUserName}</span>
-            <span>Vai trò hiện tại: {currentUserRoles.join(', ')}</span>
+            <span className="security-log-badge__item">{ICONS.shield} Lần thử truy cập: {new Date().toLocaleString('vi-VN')}</span>
+            <span className="security-log-badge__item">Tài khoản: {currentUserName}</span>
+            <span className="security-log-badge__item">Vai trò hiện tại: {currentUserRoles.join(', ')}</span>
           </div>
         </div>
       </div>
@@ -155,29 +156,30 @@ export default function SensitiveAccessLogPage({
           className="btn-icon-refresh"
           onClick={() => fetchLogs(page)}
           title="Làm mới dữ liệu"
+          aria-label="Làm mới dữ liệu"
         >
-          🔄
+          {ICONS.refresh}
         </button>
       </div>
 
       {/* KPI Stats */}
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--blue">📋</div>
+          <div className="stat-card__icon stat-card__icon--blue">{ICONS.clipboardList}</div>
           <div>
             <span className="stat-card__label">Tổng số bản ghi thỏa bộ lọc</span>
             <strong className="stat-card__value">{totalElements}</strong>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--purple">📤</div>
+          <div className="stat-card__icon stat-card__icon--purple">{ICONS.download}</div>
           <div>
             <span className="stat-card__label">Lượt xuất dữ liệu (trang này)</span>
             <strong className="stat-card__value">{exportCount}</strong>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--red">🚫</div>
+          <div className="stat-card__icon stat-card__icon--red">{ICONS.shieldOff}</div>
           <div>
             <span className="stat-card__label">Lượt bị từ chối (trang này)</span>
             <strong className="stat-card__value text-danger">{deniedCount}</strong>
@@ -187,7 +189,8 @@ export default function SensitiveAccessLogPage({
 
       {error && (
         <div className="alert alert--error" role="alert">
-          <span>⚠️ {error}</span>
+          <span className="alert__icon">{ICONS.alertTriangle}</span>
+          <span>{error}</span>
           <button type="button" className="btn-secondary text-dark ml-auto" onClick={() => fetchLogs(page)}>
             Thử lại
           </button>
@@ -243,7 +246,7 @@ export default function SensitiveAccessLogPage({
               />
             </div>
             <button type="submit" className="btn-primary">
-              🔍 Tìm kiếm
+              <span className="icon-sm">{ICONS.search}</span> Tìm kiếm
             </button>
             <button type="button" className="btn-secondary" onClick={handleResetFilters}>
               Đặt lại bộ lọc

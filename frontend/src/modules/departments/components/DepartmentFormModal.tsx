@@ -7,6 +7,7 @@ import type {
   UpdateDepartmentPayload,
 } from '../types/departmentTypes';
 import { DepartmentApiError } from '../api/departmentsApi';
+import { ICONS } from '../../../components/common/icons';
 import {
   DEPARTMENT_UNIT_TYPE_META,
   DEPARTMENT_UNIT_TYPE_OPTIONS,
@@ -164,7 +165,7 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
             </h3>
           </div>
           <button type="button" className="modal-close" onClick={onClose} title="Đóng modal">
-            ✕
+            {ICONS.close}
           </button>
         </div>
 
@@ -172,7 +173,8 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
           <div className="modal-body">
             {serverError && (
               <div className="alert alert--error" role="alert">
-                <span>⚠️ {serverError}</span>
+                <span className="alert__icon">{ICONS.alertTriangle}</span>
+                <span>{serverError}</span>
               </div>
             )}
 
@@ -267,7 +269,7 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
                   <option value="" disabled>-- Chọn nhân sự quản lý --</option>
                   {managersList.map((mgr) => (
                     <option key={mgr.id} value={mgr.id}>
-                      👤 {mgr.fullName} (@{mgr.username})
+                      {mgr.fullName} (@{mgr.username})
                     </option>
                   ))}
                 </select>

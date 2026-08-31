@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { Department, DepartmentTreeNode } from '../types/departmentTypes';
 import { getUnitTypeLabel, getUnitTypeMonogram } from '../constants/departmentUnitTypes';
+import { ICONS } from '../../../components/common/icons';
 
 export type ViewMode = 'TREE' | 'LIST' | 'TABLE';
 
@@ -68,7 +69,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
   if (treeData.length === 0) {
     return (
       <div className="tree-empty-state">
-        <div className="empty-icon">🏢</div>
+        <div className="empty-icon">{ICONS.building}</div>
         <h3>Chưa có bộ phận nào trong cây tổ chức</h3>
         <p>Hệ thống chưa ghi nhận khai báo bộ phận. Hãy bắt đầu bằng cách thêm bộ phận cấp gốc đầu tiên.</p>
       </div>
@@ -92,16 +93,16 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
   const renderActionButtons = (dept: Department) => (
     <div className="tree-node-actions">
       <button type="button" className="action-btn action-btn--add" onClick={() => onAddChild(dept.id)} title="Thêm bộ phận con trực thuộc">
-        ➕ Con
+        <span className="icon-sm">{ICONS.plus}</span> Con
       </button>
       <button type="button" className="action-btn action-btn--edit" onClick={() => onEdit(dept)} title="Chỉnh sửa bộ phận">
-        ✏️ Sửa
+        <span className="icon-sm">{ICONS.edit}</span> Sửa
       </button>
       <button type="button" className="action-btn action-btn--move" onClick={() => onMove(dept)} title="Di chuyển vị trí bộ phận">
-        ↕️ Di chuyển
+        <span className="icon-sm">{ICONS.moveVertical}</span> Di chuyển
       </button>
       <button type="button" className="action-btn action-btn--danger" onClick={() => onDelete(dept)} title="Xóa bộ phận">
-        🗑️ Xóa
+        <span className="icon-sm">{ICONS.trash}</span> Xóa
       </button>
     </div>
   );
@@ -255,7 +256,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
                             onClick={() => onAddChild(dept.id)}
                             title="Thêm bộ phận con"
                           >
-                            ➕
+                            {ICONS.plus}
                           </button>
                           <button
                             type="button"
@@ -263,7 +264,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
                             onClick={() => onEdit(dept)}
                             title="Chỉnh sửa"
                           >
-                            ✏️
+                            {ICONS.edit}
                           </button>
                           <button
                             type="button"
@@ -271,7 +272,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
                             onClick={() => onMove(dept)}
                             title="Di chuyển"
                           >
-                            ↕️
+                            {ICONS.moveVertical}
                           </button>
                           <button
                             type="button"
@@ -279,7 +280,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
                             onClick={() => onDelete(dept)}
                             title="Xóa"
                           >
-                            🗑️
+                            {ICONS.trash}
                           </button>
                         </div>
                       </td>
@@ -303,7 +304,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
     if (listRows.length === 0) {
       return (
         <div className="tree-empty-state">
-          <div className="empty-icon">🔍</div>
+          <div className="empty-icon">{ICONS.search}</div>
           <h3>Không tìm thấy bộ phận nào phù hợp</h3>
           <p>Không có bộ phận nào khớp với từ khóa "{searchKeyword}". Hãy thử một từ khóa khác.</p>
         </div>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Employee } from '../types/employeeTypes';
 import { DEFAULT_STANDARD_HOURS_PER_WEEK } from '../types/employeeTypes';
+import { ICONS } from '../../../components/common/icons';
 
 interface EmployeeTableProps {
   employees: Employee[];
@@ -40,13 +41,13 @@ export default function EmployeeTable({ employees, loading, onEdit, onViewDetail
           />
           {search && (
             <button type="button" className="search-box__clear" onClick={() => setSearch('')} aria-label="Xóa tìm kiếm">
-              ✕
+              {ICONS.close}
             </button>
           )}
         </div>
 
-        <button type="button" className="btn-icon-refresh" onClick={onRefresh} title="Tải lại danh sách">
-          🔄
+        <button type="button" className="btn-icon-refresh" onClick={onRefresh} title="Tải lại danh sách" aria-label="Tải lại danh sách">
+          {ICONS.refresh}
         </button>
       </div>
 
@@ -111,7 +112,7 @@ export default function EmployeeTable({ employees, loading, onEdit, onViewDetail
                         title="Chỉnh sửa hồ sơ"
                         onClick={() => onEdit(emp)}
                       >
-                        ✏️
+                        {ICONS.edit}
                       </button>
                       <button
                         type="button"
@@ -119,7 +120,7 @@ export default function EmployeeTable({ employees, loading, onEdit, onViewDetail
                         title="Xem chi tiết & hợp đồng lao động"
                         onClick={() => onViewDetail(emp)}
                       >
-                        👁️
+                        {ICONS.eye}
                       </button>
                     </div>
                   </td>

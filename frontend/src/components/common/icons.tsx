@@ -76,6 +76,13 @@ export const ICONS = {
       <path d="M3.7 17c.7-3.8 2.9-5.8 6.3-5.8s5.6 2 6.3 5.8" />
     </svg>
   ),
+  userMinus: (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="7.5" cy="6.5" r="3" />
+      <path d="M2.5 16.2c.6-3.4 2.4-5.2 5-5.2s4.4 1.8 5 5.2" />
+      <path d="M13.2 10.5h4.3" />
+    </svg>
+  ),
   shield: (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
       <path d="M10 2.5 16 5v4.3c0 4-2.6 6.7-6 8.2-3.4-1.5-6-4.2-6-8.2V5l6-2.5Z" />
@@ -138,6 +145,14 @@ export const ICONS = {
       <path d="M2.5 10h15M10 2.5c2.3 2.1 3.5 4.8 3.5 7.5s-1.2 5.4-3.5 7.5c-2.3-2.1-3.5-4.8-3.5-7.5S7.7 4.6 10 2.5Z" />
     </svg>
   ),
+  tree: (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 5.5h4M4 10h5.5M4 14.5h7" />
+      <circle cx="4" cy="5.5" r="1.3" />
+      <circle cx="4" cy="10" r="1.3" />
+      <circle cx="4" cy="14.5" r="1.3" />
+    </svg>
+  ),
   building: (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
       <rect x="4" y="3" width="9" height="14.5" rx="1" />
@@ -165,6 +180,16 @@ export const ICONS = {
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="10" cy="10" r="2.6" />
       <path d="M10 2.8v2M10 15.2v2M17.2 10h-2M4.8 10h-2M15.1 4.9l-1.4 1.4M6.3 13.7l-1.4 1.4M15.1 15.1l-1.4-1.4M6.3 6.3 4.9 4.9" />
+    </svg>
+  ),
+  moveVertical: (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 2.5v15M6.5 6 10 2.5 13.5 6M6.5 14l3.5 3.5L13.5 14" />
+    </svg>
+  ),
+  arrowDown: (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 3.5v11M5.5 11l4.5 4.5 4.5-4.5" />
     </svg>
   ),
   plus: (

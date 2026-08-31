@@ -4,6 +4,7 @@ import type { DepartmentInfo, User } from '../../users/types/userTypes';
 import type { Employee, EmployeeCreatePayload, EmployeeUpdatePayload } from '../types/employeeTypes';
 import { DEFAULT_STANDARD_HOURS_PER_WEEK } from '../types/employeeTypes';
 import { validateCreateEmployee, validateUpdateEmployee, type FormErrors } from '../validators/employeeValidators';
+import { ICONS } from '../../../components/common/icons';
 
 interface EmployeeFormModalProps {
   isOpen: boolean;
@@ -138,7 +139,7 @@ export default function EmployeeFormModal({
           <div className="modal-body">
             {serverError && (
               <div className="alert alert--error" role="alert">
-                <span className="alert__icon">⚠️</span>
+                <span className="alert__icon">{ICONS.alertTriangle}</span>
                 <div className="alert__content">
                   <strong>Thao tác thất bại</strong>
                   <p>{serverError}</p>

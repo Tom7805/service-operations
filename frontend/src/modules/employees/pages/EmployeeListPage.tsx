@@ -4,6 +4,7 @@ import EmployeeFormModal from '../components/EmployeeFormModal';
 import EmployeeTable from '../components/EmployeeTable';
 import type { Employee, EmployeeCreatePayload, EmployeeUpdatePayload } from '../types/employeeTypes';
 import { DEFAULT_STANDARD_HOURS_PER_WEEK } from '../types/employeeTypes';
+import { ICONS } from '../../../components/common/icons';
 
 interface EmployeeListPageProps {
   currentUserRoles?: string[];
@@ -79,7 +80,7 @@ export default function EmployeeListPage({
     return (
       <div className="access-denied-container">
         <div className="access-denied-card">
-          <div className="access-denied-icon">🚫</div>
+          <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <span className="eyebrow text-danger">Từ chối truy cập (Access Denied)</span>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
@@ -88,9 +89,9 @@ export default function EmployeeListPage({
             bảo mật.
           </p>
           <div className="security-log-badge">
-            <span>🛡️ Lần thử truy cập: {new Date().toLocaleString('vi-VN')}</span>
-            <span>Tài khoản: {currentUserName}</span>
-            <span>Vai trò hiện tại: {currentUserRoles.join(', ')}</span>
+            <span className="security-log-badge__item">{ICONS.shield} Lần thử truy cập: {new Date().toLocaleString('vi-VN')}</span>
+            <span className="security-log-badge__item">Tài khoản: {currentUserName}</span>
+            <span className="security-log-badge__item">Vai trò hiện tại: {currentUserRoles.join(', ')}</span>
           </div>
         </div>
       </div>
@@ -107,10 +108,10 @@ export default function EmployeeListPage({
     <div className="user-management-page">
       {toastMessage && (
         <div className={`toast-banner toast-banner--${toastMessage.type}`} role="status">
-          <span className="toast-banner__icon">{toastMessage.type === 'success' ? '✅' : '⚠️'}</span>
+          <span className="toast-banner__icon">{toastMessage.type === 'success' ? ICONS.checkCircle : ICONS.alertTriangle}</span>
           <span>{toastMessage.text}</span>
-          <button type="button" className="toast-banner__close" onClick={() => setToastMessage(null)}>
-            ✕
+          <button type="button" className="toast-banner__close" aria-label="Đóng thông báo" onClick={() => setToastMessage(null)}>
+            {ICONS.close}
           </button>
         </div>
       )}
@@ -135,21 +136,21 @@ export default function EmployeeListPage({
 
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--blue">🧑‍💼</div>
+          <div className="stat-card__icon stat-card__icon--blue">{ICONS.users}</div>
           <div>
             <span className="stat-card__label">Tổng hồ sơ nhân sự</span>
             <strong className="stat-card__value">{totalCount}</strong>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--purple">⏱️</div>
+          <div className="stat-card__icon stat-card__icon--purple">{ICONS.clock}</div>
           <div>
             <span className="stat-card__label">Giờ chuẩn tùy chỉnh (≠ 40)</span>
             <strong className="stat-card__value">{customHoursCount}</strong>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--red">🔚</div>
+          <div className="stat-card__icon stat-card__icon--red">{ICONS.userMinus}</div>
           <div>
             <span className="stat-card__label">Đã kết thúc làm việc</span>
             <strong className="stat-card__value text-danger">{endedCount}</strong>
@@ -159,7 +160,8 @@ export default function EmployeeListPage({
 
       {error && (
         <div className="alert alert--error mb-4" role="alert">
-          <span>⚠️ {error}</span>
+          <span className="alert__icon">{ICONS.alertTriangle}</span>
+          <span>{error}</span>
           <button type="button" className="btn-link text-white ml-auto" onClick={fetchEmployees}>
             Thử lại
           </button>
