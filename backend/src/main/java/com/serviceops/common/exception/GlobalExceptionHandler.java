@@ -63,6 +63,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex) {
+        // Truoc day khong log gi ca — loi 500 bien mat khong dau vet, khong the debug duoc tu server.
+        log.error("UNEXPECTED_ERROR", ex);
         return ResponseEntity.internalServerError()
                 .body(ErrorResponse.of(ErrorCode.INTERNAL_ERROR.name(), "Da co loi xay ra, vui long thu lai sau"));
     }

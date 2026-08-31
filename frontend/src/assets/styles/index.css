@@ -90,10 +90,14 @@
 .search-box__clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; font-size: 15.5px; cursor: pointer; padding: 2px 6px; display: flex; }
 .search-box__clear svg { width: 12px; height: 12px; }
 
-.toolbar-filters { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+/* Thanh bộ lọc — mọi ô nhập/select/nút trong đây dùng chung 1 chiều cao (40px) để luôn thẳng hàng
+   khi xuống dòng, tránh kiểu "nút cao thấp lệch nhau" khi input đã đổi sang kính bo tròn 44px. */
+.toolbar-filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .filter-group { display: flex; align-items: center; gap: 8px; }
-.filter-label { font-size: 14.5px; font-weight: 600; color: #475569; }
-.filter-select { height: 38px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 12px; font-size: 14.5px; background: #ffffff; color: #1e293b; outline: none; }
+.filter-label { font-size: 14.5px; font-weight: 600; color: #475569; white-space: nowrap; }
+.filter-select { height: 40px; border: 1px solid #cbd5e1; border-radius: 999px; padding: 0 14px; font-size: 14.5px; background: #ffffff; color: #1e293b; outline: none; }
+.toolbar-filters .form-input { height: 40px; }
+.toolbar-filters .btn-primary, .toolbar-filters .btn-secondary { height: 40px; padding: 0 18px; }
 .status-tabs { display: flex; background: #e2e8f0; padding: 3px; border-radius: 8px; }
 .status-tab { border: none; background: transparent; padding: 6px 12px; font-size: 13.5px; font-weight: 600; color: #64748b; border-radius: 6px; cursor: pointer; transition: all 0.2s var(--ease-out); display: inline-flex; align-items: center; gap: 6px; }
 .status-tab__icon { display: flex; flex-shrink: 0; }
@@ -266,6 +270,9 @@
 .btn-success { background: #16a34a !important; color: #ffffff !important; }
 
 .alert { padding: 12px 16px; border-radius: 10px; display: flex; gap: 12px; align-items: flex-start; font-size: 14.5px; margin-bottom: 16px; }
+/* Utility còn thiếu — dùng khắp nơi để đẩy nút "Thử lại" sang phải trong banner lỗi, nhưng chưa
+   từng được khai báo nên trước đây là no-op (nút dính sát chữ thay vì nằm bên phải). */
+.ml-auto { margin-left: auto; flex-shrink: 0; }
 .alert__icon { flex-shrink: 0; display: flex; margin-top: 1px; }
 .alert__icon svg { width: 16px; height: 16px; }
 .alert--error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
