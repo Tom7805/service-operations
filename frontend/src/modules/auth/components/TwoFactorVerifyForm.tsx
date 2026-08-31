@@ -54,7 +54,35 @@ export default function TwoFactorVerifyForm({
   const [errors, setErrors] = useState<TwoFactorVerifyFormErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [secretCopied, setSecretCopied] = useState(false);
   const qrDataUrl = useQrCodeDataUrl(totpEnrollment ? otpauthUri : null);
+
+  // Bôi đen tay trên điện thoại rất dễ chọn thiếu (đụng đúp thường chỉ bắt được một cụm liền kề,
+  // bỏ sót phần còn lại của khóa) — sao chép trọn vẹn bằng nút bấm mới đáng tin cậy.
+  const handleCopySecret = async () => {
+    if (!totpSecretForDisplay) return;
+    const rawSecret = totpSecretForDisplay.replace(/\s+/g, '');
+    try {
+      await navigator.clipboard.writeText(rawSecret);
+    } catch {
+      // Clipboard API có thể bị chặn (HTTP không an toàn, quyền trình duyệt...) — dự phòng bằng cách cũ.
+      const textarea = document.createElement('textarea');
+      textarea.value = rawSecret;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      try {
+        document.execCommand('copy');
+      } catch {
+        // Không copy được thì thôi, người dùng vẫn thấy chuỗi để tự chọn.
+      }
+      document.body.removeChild(textarea);
+    }
+    setSecretCopied(true);
+    setTimeout(() => setSecretCopied(false), 2500);
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -119,7 +147,22 @@ export default function TwoFactorVerifyForm({
                 {totpSecretForDisplay && (
                   <details className="totp-manual-entry">
                     <summary>Không quét được QR? Nhập khóa thủ công</summary>
-                    <code data-testid="totp-secret">{totpSecretForDisplay}</code>
+                    <p className="totp-manual-entry__hint">
+                      Trong app Authenticator, chọn "Nhập mã khóa thủ công" (hoặc "Enter setup key"), dán khóa đã
+                      sao chép vào — <strong>đừng tự bôi đen</strong> vì trên điện thoại rất dễ chọn thiếu.
+                    </p>
+                    <div className="totp-manual-entry__row">
+                      <code data-testid="totp-secret">{totpSecretForDisplay}</code>
+                      <button
+                        type="button"
+                        className="totp-copy-btn"
+                        onClick={handleCopySecret}
+                        aria-label="Sao chép khóa bí mật"
+                        data-testid="totp-copy-btn"
+                      >
+                        {secretCopied ? '✓ Đã sao chép' : 'Sao chép'}
+                      </button>
+                    </div>
                   </details>
                 )}
               </div>

@@ -141,6 +141,29 @@ describe('TwoFactorVerifyForm (NCL-01-CN-009-TC-01/TC-02) — TOTP kiểu Google
       expect(screen.getByTestId('totp-secret')).toHaveTextContent('ABCD 1234');
     });
 
+    it('nút "Sao chép" copy đúng khóa (không dấu cách) thay vì bắt người dùng tự bôi đen', async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.assign(navigator, { clipboard: { writeText } });
+
+      render(
+        <TwoFactorVerifyForm
+          challengeToken="challenge-abc"
+          username="ketoan01"
+          totpEnrollment
+          otpauthUri="otpauth://totp/Van%20Hanh%20Dich%20Vu:ketoan01?secret=ABCD1234&issuer=Van%20Hanh%20Dich%20Vu"
+          totpSecretForDisplay="ABCD 1234"
+          onVerified={vi.fn()}
+          onBackToLogin={vi.fn()}
+        />
+      );
+
+      fireEvent.click(screen.getByText(/Không quét được QR/i));
+      fireEvent.click(screen.getByRole('button', { name: /Sao chép khóa bí mật/i }));
+
+      await waitFor(() => expect(writeText).toHaveBeenCalledWith('ABCD1234'));
+      expect(screen.getByTestId('totp-copy-btn')).toHaveTextContent('Đã sao chép');
+    });
+
     it('không hiện QR/khóa bí mật khi đã thiết lập từ trước (totpEnrollment = false)', () => {
       render(
         <TwoFactorVerifyForm
