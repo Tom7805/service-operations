@@ -580,6 +580,27 @@ body { background: radial-gradient(120% 100% at 50% -10%, #dde2ea 0%, #c3c9d4 55
 .role-code { font-family: monospace; font-size: 13.5px; font-weight: 700; color: #4f46e5; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 6px; }
 .role-title { font-weight: 700; color: #0f172a; font-size: 15px; }
 
+/* Bảng "Vai trò & quyền hạn" — mỗi quyền là một chip có icon check, gọn và dễ quét mắt hơn
+   ký tự "✓" thô kèm pill xám đồng loạt như trước. */
+.role-matrix-name { font-size: 15px; color: #0f172a; }
+.role-matrix-desc { font-size: 13.5px; color: #475569; line-height: 1.5; }
+.capability-list { display: flex; flex-wrap: wrap; gap: 6px 8px; }
+.capability-chip {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px 3px 7px;
+  border-radius: 999px; background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d;
+  font-size: 12.5px; font-weight: 600; white-space: nowrap;
+}
+.capability-chip__icon { display: flex; flex-shrink: 0; width: 13px; height: 13px; }
+.capability-chip__icon svg { width: 100%; height: 100%; }
+
+/* Nút dạng liên kết trong bảng — gọn, không viền/nền, dùng cho hành động phụ trên mỗi hàng
+   (trước đây .btn-link được dùng ở 4 nơi trong dự án nhưng chưa từng được định nghĩa). */
+.btn-link {
+  background: none; border: none; padding: 0; color: #4f46e5; font-size: 13.5px; font-weight: 700;
+  cursor: pointer; white-space: nowrap; transition: color 0.15s var(--ease-out);
+}
+.btn-link:hover { color: #3730a3; text-decoration: underline; }
+
 /* Organization Tree Module Styling (NCL-01-CN-003) */
 .department-tree-container { display: flex; flex-direction: column; gap: 12px; background: #ffffff; border: 1px solid #d6dde6; border-radius: 0 0 16px 16px; padding: 24px 24px 18px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
 

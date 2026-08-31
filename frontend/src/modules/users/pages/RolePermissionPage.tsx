@@ -230,7 +230,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
                 className={`status-tab ${activeTab === 'ROLES' ? 'status-tab--active' : ''}`}
                 onClick={() => setActiveTab('ROLES')}
               >
-                <span className="status-tab__icon">{ICONS.shield}</span> Ma trận vai trò & quyền hạn (9)
+                <span className="status-tab__icon">{ICONS.shield}</span> Vai trò & quyền hạn (9)
               </button>
             </div>
           </div>

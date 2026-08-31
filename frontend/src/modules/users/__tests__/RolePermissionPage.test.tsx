@@ -166,7 +166,7 @@ describe('Role & Data Scope Module — Acceptance Criteria Tests (NCL-01-CN-004)
     });
 
     // Switch to Role Matrix tab
-    const matrixTabBtn = screen.getByRole('button', { name: /Ma trận vai trò & quyền hạn/i });
+    const matrixTabBtn = screen.getByRole('button', { name: /Vai trò & quyền hạn/i });
     fireEvent.click(matrixTabBtn);
 
     expect(screen.getByText('Quản lý dự án (PM)')).toBeInTheDocument();
