@@ -228,7 +228,7 @@ export const UserTable: React.FC<UserTableProps> = ({
               <th scope="col">Email</th>
               <th scope="col">Bộ phận</th>
               <th scope="col">Vai trò hệ thống</th>
-              <th scope="col">Trạng thái</th>
+              <th scope="col" style={{ width: '132px' }}>Trạng thái</th>
               <th scope="col" style={{ width: '150px', textAlign: 'right' }}>Thao tác</th>
             </tr>
           </thead>
