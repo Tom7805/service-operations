@@ -584,22 +584,17 @@ body { background: radial-gradient(120% 100% at 50% -10%, #b9bec4 0%, #9aa1a9 55
 .empty-icon, .table-empty-state__icon { font-size: 48px; display: flex; justify-content: center; color: #cbd5e1; }
 .empty-icon svg, .table-empty-state__icon svg { width: 44px; height: 44px; }
 
+/* Bỏ hẳn đường nối đứt nét kiểu cây thư mục cũ — dễ bị cụt ngang, rối mắt.
+   Thay bằng thụt lề + viền trái nhẹ ngay trên từng thẻ để phân cấp trực quan,
+   không phụ thuộc đường kẻ nối dài xuống khoảng trắng. */
 .tree-node-wrapper { position: relative; margin-bottom: 8px; }
 .tree-node-wrapper:last-child { margin-bottom: 0; }
-.tree-node-wrapper.level-1 { margin-left: 28px; border-left: 2px dashed #cbd5e1; padding-left: 16px; }
-.tree-node-wrapper.level-2 { margin-left: 56px; border-left: 2px dashed #94a3b8; padding-left: 16px; }
-.tree-node-wrapper.level-3 { margin-left: 84px; border-left: 2px dashed #64748b; padding-left: 16px; }
-
-/* Bo tròn điểm kết thúc đường nối cây ở nhánh cuối cùng của mỗi nhóm —
-   tránh cảm giác đường kẻ đứt bị cụt ngang giữa khoảng trắng, trông thiếu hoàn thiện. */
-.tree-node-wrapper.level-1:last-child::after,
-.tree-node-wrapper.level-2:last-child::after,
-.tree-node-wrapper.level-3:last-child::after {
-  content: ''; position: absolute; left: -5px; bottom: 0; width: 8px; height: 8px;
-  border-radius: 50%; background: #ffffff; border: 2px solid #cbd5e1;
-}
-.tree-node-wrapper.level-2:last-child::after { border-color: #94a3b8; }
-.tree-node-wrapper.level-3:last-child::after { border-color: #64748b; }
+.tree-node-wrapper.level-1 { margin-left: 24px; }
+.tree-node-wrapper.level-2 { margin-left: 48px; }
+.tree-node-wrapper.level-3 { margin-left: 72px; }
+.tree-node-wrapper.level-1 > .tree-node-card { border-left: 3px solid #c7d2fe; }
+.tree-node-wrapper.level-2 > .tree-node-card { border-left: 3px solid #a5b4fc; }
+.tree-node-wrapper.level-3 > .tree-node-card { border-left: 3px solid #818cf8; }
 
 .tree-node-card { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 8px; column-gap: 16px; padding: 11px 14px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
 .tree-node-card:hover { border-color: #6366f1; box-shadow: 0 8px 24px rgba(99,102,241,0.08); transform: translateY(-1px); }
