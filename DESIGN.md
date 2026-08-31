@@ -147,6 +147,23 @@ mặc định của trình duyệt. Khai báo tại `:root` trong `index.css`:
 - **Focus state**: viền accent + ring mờ (`box-shadow: 0 0 0 3px rgba(16,185,129,.12)`) — áp dụng cho mọi input,
   select, ô tìm kiếm.
 
+## Icons
+
+Toàn bộ icon dùng thư viện **[Lucide](https://lucide.dev)** (`lucide-react`, MIT) qua lớp tập hợp
+`frontend/src/components/common/icons.tsx` — không tự vẽ path SVG tay nữa. Lý do đổi: icon tự vẽ tay
+(dù đã cố gắng đồng bộ viewBox/stroke-width) vẫn lệch optical alignment, tỉ lệ nét, độ cong so với một
+bộ icon do nhà thiết kế chuyên nghiệp làm và kiểm định ở nhiều kích thước — đây đúng là điều người
+dùng nhận ra khi so với ảnh tham chiếu. Quy ước dùng:
+
+- Mọi icon lấy qua `ICONS.<tên>` (object đã export sẵn instance JSX, `strokeWidth` cố định 1.75 cho
+  cả bộ) — gọi trực tiếp `{ICONS.edit}`, không import lẻ icon Lucide ở từng file, để tên/nghĩa icon
+  nhất quán toàn dự án và chỉ cần đổi một chỗ nếu sau này đổi bộ icon.
+- Kích thước hiển thị luôn đến từ CSS của nơi dùng (`.icon-btn svg`, `.side-nav__item__icon svg`,
+  `.icon-xs/sm/md/lg svg`...), không đặt `width`/`height` trên icon Lucide — vì Lucide tự set kích
+  thước mặc định 24px nhưng CSS bên ngoài luôn ghi đè, giữ mọi icon đúng tỉ lệ với ngữ cảnh chứa nó.
+- Thêm icon mới: tra tên tương ứng trên lucide.dev, import vào `icons.tsx`, thêm một dòng vào object
+  `ICONS` — không thêm SVG viết tay mới.
+
 ## Rollout Plan (từng trang một, theo lựa chọn của người dùng)
 
 1. Trang Tài khoản (Users) — đã có nền tảng tốt nhất, dùng làm chuẩn tham chiếu khi mở rộng sang trang khác.
