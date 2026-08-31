@@ -127,6 +127,23 @@
 .cell-dept { font-weight: 600; color: #334155; }
 
 .user-tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Vai trò / phạm vi dữ liệu — trung tính, phân biệt bằng chữ + icon, không dùng bảng màu ngẫu nhiên
+   theo từng vai trò (trước đây mỗi vai trò một màu riêng, nhìn "màu mè lòe loẹt" và không cân đối). */
+.role-chip {
+  display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 999px;
+  background: #f1f5f9; border: 1px solid #e2e8f0; font-size: 12.5px; font-weight: 600; color: #334155;
+}
+.role-chip__code { font-family: monospace; font-size: 11px; font-weight: 700; color: #4f46e5; }
+
+.scope-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px;
+  background: #f1f5f9; border: 1px solid #e2e8f0; font-size: 12.5px; font-weight: 600; color: #334155;
+}
+.scope-chip__icon { display: flex; flex-shrink: 0; color: #6366f1; }
+.scope-chip__icon svg { width: 13px; height: 13px; }
+.scope-chip-group { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.scope-chip-group__sub { font-size: 11.5px; color: #64748b; padding-left: 2px; }
 .user-tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; font-size: 13px; font-weight: 600; border: 1px solid transparent; }
 .user-tag__code { font-family: monospace; font-size: 12px; opacity: 0.85; }
 .badge--purple { background: #f3e8ff; color: #7e22ce; border-color: #e9d5ff; }

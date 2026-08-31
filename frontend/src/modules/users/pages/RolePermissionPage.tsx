@@ -352,21 +352,20 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
                   <th>Bộ Phận Trực Thuộc</th>
                   <th>Vai Trò Được Gán</th>
                   <th>Phạm Vi Dữ Liệu (Scope)</th>
-                  <th>Trạng Thái</th>
                   <th style={{ textAlign: 'right' }}>Thao Tác</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
                       <div className="loader" style={{ margin: '0 auto 10px', borderColor: '#6366f1', borderTopColor: 'transparent' }} />
                       Đang tải dữ liệu phân quyền...
                     </td>
                   </tr>
                 ) : filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
                       Không tìm thấy tài khoản nào khớp với bộ lọc.
                     </td>
                   </tr>
@@ -393,11 +392,9 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
 
                         <td>
                           {deptObj ? (
-                            <span className="cell-dept cell-dept--with-icon">
-                              <span className="cell-dept__icon">{ICONS.folder}</span> {deptObj.name}
-                            </span>
+                            <span className="cell-dept">{deptObj.name}</span>
                           ) : (
-                            <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Chưa phân bổ</span>
+                            <span className="cell-muted">Chưa phân bổ</span>
                           )}
                         </td>
 
@@ -406,57 +403,40 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
                             {u.roleCodes && u.roleCodes.length > 0 ? (
                               u.roleCodes.map((code) => {
                                 const roleInfo = SYSTEM_ROLES.find((r) => r.code === code);
-                                const badgeClass = roleInfo ? roleInfo.badgeClass : 'badge--gray';
                                 return (
-                                  <span key={code} className={`user-tag ${badgeClass}`} title={roleInfo?.name}>
-                                    <strong className="user-tag__code">{code}</strong>
+                                  <span key={code} className="role-chip" title={roleInfo?.name}>
+                                    <strong className="role-chip__code">{code}</strong>
                                     <span>{roleInfo?.name || code}</span>
                                   </span>
                                 );
                               })
                             ) : (
-                              <span className="user-tag badge--gray">Chưa gán vai trò</span>
+                              <span className="cell-muted">Chưa gán vai trò</span>
                             )}
                           </div>
                         </td>
 
                         <td>
                           {isCompany && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span className="status-pill status-pill--active" style={{ background: '#ecfdf5', color: '#4f46e5', fontSize: '11.5px' }}>
-                                <span className="status-pill__scope-icon">{ICONS.globe}</span> Toàn công ty (COMPANY)
-                              </span>
-                            </div>
+                            <span className="scope-chip">
+                              <span className="scope-chip__icon">{ICONS.globe}</span> Toàn công ty
+                            </span>
                           )}
 
                           {isDept && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                              <span className="status-pill" style={{ background: '#eff6ff', color: '#1d4ed8', fontSize: '11.5px' }}>
-                                <span className="status-pill__scope-icon">{ICONS.building}</span> Nhánh bộ phận (DEPARTMENT)
+                            <div className="scope-chip-group">
+                              <span className="scope-chip">
+                                <span className="scope-chip__icon">{ICONS.building}</span> Nhánh bộ phận
                               </span>
-                              <span style={{ fontSize: '11.5px', color: '#475569', paddingLeft: '4px' }}>
-                                ↳ {scopeDeptObj ? scopeDeptObj.name : `Bộ phận ID: ${u.scopeDepartmentId ?? 'N/A'}`}
+                              <span className="scope-chip-group__sub">
+                                {scopeDeptObj ? scopeDeptObj.name : `Bộ phận ID: ${u.scopeDepartmentId ?? 'N/A'}`}
                               </span>
                             </div>
                           )}
 
                           {isSelf && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span className="status-pill" style={{ background: '#fef3c7', color: '#b45309', fontSize: '11.5px' }}>
-                                <span className="status-pill__scope-icon">{ICONS.user}</span> Chỉ cá nhân (SELF)
-                              </span>
-                            </div>
-                          )}
-                        </td>
-
-                        <td>
-                          {u.status === 'ACTIVE' ? (
-                            <span className="status-pill status-pill--active">
-                              <span className="status-pill__dot" /> Hoạt động
-                            </span>
-                          ) : (
-                            <span className="status-pill status-pill--locked">
-                              <span className="status-pill__dot" /> Đã khóa
+                            <span className="scope-chip">
+                              <span className="scope-chip__icon">{ICONS.user}</span> Chỉ cá nhân
                             </span>
                           )}
                         </td>
