@@ -259,93 +259,98 @@
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
 /* ==========================================================================
-   App Shell — thanh điều hướng dạng pill nằm ngang, mềm mại kiểu SaaS hiện đại
+   App Frame — toàn bộ app nổi trên nền gradient nhạt, bên trong một khối bo
+   góc lớn có viền + đổ bóng sâu, kiểu cửa sổ ứng dụng desktop (macOS window).
+   Header sạch (logo tròn + tiêu đề trang + cụm hành động bên phải) và một
+   thanh điều hướng dạng pill ngay dưới header — không dùng sidebar dọc nữa.
    ========================================================================== */
-/* === App shell: sidebar trái cố định + vùng nội dung, kiểu Apple (macOS Settings / Finder sidebar) === */
-.app-shell { min-height: 100vh; background: #f4f5f7; display: flex; }
+body { background: linear-gradient(135deg, #eef6ee 0%, #eef1f6 45%, #f1eef6 100%); }
 
-.app-sidebar {
-  width: 264px; flex-shrink: 0; height: 100vh; position: sticky; top: 0;
-  display: flex; flex-direction: column; background: #ffffff; border-right: 1px solid #ececef;
-  padding: 18px 14px 14px;
+.app-frame { min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 22px; }
+.app-shell {
+  width: 100%; max-width: 1600px; min-height: calc(100vh - 44px);
+  background: #ffffff; border: 1px solid #e4e2df; border-radius: 28px;
+  box-shadow: var(--shadow-lg);
+  display: flex; flex-direction: column; overflow: hidden;
 }
 
-.sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 4px 6px 20px; flex-shrink: 0; }
-.sidebar-brand__mark { height: 32px; width: 32px; display: flex; align-items: end; gap: 2px; padding: 5px; background: #10b981; border-radius: var(--radius-sm); flex-shrink: 0; box-shadow: var(--shadow-xs); }
-.sidebar-brand__mark i { display: block; background: #0b2130; width: 4px; border-radius: 3px; }
-.sidebar-brand__mark i:nth-child(1) { height: 7px; } .sidebar-brand__mark i:nth-child(2) { height: 13px; } .sidebar-brand__mark i:nth-child(3) { height: 18px; }
-.sidebar-brand__text { display: flex; flex-direction: column; line-height: 1.3; min-width: 0; }
-.sidebar-brand__text strong { font-size: 14px; font-weight: 700; color: #0f172a; letter-spacing: -0.01em; }
-.sidebar-brand__text strong b { color: #059669; font-weight: 700; }
-.sidebar-brand__text span { font-size: 11px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 28px 14px; flex-shrink: 0; }
+.app-topbar__brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.app-topbar__mark { height: 40px; width: 40px; border-radius: 50%; background: #17181a; display: flex; align-items: end; justify-content: center; gap: 2px; padding: 10px 0 8px; flex-shrink: 0; box-shadow: var(--shadow-sm); }
+.app-topbar__mark i { display: block; background: #10b981; width: 3.5px; border-radius: 3px; }
+.app-topbar__mark i:nth-child(1) { height: 7px; } .app-topbar__mark i:nth-child(2) { height: 12px; } .app-topbar__mark i:nth-child(3) { height: 16px; }
+.app-topbar__title { font-size: 22px; font-weight: 700; color: #0f172a; letter-spacing: -0.015em; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.sidebar-nav { display: flex; flex-direction: column; gap: 1px; flex: 1; min-height: 0; overflow-y: auto; padding: 4px 0; }
-.sidebar-nav__item {
-  display: flex; align-items: center; gap: 10px; background: transparent; border: none;
-  border-radius: var(--radius-sm); padding: 9px 10px; font-size: 13.5px; font-weight: 600; color: #55606e;
-  cursor: pointer; text-align: left; width: 100%;
-  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+.app-topbar__actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.icon-btn {
+  width: 38px; height: 38px; border-radius: 50%; border: 1px solid #eceae7; background: #ffffff; color: #55606e;
+  display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
-.sidebar-nav__item:hover { background: #f4f5f7; color: #0f172a; }
-.sidebar-nav__item:active { transform: scale(0.98); }
-.sidebar-nav__item--active { background: #0f172a; color: #ffffff; box-shadow: var(--shadow-sm); }
-.sidebar-nav__item--active:hover { background: #0f172a; color: #ffffff; }
-.sidebar-nav__item__icon { display: inline-flex; flex-shrink: 0; opacity: .85; }
-.sidebar-nav__item__icon svg { width: 16px; height: 16px; }
-.sidebar-nav__item--active .sidebar-nav__item__icon { opacity: 1; }
+.icon-btn svg { width: 17px; height: 17px; }
+.icon-btn:hover { background: #f7f6f4; border-color: #e4e2df; color: #0f172a; }
+.icon-btn:active { transform: scale(.94); }
 
-.sidebar-footer { flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; padding-top: 10px; margin-top: 6px; border-top: 1px solid #f1f5f9; }
-.sidebar-role-badge { display: flex; align-items: center; gap: 7px; border-radius: var(--radius-sm); padding: 7px 10px; background: #f4f5f7; }
-.sidebar-devmode__dot { width: 6px; height: 6px; border-radius: 50%; background: #10b981; flex-shrink: 0; box-shadow: 0 0 0 3px rgba(16,185,129,.14); }
-.sidebar-role-badge span:not(.sidebar-devmode__dot) { color: #475569; font-size: 11.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.sidebar-user { position: relative; }
-.sidebar-user__trigger {
-  display: flex; align-items: center; gap: 9px; width: 100%; background: transparent; border: 1px solid transparent;
-  border-radius: var(--radius-sm); padding: 6px 8px; cursor: pointer;
+.user-chip { position: relative; margin-left: 4px; }
+.user-chip__trigger {
+  display: flex; align-items: center; gap: 9px; background: #ffffff; border: 1px solid #eceae7;
+  border-radius: 999px; padding: 5px 14px 5px 5px; cursor: pointer;
   transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
 }
-.sidebar-user__trigger:hover, .sidebar-user__trigger--open { background: #f4f5f7; border-color: #ececef; }
-.sidebar-user__meta { display: flex; flex-direction: column; text-align: left; line-height: 1.25; min-width: 0; flex: 1; }
-.sidebar-user__name { font-size: 12.5px; font-weight: 700; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sidebar-user__role { font-size: 11px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sidebar-user__chevron { color: #94a3b8; display: inline-flex; flex-shrink: 0; transition: transform var(--dur-fast) var(--ease-out); }
-.sidebar-user__chevron svg { width: 13px; height: 13px; }
-.sidebar-user__trigger--open .sidebar-user__chevron { transform: rotate(180deg); }
+.user-chip__trigger:hover, .user-chip__trigger--open { background: #f7f6f4; border-color: #e4e2df; }
+.user-chip__name { font-size: 13px; font-weight: 700; color: #0f172a; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-chip__chevron { color: #94a3b8; display: inline-flex; flex-shrink: 0; transition: transform var(--dur-fast) var(--ease-out); }
+.user-chip__chevron svg { width: 13px; height: 13px; }
+.user-chip__trigger--open .user-chip__chevron { transform: rotate(180deg); }
 
-.sidebar-user__menu {
-  position: absolute; left: 0; right: 0; bottom: calc(100% + 8px); background: #ffffff; border: 1px solid #ececef;
+.user-chip__menu {
+  position: absolute; right: 0; top: calc(100% + 8px); width: 240px; background: #ffffff; border: 1px solid #ececef;
   border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: 6px; z-index: 30;
   animation: menu-enter var(--dur-base) var(--ease-out) both;
 }
-.sidebar-user__menu-header { padding: 10px 10px 9px; border-bottom: 1px solid #f1f5f9; margin-bottom: 6px; }
-.sidebar-user__menu-header strong { display: block; font-size: 13px; color: #0f172a; }
-.sidebar-user__menu-header span { font-size: 11.5px; color: #64748b; }
-.sidebar-user__menu-item {
+.user-chip__menu-header { padding: 10px 10px 9px; border-bottom: 1px solid #f1f5f9; margin-bottom: 6px; }
+.user-chip__menu-header strong { display: block; font-size: 13px; color: #0f172a; }
+.user-chip__menu-header span { font-size: 11.5px; color: #64748b; }
+.user-chip__role-badge { display: flex; align-items: center; gap: 6px; margin-top: 7px; background: #f4f5f7; border-radius: 999px; padding: 4px 9px; }
+.user-chip__role-dot { width: 5px; height: 5px; border-radius: 50%; background: #10b981; flex-shrink: 0; }
+.user-chip__role-badge span:not(.user-chip__role-dot) { font-size: 10.5px; font-weight: 700; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-chip__menu-item {
   width: 100%; display: flex; align-items: center; gap: 10px; background: none; border: none; text-align: left;
   padding: 9px 10px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; color: #334155; cursor: pointer;
   transition: background var(--dur-fast) var(--ease-out);
 }
-.sidebar-user__menu-item svg { width: 15px; height: 15px; flex-shrink: 0; }
-.sidebar-user__menu-item:hover { background: #f4f5f7; }
-.sidebar-user__menu-item--danger { color: #dc2626; }
-.sidebar-user__menu-item--danger:hover { background: #fef2f2; }
-@keyframes menu-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.user-chip__menu-item svg { width: 15px; height: 15px; flex-shrink: 0; }
+.user-chip__menu-item:hover { background: #f4f5f7; }
+.user-chip__menu-item--danger { color: #dc2626; }
+.user-chip__menu-item--danger:hover { background: #fef2f2; }
+@keyframes menu-enter { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 
-.app-main { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; }
+/* Thanh điều hướng dạng pill — mục đang chọn nổi bằng nền trắng bo tròn + đổ bóng nhẹ trên nền xám be. */
+.pill-tabbar {
+  display: flex; align-items: center; gap: 2px; flex-wrap: wrap; margin: 0 28px 4px; padding: 4px;
+  background: #f5f4f1; border-radius: 999px; flex-shrink: 0; width: fit-content; max-width: calc(100% - 56px);
+}
+.pill-tabbar__item {
+  display: flex; align-items: center; gap: 7px; background: transparent; border: none; border-radius: 999px;
+  padding: 9px 16px; font-size: 13px; font-weight: 600; color: #6b7280; cursor: pointer; white-space: nowrap;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.pill-tabbar__item:hover { color: #0f172a; }
+.pill-tabbar__item--active { background: #ffffff; color: #0f172a; box-shadow: var(--shadow-xs); }
+.pill-tabbar__item__icon { display: inline-flex; flex-shrink: 0; opacity: .8; }
+.pill-tabbar__item__icon svg { width: 15px; height: 15px; }
+.pill-tabbar__item--active .pill-tabbar__item__icon { opacity: 1; color: #10b981; }
+
 .app-content { flex: 1; min-width: 0; }
 
 @media (max-width: 900px) {
-  .app-shell { flex-direction: column; }
-  .app-sidebar { width: 100%; height: auto; position: relative; flex-direction: row; align-items: center; padding: 10px 12px; overflow-x: auto; }
-  .sidebar-brand { padding: 0 10px 0 0; border-right: 1px solid #f1f5f9; margin-right: 8px; }
-  .sidebar-brand__text { display: none; }
-  .sidebar-nav { flex-direction: row; overflow-x: auto; overflow-y: visible; padding: 0; }
-  .sidebar-nav__item span:not(.sidebar-nav__item__icon) { display: none; }
-  .sidebar-footer { flex-direction: row; border-top: none; margin-top: 0; padding-top: 0; margin-left: auto; }
-  .sidebar-role-badge span:not(.sidebar-devmode__dot) { display: none; }
-  .sidebar-user__meta { display: none; }
-  .app-main { height: auto; overflow-y: visible; }
+  .app-frame { padding: 0; }
+  .app-shell { border-radius: 0; min-height: 100vh; border: none; box-shadow: none; }
+  .app-topbar { padding: 14px 16px 10px; }
+  .app-topbar__title { font-size: 18px; }
+  .user-chip__name { display: none; }
+  .pill-tabbar { margin: 0 16px 4px; max-width: calc(100% - 32px); overflow-x: auto; }
+  .app-content { padding: 16px; }
 }
 
 /* Role Assign Modal & Scope Selection */

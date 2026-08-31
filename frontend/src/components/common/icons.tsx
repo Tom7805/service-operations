@@ -327,6 +327,13 @@ export const ICONS = {
       <path d="M11.5 2.5V5.5h3M7 9.5h6M7 12.5h6M7 15h3.5" />
     </svg>
   ),
+  helpCircle: (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="10" cy="10" r="7.5" />
+      <path d="M7.8 7.8a2.2 2.2 0 1 1 3.1 2c-.7.5-1.2 1-1.2 1.9" />
+      <circle cx="9.8" cy="14.3" r="0.15" fill="currentColor" />
+    </svg>
+  ),
   logout: (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
       <path d="M8 17.5H4.5a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1H8" />

@@ -49,14 +49,24 @@ Các badge màu ngữ nghĩa hiện có (`--badge-purple/gold/blue/green/orange/
   - Nhãn phụ, breadcrumb, badge: 11–12.5px / 600–700 / uppercase khi là nhãn cột hoặc eyebrow
 - Số liệu quan trọng (thẻ thống kê) dùng `font-variant-numeric: tabular-nums` khi xuất hiện nhiều số cạnh nhau.
 
-## Navigation Shell
+## Navigation Shell (v2 — "windowed app")
 
-Kiểu Apple (macOS System Settings / Finder): **sidebar trái cố định**, không phải thanh điều hướng ngang trên
-đầu. Sidebar (264px) gồm: logo + tên hệ thống trên cùng, danh sách điều hướng dạng hàng bo góc nhỏ (mục đang
-chọn tô nền đen chữ trắng, không dùng viền màu), và cụm tài khoản người dùng cố định ở đáy (avatar + tên + vai
-trò, bấm mở menu nổi lên phía trên). Trên màn hình hẹp (<900px), sidebar co lại thành thanh ngang cuộn được.
-Đây là thay đổi có chủ đích từ bản thanh pill ngang trước đó — nav ngang chỉ hợp với sản phẩm ít mục, còn 9 mục
-điều hướng như hệ thống này cần chiều dọc để không bị chật, đúng cách macOS tổ chức các mục cấu hình.
+Quyết định mới nhất, thay thế bản sidebar dọc trước đó, theo tham chiếu người dùng cung cấp (dashboard dạng
+"Settings: Email accounts" — nền gradient pastel, app nổi trong khối bo góc lớn, header sạch + thanh tab pill).
+Đã lấy đúng phần là ngôn ngữ UI thật, bỏ phần chrome trình bày Figma (khung viền đen giả thiết bị, nhãn
+`/SETTINGS`, số trang — không áp dụng cho web app thật).
+
+- **`.app-frame`**: toàn trang có nền gradient pastel rất nhạt (`body`), app nằm giữa trong một khối
+  `.app-shell` bo góc 28px, viền mảnh, đổ bóng sâu (`--shadow-lg`) — giống cửa sổ ứng dụng desktop, không
+  chiếm full viewport cứng nhắc.
+- **`.app-topbar`**: logo tròn tối màu bên trái + tiêu đề trang lớn (đổi theo mục đang chọn, không còn tên hệ
+  thống tĩnh); bên phải là cụm hành động tối giản — 2 nút icon tròn (trợ giúp, thông báo) + "user chip" (avatar
+  + tên + chevron) mở menu tài khoản (đổi mật khẩu, vai trò hiện tại, đăng xuất).
+- **`.pill-tabbar`**: điều hướng chính chuyển thành **thanh pill ngang** ngay dưới header — nền xám be nhạt
+  bo tròn hoàn toàn, mục đang chọn nổi bằng nền trắng + bóng nhẹ (không phải nền đen như v1). Đây là điểm khác
+  biệt rõ nhất so với v1 (sidebar dọc nền đen) — chuyển hẳn sang ngôn ngữ macOS System Settings.
+- Trên màn hình hẹp (<900px): bỏ khung/bo góc/đổ bóng ngoài (app chiếm full viewport như app thường), thanh
+  pill cuộn ngang được.
 
 ## Elevation & Motion
 
