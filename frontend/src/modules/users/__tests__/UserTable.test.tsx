@@ -145,11 +145,13 @@ describe('User Management Module — Acceptance Criteria Tests (NCL-01-CN-002)',
     expect(screen.getByText(/Chức năng Quản lý tài khoản người dùng chỉ dành riêng cho vai trò/i)).toBeInTheDocument();
   });
 
-  it('TC-05: Admin users (VT-07) view stats, audit log stream, and table', () => {
-    render(<UserListPage currentUserRoles={['VT-07']} currentUserName="Quản trị viên" />);
+  it('TC-05: Admin users (VT-07) view stats, table, and link to the full audit log', () => {
+    render(
+      <UserListPage currentUserRoles={['VT-07']} currentUserName="Quản trị viên" onViewAuditLog={() => {}} />
+    );
 
     expect(screen.getByText('Quản lý tài khoản người dùng')).toBeInTheDocument();
     expect(screen.getByText('Tổng tài khoản')).toBeInTheDocument();
-    expect(screen.getByText(/Nhật ký thao tác tài khoản gần đây/i)).toBeInTheDocument();
+    expect(screen.getByText(/Xem nhật ký thao tác đầy đủ/i)).toBeInTheDocument();
   });
 });

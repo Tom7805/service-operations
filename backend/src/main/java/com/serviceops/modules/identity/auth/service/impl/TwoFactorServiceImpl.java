@@ -1,5 +1,7 @@
 package com.serviceops.modules.identity.auth.service.impl;
 
+import com.serviceops.common.audit.AuditTargetType;
+import com.serviceops.common.audit.service.AuditLogService;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.identity.auth.dto.request.TwoFactorConfigReq;
@@ -73,6 +75,7 @@ public class TwoFactorServiceImpl implements TwoFactorService {
 	private final UserRoleScopeRepository userRoleScopeRepository;
 	private final JwtProvider jwtProvider;
 	private final LoginAttemptService loginAttemptService;
+	private final AuditLogService auditLogService;
 
 	@Value("${app.two-factor.challenge-ttl-minutes:10}")
 	private long challengeTtlMinutes;
@@ -218,6 +221,8 @@ public class TwoFactorServiceImpl implements TwoFactorService {
 				: null;
 		log.warn("TWO_FACTOR_ENROLLMENT_RESET userId={} username={} by={} - yeu cau lien ket lai app Authenticator",
 				user.getId(), user.getUsername(), performedByUsername);
+		auditLogService.record("Đặt lại xác thực hai bước", AuditTargetType.TWO_FACTOR, user.getId(), user.getUsername(),
+				"Xoá khoá TOTP đã liên kết do mất/đổi thiết bị, thực hiện bởi " + (performedByUsername != null ? performedByUsername : "hệ thống"));
 	}
 
 	@Override

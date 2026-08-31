@@ -7,6 +7,7 @@ import RolePermissionPage from './modules/users/pages/RolePermissionPage';
 import DepartmentTreePage from './modules/departments/pages/DepartmentTreePage';
 import MaskingRulePage from './modules/masking/pages/MaskingRulePage';
 import SensitiveAccessLogPage from './modules/auditLog/pages/SensitiveAccessLogPage';
+import AuditLogPage from './modules/auditLog/pages/AuditLogPage';
 import EmployeeListPage from './modules/employees/pages/EmployeeListPage';
 import EmployeeDetailPage from './modules/employees/pages/EmployeeDetailPage';
 import ChangePasswordPage from './modules/auth/pages/ChangePasswordPage';
@@ -25,6 +26,7 @@ type Tab =
   | 'DETAIL'
   | 'MASKING'
   | 'AUDIT_LOG'
+  | 'SYSTEM_AUDIT_LOG'
   | 'EMPLOYEES'
   | 'EMPLOYEE_DETAIL'
   | 'CHANGE_PASSWORD'
@@ -53,7 +55,8 @@ const NAV_ITEMS: NavItem[] = [
 const SYSTEM_NAV_ITEMS: NavItem[] = [
   { tab: 'TWO_FACTOR_SETTINGS', icon: ICONS.key, label: '2FA' },
   { tab: 'MASKING', icon: ICONS.eyeOff, label: 'Che dữ liệu' },
-  { tab: 'AUDIT_LOG', icon: ICONS.history, label: 'Nhật ký' },
+  { tab: 'SYSTEM_AUDIT_LOG', icon: ICONS.history, label: 'Nhật ký hệ thống' },
+  { tab: 'AUDIT_LOG', icon: ICONS.shieldOff, label: 'Nhật ký dữ liệu nhạy cảm' },
 ];
 
 const ALL_NAV_ITEMS: NavItem[] = [...NAV_ITEMS, ...SYSTEM_NAV_ITEMS];
@@ -317,9 +320,15 @@ export default function App() {
           ) : activeTab === 'DEPARTMENTS' ? (
             <DepartmentTreePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'PERMISSIONS' ? (
-            <RolePermissionPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+            <RolePermissionPage
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+              onViewAuditLog={() => setActiveTab('SYSTEM_AUDIT_LOG')}
+            />
           ) : activeTab === 'MASKING' ? (
             <MaskingRulePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+          ) : activeTab === 'SYSTEM_AUDIT_LOG' ? (
+            <AuditLogPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'AUDIT_LOG' ? (
             <SensitiveAccessLogPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'TWO_FACTOR_SETTINGS' ? (
@@ -345,6 +354,7 @@ export default function App() {
                 setSelectedUserId(id);
                 setActiveTab('DETAIL');
               }}
+              onViewAuditLog={() => setActiveTab('SYSTEM_AUDIT_LOG')}
             />
           )}
         </main>

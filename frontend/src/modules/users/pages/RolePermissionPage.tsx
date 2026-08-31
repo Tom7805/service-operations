@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import type { DepartmentInfo, ScopeType, User, UserAuditLog } from '../types/userTypes';
+import type { DepartmentInfo, ScopeType, User } from '../types/userTypes';
 import { SYSTEM_ROLES } from '../types/userTypes';
 import { getDepartmentsList, getUsers, updateUserRoleScope } from '../api/usersApi';
 import RoleScopeModal from '../components/RoleScopeModal';
@@ -9,11 +9,14 @@ import { ICONS } from '../components/icons';
 interface RolePermissionPageProps {
   currentUserRoles?: string[];
   currentUserName?: string;
+  /** Mở trang Nhật ký hệ thống (đã tách riêng, có phân trang thật từ máy chủ). */
+  onViewAuditLog?: () => void;
 }
 
 export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
   currentUserRoles = ['VT-07'],
   currentUserName = 'Quản trị viên',
+  onViewAuditLog,
 }) => {
   // TC-04: Security guard - Only VT-07 (Quản trị viên) has permission
   const isAdmin = currentUserRoles.includes('VT-07');
@@ -34,33 +37,9 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [targetUser, setTargetUser] = useState<User | null>(null);
 
-  // Realtime Audit Logs (TC-05)
-  const [auditLogs, setAuditLogs] = useState<UserAuditLog[]>([
-    {
-      id: 'audit-perm-1',
-      timestamp: new Date(Date.now() - 3600000).toLocaleTimeString('vi-VN') + ' ' + new Date().toLocaleDateString('vi-VN'),
-      action: 'Cấu hình phân quyền',
-      performedBy: 'Quản trị viên',
-      targetUser: 'admin',
-      details: 'Gán vai trò Quản trị viên với phạm vi Toàn công ty',
-    },
-  ]);
-
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setToastMessage({ text, type });
     setTimeout(() => setToastMessage(null), 4000);
-  };
-
-  const addAuditLog = (action: string, targetUser: string, details: string) => {
-    const newLog: UserAuditLog = {
-      id: `audit-perm-${Date.now()}`,
-      timestamp: new Date().toLocaleTimeString('vi-VN') + ' ' + new Date().toLocaleDateString('vi-VN'),
-      action,
-      performedBy: currentUserName,
-      targetUser,
-      details,
-    };
-    setAuditLogs((prev) => [newLog, ...prev]);
   };
 
   const fetchData = useCallback(async () => {
@@ -109,19 +88,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
       scopeDepartmentId,
     });
 
-    const scopeDesc =
-      scopeType === 'COMPANY'
-        ? 'Toàn công ty'
-        : scopeType === 'DEPARTMENT'
-        ? `Nhánh bộ phận (ID: ${scopeDepartmentId})`
-        : 'Cá nhân (SELF)';
-
     showToast(`Đã cập nhật phân quyền cho tài khoản @${target.username} thành công`);
-    addAuditLog(
-      'Cập nhật vai trò & phạm vi',
-      target.username,
-      `Gán vai trò [${roleCodes.join(', ')}] với phạm vi dữ liệu: ${scopeDesc}`
-    );
     await fetchData();
   };
 
@@ -451,27 +418,18 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
         </div>
       )}
 
-      {/* Audit Log Stream for TC-05 */}
-      <div className="audit-log-card" style={{ marginTop: '24px' }}>
-        <div className="audit-log-header">
-          <h3 className="audit-log-title"><span className="audit-log-title__icon">{ICONS.clipboardList}</span> Nhật ký phân quyền & phạm vi dữ liệu (Audit Log)</h3>
-          <span className="badge-pulse">Lưu vết 100% realtime</span>
-        </div>
-        <div className="audit-log-list">
-          {auditLogs.map((log) => (
-            <div key={log.id} className="audit-log-item">
-              <div className="audit-log-icon">{ICONS.shield}</div>
-              <div className="audit-log-meta">
-                <div className="audit-log-row">
-                  <strong>{log.action}</strong> cho tài khoản <span className="highlight-username">@{log.targetUser}</span>
-                  <span className="audit-log-time">{log.timestamp}</span>
-                </div>
-                <p className="audit-log-details">{log.details} • Thực hiện bởi <em>{log.performedBy}</em></p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* TC-05: nhật ký phân quyền giờ nằm ở trang riêng biệt "Nhật ký hệ thống" — lưu thật trên
+          máy chủ, có phân trang, không còn là danh sách nhúng cuộn tay ở đây. */}
+      {onViewAuditLog && (
+        <button type="button" className="audit-log-link" onClick={onViewAuditLog}>
+          <span className="audit-log-link__icon">{ICONS.clipboardList}</span>
+          <span className="audit-log-link__text">
+            <strong>Xem nhật ký phân quyền đầy đủ</strong>
+            <span>Toàn bộ lịch sử gán vai trò và phạm vi dữ liệu — lưu trên máy chủ</span>
+          </span>
+          <span className="audit-log-link__arrow">→</span>
+        </button>
+      )}
 
       {/* Role & Scope Configuration Modal */}
       <RoleScopeModal

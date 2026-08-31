@@ -4,18 +4,21 @@ import RoleAssignModal from '../components/RoleAssignModal';
 import UserFormModal from '../components/UserFormModal';
 import UserTable from '../components/UserTable';
 import { ICONS } from '../components/icons';
-import type { CreateUserPayload, ScopeType, UpdateUserPayload, User, UserAuditLog } from '../types/userTypes';
+import type { CreateUserPayload, ScopeType, UpdateUserPayload, User } from '../types/userTypes';
 
 interface UserListPageProps {
   currentUserRoles?: string[];
   currentUserName?: string;
   onNavigateDetail?: (userId: number) => void;
+  /** Mở trang Nhật ký hệ thống (đã tách riêng, có phân trang thật từ máy chủ). */
+  onViewAuditLog?: () => void;
 }
 
 export const UserListPage: React.FC<UserListPageProps> = ({
   currentUserRoles = ['VT-07'],
   currentUserName = 'Quản trị viên',
   onNavigateDetail,
+  onViewAuditLog,
 }) => {
   // TC-04 Permission check: Only VT-07 (Quản trị viên) can manage users
   const isAdmin = currentUserRoles.includes('VT-07');
@@ -32,21 +35,11 @@ export const UserListPage: React.FC<UserListPageProps> = ({
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [roleTargetUser, setRoleTargetUser] = useState<User | null>(null);
 
-  // Status toggle confirmation modal & Audit log (TC-05)
+  // Status toggle confirmation modal (TC-05)
   const [confirmStatusUser, setConfirmStatusUser] = useState<User | null>(null);
   // NCL-01-CN-009: xác nhận trước khi đặt lại 2FA — thao tác bắt buộc người dùng liên kết lại app mới.
   const [confirmResetTwoFactorUser, setConfirmResetTwoFactorUser] = useState<User | null>(null);
   const [resettingTwoFactor, setResettingTwoFactor] = useState(false);
-  const [auditLogs, setAuditLogs] = useState<UserAuditLog[]>([
-    {
-      id: 'log-101',
-      timestamp: new Date(Date.now() - 3600000).toLocaleTimeString('vi-VN') + ' ' + new Date().toLocaleDateString('vi-VN'),
-      action: 'Tạo tài khoản mới',
-      performedBy: 'Quản trị viên',
-      targetUser: 'admin',
-      details: 'Khởi tạo tài khoản Quản trị hệ thống',
-    },
-  ]);
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setToastMessage({ text, type });
@@ -71,19 +64,6 @@ export const UserListPage: React.FC<UserListPageProps> = ({
     fetchUsersList();
   }, [fetchUsersList]);
 
-  // Log audit activity for TC-05
-  const addAuditLog = (action: string, targetUser: string, details: string) => {
-    const newLog: UserAuditLog = {
-      id: `log-${Date.now()}`,
-      timestamp: new Date().toLocaleTimeString('vi-VN') + ' ' + new Date().toLocaleDateString('vi-VN'),
-      action,
-      performedBy: currentUserName,
-      targetUser,
-      details,
-    };
-    setAuditLogs((prev) => [newLog, ...prev]);
-  };
-
   // Handlers
   const handleOpenCreateModal = () => {
     setEditingUser(null);
@@ -103,14 +83,12 @@ export const UserListPage: React.FC<UserListPageProps> = ({
   const handleSubmitCreate = async (payload: CreateUserPayload) => {
     const created = await createUser(payload);
     showToast(`Đã tạo thành công tài khoản @${created.username}`);
-    addAuditLog('Tạo tài khoản', created.username, `Tạo tài khoản cho ${created.fullName}`);
     await fetchUsersList();
   };
 
   const handleSubmitUpdate = async (id: number, payload: UpdateUserPayload) => {
     const updated = await updateUser(id, payload);
     showToast(`Cập nhật tài khoản @${updated.username} thành công`);
-    addAuditLog('Cập nhật tài khoản', updated.username, `Cập nhật thông tin tài khoản ${updated.fullName}`);
     await fetchUsersList();
   };
 
@@ -119,7 +97,6 @@ export const UserListPage: React.FC<UserListPageProps> = ({
     if (!target) return;
     const updated = await updateUser(userId, { fullName: target.fullName, roleCodes, scopeType });
     showToast(`Đã gán ${roleCodes.length} vai trò cho tài khoản @${updated.username}`);
-    addAuditLog('Cấu hình phân quyền', updated.username, `Gán vai trò [${roleCodes.join(', ')}] với phạm vi ${scopeType}`);
     await fetchUsersList();
   };
 
@@ -133,7 +110,6 @@ export const UserListPage: React.FC<UserListPageProps> = ({
       const updated = await updateUserStatus(target.id, nextStatus);
       const actionText = nextStatus === 'LOCKED' ? 'Khóa tài khoản' : 'Mở khóa tài khoản';
       showToast(`${actionText} @${updated.username} thành công`);
-      addAuditLog(actionText, updated.username, `Đổi trạng thái tài khoản thành ${nextStatus}`);
       setConfirmStatusUser(null);
       await fetchUsersList();
     } catch (err) {
@@ -154,7 +130,6 @@ export const UserListPage: React.FC<UserListPageProps> = ({
     try {
       await resetUserTwoFactor(target.id);
       showToast(`Đã đặt lại xác thực hai bước cho @${target.username}. Lần đăng nhập kế tiếp sẽ yêu cầu quét QR liên kết app mới.`);
-      addAuditLog('Đặt lại xác thực hai bước', target.username, 'Xoá khóa TOTP đã liên kết do mất/đổi thiết bị');
       setConfirmResetTwoFactorUser(null);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Không thể đặt lại xác thực hai bước', 'error');
@@ -272,27 +247,18 @@ export const UserListPage: React.FC<UserListPageProps> = ({
         onResetTwoFactor={(u) => setConfirmResetTwoFactorUser(u)}
       />
 
-      {/* Audit Log Stream section for TC-05 */}
-      <div className="audit-log-card">
-        <div className="audit-log-header">
-          <h3 className="audit-log-title"><span className="audit-log-title__icon">{ICONS.clipboardList}</span> Nhật ký thao tác tài khoản gần đây (Audit Log)</h3>
-          <span className="badge-pulse">Lưu vết 100% realtime</span>
-        </div>
-        <div className="audit-log-list">
-          {auditLogs.map((log) => (
-            <div key={log.id} className="audit-log-item">
-              <div className="audit-log-icon">{ICONS.history}</div>
-              <div className="audit-log-meta">
-                <div className="audit-log-row">
-                  <strong>{log.action}</strong> đối với tài khoản <span className="highlight-username">@{log.targetUser}</span>
-                  <span className="audit-log-time">{log.timestamp}</span>
-                </div>
-                <p className="audit-log-details">{log.details} • Thực hiện bởi <em>{log.performedBy}</em></p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* TC-05: nhật ký thao tác tài khoản giờ nằm ở trang riêng biệt "Nhật ký hệ thống" — lưu thật
+          trên máy chủ, có phân trang, không còn là danh sách nhúng cuộn tay ở đây. */}
+      {onViewAuditLog && (
+        <button type="button" className="audit-log-link" onClick={onViewAuditLog}>
+          <span className="audit-log-link__icon">{ICONS.clipboardList}</span>
+          <span className="audit-log-link__text">
+            <strong>Xem nhật ký thao tác đầy đủ</strong>
+            <span>Toàn bộ lịch sử tạo/sửa/khóa tài khoản, phân quyền — lưu trên máy chủ</span>
+          </span>
+          <span className="audit-log-link__arrow">→</span>
+        </button>
+      )}
 
       {/* Form Modal for Create & Edit */}
       <UserFormModal

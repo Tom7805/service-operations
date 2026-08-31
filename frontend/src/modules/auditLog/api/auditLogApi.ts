@@ -1,4 +1,9 @@
-import type { SensitiveAccessLogPage, SensitiveAccessLogSearchParams } from '../types/auditLogTypes';
+import type {
+  AuditLogPage,
+  AuditLogSearchParams,
+  SensitiveAccessLogPage,
+  SensitiveAccessLogSearchParams,
+} from '../types/auditLogTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -59,6 +64,22 @@ export async function searchSensitiveAccessLogs(
   query.set('size', String(params.size ?? 20));
 
   return requestBackend<SensitiveAccessLogPage>(`${API_BASE_URL}/sensitive-access-logs?${query.toString()}`, {
+    method: 'GET',
+  });
+}
+
+/** Tra cứu nhật ký thao tác nghiệp vụ tổng hợp (Tài khoản, Phân quyền, 2FA...) theo bộ lọc + phân trang. */
+export async function searchAuditLogs(params: AuditLogSearchParams): Promise<AuditLogPage> {
+  const query = new URLSearchParams();
+  if (params.actorUsername) query.set('actorUsername', params.actorUsername);
+  if (params.targetType) query.set('targetType', params.targetType);
+  if (params.action) query.set('action', params.action);
+  if (params.from) query.set('from', params.from);
+  if (params.to) query.set('to', params.to);
+  query.set('page', String(params.page ?? 0));
+  query.set('size', String(params.size ?? 20));
+
+  return requestBackend<AuditLogPage>(`${API_BASE_URL}/audit-logs?${query.toString()}`, {
     method: 'GET',
   });
 }

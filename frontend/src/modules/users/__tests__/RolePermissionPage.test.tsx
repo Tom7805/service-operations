@@ -154,13 +154,15 @@ describe('Role & Data Scope Module — Acceptance Criteria Tests (NCL-01-CN-004)
     expect(screen.getByText(/Chức năng Phân quyền theo vai trò và phạm vi dữ liệu chỉ dành riêng/i)).toBeInTheDocument();
   });
 
-  it('TC-05: Admin users view stats and can toggle role capability matrix', async () => {
-    render(<RolePermissionPage currentUserRoles={['VT-07']} currentUserName="Quản trị viên" />);
+  it('TC-05: Admin users view stats, role capability matrix, and link to the full audit log', async () => {
+    render(
+      <RolePermissionPage currentUserRoles={['VT-07']} currentUserName="Quản trị viên" onViewAuditLog={() => {}} />
+    );
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Phân quyền vai trò & Phạm vi dữ liệu' })).toBeInTheDocument();
       expect(screen.getByText('9 Vai trò')).toBeInTheDocument();
-      expect(screen.getByText(/Nhật ký phân quyền & phạm vi dữ liệu/i)).toBeInTheDocument();
+      expect(screen.getByText(/Xem nhật ký phân quyền đầy đủ/i)).toBeInTheDocument();
     });
 
     // Switch to Role Matrix tab

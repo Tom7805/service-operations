@@ -292,6 +292,20 @@
 
 /* Audit Log Card (TC-05) */
 .audit-log-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; margin-top: 24px; }
+
+/* Thẻ dẫn sang trang Nhật ký hệ thống riêng biệt — thay cho danh sách nhật ký nhúng cuộn tay. */
+.audit-log-link {
+  width: 100%; display: flex; align-items: center; gap: 12px; margin-top: 24px; padding: 14px 18px;
+  background: #ffffff; border: 1px solid #e2e8f0; border-radius: var(--radius-lg); cursor: pointer; text-align: left;
+  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.audit-log-link:hover { border-color: #c7d2fe; box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+.audit-log-link__icon { display: flex; flex-shrink: 0; color: #6366f1; }
+.audit-log-link__icon svg { width: 20px; height: 20px; }
+.audit-log-link__text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.audit-log-link__text strong { font-size: 13.5px; color: #0f172a; }
+.audit-log-link__text span { font-size: 12px; color: #64748b; }
+.audit-log-link__arrow { color: #94a3b8; font-size: 16px; flex-shrink: 0; }
 .audit-log-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .audit-log-title { font-size: 15px; font-weight: 700; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 8px; }
 .audit-log-title__icon { display: flex; color: #6366f1; flex-shrink: 0; }

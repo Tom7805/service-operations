@@ -73,6 +73,9 @@ class TwoFactorServiceTest {
 	@Mock
 	private LoginAttemptService loginAttemptService;
 
+	@Mock
+	private com.serviceops.common.audit.service.AuditLogService auditLogService;
+
 	private TwoFactorServiceImpl twoFactorService;
 	private UserSession session;
 	private User user;
@@ -82,7 +85,7 @@ class TwoFactorServiceTest {
 	void setUp() {
 		twoFactorService = new TwoFactorServiceImpl(userSessionRepository, twoFactorSettingRepository,
 				twoFactorConfigAuditRepository, roleRepository, userRepository, userRoleScopeRepository,
-				jwtProvider, loginAttemptService);
+				jwtProvider, loginAttemptService, auditLogService);
 		ReflectionTestUtils.setField(twoFactorService, "lockMinutes", 15L);
 		ReflectionTestUtils.setField(twoFactorService, "challengeTtlMinutes", 10L);
 		ReflectionTestUtils.setField(twoFactorService, "issuer", "Van Hanh Dich Vu");
