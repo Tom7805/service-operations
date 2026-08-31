@@ -201,7 +201,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
 
     return (
       <div key={node.id} className={`tree-node-wrapper level-${level}`}>
-        <div className={`tree-node-card ${matchesKw ? 'tree-node-card--highlight' : ''}`}>
+        <div className={`tree-node-card ${hasChildren ? 'tree-node-card--group' : ''} ${matchesKw ? 'tree-node-card--highlight' : ''}`}>
           <div className="tree-node-left">
             {hasChildren ? (
               <button
