@@ -229,7 +229,7 @@ export const UserTable: React.FC<UserTableProps> = ({
               <th scope="col">Bộ phận</th>
               <th scope="col">Vai trò hệ thống</th>
               <th scope="col" style={{ width: '132px' }}>Trạng thái</th>
-              <th scope="col" style={{ width: '150px', textAlign: 'right' }}>Thao tác</th>
+              <th scope="col" style={{ width: '84px', textAlign: 'right' }}>Thao tác</th>
             </tr>
           </thead>
           <tbody>
@@ -278,16 +278,16 @@ export const UserTable: React.FC<UserTableProps> = ({
                         {user.fullName.charAt(0).toUpperCase()}
                       </div>
                       <div className="user-profile-meta">
-                        <span className="user-profile-fullname">{user.fullName}</span>
-                        <span className="user-profile-username">@{user.username}</span>
+                        <span className="user-profile-fullname" title={user.fullName}>{user.fullName}</span>
+                        <span className="user-profile-username" title={`@${user.username}`}>@{user.username}</span>
                       </div>
                     </div>
                   </td>
                   <td>
-                    <span className="cell-email">{user.email || '—'}</span>
+                    <span className="cell-email" title={user.email || undefined}>{user.email || '—'}</span>
                   </td>
                   <td>
-                    <span className="cell-dept">{getDepartmentName(user.departmentId)}</span>
+                    <span className="cell-dept" title={getDepartmentName(user.departmentId)}>{getDepartmentName(user.departmentId)}</span>
                   </td>
                   <td>
                     <div className="user-tags-wrap">

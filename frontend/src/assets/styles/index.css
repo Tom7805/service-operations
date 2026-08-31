@@ -115,20 +115,23 @@
 
 .table-responsive { overflow-x: auto; }
 .user-data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 15px; }
-.user-data-table th { background: #f8fafc; color: #475569; font-weight: 700; text-transform: uppercase; font-size: 12.5px; letter-spacing: 0.05em; padding: 14px 18px; border-bottom: 1px solid #e2e8f0; }
+/* Header luôn 1 dòng — tránh chiều cao hàng tiêu đề lệch nhau giữa các cột dài/ngắn. */
+.user-data-table th { background: #f8fafc; color: #475569; font-weight: 700; text-transform: uppercase; font-size: 12.5px; letter-spacing: 0.05em; padding: 14px 18px; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
 .user-data-table td { padding: 14px 18px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; color: #334155; }
 .user-data-table tr:hover { background: #f8fafc; }
 .user-data-table tr.row--locked { background: #fff5f5; }
 
-.user-profile-cell { display: flex; align-items: center; gap: 12px; }
+.user-profile-cell { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .avatar-circle { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #4f46e5); color: #ffffff; font-weight: 700; font-size: 15.5px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .avatar-circle--lg { width: 44px; height: 44px; font-size: 18px; }
 .avatar-circle--xl { width: 64px; height: 64px; font-size: 24px; }
-.user-profile-meta { display: flex; flex-direction: column; }
-.user-profile-fullname { font-weight: 700; color: #0f172a; font-size: 15.5px; }
-.user-profile-username { font-size: 13.5px; color: #64748b; font-family: monospace; }
-.cell-email { font-size: 14.5px; color: #475569; }
-.cell-dept { font-weight: 600; color: #334155; }
+.user-profile-meta { display: flex; flex-direction: column; min-width: 0; }
+/* Cắt gọn 1 dòng + "..." cho các cột nội dung dài (họ tên, username, email, bộ phận) —
+   trước đây tràn dòng tự do khiến chiều cao từng hàng lệch nhau, nhìn rối mắt. */
+.user-profile-fullname { font-weight: 700; color: #0f172a; font-size: 15.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+.user-profile-username { font-size: 13.5px; color: #64748b; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+.cell-email { font-size: 14.5px; color: #475569; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 230px; }
+.cell-dept { font-weight: 600; color: #334155; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
 
 .user-tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
 
