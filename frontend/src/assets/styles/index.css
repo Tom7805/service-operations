@@ -589,6 +589,9 @@ body { background: radial-gradient(120% 100% at 50% -10%, #b9bec4 0%, #9aa1a9 55
 .tree-node-card { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 8px; column-gap: 16px; padding: 11px 14px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
 .tree-node-card:hover { border-color: #6366f1; box-shadow: 0 8px 24px rgba(99,102,241,0.08); transform: translateY(-1px); }
 .tree-node-card--highlight { border-color: #6366f1 !important; background: #f0fdf4 !important; box-shadow: 0 0 0 2px rgba(99,102,241,0.2) !important; }
+/* transform ở :hover tạo stacking context mới, "nhốt" menu kebab bên trong —
+   nâng hẳn hàng đang mở menu lên trên các hàng khác để dropdown không bị dòng dưới đè lên. */
+.tree-node-card:has(.row-menu__panel--open) { position: relative; z-index: 30; transform: none; }
 
 .tree-node-left { display: flex; align-items: center; gap: 12px; flex: 1 1 220px; min-width: 0; }
 .tree-toggle-btn { width: 26px; height: 26px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; font-size: 12.5px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #475569; transition: all 0.2s var(--ease-out); flex-shrink: 0; }
@@ -610,6 +613,7 @@ body { background: radial-gradient(120% 100% at 50% -10%, #b9bec4 0%, #9aa1a9 55
 /* Branch List view (NCL-01-CN-003) — flat rows, no indentation; breadcrumb replaces nesting */
 .dept-list-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 8px; column-gap: 16px; padding: 11px 14px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
 .dept-list-row:hover { border-color: #2563eb; box-shadow: 0 8px 24px rgba(37,99,235,0.08); transform: translateY(-1px); }
+.dept-list-row:has(.row-menu__panel--open) { position: relative; z-index: 30; transform: none; }
 .dept-list-path { font-size: 13px; color: #94a3b8; font-style: italic; }
 
 .tree-children-container { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
