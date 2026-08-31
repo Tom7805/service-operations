@@ -209,15 +209,16 @@
   position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   border-radius: 999px; padding: 11px 22px; font-size: 13.5px; font-weight: 700; color: #101216; cursor: pointer;
   border: 1px solid rgba(255,255,255,.9);
-  /* 4 lớp xếp từ trên xuống: bóng láng trắng → vệt màu ngũ sắc rõ nét → nền kính đục nhẹ → base.
-     Tất cả nằm trong `background` (không phải pseudo-element) nên luôn ở DƯỚI chữ, không cần lo z-index. */
+  /* 4 lớp xếp từ trên xuống: bóng láng trắng nhẹ → vệt màu ngũ sắc chỉ điểm xuyết → NỀN ĐỤC GẦN NHƯ
+     ĐẶC (frosted, không phải kính trong suốt) để chữ luôn có nền sáng ổn định, không phụ thuộc vào
+     thứ đang bị blur phía sau. Tất cả nằm trong `background` (không phải pseudo-element) nên luôn ở
+     DƯỚI chữ, không cần lo z-index. */
   background:
-    linear-gradient(180deg, rgba(255,255,255,.92) 0%, rgba(255,255,255,.12) 55%, transparent 62%),
-    radial-gradient(ellipse 60% 90% at 12% 0%, rgba(110,150,255,.4), transparent 60%),
-    radial-gradient(ellipse 55% 85% at 50% -15%, rgba(170,110,255,.34), transparent 62%),
-    radial-gradient(ellipse 55% 85% at 90% 8%, rgba(90,225,205,.32), transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,.7) 0%, rgba(244,245,245,.42) 55%, rgba(226,229,228,.6) 100%);
-  backdrop-filter: blur(18px) saturate(220%) brightness(1.05); -webkit-backdrop-filter: blur(18px) saturate(220%) brightness(1.05);
+    linear-gradient(180deg, rgba(255,255,255,.7) 0%, rgba(255,255,255,.15) 55%, transparent 62%),
+    radial-gradient(ellipse 60% 90% at 12% 0%, rgba(110,150,255,.22), transparent 60%),
+    radial-gradient(ellipse 55% 85% at 90% 8%, rgba(90,225,205,.18), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.96) 0%, rgba(249,250,249,.94) 55%, rgba(238,240,239,.92) 100%);
+  backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
   box-shadow:
     inset 0 1px 1px rgba(255,255,255,1), inset 0 -2px 5px rgba(15,23,42,.06),
     0 1px 1px rgba(15,23,42,.04), 0 14px 28px -12px rgba(15,23,42,.26), 0 4px 10px -3px rgba(15,23,42,.12);
@@ -232,11 +233,10 @@
    Vệt màu ngũ sắc bên trong cũng nhuộm nghiêng về emerald/ngọc để ăn khớp quầng sáng bên ngoài. */
 .btn-primary {
   background:
-    linear-gradient(180deg, rgba(255,255,255,.92) 0%, rgba(255,255,255,.12) 55%, transparent 62%),
-    radial-gradient(ellipse 60% 90% at 12% 0%, rgba(52,211,153,.42), transparent 60%),
-    radial-gradient(ellipse 55% 85% at 50% -15%, rgba(110,231,183,.36), transparent 62%),
-    radial-gradient(ellipse 55% 85% at 90% 8%, rgba(90,225,205,.32), transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,.7) 0%, rgba(244,245,245,.42) 55%, rgba(226,229,228,.6) 100%);
+    linear-gradient(180deg, rgba(255,255,255,.7) 0%, rgba(255,255,255,.15) 55%, transparent 62%),
+    radial-gradient(ellipse 60% 90% at 12% 0%, rgba(52,211,153,.24), transparent 60%),
+    radial-gradient(ellipse 55% 85% at 90% 8%, rgba(90,225,205,.18), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.96) 0%, rgba(249,250,249,.94) 55%, rgba(238,240,239,.92) 100%);
   box-shadow:
     inset 0 1px 1px rgba(255,255,255,1), inset 0 -2px 4px rgba(15,23,42,.05),
     0 1px 1px rgba(15,23,42,.04), 0 16px 30px -12px rgba(16,185,129,.30), 0 5px 12px -3px rgba(16,185,129,.20);
@@ -303,7 +303,9 @@
    ========================================================================== */
 /* Nền phẳng, trung tính, sáng đều — đúng backdrop của ảnh tham chiếu bộ component kính: kính cần
    một nền sáng/trơn để "trong" đọc rõ, một nền nhiều màu loang lổ sẽ làm nhiễu độ trong của kính. */
-body { background: radial-gradient(120% 100% at 50% -10%, #ffffff 0%, #eff0ef 55%, #e8eae8 100%); }
+/* Ngoại cảnh (nền ngoài khối app) tối hơn hẳn nội dung — tương phản này giúp mắt phân biệt rõ "cái gì
+   là kính nổi lên" khỏi "cái gì là nền", đồng thời làm chữ trắng/sáng trên các khối kính dễ đọc hơn. */
+body { background: radial-gradient(120% 100% at 50% -10%, #b9bec4 0%, #9aa1a9 55%, #7f8792 100%); }
 
 .app-frame { min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 22px; }
 .app-shell {
@@ -325,11 +327,11 @@ body { background: radial-gradient(120% 100% at 50% -10%, #ffffff 0%, #eff0ef 55
   width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,.9); color: #4c5560;
   display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
   background:
-    linear-gradient(180deg, rgba(255,255,255,.92) 0%, rgba(255,255,255,.14) 55%, transparent 62%),
-    radial-gradient(circle at 20% 10%, rgba(110,150,255,.42), transparent 65%),
-    radial-gradient(circle at 80% 85%, rgba(170,110,255,.3), transparent 65%),
-    linear-gradient(180deg, rgba(255,255,255,.75) 0%, rgba(238,240,239,.55) 100%);
-  backdrop-filter: blur(16px) saturate(220%) brightness(1.05); -webkit-backdrop-filter: blur(16px) saturate(220%) brightness(1.05);
+    linear-gradient(180deg, rgba(255,255,255,.7) 0%, rgba(255,255,255,.16) 55%, transparent 62%),
+    radial-gradient(circle at 20% 10%, rgba(110,150,255,.22), transparent 65%),
+    radial-gradient(circle at 80% 85%, rgba(170,110,255,.16), transparent 65%),
+    linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(240,242,241,.92) 100%);
+  backdrop-filter: blur(12px) saturate(160%); -webkit-backdrop-filter: blur(12px) saturate(160%);
   box-shadow: inset 0 1px 1px rgba(255,255,255,1), inset 0 -1px 3px rgba(15,23,42,.06), 0 10px 20px -9px rgba(15,23,42,.24), 0 3px 7px -2px rgba(15,23,42,.12);
   transition: color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
 }
@@ -430,8 +432,8 @@ body { background: radial-gradient(120% 100% at 50% -10%, #ffffff 0%, #eff0ef 55
 .pill-tabbar {
   display: flex; align-items: center; gap: 2px; flex-wrap: wrap; margin: 0 28px 4px auto; padding: 6px;
   flex-shrink: 0; width: fit-content; max-width: calc(100% - 56px); position: relative; z-index: 1;
-  background: rgba(255,255,255,.5); border: 1px solid rgba(255,255,255,.7); border-radius: 999px;
-  backdrop-filter: blur(18px) saturate(180%); -webkit-backdrop-filter: blur(18px) saturate(180%);
+  background: rgba(255,255,255,.86); border: 1px solid rgba(255,255,255,.8); border-radius: 999px;
+  backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%);
   box-shadow: inset 0 1px 2px rgba(15,23,42,.05), inset 0 -1px 0 rgba(255,255,255,.8), 0 1px 2px rgba(15,23,42,.04);
 }
 .pill-tabbar__item {
@@ -446,8 +448,8 @@ body { background: radial-gradient(120% 100% at 50% -10%, #ffffff 0%, #eff0ef 55
 
 .pill-tabbar__item--active {
   color: #12141c; font-weight: 700; transform: scale(1.015); overflow: hidden;
-  background: linear-gradient(168deg, rgba(255,255,255,.85) 0%, rgba(255,255,255,.45) 55%, rgba(255,255,255,.65) 100%);
-  backdrop-filter: blur(14px) saturate(200%) brightness(1.06); -webkit-backdrop-filter: blur(14px) saturate(200%) brightness(1.06);
+  background: linear-gradient(168deg, rgba(255,255,255,.97) 0%, rgba(255,255,255,.82) 55%, rgba(255,255,255,.9) 100%);
+  backdrop-filter: blur(10px) saturate(150%); -webkit-backdrop-filter: blur(10px) saturate(150%);
   border: 1px solid rgba(255,255,255,.85);
   box-shadow:
     inset 0 1px 1px rgba(255,255,255,1),
@@ -467,10 +469,10 @@ body { background: radial-gradient(120% 100% at 50% -10%, #ffffff 0%, #eff0ef 55
 .pill-tabbar__item--active::after {
   content: ''; position: absolute; inset: 0; pointer-events: none;
   background:
-    radial-gradient(ellipse 55% 60% at 12% 0%, rgba(120,150,255,.28), transparent 65%),
-    radial-gradient(ellipse 50% 55% at 55% -10%, rgba(160,120,255,.22), transparent 65%),
-    radial-gradient(ellipse 45% 50% at 92% 5%, rgba(110,220,220,.2), transparent 65%);
-  mix-blend-mode: soft-light; opacity: .85;
+    radial-gradient(ellipse 55% 60% at 12% 0%, rgba(120,150,255,.18), transparent 65%),
+    radial-gradient(ellipse 50% 55% at 55% -10%, rgba(160,120,255,.14), transparent 65%),
+    radial-gradient(ellipse 45% 50% at 92% 5%, rgba(110,220,220,.12), transparent 65%);
+  mix-blend-mode: soft-light; opacity: .6;
 }
 .pill-tabbar__item--active:hover {
   transform: translateY(-3px) scale(1.02);
