@@ -1,9 +1,74 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { Department, DepartmentTreeNode } from '../types/departmentTypes';
 import { getUnitTypeLabel, getUnitTypeMonogram } from '../constants/departmentUnitTypes';
 import { ICONS } from '../../../components/common/icons';
 
 export type ViewMode = 'TREE' | 'LIST' | 'TABLE';
+
+interface RowAction {
+  key: string;
+  label: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+  tone?: 'default' | 'danger';
+}
+
+/** Menu thao tác gọn theo từng dòng — thay cho dãy nút riêng lẻ, cùng mẫu với bảng Tài khoản. */
+function RowActionsMenu({ actions }: { actions: RowAction[] }) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [open]);
+
+  return (
+    <div className="row-menu" ref={containerRef}>
+      <button
+        type="button"
+        className="row-menu__trigger"
+        aria-label="Thao tác"
+        aria-haspopup="true"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        {ICONS.more}
+      </button>
+      <div className={`row-menu__panel ${open ? 'row-menu__panel--open' : ''}`} role="menu">
+        {actions.map((action) => (
+          <button
+            key={action.key}
+            type="button"
+            role="menuitem"
+            className={`row-menu__item ${action.tone === 'danger' ? 'row-menu__item--danger' : ''}`}
+            title={action.label}
+            onClick={() => {
+              setOpen(false);
+              action.onClick();
+            }}
+          >
+            <span className="row-menu__icon">{action.icon}</span>
+            {action.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 interface DepartmentTreeProps {
   treeData: DepartmentTreeNode[];
@@ -89,22 +154,17 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
     return node.children.some((child) => nodeMatchesSearch(child, keyword));
   };
 
-  // Shared row of labeled action buttons, reused by both Tree and Branch-List views
+  // Shared action menu, reused by both Tree and Branch-List views — một menu kebab (⋮)
+  // gọn gàng thay cho 4 nút riêng lẻ, cùng mẫu với bảng Tài khoản (RowActionsMenu).
   const renderActionButtons = (dept: Department) => (
-    <div className="tree-node-actions">
-      <button type="button" className="action-btn action-btn--add" onClick={() => onAddChild(dept.id)} title="Thêm bộ phận con trực thuộc">
-        <span className="icon-sm">{ICONS.plus}</span> Con
-      </button>
-      <button type="button" className="action-btn action-btn--edit" onClick={() => onEdit(dept)} title="Chỉnh sửa bộ phận">
-        <span className="icon-sm">{ICONS.edit}</span> Sửa
-      </button>
-      <button type="button" className="action-btn action-btn--move" onClick={() => onMove(dept)} title="Di chuyển vị trí bộ phận">
-        <span className="icon-sm">{ICONS.moveVertical}</span> Di chuyển
-      </button>
-      <button type="button" className="action-btn action-btn--danger" onClick={() => onDelete(dept)} title="Xóa bộ phận">
-        <span className="icon-sm">{ICONS.trash}</span> Xóa
-      </button>
-    </div>
+    <RowActionsMenu
+      actions={[
+        { key: 'add', label: 'Thêm bộ phận con', icon: ICONS.plus, onClick: () => onAddChild(dept.id) },
+        { key: 'edit', label: 'Chỉnh sửa bộ phận', icon: ICONS.edit, onClick: () => onEdit(dept) },
+        { key: 'move', label: 'Di chuyển vị trí', icon: ICONS.moveVertical, onClick: () => onMove(dept) },
+        { key: 'delete', label: 'Xóa bộ phận', icon: ICONS.trash, onClick: () => onDelete(dept), tone: 'danger' },
+      ]}
+    />
   );
 
   // Flatten the tree into a depth-first, non-nested row list for "Danh sách Nhánh" —
