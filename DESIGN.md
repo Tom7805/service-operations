@@ -68,6 +68,16 @@ Quyết định mới nhất, thay thế bản sidebar dọc trước đó, theo
 - Trên màn hình hẹp (<900px): bỏ khung/bo góc/đổ bóng ngoài (app chiếm full viewport như app thường), thanh
   pill cuộn ngang được.
 
+**Mood nền (v3)**: theo tham chiếu "Nexa AI" người dùng cung cấp — nền trang chuyển sang gradient xanh
+lam-lavender nhạt (radial 2 điểm sáng xanh/tím ở góc + gradient nền), viền/hover của các khối chrome
+(icon-btn, user-chip, notif-panel) nhuộm nhẹ theo tông xanh lam thay vì xám ấm trung tính. **Có chủ đích
+không** áp kính mờ (glassmorphism/backdrop-blur) cho toàn khối `.app-shell` hay bảng dữ liệu — ảnh tham
+chiếu là sản phẩm AI-assistant nơi nội dung chính là hội thoại (chịu được nền mờ); hệ thống này là công cụ
+Operate với bảng/form dày đặc, nền xuyên thấu sẽ giảm độ rõ chữ, đi ngược nguyên tắc ưu tiên tốc độ quét
+thông tin đã chốt ở Product Principles. Cũng có chủ đích không dựng tính năng "AI Assistant"/"Insights
+Timeline" trong ảnh — hệ thống chưa có engine AI/phân tích, dựng giao diện cho tính năng không tồn tại là
+lừa người dùng thật.
+
 ## Elevation & Motion
 
 Mọi bề mặt nổi lên (card, nút, menu, modal) dùng chung một "nguồn sáng" — bóng mềm nhiều lớp, không dùng bóng
