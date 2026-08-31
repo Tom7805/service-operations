@@ -404,9 +404,8 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
                               u.roleCodes.map((code) => {
                                 const roleInfo = SYSTEM_ROLES.find((r) => r.code === code);
                                 return (
-                                  <span key={code} className="role-chip" title={roleInfo?.name}>
-                                    <strong className="role-chip__code">{code}</strong>
-                                    <span>{roleInfo?.name || code}</span>
+                                  <span key={code} className="role-chip" title={code}>
+                                    {roleInfo?.name || code}
                                   </span>
                                 );
                               })
@@ -417,28 +416,18 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
                         </td>
 
                         <td>
-                          {isCompany && (
-                            <span className="scope-chip">
-                              <span className="scope-chip__icon">{ICONS.globe}</span> Toàn công ty
-                            </span>
-                          )}
+                          {isCompany && <span className="scope-chip">Toàn công ty</span>}
 
                           {isDept && (
                             <div className="scope-chip-group">
-                              <span className="scope-chip">
-                                <span className="scope-chip__icon">{ICONS.building}</span> Nhánh bộ phận
-                              </span>
+                              <span className="scope-chip">Nhánh bộ phận</span>
                               <span className="scope-chip-group__sub">
                                 {scopeDeptObj ? scopeDeptObj.name : `Bộ phận ID: ${u.scopeDepartmentId ?? 'N/A'}`}
                               </span>
                             </div>
                           )}
 
-                          {isSelf && (
-                            <span className="scope-chip">
-                              <span className="scope-chip__icon">{ICONS.user}</span> Chỉ cá nhân
-                            </span>
-                          )}
+                          {isSelf && <span className="scope-chip">Chỉ cá nhân</span>}
                         </td>
 
                         <td style={{ textAlign: 'right' }}>
