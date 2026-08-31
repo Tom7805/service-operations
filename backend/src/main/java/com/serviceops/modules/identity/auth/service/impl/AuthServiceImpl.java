@@ -4,6 +4,7 @@ import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.identity.auth.dto.request.LoginReq;
 import com.serviceops.modules.identity.auth.dto.response.LoginRes;
+import com.serviceops.modules.identity.auth.dto.response.TwoFactorChallengeRes;
 import com.serviceops.modules.identity.auth.service.AuthService;
 import com.serviceops.modules.identity.auth.service.TwoFactorService;
 import com.serviceops.modules.identity.user.entity.User;
@@ -55,9 +56,10 @@ public class AuthServiceImpl implements AuthService {
 
         List<String> roles = userRoleScopeRepository.findRoleCodesByUserId(user.getId());
         if (twoFactorService.requiresTwoFactor(roles)) {
-            String challengeToken = twoFactorService.createChallenge(user);
+            TwoFactorChallengeRes challenge = twoFactorService.createChallenge(user);
             return new LoginRes(null, null, user.getId(), user.getUsername(), user.getFullName(),
-                roles, true, challengeToken);
+                roles, true, challenge.challengeToken(), challenge.enrollment(), challenge.otpauthUri(),
+                challenge.secretForDisplay());
         }
 
         String token = jwtProvider.generateToken(user.getId(), user.getUsername(), roles, user.getTokenVersion());

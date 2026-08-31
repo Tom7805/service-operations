@@ -41,9 +41,16 @@ export async function login(username: string, password: string): Promise<LoginRe
   if (!response.ok || !payload.data) throw new LoginRequestError(payload, 'Đăng nhập chưa thành công. Vui lòng thử lại.');
 
   const data = payload.data;
-  // NCL-01-CN-009-TC-01: vai trò đang bật 2FA → chưa cấp JWT, phải nộp OTP trước.
+  // NCL-01-CN-009-TC-01: vai trò đang bật 2FA → chưa cấp JWT, phải nộp mã TOTP trước.
   if (data.requiresTwoFactor && data.challengeToken) {
-    return { requiresTwoFactor: true, challengeToken: data.challengeToken, username: data.username };
+    return {
+      requiresTwoFactor: true,
+      challengeToken: data.challengeToken,
+      username: data.username,
+      totpEnrollment: data.totpEnrollment,
+      otpauthUri: data.otpauthUri,
+      totpSecretForDisplay: data.totpSecretForDisplay,
+    };
   }
 
   return {

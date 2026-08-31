@@ -21,10 +21,12 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = TwoFactorController.class)
@@ -68,6 +70,22 @@ class TwoFactorControllerTest {
                 .andExpect(status().isOk());
 
         verify(twoFactorService).listConfigs();
+    }
+
+    @Test
+    void resetEnrollment_admin_callsServiceWithPerformerId() throws Exception {
+        mockMvc.perform(post("/auth/two-factor/users/5/reset")
+                        .with(authentication(authenticationFor("VT-07"))))
+                .andExpect(status().isOk());
+
+        verify(twoFactorService).resetEnrollment(eq(5L), eq(1L));
+    }
+
+    @Test
+    void resetEnrollment_nonAdmin_returnsForbidden() throws Exception {
+        mockMvc.perform(post("/auth/two-factor/users/5/reset")
+                        .with(authentication(authenticationFor("VT-06"))))
+                .andExpect(status().isForbidden());
     }
 
     private UsernamePasswordAuthenticationToken authenticationFor(String role) {

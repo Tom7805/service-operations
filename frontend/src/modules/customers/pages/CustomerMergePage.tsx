@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { previewCustomerMerge, mergeCustomers, CustomerApiError } from '../api/customersApi';
+import { useEffect, useRef, useState } from 'react';
+import { fetchCustomers, previewCustomerMerge, mergeCustomers, CustomerApiError } from '../api/customersApi';
 import { validateCustomerMergeSelection } from '../validators/customerValidators';
 import type {
   Customer,
@@ -11,6 +11,113 @@ import type {
 interface CustomerMergePageProps {
   currentUserRoles?: string[];
   currentUserName?: string;
+}
+
+/**
+ * Ô tìm kiếm khách hàng theo tên/mã KH-xxxxxx — hỗ trợ chọn nhanh thay vì phải nhớ ID nội bộ.
+ * Chọn xong sẽ điền ID vào ô nhập bên dưới (vẫn giữ nguyên để có thể gõ tay ID khi cần).
+ */
+function CustomerSearchPicker({
+  id,
+  onSelect,
+  disabled,
+}: {
+  id: string;
+  onSelect: (customer: Customer) => void;
+  disabled?: boolean;
+}) {
+  const [keyword, setKeyword] = useState('');
+  const [results, setResults] = useState<Customer[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const trimmed = keyword.trim();
+    if (trimmed.length < 2) {
+      setResults([]);
+      setIsOpen(false);
+      return;
+    }
+    debounceRef.current = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const data = await fetchCustomers(trimmed);
+        setResults(data.filter((c) => c.status !== 'MERGED').slice(0, 8));
+        setIsOpen(true);
+      } catch {
+        setResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [keyword]);
+
+  return (
+    <div className="customer-search-picker" style={{ position: 'relative', marginBottom: '8px' }}>
+      <input
+        id={id}
+        type="text"
+        className="form-input"
+        placeholder="🔍 Tìm theo tên hoặc mã KH-xxxxxx..."
+        value={keyword}
+        onChange={(e) => setKeyword(e.target.value)}
+        onFocus={() => results.length > 0 && setIsOpen(true)}
+        disabled={disabled}
+        autoComplete="off"
+      />
+      {isSearching && <span className="field-hint">Đang tìm...</span>}
+      {isOpen && results.length > 0 && (
+        <ul
+          className="customer-search-picker__list"
+          role="listbox"
+          style={{
+            position: 'absolute',
+            zIndex: 10,
+            background: 'var(--card-bg, #fff)',
+            border: '1px solid var(--border-color, #ddd)',
+            borderRadius: '8px',
+            width: '100%',
+            maxHeight: '220px',
+            overflowY: 'auto',
+            margin: '4px 0 0',
+            padding: '4px',
+            listStyle: 'none',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+          }}
+        >
+          {results.map((customer) => (
+            <li key={customer.id}>
+              <button
+                type="button"
+                className="customer-search-picker__item"
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '8px 10px',
+                  background: 'transparent',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                }}
+                onClick={() => {
+                  onSelect(customer);
+                  setKeyword(`${customer.code} — ${customer.name}`);
+                  setIsOpen(false);
+                }}
+              >
+                <strong>{customer.code}</strong> — {customer.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 function CustomerSummaryCard({
@@ -260,6 +367,11 @@ export default function CustomerMergePage({
               <label htmlFor="merge-target-id" className="form-label">
                 ID hồ sơ giữ lại <span className="req">*</span>
               </label>
+              <CustomerSearchPicker
+                id="merge-target-search"
+                disabled={isPreviewing || isMerging}
+                onSelect={(customer) => setTargetIdInput(String(customer.id))}
+              />
               <input
                 id="merge-target-id"
                 type="number"
@@ -276,7 +388,7 @@ export default function CustomerMergePage({
                 </span>
               )}
               <span className="field-hint">
-                ID nội bộ (không phải mã KH-xxxxxx) của hồ sơ chính — sẽ nhận toàn bộ dữ liệu liên quan.
+                Tìm và chọn ở ô phía trên, hoặc gõ tay ID nội bộ của hồ sơ chính — sẽ nhận toàn bộ dữ liệu liên quan.
               </span>
             </div>
 
@@ -284,6 +396,11 @@ export default function CustomerMergePage({
               <label htmlFor="merge-source-id" className="form-label">
                 ID hồ sơ bị gộp <span className="req">*</span>
               </label>
+              <CustomerSearchPicker
+                id="merge-source-search"
+                disabled={isPreviewing || isMerging}
+                onSelect={(customer) => setSourceIdInput(String(customer.id))}
+              />
               <input
                 id="merge-source-id"
                 type="number"

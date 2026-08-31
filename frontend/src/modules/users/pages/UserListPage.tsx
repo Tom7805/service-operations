@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { createUser, getUsers, updateUser, updateUserStatus, UserApiError } from '../api/usersApi';
+import { createUser, getUsers, resetUserTwoFactor, updateUser, updateUserStatus, UserApiError } from '../api/usersApi';
 import RoleAssignModal from '../components/RoleAssignModal';
 import UserFormModal from '../components/UserFormModal';
 import UserTable from '../components/UserTable';
@@ -33,6 +33,9 @@ export const UserListPage: React.FC<UserListPageProps> = ({
 
   // Status toggle confirmation modal & Audit log (TC-05)
   const [confirmStatusUser, setConfirmStatusUser] = useState<User | null>(null);
+  // NCL-01-CN-009: xác nhận trước khi đặt lại 2FA — thao tác bắt buộc người dùng liên kết lại app mới.
+  const [confirmResetTwoFactorUser, setConfirmResetTwoFactorUser] = useState<User | null>(null);
+  const [resettingTwoFactor, setResettingTwoFactor] = useState(false);
   const [auditLogs, setAuditLogs] = useState<UserAuditLog[]>([
     {
       id: 'log-101',
@@ -139,6 +142,23 @@ export const UserListPage: React.FC<UserListPageProps> = ({
         showToast(err instanceof Error ? err.message : 'Không thể thay đổi trạng thái tài khoản', 'error');
       }
       setConfirmStatusUser(null);
+    }
+  };
+
+  // NCL-01-CN-009: mất/đổi điện thoại — đặt lại thiết lập TOTP, bắt liên kết app mới ở lần đăng nhập kế tiếp.
+  const handleConfirmResetTwoFactor = async () => {
+    if (!confirmResetTwoFactorUser) return;
+    const target = confirmResetTwoFactorUser;
+    setResettingTwoFactor(true);
+    try {
+      await resetUserTwoFactor(target.id);
+      showToast(`Đã đặt lại xác thực hai bước cho @${target.username}. Lần đăng nhập kế tiếp sẽ yêu cầu quét QR liên kết app mới.`);
+      addAuditLog('Đặt lại xác thực hai bước', target.username, 'Xoá khóa TOTP đã liên kết do mất/đổi thiết bị');
+      setConfirmResetTwoFactorUser(null);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Không thể đặt lại xác thực hai bước', 'error');
+    } finally {
+      setResettingTwoFactor(false);
     }
   };
 
@@ -252,6 +272,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
         onAssignRoles={handleOpenRoleModal}
         onViewDetail={(u) => onNavigateDetail ? onNavigateDetail(u.id) : handleOpenEditModal(u)}
         onRefresh={fetchUsersList}
+        onResetTwoFactor={(u) => setConfirmResetTwoFactorUser(u)}
       />
 
       {/* Audit Log Stream section for TC-05 */}
@@ -322,6 +343,39 @@ export const UserListPage: React.FC<UserListPageProps> = ({
                 onClick={handleConfirmToggleStatus}
               >
                 {confirmStatusUser.status === 'LOCKED' ? 'Xác nhận mở khóa' : 'Xác nhận khóa tài khoản'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NCL-01-CN-009: xác nhận đặt lại xác thực hai bước (mất/đổi điện thoại) */}
+      {confirmResetTwoFactorUser && (
+        <div className="modal-backdrop" onClick={() => setConfirmResetTwoFactorUser(null)} role="dialog">
+          <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title text-warning">🔁 Xác nhận đặt lại xác thực hai bước</h3>
+              <button type="button" className="modal-close" onClick={() => setConfirmResetTwoFactorUser(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <p>
+                Đặt lại xác thực hai bước cho tài khoản{' '}
+                <strong>@{confirmResetTwoFactorUser.username}</strong> ({confirmResetTwoFactorUser.fullName})?
+              </p>
+              <div className="confirm-note-box">
+                <span>
+                  ℹ️ Chỉ dùng khi người dùng đã mất/đổi điện thoại và không còn app Authenticator nào tạo được mã
+                  cho tài khoản này nữa. Sau khi đặt lại, app cũ sẽ ngừng hoạt động — lần đăng nhập kế tiếp của
+                  tài khoản này sẽ bắt buộc quét mã QR để liên kết app mới.
+                </span>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="btn-secondary" onClick={() => setConfirmResetTwoFactorUser(null)} disabled={resettingTwoFactor}>
+                Hủy bỏ
+              </button>
+              <button type="button" className="btn-primary btn-danger" onClick={handleConfirmResetTwoFactor} disabled={resettingTwoFactor}>
+                {resettingTwoFactor ? 'Đang xử lý...' : 'Xác nhận đặt lại'}
               </button>
             </div>
           </div>

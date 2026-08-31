@@ -46,6 +46,14 @@ public class User extends BaseEntity {
     @Column(name = "locked_until")
     private LocalDateTime lockedUntil;
 
+    /** NCL-01-CN-009: khóa bí mật TOTP (Base32) — null nghĩa là chưa thiết lập app Authenticator. */
+    @Column(name = "totp_secret", length = 64)
+    private String totpSecret;
+
+    /** Thời điểm xác nhận thành công mã TOTP đầu tiên sau khi quét QR — null nghĩa là còn đang chờ thiết lập. */
+    @Column(name = "totp_confirmed_at")
+    private LocalDateTime totpConfirmedAt;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 

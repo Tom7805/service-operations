@@ -6,6 +6,7 @@ import * as customersApi from '../api/customersApi';
 import type { Customer, CustomerMergePreview } from '../types/customerTypes';
 
 vi.mock('../api/customersApi', () => ({
+  fetchCustomers: vi.fn(),
   previewCustomerMerge: vi.fn(),
   mergeCustomers: vi.fn(),
   CustomerApiError: class extends Error {
@@ -137,6 +138,27 @@ describe('Gộp hai hồ sơ khách hàng trùng (NCL-02-CN-006)', () => {
           sourceCustomerId: 2,
         });
       });
+    });
+  });
+
+  describe('Tìm kiếm khách hàng theo tên/mã để chọn nhanh (cải tiến UX)', () => {
+    it('gõ từ khóa >= 2 ký tự sẽ gọi tìm kiếm và chọn kết quả điền đúng ID vào ô hồ sơ giữ lại', async () => {
+      vi.mocked(customersApi.fetchCustomers).mockResolvedValue([targetCustomer]);
+
+      render(<CustomerMergePage currentUserRoles={['VT-07']} />);
+
+      const [targetSearchInput] = screen.getAllByPlaceholderText(/Tìm theo tên hoặc mã KH-xxxxxx/i);
+      fireEvent.change(targetSearchInput, { target: { value: 'ABC' } });
+
+      await waitFor(() => expect(customersApi.fetchCustomers).toHaveBeenCalledWith('ABC'), { timeout: 1000 });
+
+      await waitFor(() => {
+        expect(screen.getByText(/Công ty TNHH ABC/i)).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText(/Công ty TNHH ABC/i));
+
+      expect(screen.getByLabelText(/ID hồ sơ giữ lại/i)).toHaveValue(1);
     });
   });
 

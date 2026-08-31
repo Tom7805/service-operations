@@ -900,3 +900,48 @@
 .customer-summary-scope-note { display: block; margin-top: 22px; padding-top: 14px; border-top: 1px dashed #e2e8f0; font-size: 11.5px; line-height: 1.6; }
 
 
+
+/* NCL-01-CN-009: thiết lập xác thực hai bước kiểu Google Authenticator/Authy (TOTP). */
+.totp-setup-steps { list-style: none; margin: 0 0 26px; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+.totp-setup-steps > li { display: flex; gap: 12px; align-items: flex-start; font-size: 13px; color: #34463d; line-height: 1.55; }
+.totp-setup-steps__num { flex: none; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #e3f5eb; color: #1d7c51; font-size: 12px; font-weight: 700; margin-top: 1px; }
+.totp-qr-box { margin-top: 10px; display: flex; justify-content: center; padding: 14px; background: #fff; border: 1px solid #d9e1da; border-radius: 14px; width: fit-content; }
+.totp-qr-box img { display: block; border-radius: 4px; }
+.totp-qr-box__placeholder { width: 180px; height: 180px; border-radius: 4px; background: repeating-linear-gradient(45deg, #f2f4ee, #f2f4ee 10px, #e7ebe4 10px, #e7ebe4 20px); }
+.totp-manual-entry { margin-top: 10px; font-size: 11.5px; color: #718078; }
+.totp-manual-entry summary { cursor: pointer; color: #1d7c51; font-weight: 700; }
+.totp-manual-entry__hint { margin: 8px 0 0; line-height: 1.5; }
+.totp-manual-entry__row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.totp-manual-entry code { flex: 1 1 auto; min-width: 0; padding: 8px 10px; background: #f2f4ee; border-radius: 8px; letter-spacing: 0.12em; font-size: 12px; color: #17243a; word-break: break-all; }
+.totp-copy-btn { flex: none; height: 34px; padding: 0 14px; border: 1px solid #1d7c51; border-radius: 8px; background: #fff; color: #1d7c51; font-size: 12px; font-weight: 700; cursor: pointer; transition: background .15s, color .15s; }
+.totp-copy-btn:hover { background: #1d7c51; color: #fff; }
+.totp-copy-btn:active { transform: translateY(1px); }
+
+/* Menu thao tác theo dòng (bảng Quản lý tài khoản) — kebab menu thay cho dãy icon rời, gọn & chuyên nghiệp hơn. */
+.row-menu { position: relative; display: inline-flex; }
+.row-menu__trigger {
+  width: 32px; height: 32px; border-radius: 8px; border: 1px solid transparent;
+  background: transparent; color: #64748b; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.row-menu__trigger svg { width: 18px; height: 18px; }
+.row-menu__trigger:hover { background: #f1f5f9; color: #17243a; }
+.row-menu__trigger[aria-expanded="true"] { background: #eef2f7; color: #17243a; border-color: #e2e8f0; }
+.row-menu__panel {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 20;
+  min-width: 216px; padding: 6px; background: #ffffff; border: 1px solid #e5e9ef;
+  border-radius: 10px; box-shadow: 0 12px 28px -8px rgba(23, 36, 58, 0.18), 0 2px 6px rgba(23, 36, 58, 0.06);
+  display: none; flex-direction: column; gap: 1px;
+}
+.row-menu__panel--open { display: flex; animation: row-menu-in 0.12s ease-out; }
+@keyframes row-menu-in { from { opacity: 0; transform: translateY(-2px); } to { opacity: 1; transform: translateY(0); } }
+.row-menu__item {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 8px 10px; border: none; background: transparent; border-radius: 7px;
+  font-size: 13px; font-weight: 500; color: #334155; cursor: pointer; transition: background 0.12s;
+}
+.row-menu__item:hover { background: #f1f5f9; }
+.row-menu__item--danger { color: #dc2626; }
+.row-menu__item--danger:hover { background: #fef2f2; }
+.row-menu__icon { display: flex; flex: none; width: 18px; height: 18px; color: inherit; opacity: 0.85; }
+.row-menu__icon svg { width: 100%; height: 100%; }

@@ -22,9 +22,11 @@ app:
   password-reset:
     token-ttl-minutes: ${PASSWORD_RESET_TOKEN_TTL_MINUTES:30}
   two-factor:
-    otp-ttl-minutes: ${TWO_FACTOR_OTP_TTL_MINUTES:5}
+    # NCL-01-CN-009: TOTP kiểu Google Authenticator — mã sinh trên máy người dùng,
+    # không gửi/nhận qua kênh nào nên không còn config kiểu "mock-otp-logging" nữa.
+    challenge-ttl-minutes: ${TWO_FACTOR_CHALLENGE_TTL_MINUTES:10}
     lock-minutes: ${TWO_FACTOR_LOCK_MINUTES:15}
-    mock-otp-logging: ${TWO_FACTOR_MOCK_OTP_LOGGING:false}
+    issuer: ${TWO_FACTOR_ISSUER:Van Hanh Dich Vu}
     rate-limit:
       max-attempts: ${TWO_FACTOR_RATE_LIMIT_MAX_ATTEMPTS:5}
       window-seconds: ${TWO_FACTOR_RATE_LIMIT_WINDOW_SECONDS:60}
