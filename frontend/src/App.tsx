@@ -87,11 +87,17 @@ export default function App() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifTab, setNotifTab] = useState<'ALL' | 'MENTIONS' | 'SYSTEM'>('ALL');
+  const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setUserMenuOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setNotifOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -137,9 +143,54 @@ export default function App() {
             <button type="button" className="icon-btn" title="Trợ giúp" aria-label="Trợ giúp">
               {ICONS.helpCircle}
             </button>
-            <button type="button" className="icon-btn" title="Thông báo" aria-label="Thông báo">
-              {ICONS.bell}
-            </button>
+            <div className="notif" ref={notifRef}>
+              <button
+                type="button"
+                className="icon-btn"
+                title="Thông báo"
+                aria-label="Thông báo"
+                aria-haspopup="menu"
+                aria-expanded={notifOpen}
+                onClick={() => setNotifOpen((open) => !open)}
+              >
+                {ICONS.bell}
+              </button>
+
+              {notifOpen && (
+                <div className="notif-panel" role="menu">
+                  <div className="notif-panel__tabs">
+                    <button
+                      type="button"
+                      className={`notif-panel__tab ${notifTab === 'ALL' ? 'notif-panel__tab--active' : ''}`}
+                      onClick={() => setNotifTab('ALL')}
+                    >
+                      Tất cả
+                    </button>
+                    <button
+                      type="button"
+                      className={`notif-panel__tab ${notifTab === 'MENTIONS' ? 'notif-panel__tab--active' : ''}`}
+                      onClick={() => setNotifTab('MENTIONS')}
+                    >
+                      Nhắc đến
+                    </button>
+                    <button
+                      type="button"
+                      className={`notif-panel__tab ${notifTab === 'SYSTEM' ? 'notif-panel__tab--active' : ''}`}
+                      onClick={() => setNotifTab('SYSTEM')}
+                    >
+                      Hệ thống
+                    </button>
+                    <span className="notif-panel__tabs-spacer" />
+                    <span className="notif-panel__chevron">{ICONS.chevronDown}</span>
+                  </div>
+
+                  <div className="notif-panel__empty">
+                    <span className="notif-panel__empty-icon">{ICONS.bell}</span>
+                    <p>Chưa có thông báo nào</p>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="user-chip" ref={userMenuRef}>
               <button
