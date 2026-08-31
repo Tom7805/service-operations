@@ -226,13 +226,8 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
       {/* Page Header */}
       <div className="page-header">
         <div>
-          <div className="breadcrumb">
-            <span>Hệ thống</span> / <span>Quản trị & Phân quyền</span> / <span className="active">Khai báo cây tổ chức</span>
-          </div>
-          <h1 className="page-title">Màn hình khai báo cây tổ chức</h1>
-          <p className="page-subtitle">
-            Thiết lập sơ đồ thứ bậc phòng ban, đơn vị trực thuộc, gán người quản lý và quản lý mối quan hệ cây tổ chức công ty.
-          </p>
+          <h1 className="page-title">Khai báo cây tổ chức</h1>
+          <p className="page-subtitle">Thiết lập sơ đồ phòng ban và gán người quản lý.</p>
         </div>
         <div className="page-header-actions">
           <button type="button" className="btn-primary btn-lg" onClick={handleOpenCreateRoot}>

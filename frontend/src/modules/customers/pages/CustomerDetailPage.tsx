@@ -89,8 +89,6 @@ export default function CustomerDetailPage({
               ← Khách hàng
             </button>
             <span>/</span>
-            <span>Hồ sơ khách hàng</span>
-            <span>/</span>
             <span className="active">{customer.code}</span>
           </div>
 

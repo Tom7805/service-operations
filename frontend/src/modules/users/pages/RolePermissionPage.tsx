@@ -187,13 +187,8 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
       {/* Page Header */}
       <div className="page-header">
         <div>
-          <div className="breadcrumb">
-            <span>Hệ thống</span> / <span>Quản trị & Phân quyền</span> / <span className="active">Phân quyền vai trò & Phạm vi dữ liệu</span>
-          </div>
           <h1 className="page-title">Phân quyền vai trò & Phạm vi dữ liệu</h1>
-          <p className="page-subtitle">
-            Thiết lập vai trò chức năng và phạm vi truy cập dữ liệu (Toàn công ty, Nhánh bộ phận, Cá nhân).
-          </p>
+          <p className="page-subtitle">Gán vai trò và phạm vi truy cập dữ liệu cho từng tài khoản.</p>
         </div>
       </div>
 

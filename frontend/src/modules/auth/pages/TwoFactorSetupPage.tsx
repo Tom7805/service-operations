@@ -106,13 +106,9 @@ export default function TwoFactorSetupPage({
     <div className="user-management-page">
       <div className="page-header">
         <div>
-          <div className="breadcrumb">
-            <span>Bảo mật</span> / <span className="active">Xác thực hai bước</span>
-          </div>
           <h1 className="page-title">Xác thực hai bước theo vai trò</h1>
           <p className="page-subtitle">
-            Bật xác thực hai bước cho các vai trò xem dữ liệu tài chính — người dùng thuộc vai trò đang bật
-            phải nhập mã một lần (OTP) mỗi lần đăng nhập, sau mật khẩu.
+            Vai trò được bật sẽ phải nhập mã OTP mỗi lần đăng nhập, sau mật khẩu.
           </p>
         </div>
       </div>

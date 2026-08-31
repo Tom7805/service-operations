@@ -336,15 +336,8 @@ export default function CustomerMergePage({
 
       <div className="page-header">
         <div>
-          <div className="breadcrumb">
-            <span>Trang chủ</span> <span>/</span> <span>Khách hàng</span> <span>/</span>{' '}
-            <span className="active">Gộp hồ sơ trùng</span>
-          </div>
           <h1 className="page-title">Gộp hai hồ sơ khách hàng trùng</h1>
-          <p className="page-subtitle">
-            Chuyển toàn bộ dữ liệu liên quan hiện có từ hồ sơ bị gộp về hồ sơ giữ lại để doanh thu của khách hàng
-            không bị chia nhỏ do có hai hồ sơ trùng nhau.
-          </p>
+          <p className="page-subtitle">Chuyển dữ liệu từ hồ sơ bị gộp về hồ sơ giữ lại.</p>
         </div>
       </div>
 

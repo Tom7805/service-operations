@@ -161,7 +161,7 @@ describe('Organization Tree Module — Acceptance Criteria Tests (NCL-01-CN-003)
   it('TC-05: Admin users (VT-07) view stats, audit log stream, and tree controls', () => {
     render(<DepartmentTreePage currentUserRoles={['VT-07']} currentUserName="Quản trị viên" />);
 
-    expect(screen.getByText('Màn hình khai báo cây tổ chức')).toBeInTheDocument();
+    expect(screen.getByText('Khai báo cây tổ chức')).toBeInTheDocument();
     expect(screen.getByText('Tổng số bộ phận')).toBeInTheDocument();
     expect(screen.getByText(/Nhật ký khai báo cây tổ chức/i)).toBeInTheDocument();
   });

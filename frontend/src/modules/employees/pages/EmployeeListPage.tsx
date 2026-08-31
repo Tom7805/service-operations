@@ -118,14 +118,8 @@ export default function EmployeeListPage({
 
       <div className="page-header">
         <div>
-          <div className="breadcrumb">
-            <span>Hệ thống</span> / <span>Nhân sự</span> /{' '}
-            <span className="active">Hồ sơ nhân sự & giờ làm việc chuẩn</span>
-          </div>
-          <h1 className="page-title">Quản lý hồ sơ nhân sự và giờ làm việc chuẩn</h1>
-          <p className="page-subtitle">
-            Quản lý hồ sơ, hợp đồng lao động và giờ làm việc chuẩn hàng tuần của từng nhân sự công ty.
-          </p>
+          <h1 className="page-title">Hồ sơ nhân sự & giờ làm việc</h1>
+          <p className="page-subtitle">Quản lý hồ sơ, hợp đồng lao động và giờ làm chuẩn.</p>
         </div>
         <div className="page-header-actions">
           <button type="button" className="btn-primary btn-lg" onClick={handleOpenCreateModal}>

@@ -141,10 +141,6 @@ export default function SensitiveAccessLogPage({
       {/* Page Header */}
       <div className="page-header">
         <div>
-          <div className="breadcrumb">
-            <span>Hệ thống</span> / <span>Bảo mật dữ liệu</span> /{' '}
-            <span className="active">Nhật ký truy cập dữ liệu nhạy cảm</span>
-          </div>
           <h1 className="page-title">Nhật ký truy cập dữ liệu nhạy cảm</h1>
           <p className="page-subtitle">
             Tra cứu toàn bộ lượt xem, xuất và các lần bị từ chối truy cập dữ liệu lương, chi phí, giá vốn

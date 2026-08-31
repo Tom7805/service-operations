@@ -285,14 +285,8 @@ export default function CustomerListPage({
       {/* Header trang */}
       <div className="page-header">
         <div>
-          <div className="breadcrumb">
-            <span>Trang chủ</span> <span>/</span> <span>Khách hàng</span> <span>/</span>{' '}
-            <span className="active">Hồ sơ khách hàng</span>
-          </div>
           <h1 className="page-title">Hồ sơ khách hàng</h1>
-          <p className="page-subtitle">
-            Tạo mới và quản lý danh mục hồ sơ khách hàng doanh nghiệp, kết nối hợp đồng và các dự án dịch vụ.
-          </p>
+          <p className="page-subtitle">Tạo mới và quản lý danh mục khách hàng doanh nghiệp.</p>
         </div>
         <div>
           <button

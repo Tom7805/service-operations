@@ -125,15 +125,8 @@ export default function MaskingRulePage({
       {/* Page Header */}
       <div className="page-header">
         <div>
-          <div className="breadcrumb">
-            <span>Hệ thống</span> / <span>Bảo mật dữ liệu</span> /{' '}
-            <span className="active">Che dữ liệu lương & giá vốn</span>
-          </div>
           <h1 className="page-title">Che dữ liệu lương & giá vốn</h1>
-          <p className="page-subtitle">
-            Cấu hình quy tắc che dữ liệu lương, chi phí giờ công và giá vốn theo vai trò.
-            Chỉ nhân sự, kế toán và ban giám đốc mới được xem dữ liệu thật.
-          </p>
+          <p className="page-subtitle">Chỉ nhân sự, kế toán và ban giám đốc được xem dữ liệu thật.</p>
         </div>
         <button type="button" className="btn-icon-refresh" onClick={fetchRules} title="Làm mới dữ liệu" aria-label="Làm mới dữ liệu">
           {ICONS.refresh}
