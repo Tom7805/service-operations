@@ -49,6 +49,29 @@ Các badge màu ngữ nghĩa hiện có (`--badge-purple/gold/blue/green/orange/
   - Nhãn phụ, breadcrumb, badge: 11–12.5px / 600–700 / uppercase khi là nhãn cột hoặc eyebrow
 - Số liệu quan trọng (thẻ thống kê) dùng `font-variant-numeric: tabular-nums` khi xuất hiện nhiều số cạnh nhau.
 
+## Navigation Shell
+
+Kiểu Apple (macOS System Settings / Finder): **sidebar trái cố định**, không phải thanh điều hướng ngang trên
+đầu. Sidebar (264px) gồm: logo + tên hệ thống trên cùng, danh sách điều hướng dạng hàng bo góc nhỏ (mục đang
+chọn tô nền đen chữ trắng, không dùng viền màu), và cụm tài khoản người dùng cố định ở đáy (avatar + tên + vai
+trò, bấm mở menu nổi lên phía trên). Trên màn hình hẹp (<900px), sidebar co lại thành thanh ngang cuộn được.
+Đây là thay đổi có chủ đích từ bản thanh pill ngang trước đó — nav ngang chỉ hợp với sản phẩm ít mục, còn 9 mục
+điều hướng như hệ thống này cần chiều dọc để không bị chật, đúng cách macOS tổ chức các mục cấu hình.
+
+## Elevation & Motion
+
+Mọi bề mặt nổi lên (card, nút, menu, modal) dùng chung một "nguồn sáng" — bóng mềm nhiều lớp, không dùng bóng
+đơn cứng — và di chuyển bằng easing giảm tốc tự nhiên (`cubic-bezier(.16,1,.3,1)`), không dùng `linear`/`ease`
+mặc định của trình duyệt. Khai báo tại `:root` trong `index.css`:
+
+- `--shadow-xs/sm/md/lg`: 4 mức độ sâu, dùng đúng thứ tự (thẻ tĩnh → xs, hover thẻ → sm/md, menu/modal nổi → lg).
+- `--ease-out`, `--dur-fast` (120ms), `--dur-base` (180ms): mọi `transition`/`animation` UI dùng lại các biến
+  này thay vì hằng số rời rạc.
+- `--radius-sm/md/lg/xl` (8/12/16/20px): bo góc theo cấp bậc bề mặt — nút/hàng nhỏ dùng sm, thẻ dùng md/lg, khối
+  lớn (login panel...) dùng xl.
+- Quy ước tương tác: hover nổi nhẹ (`translateY(-1px)` đến `-2px`) kèm bóng đậm hơn một cấp; bấm xuống lún nhẹ
+  (`scale(.98)`); menu/modal xuất hiện bằng fade + dịch chuyển 4-8px, không bao giờ bật tắt đột ngột.
+
 ## Layout & Spacing
 
 - Container trang: `max-width: 1280px`, padding ngang 24px.

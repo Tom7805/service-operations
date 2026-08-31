@@ -118,92 +118,94 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <div className="app-main">
-        <header className="app-topbar">
-          <div className="topbar-brand">
-            <span className="topbar-brand__mark">
-              <i />
-              <i />
-              <i />
-            </span>
-            <span>
+      <aside className="app-sidebar">
+        <div className="sidebar-brand">
+          <span className="sidebar-brand__mark">
+            <i />
+            <i />
+            <i />
+          </span>
+          <span className="sidebar-brand__text">
+            <strong>
               Vận hành <b>dịch vụ</b>
-            </span>
-          </div>
+            </strong>
+            <span>{session.fullName}</span>
+          </span>
+        </div>
 
-          <nav className="topbar-nav" aria-label="Điều hướng chính">
-            {NAV_ITEMS.map((item) => {
-              const isActive = activeTab === item.tab || (item.matches ?? []).includes(activeTab);
-              return (
-                <button
-                  key={item.tab}
-                  type="button"
-                  className={`topbar-nav__item ${isActive ? 'topbar-nav__item--active' : ''}`}
-                  onClick={() => setActiveTab(item.tab)}
-                  aria-current={isActive ? 'page' : undefined}
-                >
-                  <span className="topbar-nav__item__icon" aria-hidden="true">
-                    {item.icon}
-                  </span>
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-          </nav>
-
-          <div className="topbar-actions">
-            <div className="topbar-role-badge" title="Vai trò thật của tài khoản đang đăng nhập, do máy chủ xác định khi đăng nhập">
-              <span className="topbar-devmode__dot" />
-              <span>{currentRoles.map((role) => ROLE_LABELS[role] ?? role).join(', ')}</span>
-            </div>
-
-            <div className="topbar-user" ref={userMenuRef}>
+        <nav className="sidebar-nav" aria-label="Điều hướng chính">
+          {NAV_ITEMS.map((item) => {
+            const isActive = activeTab === item.tab || (item.matches ?? []).includes(activeTab);
+            return (
               <button
+                key={item.tab}
                 type="button"
-                className={`topbar-user__trigger ${userMenuOpen ? 'topbar-user__trigger--open' : ''}`}
-                onClick={() => setUserMenuOpen((open) => !open)}
-                aria-haspopup="menu"
-                aria-expanded={userMenuOpen}
+                className={`sidebar-nav__item ${isActive ? 'sidebar-nav__item--active' : ''}`}
+                onClick={() => setActiveTab(item.tab)}
+                aria-current={isActive ? 'page' : undefined}
               >
-                <span className="avatar-circle">{getInitials(session.fullName)}</span>
-                <span className="topbar-user__meta">
-                  <span className="topbar-user__name">{session.fullName}</span>
-                  <span className="topbar-user__role">@{session.username}</span>
+                <span className="sidebar-nav__item__icon" aria-hidden="true">
+                  {item.icon}
                 </span>
-                <span className="topbar-user__chevron">▾</span>
+                <span>{item.label}</span>
               </button>
+            );
+          })}
+        </nav>
 
-              {userMenuOpen && (
-                <div className="topbar-user__menu" role="menu">
-                  <div className="topbar-user__menu-header">
-                    <strong>{session.fullName}</strong>
-                    <span>@{session.username}</span>
-                  </div>
-                  <button
-                    type="button"
-                    className="topbar-user__menu-item"
-                    role="menuitem"
-                    onClick={() => {
-                      setActiveTab('CHANGE_PASSWORD');
-                      setUserMenuOpen(false);
-                    }}
-                  >
-                    🔑 Đổi mật khẩu
-                  </button>
-                  <button
-                    type="button"
-                    className="topbar-user__menu-item topbar-user__menu-item--danger"
-                    role="menuitem"
-                    onClick={handleLogout}
-                  >
-                    ↪ Đăng xuất
-                  </button>
-                </div>
-              )}
-            </div>
+        <div className="sidebar-footer">
+          <div className="sidebar-role-badge" title="Vai trò thật của tài khoản đang đăng nhập, do máy chủ xác định khi đăng nhập">
+            <span className="sidebar-devmode__dot" />
+            <span>{currentRoles.map((role) => ROLE_LABELS[role] ?? role).join(', ')}</span>
           </div>
-        </header>
 
+          <div className="sidebar-user" ref={userMenuRef}>
+            {userMenuOpen && (
+              <div className="sidebar-user__menu" role="menu">
+                <div className="sidebar-user__menu-header">
+                  <strong>{session.fullName}</strong>
+                  <span>@{session.username}</span>
+                </div>
+                <button
+                  type="button"
+                  className="sidebar-user__menu-item"
+                  role="menuitem"
+                  onClick={() => {
+                    setActiveTab('CHANGE_PASSWORD');
+                    setUserMenuOpen(false);
+                  }}
+                >
+                  {ICONS.key} Đổi mật khẩu
+                </button>
+                <button
+                  type="button"
+                  className="sidebar-user__menu-item sidebar-user__menu-item--danger"
+                  role="menuitem"
+                  onClick={handleLogout}
+                >
+                  {ICONS.logout} Đăng xuất
+                </button>
+              </div>
+            )}
+            <button
+              type="button"
+              className={`sidebar-user__trigger ${userMenuOpen ? 'sidebar-user__trigger--open' : ''}`}
+              onClick={() => setUserMenuOpen((open) => !open)}
+              aria-haspopup="menu"
+              aria-expanded={userMenuOpen}
+            >
+              <span className="avatar-circle">{getInitials(session.fullName)}</span>
+              <span className="sidebar-user__meta">
+                <span className="sidebar-user__name">{session.fullName}</span>
+                <span className="sidebar-user__role">@{session.username}</span>
+              </span>
+              <span className="sidebar-user__chevron">{ICONS.chevronDown}</span>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <div className="app-main">
         <main className="app-content">
           {activeTab === 'CHANGE_PASSWORD' ? (
             <ChangePasswordPage onBack={() => setActiveTab('DEPARTMENTS')} onPasswordChanged={handleLogout} />

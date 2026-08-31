@@ -327,6 +327,18 @@ export const ICONS = {
       <path d="M11.5 2.5V5.5h3M7 9.5h6M7 12.5h6M7 15h3.5" />
     </svg>
   ),
+  logout: (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 17.5H4.5a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1H8" />
+      <path d="M13 13.5 17.5 10 13 6.5" />
+      <path d="M17.2 10H7.5" />
+    </svg>
+  ),
+  chevronDown: (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 7.5 10 12.5 15 7.5" />
+    </svg>
+  ),
   hash: (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
       <path d="M7 2.5 5 17.5M15 2.5l-2 15M3 7h14M2.5 13h14" />
