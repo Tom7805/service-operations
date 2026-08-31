@@ -369,17 +369,17 @@ body { background: linear-gradient(135deg, #eef6ee 0%, #eef1f6 45%, #f1eef6 100%
 
 /* Thanh điều hướng dạng pill — mục đang chọn nổi bằng nền trắng bo tròn + đổ bóng nhẹ trên nền xám be. */
 .pill-tabbar {
-  display: flex; align-items: center; gap: 2px; flex-wrap: wrap; margin: 0 28px 4px auto; padding: 4px;
-  background: #f5f4f1; border: 1px solid #ececea; border-radius: 999px; flex-shrink: 0;
-  width: fit-content; max-width: calc(100% - 56px); box-shadow: var(--shadow-xs);
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 28px 4px auto;
+  flex-shrink: 0; width: fit-content; max-width: calc(100% - 56px);
 }
 .pill-tabbar__item {
-  display: flex; align-items: center; gap: 7px; background: transparent; border: none; border-radius: 999px;
-  padding: 9px 16px; font-size: 13px; font-weight: 600; color: #6b7280; cursor: pointer; white-space: nowrap;
-  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  display: flex; align-items: center; gap: 7px; background: #ffffff; border: 1.5px solid transparent;
+  border-radius: 999px; padding: 9px 16px; font-size: 13px; font-weight: 600; color: #6b7280; cursor: pointer;
+  white-space: nowrap; box-shadow: var(--shadow-xs);
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
 }
-.pill-tabbar__item:hover { color: #0f172a; }
-.pill-tabbar__item--active { background: #ffffff; color: #0f172a; box-shadow: var(--shadow-xs); }
+.pill-tabbar__item:hover { color: #0f172a; box-shadow: var(--shadow-sm); }
+.pill-tabbar__item--active { background: #ffffff; color: #0f172a; font-weight: 700; border-color: #17181a; box-shadow: none; }
 .pill-tabbar__item__icon { display: inline-flex; flex-shrink: 0; opacity: .8; }
 .pill-tabbar__item__icon svg { width: 15px; height: 15px; }
 .pill-tabbar__item--active .pill-tabbar__item__icon { opacity: 1; color: #10b981; }
