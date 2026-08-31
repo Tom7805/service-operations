@@ -109,13 +109,53 @@ describe('authApi (NCL-01-CN-001, NCL-01-CN-008)', () => {
           roles: ['VT-05'],
           requiresTwoFactor: true,
           challengeToken: 'challenge-abc',
+          totpEnrollment: false,
+          otpauthUri: null,
+          totpSecretForDisplay: null,
         },
       })
     );
 
     const result = await login('finance-user', 'Password@123');
-    expect(result).toEqual({ requiresTwoFactor: true, challengeToken: 'challenge-abc', username: 'finance-user' });
+    expect(result).toEqual({
+      requiresTwoFactor: true,
+      challengeToken: 'challenge-abc',
+      username: 'finance-user',
+      totpEnrollment: false,
+      otpauthUri: null,
+      totpSecretForDisplay: null,
+    });
     expect(isTwoFactorChallenge(result)).toBe(true);
+  });
+
+  it('login: lần đầu bật 2FA trả kèm otpauthUri để vẽ QR (thiết lập app Authenticator)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetchOnce(200, {
+        success: true,
+        data: {
+          accessToken: null,
+          tokenType: null,
+          userId: 5,
+          username: 'finance-user',
+          fullName: 'Finance User',
+          roles: ['VT-05'],
+          requiresTwoFactor: true,
+          challengeToken: 'challenge-abc',
+          totpEnrollment: true,
+          otpauthUri: 'otpauth://totp/Van%20Hanh%20Dich%20Vu:finance-user?secret=ABCD&issuer=Van%20Hanh%20Dich%20Vu',
+          totpSecretForDisplay: 'ABCD 1234',
+        },
+      })
+    );
+
+    const result = await login('finance-user', 'Password@123');
+    expect(isTwoFactorChallenge(result)).toBe(true);
+    if (isTwoFactorChallenge(result)) {
+      expect(result.totpEnrollment).toBe(true);
+      expect(result.otpauthUri).toContain('otpauth://totp/');
+      expect(result.totpSecretForDisplay).toBe('ABCD 1234');
+    }
   });
 
   it('verifyTwoFactor: trả về AuthSession sau khi OTP đúng', async () => {

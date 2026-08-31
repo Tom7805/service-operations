@@ -28,7 +28,8 @@ export interface ResetPasswordPayload {
 }
 
 /**
- * NCL-01-CN-009 — xác thực hai bước (2FA) cho tài khoản xem dữ liệu tài chính.
+ * NCL-01-CN-009 — xác thực hai bước (2FA) kiểu Google Authenticator/Authy (TOTP)
+ * cho tài khoản xem dữ liệu tài chính.
  */
 
 /** Hình dạng thô của LoginRes trả về từ backend — dùng nội bộ trong authApi để phân biệt hai nhánh. */
@@ -41,13 +42,23 @@ export interface LoginResponseDto {
   roles: string[];
   requiresTwoFactor: boolean;
   challengeToken: string | null;
+  /** true nếu đây là lần đầu tài khoản bật 2FA — chưa liên kết app Authenticator nào, cần quét QR. */
+  totpEnrollment: boolean;
+  /** Chuỗi otpauth:// để vẽ QR — chỉ có khi totpEnrollment = true. */
+  otpauthUri: string | null;
+  /** Khóa bí mật định dạng dễ đọc — fallback nhập tay khi không quét được QR. */
+  totpSecretForDisplay: string | null;
 }
 
-/** Kết quả bước 1 khi tài khoản thuộc vai trò đang bật 2FA — chưa có JWT, cần nộp OTP (TC-01). */
+/** Kết quả bước 1 khi tài khoản thuộc vai trò đang bật 2FA — chưa có JWT, cần nộp mã TOTP (TC-01). */
 export interface TwoFactorChallenge {
   requiresTwoFactor: true;
   challengeToken: string;
   username: string;
+  /** true = lần đầu thiết lập, cần hiện QR để quét bằng Google Authenticator/Authy. */
+  totpEnrollment: boolean;
+  otpauthUri: string | null;
+  totpSecretForDisplay: string | null;
 }
 
 /** login() trả về một trong hai: đăng nhập xong ngay, hoặc còn chờ xác thực OTP. */

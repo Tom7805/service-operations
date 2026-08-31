@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { AuthSession } from '../types/authTypes';
+import type { AuthSession, TwoFactorChallenge } from '../types/authTypes';
 import LoginForm from '../components/LoginForm';
 import ForgotPasswordForm from '../components/ForgotPasswordForm';
 import ResetPasswordForm from '../components/ResetPasswordForm';
@@ -47,8 +47,8 @@ type AuthView = 'LOGIN' | 'FORGOT' | 'RESET' | 'TWO_FACTOR';
 export default function LoginPage({ onAuthenticated }: LoginPageProps) {
   const [view, setView] = useState<AuthView>('LOGIN');
   const [resetToken, setResetToken] = useState<string | null>(null);
-  // NCL-01-CN-009: bước 1 (mật khẩu đúng) trả về challengeToken khi vai trò đang bật 2FA.
-  const [twoFactorChallenge, setTwoFactorChallenge] = useState<{ token: string; username: string } | null>(null);
+  // NCL-01-CN-009: bước 1 (mật khẩu đúng) trả về challenge khi vai trò đang bật 2FA.
+  const [twoFactorChallenge, setTwoFactorChallenge] = useState<TwoFactorChallenge | null>(null);
 
   // Liên kết khôi phục mật khẩu (mô phỏng qua log backend — QTN-04) đưa người dùng thẳng
   // vào đây kèm ?token=..., không cần đăng nhập trước.
@@ -93,8 +93,8 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
           <LoginForm
             onAuthenticated={onAuthenticated}
             onForgotPassword={() => setView('FORGOT')}
-            onTwoFactorRequired={(token, username) => {
-              setTwoFactorChallenge({ token, username });
+            onTwoFactorRequired={(challenge) => {
+              setTwoFactorChallenge(challenge);
               setView('TWO_FACTOR');
             }}
           />
@@ -103,8 +103,11 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
         {view === 'RESET' && resetToken && <ResetPasswordForm token={resetToken} onDone={handleResetDone} />}
         {view === 'TWO_FACTOR' && twoFactorChallenge && (
           <TwoFactorVerifyForm
-            challengeToken={twoFactorChallenge.token}
+            challengeToken={twoFactorChallenge.challengeToken}
             username={twoFactorChallenge.username}
+            totpEnrollment={twoFactorChallenge.totpEnrollment}
+            otpauthUri={twoFactorChallenge.otpauthUri}
+            totpSecretForDisplay={twoFactorChallenge.totpSecretForDisplay}
             onVerified={onAuthenticated}
             onBackToLogin={() => {
               setTwoFactorChallenge(null);

@@ -17,12 +17,16 @@ vi.mock('../../api/authApi', () => ({
   },
 }));
 
-describe('TwoFactorVerifyForm (NCL-01-CN-009-TC-01/TC-02)', () => {
+vi.mock('qrcode', () => ({
+  default: { toDataURL: vi.fn().mockResolvedValue('data:image/png;base64,fake') },
+}));
+
+describe('TwoFactorVerifyForm (NCL-01-CN-009-TC-01/TC-02) — TOTP kiểu Google Authenticator', () => {
   beforeEach(() => {
     mockVerifyTwoFactor.mockReset();
   });
 
-  it('TC-01: gọi verifyTwoFactor với challengeToken + OTP rồi trả về phiên đã đăng nhập', async () => {
+  it('TC-01: gọi verifyTwoFactor với challengeToken + mã rồi trả về phiên đã đăng nhập', async () => {
     const session = { accessToken: 'tok', tokenType: 'Bearer', userId: 5, username: 'finance-user', fullName: 'Finance User', roles: ['VT-05'] };
     mockVerifyTwoFactor.mockResolvedValue(session);
     const onVerified = vi.fn();
@@ -31,6 +35,9 @@ describe('TwoFactorVerifyForm (NCL-01-CN-009-TC-01/TC-02)', () => {
       <TwoFactorVerifyForm
         challengeToken="challenge-abc"
         username="finance-user"
+        totpEnrollment={false}
+        otpauthUri={null}
+        totpSecretForDisplay={null}
         onVerified={onVerified}
         onBackToLogin={vi.fn()}
       />
@@ -48,6 +55,9 @@ describe('TwoFactorVerifyForm (NCL-01-CN-009-TC-01/TC-02)', () => {
       <TwoFactorVerifyForm
         challengeToken="challenge-abc"
         username="finance-user"
+        totpEnrollment={false}
+        otpauthUri={null}
+        totpSecretForDisplay={null}
         onVerified={vi.fn()}
         onBackToLogin={vi.fn()}
       />
@@ -60,7 +70,7 @@ describe('TwoFactorVerifyForm (NCL-01-CN-009-TC-01/TC-02)', () => {
     expect(mockVerifyTwoFactor).not.toHaveBeenCalled();
   });
 
-  it('TC-02: hiển thị thông báo khóa tạm từ backend khi sai OTP quá số lần cho phép', async () => {
+  it('TC-02: hiển thị thông báo khóa tạm từ backend khi sai mã quá số lần cho phép', async () => {
     const { AuthApiError } = await import('../../api/authApi');
     mockVerifyTwoFactor.mockRejectedValue(
       new AuthApiError('ACCOUNT_LOCKED', 'Nhap sai ma xac thuc qua so lan cho phep. Tai khoan tam khoa, vui long thu lai sau.')
@@ -70,6 +80,9 @@ describe('TwoFactorVerifyForm (NCL-01-CN-009-TC-01/TC-02)', () => {
       <TwoFactorVerifyForm
         challengeToken="challenge-abc"
         username="finance-user"
+        totpEnrollment={false}
+        otpauthUri={null}
+        totpSecretForDisplay={null}
         onVerified={vi.fn()}
         onBackToLogin={vi.fn()}
       />
@@ -89,6 +102,9 @@ describe('TwoFactorVerifyForm (NCL-01-CN-009-TC-01/TC-02)', () => {
       <TwoFactorVerifyForm
         challengeToken="challenge-abc"
         username="finance-user"
+        totpEnrollment={false}
+        otpauthUri={null}
+        totpSecretForDisplay={null}
         onVerified={vi.fn()}
         onBackToLogin={onBackToLogin}
       />
@@ -97,5 +113,50 @@ describe('TwoFactorVerifyForm (NCL-01-CN-009-TC-01/TC-02)', () => {
     fireEvent.click(screen.getByText(/Quay lại đăng nhập/i));
 
     expect(onBackToLogin).toHaveBeenCalledTimes(1);
+  });
+
+  describe('Thiết lập lần đầu (totpEnrollment = true)', () => {
+    it('hiện mã QR và khóa dự phòng để liên kết app Authenticator', async () => {
+      render(
+        <TwoFactorVerifyForm
+          challengeToken="challenge-abc"
+          username="ketoan01"
+          totpEnrollment
+          otpauthUri="otpauth://totp/Van%20Hanh%20Dich%20Vu:ketoan01?secret=ABCD1234&issuer=Van%20Hanh%20Dich%20Vu&algorithm=SHA1&digits=6&period=30"
+          totpSecretForDisplay="ABCD 1234"
+          onVerified={vi.fn()}
+          onBackToLogin={vi.fn()}
+        />
+      );
+
+      expect(screen.getByText(/Liên kết ứng dụng Authenticator/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByTestId('totp-qr-box').querySelector('img')).toHaveAttribute(
+          'src',
+          'data:image/png;base64,fake'
+        );
+      });
+
+      fireEvent.click(screen.getByText(/Không quét được QR/i));
+      expect(screen.getByTestId('totp-secret')).toHaveTextContent('ABCD 1234');
+    });
+
+    it('không hiện QR/khóa bí mật khi đã thiết lập từ trước (totpEnrollment = false)', () => {
+      render(
+        <TwoFactorVerifyForm
+          challengeToken="challenge-abc"
+          username="ketoan01"
+          totpEnrollment={false}
+          otpauthUri={null}
+          totpSecretForDisplay={null}
+          onVerified={vi.fn()}
+          onBackToLogin={vi.fn()}
+        />
+      );
+
+      expect(screen.queryByTestId('totp-qr-box')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('totp-secret')).not.toBeInTheDocument();
+      expect(screen.getByText(/Nhập mã xác thực/i)).toBeInTheDocument();
+    });
   });
 });
