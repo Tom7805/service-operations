@@ -52,4 +52,17 @@ public class TwoFactorController {
 		CustomUserDetails user = (CustomUserDetails) authentication.getPrincipal();
 		return BaseRes.ok(twoFactorService.updateConfig(roleId, request, user.getId()));
 	}
+
+	/**
+	 * Đặt lại thiết lập TOTP khi người dùng mất/đổi điện thoại và không còn cách
+	 * nào tạo mã cho tài khoản cũ nữa. Lần đăng nhập kế tiếp của tài khoản đó sẽ
+	 * hiện lại màn hình QR để liên kết app Authenticator mới.
+	 */
+	@PostMapping("/users/{userId}/reset")
+	@PreAuthorize("hasRole('VT-07')")
+	public BaseRes<Void> resetEnrollment(@PathVariable Long userId, Authentication authentication) {
+		CustomUserDetails admin = (CustomUserDetails) authentication.getPrincipal();
+		twoFactorService.resetEnrollment(userId, admin.getId());
+		return BaseRes.ok("Đã đặt lại xác thực hai bước cho tài khoản này", null);
+	}
 }

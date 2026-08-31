@@ -10,6 +10,8 @@ interface UserTableProps {
   onAssignRoles: (user: User) => void;
   onViewDetail: (user: User) => void;
   onRefresh: () => void;
+  /** NCL-01-CN-009: mất/đổi điện thoại — đặt lại thiết lập TOTP để bắt buộc liên kết app mới. */
+  onResetTwoFactor?: (user: User) => void;
 }
 
 export const UserTable: React.FC<UserTableProps> = ({
@@ -20,6 +22,7 @@ export const UserTable: React.FC<UserTableProps> = ({
   onAssignRoles,
   onViewDetail,
   onRefresh,
+  onResetTwoFactor,
 }) => {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
@@ -262,6 +265,17 @@ export const UserTable: React.FC<UserTableProps> = ({
                       >
                         👁️
                       </button>
+                      {onResetTwoFactor && (
+                        <button
+                          type="button"
+                          className="action-btn action-btn--reset-2fa"
+                          title="Đặt lại xác thực hai bước (mất/đổi điện thoại)"
+                          data-testid={`btn-reset-2fa-${user.id}`}
+                          onClick={() => onResetTwoFactor(user)}
+                        >
+                          🔁
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

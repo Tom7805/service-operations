@@ -44,6 +44,15 @@ public interface TwoFactorService {
     List<TwoFactorSetupRes> listConfigs();
 
     /**
+     * Đặt lại thiết lập TOTP của một người dùng — dùng khi mất/đổi điện thoại nên
+     * không còn app Authenticator nào tạo được mã cho tài khoản đó nữa. Xoá khóa bí
+     * mật và trạng thái đã xác nhận; lần đăng nhập kế tiếp của tài khoản đó sẽ hiện
+     * lại màn hình quét QR để liên kết app mới. Chỉ Quản trị viên thực hiện được
+     * (ràng buộc ở tầng controller).
+     */
+    void resetEnrollment(Long userId, Long performedByUserId);
+
+    /**
      * TC-03/TC-04: bật/tắt 2FA cho một vai trò (chỉ quản trị viên). Ghi lại
      * người thực hiện (updatedBy) và thời điểm (updatedAt) cho TC-04.
      */

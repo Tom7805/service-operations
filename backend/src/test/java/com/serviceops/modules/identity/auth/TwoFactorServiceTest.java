@@ -280,6 +280,40 @@ class TwoFactorServiceTest {
 	}
 
 	@Test
+	@DisplayName("Mat thiet bi: dat lai thiet lap thi xoa khoa + xac nhan, lan sau lai phai hien QR")
+	void resetEnrollment_clearsSecretAndConfirmation() {
+		when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+		when(userRepository.findById(9L)).thenReturn(Optional.of(adminUser(9L, "admin")));
+
+		twoFactorService.resetEnrollment(1L, 9L);
+
+		assertThat(user.getTotpSecret()).isNull();
+		assertThat(user.getTotpConfirmedAt()).isNull();
+		verify(userRepository).save(user);
+
+		// Xoa xong thi lan createChallenge ke tiep phai coi nhu chua tung thiet lap.
+		TwoFactorChallengeRes challenge = twoFactorService.createChallenge(user);
+		assertThat(challenge.enrollment()).isTrue();
+	}
+
+	@Test
+	void resetEnrollment_userNotFound_throwsResourceNotFound() {
+		when(userRepository.findById(999L)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> twoFactorService.resetEnrollment(999L, 9L))
+				.isInstanceOf(BusinessRuleException.class)
+				.extracting("errorCode")
+				.isEqualTo(ErrorCode.RESOURCE_NOT_FOUND);
+	}
+
+	private User adminUser(Long id, String username) {
+		User admin = new User();
+		admin.setId(id);
+		admin.setUsername(username);
+		return admin;
+	}
+
+	@Test
 	void updateConfig_persistsBeforeAndAfterStateAudit() {
 		Role role = new Role();
 		role.setId(7L);

@@ -202,6 +202,25 @@ public class TwoFactorServiceImpl implements TwoFactorService {
 	}
 
 	@Override
+	@Transactional
+	public void resetEnrollment(Long userId, Long performedByUserId) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Khong tim thay tai khoan"));
+
+		user.setTotpSecret(null);
+		user.setTotpConfirmedAt(null);
+		userRepository.save(user);
+		// Khong can thu hoi rieng cac phien cho dang do: verifyTwoFactor da bat buoc
+		// user.getTotpSecret() != null moi tinh ma, nen phien cu (neu con) tu dong vo hieu.
+
+		String performedByUsername = performedByUserId != null
+				? userRepository.findById(performedByUserId).map(User::getUsername).orElse(null)
+				: null;
+		log.warn("TWO_FACTOR_ENROLLMENT_RESET userId={} username={} by={} - yeu cau lien ket lai app Authenticator",
+				user.getId(), user.getUsername(), performedByUsername);
+	}
+
+	@Override
 	@Transactional(readOnly = true)
 	public List<TwoFactorSetupRes> listConfigs() {
 		return roleRepository.findAll().stream()
