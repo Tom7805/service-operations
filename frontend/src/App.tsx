@@ -129,6 +129,7 @@ export default function App() {
   return (
     <div className="app-frame">
       <div className="app-shell">
+        <div className="app-topbar-glow" aria-hidden="true" />
         <header className="app-topbar">
           <div className="app-topbar__brand">
             <span className="app-topbar__mark">

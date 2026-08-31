@@ -275,10 +275,10 @@ body {
   width: 100%; max-width: 1600px; min-height: calc(100vh - 44px);
   background: #ffffff; border: 1px solid #e6e8f5; border-radius: 28px;
   box-shadow: 0 1px 2px rgba(79,70,229,.04), var(--shadow-lg);
-  display: flex; flex-direction: column; overflow: hidden;
+  display: flex; flex-direction: column; overflow: hidden; position: relative;
 }
 
-.app-topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 28px 14px; flex-shrink: 0; }
+.app-topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 28px 14px; flex-shrink: 0; position: relative; z-index: 1; }
 .app-topbar__brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .app-topbar__mark { height: 40px; width: 40px; border-radius: 50%; background: #17181a; display: flex; align-items: end; justify-content: center; gap: 2px; padding: 10px 0 8px; flex-shrink: 0; box-shadow: var(--shadow-sm); }
 .app-topbar__mark i { display: block; background: #10b981; width: 3.5px; border-radius: 3px; }
@@ -375,11 +375,22 @@ body {
 /* Track liền mạch kiểu "iOS segmented control" — nền xám be, các mục chưa chọn chỉ là chữ trần,
    mục đang chọn nổi thành một khối kính (glass pill): gradient trắng→xám, viền sáng nội, đổ bóng
    nhiều lớp, vệt ánh sáng ngũ sắc mờ ở góc trên. Đúng yêu cầu — không được làm khác kiểu này. */
+/* Vệt sáng xanh/tím rất nhạt phía sau thanh điều hướng — để kính có thứ "trong suốt" để lộ ra,
+   đúng cách Apple luôn đặt liquid glass trên một nền có màu/độ sáng thay đổi, không phải nền trắng trơn. */
+.app-topbar-glow {
+  position: absolute; top: -60px; left: 50%; transform: translateX(-50%); width: 640px; height: 220px;
+  background:
+    radial-gradient(ellipse 45% 100% at 30% 100%, rgba(99,140,255,.20), transparent 70%),
+    radial-gradient(ellipse 40% 100% at 75% 100%, rgba(160,110,255,.16), transparent 70%);
+  filter: blur(10px); pointer-events: none; z-index: 0;
+}
+
 .pill-tabbar {
   display: flex; align-items: center; gap: 2px; flex-wrap: wrap; margin: 0 28px 4px auto; padding: 6px;
-  flex-shrink: 0; width: fit-content; max-width: calc(100% - 56px);
-  background: #eceef2; border-radius: 999px;
-  box-shadow: inset 0 1px 3px rgba(15,23,42,.07), inset 0 -1px 0 rgba(255,255,255,.7);
+  flex-shrink: 0; width: fit-content; max-width: calc(100% - 56px); position: relative; z-index: 1;
+  background: rgba(255,255,255,.5); border: 1px solid rgba(255,255,255,.7); border-radius: 999px;
+  backdrop-filter: blur(18px) saturate(180%); -webkit-backdrop-filter: blur(18px) saturate(180%);
+  box-shadow: inset 0 1px 2px rgba(15,23,42,.05), inset 0 -1px 0 rgba(255,255,255,.8), 0 1px 2px rgba(15,23,42,.04);
 }
 .pill-tabbar__item {
   display: flex; align-items: center; gap: 7px; background: transparent; border: none;
@@ -392,38 +403,38 @@ body {
 .pill-tabbar__item:active { transform: scale(.97); }
 
 .pill-tabbar__item--active {
-  color: #10121a; font-weight: 700; transform: scale(1.015); overflow: hidden;
-  background: linear-gradient(168deg, #ffffff 0%, #f8f9fc 38%, #e6e9f1 76%, #d7dce6 100%);
-  border: 1px solid rgba(255,255,255,.9);
+  color: #12141c; font-weight: 700; transform: scale(1.015); overflow: hidden;
+  background: linear-gradient(168deg, rgba(255,255,255,.85) 0%, rgba(255,255,255,.45) 55%, rgba(255,255,255,.65) 100%);
+  backdrop-filter: blur(14px) saturate(200%) brightness(1.06); -webkit-backdrop-filter: blur(14px) saturate(200%) brightness(1.06);
+  border: 1px solid rgba(255,255,255,.85);
   box-shadow:
-    inset 0 2px 1px rgba(255,255,255,1),
-    inset 0 -4px 6px rgba(15,23,60,.10),
-    inset 1px 0 1px rgba(255,255,255,.6),
-    inset -1px 0 1px rgba(15,23,60,.05),
-    0 1px 1px rgba(15,23,60,.05),
-    0 18px 34px -10px rgba(15,23,60,.30),
-    0 6px 14px -4px rgba(15,23,60,.18);
+    inset 0 1px 1px rgba(255,255,255,1),
+    inset 0 -3px 5px rgba(15,23,60,.06),
+    inset 1px 0 1px rgba(255,255,255,.5),
+    0 1px 1px rgba(15,23,60,.04),
+    0 14px 28px -12px rgba(15,23,60,.20),
+    0 4px 10px -3px rgba(15,23,60,.10);
 }
 /* overflow:hidden ở trên cắt mọi lớp phủ theo đúng viền bo tròn — sửa lỗi góc vuông lòi ra ngoài viên kính. */
 /* Vệt bóng láng (specular) trắng chiếm nửa trên viên kính — đây là thứ khiến nó "đọc" ra là kính. */
 .pill-tabbar__item--active::before {
-  content: ''; position: absolute; inset: 0 0 50% 0; pointer-events: none;
-  background: linear-gradient(180deg, rgba(255,255,255,.98) 0%, rgba(255,255,255,.4) 70%, transparent 100%);
+  content: ''; position: absolute; inset: 0 0 55% 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,.9) 0%, rgba(255,255,255,.25) 75%, transparent 100%);
 }
-/* Vệt ánh sáng ngũ sắc — tông lạnh (xanh dương/tím/ngọc) thay vì hồng ấm, hợp mood xanh lam-lavender của app. */
+/* Vệt ánh sáng ngũ sắc rất nhẹ — chỉ điểm xuyết, để độ trong suốt của kính là yếu tố chính, không bị màu lấn át. */
 .pill-tabbar__item--active::after {
   content: ''; position: absolute; inset: 0; pointer-events: none;
   background:
-    radial-gradient(ellipse 55% 60% at 15% 0%, rgba(120,150,255,.45), transparent 65%),
-    radial-gradient(ellipse 50% 55% at 52% -8%, rgba(160,120,255,.38), transparent 65%),
-    radial-gradient(ellipse 45% 50% at 90% 5%, rgba(110,220,220,.32), transparent 65%);
-  mix-blend-mode: soft-light; opacity: .9;
+    radial-gradient(ellipse 55% 60% at 12% 0%, rgba(120,150,255,.28), transparent 65%),
+    radial-gradient(ellipse 50% 55% at 55% -10%, rgba(160,120,255,.22), transparent 65%),
+    radial-gradient(ellipse 45% 50% at 92% 5%, rgba(110,220,220,.2), transparent 65%);
+  mix-blend-mode: soft-light; opacity: .85;
 }
 .pill-tabbar__item--active:hover {
   transform: translateY(-3px) scale(1.02);
   box-shadow:
-    inset 0 2px 1px rgba(255,255,255,1), inset 0 -4px 6px rgba(0,0,0,.10),
-    0 26px 44px -12px rgba(15,15,20,.38), 0 8px 18px -4px rgba(15,15,20,.22);
+    inset 0 1px 1px rgba(255,255,255,1), inset 0 -3px 5px rgba(15,23,60,.06),
+    0 22px 40px -14px rgba(15,23,60,.24), 0 6px 14px -4px rgba(15,23,60,.12);
 }
 .pill-tabbar__item--active:active { transform: translateY(0) scale(.99); }
 .pill-tabbar__item__icon { display: inline-flex; flex-shrink: 0; opacity: .7; position: relative; z-index: 1; }
