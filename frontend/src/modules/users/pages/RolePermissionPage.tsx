@@ -365,7 +365,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
                 {loading ? (
                   <tr>
                     <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
-                      <div className="loader" style={{ margin: '0 auto 10px', borderColor: '#10b981', borderTopColor: 'transparent' }} />
+                      <div className="loader" style={{ margin: '0 auto 10px', borderColor: '#6366f1', borderTopColor: 'transparent' }} />
                       Đang tải dữ liệu phân quyền...
                     </td>
                   </tr>
@@ -428,7 +428,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
                         <td>
                           {isCompany && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span className="status-pill status-pill--active" style={{ background: '#ecfdf5', color: '#059669', fontSize: '11.5px' }}>
+                              <span className="status-pill status-pill--active" style={{ background: '#ecfdf5', color: '#4f46e5', fontSize: '11.5px' }}>
                                 <span className="status-pill__scope-icon">{ICONS.globe}</span> Toàn công ty (COMPANY)
                               </span>
                             </div>

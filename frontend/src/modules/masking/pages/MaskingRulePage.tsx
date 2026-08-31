@@ -197,7 +197,7 @@ export default function MaskingRulePage({
               {loading ? (
                 <tr>
                   <td colSpan={4} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
-                    <div className="loader" style={{ margin: '0 auto 10px', borderColor: '#10b981', borderTopColor: 'transparent' }} />
+                    <div className="loader" style={{ margin: '0 auto 10px', borderColor: '#6366f1', borderTopColor: 'transparent' }} />
                     Đang tải danh sách quy tắc che dữ liệu...
                   </td>
                 </tr>

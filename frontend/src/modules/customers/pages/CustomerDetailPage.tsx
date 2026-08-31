@@ -284,7 +284,7 @@ export default function CustomerDetailPage({
               </div>
               <div className="form-field">
                 <span className="form-label">Mã khách hàng tự sinh:</span>
-                <p style={{ fontFamily: 'monospace', fontWeight: 700, color: '#059669', margin: 0 }}>
+                <p style={{ fontFamily: 'monospace', fontWeight: 700, color: '#4f46e5', margin: 0 }}>
                   {customer.code}
                 </p>
               </div>

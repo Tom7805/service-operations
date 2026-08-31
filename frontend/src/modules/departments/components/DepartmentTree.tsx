@@ -60,7 +60,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
   if (loading) {
     return (
       <div className="tree-loading-state">
-        <div className="loader" style={{ width: '28px', height: '28px', borderWidth: '3px', borderColor: '#10b981', borderTopColor: 'transparent' }} />
+        <div className="loader" style={{ width: '28px', height: '28px', borderWidth: '3px', borderColor: '#6366f1', borderTopColor: 'transparent' }} />
         <span>Đang tải cấu trúc cây tổ chức...</span>
       </div>
     );
@@ -217,7 +217,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
                     <tr key={dept.id}>
                       <td>
                         <div className="user-profile-cell">
-                          <span className="avatar-circle avatar-circle--lg" style={{ background: isRoot ? '#059669' : '#0284c7' }}>
+                          <span className="avatar-circle avatar-circle--lg" style={{ background: isRoot ? '#4f46e5' : '#0284c7' }}>
                             {getUnitTypeMonogram(dept.unitType)}
                           </span>
                           <div className="user-profile-meta">

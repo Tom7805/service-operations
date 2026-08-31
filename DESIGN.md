@@ -18,6 +18,14 @@ hành động chính và điểm nhấn trạng thái tích cực; các màu ng�
 badge/pill trạng thái, không dùng làm accent chính. Đây là lựa chọn đúng cho một hệ thống Operate — vận hành nội bộ,
 thao tác lặp lại hàng ngày, quét trạng thái là ưu tiên số một, không phải thuyết phục hay giải trí.
 
+**Đổi màu nhấn (v2)**: người dùng phản hồi thẳng emerald "xấu, không chuyên nghiệp như thiết kế Figma" — đổi hẳn
+sang **indigo** (`#6366f1`/`#4f46e5`), tông màu chủ đạo của phần lớn sản phẩm SaaS được coi là chuẩn mực thiết kế
+hiện nay (Linear, Vercel, Raycast, Stripe Dashboard...) và hợp với mood xanh lam-lavender đã chốt cho nền/kính.
+Đổi ở mọi nơi accent xuất hiện: nút chính, focus ring, brand mark, link, trạng thái chọn/active, quầng sáng kính
+lỏng, và toàn bộ bảng màu trang Đăng nhập (trước là xanh lá rừng, giờ đồng bộ indigo). **Giữ nguyên** các màu
+xanh lá **ngữ nghĩa** (trạng thái "Đang hoạt động", `text-success`, toast thành công...) — đó là quy ước semantic
+riêng (xanh = thành công), không phải accent thương hiệu, đổi sẽ gây hiểu lầm trạng thái.
+
 ### Tokens
 
 | Token | Giá trị | Vai trò |
@@ -30,8 +38,8 @@ thao tác lặp lại hàng ngày, quét trạng thái là ưu tiên số một,
 | `--line-soft` | `#f1f5f9` | Viền phân cách hàng, nền hover nhẹ |
 | `--surface` | `#ffffff` | Nền thẻ, bảng, modal |
 | `--surface-muted` | `#f8fafc` | Nền toolbar, header bảng, footer |
-| `--accent` | `#10b981` | Emerald — hành động chính, focus ring, trạng thái tích cực |
-| `--accent-strong` | `#059669` | Hover/active của accent |
+| `--accent` | `#6366f1` | Indigo (đổi từ emerald) — hành động chính, focus ring, brand mark, active state |
+| `--accent-strong` | `#4f46e5` | Hover/active của accent |
 | `--danger` | `#dc2626` | Lỗi, khóa tài khoản, hành động phá hủy |
 | `--warning` | `#d97706` | Cảnh báo |
 
