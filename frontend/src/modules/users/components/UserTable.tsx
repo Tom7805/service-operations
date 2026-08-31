@@ -119,7 +119,7 @@ export const UserTable: React.FC<UserTableProps> = ({
     const role = SYSTEM_ROLES.find((r) => r.code === code);
     const name = role ? role.name : code;
     return (
-      <span key={code} className={`user-tag ${role?.badgeClass || 'badge--gray'}`} title={role?.description || name}>
+      <span key={code} className="role-chip" title={role?.description || name}>
         {name}
       </span>
     );
