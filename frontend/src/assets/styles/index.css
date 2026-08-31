@@ -207,15 +207,20 @@
    sẵn có trong dự án mà không cần sửa từng file. */
 .btn-primary, .btn-secondary {
   position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  border-radius: 999px; padding: 11px 22px; font-size: 13.5px; font-weight: 700; color: #14161a; cursor: pointer;
-  border: 1px solid rgba(255,255,255,.85);
+  border-radius: 999px; padding: 11px 22px; font-size: 13.5px; font-weight: 700; color: #101216; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.9);
+  /* 4 lớp xếp từ trên xuống: bóng láng trắng → vệt màu ngũ sắc rõ nét → nền kính đục nhẹ → base.
+     Tất cả nằm trong `background` (không phải pseudo-element) nên luôn ở DƯỚI chữ, không cần lo z-index. */
   background:
-    linear-gradient(180deg, rgba(255,255,255,.85) 0%, rgba(255,255,255,.1) 55%, transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,.92) 0%, rgba(246,247,247,.62) 55%, rgba(232,234,233,.75) 100%);
-  backdrop-filter: blur(10px) saturate(180%); -webkit-backdrop-filter: blur(10px) saturate(180%);
+    linear-gradient(180deg, rgba(255,255,255,.92) 0%, rgba(255,255,255,.12) 55%, transparent 62%),
+    radial-gradient(ellipse 60% 90% at 12% 0%, rgba(110,150,255,.4), transparent 60%),
+    radial-gradient(ellipse 55% 85% at 50% -15%, rgba(170,110,255,.34), transparent 62%),
+    radial-gradient(ellipse 55% 85% at 90% 8%, rgba(90,225,205,.32), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.7) 0%, rgba(244,245,245,.42) 55%, rgba(226,229,228,.6) 100%);
+  backdrop-filter: blur(18px) saturate(220%) brightness(1.05); -webkit-backdrop-filter: blur(18px) saturate(220%) brightness(1.05);
   box-shadow:
-    inset 0 1px 1px rgba(255,255,255,1), inset 0 -2px 4px rgba(15,23,42,.05),
-    0 1px 1px rgba(15,23,42,.04), 0 12px 24px -12px rgba(15,23,42,.22), 0 3px 8px -3px rgba(15,23,42,.10);
+    inset 0 1px 1px rgba(255,255,255,1), inset 0 -2px 5px rgba(15,23,42,.06),
+    0 1px 1px rgba(15,23,42,.04), 0 14px 28px -12px rgba(15,23,42,.26), 0 4px 10px -3px rgba(15,23,42,.12);
   transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
 }
 .btn-primary:hover, .btn-secondary:hover { transform: translateY(-2px); }
@@ -223,8 +228,15 @@
 .btn-lg { padding: 13px 26px; font-size: 14.5px; }
 
 /* Primary: thêm quầng sáng ngoài màu nhấn thương hiệu (emerald) bên dưới — đúng cách ảnh tham chiếu
-   dùng quầng sáng ấm để phân biệt nút chính với nút phụ, chỉ đổi màu quầng theo brand thay vì hổ phách. */
+   dùng quầng sáng ấm để phân biệt nút chính với nút phụ, chỉ đổi màu quầng theo brand thay vì hổ phách.
+   Vệt màu ngũ sắc bên trong cũng nhuộm nghiêng về emerald/ngọc để ăn khớp quầng sáng bên ngoài. */
 .btn-primary {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.92) 0%, rgba(255,255,255,.12) 55%, transparent 62%),
+    radial-gradient(ellipse 60% 90% at 12% 0%, rgba(52,211,153,.42), transparent 60%),
+    radial-gradient(ellipse 55% 85% at 50% -15%, rgba(110,231,183,.36), transparent 62%),
+    radial-gradient(ellipse 55% 85% at 90% 8%, rgba(90,225,205,.32), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.7) 0%, rgba(244,245,245,.42) 55%, rgba(226,229,228,.6) 100%);
   box-shadow:
     inset 0 1px 1px rgba(255,255,255,1), inset 0 -2px 4px rgba(15,23,42,.05),
     0 1px 1px rgba(15,23,42,.04), 0 16px 30px -12px rgba(16,185,129,.30), 0 5px 12px -3px rgba(16,185,129,.20);
@@ -310,13 +322,15 @@ body { background: radial-gradient(120% 100% at 50% -10%, #ffffff 0%, #eff0ef 55
 
 .app-topbar__actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .icon-btn {
-  width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,.85); color: #55606e;
+  width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,.9); color: #4c5560;
   display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
   background:
-    linear-gradient(180deg, rgba(255,255,255,.9) 0%, rgba(255,255,255,.15) 55%, transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,.9) 0%, rgba(240,241,240,.6) 100%);
-  backdrop-filter: blur(10px) saturate(180%); -webkit-backdrop-filter: blur(10px) saturate(180%);
-  box-shadow: inset 0 1px 1px rgba(255,255,255,1), inset 0 -1px 2px rgba(15,23,42,.05), 0 8px 16px -8px rgba(15,23,42,.20), 0 2px 5px -2px rgba(15,23,42,.10);
+    linear-gradient(180deg, rgba(255,255,255,.92) 0%, rgba(255,255,255,.14) 55%, transparent 62%),
+    radial-gradient(circle at 20% 10%, rgba(110,150,255,.42), transparent 65%),
+    radial-gradient(circle at 80% 85%, rgba(170,110,255,.3), transparent 65%),
+    linear-gradient(180deg, rgba(255,255,255,.75) 0%, rgba(238,240,239,.55) 100%);
+  backdrop-filter: blur(16px) saturate(220%) brightness(1.05); -webkit-backdrop-filter: blur(16px) saturate(220%) brightness(1.05);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,1), inset 0 -1px 3px rgba(15,23,42,.06), 0 10px 20px -9px rgba(15,23,42,.24), 0 3px 7px -2px rgba(15,23,42,.12);
   transition: color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
 }
 .icon-btn svg { width: 17px; height: 17px; }
