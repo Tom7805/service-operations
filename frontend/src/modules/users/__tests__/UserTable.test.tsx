@@ -112,6 +112,31 @@ describe('User Management Module — Acceptance Criteria Tests (NCL-01-CN-002)',
     expect(handleToggleStatus).toHaveBeenCalledWith(mockUsersList[0]);
   });
 
+  it('TC-06: Menu thao tác (⋮) gọn từng dòng — mở ra mới thấy hành động, bấm ra ngoài thì đóng lại', () => {
+    const handleResetTwoFactor = vi.fn();
+    render(
+      <UserTable
+        users={mockUsersList}
+        loading={false}
+        onEdit={vi.fn()}
+        onToggleStatus={vi.fn()}
+        onAssignRoles={vi.fn()}
+        onViewDetail={vi.fn()}
+        onRefresh={vi.fn()}
+        onResetTwoFactor={handleResetTwoFactor}
+      />
+    );
+
+    const triggers = screen.getAllByLabelText('Thao tác');
+    expect(triggers).toHaveLength(2);
+
+    fireEvent.click(triggers[0]);
+    const resetItem = screen.getAllByText('Đặt lại xác thực hai bước')[0];
+    fireEvent.click(resetItem);
+
+    expect(handleResetTwoFactor).toHaveBeenCalledWith(mockUsersList[0]);
+  });
+
   it('TC-04: Non-admin users (VT-03) get Access Denied screen', () => {
     render(<UserListPage currentUserRoles={['VT-03']} currentUserName="Nhân viên IT" />);
 
