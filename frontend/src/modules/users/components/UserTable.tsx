@@ -1,52 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { User, UserStatus } from '../types/userTypes';
 import { SYSTEM_DEPARTMENTS, SYSTEM_ROLES } from '../types/userTypes';
-
-/** Bộ icon nét mảnh dùng chung cho menu thao tác — cùng kích thước/độ dày, tránh trộn lẫn emoji. */
-const ICONS = {
-  edit: (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M13.5 3.5 16.5 6.5 7 16H4v-3L13.5 3.5Z" />
-    </svg>
-  ),
-  role: (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="7.5" cy="7.5" r="3.5" />
-      <path d="M10.6 10.6 16.5 16.5M13.5 13.5l2-2" />
-    </svg>
-  ),
-  lock: (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="4.5" y="9" width="11" height="7.5" rx="1.5" />
-      <path d="M6.5 9V6.5a3.5 3.5 0 0 1 7 0V9" />
-    </svg>
-  ),
-  unlock: (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="4.5" y="9" width="11" height="7.5" rx="1.5" />
-      <path d="M6.5 9V6.5a3.5 3.5 0 0 1 6.7-1.4" />
-    </svg>
-  ),
-  eye: (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 10s2.7-5 8-5 8 5 8 5-2.7 5-8 5-8-5-8-5Z" />
-      <circle cx="10" cy="10" r="2.2" />
-    </svg>
-  ),
-  resetTwoFactor: (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M16 10a6 6 0 1 1-1.9-4.4" />
-      <path d="M16 3v3.5h-3.5" />
-    </svg>
-  ),
-  more: (
-    <svg viewBox="0 0 20 20" fill="currentColor">
-      <circle cx="10" cy="4.5" r="1.4" />
-      <circle cx="10" cy="10" r="1.4" />
-      <circle cx="10" cy="15.5" r="1.4" />
-    </svg>
-  ),
-};
+import { ICONS } from './icons';
 
 interface RowAction {
   key: string;

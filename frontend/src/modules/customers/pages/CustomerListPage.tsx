@@ -8,6 +8,7 @@ import {
 import CustomerFormModal from '../components/CustomerFormModal';
 import CustomerTable from '../components/CustomerTable';
 import CustomerDetailPage from './CustomerDetailPage';
+import { ICONS } from '../../../components/common/icons';
 import type {
   Customer,
   CustomerCreatePayload,
@@ -198,7 +199,7 @@ export default function CustomerListPage({
     return (
       <div className="access-denied-container" data-testid="access-denied-view">
         <div className="access-denied-card">
-          <div className="access-denied-icon">🚫</div>
+          <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <span className="eyebrow text-danger">Từ chối quyền truy cập (403 FORBIDDEN)</span>
           <h2>Bạn không có thẩm quyền tạo & quản lý hồ sơ khách hàng</h2>
           <p>
@@ -207,9 +208,9 @@ export default function CustomerListPage({
             Hệ thống đã ghi lại lần từ chối truy cập này vào nhật ký bảo mật (Audit Log).
           </p>
           <div className="security-log-badge">
-            <span>🛡️ Thời điểm ghi nhận: {new Date().toLocaleString('vi-VN')}</span>
-            <span>Tài khoản: {currentUserName}</span>
-            <span>Vai trò tài khoản: {currentUserRoles.join(', ')}</span>
+            <span className="security-log-badge__item">{ICONS.shield} Thời điểm ghi nhận: {new Date().toLocaleString('vi-VN')}</span>
+            <span className="security-log-badge__item">Tài khoản: {currentUserName}</span>
+            <span className="security-log-badge__item">Vai trò tài khoản: {currentUserRoles.join(', ')}</span>
           </div>
         </div>
       </div>
@@ -258,7 +259,7 @@ export default function CustomerListPage({
         >
           <div className="toast-notification__content">
             <span className="toast-notification__icon">
-              {toastMessage.type === 'success' ? '✅' : toastMessage.type === 'error' ? '❌' : 'ℹ️'}
+              {toastMessage.type === 'success' ? ICONS.checkCircle : toastMessage.type === 'error' ? ICONS.alertTriangle : ICONS.info}
             </span>
             <div className="toast-notification__text">
               <p>{toastMessage.text}</p>
@@ -309,14 +310,14 @@ export default function CustomerListPage({
       {/* Thẻ thống kê KPI */}
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--blue">🏢</div>
+          <div className="stat-card__icon stat-card__icon--blue">{ICONS.building}</div>
           <div>
             <span className="stat-card__label">Tổng hồ sơ khách hàng</span>
             <div className="stat-card__value">{customers.length}</div>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--green">✨</div>
+          <div className="stat-card__icon stat-card__icon--green">{ICONS.spark}</div>
           <div>
             <span className="stat-card__label">Hồ sơ tạo trong phiên</span>
             <div className="stat-card__value text-success">
@@ -325,7 +326,7 @@ export default function CustomerListPage({
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--purple">🛡️</div>
+          <div className="stat-card__icon stat-card__icon--purple">{ICONS.shield}</div>
           <div>
             <span className="stat-card__label">Vai trò thực hiện</span>
             <div className="stat-card__value" style={{ fontSize: '16px' }}>
@@ -339,7 +340,7 @@ export default function CustomerListPage({
       <div className="user-table-card customer-table-card">
         <div className="user-table-toolbar">
           <div className="search-box">
-            <span className="search-box__icon" aria-hidden="true">🔍</span>
+            <span className="search-box__icon" aria-hidden="true">{ICONS.search}</span>
             <input
               type="text"
               className="search-box__input"
@@ -355,7 +356,7 @@ export default function CustomerListPage({
                 onClick={() => setSearchTerm('')}
                 aria-label="Xóa từ khóa tìm kiếm"
               >
-                ✕
+                {ICONS.close}
               </button>
             )}
           </div>
@@ -437,14 +438,14 @@ export default function CustomerListPage({
               aria-label="Tải lại danh sách khách hàng"
               data-testid="btn-reload-customers"
             >
-              🔄
+              {ICONS.refresh}
             </button>
           </div>
         </div>
 
         {loadError && !isLoading && (
           <div className="table-error-state" role="alert" data-testid="customer-load-error">
-            <div className="table-error-state__icon">⚠️</div>
+            <div className="table-error-state__icon">{ICONS.alertTriangle}</div>
             <div className="table-error-state__body">
               <h3>Không tải được danh sách hồ sơ khách hàng</h3>
               <p>{loadError}</p>

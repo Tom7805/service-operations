@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Customer, CustomerSegmentPayload, ContactAuditItem } from '../types/customerTypes';
 import { updateCustomerSegment, CustomerApiError } from '../api/customersApi';
 import CustomerSegmentModal from './CustomerSegmentModal';
+import { ICONS } from '../../../components/common/icons';
 
 interface CustomerSegmentPanelProps {
   customer: Customer;
@@ -88,7 +89,7 @@ export default function CustomerSegmentPanel({
   if (!isAllowed) {
     return (
       <div className="access-denied-card segment-access-denied" data-testid="segment-access-denied">
-        <div className="access-denied-icon">🚫</div>
+        <div className="access-denied-icon">{ICONS.shieldOff}</div>
         <span className="eyebrow text-danger">Từ chối quyền truy cập (403 FORBIDDEN)</span>
         <h3>Không có quyền phân nhóm khách hàng</h3>
         <p>
@@ -97,9 +98,9 @@ export default function CustomerSegmentPanel({
           <strong>Quản lý dự án (VT-02)</strong>.
         </p>
         <div className="security-log-badge">
-          <span>🛡️ Ghi nhận Audit Log: {new Date().toLocaleString('vi-VN')}</span>
-          <span>Tài khoản thực hiện: {currentUserName}</span>
-          <span>Vai trò tài khoản: {currentUserRoles.join(', ')}</span>
+          <span className="security-log-badge__item">{ICONS.shield} Ghi nhận Audit Log: {new Date().toLocaleString('vi-VN')}</span>
+          <span className="security-log-badge__item">Tài khoản thực hiện: {currentUserName}</span>
+          <span className="security-log-badge__item">Vai trò tài khoản: {currentUserRoles.join(', ')}</span>
         </div>
       </div>
     );
@@ -116,7 +117,7 @@ export default function CustomerSegmentPanel({
         >
           <div className="toast-notification__content">
             <span className="toast-notification__icon">
-              {toastMessage.type === 'success' ? '✅' : toastMessage.type === 'error' ? '❌' : 'ℹ️'}
+              {toastMessage.type === 'success' ? ICONS.checkCircle : toastMessage.type === 'error' ? ICONS.alertTriangle : ICONS.info}
             </span>
             <span className="toast-notification__text">{toastMessage.text}</span>
           </div>
@@ -126,7 +127,7 @@ export default function CustomerSegmentPanel({
             onClick={() => setToastMessage(null)}
             aria-label="Đóng thông báo"
           >
-            ✕
+            {ICONS.close}
           </button>
         </div>
       )}
@@ -152,7 +153,7 @@ export default function CustomerSegmentPanel({
             onClick={() => setIsModalOpen(true)}
             data-testid="btn-open-segment-modal"
           >
-            <span>🏷️</span>
+            <span className="icon-sm">{ICONS.tag}</span>
             <span>Cập nhật phân nhóm</span>
           </button>
         </div>
@@ -213,13 +214,13 @@ export default function CustomerSegmentPanel({
       {localAuditLogs.length > 0 && (
         <div className="audit-log-card segment-audit-card" data-testid="segment-audit-card">
           <div className="audit-log-header">
-            <h4 className="audit-log-title">📋 Nhật ký thay đổi phân nhóm trong phiên (TC-04)</h4>
+            <h4 className="audit-log-title"><span className="audit-log-title__icon">{ICONS.clipboardList}</span> Nhật ký thay đổi phân nhóm trong phiên (TC-04)</h4>
             <span className="badge-pulse">{localAuditLogs.length} ghi nhận mới</span>
           </div>
           <div className="audit-log-list">
             {localAuditLogs.map((log) => (
               <div key={log.id} className="audit-log-item" data-testid="segment-audit-entry">
-                <span className="audit-log-icon">🛡️</span>
+                <span className="audit-log-icon">{ICONS.tag}</span>
                 <div className="audit-log-meta">
                   <div className="audit-log-row">
                     <span>
