@@ -587,14 +587,17 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
 
 /* Access Denied Card (TC-04) */
 .access-denied-container { min-height: 70vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
-.access-denied-card { background: #ffffff; border: 1px solid rgba(159,47,45,.20); border-radius: 20px; padding: 40px; max-width: 520px; text-align: center; box-shadow: 0 15px 40px rgba(159,47,45,0.08); }
+.access-denied-card { background: #ffffff; border: 1px solid #EAEAEA; border-radius: 12px; padding: 40px; max-width: 520px; text-align: center; box-shadow: 0 15px 40px rgba(159,47,45,0.08); }
 .access-denied-icon { display: flex; justify-content: center; margin-bottom: 12px; color: #9F2F2D; }
 .access-denied-icon svg { width: 44px; height: 44px; }
 .security-log-badge__item { display: flex; align-items: center; gap: 6px; }
 .security-log-badge__item svg { width: 13px; height: 13px; flex-shrink: 0; }
-.access-denied-card h2 { font-size: 24px; color: #9F2F2D; font-weight: 700; margin: 8px 0 12px; }
+/* Tieu de ve mau muc: day la mot rao chan quyen han, khong phai mot loi do nguoi
+   dung gay ra. To do ca tieu de tao cam giac bao dong sai cho. Giu do o icon
+   va the thong tin ben duoi la du de doc ra "ban khong vao duoc". */
+.access-denied-card h2 { font-size: 24px; color: #111111; font-weight: 600; letter-spacing: -0.02em; margin: 12px 0 12px; line-height: 1.25; }
 .access-denied-card p { color: #787774; font-size: 15px; line-height: 1.6; margin-bottom: 24px; }
-.security-log-badge { background: #FDEBEC; border: 1px solid #FDEBEC; border-radius: 10px; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; color: #9F2F2D; font-weight: 600; text-align: left; }
+.security-log-badge { background: #F9F9F8; border: 1px solid #EAEAEA; border-radius: 8px; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; color: #787774; font-weight: 600; text-align: left; }
 
 /* Audit Log Card (TC-05) */
 .audit-log-card { background: #ffffff; border: 1px solid #EAEAEA; border-radius: 16px; padding: 20px; margin-top: 24px; }
@@ -1968,3 +1971,12 @@ body { background: var(--canvas); }
   .icon-btn:hover,
   .story__item:hover { transform: none !important; }
 }
+
+/* Mục điều hướng người dùng chưa đủ vai trò để vào.
+   Vẫn bấm được (cổng thật nằm ở trang và ở backend, giao diện không tự ý chặn),
+   nhưng làm mờ và gắn ổ khóa để người dùng biết TRƯỚC khi bấm — thay vì bấm vào
+   rồi mới gặp một màn hình từ chối. */
+.side-nav__item--locked { opacity: 0.45; }
+.side-nav__item--locked:hover { opacity: 0.7; }
+.side-nav__item__lock { display: inline-flex; margin-left: auto; flex-shrink: 0; }
+.side-nav__item__lock svg { width: 12px; height: 12px; }

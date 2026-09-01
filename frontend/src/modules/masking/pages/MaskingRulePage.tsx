@@ -94,15 +94,14 @@ export default function MaskingRulePage({
       <div className="access-denied-container">
         <div className="access-denied-card">
           <div className="access-denied-icon">{ICONS.lock}</div>
-          <span className="eyebrow text-danger">Từ chối truy cập (Access Denied)</span>
           <h2>Bạn không có thẩm quyền truy cập dữ liệu nhạy cảm</h2>
           <p>
             Chức năng cấu hình quy tắc che dữ liệu lương/giá vốn chỉ dành cho các vai trò{' '}
             <strong>Nhân sự</strong>, <strong>Kế toán</strong> và{' '}
-            <strong>Ban giám đốc</strong>. Hệ thống đã ghi nhận lần truy cập trái phép này.
+            <strong>Ban giám đốc</strong>. Nếu bạn cần quyền này, hãy liên hệ quản trị viên hệ thống.
           </p>
           <div className="security-log-badge">
-            <span className="security-log-badge__item">{ICONS.shield} Lần thử truy cập: {new Date().toLocaleString('vi-VN')}</span>
+            <span className="security-log-badge__item">{ICONS.shield} Thời điểm: {new Date().toLocaleString('vi-VN')}</span>
             <span className="security-log-badge__item">Tài khoản: {currentUserName}</span>
             <span className="security-log-badge__item">Vai trò hiện tại: {currentUserRoles.join(', ')}</span>
           </div>

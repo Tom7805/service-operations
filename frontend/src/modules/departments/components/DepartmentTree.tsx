@@ -2,73 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import type { Department, DepartmentTreeNode } from '../types/departmentTypes';
 import { getUnitTypeLabel, getUnitTypeMonogram } from '../constants/departmentUnitTypes';
 import { ICONS } from '../../../components/common/icons';
+import RowActionsMenu from '../../../components/common/RowActionsMenu';
 
 export type ViewMode = 'TREE' | 'LIST' | 'TABLE';
-
-interface RowAction {
-  key: string;
-  label: string;
-  icon: React.ReactNode;
-  onClick: () => void;
-  tone?: 'default' | 'danger';
-}
-
-/** Menu thao tác gọn theo từng dòng — thay cho dãy nút riêng lẻ, cùng mẫu với bảng Tài khoản. */
-function RowActionsMenu({ actions }: { actions: RowAction[] }) {
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscape);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [open]);
-
-  return (
-    <div className="row-menu" ref={containerRef}>
-      <button
-        type="button"
-        className="row-menu__trigger"
-        aria-label="Thao tác"
-        aria-haspopup="true"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-      >
-        {ICONS.more}
-      </button>
-      <div className={`row-menu__panel ${open ? 'row-menu__panel--open' : ''}`} role="menu">
-        {actions.map((action) => (
-          <button
-            key={action.key}
-            type="button"
-            role="menuitem"
-            className={`row-menu__item ${action.tone === 'danger' ? 'row-menu__item--danger' : ''}`}
-            title={action.label}
-            onClick={() => {
-              setOpen(false);
-              action.onClick();
-            }}
-          >
-            <span className="row-menu__icon">{action.icon}</span>
-            {action.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 interface DepartmentTreeProps {
   treeData: DepartmentTreeNode[];

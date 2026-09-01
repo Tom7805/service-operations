@@ -3,6 +3,7 @@ import type { Employee } from '../types/employeeTypes';
 import { DEFAULT_STANDARD_HOURS_PER_WEEK } from '../types/employeeTypes';
 import { ICONS } from '../../../components/common/icons';
 import TableSkeleton from '../../../components/common/TableSkeleton';
+import RowActionsMenu from '../../../components/common/RowActionsMenu';
 
 interface EmployeeTableProps {
   employees: Employee[];
@@ -101,24 +102,12 @@ export default function EmployeeTable({ employees, loading, onEdit, onViewDetail
                   <td>{emp.hireDate}</td>
                   <td>{emp.endDate || '—'}</td>
                   <td style={{ textAlign: 'right' }}>
-                    <div className="table-actions">
-                      <button
-                        type="button"
-                        className="action-btn"
-                        title="Chỉnh sửa hồ sơ"
-                        onClick={() => onEdit(emp)}
-                      >
-                        {ICONS.edit}
-                      </button>
-                      <button
-                        type="button"
-                        className="action-btn"
-                        title="Xem chi tiết & hợp đồng lao động"
-                        onClick={() => onViewDetail(emp)}
-                      >
-                        {ICONS.eye}
-                      </button>
-                    </div>
+                    <RowActionsMenu
+                      actions={[
+                        { key: 'edit', label: 'Chỉnh sửa hồ sơ', icon: ICONS.edit, onClick: () => onEdit(emp) },
+                        { key: 'detail', label: 'Xem chi tiết & hợp đồng', icon: ICONS.eye, onClick: () => onViewDetail(emp) },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))

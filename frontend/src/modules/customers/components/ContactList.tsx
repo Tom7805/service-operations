@@ -189,7 +189,6 @@ export default function ContactList({
     return (
       <div className="access-denied-card contact-access-denied" data-testid="contact-access-denied">
         <div className="access-denied-icon">{ICONS.shieldOff}</div>
-        <span className="eyebrow text-danger">Từ chối quyền truy cập (403 FORBIDDEN)</span>
         <h3>Không có quyền quản lý người liên hệ của khách hàng</h3>
         <p>
           Theo quy định an ninh dữ liệu khách hàng (<strong>NCL-02-CN-003 · TC-03</strong>), chức năng Quản lý người liên hệ chỉ dành riêng cho{' '}

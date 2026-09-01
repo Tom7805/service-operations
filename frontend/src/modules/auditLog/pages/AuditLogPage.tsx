@@ -103,7 +103,6 @@ export default function AuditLogPage({
       <div className="access-denied-container">
         <div className="access-denied-card">
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
-          <span className="eyebrow text-danger">Từ chối truy cập (Access Denied)</span>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
             Nhật ký thao tác tổng hợp chỉ dành riêng cho vai trò <strong>Quản trị viên</strong>.

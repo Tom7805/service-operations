@@ -40,25 +40,34 @@ interface NavItem {
   label: string;
   /** Các tab con cũng nên tô sáng mục điều hướng này (ví dụ trang chi tiết). */
   matches?: Tab[];
+  /**
+   * Vai trò cần có để dùng được màn hình này. CHỈ dùng để hiển thị chỉ báo khóa
+   * trên menu — cổng bảo mật thật vẫn nằm trong từng trang và ở backend, không
+   * đổi. Mục đích duy nhất: người dùng biết TRƯỚC khi bấm, thay vì bấm vào rồi
+   * mới gặp ngõ cụt.
+   */
+  requires?: string[];
 }
 
 /** Điều hướng chính — vận hành nghiệp vụ hàng ngày. */
 const NAV_ITEMS: NavItem[] = [
-  { tab: 'CUSTOMERS', icon: ICONS.building, label: 'Khách hàng' },
-  { tab: 'CUSTOMER_MERGE', icon: ICONS.merge, label: 'Gộp KH trùng' },
-  { tab: 'DEPARTMENTS', icon: ICONS.tree, label: 'Tổ chức' },
-  { tab: 'USERS', icon: ICONS.user, label: 'Tài khoản', matches: ['DETAIL'] },
-  { tab: 'EMPLOYEES', icon: ICONS.users, label: 'Nhân sự', matches: ['EMPLOYEE_DETAIL'] },
-  { tab: 'PERMISSIONS', icon: ICONS.shield, label: 'Phân quyền' },
+  { tab: 'CUSTOMERS', icon: ICONS.building, label: 'Khách hàng', requires: ['VT-04', 'VT-02'] },
+  { tab: 'CUSTOMER_MERGE', icon: ICONS.merge, label: 'Gộp KH trùng', requires: ['VT-07'] },
+  { tab: 'DEPARTMENTS', icon: ICONS.tree, label: 'Tổ chức', requires: ['VT-07'] },
+  { tab: 'USERS', icon: ICONS.user, label: 'Tài khoản', matches: ['DETAIL'], requires: ['VT-07'] },
+  { tab: 'EMPLOYEES', icon: ICONS.users, label: 'Nhân sự', matches: ['EMPLOYEE_DETAIL'], requires: ['VT-06', 'VT-07'] },
+  { tab: 'PERMISSIONS', icon: ICONS.shield, label: 'Phân quyền', requires: ['VT-07'] },
 ];
 
 /** Bảo mật & Hệ thống — nhóm riêng, tách khỏi điều hướng nghiệp vụ hàng ngày (theo mẫu "Favorites"
  * của tham chiếu: một nhãn xám nhỏ đứng trên nhóm mục phụ). */
 const SYSTEM_NAV_ITEMS: NavItem[] = [
-  { tab: 'TWO_FACTOR_SETTINGS', icon: ICONS.key, label: '2FA' },
-  { tab: 'MASKING', icon: ICONS.eyeOff, label: 'Che dữ liệu' },
-  { tab: 'SYSTEM_AUDIT_LOG', icon: ICONS.history, label: 'Nhật ký hệ thống' },
-  { tab: 'AUDIT_LOG', icon: ICONS.shieldOff, label: 'Dữ liệu nhạy cảm' },
+  { tab: 'TWO_FACTOR_SETTINGS', icon: ICONS.key, label: '2FA', requires: ['VT-07'] },
+  // Che dữ liệu dành cho Ban giám đốc / Kế toán / Nhân sự (SENSITIVE_DATA_ROLES),
+  // không phải quản trị viên — khớp với hằng số cùng tên ở backend.
+  { tab: 'MASKING', icon: ICONS.eyeOff, label: 'Che dữ liệu', requires: ['VT-01', 'VT-05', 'VT-06'] },
+  { tab: 'SYSTEM_AUDIT_LOG', icon: ICONS.history, label: 'Nhật ký hệ thống', requires: ['VT-07'] },
+  { tab: 'AUDIT_LOG', icon: ICONS.shieldOff, label: 'Dữ liệu nhạy cảm', requires: ['VT-07'] },
 ];
 
 const ALL_NAV_ITEMS: NavItem[] = [...NAV_ITEMS, ...SYSTEM_NAV_ITEMS];
@@ -148,22 +157,32 @@ export default function App() {
     ALL_NAV_ITEMS.find((item) => item.tab === activeTab) ??
     ALL_NAV_ITEMS.find((item) => (item.matches ?? []).includes(activeTab));
 
+  /** Chỉ để hiển thị. Cổng bảo mật thật nằm trong từng trang và ở backend. */
+  const canAccess = (item: NavItem) =>
+    !item.requires || item.requires.some((r) => currentRoles.includes(r));
+
   const renderNavGroup = (items: NavItem[]) =>
     items.map((item) => {
       const isActive = activeTab === item.tab || (item.matches ?? []).includes(activeTab);
+      const locked = !canAccess(item);
       return (
         <button
           key={item.tab}
           type="button"
-          className={`side-nav__item ${isActive ? 'side-nav__item--active' : ''}`}
+          className={`side-nav__item ${isActive ? 'side-nav__item--active' : ''} ${locked ? 'side-nav__item--locked' : ''}`}
           onClick={() => setActiveTab(item.tab)}
           aria-current={isActive ? 'page' : undefined}
-          title={sidebarCollapsed ? item.label : undefined}
+          title={locked ? `${item.label} — cần vai trò khác` : (sidebarCollapsed ? item.label : undefined)}
         >
           <span className="side-nav__item__icon" aria-hidden="true">
             {item.icon}
           </span>
           {!sidebarCollapsed && <span className="side-nav__item__label">{item.label}</span>}
+          {!sidebarCollapsed && locked && (
+            <span className="side-nav__item__lock" aria-label="Cần vai trò khác">
+              {ICONS.lock}
+            </span>
+          )}
         </button>
       );
     });

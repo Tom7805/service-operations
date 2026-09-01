@@ -200,7 +200,6 @@ export default function CustomerListPage({
       <div className="access-denied-container" data-testid="access-denied-view">
         <div className="access-denied-card">
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
-          <span className="eyebrow text-danger">Từ chối quyền truy cập (403 FORBIDDEN)</span>
           <h2>Bạn không có thẩm quyền tạo & quản lý hồ sơ khách hàng</h2>
           <p>
             Theo quy định phân quyền bảo mật (<strong>NCL-02-CN-001</strong>), chức năng Tạo hồ sơ khách hàng chỉ dành riêng cho{' '}
