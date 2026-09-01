@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-01T16:10:30.154920",
+  "generatedAt": "2026-09-01T18:57:49.183654",
   "title": "Vận Hành Dịch Vụ",
   "extensions": {
     "colorMeta": {
@@ -146,7 +146,7 @@
         "letterSpacing": "0.05em"
       },
       "mono": {
-        "fontFamily": "SF Mono, Segoe UI Mono, JetBrains Mono, Consolas, monospace",
+        "fontFamily": "SF Mono, SFMono-Regular, Segoe UI Mono, JetBrains Mono, Consolas, Liberation Mono, Menlo, monospace",
         "fontSize": "13.5px",
         "fontWeight": 400,
         "lineHeight": 1.5,
@@ -319,6 +319,11 @@
         "metric": "clamp(26px, 2.4vw, 34px)"
       },
       "note": "Toan bo bac duoc phep. Khong tu them bac moi. Truoc day co 23 bac roi rac, nhieu cap chi lech 0.5-1px."
+    },
+    "fontStacks": {
+      "sans": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
+      "mono": "SF Mono, SFMono-Regular, Segoe UI Mono, JetBrains Mono, Consolas, Liberation Mono, Menlo, monospace",
+      "note": "Khai bao mot lan tai :root (--font-sans / --font-mono). Khong viet chuoi font truc tiep vao quy tac."
     }
   },
   "components": [

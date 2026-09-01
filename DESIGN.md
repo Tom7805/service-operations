@@ -48,7 +48,7 @@ typography:
     lineHeight: 1
     letterSpacing: "-0.03em"
   meta:
-    fontFamily: "SF Mono, Segoe UI Mono, JetBrains Mono, Consolas, monospace"
+    fontFamily: "SF Mono, SFMono-Regular, Segoe UI Mono, JetBrains Mono, Consolas, Liberation Mono, Menlo, monospace"
     fontSize: "11px"
     fontWeight: 500
     lineHeight: 1.35
@@ -72,7 +72,7 @@ typography:
     lineHeight: 1.3
     letterSpacing: "0.05em"
   mono:
-    fontFamily: "SF Mono, Segoe UI Mono, JetBrains Mono, Consolas, monospace"
+    fontFamily: "SF Mono, SFMono-Regular, Segoe UI Mono, JetBrains Mono, Consolas, Liberation Mono, Menlo, monospace"
     fontSize: "13.5px"
     fontWeight: 400
     lineHeight: 1.5
@@ -201,6 +201,10 @@ Dùng theo cặp `bg` + `fg`, không bao giờ dùng lẻ. Không có màu nào 
 ## Typography
 
 **Chữ hệ thống, không tải font qua mạng.** SF Pro trên máy Apple, Segoe UI Variable trên Windows 11.
+
+Hai chuỗi font khai báo **một lần** ở `:root` rồi tham chiếu khắp nơi: `--font-sans` và `--font-mono`.
+Không viết chuỗi font trực tiếp vào bất kỳ quy tắc nào, và **không bao giờ** dùng `font-family: monospace`
+trần — trên Windows nó rơi về Courier New, vừa xấu vừa lệch hẳn phần còn lại của giao diện.
 Sắc nét sẵn ở mọi cỡ, không nhấp nháy khi tải, và không mang "vân tay" của một font web bị dùng quá nhiều.
 
 Phân cấp bằng **cỡ chữ + độ đậm**, không bằng màu và không bằng chữ IN HOA.

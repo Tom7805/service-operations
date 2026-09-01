@@ -14,8 +14,16 @@
      workspace kiểu tài liệu làm: SF Pro trên máy Apple, Segoe UI Variable trên
      Windows 11 — sắc nét sẵn ở mọi cỡ, không nhấp nháy khi tải, và không mang
      "vân tay" của một font web bị dùng quá nhiều. */
-  font-family: -apple-system, 'SF Pro Text', 'Segoe UI Variable Text', 'Segoe UI',
+  /* Hai chuoi font cua he, khai bao MOT lan roi tham chieu khap noi.
+     Truoc day chu mono co BA khai bao khac nhau cho cung mot vai tro, trong do 9
+     cho chi ghi `monospace` tran — tren Windows roi ve Courier New, vua xau vua
+     lech han phan con lai cua giao dien. */
+  --font-sans: -apple-system, 'SF Pro Text', 'Segoe UI Variable Text', 'Segoe UI',
                system-ui, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'SF Mono', 'SFMono-Regular', 'Segoe UI Mono', 'JetBrains Mono',
+               Consolas, 'Liberation Mono', Menlo, monospace;
+
+  font-family: var(--font-sans);
   color: #2F3437;
   background: #F7F6F3;
   font-synthesis: none; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility;
@@ -228,7 +236,7 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
    nhãn cột, số đếm. Đây là thứ làm giao diện đọc ra "công cụ vận hành" chứ không
    phải "trang web", và nó tách bạch rõ dữ liệu máy với chữ người viết. */
 .mono-meta {
-  font-family: 'SF Mono', 'Segoe UI Mono', 'JetBrains Mono', Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -307,7 +315,7 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
 .stat-card--blue, .stat-card--green, .stat-card--red, .stat-card--purple { border-left: none; }
 /* Nhãn thành siêu dữ liệu mono IN HOA: đọc ra là "tên chỉ số của máy đo". */
 .stat-card__label {
-  font-family: 'SF Mono', 'Segoe UI Mono', 'JetBrains Mono', Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 11px; color: #787774; font-weight: 500; letter-spacing: 0.08em;
   text-transform: uppercase; display: block; margin-bottom: 10px; line-height: 1.35;
 }
@@ -414,7 +422,7 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
    người đọc bên dưới, và giữ được chiều rộng cột ổn định khi lọc/đổi trang. */
 .user-data-table th {
   background: #F9F9F8; color: #787774; font-weight: 500;
-  font-family: 'SF Mono', 'Segoe UI Mono', 'JetBrains Mono', Consolas, monospace;
+  font-family: var(--font-mono);
   text-transform: uppercase; font-size: 11px; letter-spacing: 0.08em;
   padding: 12px 13px; border-bottom: 1px solid #EAEAEA; white-space: nowrap;
   position: sticky; top: 0; z-index: 2;
@@ -433,7 +441,7 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
 /* Cắt gọn 1 dòng + "..." cho các cột nội dung dài (họ tên, username, email, bộ phận) —
    trước đây tràn dòng tự do khiến chiều cao từng hàng lệch nhau, nhìn rối mắt. */
 .user-profile-fullname { font-weight: 700; color: #111111; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 186px; }
-.user-profile-username { font-size: 13.5px; color: #787774; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 186px; }
+.user-profile-username { font-size: 13.5px; color: #787774; font-family: var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 186px; }
 .cell-email { font-size: 14.5px; color: #5F5E5B; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 178px; }
 .cell-dept { font-weight: 600; color: #2F3437; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 156px; }
 
@@ -457,7 +465,7 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
 .scope-chip-group { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
 .scope-chip-group__sub { font-size: 11px; color: #787774; padding-left: 2px; }
 .user-tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; font-size: 13.5px; font-weight: 600; border: 1px solid transparent; }
-.user-tag__code { font-family: monospace; font-size: 12.5px; opacity: 0.85; }
+.user-tag__code { font-family: var(--font-mono); font-size: 12.5px; opacity: 0.85; }
 .badge--purple { background: #F1F0EE; color: #5F5E5B; border-color: #EAEAEA; }
 .badge--gold { background: #FBF3DB; color: #956400; border-color: rgba(149,100,0,.22); }
 .badge--blue { background: #E1F3FE; color: #1F6C9F; border-color: rgba(31,108,159,.20); }
@@ -530,7 +538,7 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
 .role-choice-card--selected { border-color: #111111; background: #EDF3EC; box-shadow: 0 0 0 1px #111111; }
 .role-choice-info { flex: 1; min-width: 0; }
 .role-choice-header { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.role-code-badge { font-family: monospace; font-size: 12.5px; font-weight: 700; color: #111111; background: #EDF3EC; border: 1px solid rgba(52,101,56,.20); padding: 1px 5px; border-radius: 4px; }
+.role-code-badge { font-family: var(--font-mono); font-size: 12.5px; font-weight: 700; color: #111111; background: #EDF3EC; border: 1px solid rgba(52,101,56,.20); padding: 1px 5px; border-radius: 4px; }
 .role-name { font-size: 14.5px; font-weight: 700; color: #111111; }
 .role-desc { font-size: 13.5px; color: #787774; margin: 3px 0 0; line-height: 1.4; }
 
@@ -626,7 +634,7 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
 .audit-log-icon svg { width: 15px; height: 15px; }
 .audit-log-meta { flex: 1; }
 .audit-log-row { color: #2F3437; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
-.highlight-username { font-family: monospace; font-weight: 700; color: #111111; }
+.highlight-username { font-family: var(--font-mono); font-weight: 700; color: #111111; }
 .audit-log-time { color: #9B9A97; font-size: 13.5px; }
 .audit-log-details { color: #787774; font-size: 13.5px; margin: 2px 0 0; }
 
@@ -903,7 +911,7 @@ body { background: var(--canvas); }
 .checklist-item:hover { border-color: rgba(52,101,56,.20); background: #EDF3EC; }
 .checklist-item--checked { border-color: #111111; background: #EDF3EC; box-shadow: 0 0 0 1px #111111; }
 .checklist-item input[type="checkbox"], .role-choice-card input[type="checkbox"] { accent-color: #111111; width: 16px; height: 16px; margin-top: 2px; cursor: pointer; }
-.checklist-code { font-family: monospace; font-weight: 700; font-size: 13.5px; color: #111111; background: #EDF3EC; border: 1px solid rgba(52,101,56,.20); padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
+.checklist-code { font-family: var(--font-mono); font-weight: 700; font-size: 13.5px; color: #111111; background: #EDF3EC; border: 1px solid rgba(52,101,56,.20); padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
 .checklist-info strong { font-size: 14.5px; color: #111111; display: block; }
 .checklist-info p { font-size: 13.5px; color: #787774; margin: 2px 0 0; }
 
@@ -917,7 +925,7 @@ body { background: var(--canvas); }
 .detail-card { background: #ffffff; border: 1px solid #EAEAEA; border-radius: 20px; padding: 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
 .detail-header { display: flex; align-items: center; gap: 20px; }
 .detail-name { font-size: 24px; font-weight: 700; color: #111111; margin: 0 0 4px; }
-.detail-username { font-family: monospace; font-size: 15px; color: #787774; }
+.detail-username { font-family: var(--font-mono); font-size: 15px; color: #787774; }
 .divider { border: 0; border-top: 1px solid #F1F0EE; margin: 24px 0; }
 .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .detail-field { display: flex; flex-direction: column; gap: 4px; }
@@ -925,7 +933,7 @@ body { background: var(--canvas); }
 .detail-value { font-size: 16px; color: #111111; font-weight: 600; }
 .section-title { font-size: 16px; font-weight: 700; color: #111111; margin: 0 0 12px; }
 .role-detail-card { border: 1px solid #EAEAEA; border-radius: 10px; padding: 12px 16px; display: flex; align-items: flex-start; gap: 12px; background: #F9F9F8; margin-bottom: 8px; width: 100%; }
-.role-code { font-family: monospace; font-size: 13.5px; font-weight: 700; color: #111111; background: #EDF3EC; border: 1px solid rgba(52,101,56,.20); padding: 3px 8px; border-radius: 6px; }
+.role-code { font-family: var(--font-mono); font-size: 13.5px; font-weight: 700; color: #111111; background: #EDF3EC; border: 1px solid rgba(52,101,56,.20); padding: 3px 8px; border-radius: 6px; }
 .role-title { font-weight: 700; color: #111111; font-size: 15px; }
 
 /* Bảng "Vai trò & quyền hạn" — mỗi quyền là một chip có icon check, gọn và dễ quét mắt hơn
@@ -1040,7 +1048,7 @@ body { background: var(--canvas); }
 .info-callout__text { flex: 1; }
 
 .customer-code-badge {
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   background: #EDF3EC;
   color: #346538;
@@ -1055,7 +1063,7 @@ body { background: var(--canvas); }
   gap: 6px;
 }
 .customer-code-pill {
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 14.5px;
   font-weight: 700;
   color: #111111;
@@ -1111,11 +1119,11 @@ body { background: var(--canvas); }
 .customer-id-sub {
   font-size: 12.5px;
   color: #9B9A97;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .taxcode-badge {
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 13.5px;
   font-weight: 600;
   color: #2F3437;
@@ -1273,7 +1281,7 @@ body { background: var(--canvas); }
   gap: 6px;
 }
 .toast-customer-code strong {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 14.5px;
   background: #EDF3EC;
   padding: 1px 6px;
@@ -1367,7 +1375,7 @@ body { background: var(--canvas); }
 .candidate-card__header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
 .candidate-card__identity { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
 .candidate-name { font-size: 16px; font-weight: 700; color: #111111; margin: 0; }
-.candidate-code-pill { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 13.5px; font-weight: 700; color: #5F5E5B; background: #F1F0EE; border: 1px solid #EAEAEA; padding: 2px 7px; border-radius: 5px; }
+.candidate-code-pill { font-family: var(--font-mono); font-size: 13.5px; font-weight: 700; color: #5F5E5B; background: #F1F0EE; border: 1px solid #EAEAEA; padding: 2px 7px; border-radius: 5px; }
 .candidate-similarity-wrap { flex-shrink: 0; }
 
 .similarity-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 13.5px; font-weight: 700; white-space: nowrap; }
@@ -1711,7 +1719,7 @@ body { background: var(--canvas); }
 }
 .cmdk__input::placeholder { color: #9B9A97; }
 .cmdk__kbd {
-  font-family: 'SF Mono', 'Segoe UI Mono', 'JetBrains Mono', Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 11px; letter-spacing: 0.04em; color: #787774;
   background: #F7F6F3; border: 1px solid #EAEAEA; border-radius: 4px;
   padding: 3px 6px; flex-shrink: 0; line-height: 1;
@@ -1720,7 +1728,7 @@ body { background: var(--canvas); }
 .cmdk__list { overflow-y: auto; padding: 6px; flex: 1; min-height: 0; }
 .cmdk__group + .cmdk__group { margin-top: 4px; border-top: 1px solid #EAEAEA; padding-top: 4px; }
 .cmdk__group-label {
-  font-family: 'SF Mono', 'Segoe UI Mono', 'JetBrains Mono', Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
   color: #9B9A97; padding: 8px 10px 6px;
 }
