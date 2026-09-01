@@ -136,9 +136,10 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
 
   if (loading) {
     return (
-      <div className="tree-loading-state">
-        <div className="loader" style={{ width: '28px', height: '28px', borderWidth: '3px', borderColor: '#111111', borderTopColor: 'transparent' }} />
-        <span>Đang tải cấu trúc cây tổ chức...</span>
+      <div className="tree-loading-state" role="status" aria-label="Đang tải cấu trúc cây tổ chức">
+        <div className="skeleton" />
+        <div className="skeleton" style={{ marginLeft: '24px' }} />
+        <div className="skeleton" style={{ marginLeft: '24px' }} />
       </div>
     );
   }

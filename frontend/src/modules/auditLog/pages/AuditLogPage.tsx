@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { AuditLogApiError, searchAuditLogs } from '../api/auditLogApi';
 import { TARGET_TYPE_LABELS, type AuditLogEntry, type AuditTargetType } from '../types/auditLogTypes';
 import { ICONS } from '../../../components/common/icons';
+import TableSkeleton from '../../../components/common/TableSkeleton';
 
 interface AuditLogPageProps {
   currentUserRoles?: string[];
@@ -230,12 +231,7 @@ export default function AuditLogPage({
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#787774' }}>
-                    <div className="loader" style={{ margin: '0 auto 10px', borderColor: '#111111', borderTopColor: 'transparent' }} />
-                    Đang tải nhật ký...
-                  </td>
-                </tr>
+                <TableSkeleton columns={6} />
               ) : entries.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#787774' }}>

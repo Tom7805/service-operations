@@ -15,6 +15,7 @@ import TwoFactorSetupPage from './modules/auth/pages/TwoFactorSetupPage';
 import CustomerListPage from './modules/customers/pages/CustomerListPage';
 import CustomerMergePage from './modules/customers/pages/CustomerMergePage';
 import { ICONS } from './components/common/icons';
+import CommandPalette from './components/common/CommandPalette';
 import type { ReactNode } from 'react';
 
 type Tab =
@@ -167,6 +168,17 @@ export default function App() {
     <div className="app-frame">
       {/* Nguoi dung ban phim khong phai Tab qua ca menu dieu huong moi toi duoc noi dung. */}
       <a className="skip-link" href="#noi-dung-chinh">Bỏ qua điều hướng, tới nội dung chính</a>
+
+      {/* Bảng lệnh Ctrl/⌘+K — nhảy tới bất kỳ màn hình nào không cần rời bàn phím. */}
+      <CommandPalette
+        items={[
+          ...NAV_ITEMS.map((i) => ({ id: i.tab, label: i.label, group: 'Điều hướng', icon: i.icon })),
+          ...SYSTEM_NAV_ITEMS.map((i) => ({ id: i.tab, label: i.label, group: 'Bảo mật & hệ thống', icon: i.icon })),
+          { id: 'CHANGE_PASSWORD', label: 'Đổi mật khẩu', group: 'Tài khoản của tôi', icon: ICONS.key },
+        ]}
+        onSelect={(id) => setActiveTab(id as Tab)}
+      />
+
       <div className="app-shell">
         <aside className={`side-nav ${sidebarCollapsed ? 'side-nav--collapsed' : ''}`}>
           <div className="side-nav__header">
@@ -209,6 +221,18 @@ export default function App() {
           </div>
 
           <div className="app-topbar__actions">
+            {/* Phím tắt phải nhìn thấy được thì mới có người dùng. Nút này vừa là chỉ dẫn,
+                vừa là lối vào cho người dùng chuột. */}
+            <button
+              type="button"
+              className="cmdk-hint"
+              title="Mở bảng lệnh (Ctrl K)"
+              onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+            >
+              {ICONS.search}
+              <span>Tìm nhanh</span>
+              <kbd className="cmdk__kbd">Ctrl K</kbd>
+            </button>
             <button type="button" className="icon-btn" title="Trợ giúp" aria-label="Trợ giúp">
               {ICONS.helpCircle}
             </button>

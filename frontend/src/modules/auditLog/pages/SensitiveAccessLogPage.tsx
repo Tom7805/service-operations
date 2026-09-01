@@ -8,6 +8,7 @@ import {
   type SensitiveDataTypeCode,
 } from '../types/auditLogTypes';
 import { ICONS } from '../../../components/common/icons';
+import TableSkeleton from '../../../components/common/TableSkeleton';
 
 interface SensitiveAccessLogPageProps {
   currentUserRoles?: string[];
@@ -266,15 +267,7 @@ export default function SensitiveAccessLogPage({
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#787774' }}>
-                    <div
-                      className="loader"
-                      style={{ margin: '0 auto 10px', borderColor: '#111111', borderTopColor: 'transparent' }}
-                    />
-                    Đang tải nhật ký truy cập...
-                  </td>
-                </tr>
+                <TableSkeleton columns={7} />
               ) : entries.length === 0 ? (
                 <tr>
                   {/* TC-02: không có bản ghi nào thỏa bộ lọc */}

@@ -5,6 +5,7 @@ import { getDepartmentsList, getUsers, updateUserRoleScope } from '../api/usersA
 import RoleScopeModal from '../components/RoleScopeModal';
 import RoleMatrixTable from '../components/RoleMatrixTable';
 import { ICONS } from '../components/icons';
+import TableSkeleton from '../../../components/common/TableSkeleton';
 
 interface RolePermissionPageProps {
   currentUserRoles?: string[];
@@ -324,12 +325,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
               </thead>
               <tbody>
                 {loading ? (
-                  <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#787774' }}>
-                      <div className="loader" style={{ margin: '0 auto 10px', borderColor: '#111111', borderTopColor: 'transparent' }} />
-                      Đang tải dữ liệu phân quyền...
-                    </td>
-                  </tr>
+                  <TableSkeleton columns={5} />
                 ) : filteredUsers.length === 0 ? (
                   <tr>
                     <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#787774' }}>

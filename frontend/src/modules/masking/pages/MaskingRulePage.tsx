@@ -4,6 +4,7 @@ import type { MaskingAuditLog, MaskingRule } from '../types/maskingTypes';
 import { canViewSensitiveData } from '../../../hooks/usePermission';
 import { SYSTEM_ROLES } from '../../users/types/userTypes';
 import { ICONS } from '../../../components/common/icons';
+import TableSkeleton from '../../../components/common/TableSkeleton';
 
 interface MaskingRulePageProps {
   currentUserRoles?: string[];
@@ -188,12 +189,7 @@ export default function MaskingRulePage({
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', padding: '40px', color: '#787774' }}>
-                    <div className="loader" style={{ margin: '0 auto 10px', borderColor: '#111111', borderTopColor: 'transparent' }} />
-                    Đang tải danh sách quy tắc che dữ liệu...
-                  </td>
-                </tr>
+                <TableSkeleton columns={4} />
               ) : rules.length === 0 ? (
                 <tr>
                   <td colSpan={4} style={{ textAlign: 'center', padding: '40px', color: '#787774' }}>
