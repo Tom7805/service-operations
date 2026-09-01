@@ -1,5 +1,6 @@
 package com.serviceops.modules.identity.auth;
 
+import com.serviceops.config.PasswordResetMailRequiredConfig;
 import com.serviceops.modules.identity.auth.service.impl.LoggingPasswordResetNotifier;
 import com.serviceops.modules.identity.auth.service.impl.MailPasswordResetNotifier;
 import org.junit.jupiter.api.Test;
@@ -46,27 +47,33 @@ class PasswordResetNotifierGuardTest {
     }
 
     /**
-     * Spring Boot tu tao JavaMailSender ngay ca khi khong khai bao may chu SMTP,
-     * nen neu khong chan thi loi chi lo ra LUC GUI — tuc luc mot nguoi dung that
-     * dang cho thu. He thong trong nhu chay binh thuong nhung khong ai lay lai
-     * duoc mat khau, va khong ai biet cho toi khi co nguoi bao.
+     * Chay prod ma quen khai bao SMTP_HOST: khong ban cai dat nao duoc tao, nen
+     * ung dung khong len duoc. Lop guard nay bien thong bao kho hieu ("No
+     * qualifying bean of type PasswordResetNotifier") thanh mot thong bao noi ro
+     * thieu bien nao va phai lam gi.
      */
     @Test
-    void banThat_thieuCauHinhSmtp_dungKhoiDong() {
-        MailPasswordResetNotifier notifier = new MailPasswordResetNotifier(mock(JavaMailSender.class));
-        ReflectionTestUtils.setField(notifier, "mailHost", "");
-        ReflectionTestUtils.setField(notifier, "fromAddress", "no-reply@congty.vn");
-        ReflectionTestUtils.setField(notifier, "frontendBaseUrl", "https://vanhanh.congty.vn");
-
-        assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(notifier, "validateConfig"))
+    void prod_thieuMayChuSmtp_dungKhoiDongVaNoiRoThieuGi() {
+        assertThatThrownBy(() -> new PasswordResetMailRequiredConfig(""))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("spring.mail.host");
+                .hasMessageContaining("SMTP_HOST")
+                .hasMessageContaining("MAIL_FROM");
     }
 
     @Test
+    void prod_coMayChuSmtp_khoiDongBinhThuong() {
+        assertThatCode(() -> new PasswordResetMailRequiredConfig("smtp.congty.vn"))
+                .doesNotThrowAnyException();
+    }
+
+    /**
+     * `spring.mail.host` da duoc dieu kien tren lop bao dam, nen ban that chi con
+     * kiem tra hai gia tri ma thieu chung thi thu VAN GUI DI nhung vo dung: khong
+     * co dia chi nguoi gui, hoac lien ket trong thu tro di dau khong biet.
+     */
+    @Test
     void banThat_thieuDiaChiNguoiGui_dungKhoiDong() {
         MailPasswordResetNotifier notifier = new MailPasswordResetNotifier(mock(JavaMailSender.class));
-        ReflectionTestUtils.setField(notifier, "mailHost", "smtp.congty.vn");
         ReflectionTestUtils.setField(notifier, "fromAddress", "");
         ReflectionTestUtils.setField(notifier, "frontendBaseUrl", "https://vanhanh.congty.vn");
 
@@ -75,14 +82,9 @@ class PasswordResetNotifierGuardTest {
                 .hasMessageContaining("app.mail.from");
     }
 
-    /**
-     * Thieu goc dia chi giao dien thi lien ket gui di se sai, nguoi dung bam vao
-     * khong toi dau. Cung phai chan ngay luc khoi dong.
-     */
     @Test
     void banThat_thieuGocDiaChiGiaoDien_dungKhoiDong() {
         MailPasswordResetNotifier notifier = new MailPasswordResetNotifier(mock(JavaMailSender.class));
-        ReflectionTestUtils.setField(notifier, "mailHost", "smtp.congty.vn");
         ReflectionTestUtils.setField(notifier, "fromAddress", "no-reply@congty.vn");
         ReflectionTestUtils.setField(notifier, "frontendBaseUrl", "");
 
@@ -94,7 +96,6 @@ class PasswordResetNotifierGuardTest {
     @Test
     void banThat_dayDuCauHinh_khoiDongBinhThuong() {
         MailPasswordResetNotifier notifier = new MailPasswordResetNotifier(mock(JavaMailSender.class));
-        ReflectionTestUtils.setField(notifier, "mailHost", "smtp.congty.vn");
         ReflectionTestUtils.setField(notifier, "fromAddress", "no-reply@congty.vn");
         ReflectionTestUtils.setField(notifier, "frontendBaseUrl", "https://vanhanh.congty.vn");
 

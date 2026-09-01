@@ -7,6 +7,28 @@ spring:
     default-property-inclusion: non_null
     serialization:
       write-dates-as-timestamps: false
+  # Thu dien tu — khai bao MOT lan o day cho MOI profile.
+  #
+  # `host` rong = chua cau hinh. Khi do:
+  #   - profile dev/test : lien ket khoi phuc duoc ghi ra logger AUDIT_MOCK_EMAIL
+  #   - profile prod     : ung dung DUNG KHOI DONG (PasswordResetMailRequiredConfig)
+  # Vua dat SMTP_HOST la ban gui thu that tiep quan ngay, o BAT KY profile nao —
+  # nho vay thu duoc chuc nang gui thu tren may phat trien ma khong phai dung
+  # nguyen cau hinh production.
+  #
+  # SMTP_AUTH / SMTP_STARTTLS mac dinh bat cho may chu thu that. Voi may chu thu
+  # cuc bo kieu MailHog thi tat ca hai (SMTP_AUTH=false SMTP_STARTTLS=false).
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH:true}
+          starttls:
+            enable: ${SMTP_STARTTLS:true}
 
 server:
   port: ${SERVER_PORT:8080}

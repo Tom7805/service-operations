@@ -425,17 +425,21 @@ hợp lệ) — Frontend chỉ nên hiển thị một thông báo chung dạng 
 
 Liên kết khôi phục có hạn dùng mặc định 30 phút và **chỉ dùng được một lần**.
 
-**Kênh gửi phụ thuộc profile đang chạy** (`PasswordResetNotifier`):
+**`SMTP_HOST` là công tắc quyết định kênh gửi** (`PasswordResetNotifier`), không phải profile và cũng
+không phải địa chỉ email của tài khoản:
 
-| Profile | Cách gửi |
-|---|---|
-| `dev` / `test` | Ghi liên kết ra logger riêng `AUDIT_MOCK_EMAIL`. Các tài khoản mẫu dùng tên miền `.local` (RFC 6762) nên không có hộp thư nào tồn tại. |
-| `prod` | Gửi thư thật qua SMTP. **Không bao giờ** ghi token ra log, kể cả khi gửi thất bại. |
+| `SMTP_HOST` | Profile | Kết quả |
+|---|---|---|
+| rỗng | `dev` / `test` | Ghi liên kết ra logger riêng `AUDIT_MOCK_EMAIL`, **không** gửi thư |
+| rỗng | `prod` | Ứng dụng **dừng khởi động** kèm thông báo nói rõ thiếu biến nào |
+| có giá trị | bất kỳ | Gửi thư thật qua SMTP. **Không bao giờ** ghi token ra log, kể cả khi gửi thất bại |
 
-**Bốn biến môi trường bắt buộc ở `prod`** — thiếu bất kỳ biến nào thì ứng dụng **dừng khởi động**:
-`SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `MAIL_FROM`, cộng `FRONTEND_BASE_URL` để dựng liên kết.
-Đây là chủ đích: nếu để mặc định rỗng, ứng dụng sẽ lên bình thường rồi im lặng không gửi được thư trong khi
-giao diện vẫn báo "đã gửi" — người dùng bị khoá ngoài mà không ai biết.
+Nhờ vậy có thể thử chức năng gửi thư ngay trên máy phát triển (ví dụ trỏ `SMTP_HOST` vào một máy chủ
+thư cục bộ như MailHog) mà không phải dựng nguyên cấu hình production.
+
+Ở `prod`, thiếu `SMTP_HOST` thì dừng khởi động là **chủ đích**: nếu để lên bình thường, ứng dụng sẽ im
+lặng không gửi được thư trong khi giao diện vẫn báo "đã gửi" — người dùng bị khoá ngoài mà không ai biết.
+Cần đủ: `SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `MAIL_FROM`, `FRONTEND_BASE_URL`.
 
 **Token lưu trong CSDL dưới dạng SHA-256** (cột `password_reset_tokens.token_hash`), không phải chuỗi thô.
 Đọc được bảng này cũng không đặt lại được mật khẩu của ai.

@@ -6,6 +6,7 @@ import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -30,6 +31,10 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Profile("!prod")
+// Chi chay khi CHUA khai bao may chu SMTP. Vua khai bao SMTP_HOST la ban that
+// tiep quan ngay, ke ca tren may phat trien — vi gui thu that luon an toan hon
+// in token ra log.
+@ConditionalOnExpression("'${spring.mail.host:}'.isEmpty()")
 public class LoggingPasswordResetNotifier implements PasswordResetNotifier {
 
     private static final Logger MOCK_MAIL_LOG = LoggerFactory.getLogger("AUDIT_MOCK_EMAIL");

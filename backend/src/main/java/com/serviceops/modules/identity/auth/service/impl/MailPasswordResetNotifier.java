@@ -6,7 +6,7 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -29,14 +29,16 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-@Profile("prod")
+// Bat khi CO khai bao may chu SMTP — o BAT KY profile nao, khong rieng prod.
+// Nho vay co the thu gui thu that ngay tren may phat trien (vi du bang MailHog)
+// ma khong phai dung nguyen cau hinh production.
+// Dung @ConditionalOnExpression thay vi @ConditionalOnProperty vi cai sau coi
+// chuoi RONG la "co khai bao" — ma docker-compose lai truyen SMTP_HOST= rong.
+@ConditionalOnExpression("!'${spring.mail.host:}'.isEmpty()")
 @RequiredArgsConstructor
 public class MailPasswordResetNotifier implements PasswordResetNotifier {
 
     private final JavaMailSender mailSender;
-
-    @Value("${spring.mail.host:}")
-    private String mailHost;
 
     @Value("${app.mail.from:}")
     private String fromAddress;
@@ -44,9 +46,13 @@ public class MailPasswordResetNotifier implements PasswordResetNotifier {
     @Value("${app.frontend.base-url:}")
     private String frontendBaseUrl;
 
+    /**
+     * {@code spring.mail.host} da duoc dieu kien tren lop bao dam, nen o day chi
+     * con kiem tra hai gia tri ma thieu chung thi thu van gui di nhung VO DUNG:
+     * khong co dia chi nguoi gui, hoac lien ket trong thu tro di dau khong biet.
+     */
     @PostConstruct
     void validateConfig() {
-        requireConfigured("spring.mail.host (SMTP_HOST)", mailHost);
         requireConfigured("app.mail.from (MAIL_FROM)", fromAddress);
         requireConfigured("app.frontend.base-url (FRONTEND_BASE_URL)", frontendBaseUrl);
     }

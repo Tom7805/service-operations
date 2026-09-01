@@ -4,26 +4,10 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
-  # Thu dien tu that. O profile nay KHONG co ban gia lap ghi token ra log:
-  # LoggingPasswordResetNotifier mang @Profile("!prod") nen khong duoc tao,
-  # va no con tu kiem tra lai lan nua de chac chan.
-  #
-  # Bon bien duoi day khong co gia tri mac dinh. Thieu bat ky bien nao thi
-  # MailPasswordResetNotifier nem loi ngay luc khoi dong. Day la CO Y: neu de
-  # mac dinh rong, ung dung se len binh thuong roi im lang khong gui duoc thu,
-  # trong khi giao dien van bao "da gui" — nguoi dung bi khoa ngoai ma khong ai
-  # biet cho toi khi co nguoi bao. Tha khong len duoc con hon len roi hong am tham.
-  mail:
-    host: ${SMTP_HOST}
-    port: ${SMTP_PORT:587}
-    username: ${SMTP_USERNAME}
-    password: ${SMTP_PASSWORD}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
+  # Cau hinh thu dien tu nam o application.yml (dung chung moi profile).
+  # Rieng o profile nay, THIEU SMTP_HOST la ung dung DUNG KHOI DONG — xem
+  # PasswordResetMailRequiredConfig. Va ban gia lap ghi token ra log khong bao
+  # gio duoc tao o day: LoggingPasswordResetNotifier mang @Profile("!prod").
   jpa:
     hibernate:
       ddl-auto: validate
