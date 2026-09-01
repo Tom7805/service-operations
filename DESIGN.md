@@ -169,6 +169,17 @@ Phân cấp bằng **cỡ chữ + độ đậm**, không bằng màu và không 
 **Tương phản cỡ chữ là công cụ phân cấp chính.** Khoảng cách giữa nhãn mono 11px và số liệu
 34px ngay bên dưới nó chính là thứ tạo nhịp cho cả trang — đừng thu hẹp khoảng cách đó.
 
+### Thang cỡ chữ đầy đủ
+Một giao diện dày dữ liệu cần nhiều bậc hơn 6 vai trò ở trên. Đây là **toàn bộ** bậc được phép —
+12 bậc, không được tự thêm bậc mới:
+
+`11 · 12.5 · 13.5 · 14.5 · 15 · 16 · 18 · 20 · 24 · 30 · 32 · 40` (px), cộng 3 bậc `clamp()`
+cho display / tiêu đề trang / số liệu chỉ số.
+
+Trước đây file dùng **23 cỡ rời rạc** (`10.5 11 11.5 12 12.5 13 13.5 14 14.5 15 15.5 16 17 18 19
+20 22 24 30 32 39 40 43 48`) — nhiều cặp chỉ lệch nhau 0.5–1px, tức cùng một vai trò thị giác mà
+mỗi nơi một cỡ. Đó là drift, không phải sắc thái.
+
 **Quy tắc chữ:**
 - **Mono + IN HOA + giãn chữ rộng** dành riêng cho *siêu dữ liệu*: nhãn cột bảng, nhãn chỉ số,
   nhãn nhóm, mã định danh, phím tắt. Nó tách bạch "nhãn do máy sinh" với "chữ do người viết".

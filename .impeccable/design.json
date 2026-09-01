@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-01T15:09:46.566118",
+  "generatedAt": "2026-09-01T15:27:05.838282",
   "title": "Vận Hành Dịch Vụ",
   "extensions": {
     "colorMeta": {
@@ -241,7 +241,29 @@
         "name": "login-stack",
         "value": "820px"
       }
-    ]
+    ],
+    "typeScale": {
+      "steps": [
+        "11px",
+        "12.5px",
+        "13.5px",
+        "14.5px",
+        "15px",
+        "16px",
+        "18px",
+        "20px",
+        "24px",
+        "30px",
+        "32px",
+        "40px"
+      ],
+      "fluid": {
+        "display": "clamp(38px, 3.6vw, 58px)",
+        "pageTitle": "clamp(30px, 3.4vw, 42px)",
+        "metric": "clamp(26px, 2.4vw, 34px)"
+      },
+      "note": "Toan bo bac duoc phep. Khong tu them bac moi. Truoc day co 23 bac roi rac, nhieu cap chi lech 0.5-1px."
+    }
   },
   "components": [
     {
