@@ -67,13 +67,18 @@
   --shadow-lg: 0 4px 16px rgba(0,0,0,0.05);
   --shadow-focus: 0 0 0 3px rgba(17,17,17,0.10);
 
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Ba duong cong chuan cua bo skill animation — KHONG tu che them.
+     Duong cong dung san cua trinh duyet qua yeu, thieu do dut khoat. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);       /* vao / ra */
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);   /* di chuyen tren man hinh */
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);    /* ngan keo kieu iOS */
   --dur-fast: 120ms;
   --dur-base: 200ms;
+  --dur-press: 160ms;
 
   /* Giữ tên biến cũ để các quy tắc chưa chuyển đổi không vỡ đột ngột */
   --radius-xl: 12px;
-  --ease-gel: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-gel: var(--ease-out);
   --dur-gel: 200ms;
 }
 * { box-sizing: border-box; } body { margin: 0; min-width: 320px; line-height: 1.5; } button, input { font: inherit; } button { cursor: pointer; }
@@ -116,7 +121,7 @@ p, .page-subtitle, .field-hint, .role-matrix-desc { text-wrap: pretty; }
 .ambient { display: none; }.ambient--one { height: 37vw; width: 37vw; left: -20vw; top: -18vw; background: radial-gradient(circle, rgba(17,17,17,.26), transparent 65%); animation: drift-soft 9s ease-in-out infinite; }.ambient--two { height: 30vw; width: 30vw; left: 27vw; bottom: -22vw; background: radial-gradient(circle, rgba(251,243,219,.14), transparent 64%); animation: float-soft 7s ease-in-out infinite; }
 .brand { color:inherit; text-decoration:none; display:flex; align-items:center; gap:12px; font-weight:600; letter-spacing:-.04em; font-size: 18px; z-index:1; }.brand b { color:#EAEAEA; font-weight:500; }.brand__mark { height:34px; width:34px; display:flex; align-items:end; gap:3px; padding:5px; background:#111111; border-radius:9px; box-shadow:0 7px 20px rgba(17,17,17,.3); }.brand__mark i { display:block; background:#F1F0EE; width:6px; border-radius:3px; }.brand__mark i:nth-child(1){height:9px}.brand__mark i:nth-child(2){height:17px}.brand__mark i:nth-child(3){height:23px}
 .brand-copy { margin:auto 0 39px; z-index:1; animation:enter-left .8s .1s both; }.eyebrow { color:#EAEAEA; text-transform:uppercase; letter-spacing:.16em; font-size: 11px; font-weight:700; }.brand-copy h1 { font-size:clamp(43px,4.25vw,70px); font-weight:700; font-style:normal; line-height:1.12; letter-spacing:-.06em; word-spacing:normal; font-kerning:normal; font-variant-ligatures:none; margin:18px 0 19px; max-width:720px; }.brand-copy h1 em { color:#EAEAEA; font-family:inherit; font-weight:600; font-style:normal; }.brand-copy__description { max-width:430px; color:#787774; font-size: 15px; line-height:1.75; }.brand-signals { display:flex; flex-wrap:wrap; gap:10px 18px; margin-top:22px; color:#787774; font-size: 12.5px; font-weight:600; }.brand-signals span { display:flex; align-items:center; gap:7px; }.brand-signals i { width:6px; height:6px; border-radius:50%; background:#787774; box-shadow:0 0 0 4px rgba(17,17,17,.15); }
-.highlights { z-index:1; }.story { display:flex; gap:12px; z-index:1; position:relative; }.story__line { height:1px; position:absolute; top:8px; left:0; width:100%; background:rgba(52,101,56,.2); }.story__item { appearance:none; flex:1 1 0; min-width:0; border:1px solid transparent; background:transparent; text-align:left; color:#787774; position:relative; min-height:132px; padding:25px 11px 12px; border-radius:12px; animation:enter-up .6s calc(var(--delay, 0s) + .45s) both; transition: transform .35s cubic-bezier(.22,1,.36,1),background .35s var(--ease-out),border-color .35s var(--ease-out),color .35s var(--ease-out),box-shadow .35s var(--ease-out); }.story__item:hover,.story__item:focus-visible { transform:translateY(-4px); background:rgba(17,17,17,.09); border-color:rgba(17,17,17,.24); color:#2F3437; outline:none; }.story__item:nth-of-type(3){--delay:.1s}.story__item:nth-of-type(4){--delay:.2s}.story__item span { position:absolute; top:0; left:11px; color:#EAEAEA; font-size: 11px; padding-right:7px; background:#F1F0EE; }.story__item--active { background:linear-gradient(145deg,rgba(17,17,17,.14),rgba(17,17,17,.06)); border-color:rgba(17,17,17,.27); color:#2F3437; box-shadow:0 12px 30px var(--overlay-subtle); }.story__item--active span { color:#956400; }.story__item strong { display:block; color:#111111; font-size: 13.5px; margin-bottom:6px; }.story__item p { font-size: 12.5px; line-height:1.55; margin:0; }.story__progress { position:absolute; height:2px; bottom:0; left:11px; right:11px; border-radius:2px; background:#EAEAEA; transform-origin:left; animation:feature-progress 5s linear both; }.highlight-detail { margin-top:12px; min-height:48px; border:1px solid rgba(17,17,17,.16); background:rgba(17,17,17,.07); border-radius:10px; padding:12px 14px; backdrop-filter:blur(9px); }.highlight-detail__content { display:flex; align-items:center; gap:9px; animation:content-enter .36s cubic-bezier(.22,1,.36,1) both; }.highlight-detail span { color:#956400; }.highlight-detail p { margin:0; color:#787774; font-size: 12.5px; }.brand-footer { margin:27px 0 0; color:#9B9A97; font-size: 11px; z-index:1; }
+.highlights { z-index:1; }.story { display:flex; gap:12px; z-index:1; position:relative; }.story__line { height:1px; position:absolute; top:8px; left:0; width:100%; background:rgba(52,101,56,.2); }.story__item { appearance:none; flex:1 1 0; min-width:0; border:1px solid transparent; background:transparent; text-align:left; color:#787774; position:relative; min-height:132px; padding:25px 11px 12px; border-radius:12px; animation:enter-up .6s calc(var(--delay, 0s) + .45s) both; transition: transform .35s var(--ease-out),background .35s var(--ease-out),border-color .35s var(--ease-out),color .35s var(--ease-out),box-shadow .35s var(--ease-out); }.story__item:hover,.story__item:focus-visible { transform:translateY(-4px); background:rgba(17,17,17,.09); border-color:rgba(17,17,17,.24); color:#2F3437; outline:none; }.story__item:nth-of-type(3){--delay:.1s}.story__item:nth-of-type(4){--delay:.2s}.story__item span { position:absolute; top:0; left:11px; color:#EAEAEA; font-size: 11px; padding-right:7px; background:#F1F0EE; }.story__item--active { background:linear-gradient(145deg,rgba(17,17,17,.14),rgba(17,17,17,.06)); border-color:rgba(17,17,17,.27); color:#2F3437; box-shadow:0 12px 30px var(--overlay-subtle); }.story__item--active span { color:#956400; }.story__item strong { display:block; color:#111111; font-size: 13.5px; margin-bottom:6px; }.story__item p { font-size: 12.5px; line-height:1.55; margin:0; }.story__progress { position:absolute; height:2px; bottom:0; left:11px; right:11px; border-radius:2px; background:#EAEAEA; transform-origin:left; animation:feature-progress 5s linear both; }.highlight-detail { margin-top:12px; min-height:48px; border:1px solid rgba(17,17,17,.16); background:rgba(17,17,17,.07); border-radius:10px; padding:12px 14px; backdrop-filter:blur(9px); }.highlight-detail__content { display:flex; align-items:center; gap:9px; animation:content-enter .36s var(--ease-out) both; }.highlight-detail span { color:#956400; }.highlight-detail p { margin:0; color:#787774; font-size: 12.5px; }.brand-footer { margin:27px 0 0; color:#9B9A97; font-size: 11px; z-index:1; }
 .login-panel { background:radial-gradient(circle at 18% 10%,#fff 0,rgba(255,255,255,.55) 28%,transparent 54%),#F7F6F3; display:flex; align-items:center; justify-content:center; padding:40px; position:relative; }.login-panel::before { content:''; position:absolute; inset:22px; border:1px solid var(--overlay-hairline); pointer-events:none; }.login-card { width:min(100%,470px); position:relative; z-index:1; padding:38px; border:1px solid rgba(255,255,255,.9); border-radius:22px; background:rgba(255,255,255,.7); box-shadow:0 28px 75px -32px var(--overlay-scrim),inset 0 1px rgba(255,255,255,.95); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); animation:card-enter .7s .05s both; }.panel-heading { display:flex; align-items:center; gap:8px; color:#787774; text-transform:uppercase; letter-spacing:.14em; font-size: 11px; font-weight:700; }.panel-heading__signal { height:7px;width:7px;background:#787774;border-radius:50%;box-shadow:0 0 0 4px rgba(52,101,56,.13); }.login-card h2 { font-size: 32px; font-weight:700; line-height:1.15; letter-spacing:-.052em; margin:19px 0 8px; }.login-card__intro { color:#787774; font-size: 15px; margin:0 0 33px; } form label { display:block; color:#2F3437; font-size: 13.5px; font-weight:700; margin:0 0 8px; }.field { position:relative; margin-bottom:21px; }.field input { width:100%; height:53px; background:rgba(255,255,255,.82); border:1px solid #EAEAEA; border-radius:10px; outline:none; padding:0 48px 0 15px; color:#2F3437; font-size: 15px; transition: .2s var(--ease-out); }.field input::placeholder { color:#9B9A97; }.field input:focus { border-color:#111111; box-shadow:0 0 0 4px rgba(17,17,17,.16); }.field__toggle { position:absolute; right:12px; top:10px; background:transparent; border:0; padding:7px; color:#787774; transition: transform .2s var(--ease-out),color .2s var(--ease-out); }.field__toggle:hover { transform:scale(1.12);color:#111111; }.field__toggle svg { width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round; }.form-options { display:flex; justify-content:space-between; align-items:center; margin:-2px 0 25px; }.form-options a, .login-card__privacy a { color:#111111; text-decoration:none; font-size: 13.5px; font-weight:700; }.checkbox { display:flex!important; align-items:center; gap:7px; margin:0!important; color:#787774!important; font-weight:500!important; }.checkbox input { accent-color:#111111; width:14px; height:14px; transition: transform .2s var(--ease-out); }.checkbox input:checked { transform:scale(1.1); }.form-error { padding:11px 12px; border-radius:9px; background:#FDEBEC; color:#9F2F2D; display:flex; gap:8px; align-items:flex-start; font-size: 13.5px; line-height:1.4; margin:-9px 0 17px; animation:error-enter .25s ease both; }.form-error span { background:#9F2F2D; color:#fff; border-radius:50%; height:15px; width:15px; line-height:15px; text-align:center; font-weight:700; flex:none; }.submit { width:100%; height:54px; border:0; border-radius:10px; background:#111111; color:#fff; font-size: 15px; font-weight:700; box-shadow:0 12px 24px rgba(17,17,17,.24); transition: transform .2s var(--ease-out),background .2s var(--ease-out),box-shadow .2s var(--ease-out); display:flex; justify-content:center; align-items:center; gap:11px; position:relative; overflow:hidden; }.submit:hover:not(:disabled) { transform:translateY(-2px); background:#111111;box-shadow:0 16px 30px rgba(17,17,17,.3); }.submit span { font-size: 20px; font-weight:400; transition: transform .2s var(--ease-out); }.submit:hover span { transform:translateX(3px); }.submit:disabled { opacity:.75; cursor:wait; }.submit__shine { position:absolute; inset:-20% auto -20% -35%; width:24%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.42),transparent); transform:skewX(-18deg); animation:button-shine 3.8s ease-in-out infinite; }.loader { width:15px;height:15px;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite; }.secure-note { display:flex; align-items:flex-start; gap:8px; margin:18px 0 0; padding:0 2px; color:#787774; font-size: 11px; line-height:1.5; }.secure-note span { display:grid; place-items:center; flex:none; width:15px; height:15px; border-radius:50%; background:#F1F0EE; color:#111111; font-size: 11px; font-weight:700; }.secure-note p { margin:0; }.login-card__privacy { margin:21px 0 0; color:#9B9A97; text-align:center; font-size: 11px; line-height:1.7; }
 .signed-in { min-height:100vh; display:grid;place-items:center;overflow:hidden;background:#F1F0EE;color:#2F3437;position:relative;text-align:center; }.signed-in__orb { position:absolute;width:60vw;height:60vw;border-radius:50%;background:radial-gradient(circle,#111111,transparent 65%);opacity:.65;animation:pulse 4s infinite; }.signed-in section { position:relative; z-index:1; }.signed-in h1 { font:600 clamp(35px,5vw,64px)/1.1 'Playfair Display',Georgia,serif;margin:16px 0; }.signed-in p { color:#787774; }.signed-in__progress { height:3px;width:220px;margin:30px auto;background:rgba(255,255,255,.15);overflow:hidden;border-radius:3px; }.signed-in__progress span { display:block;height:100%;width:45%;background:#EAEAEA;animation:progress 1.6s ease-in-out infinite; }.signed-in button { background:transparent;border:1px solid #EAEAEA;color:#2F3437;border-radius:6px;padding:10px 20px; }
 @keyframes enter-left{from{opacity:0;transform:translateX(-22px)}to{opacity:1;transform:none}}@keyframes enter-up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}@keyframes card-enter{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{50%{transform:scale(1.1);opacity:.85}}@keyframes progress{from{transform:translateX(-100%)}to{transform:translateX(325%)}}@keyframes gradient-flow{50%{background-position:100% 50%}}@keyframes float-soft{50%{transform:translate3d(0,-14px,0) scale(1.03)}}@keyframes drift-soft{50%{transform:translate3d(18px,10px,0)}}@keyframes feature-progress{from{transform:scaleX(0)}to{transform:scaleX(1)}}@keyframes content-enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}@keyframes button-shine{0%,55%,100%{transform:translateX(-15vw) skewX(-18deg)}25%{transform:translateX(56vw) skewX(-18deg)}}@keyframes error-enter{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
@@ -470,7 +475,7 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
 .status-pill--inactive { background: #F1F0EE; color: #787774; }
 
 .table-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
-.action-btn { width: 32px; height: 32px; border-radius: 6px; border: 1px solid #EAEAEA; background: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s var(--ease-out); font-size: 15px; }
+.action-btn { width: 32px; height: 32px; border-radius: 6px; border: 1px solid #EAEAEA; background: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-press) var(--ease-out); font-size: 15px; }
 .action-btn:hover { background: #F9F9F8; border-color: #EAEAEA; transform: scale(1.05); }
 .action-btn svg { width: 15px; height: 15px; }
 
@@ -520,7 +525,7 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
 .password-toggle-btn svg { width: 17px; height: 17px; }
 
 .roles-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-height: 250px; overflow-y: auto; padding: 4px; }
-.role-choice-card { border: 1px solid #EAEAEA; border-radius: 10px; padding: 12px; display: flex; align-items: flex-start; gap: 10px; cursor: pointer; transition: all 0.2s var(--ease-out); background: #ffffff; min-height: 72px; }
+.role-choice-card { border: 1px solid #EAEAEA; border-radius: 10px; padding: 12px; display: flex; align-items: flex-start; gap: 10px; cursor: pointer; transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-press) var(--ease-out); background: #ffffff; min-height: 72px; }
 .role-choice-card:hover { border-color: rgba(52,101,56,.20); background: #EDF3EC; }
 .role-choice-card--selected { border-color: #111111; background: #EDF3EC; box-shadow: 0 0 0 1px #111111; }
 .role-choice-info { flex: 1; min-width: 0; }
@@ -543,7 +548,7 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
   transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out),
               color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
-.btn-primary:active, .btn-secondary:active { transform: scale(0.98); }
+.btn-primary:active, .btn-secondary:active { transform: scale(0.97); }
 .btn-primary:focus-visible, .btn-secondary:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
 .btn-lg { padding: 12px 22px; font-size: 15px; }
 
@@ -565,7 +570,14 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
 .alert--error { background: #FDEBEC; border: 1px solid rgba(159,47,45,.20); color: #9F2F2D; }
 .alert--warning { background: #FBF3DB; border: 1px solid rgba(149,100,0,.22); color: #956400; }
 .alert--success { background: #EDF3EC; border: 1px solid rgba(52,101,56,.20); color: #346538; }
-.toast-banner { position: fixed; bottom: 24px; right: 24px; background: #111111; color: #ffffff; padding: 14px 20px; border-radius: 10px; box-shadow: 0 10px 30px var(--overlay-strong); display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: 600; z-index: 10000; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.toast-banner { position: fixed; bottom: 24px; right: 24px; background: #111111; color: #ffffff; padding: 14px 20px; border-radius: 10px; box-shadow: 0 10px 30px var(--overlay-strong); display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: 600; z-index: 10000; transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+  opacity: 1; transform: translateY(0); }
+/* Vao va RA cung mot canh (canh duoi) — day la thu khien thao tac vuot-de-dong
+   tro nen hien nhien. Dung @starting-style thay keyframes: keyframes chay lai tu
+   dau moi lan, con transition doi huong tu gia tri hien tai nen bam lien tiep
+   khong bi giat. */
+@starting-style { .toast-banner { opacity: 0; transform: translateY(20px); } }
+.toast-banner[data-leaving='true'] { opacity: 0; transform: translateY(20px); }
 .toast-banner__close { background: none; border: none; color: #9B9A97; cursor: pointer; font-size: 15px; margin-left: 10px; display: flex; }
 .toast-banner__close svg { width: 13px; height: 13px; }
 .toast-banner__icon { display: flex; flex-shrink: 0; }
@@ -839,8 +851,11 @@ body { background: var(--canvas); }
    trong lúc nở. Vì vậy: gốc biến đổi đặt ở góc nút, bắt đầu bị nén và gần như trong veo, kết
    thúc đúng kích thước và đúng độ đặc của kính. Đây là MỘT khoảnh khắc được dàn dựng cho toàn hệ,
    không phải hiệu ứng hover rải rác. */
+/* Popover no ra tu chinh nut bam (transform-origin dat o duoi), khong phai tu tam.
+   Bat dau tu scale(0.97) chu KHONG BAO GIO tu scale(0) — khong gi trong doi thuc
+   xuat hien tu hu vo. */
 @keyframes menu-enter {
-  from { opacity: 0; transform: translateY(-4px); }
+  from { opacity: 0; transform: scale(0.97) translateY(-4px); }
   to   { opacity: 1; transform: none; }
 }
 .notif-panel, .user-chip__menu { transform-origin: top right; }
@@ -873,7 +888,7 @@ body { background: var(--canvas); }
 /* Role Assign Modal & Scope Selection */
 .user-assign-summary { display: flex; align-items: center; gap: 14px; padding: 14px; background: #F9F9F8; border: 1px solid #EAEAEA; border-radius: 12px; margin-bottom: 16px; }
 .scope-options { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
-.scope-radio { border: 1px solid #EAEAEA; border-radius: 10px; padding: 12px 16px; display: flex; align-items: flex-start; gap: 12px; cursor: pointer; transition: all 0.2s var(--ease-out); background: #ffffff; }
+.scope-radio { border: 1px solid #EAEAEA; border-radius: 10px; padding: 12px 16px; display: flex; align-items: flex-start; gap: 12px; cursor: pointer; transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-press) var(--ease-out); background: #ffffff; }
 .scope-radio:hover { border-color: #111111; background: #EDF3EC; }
 .scope-radio--active { border-color: #111111; background: #EDF3EC; box-shadow: 0 0 0 1px #111111; }
 .scope-radio input[type="radio"] { accent-color: #111111; width: 16px; height: 16px; margin-top: 3px; }
@@ -881,7 +896,7 @@ body { background: var(--canvas); }
 .scope-radio p { font-size: 13.5px; color: #787774; margin: 2px 0 0; }
 
 .roles-checklist { display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto; padding-right: 4px; }
-.checklist-item { border: 1px solid #EAEAEA; border-radius: 10px; padding: 12px 14px; display: flex; align-items: flex-start; gap: 12px; cursor: pointer; transition: all 0.2s var(--ease-out); background: #ffffff; }
+.checklist-item { border: 1px solid #EAEAEA; border-radius: 10px; padding: 12px 14px; display: flex; align-items: flex-start; gap: 12px; cursor: pointer; transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-press) var(--ease-out); background: #ffffff; }
 .checklist-item:hover { border-color: rgba(52,101,56,.20); background: #EDF3EC; }
 .checklist-item--checked { border-color: #111111; background: #EDF3EC; box-shadow: 0 0 0 1px #111111; }
 .checklist-item input[type="checkbox"], .role-choice-card input[type="checkbox"] { accent-color: #111111; width: 16px; height: 16px; margin-top: 2px; cursor: pointer; }
@@ -944,7 +959,7 @@ body { background: var(--canvas); }
 .tree-node-wrapper { position: relative; margin-bottom: 8px; }
 .tree-node-wrapper:last-child { margin-bottom: 0; }
 
-.tree-node-card { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 8px; column-gap: 16px; padding: 11px 14px; background: #ffffff; border: 1px solid #EAEAEA; border-radius: 14px; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 2px 6px rgba(0,0,0,0.03); }
+.tree-node-card { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 8px; column-gap: 16px; padding: 11px 14px; background: #ffffff; border: 1px solid #EAEAEA; border-radius: 14px; transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-press) var(--ease-out); box-shadow: 0 2px 6px rgba(0,0,0,0.03); }
 .tree-node-card:hover { border-color: #111111; box-shadow: 0 8px 24px rgba(17,17,17,0.08); transform: translateY(-1px); }
 /* Thẻ có nhánh con (nhóm/phòng/ban) nổi bật hơn thẻ lá — nền tint nhẹ + chữ đậm hơn,
    giúp phân biệt "đây là một nhóm" ngay từ cái nhìn đầu, không cần đường nối. */
@@ -956,7 +971,7 @@ body { background: var(--canvas); }
 .tree-node-card:has(.row-menu__panel--open) { position: relative; z-index: 30; transform: none; }
 
 .tree-node-left { display: flex; align-items: center; gap: 12px; flex: 1 1 220px; min-width: 0; }
-.tree-toggle-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid #EAEAEA; background: #ffffff; font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #111111; transition: all 0.2s var(--ease-out); flex-shrink: 0; }
+.tree-toggle-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid #EAEAEA; background: #ffffff; font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #111111; transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-press) var(--ease-out); flex-shrink: 0; }
 .tree-toggle-btn:hover { background: #111111; color: #ffffff; border-color: #111111; }
 .tree-node-dot { width: 8px; height: 8px; border-radius: 50%; background: #9B9A97; margin: 0 9px; flex-shrink: 0; }
 .tree-node-icon { font-size: 24px; flex-shrink: 0; }
@@ -973,7 +988,7 @@ body { background: var(--canvas); }
 .badge-children { font-size: 13.5px; font-weight: 600; color: #1F6C9F; background: #E1F3FE; border: 1px solid rgba(31,108,159,.20); padding: 2px 8px; border-radius: 12px; }
 
 /* Branch List view (NCL-01-CN-003) — flat rows, no indentation; breadcrumb replaces nesting */
-.dept-list-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 8px; column-gap: 16px; padding: 11px 14px; background: #ffffff; border: 1px solid #EAEAEA; border-radius: 14px; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 2px 6px rgba(0,0,0,0.03); }
+.dept-list-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 8px; column-gap: 16px; padding: 11px 14px; background: #ffffff; border: 1px solid #EAEAEA; border-radius: 14px; transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-press) var(--ease-out); box-shadow: 0 2px 6px rgba(0,0,0,0.03); }
 .dept-list-row:hover { border-color: #1F6C9F; box-shadow: 0 8px 24px rgba(31,108,159,0.08); transform: translateY(-1px); }
 .dept-list-row:has(.row-menu__panel--open) { position: relative; z-index: 30; transform: none; }
 .dept-list-path { font-size: 13.5px; color: #9B9A97; font-style: italic; }
@@ -1055,7 +1070,7 @@ body { background: var(--canvas); }
   cursor: pointer;
   padding: 2px 4px;
   font-size: 13.5px;
-  transition: all 0.15s var(--ease-out);
+  transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-press) var(--ease-out);
 }
 .btn-copy-code:hover {
   background: #F1F0EE;
@@ -1228,7 +1243,7 @@ body { background: var(--canvas); }
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  animation: enter-left 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: enter-left 0.25s var(--ease-out) both;
 }
 /* Sắc thái thông báo mã hóa bằng nền nhuộm + viền vòng mảnh thay cho vạch màu dày bên trái. */
 .toast-notification--success { background: var(--pale-green-bg); color: var(--pale-green-fg); border: 1px solid rgba(52,101,56,.18); box-shadow: var(--shadow-md); }
@@ -1302,7 +1317,7 @@ body { background: var(--canvas); }
 .btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .btn-warning-action { background: #956400; color: #ffffff; border: none; border-radius: 8px; padding: 10px 18px; font-size: 15px; font-weight: 700; cursor: pointer; transition: background 0.2s var(--ease-out); }
 .btn-warning-action:hover:not(:disabled) { background: #956400; }
-.btn-suggestion { background: #F9F9F8; border: 1px solid #EAEAEA; border-radius: 999px; padding: 6px 12px; font-size: 13.5px; font-weight: 600; color: #5F5E5B; cursor: pointer; transition: all 0.15s var(--ease-out); }
+.btn-suggestion { background: #F9F9F8; border: 1px solid #EAEAEA; border-radius: 999px; padding: 6px 12px; font-size: 13.5px; font-weight: 600; color: #5F5E5B; cursor: pointer; transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-press) var(--ease-out); }
 .btn-suggestion:hover:not(:disabled) { background: #EDF3EC; border-color: rgba(52,101,56,.20); color: #111111; }
 .btn-suggestion:disabled { opacity: 0.5; cursor: not-allowed; }
 .spinner-sm { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #ffffff; border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; flex-shrink: 0; }
@@ -1432,11 +1447,11 @@ body { background: var(--canvas); }
 .contact-phone-link { color: #111111; font-weight: 600; }
 .contact-phone-link:hover { color: #111111; }
 
-.btn-set-primary { background: #ffffff; color: #956400; border: 1px solid rgba(149,100,0,.22); border-radius: 8px; padding: 6px 12px; font-size: 13.5px; font-weight: 700; cursor: pointer; transition: all 0.2s var(--ease-out); display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+.btn-set-primary { background: #ffffff; color: #956400; border: 1px solid rgba(149,100,0,.22); border-radius: 8px; padding: 6px 12px; font-size: 13.5px; font-weight: 700; cursor: pointer; transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-press) var(--ease-out); display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
 .btn-set-primary:hover:not(:disabled) { background: #FBF3DB; border-color: #956400; color: #956400; transform: scale(1.03); }
 .is-primary-indicator { font-size: 13.5px; font-weight: 700; color: #111111; background: #EDF3EC; border: 1px solid rgba(52,101,56,.20); padding: 4px 10px; border-radius: 999px; display: inline-flex; align-items: center; gap: 5px; }
 
-.btn-manage-contacts-link { background: #EDF3EC; color: #111111; border: 1px solid rgba(52,101,56,.20); border-radius: 7px; padding: 5px 10px; font-size: 13.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: all 0.15s var(--ease-out); }
+.btn-manage-contacts-link { background: #EDF3EC; color: #111111; border: 1px solid rgba(52,101,56,.20); border-radius: 7px; padding: 5px 10px; font-size: 13.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-press) var(--ease-out); }
 .btn-manage-contacts-link:hover { background: #111111; color: #ffffff; border-color: #111111; }
 .btn-manage-contacts-link:disabled { background: #F1F0EE; color: #9B9A97; border-color: #EAEAEA; cursor: not-allowed; }
 .btn-manage-contacts-link:disabled:hover { background: #F1F0EE; color: #9B9A97; border-color: #EAEAEA; }
@@ -1462,7 +1477,7 @@ body { background: var(--canvas); }
 .customer-name-cell--clickable:hover .customer-company-name { color: #111111; text-decoration: underline; }
 
 /* Checkbox Card for Primary Contact */
-.primary-contact-checkbox-card { display: flex; align-items: flex-start; gap: 12px; background: #FBF3DB; border: 1px solid rgba(149,100,0,.22); border-radius: 10px; padding: 14px; cursor: pointer; transition: all 0.2s var(--ease-out); }
+.primary-contact-checkbox-card { display: flex; align-items: flex-start; gap: 12px; background: #FBF3DB; border: 1px solid rgba(149,100,0,.22); border-radius: 10px; padding: 14px; cursor: pointer; transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-press) var(--ease-out); }
 .primary-contact-checkbox-card:hover { border-color: #956400; background: #FBF3DB; }
 .primary-contact-checkbox-card input[type="checkbox"] { accent-color: #956400; width: 18px; height: 18px; margin-top: 2px; cursor: pointer; flex-shrink: 0; }
 .primary-contact-checkbox-label { flex: 1; }
@@ -1489,7 +1504,7 @@ body { background: var(--canvas); }
 .meta-item__value { font-size: 15px; color: #111111; font-weight: 600; }
 
 .customer-tabs-bar { display: flex; gap: 8px; border-bottom: 2px solid #EAEAEA; margin-bottom: 20px; padding-bottom: 2px; }
-.customer-tab-btn { background: transparent; border: none; padding: 10px 18px; font-size: 15px; font-weight: 700; color: #787774; cursor: pointer; border-radius: 8px 8px 0 0; transition: all 0.2s var(--ease-out); display: inline-flex; align-items: center; gap: 7px; position: relative; }
+.customer-tab-btn { background: transparent; border: none; padding: 10px 18px; font-size: 15px; font-weight: 700; color: #787774; cursor: pointer; border-radius: 8px 8px 0 0; transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-press) var(--ease-out); display: inline-flex; align-items: center; gap: 7px; position: relative; }
 .customer-tab-btn:hover { color: #111111; background: #F9F9F8; }
 .customer-tab-btn--active { color: #111111; background: #ffffff; }
 .customer-tab-btn--active::after { content: ''; position: absolute; bottom: -4px; left: 0; right: 0; height: 3px; background: #111111; border-radius: 3px 3px 0 0; }
@@ -1581,7 +1596,7 @@ body { background: var(--canvas); }
 }
 .row-menu__panel--open { display: flex; animation: row-menu-in var(--dur-base) var(--ease-out); transform-origin: top right; }
 @keyframes row-menu-in {
-  from { opacity: 0; transform: translateY(-4px); }
+  from { opacity: 0; transform: scale(0.97) translateY(-4px); }
   to   { opacity: 1; transform: none; }
 }
 .row-menu__item {
@@ -1676,16 +1691,16 @@ body { background: var(--canvas); }
   background: rgba(17,17,17,0.28);
   display: flex; align-items: flex-start; justify-content: center;
   padding: clamp(48px, 12vh, 140px) 20px 20px;
-  animation: fadeIn 0.14s ease-out;
 }
 .cmdk {
   width: min(100%, 560px); max-height: min(60vh, 460px);
   display: flex; flex-direction: column; overflow: hidden;
   background: #FFFFFF; border: 1px solid #EAEAEA; border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.05), 0 16px 48px -16px rgba(0,0,0,0.14);
-  animation: cmdk-in 0.16s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-@keyframes cmdk-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+/* KHONG co hieu ung mo/dong. Bang lenh mo bang ban phim hang tram lan moi ngay;
+   moi mili-giay hoat hinh o day deu bien thao tac tuc thi thanh cam giac cham tre.
+   Raycast cung khong co, va do la lua chon dung. */
 
 .cmdk__field { display: flex; align-items: center; gap: 10px; padding: 0 14px; border-bottom: 1px solid #EAEAEA; flex-shrink: 0; }
 .cmdk__input {
@@ -1798,21 +1813,26 @@ body { background: var(--canvas); }
 :root {
   /* Đường cong "khối lượng": tăng tốc gần như tức thì rồi giảm tốc rất dài —
      mô phỏng vật thể có quán tính đang dừng lại, không phải một giá trị bị nội suy. */
-  --ease-soft: cubic-bezier(0.32, 0.72, 0, 1);
-  --dur-enter: 520ms;
-  --stagger: 55ms;
+  /* --ease-soft cu chinh la --ease-drawer; giu alias de khong pha cac quy tac
+     dang tham chieu, nhung tu vung chinh thuc la --ease-drawer. */
+  --ease-soft: var(--ease-drawer);
+  /* 520ms -> 200ms: tran cho hoat hinh giao dien la 300ms. Dieu huong trang la
+     thao tac lap lai hang chuc lan moi ngay, nen phai "gan nhu khong cam nhan
+     duoc" chu khong phai mot man trinh dien. */
+  --dur-enter: 200ms;
+  --stagger: 40ms;
 }
 
 /* ---------- Xổ trang: các khối chính vào theo tầng ---------- */
 @keyframes block-in {
-  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  from { opacity: 0; transform: translate3d(0, 4px, 0); }
   to   { opacity: 1; transform: none; }
 }
 
 /* Mỗi khối trực tiếp của trang là một tầng. Dùng nth-child nên áp được cho cả 13
    trang mà không phải sửa từng file — mọi trang đều bọc trong .user-management-page. */
 .user-management-page > * {
-  animation: block-in var(--dur-enter) var(--ease-soft) both;
+  animation: block-in var(--dur-enter) var(--ease-out) both;
 }
 .user-management-page > *:nth-child(1) { animation-delay: 0ms; }
 .user-management-page > *:nth-child(2) { animation-delay: calc(var(--stagger) * 1); }
@@ -1836,13 +1856,13 @@ body { background: var(--canvas); }
 
 /* ---------- Khoang chỉ số: xổ lần lượt trái sang phải ---------- */
 .stats-grid .stat-card {
-  animation: block-in 420ms var(--ease-soft) both;
+  animation: block-in var(--dur-enter) var(--ease-out) both;
 }
-.stats-grid .stat-card:nth-child(1) { animation-delay: 60ms; }
-.stats-grid .stat-card:nth-child(2) { animation-delay: 110ms; }
-.stats-grid .stat-card:nth-child(3) { animation-delay: 160ms; }
-.stats-grid .stat-card:nth-child(4) { animation-delay: 210ms; }
-.stats-grid .stat-card:nth-child(5) { animation-delay: 260ms; }
+.stats-grid .stat-card:nth-child(1) { animation-delay: 0ms; }
+.stats-grid .stat-card:nth-child(2) { animation-delay: 30ms; }
+.stats-grid .stat-card:nth-child(3) { animation-delay: 60ms; }
+.stats-grid .stat-card:nth-child(4) { animation-delay: 90ms; }
+.stats-grid .stat-card:nth-child(5) { animation-delay: 120ms; }
 
 /* ---------- Hàng bảng: sóng đổ xuống khi dữ liệu về ----------
    Chỉ 10 hàng đầu mang độ trễ; từ hàng 11 trở đi vào cùng lúc, nếu không một bảng
@@ -1862,17 +1882,17 @@ body { background: var(--canvas); }
 
 /* Ca khoi bang vao mot lan, sau cac khoi tren mot nhip. */
 .user-management-page > .user-table-card {
-  animation: block-in 460ms var(--ease-soft) both;
+  animation: block-in var(--dur-enter) var(--ease-out) both;
   animation-delay: calc(var(--stagger) * 2);
 }
 
 /* ---------- Thẻ cây tổ chức: xổ theo tầng ---------- */
 /* CHI cac nhanh cap goc. Selector cu khop ca wrapper LONG NHAU, nen mot cay sau
    3 tang thi nhanh trong cung bi nhan opacity ba lan — chim han roi bat len. */
-.department-tree-container > .tree-node-wrapper { animation: block-in 380ms var(--ease-soft) both; }
+.department-tree-container > .tree-node-wrapper { animation: block-in var(--dur-enter) var(--ease-out) both; }
 .department-tree-container > .tree-node-wrapper:nth-child(1) { animation-delay: 0ms; }
-.department-tree-container > .tree-node-wrapper:nth-child(2) { animation-delay: 45ms; }
-.department-tree-container > .tree-node-wrapper:nth-child(n+3) { animation-delay: 90ms; }
+.department-tree-container > .tree-node-wrapper:nth-child(2) { animation-delay: 30ms; }
+.department-tree-container > .tree-node-wrapper:nth-child(n+3) { animation-delay: 60ms; }
 /* Nhanh con tuyet doi khong tu xo: chung di theo nhanh cha. */
 .tree-children-container .tree-node-wrapper { animation: none !important; }
 
@@ -1890,12 +1910,15 @@ body { background: var(--canvas); }
 }
 
 /* ---------- Phản hồi khi bấm: lún nhẹ như vật thể có khối lượng ---------- */
+/* Phan hoi khi bam: scale(0.97) trong 160ms — gia tri chuan cua bo skill.
+   Muc trong bang lenh CO O DAY vi day la phan hoi tuc thi khi bam, khong phai
+   hieu ung mo/dong; no khong lam cham thao tac ban phim. */
 .side-nav__item, .status-tab, .row-menu__item, .cmdk__item, .action-btn, .tree-toggle-btn {
-  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out),
-              transform 140ms var(--ease-soft);
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out),
+              transform var(--dur-press) var(--ease-out);
 }
 .side-nav__item:active, .status-tab:active, .row-menu__item:active,
-.cmdk__item:active, .action-btn:active, .tree-toggle-btn:active { transform: scale(0.975); }
+.cmdk__item:active, .action-btn:active, .tree-toggle-btn:active { transform: scale(0.97); }
 
 /* ---------- Chuyển tiếp mềm cho hàng bảng và thẻ ---------- */
 .user-data-table tbody tr { transition: background var(--dur-fast) var(--ease-out); }
@@ -1906,11 +1929,43 @@ body { background: var(--canvas); }
 /* ---------- Tôn trọng lựa chọn giảm chuyển động ----------
    Bắt buộc. Người bật tuỳ chọn này thường vì chuyển động gây chóng mặt hoặc buồn nôn —
    với họ, mọi hiệu ứng ở trên phải biến mất hoàn toàn chứ không phải chạy nhanh hơn. */
+/* Giam chuyen dong = IT HON va DIU HON, khong phai bang khong.
+   Giu lai phan mo dan (no giup hieu rang noi dung vua doi), bo hoan toan phan
+   DI CHUYEN va do tre theo tang — do moi la thu gay chong mat. */
 @media (prefers-reduced-motion: reduce) {
+  @keyframes block-in { from { opacity: 0; } to { opacity: 1; } }
   .user-management-page > *,
   .stats-grid .stat-card,
-  .department-tree-container > .tree-node-wrapper { animation: none !important; }
+  .department-tree-container > .tree-node-wrapper {
+    animation-duration: 120ms !important;
+    animation-delay: 0ms !important;
+  }
   .user-management-page > * { will-change: auto !important; }
   [data-reveal='pending'] { opacity: 1 !important; transform: none !important; }
   [data-reveal='shown'] { transition: none !important; }
+  .side-nav__item:active, .status-tab:active, .row-menu__item:active,
+  .cmdk__item:active, .action-btn:active, .tree-toggle-btn:active { transform: none; }
+}
+
+/* ==========================================================================
+   CỔNG HOVER — bắt buộc theo review-animations §8
+   --------------------------------------------------------------------------
+   Trên thiết bị cảm ứng, một cú chạm sinh ra sự kiện hover GIẢ và nó DÍNH LẠI
+   cho tới khi người dùng chạm chỗ khác. Hệ quả: thẻ vừa bấm cứ nổi lên mãi,
+   trông như hỏng. Mọi hover có DI CHUYỂN phải nằm sau cổng này.
+
+   Chỉ chặn phần transform. Đổi màu/viền khi hover vẫn giữ nguyên trên mọi thiết
+   bị — chúng vô hại và giúp nhận biết vùng bấm.
+   ========================================================================== */
+@media not all and (hover: hover) and (pointer: fine) {
+  .action-btn:hover,
+  .audit-log-link:hover,
+  .tree-node-card:hover,
+  .dept-list-row:hover,
+  .contact-stat-card:hover,
+  .btn-set-primary:hover:not(:disabled),
+  .btn-primary:hover,
+  .btn-secondary:hover,
+  .icon-btn:hover,
+  .story__item:hover { transform: none !important; }
 }
