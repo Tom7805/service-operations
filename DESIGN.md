@@ -77,6 +77,54 @@ typography:
     fontWeight: 400
     lineHeight: 1.5
     letterSpacing: "0"
+  bodySmall:
+    fontFamily: "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif"
+    fontSize: "13.5px"
+    fontWeight: 400
+    lineHeight: 1.5
+    letterSpacing: "0"
+  bodyLarge:
+    fontFamily: "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif"
+    fontSize: "15px"
+    fontWeight: 400
+    lineHeight: 1.6
+    letterSpacing: "0"
+  lead:
+    fontFamily: "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif"
+    fontSize: "16px"
+    fontWeight: 400
+    lineHeight: 1.6
+    letterSpacing: "0"
+  titleLarge:
+    fontFamily: "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif"
+    fontSize: "20px"
+    fontWeight: 600
+    lineHeight: 1.3
+    letterSpacing: "-0.015em"
+  section:
+    fontFamily: "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif"
+    fontSize: "24px"
+    fontWeight: 600
+    lineHeight: 1.25
+    letterSpacing: "-0.02em"
+  heading:
+    fontFamily: "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif"
+    fontSize: "30px"
+    fontWeight: 600
+    lineHeight: 1.15
+    letterSpacing: "-0.03em"
+  displaySmall:
+    fontFamily: "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif"
+    fontSize: "32px"
+    fontWeight: 600
+    lineHeight: 1.12
+    letterSpacing: "-0.03em"
+  displayLarge:
+    fontFamily: "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif"
+    fontSize: "40px"
+    fontWeight: 600
+    lineHeight: 1.05
+    letterSpacing: "-0.035em"
 ---
 
 # Design
