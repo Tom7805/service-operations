@@ -32,10 +32,22 @@ typography:
     letterSpacing: "-0.035em"
   headline:
     fontFamily: "-apple-system, SF Pro Display, Segoe UI Variable Display, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif"
-    fontSize: "26px"
+    fontSize: "clamp(30px, 3.4vw, 42px)"
     fontWeight: 600
-    lineHeight: 1.3
-    letterSpacing: "-0.02em"
+    lineHeight: 1.04
+    letterSpacing: "-0.035em"
+  metric:
+    fontFamily: "-apple-system, SF Pro Display, Segoe UI Variable Display, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif"
+    fontSize: "clamp(26px, 2.4vw, 34px)"
+    fontWeight: 600
+    lineHeight: 1
+    letterSpacing: "-0.03em"
+  meta:
+    fontFamily: "SF Mono, Segoe UI Mono, JetBrains Mono, Consolas, monospace"
+    fontSize: "11px"
+    fontWeight: 500
+    lineHeight: 1.35
+    letterSpacing: "0.08em"
   title:
     fontFamily: "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif"
     fontSize: "18px"
@@ -127,16 +139,20 @@ Phân cấp bằng **cỡ chữ + độ đậm**, không bằng màu và không 
 
 | Vai trò | Cỡ | Đậm | Ghi chú |
 |---|---|---|---|
-| Display (bìa đăng nhập) | `clamp(38px, 3.6vw, 58px)` | 600 | `letter-spacing: -0.035em`, `line-height: 1.08` |
-| Tiêu đề trang | 26px | 600 | `-0.02em` |
+| Display (bìa đăng nhập) | `clamp(38px, 3.6vw, 58px)` | 600 | `-0.035em`, `line-height: 1.08` |
+| Tiêu đề trang | `clamp(30px, 3.4vw, 42px)` | 600 | `-0.035em`, `line-height: 1.04` — điểm neo thị giác của trang |
+| Số liệu chỉ số | `clamp(26px, 2.4vw, 34px)` | 600 | `-0.03em`, `line-height: 1`, `tabular-nums` |
 | Tiêu đề thẻ / modal | 18px | 600 | |
 | Nội dung | 14.5px | 400 | `line-height: 1.6` |
-| Nhãn cột bảng | 12.5px | 700 | IN HOA + `0.05em` — **ngoại lệ duy nhất được phép** |
-| Số liệu | — | — | luôn kèm `font-variant-numeric: tabular-nums` |
+| **Siêu dữ liệu (mono)** | 11px | 500 | IN HOA + `0.08em`, **mono** — nhãn cột bảng, nhãn chỉ số, nhóm trong bảng lệnh |
+
+**Tương phản cỡ chữ là công cụ phân cấp chính.** Khoảng cách giữa nhãn mono 11px và số liệu
+34px ngay bên dưới nó chính là thứ tạo nhịp cho cả trang — đừng thu hẹp khoảng cách đó.
 
 **Quy tắc chữ:**
-- Nhãn thẻ, nhãn chi tiết, nhãn meta dùng **chữ thường**, độ đậm 500, màu `--ink-muted`.
-  IN HOA chỉ còn ở nhãn cột bảng, nơi nó thật sự giúp phân biệt hàng tiêu đề với dữ liệu.
+- **Mono + IN HOA + giãn chữ rộng** dành riêng cho *siêu dữ liệu*: nhãn cột bảng, nhãn chỉ số,
+  nhãn nhóm, mã định danh, phím tắt. Nó tách bạch "nhãn do máy sinh" với "chữ do người viết".
+  Chữ do người viết (tiêu đề, mô tả, nội dung ô) **không bao giờ** dùng mono hay IN HOA.
 - **Tiếng Việt dùng sentence case, KHÔNG dùng Title Case.** Viết hoa mọi chữ là quy ước tiếng Anh;
   áp vào tiếng Việt nó đọc ra như bản dịch máy.
 - Tiêu đề có `text-wrap: balance`, đoạn văn có `text-wrap: pretty` để tránh chữ mồ côi cuối dòng.
@@ -146,7 +162,7 @@ Phân cấp bằng **cỡ chữ + độ đậm**, không bằng màu và không 
 - Ứng dụng trải hết khung nhìn như một tài liệu (`min-height: 100dvh`), **không** phải "cửa sổ nổi".
 - Sidebar 244px (thu gọn 68px), phân tách bằng `border-right: 1px solid var(--line)`.
 - Vùng nội dung: `max-width: 1280px`, padding 24px.
-- Thẻ số liệu: `repeat(auto-fit, minmax(180px, 1fr))` — đủ để 5 thẻ nằm một hàng.
+- Bảng chỉ số: `repeat(auto-fit, minmax(172px, 1fr))` với `gap: 1px` — đủ để 5 khoang nằm một hàng.
 - Khoảng cách giữa các khối lớn: bội số 8px.
 - Nội dung rộng (bảng) cuộn ngang **trong khung của chính nó**, không để `body` cuộn ngang.
 
@@ -181,6 +197,16 @@ Bán kính trong = bán kính ngoài − đệm (popover r=12, đệm 5 → mụ
 - **Nút phụ**: nền `--surface`, viền `--line`, chữ `--ink`.
 - **Ô nhập**: cao 40px, viền `--line`, `--radius-md`. Focus: viền `--ink-strong` + `--shadow-focus`.
 - **Thẻ**: nền `--surface`, viền 1px `--line`, `--radius-lg`, đệm trong rộng rãi (18–24px).
+- **Bảng chỉ số (`.stats-grid`)**: KHÔNG phải các thẻ rời. Là **một khối phân khoang** —
+  `display: grid; gap: 1px; background: var(--line)` trên khối có viền và bo góc, `overflow: hidden`.
+  Chính khe hở 1px tạo ra đường phân cách, nên không ô con nào khai báo `border`, và đường
+  không bao giờ chồng đôi ở chỗ tiếp giáp. Mỗi ô: nhãn mono ở trên, số liệu cỡ lớn ở dưới.
+- **Bảng lệnh (`.cmdk`)**: mở bằng `Ctrl/⌘ + K`. Tìm kiếm phải **bỏ dấu tiếng Việt**.
+  Mục đang chọn đánh dấu bằng `data-active` chứ không bằng `:hover`, để bàn phím và chuột
+  dùng chung một chỉ báo và không bao giờ sáng hai mục cùng lúc.
+- **Đang tải**: dùng **khung xương** (`.skeleton`) khớp đúng số cột, không dùng con quay tròn.
+  Ngoại lệ duy nhất: spinner bên trong nút đang gửi — ở đó nó báo "thao tác đang chạy",
+  không phải "nội dung sắp hiện ra".
 - **Bảng**: hàng tiêu đề nền `--surface-alt`, phân cách hàng bằng `--line`, hover hàng `--surface-alt`.
 - **Pill trạng thái**: viên nang, cặp pastel, có chấm `currentColor` — **mã hóa bằng hình + màu**, không chỉ màu.
 - **Ô định danh (avatar)**: khối **vuông bo góc**, nền `--surface-sunken`, viền `--line`, chữ mực.
