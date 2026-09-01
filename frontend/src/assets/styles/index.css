@@ -460,6 +460,24 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
   font-family: var(--font-mono);
   text-transform: uppercase; font-size: 11px; letter-spacing: var(--track-caps);
   padding: 12px 13px; border-bottom: 1px solid #EAEAEA; white-space: nowrap;
+  /* CẢNH BÁO — khai báo `sticky` này HIỆN KHÔNG CÓ TÁC DỤNG. Giữ lại vì nó đúng
+     về mặt ý định, nhưng đừng tin là hàng tiêu đề đang dính.
+
+     Sticky bám vào vùng cuộn tổ tiên GẦN NHẤT. Ở đây đó là `.table-responsive`
+     (`overflow-x: auto` cũng biến nó thành vùng cuộn ở cả hai trục) — một hộp
+     không hề cuộn dọc. Đo được: cuộn 900px thì `th` nằm ở -485px.
+
+     Đã THỬ và ĐÃ HOÀN TÁC cách chặn `max-height` trên `.table-responsive`: nó
+     tạo ra vùng cuộn thứ hai mà hàng tiêu đề VẪN trôi mất (đo: th ở -57px), vì
+     cả khối bảng bị `.app-main` cuốn lên. Kết quả tệ hơn bản hiện tại.
+
+     Cách sửa đúng là dựng bố cục ứng dụng thật: `.user-management-page` cao đúng
+     khung nhìn, thanh công cụ đứng yên, thẻ bảng `flex: 1; min-height: 0` và tự
+     cuộn. Đó là thay đổi cấu trúc chạm vào mọi trang dùng `.user-management-page`,
+     nên để lại làm việc riêng chứ không làm kèm.
+
+     Vì sao chưa bỏ hẳn vùng cuộn ngang: đã đo bề rộng thật — bảng tràn 15px ở
+     1366px và 101px ở 1280px, hai khổ laptop phổ biến nhất vẫn cần cuộn ngang. */
   position: sticky; top: 0; z-index: 2;
 }
 .user-data-table td { padding: 14px 13px; border-bottom: 1px solid #F1F0EE; vertical-align: middle; color: #2F3437; }
