@@ -1805,7 +1805,7 @@ body { background: var(--canvas); }
 
 /* ---------- Xổ trang: các khối chính vào theo tầng ---------- */
 @keyframes block-in {
-  from { opacity: 0; transform: translate3d(0, 14px, 0); }
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
   to   { opacity: 1; transform: none; }
 }
 
@@ -1820,6 +1820,19 @@ body { background: var(--canvas); }
 .user-management-page > *:nth-child(4) { animation-delay: calc(var(--stagger) * 3); }
 .user-management-page > *:nth-child(5) { animation-delay: calc(var(--stagger) * 4); }
 .user-management-page > *:nth-child(n+6) { animation-delay: calc(var(--stagger) * 5); }
+
+/* NGUYEN TAC: mot phan tu hoat hinh, HOAC cac con cua no hoat hinh — khong bao gio ca hai.
+   Hai khoi duoi day co con tu xo, nen BAN THAN chung phai dung yen. Neu khong, opacity
+   nhan nhau (0.5 x 0.5 = 0.25) khien noi dung chim xuong roi bat len dot ngot — dung
+   cai cam giac "giat giat" ma nguoi dung bao. */
+.user-management-page > .stats-grid,
+.user-management-page > .tree-content-wrapper,
+.user-management-page > .user-table-card { animation: none; }
+
+/* Chi promote lop cho cac khoi cap trang (it, va thuc su co hoat hinh).
+   taste-skill 6.A: will-change dung tiet che, chi tren phan tu that su se chay. */
+.user-management-page > *:not(.stats-grid):not(.user-table-card):not(.tree-content-wrapper) { will-change: opacity, transform; }
+.user-management-page > * { animation-fill-mode: both; }
 
 /* ---------- Khoang chỉ số: xổ lần lượt trái sang phải ---------- */
 .stats-grid .stat-card {
@@ -1839,26 +1852,29 @@ body { background: var(--canvas); }
   from { opacity: 0; transform: translate3d(0, 6px, 0); }
   to   { opacity: 1; transform: none; }
 }
-.user-data-table tbody tr { animation: row-in 340ms var(--ease-soft) both; }
-.user-data-table tbody tr:nth-child(1) { animation-delay: 0ms; }
-.user-data-table tbody tr:nth-child(2) { animation-delay: 26ms; }
-.user-data-table tbody tr:nth-child(3) { animation-delay: 52ms; }
-.user-data-table tbody tr:nth-child(4) { animation-delay: 78ms; }
-.user-data-table tbody tr:nth-child(5) { animation-delay: 104ms; }
-.user-data-table tbody tr:nth-child(6) { animation-delay: 130ms; }
-.user-data-table tbody tr:nth-child(7) { animation-delay: 156ms; }
-.user-data-table tbody tr:nth-child(8) { animation-delay: 182ms; }
-.user-data-table tbody tr:nth-child(9) { animation-delay: 208ms; }
-.user-data-table tbody tr:nth-child(n+10) { animation-delay: 234ms; }
-/* Khung xương không xổ: nó phải có mặt NGAY, nếu không lại thành một lần chờ nữa. */
-.user-data-table tbody tr[aria-hidden='true'] { animation: none; }
+/* Hoat hinh TUNG HANG da bi go bo. Mot bang 10 dong x 7 cot bat trinh duyet dung
+   khoang 70 lop hop thanh cung luc, va vi the bang lai nam trong mot the CUNG dang
+   mo dan — day la nguyen nhan giat nang nhat. Ca bang gio vao lam MOT khoi duy nhat:
+   re hon nhieu lan va mat doc ra muot hon han, vi mat nguoi doc bang theo khoi chu
+   khong theo tung dong.
+   Chi giu chuyen mau nen khi re chuot. */
+.user-data-table tbody tr { transition: background var(--dur-fast) var(--ease-out); }
+
+/* Ca khoi bang vao mot lan, sau cac khoi tren mot nhip. */
+.user-management-page > .user-table-card {
+  animation: block-in 460ms var(--ease-soft) both;
+  animation-delay: calc(var(--stagger) * 2);
+}
 
 /* ---------- Thẻ cây tổ chức: xổ theo tầng ---------- */
-.tree-node-wrapper { animation: block-in 380ms var(--ease-soft) both; }
-.tree-node-wrapper:nth-child(1) { animation-delay: 0ms; }
-.tree-node-wrapper:nth-child(2) { animation-delay: 40ms; }
-.tree-node-wrapper:nth-child(3) { animation-delay: 80ms; }
-.tree-node-wrapper:nth-child(n+4) { animation-delay: 120ms; }
+/* CHI cac nhanh cap goc. Selector cu khop ca wrapper LONG NHAU, nen mot cay sau
+   3 tang thi nhanh trong cung bi nhan opacity ba lan — chim han roi bat len. */
+.department-tree-container > .tree-node-wrapper { animation: block-in 380ms var(--ease-soft) both; }
+.department-tree-container > .tree-node-wrapper:nth-child(1) { animation-delay: 0ms; }
+.department-tree-container > .tree-node-wrapper:nth-child(2) { animation-delay: 45ms; }
+.department-tree-container > .tree-node-wrapper:nth-child(n+3) { animation-delay: 90ms; }
+/* Nhanh con tuyet doi khong tu xo: chung di theo nhanh cha. */
+.tree-children-container .tree-node-wrapper { animation: none !important; }
 
 /* ---------- Hé lộ khi cuộn tới (IntersectionObserver, không phải scroll listener) ----------
    Phần tử nằm dưới nếp gấp không xổ lúc tải trang — nó chờ tới khi thực sự lọt vào
@@ -1893,8 +1909,8 @@ body { background: var(--canvas); }
 @media (prefers-reduced-motion: reduce) {
   .user-management-page > *,
   .stats-grid .stat-card,
-  .user-data-table tbody tr,
-  .tree-node-wrapper { animation: none !important; }
+  .department-tree-container > .tree-node-wrapper { animation: none !important; }
+  .user-management-page > * { will-change: auto !important; }
   [data-reveal='pending'] { opacity: 1 !important; transform: none !important; }
   [data-reveal='shown'] { transition: none !important; }
 }
