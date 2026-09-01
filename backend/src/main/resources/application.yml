@@ -21,6 +21,19 @@ app:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
   password-reset:
     token-ttl-minutes: ${PASSWORD_RESET_TOKEN_TTL_MINUTES:30}
+    # Gioi han tan suat cho /auth/forgot-password — chan theo CA IP lan email.
+    # Long hon 2FA vi quen mat khau la thao tac binh thuong, nguoi dung that co
+    # the bam lai vai lan khi cho thu.
+    rate-limit:
+      max-attempts: ${PASSWORD_RESET_RATE_LIMIT_MAX_ATTEMPTS:5}
+      window-seconds: ${PASSWORD_RESET_RATE_LIMIT_WINDOW_SECONDS:900}
+  frontend:
+    # Goc dia chi dat vao lien ket khoi phuc gui cho nguoi dung.
+    base-url: ${FRONTEND_BASE_URL:http://localhost:5173}
+  mail:
+    # Dia chi nguoi gui. BAT BUOC o profile prod — thieu thi ung dung dung khoi
+    # dong (xem MailPasswordResetNotifier#validateConfig).
+    from: ${MAIL_FROM:}
   two-factor:
     # NCL-01-CN-009: TOTP kiểu Google Authenticator — mã sinh trên máy người dùng,
     # không gửi/nhận qua kênh nào nên không còn config kiểu "mock-otp-logging" nữa.

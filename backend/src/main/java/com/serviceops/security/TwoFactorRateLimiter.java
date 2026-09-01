@@ -1,19 +1,19 @@
 package com.serviceops.security;
 
-import com.serviceops.common.exception.BusinessRuleException;
-import com.serviceops.common.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
+/**
+ * Gioi han so lan nhap ma 2FA, theo dia chi IP va theo tung phien thu thach.
+ *
+ * <p>Thuat toan cua so co dinh da duoc tach ra {@link FixedWindowRateLimiter} de
+ * dung chung voi {@link PasswordResetRateLimiter}. Cau hinh van nam o day nen
+ * hai bo gioi han co han muc doc lap nhau.</p>
+ */
 @Service
 public class TwoFactorRateLimiter {
 
-    private final ConcurrentMap<String, Window> windows = new ConcurrentHashMap<>();
+    private final FixedWindowRateLimiter limiter = new FixedWindowRateLimiter();
 
     @Value("${app.two-factor.rate-limit.max-attempts:5}")
     private int maxAttempts;
@@ -22,40 +22,11 @@ public class TwoFactorRateLimiter {
     private long windowSeconds;
 
     public void check(String ipAddress, String challengeToken) {
-        checkKey("ip:" + normalize(ipAddress));
-        checkKey("challenge:" + normalize(challengeToken));
-    }
-
-    private void checkKey(String key) {
-        Instant now = Instant.now();
-        Window window = windows.compute(key, (ignored, current) -> {
-            if (current == null || Duration.between(current.startedAt, now).getSeconds() >= windowSeconds) {
-                return new Window(now, 1);
-            }
-            if (current.attempts >= maxAttempts) {
-                throw new BusinessRuleException(ErrorCode.TOO_MANY_REQUESTS,
-                        "Qua nhieu lan thu. Vui long thu lai sau.");
-            }
-            current.attempts++;
-            return current;
-        });
-
-        if (window == null) {
-            throw new IllegalStateException("Khong the tao cua so gioi han 2FA");
-        }
+        limiter.check("2fa:ip:" + normalize(ipAddress), maxAttempts, windowSeconds);
+        limiter.check("2fa:challenge:" + normalize(challengeToken), maxAttempts, windowSeconds);
     }
 
     private String normalize(String value) {
         return value == null || value.isBlank() ? "unknown" : value.trim();
-    }
-
-    private static final class Window {
-        private final Instant startedAt;
-        private int attempts;
-
-        private Window(Instant startedAt, int attempts) {
-            this.startedAt = startedAt;
-            this.attempts = attempts;
-        }
     }
 }

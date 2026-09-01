@@ -30,8 +30,16 @@ public class PasswordResetToken extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "token", nullable = false, unique = true, length = 100)
-    private String token;
+    /**
+     * SHA-256 (hex, 64 ky tu) cua token, KHONG PHAI token tho.
+     *
+     * <p>Ban tho chi ton tai trong lien ket gui toi nguoi dung va khong duoc luu
+     * lai o dau — ke ca trong log. Luu tho o day thi mot ban sao luu bi ro hay
+     * mot lo hong SQL chi-doc cung du de chiem tai khoan nguoi khac. Xem
+     * {@code V31__hash_password_reset_tokens.sql}.</p>
+     */
+    @Column(name = "token_hash", nullable = false, unique = true, length = 64)
+    private String tokenHash;
 
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;

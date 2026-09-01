@@ -9,6 +9,7 @@ import com.serviceops.modules.identity.auth.dto.response.LoginRes;
 import com.serviceops.modules.identity.auth.service.AuthService;
 import com.serviceops.modules.identity.auth.service.PasswordService;
 import com.serviceops.security.CustomUserDetails;
+import com.serviceops.security.PasswordResetRateLimiter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final PasswordService passwordService;
+    private final PasswordResetRateLimiter passwordResetRateLimiter;
 
     @PostMapping("/login")
     public BaseRes<LoginRes> login(@Valid @RequestBody LoginReq request, HttpServletRequest httpRequest) {
@@ -43,9 +45,18 @@ public class AuthController {
         return BaseRes.ok(null);
     }
 
-    /** Khoi tao yeu cau khoi phuc mat khau qua email (mo phong). */
+    /**
+     * Khoi tao yeu cau khoi phuc mat khau: sinh token, gui lien ket qua email.
+     *
+     * <p>Co gioi han tan suat theo CA dia chi IP lan dia chi email. Diem cuoi nay
+     * cong khai, khong doi dang nhap, va moi lan goi vua tao mot dong trong CSDL
+     * vua gui mot la thu that — khong chan thi ke tan cong doi bom duoc hom thu
+     * cua nan nhan va lam ten mien gui thu cua cong ty bi danh dau spam.</p>
+     */
     @PostMapping("/forgot-password")
-    public BaseRes<Void> forgotPassword(@Valid @RequestBody ForgotPasswordReq request) {
+    public BaseRes<Void> forgotPassword(@Valid @RequestBody ForgotPasswordReq request,
+                                        HttpServletRequest httpRequest) {
+        passwordResetRateLimiter.check(extractIp(httpRequest), request.getEmail());
         passwordService.forgotPassword(request);
         return BaseRes.ok(null);
     }

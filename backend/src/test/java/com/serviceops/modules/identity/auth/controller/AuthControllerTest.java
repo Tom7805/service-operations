@@ -16,6 +16,7 @@ import com.serviceops.security.CustomUserDetailsService;
 import com.serviceops.security.JwtAuthFilter;
 import com.serviceops.security.JwtAuthenticationEntryPoint;
 import com.serviceops.security.JwtProvider;
+import com.serviceops.security.PasswordResetRateLimiter;
 import com.serviceops.security.scope.UserScope;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -56,6 +57,13 @@ class AuthControllerTest {
 
     @MockBean
     private PasswordService passwordService;
+
+    /**
+     * /auth/forgot-password gio di qua bo gioi han tan suat truoc khi vao service.
+     * Trong lat cat @WebMvcTest phai khai bao, neu khong context khong len duoc.
+     */
+    @MockBean
+    private PasswordResetRateLimiter passwordResetRateLimiter;
 
     @MockBean
     private JwtProvider jwtProvider;

@@ -423,8 +423,27 @@ hợp lệ) — Frontend chỉ nên hiển thị một thông báo chung dạng 
 
 **Response thành công — `200 OK`:** `{ "success": true, "data": null }`
 
-QTN-04 (hệ thống chỉ dùng dữ liệu mô phỏng): "gửi email" ở giai đoạn hiện tại là ghi log phía backend
-(`[MOCK EMAIL] ...` kèm token), chưa gọi dịch vụ email thật. Liên kết khôi phục có hạn dùng mặc định 30 phút.
+Liên kết khôi phục có hạn dùng mặc định 30 phút và **chỉ dùng được một lần**.
+
+**Kênh gửi phụ thuộc profile đang chạy** (`PasswordResetNotifier`):
+
+| Profile | Cách gửi |
+|---|---|
+| `dev` / `test` | Ghi liên kết ra logger riêng `AUDIT_MOCK_EMAIL`. Các tài khoản mẫu dùng tên miền `.local` (RFC 6762) nên không có hộp thư nào tồn tại. |
+| `prod` | Gửi thư thật qua SMTP. **Không bao giờ** ghi token ra log, kể cả khi gửi thất bại. |
+
+**Bốn biến môi trường bắt buộc ở `prod`** — thiếu bất kỳ biến nào thì ứng dụng **dừng khởi động**:
+`SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `MAIL_FROM`, cộng `FRONTEND_BASE_URL` để dựng liên kết.
+Đây là chủ đích: nếu để mặc định rỗng, ứng dụng sẽ lên bình thường rồi im lặng không gửi được thư trong khi
+giao diện vẫn báo "đã gửi" — người dùng bị khoá ngoài mà không ai biết.
+
+**Token lưu trong CSDL dưới dạng SHA-256** (cột `password_reset_tokens.token_hash`), không phải chuỗi thô.
+Đọc được bảng này cũng không đặt lại được mật khẩu của ai.
+
+**Giới hạn tần suất:** mặc định 5 lần / 15 phút, chặn theo **cả** địa chỉ IP lẫn địa chỉ email
+(`PASSWORD_RESET_RATE_LIMIT_*`). Vượt hạn mức trả `TOO_MANY_REQUESTS`.
+
+Phản hồi **không phân biệt** "email không tồn tại" với "đã gửi liên kết", để tránh dò danh sách tài khoản hợp lệ.
 
 #### `GET /auth/reset-password/validate?token={token}`
 

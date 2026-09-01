@@ -7,6 +7,7 @@ import com.serviceops.modules.identity.auth.dto.request.ForgotPasswordReq;
 import com.serviceops.modules.identity.auth.dto.request.ResetPasswordReq;
 import com.serviceops.modules.identity.auth.entity.PasswordResetToken;
 import com.serviceops.modules.identity.auth.repository.PasswordResetTokenRepository;
+import com.serviceops.modules.identity.auth.service.PasswordResetNotifier;
 import com.serviceops.modules.identity.auth.service.impl.PasswordServiceImpl;
 import com.serviceops.modules.identity.auth.validator.PasswordPolicyValidator;
 import com.serviceops.modules.identity.user.entity.User;
@@ -14,18 +15,25 @@ import com.serviceops.modules.identity.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -45,14 +53,31 @@ class PasswordServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private PasswordResetNotifier passwordResetNotifier;
+
     private PasswordServiceImpl passwordService;
 
     private User user;
 
+    /** SHA-256 hex — ban sao doc lap cua cach ma service bam token. */
+    private static String sha256Hex(String raw) {
+        try {
+            byte[] d = MessageDigest.getInstance("SHA-256").digest(raw.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder(d.length * 2);
+            for (byte b : d) {
+                sb.append(Character.forDigit((b >> 4) & 0xF, 16)).append(Character.forDigit(b & 0xF, 16));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     @BeforeEach
     void setUp() {
         passwordService = new PasswordServiceImpl(userRepository, passwordResetTokenRepository,
-                passwordEncoder, new PasswordPolicyValidator());
+                passwordEncoder, new PasswordPolicyValidator(), passwordResetNotifier);
         ReflectionTestUtils.setField(passwordService, "resetTokenTtlMinutes", 30L);
 
         user = new User();
@@ -137,6 +162,72 @@ class PasswordServiceTest {
         verify(passwordResetTokenRepository).save(any(PasswordResetToken.class));
     }
 
+    /**
+     * Test QUAN TRONG NHAT cua lop nay: CSDL khong duoc giu token tho.
+     *
+     * <p>Bat ca hai dau: chuoi luu vao CSDL, va chuoi trao cho kenh gui. Roi
+     * khang dinh chung KHAC nhau, va chuoi luu dung bang SHA-256 cua chuoi gui.</p>
+     *
+     * <p>Neu mot ngay nao do co nguoi "don dep" bang cach luu thang token tho cho
+     * tien tra cuu, test nay do ngay.</p>
+     */
+    @Test
+    void forgotPassword_luuBanBam_khongLuuTokenTho() {
+        when(userRepository.findByEmailIgnoreCase(user.getEmail())).thenReturn(Optional.of(user));
+
+        ForgotPasswordReq req = new ForgotPasswordReq();
+        req.setEmail(user.getEmail());
+
+        passwordService.forgotPassword(req);
+
+        ArgumentCaptor<PasswordResetToken> saved = ArgumentCaptor.forClass(PasswordResetToken.class);
+        verify(passwordResetTokenRepository).save(saved.capture());
+
+        ArgumentCaptor<String> sentRaw = ArgumentCaptor.forClass(String.class);
+        verify(passwordResetNotifier).sendResetLink(eq(user), sentRaw.capture(), eq(30L));
+
+        String rawToken = sentRaw.getValue();
+        String storedHash = saved.getValue().getTokenHash();
+
+        assertThat(rawToken).isNotBlank();
+        assertThat(storedHash)
+                .as("CSDL phai giu ban bam, khong phai token tho")
+                .isNotEqualTo(rawToken)
+                .hasSize(64)
+                .isEqualTo(sha256Hex(rawToken));
+    }
+
+    /** Token phai du dai de khong the do: 32 byte ngau nhien -> 43 ky tu Base64url. */
+    @Test
+    void forgotPassword_tokenDuDaiVaKhacNhauMoiLan() {
+        when(userRepository.findByEmailIgnoreCase(user.getEmail())).thenReturn(Optional.of(user));
+        ForgotPasswordReq req = new ForgotPasswordReq();
+        req.setEmail(user.getEmail());
+
+        passwordService.forgotPassword(req);
+        passwordService.forgotPassword(req);
+
+        ArgumentCaptor<String> raws = ArgumentCaptor.forClass(String.class);
+        verify(passwordResetNotifier, times(2)).sendResetLink(eq(user), raws.capture(), eq(30L));
+
+        assertThat(raws.getAllValues().get(0)).hasSize(43);
+        assertThat(raws.getAllValues().get(0))
+                .as("moi yeu cau phai sinh token moi")
+                .isNotEqualTo(raws.getAllValues().get(1));
+    }
+
+    @Test
+    void forgotPassword_emailKhongTonTai_khongGuiGiCa() {
+        when(userRepository.findByEmailIgnoreCase("khongton@service-operations.local")).thenReturn(Optional.empty());
+
+        ForgotPasswordReq req = new ForgotPasswordReq();
+        req.setEmail("khongton@service-operations.local");
+
+        passwordService.forgotPassword(req);
+
+        verify(passwordResetNotifier, never()).sendResetLink(any(), any(), anyLong());
+    }
+
     @Test
     void forgotPassword_emailKhongTonTai_khongNemLoiVaKhongTaoToken() {
         when(userRepository.findByEmailIgnoreCase("khongton@service-operations.local")).thenReturn(Optional.empty());
@@ -153,10 +244,10 @@ class PasswordServiceTest {
     void resetPassword_tokenHetHan_nemResetTokenInvalid() {
         PasswordResetToken expiredToken = new PasswordResetToken();
         expiredToken.setUser(user);
-        expiredToken.setToken("expired-token");
+        expiredToken.setTokenHash(sha256Hex("expired-token"));
         expiredToken.setExpiresAt(LocalDateTime.now().minusMinutes(1));
 
-        when(passwordResetTokenRepository.findByToken("expired-token")).thenReturn(Optional.of(expiredToken));
+        when(passwordResetTokenRepository.findByTokenHash(sha256Hex("expired-token"))).thenReturn(Optional.of(expiredToken));
 
         ResetPasswordReq req = new ResetPasswordReq();
         req.setToken("expired-token");
@@ -172,10 +263,10 @@ class PasswordServiceTest {
     void resetPassword_tokenHopLe_datLaiMatKhauVaDanhDauDaDung() {
         PasswordResetToken token = new PasswordResetToken();
         token.setUser(user);
-        token.setToken("valid-token");
+        token.setTokenHash(sha256Hex("valid-token"));
         token.setExpiresAt(LocalDateTime.now().plusMinutes(30));
 
-        when(passwordResetTokenRepository.findByToken("valid-token")).thenReturn(Optional.of(token));
+        when(passwordResetTokenRepository.findByTokenHash(sha256Hex("valid-token"))).thenReturn(Optional.of(token));
         when(passwordEncoder.encode("MatKhauMoi2")).thenReturn("hashed-new-password");
 
         ResetPasswordReq req = new ResetPasswordReq();
@@ -196,7 +287,7 @@ class PasswordServiceTest {
         usedToken.setExpiresAt(LocalDateTime.now().plusMinutes(30));
         usedToken.setUsedAt(LocalDateTime.now());
 
-        when(passwordResetTokenRepository.findByToken("used-token")).thenReturn(Optional.of(usedToken));
+        when(passwordResetTokenRepository.findByTokenHash(sha256Hex("used-token"))).thenReturn(Optional.of(usedToken));
 
         assertThat(passwordService.isResetTokenValid("used-token")).isFalse();
     }
