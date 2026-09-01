@@ -160,8 +160,8 @@ describe('Role & Data Scope Module — Acceptance Criteria Tests (NCL-01-CN-004)
     );
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Phân quyền vai trò & Phạm vi dữ liệu' })).toBeInTheDocument();
-      expect(screen.getByText('9 Vai trò')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Phân quyền vai trò & phạm vi dữ liệu' })).toBeInTheDocument();
+      expect(screen.getByText('9 vai trò')).toBeInTheDocument();
       expect(screen.getByText(/Xem nhật ký phân quyền đầy đủ/i)).toBeInTheDocument();
     });
 

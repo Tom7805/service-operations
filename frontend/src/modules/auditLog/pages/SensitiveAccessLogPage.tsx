@@ -267,10 +267,10 @@ export default function SensitiveAccessLogPage({
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#787774' }}>
                     <div
                       className="loader"
-                      style={{ margin: '0 auto 10px', borderColor: '#6366f1', borderTopColor: 'transparent' }}
+                      style={{ margin: '0 auto 10px', borderColor: '#111111', borderTopColor: 'transparent' }}
                     />
                     Đang tải nhật ký truy cập...
                   </td>
@@ -278,7 +278,7 @@ export default function SensitiveAccessLogPage({
               ) : entries.length === 0 ? (
                 <tr>
                   {/* TC-02: không có bản ghi nào thỏa bộ lọc */}
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#787774' }}>
                     Không tìm thấy nhật ký truy cập nào thỏa bộ lọc đã chọn.
                   </td>
                 </tr>

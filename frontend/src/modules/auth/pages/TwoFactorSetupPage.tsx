@@ -134,13 +134,13 @@ export default function TwoFactorSetupPage({
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', padding: 32, color: '#64748b' }}>
+                  <td colSpan={4} style={{ textAlign: 'center', padding: 32, color: '#787774' }}>
                     Đang tải cấu hình...
                   </td>
                 </tr>
               ) : configs.length === 0 ? (
                 <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', padding: 32, color: '#64748b' }}>
+                  <td colSpan={4} style={{ textAlign: 'center', padding: 32, color: '#787774' }}>
                     Chưa có vai trò nào trong hệ thống.
                   </td>
                 </tr>

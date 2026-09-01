@@ -272,17 +272,17 @@ export default function CustomerDetailPage({
 
         {activeTab === 'OVERVIEW' && (
           <div className="overview-tab-pane user-table-card" style={{ padding: '24px' }}>
-            <h3 style={{ margin: '0 0 16px', fontSize: '17px', color: '#0f172a' }}>
+            <h3 style={{ margin: '0 0 16px', fontSize: '17px', color: '#111111' }}>
               Thông tin hành chính doanh nghiệp
             </h3>
             <div className="form-grid">
               <div className="form-field">
                 <span className="form-label">Tên pháp nhân đầy đủ:</span>
-                <p style={{ fontWeight: 600, color: '#0f172a', margin: 0 }}>{customer.name}</p>
+                <p style={{ fontWeight: 600, color: '#111111', margin: 0 }}>{customer.name}</p>
               </div>
               <div className="form-field">
                 <span className="form-label">Mã khách hàng tự sinh:</span>
-                <p style={{ fontFamily: 'monospace', fontWeight: 700, color: '#4f46e5', margin: 0 }}>
+                <p style={{ fontFamily: 'monospace', fontWeight: 700, color: '#111111', margin: 0 }}>
                   {customer.code}
                 </p>
               </div>

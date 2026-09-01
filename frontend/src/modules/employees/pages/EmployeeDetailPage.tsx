@@ -153,7 +153,7 @@ export default function EmployeeDetailPage({ employeeId, onBack }: EmployeeDetai
           <h3 className="section-title">Hợp đồng lao động</h3>
 
           {employee.contracts.length === 0 ? (
-            <p style={{ color: '#64748b', fontSize: 13.5 }}>Chưa có hợp đồng lao động nào được ghi nhận.</p>
+            <p style={{ color: '#787774', fontSize: 13.5 }}>Chưa có hợp đồng lao động nào được ghi nhận.</p>
           ) : (
             <div className="table-responsive">
               <table className="user-data-table">

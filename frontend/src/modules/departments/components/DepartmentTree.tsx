@@ -111,7 +111,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
   const isCollapsed = (nodeId: number) => collapsedNodes.has(nodeId);
 
   // Độ sâu thực tế của một bộ phận trong cây (0 = cấp gốc) — dùng để hiển thị "Cấp N" đúng vị trí
-  // thay vì chỉ ghi chung chung "Trực thuộc" cho mọi hàng không phải gốc ở chế độ Bảng Dữ Liệu.
+  // thay vì chỉ ghi chung chung "Trực thuộc" cho mọi hàng không phải gốc ở chế độ Bảng dữ liệu.
   const getDepth = (deptId: number): number => {
     let depth = 0;
     let current = flatData.find((d) => d.id === deptId);
@@ -137,7 +137,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
   if (loading) {
     return (
       <div className="tree-loading-state">
-        <div className="loader" style={{ width: '28px', height: '28px', borderWidth: '3px', borderColor: '#6366f1', borderTopColor: 'transparent' }} />
+        <div className="loader" style={{ width: '28px', height: '28px', borderWidth: '3px', borderColor: '#111111', borderTopColor: 'transparent' }} />
         <span>Đang tải cấu trúc cây tổ chức...</span>
       </div>
     );
@@ -179,7 +179,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
     />
   );
 
-  // Flatten the tree into a depth-first, non-nested row list for "Danh sách Nhánh" —
+  // Flatten the tree into a depth-first, non-nested row list for "Danh sách nhánh" —
   // unlike the Tree view, rows are NOT indented and carry a breadcrumb path instead,
   // so the whole org can be scanned/searched top-to-bottom without expanding nodes.
   const flattenForList = (): Array<{ dept: Department; level: number; path: string; childCount: number }> => {
@@ -232,7 +232,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
               <div className="tree-node-header">
                 <span className="tree-node-title">{node.name}</span>
                 <span className="user-tag badge--blue">{getUnitTypeLabel(node.unitType)}</span>
-                {level === 0 && <span className="badge-level badge-level--root">Cấp Gốc</span>}
+                {level === 0 && <span className="badge-level badge-level--root">Cấp gốc</span>}
                 {hasChildren && <span className="badge-children">{node.children.length} bộ phận con</span>}
               </div>
 
@@ -264,18 +264,18 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
           <table className="user-data-table">
             <thead>
               <tr>
-                <th>Mã / Tên Bộ Phận</th>
-                <th>Cấp Độ Cây</th>
-                <th>Bộ Phận Cha</th>
-                <th>Trưởng Bộ Phận</th>
-                <th>Số Đơn Vị Con</th>
-                <th style={{ textAlign: 'right' }}>Thao Tác</th>
+                <th>Mã / tên bộ phận</th>
+                <th>Cấp độ cây</th>
+                <th>Bộ phận cha</th>
+                <th>Trưởng bộ phận</th>
+                <th>Số đơn vị con</th>
+                <th style={{ textAlign: 'right' }}>Thao tác</th>
               </tr>
             </thead>
             <tbody>
               {filteredFlatData.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#787774' }}>
                     Không tìm thấy bộ phận nào phù hợp với từ khóa "{searchKeyword}".
                   </td>
                 </tr>
@@ -290,7 +290,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
                     <tr key={dept.id}>
                       <td>
                         <div className="user-profile-cell">
-                          <span className="avatar-circle avatar-circle--lg" style={{ background: isRoot ? '#4f46e5' : '#0284c7' }}>
+                          <span className="avatar-circle avatar-circle--lg" style={{ background: isRoot ? '#111111' : '#1F6C9F' }}>
                             {getUnitTypeMonogram(dept.unitType)}
                           </span>
                           <div className="user-profile-meta">
@@ -310,12 +310,12 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
                         {parentDept ? (
                           <span className="cell-dept">{parentDept.name}</span>
                         ) : (
-                          <span style={{ color: '#7c8a9c', fontStyle: 'italic' }}>-- Cấp cao nhất --</span>
+                          <span style={{ color: '#9B9A97', fontStyle: 'italic' }}>-- Cấp cao nhất --</span>
                         )}
                       </td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <strong style={{ color: '#0f172a' }}>{dept.managerName || 'Chưa gán'}</strong>
+                          <strong style={{ color: '#111111' }}>{dept.managerName || 'Chưa gán'}</strong>
                         </div>
                       </td>
                       <td>
@@ -361,7 +361,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
                   <span className="tree-node-title">{dept.name}</span>
                   <span className="user-tag badge--blue">{getUnitTypeLabel(dept.unitType)}</span>
                   {level === 0 ? (
-                    <span className="badge-level badge-level--root">Cấp Gốc</span>
+                    <span className="badge-level badge-level--root">Cấp gốc</span>
                   ) : (
                     <span className="badge-level badge-level--branch">Cấp {level + 1}</span>
                   )}

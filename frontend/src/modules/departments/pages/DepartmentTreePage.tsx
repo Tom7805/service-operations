@@ -243,7 +243,7 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
         <div className="stat-card">
           <div className="stat-card__icon stat-card__icon--blue">{ICONS.building}</div>
           <div>
-            <span className="stat-card__label">Tổng số bộ phận</span>
+            <span className="stat-card__label">Tổng bộ phận</span>
             <strong className="stat-card__value">{totalDepts}</strong>
           </div>
         </div>
@@ -251,7 +251,7 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
         <div className="stat-card">
           <div className="stat-card__icon stat-card__icon--green">{ICONS.tree}</div>
           <div>
-            <span className="stat-card__label">Đơn vị Cấp Gốc</span>
+            <span className="stat-card__label">Đơn vị cấp gốc</span>
             <strong className="stat-card__value text-success">{rootDepts}</strong>
           </div>
         </div>
@@ -312,21 +312,21 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
                   className={`status-tab ${viewMode === 'TREE' ? 'status-tab--active' : ''}`}
                   onClick={() => setViewMode('TREE')}
                 >
-                  <span className="status-tab__icon">{ICONS.tree}</span> Sơ đồ Cây
+                  <span className="status-tab__icon">{ICONS.tree}</span> Sơ đồ cây
                 </button>
                 <button
                   type="button"
                   className={`status-tab ${viewMode === 'LIST' ? 'status-tab--active' : ''}`}
                   onClick={() => setViewMode('LIST')}
                 >
-                  <span className="status-tab__icon">{ICONS.clipboardList}</span> Danh sách Nhánh
+                  <span className="status-tab__icon">{ICONS.clipboardList}</span> Danh sách nhánh
                 </button>
                 <button
                   type="button"
                   className={`status-tab ${viewMode === 'TABLE' ? 'status-tab--active' : ''}`}
                   onClick={() => setViewMode('TABLE')}
                 >
-                  <span className="status-tab__icon">{ICONS.chart}</span> Bảng Dữ Liệu
+                  <span className="status-tab__icon">{ICONS.chart}</span> Bảng dữ liệu
                 </button>
               </div>
             </div>

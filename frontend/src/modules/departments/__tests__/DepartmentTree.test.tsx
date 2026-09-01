@@ -164,7 +164,7 @@ describe('Organization Tree Module — Acceptance Criteria Tests (NCL-01-CN-003)
     render(<DepartmentTreePage currentUserRoles={['VT-07']} currentUserName="Quản trị viên" />);
 
     expect(screen.getByText('Khai báo cây tổ chức')).toBeInTheDocument();
-    expect(screen.getByText('Tổng số bộ phận')).toBeInTheDocument();
+    expect(screen.getByText('Tổng bộ phận')).toBeInTheDocument();
     expect(screen.getByText(/Nhật ký khai báo cây tổ chức/i)).toBeInTheDocument();
   });
 });

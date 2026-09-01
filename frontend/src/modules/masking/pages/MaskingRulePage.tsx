@@ -171,7 +171,7 @@ export default function MaskingRulePage({
       {/* Danh sách quy tắc che dữ liệu */}
       <div className="user-table-card">
         <div className="user-table-toolbar">
-          <h3 style={{ margin: 0, fontSize: '15px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h3 style={{ margin: 0, fontSize: '15px', color: '#111111', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span className="icon-sm">{ICONS.clipboardList}</span> Danh sách quy tắc che dữ liệu
           </h3>
           <span className="badge-pulse">Đang áp dụng</span>
@@ -189,14 +189,14 @@ export default function MaskingRulePage({
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
-                    <div className="loader" style={{ margin: '0 auto 10px', borderColor: '#6366f1', borderTopColor: 'transparent' }} />
+                  <td colSpan={4} style={{ textAlign: 'center', padding: '40px', color: '#787774' }}>
+                    <div className="loader" style={{ margin: '0 auto 10px', borderColor: '#111111', borderTopColor: 'transparent' }} />
                     Đang tải danh sách quy tắc che dữ liệu...
                   </td>
                 </tr>
               ) : rules.length === 0 ? (
                 <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                  <td colSpan={4} style={{ textAlign: 'center', padding: '40px', color: '#787774' }}>
                     Không có quy tắc che dữ liệu nào.
                   </td>
                 </tr>
@@ -207,7 +207,7 @@ export default function MaskingRulePage({
                       <span className="checklist-code">{rule.level}</span>
                     </td>
                     <td>
-                      <strong style={{ color: '#0f172a' }}>{rule.levelLabel}</strong>
+                      <strong style={{ color: '#111111' }}>{rule.levelLabel}</strong>
                     </td>
                     <td>
                       <div className="user-tags-wrap">

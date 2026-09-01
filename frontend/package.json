@@ -19,6 +19,7 @@
     "e2e": "playwright test"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
     "@reduxjs/toolkit": "^2.2.5",
     "axios": "^1.7.2",
     "lucide-react": "^1.38.0",

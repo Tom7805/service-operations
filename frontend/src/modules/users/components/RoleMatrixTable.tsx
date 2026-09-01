@@ -18,11 +18,11 @@ export const RoleMatrixTable: React.FC<RoleMatrixTableProps> = ({
         <table className="user-data-table">
           <thead>
             <tr>
-              <th style={{ width: '220px' }}>Vai Trò & Chức Năng</th>
-              <th style={{ width: '280px' }}>Mô Tả Nghiệp Vụ</th>
-              <th>Quyền Hạn Chi Tiết</th>
-              <th style={{ width: '150px' }}>Tài Khoản Đang Giữ</th>
-              <th style={{ width: '110px', textAlign: 'right' }}>Thao Tác</th>
+              <th style={{ width: '220px' }}>Vai trò & chức năng</th>
+              <th style={{ width: '280px' }}>Mô tả nghiệp vụ</th>
+              <th>Quyền hạn chi tiết</th>
+              <th style={{ width: '150px' }}>Tài khoản đang giữ</th>
+              <th style={{ width: '110px', textAlign: 'right' }}>Thao tác</th>
             </tr>
           </thead>
           <tbody>

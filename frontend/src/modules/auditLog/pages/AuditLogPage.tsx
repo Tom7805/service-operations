@@ -231,14 +231,14 @@ export default function AuditLogPage({
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
-                    <div className="loader" style={{ margin: '0 auto 10px', borderColor: '#6366f1', borderTopColor: 'transparent' }} />
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#787774' }}>
+                    <div className="loader" style={{ margin: '0 auto 10px', borderColor: '#111111', borderTopColor: 'transparent' }} />
                     Đang tải nhật ký...
                   </td>
                 </tr>
               ) : entries.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#787774' }}>
                     Không tìm thấy bản ghi nào thỏa bộ lọc đã chọn.
                   </td>
                 </tr>

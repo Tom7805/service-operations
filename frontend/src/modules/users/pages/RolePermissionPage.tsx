@@ -154,7 +154,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
       {/* Page Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Phân quyền vai trò & Phạm vi dữ liệu</h1>
+          <h1 className="page-title">Phân quyền vai trò & phạm vi dữ liệu</h1>
           <p className="page-subtitle">Gán vai trò và phạm vi truy cập dữ liệu cho từng tài khoản.</p>
         </div>
       </div>
@@ -165,7 +165,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
           <div className="stat-card__icon stat-card__icon--purple">{ICONS.shield}</div>
           <div>
             <span className="stat-card__label">Vai trò hệ thống</span>
-            <strong className="stat-card__value">9 Vai trò</strong>
+            <strong className="stat-card__value">9 vai trò</strong>
           </div>
         </div>
 
@@ -180,7 +180,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
         <div className="stat-card">
           <div className="stat-card__icon stat-card__icon--green">{ICONS.globe}</div>
           <div>
-            <span className="stat-card__label">Phạm vi Toàn công ty</span>
+            <span className="stat-card__label">Toàn công ty</span>
             <strong className="stat-card__value text-success">{companyScopeUsers}</strong>
           </div>
         </div>
@@ -188,7 +188,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
         <div className="stat-card">
           <div className="stat-card__icon stat-card__icon--blue">{ICONS.building}</div>
           <div>
-            <span className="stat-card__label">Phạm vi Nhánh bộ phận</span>
+            <span className="stat-card__label">Nhánh bộ phận</span>
             <strong className="stat-card__value">{deptScopeUsers}</strong>
           </div>
         </div>
@@ -196,7 +196,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
         <div className="stat-card">
           <div className="stat-card__icon stat-card__icon--amber">{ICONS.user}</div>
           <div>
-            <span className="stat-card__label">Phạm vi Chỉ cá nhân</span>
+            <span className="stat-card__label">Chỉ cá nhân</span>
             <strong className="stat-card__value text-warning">{selfScopeUsers}</strong>
           </div>
         </div>
@@ -315,24 +315,24 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
             <table className="user-data-table">
               <thead>
                 <tr>
-                  <th>Tài Khoản & Nhân Sự</th>
-                  <th>Bộ Phận Trực Thuộc</th>
-                  <th>Vai Trò Được Gán</th>
-                  <th>Phạm Vi Dữ Liệu (Scope)</th>
-                  <th style={{ textAlign: 'right' }}>Thao Tác</th>
+                  <th>Tài khoản & nhân sự</th>
+                  <th>Bộ phận Trực Thuộc</th>
+                  <th>Vai trò được gán</th>
+                  <th>Phạm vi dữ liệu</th>
+                  <th style={{ textAlign: 'right' }}>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
-                      <div className="loader" style={{ margin: '0 auto 10px', borderColor: '#6366f1', borderTopColor: 'transparent' }} />
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#787774' }}>
+                      <div className="loader" style={{ margin: '0 auto 10px', borderColor: '#111111', borderTopColor: 'transparent' }} />
                       Đang tải dữ liệu phân quyền...
                     </td>
                   </tr>
                 ) : filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#787774' }}>
                       Không tìm thấy tài khoản nào khớp với bộ lọc.
                     </td>
                   </tr>

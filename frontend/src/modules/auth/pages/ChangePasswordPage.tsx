@@ -33,7 +33,7 @@ export default function ChangePasswordPage({ onBack, onPasswordChanged }: Change
         {done ? (
           <div
             className="alert"
-            style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d' }}
+            style={{ background: '#EDF3EC', border: '1px solid rgba(52,101,56,.20)', color: '#346538' }}
             role="status"
           >
             <span className="alert__icon">{ICONS.checkCircle}</span>

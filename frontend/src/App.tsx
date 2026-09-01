@@ -56,7 +56,7 @@ const SYSTEM_NAV_ITEMS: NavItem[] = [
   { tab: 'TWO_FACTOR_SETTINGS', icon: ICONS.key, label: '2FA' },
   { tab: 'MASKING', icon: ICONS.eyeOff, label: 'Che dữ liệu' },
   { tab: 'SYSTEM_AUDIT_LOG', icon: ICONS.history, label: 'Nhật ký hệ thống' },
-  { tab: 'AUDIT_LOG', icon: ICONS.shieldOff, label: 'Nhật ký dữ liệu nhạy cảm' },
+  { tab: 'AUDIT_LOG', icon: ICONS.shieldOff, label: 'Dữ liệu nhạy cảm' },
 ];
 
 const ALL_NAV_ITEMS: NavItem[] = [...NAV_ITEMS, ...SYSTEM_NAV_ITEMS];
