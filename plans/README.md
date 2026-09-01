@@ -23,6 +23,24 @@ Sắp theo đòn bẩy (tác động ÷ công sức). Mọi mục đều đã đ
 | 9 | LOW | Đối xứng | `App.tsx:275,324` | Popover có hoạt hình vào nhưng **cắt phụt** khi đóng (dựng có điều kiện) — apple-design §7 | ⏸ [002](002-popover-exit-symmetry.md) |
 | 10 | LOW | Gắn kết | `package.json` | `lucide-react` còn trong phụ thuộc, 0 lần import | ✅ XONG |
 
+## Đợt rà thứ hai — mức `deep` (toàn repo) + minimalist-skill
+
+| # | Mức | Nhóm | Vị trí | Phát hiện | Trạng thái |
+|---|---|---|---|---|---|
+| 11 | HIGH | Gắn kết | 27 file | 45 **ký tự** dùng như icon (`X` ×9, `←` ×12, `→` ×10, `✓` ×13, `🔎`, `✦`, `⇐`, `▶`/`▼`). Ký tự lấy nét từ font hệ thống nên không khớp `weight="bold"` của Phosphor | ✅ XONG |
+| 12 | HIGH | Mục đích | `.dot-pulse` (2 chỗ) | Chấm nhấp nháy **vô hạn** cạnh một nhãn tĩnh, không báo trạng thái gì. AUDIT §1 + detector có sẵn luật `pulsing-dot` | ✅ XONG |
+| 13 | MED | Đối xứng | `.toast-notification` | Neo mép **phải** (`right: 24px`) nhưng bay vào từ **trái** (`translateX(-22px)`) | ✅ XONG |
+| 14 | MED | Hiệu năng | `.skip-link` | Chuyển động `top` — thuộc tính bố cục. Và đây là phần tử người dùng bàn phím thấy đầu tiên | ✅ XONG |
+| 15 | MED | Bề mặt | 6 chỗ | Gradient: 3 chỗ **hai đầu cùng màu**, 3 chỗ chênh **0.24/255** (mắt người không thấy) | ✅ XONG |
+| 16 | MED | Độ cao | 12 chỗ | Bóng vượt trần 0.05, gồm 2 bóng **nhuộm màu** (đỏ, xanh) trong hệ đơn sắc ấm | ✅ XONG |
+| 17 | MED | Nội dung | 9 modal | Eyebrow trên tiêu đề; 3 chỗ rò mã yêu cầu nội bộ (`NCL-02-CN-003`, `QTN-01`) ra người dùng cuối | ✅ XONG |
+
+**Bẫy phép đo thứ ba của đợt này.** Lần quét thời lượng đầu báo `.brand-copy` chạy **8000ms** và
+`.story__item` **45000ms** — nghe như lỗi nghiêm trọng. Nguyên nhân: regex `(\d+(?:\.\d+)?)` không
+khớp dạng `.8s` (không có số 0 dẫn đầu), nên nó đọc `8` thay vì `.8`, sai **10 lần**. Đo lại đúng:
+800ms và 600ms, đều nằm ở màn đăng nhập và đều chạy một lần. Nếu tin con số đầu, tôi đã "sửa"
+những thứ không hỏng.
+
 ## Cơ hội bị bỏ lỡ (bổ sung, không phải sửa lỗi)
 
 - **Bàn giao trạng thái vận tốc khi kéo** (apple-design §5). Hiện không có tương tác kéo nào.

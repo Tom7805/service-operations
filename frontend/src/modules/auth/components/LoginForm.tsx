@@ -51,7 +51,7 @@ export default function LoginForm({ onAuthenticated, onForgotPassword, onTwoFact
       <div className="field"><input id="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(event) => { setPassword(event.target.value); if (error) setError(''); }} placeholder="Nhập mật khẩu" disabled={loading} /><button type="button" className="field__toggle" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}><EyeIcon visible={showPassword} /></button></div>
       <div className="form-options"><label className="checkbox"><input type="checkbox" /> <span>Ghi nhớ đăng nhập</span></label><a href="#forgot-password" onClick={(event) => { event.preventDefault(); onForgotPassword?.(); }}>Quên mật khẩu?</a></div>
       {error && <p className="form-error" role="alert"><span>!</span>{error}</p>}
-      <button className="submit" type="submit" disabled={loading}>{loading ? <><i className="loader" />Đang xác thực</> : <><i className="submit__shine" />Đăng nhập <span className="icon-sm">{ICONS.arrowRight}</span></>}</button>
+      <button className="submit" type="submit" disabled={loading}>{loading ? <><i className="loader" />Đang xác thực</> : <>Đăng nhập <span className="icon-sm">{ICONS.arrowRight}</span></>}</button>
     </form>
     <div className="secure-note"><span className="icon-sm">{ICONS.check}</span><p>Phiên đăng nhập được bảo vệ và tự động kết thúc khi không hoạt động.</p></div>
     <p className="login-card__privacy">Bằng việc tiếp tục, bạn xác nhận đã đọc và đồng ý với<br /><a href="#terms">Điều khoản sử dụng</a> và <a href="#privacy">Chính sách bảo mật</a>.</p>

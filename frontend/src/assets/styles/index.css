@@ -126,12 +126,18 @@ p, .page-subtitle, .field-hint, .role-matrix-desc { text-wrap: pretty; }
 
 /* Lien ket nhay thang toi noi dung — bat buoc cho nguoi dung ban phim, chi hien khi duoc focus. */
 .skip-link {
-  position: absolute; left: 12px; top: -60px; z-index: 999;
+  position: absolute; left: 12px; top: 12px; z-index: 999;
   padding: 10px 18px; border-radius: var(--radius-md); background: var(--ink-strong); color: #fff;
   font-size: 14.5px; font-weight: 700; text-decoration: none;
-  transition: top var(--dur-base) var(--ease-out);
+  /* Trước đây giấu bằng `top: -60px` rồi chuyển động `top` khi focus. `top` là
+     thuộc tính BỐ CỤC: mỗi khung hình bắt trình duyệt tính lại vị trí rồi vẽ lại,
+     thay vì chỉ gộp lớp (AUDIT §5: chỉ hoạt hình `transform` và `opacity`).
+     Dùng `translateY` cho đúng, và đây lại chính là phần tử mà người dùng bàn
+     phím nhìn thấy đầu tiên khi vào trang — nó phải bật ra dứt khoát. */
+  transform: translateY(calc(-100% - 16px));
+  transition: transform var(--dur-fast) var(--ease-out);
 }
-.skip-link:focus-visible { top: 12px; outline: 2px solid #fff; outline-offset: 2px; }
+.skip-link:focus-visible { transform: none; outline: 2px solid #fff; outline-offset: 2px; }
 
 /* ===================== BỀ MẶT DO TRÌNH DUYỆT VẼ =====================
    Bôi đen, con trỏ nhập, thanh cuộn, vòng focus — mặc định của trình duyệt không thuộc hệ thiết
@@ -1408,7 +1414,18 @@ body { background: var(--canvas); }
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  animation: enter-left 0.25s var(--ease-out) both;
+  /* Toast neo vào MÉP PHẢI (`right: 24px`) nên nó phải đi vào TỪ BÊN PHẢI.
+     Trước đây dùng `enter-left`, tức trượt vào từ `translateX(-22px)` — bay vào
+     từ phía đối diện với cạnh mà nó đang bám. apple-design §7: "if something
+     disappears one way, we expect it to emerge from where it came"; một vật bám
+     mép phải mà lại xuất hiện từ bên trái thì đọc ra là không liên quan tới đâu cả.
+     Dùng `translateX(100%)` — phần trăm ăn theo bề rộng của CHÍNH nó, nên toast
+     rộng hẹp gì cũng vào đúng từ ngoài mép, không cần con số pixel cứng. */
+  animation: toast-in var(--dur-base) var(--ease-out) both;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(100%); }
+  to   { opacity: 1; transform: none; }
 }
 /* Sắc thái thông báo mã hóa bằng nền nhuộm + viền vòng mảnh thay cho vạch màu dày bên trái. */
 .toast-notification--success { background: var(--pale-green-bg); color: var(--pale-green-fg); border: 1px solid rgba(52,101,56,.18); box-shadow: var(--shadow-md); }
@@ -1568,7 +1585,15 @@ body { background: var(--canvas); }
 .contact-manager-section { margin-top: 10px; }
 .contact-manager-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 16px; }
 .contact-section-eyebrow { display: inline-flex; align-items: center; gap: 7px; background: #EDF3EC; border: 1px solid rgba(52,101,56,.20); border-radius: 999px; padding: 3px 12px; font-size: 13.5px; font-weight: 700; color: #111111; margin-bottom: 8px; }
-.dot-pulse { width: 7px; height: 7px; border-radius: 50%; background: #111111; box-shadow: 0 0 0 3px var(--overlay-muted); animation: pulse 2s infinite; }
+/* Bỏ `animation: pulse 2s infinite`. Chấm này đứng cạnh một nhãn tĩnh, không báo
+   trạng thái gì đang diễn ra — nên nó nhấp nháy mãi mà không mang thông tin nào.
+   AUDIT §1: chuyển động phải trả lời được "vì sao thứ này động?"; "trông cho vui"
+   trên phần tử luôn hiển thị thì cách sửa mạnh nhất là XOÁ nó đi.
+   taste-skill 9.F cũng cấm chấm trạng thái trang trí, và chính detector của
+   impeccable có một luật tên `pulsing-dot`.
+   Nhịp lặp vô hạn còn tệ hơn nữa: người dùng không kích hoạt nó, và nó không bao
+   giờ dừng — thứ khó chịu nhất với người nhạy cảm chuyển động. */
+.dot-pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-faint); box-shadow: 0 0 0 3px var(--overlay-hairline); }
 .contact-section-title { font-size: 24px; font-weight: 800; color: #111111; margin: 0 0 6px; letter-spacing: var(--track-2xl); }
 .contact-section-subtitle { color: #787774; font-size: 15px; margin: 0; max-width: 680px; }
 
