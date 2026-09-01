@@ -420,7 +420,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
       {/* TC-05: nhật ký phân quyền giờ nằm ở trang riêng biệt "Nhật ký hệ thống" — lưu thật trên
           máy chủ, có phân trang, không còn là danh sách nhúng cuộn tay ở đây. */}
       {onViewAuditLog && (
-        <button type="button" className="audit-log-link" onClick={onViewAuditLog}>
+        <button type="button" className="audit-log-link" data-reveal-target onClick={onViewAuditLog}>
           <span className="audit-log-link__icon">{ICONS.clipboardList}</span>
           <span className="audit-log-link__text">
             <strong>Xem nhật ký phân quyền đầy đủ</strong>

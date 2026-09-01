@@ -16,6 +16,7 @@ import CustomerListPage from './modules/customers/pages/CustomerListPage';
 import CustomerMergePage from './modules/customers/pages/CustomerMergePage';
 import { ICONS } from './components/common/icons';
 import CommandPalette from './components/common/CommandPalette';
+import useScrollReveal from './hooks/useScrollReveal';
 import type { ReactNode } from 'react';
 
 type Tab =
@@ -108,6 +109,9 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('sidebarCollapsed', sidebarCollapsed ? '1' : '0');
   }, [sidebarCollapsed]);
+
+  // Quet lai cac khoi "he lo khi cuon toi" moi lan doi trang.
+  useScrollReveal(activeTab);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -333,7 +337,9 @@ export default function App() {
           </div>
         </header>
 
-        <main className="app-content" id="noi-dung-chinh" tabIndex={-1}>
+        {/* key doi theo tab: React thay toan bo cay con, nen hieu ung xo theo tang
+            chay lai o MOI lan chuyen trang chu khong chi lan tai dau tien. */}
+        <main className="app-content" id="noi-dung-chinh" tabIndex={-1} key={activeTab}>
           {activeTab === 'CHANGE_PASSWORD' ? (
             <ChangePasswordPage onBack={() => setActiveTab('DEPARTMENTS')} onPasswordChanged={handleLogout} />
           ) : activeTab === 'CUSTOMERS' ? (

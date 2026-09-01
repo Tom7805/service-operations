@@ -1770,3 +1770,120 @@ body { background: var(--canvas); }
 /* Cây tổ chức đang tải: ba thanh xương thay con quay, giữ đúng nhịp của thẻ thật. */
 .tree-loading-state { gap: 10px !important; padding: 28px !important; border: 1px solid #EAEAEA !important; background: #FFFFFF !important; border-radius: 12px !important; align-items: stretch !important; }
 .tree-loading-state .skeleton { width: 100%; height: 54px; border-radius: 8px; }
+
+/* ==========================================================================
+   VŨ ĐẠO CHUYỂN ĐỘNG (soft-skill §5 — Motion Choreography)
+   --------------------------------------------------------------------------
+   Nguyên tắc chung của cả soft-skill lẫn minimalist-skill (đây là trục duy nhất
+   hai skill KHÔNG mâu thuẫn):
+     - Chỉ hoạt hình `transform` và `opacity`. Không bao giờ đụng top/left/width/height.
+     - Không dùng `linear` hay `ease-in-out` mặc định của trình duyệt.
+     - Không mount cả trang cùng lúc — các khối xổ ra theo tầng, có độ trễ.
+
+   Thời lượng cố tình ngắn hơn con số soft-skill đề xuất (800ms+): đây là công cụ
+   vận hành bấm hàng trăm lần mỗi ngày, 800ms cho mỗi lần chuyển trang sẽ thành
+   vật cản chứ không phải sự tinh tế. 420–560ms là điểm cân bằng.
+   ========================================================================== */
+:root {
+  /* Đường cong "khối lượng": tăng tốc gần như tức thì rồi giảm tốc rất dài —
+     mô phỏng vật thể có quán tính đang dừng lại, không phải một giá trị bị nội suy. */
+  --ease-soft: cubic-bezier(0.32, 0.72, 0, 1);
+  --dur-enter: 520ms;
+  --stagger: 55ms;
+}
+
+/* ---------- Xổ trang: các khối chính vào theo tầng ---------- */
+@keyframes block-in {
+  from { opacity: 0; transform: translate3d(0, 14px, 0); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Mỗi khối trực tiếp của trang là một tầng. Dùng nth-child nên áp được cho cả 13
+   trang mà không phải sửa từng file — mọi trang đều bọc trong .user-management-page. */
+.user-management-page > * {
+  animation: block-in var(--dur-enter) var(--ease-soft) both;
+}
+.user-management-page > *:nth-child(1) { animation-delay: 0ms; }
+.user-management-page > *:nth-child(2) { animation-delay: calc(var(--stagger) * 1); }
+.user-management-page > *:nth-child(3) { animation-delay: calc(var(--stagger) * 2); }
+.user-management-page > *:nth-child(4) { animation-delay: calc(var(--stagger) * 3); }
+.user-management-page > *:nth-child(5) { animation-delay: calc(var(--stagger) * 4); }
+.user-management-page > *:nth-child(n+6) { animation-delay: calc(var(--stagger) * 5); }
+
+/* ---------- Khoang chỉ số: xổ lần lượt trái sang phải ---------- */
+.stats-grid .stat-card {
+  animation: block-in 420ms var(--ease-soft) both;
+}
+.stats-grid .stat-card:nth-child(1) { animation-delay: 60ms; }
+.stats-grid .stat-card:nth-child(2) { animation-delay: 110ms; }
+.stats-grid .stat-card:nth-child(3) { animation-delay: 160ms; }
+.stats-grid .stat-card:nth-child(4) { animation-delay: 210ms; }
+.stats-grid .stat-card:nth-child(5) { animation-delay: 260ms; }
+
+/* ---------- Hàng bảng: sóng đổ xuống khi dữ liệu về ----------
+   Chỉ 10 hàng đầu mang độ trễ; từ hàng 11 trở đi vào cùng lúc, nếu không một bảng
+   200 dòng sẽ mất vài giây mới hiện xong. Biên độ nhỏ (6px) vì hàng bảng nằm sát
+   nhau — dịch nhiều sẽ thành gợn sóng gây nhiễu mắt. */
+@keyframes row-in {
+  from { opacity: 0; transform: translate3d(0, 6px, 0); }
+  to   { opacity: 1; transform: none; }
+}
+.user-data-table tbody tr { animation: row-in 340ms var(--ease-soft) both; }
+.user-data-table tbody tr:nth-child(1) { animation-delay: 0ms; }
+.user-data-table tbody tr:nth-child(2) { animation-delay: 26ms; }
+.user-data-table tbody tr:nth-child(3) { animation-delay: 52ms; }
+.user-data-table tbody tr:nth-child(4) { animation-delay: 78ms; }
+.user-data-table tbody tr:nth-child(5) { animation-delay: 104ms; }
+.user-data-table tbody tr:nth-child(6) { animation-delay: 130ms; }
+.user-data-table tbody tr:nth-child(7) { animation-delay: 156ms; }
+.user-data-table tbody tr:nth-child(8) { animation-delay: 182ms; }
+.user-data-table tbody tr:nth-child(9) { animation-delay: 208ms; }
+.user-data-table tbody tr:nth-child(n+10) { animation-delay: 234ms; }
+/* Khung xương không xổ: nó phải có mặt NGAY, nếu không lại thành một lần chờ nữa. */
+.user-data-table tbody tr[aria-hidden='true'] { animation: none; }
+
+/* ---------- Thẻ cây tổ chức: xổ theo tầng ---------- */
+.tree-node-wrapper { animation: block-in 380ms var(--ease-soft) both; }
+.tree-node-wrapper:nth-child(1) { animation-delay: 0ms; }
+.tree-node-wrapper:nth-child(2) { animation-delay: 40ms; }
+.tree-node-wrapper:nth-child(3) { animation-delay: 80ms; }
+.tree-node-wrapper:nth-child(n+4) { animation-delay: 120ms; }
+
+/* ---------- Hé lộ khi cuộn tới (IntersectionObserver, không phải scroll listener) ----------
+   Phần tử nằm dưới nếp gấp không xổ lúc tải trang — nó chờ tới khi thực sự lọt vào
+   khung nhìn. Trạng thái mặc định là ĐÃ HIỆN; JS mới thêm [data-reveal] để ẩn đi,
+   nên nếu JS lỗi thì nội dung vẫn đọc được. */
+/* Rao chan: mot phan tu khong duoc vua xo theo tang vua he lo khi cuon — hai hieu ung
+   se danh nhau ve opacity va cho ra mot nhip nhap nhay. Da gan moc he lo thi bo xo tang. */
+.user-management-page > *[data-reveal] { animation: none !important; }
+[data-reveal='pending'] { opacity: 0; transform: translate3d(0, 18px, 0); }
+[data-reveal='shown'] {
+  opacity: 1; transform: none;
+  transition: opacity var(--dur-enter) var(--ease-soft), transform var(--dur-enter) var(--ease-soft);
+}
+
+/* ---------- Phản hồi khi bấm: lún nhẹ như vật thể có khối lượng ---------- */
+.side-nav__item, .status-tab, .row-menu__item, .cmdk__item, .action-btn, .tree-toggle-btn {
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out),
+              transform 140ms var(--ease-soft);
+}
+.side-nav__item:active, .status-tab:active, .row-menu__item:active,
+.cmdk__item:active, .action-btn:active, .tree-toggle-btn:active { transform: scale(0.975); }
+
+/* ---------- Chuyển tiếp mềm cho hàng bảng và thẻ ---------- */
+.user-data-table tbody tr { transition: background var(--dur-fast) var(--ease-out); }
+.tree-node-card, .dept-list-row {
+  transition: border-color var(--dur-base) var(--ease-soft), background var(--dur-fast) var(--ease-out);
+}
+
+/* ---------- Tôn trọng lựa chọn giảm chuyển động ----------
+   Bắt buộc. Người bật tuỳ chọn này thường vì chuyển động gây chóng mặt hoặc buồn nôn —
+   với họ, mọi hiệu ứng ở trên phải biến mất hoàn toàn chứ không phải chạy nhanh hơn. */
+@media (prefers-reduced-motion: reduce) {
+  .user-management-page > *,
+  .stats-grid .stat-card,
+  .user-data-table tbody tr,
+  .tree-node-wrapper { animation: none !important; }
+  [data-reveal='pending'] { opacity: 1 !important; transform: none !important; }
+  [data-reveal='shown'] { transition: none !important; }
+}
