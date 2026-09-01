@@ -371,7 +371,11 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
   box-shadow: inset 0 0 0 1px var(--overlay-hairline), var(--shadow-sm);
 }
 /* Thanh công cụ là tầng CHỨC NĂNG nằm trong tấm nội dung → máng kính lõm nhẹ, không phải nền xám phẳng. */
-.user-table-toolbar { padding: 16px 20px; border-bottom: 1px solid var(--overlay-hairline); display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: center; background: linear-gradient(180deg, rgba(249,249,248,.92) 0%, rgba(249,249,248,.88) 100%); }
+/* Ba khoi duoi day tung dung gradient doc de "tao chieu sau". Do lai: hai dau
+   chenh nhau 0.24/255 muc do sang khi ve tren nen trang — mat nguoi khong the
+   thay. Do la gradient chi ton mot lop ve chu khong mang thong tin gi.
+   minimalist-skill Sec.2 cam gradient; o day bo no khong mat gi ca. */
+.user-table-toolbar { padding: 16px 20px; border-bottom: 1px solid var(--overlay-hairline); display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: center; background: var(--surface-alt); }
 .search-box { position: relative; flex: 1 1 300px; max-width: 440px; }
 .search-box__icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: #9B9A97; display: flex; }
 .search-box__icon svg { width: 100%; height: 100%; }
@@ -562,8 +566,15 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
 @keyframes modal-pop { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .modal-card form { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 .modal-card--md { width: min(100%, 560px); } .modal-card--sm { width: min(100%, 440px); }
-.modal-header { padding: 20px 24px; border-bottom: 1px solid var(--overlay-hairline); display: flex; justify-content: space-between; align-items: flex-start; background: linear-gradient(180deg, rgba(249,249,248,.94) 0%, rgba(249,249,248,.90) 100%); flex-shrink: 0; }
-.modal-eyebrow { font-size: 12.5px; text-transform: uppercase; letter-spacing: var(--track-caps-lg); font-weight: 700; color: #111111; }
+.modal-header { padding: 20px 24px; border-bottom: 1px solid var(--overlay-hairline); display: flex; justify-content: space-between; align-items: flex-start; background: var(--surface-alt); flex-shrink: 0; }
+/* `.modal-eyebrow` ĐÃ BỊ GỠ. Nó từng đứng trên tiêu đề của 9 modal, và ba chỗ còn
+   in cả mã yêu cầu nội bộ ("NCL-02-CN-003 · Danh bạ khách hàng", "QTN-01") ra cho
+   người dùng cuối. DESIGN.md § Don't cấm eyebrow, và craft-floor của impeccable
+   xếp đây là lệnh cấm tuyệt đối: "no brief earns it back. The heading carries its
+   own weight." Phần lớn eyebrow chỉ lặp lại điều tiêu đề đã nói ("Khởi tạo tài
+   khoản" đứng trên "Thêm tài khoản người dùng mới"). Hai chỗ mang thông tin thật
+   thì đã gộp vào chính tiêu đề, không xoá trắng.
+   Đừng khai báo lại lớp này. */
 .modal-title { font-size: 18px; font-weight: 700; color: #111111; margin: 2px 0 0; }
 .modal-close { background: none; border: none; font-size: 18px; color: #9B9A97; cursor: pointer; padding: 4px; border-radius: var(--radius-md); display: flex; transition: background 0.15s var(--ease-out), color 0.15s var(--ease-out); }
 .modal-close:hover { background: #F1F0EE; color: #111111; }
@@ -572,7 +583,7 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
 .modal-title__icon { display: flex; flex-shrink: 0; }
 .modal-title__icon svg { width: 18px; height: 18px; }
 .modal-body { padding: 20px 24px; overflow-y: auto; flex: 1; min-height: 0; }
-.modal-footer { padding: 16px 24px; border-top: 1px solid var(--overlay-hairline); background: linear-gradient(180deg, rgba(249,249,248,.90) 0%, rgba(249,249,248,.94) 100%); display: flex; justify-content: flex-end; gap: 12px; flex-shrink: 0; }
+.modal-footer { padding: 16px 24px; border-top: 1px solid var(--overlay-hairline); background: var(--surface-alt); display: flex; justify-content: flex-end; gap: 12px; flex-shrink: 0; }
 
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .form-field--full { grid-column: 1 / -1; }
@@ -660,7 +671,7 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
 
 /* Access Denied Card (TC-04) */
 .access-denied-container { min-height: 70vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
-.access-denied-card { background: #ffffff; border: 1px solid #EAEAEA; border-radius: var(--radius-lg); padding: 40px; max-width: 520px; text-align: center; box-shadow: 0 15px 40px rgba(159,47,45,0.08); }
+.access-denied-card { background: #ffffff; border: 1px solid #EAEAEA; border-radius: var(--radius-lg); padding: 40px; max-width: 520px; text-align: center; box-shadow: var(--shadow-lg); }
 .access-denied-icon { display: flex; justify-content: center; margin-bottom: 12px; color: #9F2F2D; }
 .access-denied-icon svg { width: 44px; height: 44px; }
 .security-log-badge__item { display: flex; align-items: center; gap: 6px; }
@@ -694,7 +705,7 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
 .audit-log-title__icon svg { width: 16px; height: 16px; }
 .badge-pulse { background: #EDF3EC; color: #111111; border: 1px solid rgba(52,101,56,.20); font-size: 12.5px; font-weight: 700; padding: 3px 10px; border-radius: var(--radius-lg); }
 .audit-log-list { display: flex; flex-direction: column; gap: 10px; }
-.audit-log-item { display: flex; gap: 12px; align-items: flex-start; padding: 10px 14px; background: rgba(17,17,17,.06); box-shadow: inset 0 0 0 1px rgba(17,17,17,.12); border-radius: var(--radius-lg); font-size: 14.5px; }
+.audit-log-item { display: flex; gap: 12px; align-items: flex-start; padding: 10px 14px; background: rgba(17,17,17,.06); box-shadow: inset 0 0 0 1px var(--overlay-subtle); border-radius: var(--radius-lg); font-size: 14.5px; }
 .audit-log-icon { display: flex; color: #787774; flex-shrink: 0; margin-top: 1px; }
 .audit-log-icon svg { width: 15px; height: 15px; }
 .audit-log-meta { flex: 1; }
@@ -1093,12 +1104,12 @@ body { background: var(--canvas); }
 .tree-node-wrapper:last-child { margin-bottom: 0; }
 
 .tree-node-card { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 8px; column-gap: 16px; padding: 11px 14px; background: #ffffff; border: 1px solid #EAEAEA; border-radius: var(--radius-lg); transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-press) var(--ease-out); box-shadow: 0 2px 6px rgba(0,0,0,0.03); }
-.tree-node-card:hover { border-color: #111111; box-shadow: 0 8px 24px rgba(17,17,17,0.08); transform: translateY(-1px); }
+.tree-node-card:hover { border-color: #111111; box-shadow: var(--shadow-md); transform: translateY(-1px); }
 /* Thẻ có nhánh con (nhóm/phòng/ban) nổi bật hơn thẻ lá — nền tint nhẹ + chữ đậm hơn,
    giúp phân biệt "đây là một nhóm" ngay từ cái nhìn đầu, không cần đường nối. */
 .tree-node-card--group { background: #F9F9F8; border-color: #EAEAEA; }
 .tree-node-card--group:hover { border-color: #111111; }
-.tree-node-card--highlight { border-color: #111111 !important; background: #EDF3EC !important; box-shadow: 0 0 0 2px rgba(17,17,17,0.2) !important; }
+.tree-node-card--highlight { border-color: #111111 !important; background: #EDF3EC !important; box-shadow: 0 0 0 2px var(--ink-strong) !important; }
 /* transform ở :hover tạo stacking context mới, "nhốt" menu kebab bên trong —
    nâng hẳn hàng đang mở menu lên trên các hàng khác để dropdown không bị dòng dưới đè lên. */
 .tree-node-card:has(.row-menu__panel--open) { position: relative; z-index: 30; transform: none; }
@@ -1106,6 +1117,11 @@ body { background: var(--canvas); }
 .tree-node-left { display: flex; align-items: center; gap: 12px; flex: 1 1 220px; min-width: 0; }
 .tree-toggle-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid #EAEAEA; background: #ffffff; font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #111111; transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-press) var(--ease-out); flex-shrink: 0; }
 .tree-toggle-btn:hover { background: #111111; color: #ffffff; border-color: #111111; }
+/* Mũi tên xoay -90° khi nhánh đang thu. Đây là một thay đổi TRẠNG THÁI do người
+   dùng chủ động gây ra, ở bậc tần suất "vài chục lần/ngày" — nên chuyển động phải
+   gần như không cảm nhận được: 120ms, chỉ `transform`. */
+.tree-toggle-btn__caret { transition: transform var(--dur-fast) var(--ease-out); }
+.tree-toggle-btn--collapsed .tree-toggle-btn__caret { transform: rotate(-90deg); }
 .tree-node-dot { width: 8px; height: 8px; border-radius: 50%; background: #9B9A97; margin: 0 9px; flex-shrink: 0; }
 .tree-node-icon { font-size: 24px; flex-shrink: 0; }
 
@@ -1115,14 +1131,21 @@ body { background: var(--canvas); }
 .tree-node-manager { font-size: 14.5px; color: #787774; display: flex; gap: 6px; align-items: center; }
 .tree-node-manager strong { color: #2F3437; font-weight: 600; }
 
-.badge-level { font-size: 12.5px; font-weight: 700; padding: 2px 8px; border-radius: var(--radius-md); text-transform: uppercase; letter-spacing: var(--track-caps-lg); }
+/* Bỏ IN HOA. Hai lý do, và lý do thứ hai nhìn thấy được ngay trên màn hình:
+   1. DESIGN.md § Don't: không dùng IN HOA cho nhãn tiếng Việt ngoài hàng tiêu đề
+      bảng — viết hoa mọi chữ là quy ước tiếng Anh, áp vào tiếng Việt đọc ra như
+      bản dịch máy (tiếng Việt còn có dấu, IN HOA làm dấu chồng lên nhau).
+   2. Ngay cạnh nó trong cùng một hàng là các nhãn "Trung tâm", "Ban", "Phòng",
+      "Tổ / Nhóm" — tất cả đều sentence case. Nên "CẤP GỐC" là nhãn DUY NHẤT
+      viết hoa, tức nó lạc lõng với chính hàng xóm của mình. */
+.badge-level { font-size: 12.5px; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-md); letter-spacing: var(--track-xs); }
 .badge-level--root { background: #EDF3EC; color: #346538; border: 1px solid rgba(52,101,56,.20); }
 .badge-level--branch { background: #E1F3FE; color: #1F6C9F; border: 1px solid rgba(31,108,159,.20); }
 .badge-children { font-size: 13.5px; font-weight: 600; color: #1F6C9F; background: #E1F3FE; border: 1px solid rgba(31,108,159,.20); padding: 2px 8px; border-radius: var(--radius-lg); }
 
 /* Branch List view (NCL-01-CN-003) — flat rows, no indentation; breadcrumb replaces nesting */
 .dept-list-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 8px; column-gap: 16px; padding: 11px 14px; background: #ffffff; border: 1px solid #EAEAEA; border-radius: var(--radius-lg); transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-press) var(--ease-out); box-shadow: 0 2px 6px rgba(0,0,0,0.03); }
-.dept-list-row:hover { border-color: #1F6C9F; box-shadow: 0 8px 24px rgba(31,108,159,0.08); transform: translateY(-1px); }
+.dept-list-row:hover { border-color: #1F6C9F; box-shadow: var(--shadow-md); transform: translateY(-1px); }
 .dept-list-row:has(.row-menu__panel--open) { position: relative; z-index: 30; transform: none; }
 .dept-list-path { font-size: 13.5px; color: #9B9A97; font-style: italic; }
 
@@ -1225,13 +1248,17 @@ body { background: var(--canvas); }
   width: 34px;
   height: 34px;
   border-radius: var(--radius-md);
-  background: linear-gradient(135deg, #111111 0%, #111111 100%);
+  /* Trước đây là `linear-gradient(135deg, #111111 0%, #111111 100%)` — hai đầu
+     CÙNG MỘT MÀU, tức một nền đặc được viết dưới dạng gradient. Đợt quét màu
+     trước đã thay giá trị màu nhưng để lại vỏ gradient. Nó vẫn bắt trình duyệt
+     dựng một lớp chuyển sắc để vẽ ra đúng một màu phẳng. */
+  background: var(--ink-strong);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 16px;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(17,17,17,0.2);
+  box-shadow: none;
 }
 .customer-name-meta {
   display: flex;
@@ -1448,7 +1475,7 @@ body { background: var(--canvas); }
 .form-label.required::after { content: ' *'; color: #9F2F2D; }
 .form-row-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .form-textarea { width: 100%; padding: 10px 14px; border: 1px solid #EAEAEA; border-radius: var(--radius-md); font-size: 15px; outline: none; background: #ffffff; color: #111111; transition: border-color 0.2s var(--ease-out); resize: vertical; font-family: inherit; line-height: 1.5; }
-.form-textarea:focus { border-color: #111111; box-shadow: 0 0 0 3px rgba(17,17,17,0.12); }
+.form-textarea:focus { border-color: #111111; box-shadow: var(--shadow-focus); }
 .field-error-text { color: #9F2F2D; font-size: 13.5px; margin: 4px 0 0; font-weight: 500; }
 
 .btn { display: inline-flex; align-items: center; gap: 6px; }
@@ -1497,7 +1524,7 @@ body { background: var(--canvas); }
 .duplicate-candidates-list { display: flex; flex-direction: column; gap: 12px; }
 
 .candidate-card { border: 1px solid #EAEAEA; border-radius: var(--radius-lg); padding: 14px 16px; background: #ffffff; }
-.candidate-card--high { border-color: rgba(159,47,45,.20); background: #F9F9F8; box-shadow: 0 0 0 1px rgba(159,47,45,0.08); }
+.candidate-card--high { border-color: rgba(159,47,45,.20); background: #F9F9F8; box-shadow: 0 0 0 1px var(--pale-red-fg); }
 .candidate-card--medium { border-color: rgba(149,100,0,.22); background: #F9F9F8; }
 .candidate-card__header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
 .candidate-card__identity { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
@@ -1541,13 +1568,13 @@ body { background: var(--canvas); }
 .contact-manager-section { margin-top: 10px; }
 .contact-manager-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 16px; }
 .contact-section-eyebrow { display: inline-flex; align-items: center; gap: 7px; background: #EDF3EC; border: 1px solid rgba(52,101,56,.20); border-radius: 999px; padding: 3px 12px; font-size: 13.5px; font-weight: 700; color: #111111; margin-bottom: 8px; }
-.dot-pulse { width: 7px; height: 7px; border-radius: 50%; background: #111111; box-shadow: 0 0 0 3px rgba(17,17,17,0.2); animation: pulse 2s infinite; }
+.dot-pulse { width: 7px; height: 7px; border-radius: 50%; background: #111111; box-shadow: 0 0 0 3px var(--overlay-muted); animation: pulse 2s infinite; }
 .contact-section-title { font-size: 24px; font-weight: 800; color: #111111; margin: 0 0 6px; letter-spacing: var(--track-2xl); }
 .contact-section-subtitle { color: #787774; font-size: 15px; margin: 0; max-width: 680px; }
 
 .contact-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
 .contact-stat-card { background: #ffffff; border: 1px solid #EAEAEA; border-radius: var(--radius-lg); padding: 16px; display: flex; align-items: center; gap: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out); }
-.contact-stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+.contact-stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
 .contact-stat-icon { width: 42px; height: 42px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
 .contact-stat-icon--total { background: #E1F3FE; color: #1F6C9F; }
 .contact-stat-icon--primary { background: #FBF3DB; color: #956400; }
@@ -1564,16 +1591,21 @@ body { background: var(--canvas); }
 .contact-table-container { background: #ffffff; border: 1px solid #EAEAEA; border-radius: var(--radius-lg); overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
 .contact-data-table th { background: #F9F9F8; padding: 12px 16px; }
 .contact-data-table td { padding: 14px 16px; }
-.contact-table-row--primary { background: linear-gradient(90deg, rgba(251,243,219, 0.42) 0%, rgba(255, 255, 255, 0.95) 100%); }
-.contact-table-row--primary:hover { background: linear-gradient(90deg, rgba(251,243,219, 0.42) 0%, #ffffff 100%) !important; }
+/* Hàng "đầu mối chính" trước đây đổ một vệt vàng chuyển sắc suốt cả hàng. Cùng
+   một lỗi với hàng tài khoản bị khóa đã sửa: mảng màu lớn nhất trong bảng, lại
+   mã hóa trùng với pill "Đang là đầu mối chính" ngay trong hàng đó. Bản `:hover`
+   phải dùng `!important` để giành lại quyền chính là dấu hiệu của xung đột này.
+   Giữ hàng trung tính; chính pill làm nhiệm vụ đánh dấu. */
 
-.primary-star-badge { display: inline-flex; align-items: center; gap: 4px; background: linear-gradient(135deg, #FBF3DB, rgba(149,100,0,.22)); color: #956400; border: 1px solid #956400; padding: 3px 8px; border-radius: 999px; font-size: 13.5px; font-weight: 800; box-shadow: 0 1px 3px rgba(149,100,0,0.2); }
+/* Pill trạng thái chuẩn: cặp pastel PHẲNG, không gradient, không đổ bóng, độ đậm
+   nằm trong thang (600 chứ không phải 800). Bản cũ có cả ba thứ bị cấm cùng lúc. */
+.primary-star-badge { display: inline-flex; align-items: center; gap: 4px; background: var(--pale-yellow-bg); color: var(--pale-yellow-fg); border: 1px solid rgba(149,100,0,.24); padding: 3px 8px; border-radius: 999px; font-size: 12.5px; font-weight: 600; box-shadow: none; }
 .secondary-role-badge { display: inline-flex; align-items: center; gap: 4px; background: #F1F0EE; color: #787774; border: 1px solid #EAEAEA; padding: 3px 8px; border-radius: 999px; font-size: 12.5px; font-weight: 600; }
 .primary-pill-text, .secondary-pill-text { font-size: 12.5px; }
 
 .contact-name-cell { display: flex; align-items: center; gap: 10px; }
 .contact-avatar { width: 34px; height: 34px; border-radius: 50%; background: #EAEAEA; color: #5F5E5B; font-weight: 700; font-size: 13.5px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 2px solid #ffffff; }
-.contact-avatar--primary { background: linear-gradient(135deg, #956400, #956400); color: #ffffff; box-shadow: 0 2px 6px rgba(149,100,0,0.3); }
+.contact-avatar--primary { background: var(--pale-yellow-fg); color: #ffffff; box-shadow: none; }
 .contact-name-meta { display: flex; flex-direction: column; gap: 2px; }
 .contact-fullname-text { font-weight: 700; color: #111111; font-size: 15px; }
 .primary-label-chip { font-size: 12.5px; font-weight: 700; color: #956400; background: #FBF3DB; border-radius: var(--radius-sm); padding: 1px 6px; display: inline-block; width: fit-content; }
@@ -1632,7 +1664,9 @@ body { background: var(--canvas); }
 
 .customer-overview-card { background: #ffffff; border: 1px solid #EAEAEA; border-radius: var(--radius-lg); padding: 22px 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
 .customer-overview-header { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid #F1F0EE; }
-.overview-brand-icon { width: 48px; height: 48px; border-radius: var(--radius-lg); background: linear-gradient(135deg, #111111, #111111); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; box-shadow: 0 4px 12px rgba(17,17,17,0.2); }
+/* Cũng là gradient hai đầu cùng màu. Và bóng đổ `rgba(17,17,17,0.2)` gấp 4 lần
+   trần 0.05 của hệ (DESIGN.md § Elevation) — chiều sâu ở hệ này do đường kẻ tạo ra. */
+.overview-brand-icon { width: 48px; height: 48px; border-radius: var(--radius-lg); background: var(--ink-strong); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; box-shadow: none; }
 .overview-title-meta h3 { font-size: 18px; font-weight: 800; color: #111111; margin: 0 0 4px; }
 .customer-industry-badge { font-size: 13.5px; font-weight: 600; color: #5F5E5B; background: #F1F0EE; padding: 3px 9px; border-radius: var(--radius-md); display: inline-block; }
 
@@ -1683,7 +1717,7 @@ body { background: var(--canvas); }
 .customer-summary-section__title { margin: 0 0 10px; font-size: 15px; font-weight: 700; color: #111111; }
 .customer-summary-section__empty { font-size: 14.5px; margin: 0; padding: 8px 0; }
 .customer-timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.customer-timeline__item { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 10px 12px; background: rgba(17,17,17,.06); box-shadow: inset 0 0 0 1px rgba(17,17,17,.14); border-radius: var(--radius-lg); font-size: 14.5px; }
+.customer-timeline__item { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 10px 12px; background: rgba(17,17,17,.06); box-shadow: inset 0 0 0 1px var(--overlay-subtle); border-radius: var(--radius-lg); font-size: 14.5px; }
 .customer-timeline__date { min-width: 84px; color: #5F5E5B; font-variant-numeric: tabular-nums; }
 .customer-timeline__tag { padding: 2px 8px; border-radius: 999px; background: #F1F0EE; color: #111111; font-weight: 600; font-size: 12.5px; white-space: nowrap; }
 .customer-timeline__tag--opportunities { background: #E1F3FE; color: #1F6C9F; }
@@ -1837,7 +1871,7 @@ body { background: var(--canvas); }
   width: min(100%, 560px); max-height: min(60vh, 460px);
   display: flex; flex-direction: column; overflow: hidden;
   background: #FFFFFF; border: 1px solid #EAEAEA; border-radius: var(--radius-lg);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.05), 0 16px 48px -16px rgba(0,0,0,0.14);
+  box-shadow: var(--shadow-lg);
 }
 /* KHONG co hieu ung mo/dong. Bang lenh mo bang ban phim hang tram lan moi ngay;
    moi mili-giay hoat hinh o day deu bien thao tac tuc thi thanh cam giac cham tre.

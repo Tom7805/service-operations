@@ -451,7 +451,7 @@ export default function CustomerMergePage({
                 tone="target"
               />
               <span className="merge-preview-arrow" aria-hidden="true">
-                ⇐
+                <span className="icon-sm">{ICONS.arrowLeft}</span>
               </span>
               <CustomerSummaryCard
                 title="Hồ sơ bị gộp"
@@ -484,7 +484,7 @@ export default function CustomerMergePage({
                   </>
                 ) : (
                   <>
-                    <span>✓</span>
+                    <span className="icon-sm">{ICONS.check}</span>
                     <span>Xác nhận gộp</span>
                   </>
                 )}

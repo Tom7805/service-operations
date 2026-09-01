@@ -192,7 +192,6 @@ export default function TwoFactorSetupPage({
           <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
-                <span className="modal-eyebrow">Xác nhận</span>
                 <h3 className="modal-title">
                   <span className="modal-title__icon">{confirmTarget.enabled ? ICONS.unlock : ICONS.lock}</span>
                   {confirmTarget.enabled ? 'Tắt xác thực hai bước' : 'Bật xác thực hai bước'}
@@ -228,7 +227,7 @@ export default function TwoFactorSetupPage({
           <span className="toast-banner__icon">{toastMessage.type === 'success' ? ICONS.checkCircle : ICONS.alertTriangle}</span>
           <span>{toastMessage.text}</span>
           <button type="button" className="toast-banner__close" onClick={() => setToastMessage(null)}>
-            ✕
+            <span className="icon-sm">{ICONS.close}</span>
           </button>
         </div>
       )}

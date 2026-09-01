@@ -93,7 +93,7 @@ export const UserTable: React.FC<UserTableProps> = ({
           />
           {search && (
             <button type="button" className="search-box__clear" onClick={() => setSearch('')} aria-label="Xóa tìm kiếm">
-              ✕
+              <span className="icon-sm">{ICONS.close}</span>
             </button>
           )}
         </div>

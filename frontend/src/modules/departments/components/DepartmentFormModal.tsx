@@ -157,9 +157,6 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
       <div className="modal-card modal-card--md" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
-            <span className="modal-eyebrow">
-              {editingDepartment ? 'Chỉnh sửa khai báo' : 'Khai báo mới'}
-            </span>
             <h3 className="modal-title">
               {editingDepartment ? `Cập nhật: ${editingDepartment.name}` : 'Thêm bộ phận / Đơn vị mới'}
             </h3>

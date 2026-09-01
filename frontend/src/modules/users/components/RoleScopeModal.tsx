@@ -112,11 +112,10 @@ export const RoleScopeModal: React.FC<RoleScopeModalProps> = ({
       <div className="modal-card modal-card--md" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
-            <span className="modal-eyebrow">Phân quyền & Phạm vi dữ liệu (QTN-01)</span>
-            <h2 className="modal-title">Cấu hình: {user.fullName} (@{user.username})</h2>
+            <h2 className="modal-title">Phân quyền & phạm vi dữ liệu: {user.fullName}</h2>
           </div>
           <button type="button" className="modal-close" onClick={onClose} title="Đóng modal">
-            ✕
+            <span className="icon-sm">{ICONS.close}</span>
           </button>
         </div>
 
@@ -273,7 +272,7 @@ export const RoleScopeModal: React.FC<RoleScopeModalProps> = ({
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
                             {role.capabilities.map((cap, i) => (
                               <span key={i} className="user-tag badge--gray" style={{ fontSize: '10px', padding: '1px 5px' }}>
-                                ✓ {cap}
+                                <span className="icon-xs">{ICONS.check}</span> {cap}
                               </span>
                             ))}
                           </div>

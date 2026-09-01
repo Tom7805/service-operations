@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { ICONS } from '../../../components/common/icons';
 import { AuthApiError, forgotPassword } from '../api/authApi';
 import { validateForgotPasswordForm, type ForgotPasswordFormErrors } from '../validators/authValidators';
 
@@ -91,7 +92,7 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
             </>
           ) : (
             <>
-              Gửi liên kết khôi phục <span>→</span>
+              Gửi liên kết khôi phục <span className="icon-sm">{ICONS.arrowRight}</span>
             </>
           )}
         </button>
@@ -104,7 +105,7 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
             onBackToLogin();
           }}
         >
-          ← Quay lại đăng nhập
+          <span className="icon-sm">{ICONS.arrowLeft}</span> Quay lại đăng nhập
         </a>
       </div>
     </div>

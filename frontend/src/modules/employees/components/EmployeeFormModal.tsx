@@ -125,13 +125,12 @@ export default function EmployeeFormModal({
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
-            <span className="modal-eyebrow">{isEdit ? 'Cập nhật hồ sơ' : 'Khởi tạo hồ sơ'}</span>
             <h2 id="employee-modal-title" className="modal-title">
               {isEdit ? `Chỉnh sửa: ${editingEmployee?.fullName}` : 'Thêm hồ sơ nhân sự mới'}
             </h2>
           </div>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Đóng dialog">
-            ✕
+            <span className="icon-sm">{ICONS.close}</span>
           </button>
         </div>
 
@@ -272,7 +271,7 @@ export default function EmployeeFormModal({
                     setStandardHoursPerWeek(e.target.value);
                     if (errors.standardHoursPerWeek) setErrors({ ...errors, standardHoursPerWeek: undefined });
                   }}
-                  placeholder={`Để trống → mặc định ${DEFAULT_STANDARD_HOURS_PER_WEEK}`}
+                  placeholder={`Để trống thì lấy mặc định ${DEFAULT_STANDARD_HOURS_PER_WEEK}`}
                   disabled={submitting}
                 />
                 {errors.standardHoursPerWeek && <span className="field-error">{errors.standardHoursPerWeek}</span>}

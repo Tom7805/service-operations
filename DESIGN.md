@@ -337,6 +337,15 @@ Bóng đổ gần như không tồn tại — độ mờ luôn **< 0.05**. Chi�
 | `--shadow-lg` | `0 4px 16px rgba(0,0,0,0.05)` | Popover, modal |
 | `--shadow-focus` | `0 0 0 3px rgba(17,17,17,0.10)` | Vòng focus |
 
+**Phân biệt ĐỘ CAO với VÒNG VIỀN.** Trần độ mờ `0.05` chỉ áp cho **bóng đổ** (có độ mờ và độ lệch).
+Dạng `box-shadow: 0 0 0 Npx …` và `inset 0 0 0 1px …` **không phải bóng đổ** — đó là *viền* viết
+bằng `box-shadow`, và chúng lấy giá trị từ **thang phủ đen** (`--overlay-*`) hoặc `--shadow-focus`,
+không phải từ trần 0.05. Nhập nhèm hai loại này dẫn tới hai lỗi ngược nhau: viền thì quá nhạt để
+thấy, còn bóng thì quá đậm so với hệ.
+
+Cấm **bóng nhuộm màu**. Từng có `rgba(159,47,45,.08)` (đỏ) và `rgba(31,108,159,.08)` (xanh) — trong
+một hệ đơn sắc ấm, bóng màu tạo ra một nguồn sáng thứ hai mâu thuẫn với phần còn lại của giao diện.
+
 ## Shapes
 
 Bán kính **dứt khoát, tối đa 12px**. Viên nang (`999px`) chỉ dành cho **nhãn/pill trạng thái**.

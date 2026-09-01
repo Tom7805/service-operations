@@ -155,11 +155,17 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
             {hasChildren ? (
               <button
                 type="button"
-                className="tree-toggle-btn"
+                className={`tree-toggle-btn ${collapsed ? 'tree-toggle-btn--collapsed' : ''}`}
                 onClick={() => toggleNode(node.id)}
                 title={collapsed ? 'Mở rộng nhánh con' : 'Thu gọn nhánh con'}
+                aria-expanded={!collapsed}
               >
-                {collapsed ? '▶' : '▼'}
+                {/* MỘT icon xoay đi, không phải hai ký tự khác nhau (`▶` / `▼`).
+                    Hai lý do: ký tự hình học lấy nét từ font hệ thống nên không
+                    khớp độ dày với bộ icon Phosphor còn lại; và việc xoay cho
+                    thấy hai trạng thái là MỘT vật ở hai tư thế, đúng nguyên tắc
+                    "vào và ra theo cùng một đường" (apple-design §7). */}
+                <span className="icon-xs tree-toggle-btn__caret">{ICONS.chevronDown}</span>
               </button>
             ) : (
               <span className="tree-node-dot" />

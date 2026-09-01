@@ -276,7 +276,7 @@ export default function CustomerListPage({
             onClick={() => setToastMessage(null)}
             aria-label="Đóng thông báo"
           >
-            ✕
+            <span className="icon-sm">{ICONS.close}</span>
           </button>
         </div>
       )}
@@ -452,7 +452,7 @@ export default function CustomerListPage({
         {/* NCL-02-CN-005 (TC-02): không có khách hàng nào thuộc nhóm được lọc */}
         {!loadError && !isLoading && customers.length > 0 && filteredCustomers.length === 0 && (
           <div className="table-empty-state" data-testid="segment-filter-empty-state">
-            <div className="table-empty-state__icon">🔎</div>
+            <div className="table-empty-state__icon">{ICONS.search}</div>
             <h3>Không có kết quả phù hợp</h3>
             <p>
               Không tìm thấy khách hàng nào khớp với từ khóa hoặc nhóm đã chọn

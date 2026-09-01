@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { ICONS } from '../../../components/common/icons';
 import QRCode from 'qrcode';
 import { AuthApiError, verifyTwoFactor } from '../api/authApi';
 import type { AuthSession } from '../types/authTypes';
@@ -126,7 +127,7 @@ export default function TwoFactorVerifyForm({
             <li>
               <span className="totp-setup-steps__num">1</span>
               <div>
-                <strong>Mở app Authenticator</strong> trên điện thoại, chọn "Thêm tài khoản" → "Quét mã QR".
+                <strong>Mở app Authenticator</strong> trên điện thoại, chọn "Thêm tài khoản" rồi "Quét mã QR".
               </div>
             </li>
             <li>
@@ -156,7 +157,7 @@ export default function TwoFactorVerifyForm({
                         aria-label="Sao chép khóa bí mật"
                         data-testid="totp-copy-btn"
                       >
-                        {secretCopied ? '✓ Đã sao chép' : 'Sao chép'}
+                        {secretCopied ? <><span className="icon-sm">{ICONS.check}</span> Đã sao chép</> : 'Sao chép'}
                       </button>
                     </div>
                   </details>
@@ -222,13 +223,13 @@ export default function TwoFactorVerifyForm({
             </>
           ) : (
             <>
-              {totpEnrollment ? 'Xác nhận thiết lập' : 'Xác nhận'} <span>→</span>
+              {totpEnrollment ? 'Xác nhận thiết lập' : 'Xác nhận'} <span className="icon-sm">{ICONS.arrowRight}</span>
             </>
           )}
         </button>
       </form>
       <div className="secure-note">
-        <span>✓</span>
+        <span className="icon-sm">{ICONS.check}</span>
         <p>Nhập sai mã quá 3 lần liên tiếp, tài khoản sẽ tạm khóa để bảo vệ dữ liệu.</p>
       </div>
       <div className="form-options" style={{ marginTop: 16 }}>
@@ -239,7 +240,7 @@ export default function TwoFactorVerifyForm({
             onBackToLogin();
           }}
         >
-          ← Quay lại đăng nhập
+          <span className="icon-sm">{ICONS.arrowLeft}</span> Quay lại đăng nhập
         </a>
       </div>
     </div>

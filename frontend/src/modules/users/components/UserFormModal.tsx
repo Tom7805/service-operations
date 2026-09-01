@@ -125,13 +125,12 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
-            <span className="modal-eyebrow">{isEdit ? 'Cập nhật tài khoản' : 'Khởi tạo tài khoản'}</span>
             <h2 id="modal-title" className="modal-title">
               {isEdit ? `Chỉnh sửa: @${editingUser?.username}` : 'Thêm tài khoản người dùng mới'}
             </h2>
           </div>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Đóng dialog">
-            ✕
+            <span className="icon-sm">{ICONS.close}</span>
           </button>
         </div>
 

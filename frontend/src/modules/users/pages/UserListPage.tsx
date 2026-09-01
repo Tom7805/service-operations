@@ -255,7 +255,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
             <strong>Xem nhật ký thao tác đầy đủ</strong>
             <span>Toàn bộ lịch sử tạo/sửa/khóa tài khoản, phân quyền — lưu trên máy chủ</span>
           </span>
-          <span className="audit-log-link__arrow">→</span>
+          <span className="audit-log-link__arrow icon-sm">{ICONS.arrowRight}</span>
         </button>
       )}
 

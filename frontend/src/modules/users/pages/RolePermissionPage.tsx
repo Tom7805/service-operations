@@ -425,7 +425,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
             <strong>Xem nhật ký phân quyền đầy đủ</strong>
             <span>Toàn bộ lịch sử gán vai trò và phạm vi dữ liệu — lưu trên máy chủ</span>
           </span>
-          <span className="audit-log-link__arrow">→</span>
+          <span className="audit-log-link__arrow icon-sm">{ICONS.arrowRight}</span>
         </button>
       )}
 

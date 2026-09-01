@@ -224,7 +224,7 @@ export default function ContactList({
             onClick={() => setToastMessage(null)}
             aria-label="Đóng thông báo"
           >
-            ✕
+            <span className="icon-sm">{ICONS.close}</span>
           </button>
         </div>
       )}
@@ -454,7 +454,7 @@ export default function ContactList({
                             onClick={() => handleCopy(contact.email!, 'Email')}
                             aria-label={`Sao chép email ${contact.email}`}
                           >
-                            {copiedText === contact.email ? '✓' : <span className="icon-sm">{ICONS.copy}</span>}
+                            {copiedText === contact.email ? <span className="icon-sm">{ICONS.check}</span> : <span className="icon-sm">{ICONS.copy}</span>}
                           </button>
                         </div>
                       ) : (
@@ -481,7 +481,7 @@ export default function ContactList({
                             onClick={() => handleCopy(contact.phone!, 'Số điện thoại')}
                             aria-label={`Sao chép số điện thoại ${contact.phone}`}
                           >
-                            {copiedText === contact.phone ? '✓' : <span className="icon-sm">{ICONS.copy}</span>}
+                            {copiedText === contact.phone ? <span className="icon-sm">{ICONS.check}</span> : <span className="icon-sm">{ICONS.copy}</span>}
                           </button>
                         </div>
                       ) : (
@@ -493,7 +493,7 @@ export default function ContactList({
                     <td style={{ textAlign: 'center' }}>
                       {isPrimary ? (
                         <span className="is-primary-indicator" data-testid={`current-primary-tag-${contact.id}`}>
-                          <span>✓</span> Đang là đầu mối chính
+                          <span className="icon-sm">{ICONS.check}</span> Đang là đầu mối chính
                         </span>
                       ) : (
                         <button

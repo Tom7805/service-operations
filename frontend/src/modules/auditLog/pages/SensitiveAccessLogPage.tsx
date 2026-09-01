@@ -311,7 +311,7 @@ export default function SensitiveAccessLogPage({
               disabled={page <= 0 || loading}
               onClick={() => fetchLogs(page - 1)}
             >
-              ← Trang trước
+              <span className="icon-sm">{ICONS.arrowLeft}</span> Trang trước
             </button>
             <button
               type="button"
@@ -319,7 +319,7 @@ export default function SensitiveAccessLogPage({
               disabled={page + 1 >= totalPages || loading}
               onClick={() => fetchLogs(page + 1)}
             >
-              Trang sau →
+              Trang sau <span className="icon-sm">{ICONS.arrowRight}</span>
             </button>
           </div>
         </div>

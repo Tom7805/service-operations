@@ -92,7 +92,6 @@ export default function ContactFormModal({
       >
         <div className="modal-header">
           <div>
-            <span className="modal-eyebrow">NCL-02-CN-003 · Danh bạ khách hàng</span>
             <h2 id="contact-modal-title" className="modal-title">
               Thêm người liên hệ mới
             </h2>
@@ -256,7 +255,7 @@ export default function ContactFormModal({
                 </>
               ) : (
                 <>
-                  <span>✓</span>
+                  <span className="icon-sm">{ICONS.check}</span>
                   <span>Lưu người liên hệ</span>
                 </>
               )}

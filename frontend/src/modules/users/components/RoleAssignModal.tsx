@@ -67,11 +67,10 @@ export const RoleAssignModal: React.FC<RoleAssignModalProps> = ({
       <div className="modal-card modal-card--md" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
-            <span className="modal-eyebrow">Phân quyền & Vai trò</span>
-            <h2 className="modal-title">Cấu hình tài khoản: {user.fullName}</h2>
+            <h2 className="modal-title">Phân quyền cho {user.fullName}</h2>
           </div>
           <button type="button" className="modal-close" onClick={onClose}>
-            ✕
+            <span className="icon-sm">{ICONS.close}</span>
           </button>
         </div>
 

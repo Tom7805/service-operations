@@ -11,6 +11,7 @@ import {
   Receipt, LinkSimple, Key, Star, Wrench,
   MapPin, Sparkle, FileText, Question, SignOut,
   SidebarSimple, CaretDown, Hash, Copy, GitMerge,
+  Check, ArrowLeft, ArrowRight,
 } from '@phosphor-icons/react';
 
 /**
@@ -48,6 +49,17 @@ export const ICONS = {
   clock: <Clock weight={W} />,
   history: <ClockCounterClockwise weight={W} />,
   close: <X weight={W} />,
+  /* Ba icon dưới đây thay cho các KÝ TỰ đang được dùng như icon trong mã nguồn:
+     `✕` (9 chỗ), `←` (12 chỗ), `→` (10 chỗ), `✓` (13 chỗ), `⇐`, `✦`, `🔎`.
+     Ký tự chữ và icon vector không bao giờ khớp nhau: chúng lấy nét từ font hệ
+     thống chứ không từ `weight="bold"` của Phosphor, nằm trên đường cơ sở chữ
+     chứ không căn giữa theo ô, và đổi hình dạng theo từng hệ điều hành. Đặt một
+     dấu `✕` cạnh một icon Phosphor là thấy ngay hai độ dày nét khác nhau —
+     đúng thứ minimalist-skill §6 gọi là "standardize stroke width across all
+     icons", và taste-skill 9.E xếp vào nhóm dấu hiệu giao diện do AI sinh. */
+  check: <Check weight={W} />,
+  arrowLeft: <ArrowLeft weight={W} />,
+  arrowRight: <ArrowRight weight={W} />,
   globe: <Globe weight={W} />,
   tree: <TreeStructure weight={W} />,
   building: <Buildings weight={W} />,

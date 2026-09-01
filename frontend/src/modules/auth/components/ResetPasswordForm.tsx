@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { ICONS } from '../../../components/common/icons';
 import { AuthApiError, resetPassword, validateResetToken } from '../api/authApi';
 import { validateResetPasswordForm, type ResetPasswordFormErrors } from '../validators/authValidators';
 
@@ -157,7 +158,7 @@ export default function ResetPasswordForm({ token, onDone }: ResetPasswordFormPr
             </>
           ) : (
             <>
-              Đặt lại mật khẩu <span>→</span>
+              Đặt lại mật khẩu <span className="icon-sm">{ICONS.arrowRight}</span>
             </>
           )}
         </button>

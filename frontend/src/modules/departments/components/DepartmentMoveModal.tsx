@@ -96,11 +96,10 @@ export const DepartmentMoveModal: React.FC<DepartmentMoveModalProps> = ({
       <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
-            <span className="modal-eyebrow text-warning">Di chuyển vị trí</span>
             <h3 className="modal-title">Thay đổi vị trí bộ phận</h3>
           </div>
           <button type="button" className="modal-close" onClick={onClose}>
-            ✕
+            <span className="icon-sm">{ICONS.close}</span>
           </button>
         </div>
 

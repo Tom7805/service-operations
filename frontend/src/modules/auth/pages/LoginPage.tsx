@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ICONS } from '../../../components/common/icons';
 import type { AuthSession, TwoFactorChallenge } from '../types/authTypes';
 import LoginForm from '../components/LoginForm';
 import ForgotPasswordForm from '../components/ForgotPasswordForm';
@@ -36,7 +37,7 @@ function Highlights() {
         </button>)}
       </div>
       <div className="highlight-detail" role="tabpanel" aria-live="polite">
-        <div key={active.number} className="highlight-detail__content"><span>✦</span><p>{active.detail}</p></div>
+        <div key={active.number} className="highlight-detail__content"><span className="icon-sm">{ICONS.spark}</span><p>{active.detail}</p></div>
       </div>
     </div>
   );
