@@ -3,12 +3,17 @@ package com.serviceops.modules.identity.auth;
 import com.serviceops.config.PasswordResetMailRequiredConfig;
 import com.serviceops.modules.identity.auth.service.impl.LoggingPasswordResetNotifier;
 import com.serviceops.modules.identity.auth.service.impl.MailPasswordResetNotifier;
+import com.serviceops.modules.identity.user.entity.User;
 import org.junit.jupiter.api.Test;
+import org.springframework.mail.MailSendException;
+import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -91,6 +96,37 @@ class PasswordResetNotifierGuardTest {
         assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(notifier, "validateConfig"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("app.frontend.base-url");
+    }
+
+    /**
+     * Gui thu that bai KHONG duoc nem loi ra ngoai.
+     *
+     * <p>Day tung la mot loi that trong ban dau: cho do co {@code throw ex;}, va
+     * no pha co che chong do tai khoan ma tang tren da co cong xay. Tang tren co
+     * y tra 200 du email co ton tai hay khong; nhung neu loi gui thu thoat ra thi
+     * "email khong ton tai" tra 200 con "email co that nhung gui hong" tra 500 —
+     * ke tan cong chi can nhin ma trang thai la do ra duoc tai khoan nao co that.</p>
+     */
+    @Test
+    void guiThuThatBai_khongNemLoiRaNgoai() {
+        JavaMailSender sender = mock(JavaMailSender.class);
+        doThrow(new MailSendException("may chu thu tu choi"))
+                .when(sender).send(any(SimpleMailMessage.class));
+
+        MailPasswordResetNotifier notifier = new MailPasswordResetNotifier(sender);
+        ReflectionTestUtils.setField(notifier, "fromAddress", "no-reply@congty.vn");
+        ReflectionTestUtils.setField(notifier, "frontendBaseUrl", "https://vanhanh.congty.vn");
+        ReflectionTestUtils.setField(notifier, "fallbackToLog", false);
+
+        User user = new User();
+        user.setId(1L);
+        user.setEmail("nguoidung@congty.vn");
+        user.setUsername("nguoidung");
+        user.setFullName("Nguoi Dung");
+
+        assertThatCode(() -> notifier.sendResetLink(user, "token-tho", 30L))
+                .as("loi gui thu phai bi nuot lai, neu khong se lo ra tai khoan nao co that")
+                .doesNotThrowAnyException();
     }
 
     @Test

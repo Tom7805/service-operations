@@ -94,7 +94,30 @@ public class PasswordServiceImpl implements PasswordService {
             // TUYET DOI KHONG ghi token vao log o day. Truoc day dong nay la
             //   log.info("[MOCK EMAIL] ... token={}", ..., rawToken, ...)
             // va no dong nghia voi: ai doc duoc log la doi duoc mat khau bat ky ai.
-            passwordResetNotifier.sendResetLink(user, rawToken, resetTokenTtlMinutes);
+            //
+            // Bat MOI ngoai le tu kenh gui. Day la rao chan cuoi cho tinh chat
+            // chong do email, va no phai nam O DAY chu khong chi trong ban gui thu:
+            // tinh chat "khong lo ra tai khoan nao co that" la loi hua cua TANG NAY,
+            // nen no phai dung du ai cam ban cai dat nao vao.
+            //
+            // Neu de ngoai le thoat ra thi:
+            //     email khong ton tai   -> khong gui gi -> 200
+            //     email co that, gui hong -> nem loi    -> 500
+            // Ke tan cong chi can nhin ma trang thai la do ra duoc tai khoan nao
+            // co that, du khong doc duoc noi dung phan hoi.
+            //
+            // Ban dau toi chi bat MailException ben trong MailPasswordResetNotifier
+            // va tuong the la du. Khong du: timeout, loi phan giai ten mien, hay
+            // mot NullPointerException trong chinh kenh gui deu khong phai
+            // MailException va van thoat ra. Mot test cho dung tinh huong do da
+            // phat hien ra cho nay.
+            try {
+                passwordResetNotifier.sendResetLink(user, rawToken, resetTokenTtlMinutes);
+            } catch (RuntimeException ex) {
+                // Khong kem token vao thong bao loi — log loi cung la log.
+                log.error("FORGOT_PASSWORD_NOTIFY_FAILED userId={} nguyenNhan={}",
+                        user.getId(), ex.getMessage());
+            }
 
             log.info("FORGOT_PASSWORD_REQUESTED userId={} username={}", user.getId(), user.getUsername());
         }, () -> log.info("FORGOT_PASSWORD_REQUESTED email khong ton tai - bo qua de tranh lo thong tin tai khoan"));

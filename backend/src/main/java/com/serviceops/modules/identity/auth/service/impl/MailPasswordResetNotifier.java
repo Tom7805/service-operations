@@ -38,6 +38,10 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class MailPasswordResetNotifier implements PasswordResetNotifier {
 
+    /** Cung logger voi ban gia lap, de van hanh chan/tat rieng mot kenh. */
+    private static final org.slf4j.Logger MOCK_MAIL_LOG =
+            org.slf4j.LoggerFactory.getLogger("AUDIT_MOCK_EMAIL");
+
     private final JavaMailSender mailSender;
 
     @Value("${app.mail.from:}")
@@ -45,6 +49,20 @@ public class MailPasswordResetNotifier implements PasswordResetNotifier {
 
     @Value("${app.frontend.base-url:}")
     private String frontendBaseUrl;
+
+    /**
+     * Khi gui thu that bai, co ghi lien ket ra log khong?
+     *
+     * <p>{@code true} o moi truong phat trien: cac tai khoan mau dung ten mien
+     * {@code .local} nen thu chac chan khong toi, va neu khong co duong nay thi
+     * nguoi lam bi ket hoan toan.</p>
+     *
+     * <p>O {@code prod} gia tri nay bi GHIM CUNG {@code false} trong
+     * {@code application-prod.yml} — khong doc tu bien moi truong — nen khong ai
+     * co the vo tinh (hay co tinh) bat lai bang cach dat bien khi trien khai.</p>
+     */
+    @Value("${app.mail.fallback-to-log:true}")
+    private boolean fallbackToLog;
 
     /**
      * {@code spring.mail.host} da duoc dieu kien tren lop bao dam, nen o day chi
@@ -79,9 +97,34 @@ public class MailPasswordResetNotifier implements PasswordResetNotifier {
             // Ghi nhan de kiem toan — co userId, KHONG co token.
             log.info("PASSWORD_RESET_MAIL_SENT userId={}", user.getId());
         } catch (MailException ex) {
-            // Khong kem token vao thong bao loi: log loi cung la log.
+            // KHONG nem loi ra ngoai. Ban dau cho nay co `throw ex;` va do la mot
+            // LOI THAT, voi hai hau qua:
+            //
+            // 1. Pha co che chong do tai khoan — hau qua nang hon. Ca tang tren co
+            //    y tra 200 du email co ton tai hay khong. Nhung neu loi gui thu
+            //    thoat ra ngoai thi:
+            //        email khong ton tai  -> khong gui gi   -> 200
+            //        email co that, gui hong -> nem loi     -> 500
+            //    Ke tan cong chi can nhin ma trang thai la biet tai khoan nao co
+            //    that. Dung cai ma tac gia ban dau da co cong tranh.
+            //
+            // 2. Voi tai khoan mau dung ten mien `.local` (khong dinh tuyen ra
+            //    Internet), moi lan bam "Quen mat khau" deu ra loi 500.
+            //
+            // He thong that cung hanh xu the nay: chung cu gui, thu khong toi thi
+            // bounce bat dong bo, con API van tra ve binh thuong.
             log.error("PASSWORD_RESET_MAIL_FAILED userId={} nguyenNhan={}", user.getId(), ex.getMessage());
-            throw ex;
+
+            // O moi truong phat trien, ghi lien ket ra log de nguoi lam khong bi
+            // ket khi tai khoan mau co dia chi khong gui toi duoc. O prod gia tri
+            // nay bi ghim cung `false` trong application-prod.yml (khong qua bien
+            // moi truong), nen token khong bao gio lot vao log that.
+            if (fallbackToLog) {
+                MOCK_MAIL_LOG.info(
+                        "[GUI THU THAT BAI - GHI RA LOG VI DANG O MOI TRUONG PHAT TRIEN] "
+                                + "Lien ket khoi phuc cho {} (het han sau {} phut): {}",
+                        user.getEmail(), ttlMinutes, buildResetLink(rawToken));
+            }
         }
     }
 
