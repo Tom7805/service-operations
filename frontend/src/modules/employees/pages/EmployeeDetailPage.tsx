@@ -3,6 +3,7 @@ import { addEmploymentContract, EmployeeApiError, getEmployeeById } from '../api
 import type { EmployeeDetail, EmploymentContractCreatePayload, EmploymentTypeCode } from '../types/employeeTypes';
 import { EMPLOYMENT_TYPE_LABELS } from '../types/employeeTypes';
 import { validateContractForm, type ContractFormErrors } from '../validators/employeeValidators';
+import { ICONS } from '../../../components/common/icons';
 
 interface EmployeeDetailPageProps {
   employeeId: number;
@@ -88,7 +89,8 @@ export default function EmployeeDetailPage({ employeeId, onBack }: EmployeeDetai
           ← Quay lại danh sách
         </button>
         <div className="alert alert--error">
-          <span>⚠️ {error || 'Không tìm thấy hồ sơ nhân sự'}</span>
+          <span className="alert__icon">{ICONS.alertTriangle}</span>
+          <span>{error || 'Không tìm thấy hồ sơ nhân sự'}</span>
         </div>
       </div>
     );
@@ -151,7 +153,7 @@ export default function EmployeeDetailPage({ employeeId, onBack }: EmployeeDetai
           <h3 className="section-title">Hợp đồng lao động</h3>
 
           {employee.contracts.length === 0 ? (
-            <p style={{ color: '#64748b', fontSize: 13.5 }}>Chưa có hợp đồng lao động nào được ghi nhận.</p>
+            <p style={{ color: '#787774', fontSize: 13.5 }}>Chưa có hợp đồng lao động nào được ghi nhận.</p>
           ) : (
             <div className="table-responsive">
               <table className="user-data-table">
@@ -182,7 +184,8 @@ export default function EmployeeDetailPage({ employeeId, onBack }: EmployeeDetai
           <form onSubmit={handleAddContract} className="form-grid mt-4">
             {contractServerError && (
               <div className="alert alert--error form-field--full" role="alert">
-                <span>⚠️ {contractServerError}</span>
+                <span className="alert__icon">{ICONS.alertTriangle}</span>
+                <span>{contractServerError}</span>
               </div>
             )}
 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Customer } from '../types/customerTypes';
+import { ICONS } from '../../../components/common/icons';
 
 interface CustomerTableProps {
   customers: Customer[];
@@ -66,7 +67,7 @@ export default function CustomerTable({
   if (customers.length === 0) {
     return (
       <div className="table-empty-state">
-        <div className="table-empty-state__icon">🏢</div>
+        <div className="table-empty-state__icon"><span className="icon-lg">{ICONS.building}</span></div>
         <h3>Chưa có hồ sơ khách hàng nào</h3>
         <p>
           Hệ thống hiện tại chưa có hồ sơ khách hàng được ghi nhận. Bắt đầu tạo mới hồ sơ để quản lý thông tin khách hàng và dự án.
@@ -117,7 +118,7 @@ export default function CustomerTable({
                     onClick={() => handleCopyCode(cust.code)}
                     aria-label={`Sao chép mã ${cust.code}`}
                   >
-                    {copiedCode === cust.code ? '✓' : '📋'}
+                    {copiedCode === cust.code ? '✓' : <span className="icon-sm">{ICONS.copy}</span>}
                   </button>
                 </div>
               </td>
@@ -127,7 +128,7 @@ export default function CustomerTable({
                   onClick={() => onNavigateDetail?.(cust)}
                   title={onNavigateDetail ? 'Nhấp để xem chi tiết & người liên hệ' : undefined}
                 >
-                  <div className="customer-avatar-icon">🏢</div>
+                  <div className="customer-avatar-icon">{ICONS.building}</div>
                   <div className="customer-name-meta">
                     <span className="customer-company-name">
                       {cust.name}
@@ -211,7 +212,7 @@ export default function CustomerTable({
                       disabled={isMerged}
                       data-testid={`btn-manage-contacts-${cust.id}`}
                     >
-                      <span>👥</span>
+                      <span className="icon-sm">{ICONS.users}</span>
                       <span>Người liên hệ</span>
                     </button>
                   )}
@@ -228,7 +229,7 @@ export default function CustomerTable({
                       disabled={isMerged}
                       data-testid={`btn-open-segment-${cust.id}`}
                     >
-                      <span>🏷️</span>
+                      <span className="icon-sm">{ICONS.tag}</span>
                       <span>Phân nhóm</span>
                     </button>
                   )}
@@ -238,7 +239,7 @@ export default function CustomerTable({
                     title="Sao chép mã khách hàng"
                     onClick={() => handleCopyCode(cust.code)}
                   >
-                    {copiedCode === cust.code ? '✓' : '📋'}
+                    {copiedCode === cust.code ? '✓' : <span className="icon-sm">{ICONS.copy}</span>}
                   </button>
                 </div>
               </td>

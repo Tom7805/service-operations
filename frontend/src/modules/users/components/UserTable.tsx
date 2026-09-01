@@ -1,52 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { User, UserStatus } from '../types/userTypes';
 import { SYSTEM_DEPARTMENTS, SYSTEM_ROLES } from '../types/userTypes';
-
-/** Bộ icon nét mảnh dùng chung cho menu thao tác — cùng kích thước/độ dày, tránh trộn lẫn emoji. */
-const ICONS = {
-  edit: (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M13.5 3.5 16.5 6.5 7 16H4v-3L13.5 3.5Z" />
-    </svg>
-  ),
-  role: (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="7.5" cy="7.5" r="3.5" />
-      <path d="M10.6 10.6 16.5 16.5M13.5 13.5l2-2" />
-    </svg>
-  ),
-  lock: (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="4.5" y="9" width="11" height="7.5" rx="1.5" />
-      <path d="M6.5 9V6.5a3.5 3.5 0 0 1 7 0V9" />
-    </svg>
-  ),
-  unlock: (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="4.5" y="9" width="11" height="7.5" rx="1.5" />
-      <path d="M6.5 9V6.5a3.5 3.5 0 0 1 6.7-1.4" />
-    </svg>
-  ),
-  eye: (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 10s2.7-5 8-5 8 5 8 5-2.7 5-8 5-8-5-8-5Z" />
-      <circle cx="10" cy="10" r="2.2" />
-    </svg>
-  ),
-  resetTwoFactor: (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M16 10a6 6 0 1 1-1.9-4.4" />
-      <path d="M16 3v3.5h-3.5" />
-    </svg>
-  ),
-  more: (
-    <svg viewBox="0 0 20 20" fill="currentColor">
-      <circle cx="10" cy="4.5" r="1.4" />
-      <circle cx="10" cy="10" r="1.4" />
-      <circle cx="10" cy="15.5" r="1.4" />
-    </svg>
-  ),
-};
+import { ICONS } from './icons';
 
 interface RowAction {
   key: string;
@@ -164,7 +119,7 @@ export const UserTable: React.FC<UserTableProps> = ({
     const role = SYSTEM_ROLES.find((r) => r.code === code);
     const name = role ? role.name : code;
     return (
-      <span key={code} className={`user-tag ${role?.badgeClass || 'badge--gray'}`} title={role?.description || name}>
+      <span key={code} className="role-chip" title={role?.description || name}>
         {name}
       </span>
     );
@@ -268,13 +223,13 @@ export const UserTable: React.FC<UserTableProps> = ({
         <table className="user-data-table">
           <thead>
             <tr>
-              <th scope="col" style={{ width: '60px' }}>STT</th>
+              <th scope="col" style={{ width: '46px' }}>STT</th>
               <th scope="col">Tài khoản & Họ tên</th>
               <th scope="col">Email</th>
               <th scope="col">Bộ phận</th>
               <th scope="col">Vai trò hệ thống</th>
-              <th scope="col">Trạng thái</th>
-              <th scope="col" style={{ width: '150px', textAlign: 'right' }}>Thao tác</th>
+              <th scope="col" style={{ width: '132px' }}>Trạng thái</th>
+              <th scope="col" style={{ width: '84px', textAlign: 'right' }}>Thao tác</th>
             </tr>
           </thead>
           <tbody>
@@ -294,7 +249,7 @@ export const UserTable: React.FC<UserTableProps> = ({
               <tr>
                 <td colSpan={7}>
                   <div className="table-empty-state">
-                    <div className="empty-icon">👤</div>
+                    <div className="empty-icon">{ICONS.user}</div>
                     <h3>Không tìm thấy tài khoản người dùng nào</h3>
                     <p>Thử điều chỉnh từ khóa tìm kiếm hoặc bộ lọc vai trò, trạng thái.</p>
                     {(search || roleFilter !== 'ALL' || statusFilter !== 'ALL') && (
@@ -323,16 +278,16 @@ export const UserTable: React.FC<UserTableProps> = ({
                         {user.fullName.charAt(0).toUpperCase()}
                       </div>
                       <div className="user-profile-meta">
-                        <span className="user-profile-fullname">{user.fullName}</span>
-                        <span className="user-profile-username">@{user.username}</span>
+                        <span className="user-profile-fullname" title={user.fullName}>{user.fullName}</span>
+                        <span className="user-profile-username" title={`@${user.username}`}>@{user.username}</span>
                       </div>
                     </div>
                   </td>
                   <td>
-                    <span className="cell-email">{user.email || '—'}</span>
+                    <span className="cell-email" title={user.email || undefined}>{user.email || '—'}</span>
                   </td>
                   <td>
-                    <span className="cell-dept">{getDepartmentName(user.departmentId)}</span>
+                    <span className="cell-dept" title={getDepartmentName(user.departmentId)}>{getDepartmentName(user.departmentId)}</span>
                   </td>
                   <td>
                     <div className="user-tags-wrap">

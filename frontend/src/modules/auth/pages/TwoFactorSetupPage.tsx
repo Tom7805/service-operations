@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AuthApiError, getTwoFactorConfigs, updateTwoFactorConfig } from '../api/authApi';
 import type { TwoFactorRoleConfig } from '../types/authTypes';
+import { ICONS } from '../../../components/common/icons';
 
 interface TwoFactorSetupPageProps {
   currentUserRoles?: string[];
@@ -85,7 +86,7 @@ export default function TwoFactorSetupPage({
     return (
       <div className="access-denied-container">
         <div className="access-denied-card">
-          <div className="access-denied-icon">🚫</div>
+          <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <span className="eyebrow text-danger">Từ chối truy cập (Access Denied)</span>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
@@ -93,8 +94,8 @@ export default function TwoFactorSetupPage({
             Hệ thống đã lưu lại lần truy cập trái phép này vào nhật ký an ninh.
           </p>
           <div className="security-log-badge">
-            <span>🛡️ Lần thử truy cập: {new Date().toLocaleString('vi-VN')}</span>
-            <span>👤 Người dùng: {currentUserName}</span>
+            <span className="security-log-badge__item">{ICONS.shield} Lần thử truy cập: {new Date().toLocaleString('vi-VN')}</span>
+            <span className="security-log-badge__item">{ICONS.user} Người dùng: {currentUserName}</span>
           </div>
         </div>
       </div>
@@ -105,20 +106,17 @@ export default function TwoFactorSetupPage({
     <div className="user-management-page">
       <div className="page-header">
         <div>
-          <div className="breadcrumb">
-            <span>Bảo mật</span> / <span className="active">Xác thực hai bước</span>
-          </div>
           <h1 className="page-title">Xác thực hai bước theo vai trò</h1>
           <p className="page-subtitle">
-            Bật xác thực hai bước cho các vai trò xem dữ liệu tài chính — người dùng thuộc vai trò đang bật
-            phải nhập mã một lần (OTP) mỗi lần đăng nhập, sau mật khẩu.
+            Vai trò được bật sẽ phải nhập mã OTP mỗi lần đăng nhập, sau mật khẩu.
           </p>
         </div>
       </div>
 
       {error && (
         <div className="alert alert--error" role="alert">
-          <span>⚠️ {error}</span>
+          <span className="alert__icon">{ICONS.alertTriangle}</span>
+          <span>{error}</span>
         </div>
       )}
 
@@ -136,13 +134,13 @@ export default function TwoFactorSetupPage({
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', padding: 32, color: '#64748b' }}>
+                  <td colSpan={4} style={{ textAlign: 'center', padding: 32, color: '#787774' }}>
                     Đang tải cấu hình...
                   </td>
                 </tr>
               ) : configs.length === 0 ? (
                 <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', padding: 32, color: '#64748b' }}>
+                  <td colSpan={4} style={{ textAlign: 'center', padding: 32, color: '#787774' }}>
                     Chưa có vai trò nào trong hệ thống.
                   </td>
                 </tr>
@@ -197,7 +195,8 @@ export default function TwoFactorSetupPage({
               <div>
                 <span className="modal-eyebrow">Xác nhận</span>
                 <h3 className="modal-title">
-                  {confirmTarget.enabled ? '🔓 Tắt xác thực hai bước' : '🔒 Bật xác thực hai bước'}
+                  <span className="modal-title__icon">{confirmTarget.enabled ? ICONS.unlock : ICONS.lock}</span>
+                  {confirmTarget.enabled ? 'Tắt xác thực hai bước' : 'Bật xác thực hai bước'}
                 </h3>
               </div>
             </div>
@@ -227,7 +226,8 @@ export default function TwoFactorSetupPage({
 
       {toastMessage && (
         <div className={`toast-banner toast-banner--${toastMessage.type}`} role="status">
-          <span>{toastMessage.type === 'success' ? '✅' : '⚠️'} {toastMessage.text}</span>
+          <span className="toast-banner__icon">{toastMessage.type === 'success' ? ICONS.checkCircle : ICONS.alertTriangle}</span>
+          <span>{toastMessage.text}</span>
           <button type="button" className="toast-banner__close" onClick={() => setToastMessage(null)}>
             ✕
           </button>

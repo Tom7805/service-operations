@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { AuthApiError, changePassword } from '../api/authApi';
 import { validateChangePasswordForm, type ChangePasswordFormErrors } from '../validators/authValidators';
+import { ICONS } from '../../../components/common/icons';
 
 interface ChangePasswordFormProps {
   onSuccess: () => void;
@@ -42,7 +43,8 @@ export default function ChangePasswordForm({ onSuccess }: ChangePasswordFormProp
     <form onSubmit={handleSubmit} noValidate>
       {serverError && (
         <div className="alert alert--error" role="alert">
-          <span>⚠️ {serverError}</span>
+          <span className="alert__icon">{ICONS.alertTriangle}</span>
+          <span>{serverError}</span>
         </div>
       )}
 
@@ -92,7 +94,7 @@ export default function ChangePasswordForm({ onSuccess }: ChangePasswordFormProp
               onClick={() => setShowPasswords(!showPasswords)}
               tabIndex={-1}
             >
-              {showPasswords ? '🙈' : '👁️'}
+              {showPasswords ? ICONS.eyeOff : ICONS.eye}
             </button>
           </div>
           {errors.newPassword && <span className="field-error">{errors.newPassword}</span>}
@@ -119,8 +121,9 @@ export default function ChangePasswordForm({ onSuccess }: ChangePasswordFormProp
       </div>
 
       <div className="confirm-note-box">
+        <span className="confirm-note-box__icon">{ICONS.info}</span>
         <span>
-          ℹ️ Sau khi đổi mật khẩu thành công, mọi phiên đăng nhập hiện tại (kể cả phiên bạn đang dùng) sẽ hết
+          Sau khi đổi mật khẩu thành công, mọi phiên đăng nhập hiện tại (kể cả phiên bạn đang dùng) sẽ hết
           hiệu lực và bạn cần đăng nhập lại.
         </span>
       </div>

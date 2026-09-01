@@ -7,12 +7,17 @@ import RolePermissionPage from './modules/users/pages/RolePermissionPage';
 import DepartmentTreePage from './modules/departments/pages/DepartmentTreePage';
 import MaskingRulePage from './modules/masking/pages/MaskingRulePage';
 import SensitiveAccessLogPage from './modules/auditLog/pages/SensitiveAccessLogPage';
+import AuditLogPage from './modules/auditLog/pages/AuditLogPage';
 import EmployeeListPage from './modules/employees/pages/EmployeeListPage';
 import EmployeeDetailPage from './modules/employees/pages/EmployeeDetailPage';
 import ChangePasswordPage from './modules/auth/pages/ChangePasswordPage';
 import TwoFactorSetupPage from './modules/auth/pages/TwoFactorSetupPage';
 import CustomerListPage from './modules/customers/pages/CustomerListPage';
 import CustomerMergePage from './modules/customers/pages/CustomerMergePage';
+import { ICONS } from './components/common/icons';
+import CommandPalette from './components/common/CommandPalette';
+import useScrollReveal from './hooks/useScrollReveal';
+import type { ReactNode } from 'react';
 
 type Tab =
   | 'CUSTOMERS'
@@ -23,6 +28,7 @@ type Tab =
   | 'DETAIL'
   | 'MASKING'
   | 'AUDIT_LOG'
+  | 'SYSTEM_AUDIT_LOG'
   | 'EMPLOYEES'
   | 'EMPLOYEE_DETAIL'
   | 'CHANGE_PASSWORD'
@@ -30,24 +36,32 @@ type Tab =
 
 interface NavItem {
   tab: Tab;
-  icon: string;
+  icon: ReactNode;
   label: string;
   /** Các tab con cũng nên tô sáng mục điều hướng này (ví dụ trang chi tiết). */
   matches?: Tab[];
 }
 
-/** Thanh điều hướng dạng pill nằm ngang — nhãn rút gọn để vừa một hàng, đầy đủ ngữ cảnh nằm trong tiêu đề từng trang. */
+/** Điều hướng chính — vận hành nghiệp vụ hàng ngày. */
 const NAV_ITEMS: NavItem[] = [
-  { tab: 'CUSTOMERS', icon: '🏢', label: 'Khách hàng' },
-  { tab: 'CUSTOMER_MERGE', icon: '🔗', label: 'Gộp KH trùng' },
-  { tab: 'DEPARTMENTS', icon: '🏛️', label: 'Tổ chức' },
-  { tab: 'USERS', icon: '👤', label: 'Tài khoản', matches: ['DETAIL'] },
-  { tab: 'EMPLOYEES', icon: '🧑‍💼', label: 'Nhân sự', matches: ['EMPLOYEE_DETAIL'] },
-  { tab: 'PERMISSIONS', icon: '🛡️', label: 'Phân quyền' },
-  { tab: 'TWO_FACTOR_SETTINGS', icon: '🔐', label: '2FA' },
-  { tab: 'MASKING', icon: '🕶️', label: 'Che dữ liệu' },
-  { tab: 'AUDIT_LOG', icon: '🕵️', label: 'Nhật ký' },
+  { tab: 'CUSTOMERS', icon: ICONS.building, label: 'Khách hàng' },
+  { tab: 'CUSTOMER_MERGE', icon: ICONS.merge, label: 'Gộp KH trùng' },
+  { tab: 'DEPARTMENTS', icon: ICONS.tree, label: 'Tổ chức' },
+  { tab: 'USERS', icon: ICONS.user, label: 'Tài khoản', matches: ['DETAIL'] },
+  { tab: 'EMPLOYEES', icon: ICONS.users, label: 'Nhân sự', matches: ['EMPLOYEE_DETAIL'] },
+  { tab: 'PERMISSIONS', icon: ICONS.shield, label: 'Phân quyền' },
 ];
+
+/** Bảo mật & Hệ thống — nhóm riêng, tách khỏi điều hướng nghiệp vụ hàng ngày (theo mẫu "Favorites"
+ * của tham chiếu: một nhãn xám nhỏ đứng trên nhóm mục phụ). */
+const SYSTEM_NAV_ITEMS: NavItem[] = [
+  { tab: 'TWO_FACTOR_SETTINGS', icon: ICONS.key, label: '2FA' },
+  { tab: 'MASKING', icon: ICONS.eyeOff, label: 'Che dữ liệu' },
+  { tab: 'SYSTEM_AUDIT_LOG', icon: ICONS.history, label: 'Nhật ký hệ thống' },
+  { tab: 'AUDIT_LOG', icon: ICONS.shieldOff, label: 'Dữ liệu nhạy cảm' },
+];
+
+const ALL_NAV_ITEMS: NavItem[] = [...NAV_ITEMS, ...SYSTEM_NAV_ITEMS];
 
 const ROLE_LABELS: Record<string, string> = {
   'VT-01': 'Ban giám đốc',
@@ -85,11 +99,27 @@ export default function App() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifTab, setNotifTab] = useState<'ALL' | 'MENTIONS' | 'SYSTEM'>('ALL');
+  const notifRef = useRef<HTMLDivElement>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(
+    () => localStorage.getItem('sidebarCollapsed') === '1'
+  );
+
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', sidebarCollapsed ? '1' : '0');
+  }, [sidebarCollapsed]);
+
+  // Quet lai cac khoi "he lo khi cuon toi" moi lan doi trang.
+  useScrollReveal(activeTab);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setUserMenuOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setNotifOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -114,87 +144,192 @@ export default function App() {
   // khong dung bat ky co che gia lap nao o phia giao dien.
   const currentRoles = session.roles;
 
+  const activeNavItem =
+    ALL_NAV_ITEMS.find((item) => item.tab === activeTab) ??
+    ALL_NAV_ITEMS.find((item) => (item.matches ?? []).includes(activeTab));
+
+  const renderNavGroup = (items: NavItem[]) =>
+    items.map((item) => {
+      const isActive = activeTab === item.tab || (item.matches ?? []).includes(activeTab);
+      return (
+        <button
+          key={item.tab}
+          type="button"
+          className={`side-nav__item ${isActive ? 'side-nav__item--active' : ''}`}
+          onClick={() => setActiveTab(item.tab)}
+          aria-current={isActive ? 'page' : undefined}
+          title={sidebarCollapsed ? item.label : undefined}
+        >
+          <span className="side-nav__item__icon" aria-hidden="true">
+            {item.icon}
+          </span>
+          {!sidebarCollapsed && <span className="side-nav__item__label">{item.label}</span>}
+        </button>
+      );
+    });
+
   return (
-    <div className="app-shell">
-      <div className="app-main">
-        <header className="app-topbar">
-          <div className="topbar-brand">
-            <span className="topbar-brand__mark">
-              <i />
-              <i />
-              <i />
-            </span>
-            <span>
-              Vận hành <b>dịch vụ</b>
-            </span>
+    <div className="app-frame">
+      {/* Nguoi dung ban phim khong phai Tab qua ca menu dieu huong moi toi duoc noi dung. */}
+      <a className="skip-link" href="#noi-dung-chinh">Bỏ qua điều hướng, tới nội dung chính</a>
+
+      {/* Bảng lệnh Ctrl/⌘+K — nhảy tới bất kỳ màn hình nào không cần rời bàn phím. */}
+      <CommandPalette
+        items={[
+          ...NAV_ITEMS.map((i) => ({ id: i.tab, label: i.label, group: 'Điều hướng', icon: i.icon })),
+          ...SYSTEM_NAV_ITEMS.map((i) => ({ id: i.tab, label: i.label, group: 'Bảo mật & hệ thống', icon: i.icon })),
+          { id: 'CHANGE_PASSWORD', label: 'Đổi mật khẩu', group: 'Tài khoản của tôi', icon: ICONS.key },
+        ]}
+        onSelect={(id) => setActiveTab(id as Tab)}
+      />
+
+      <div className="app-shell">
+        <aside className={`side-nav ${sidebarCollapsed ? 'side-nav--collapsed' : ''}`}>
+          <div className="side-nav__header">
+            <div className="side-nav__brand">
+              <span className="side-nav__brand-mark">
+                <i />
+                <i />
+                <i />
+              </span>
+              {!sidebarCollapsed && (
+                <span className="side-nav__brand-text">
+                  Vận hành <b>dịch vụ</b>
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              className="side-nav__toggle"
+              onClick={() => setSidebarCollapsed((v) => !v)}
+              title={sidebarCollapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
+              aria-label={sidebarCollapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
+            >
+              {ICONS.panelToggle}
+            </button>
           </div>
 
-          <nav className="topbar-nav" aria-label="Điều hướng chính">
-            {NAV_ITEMS.map((item) => {
-              const isActive = activeTab === item.tab || (item.matches ?? []).includes(activeTab);
-              return (
-                <button
-                  key={item.tab}
-                  type="button"
-                  className={`topbar-nav__item ${isActive ? 'topbar-nav__item--active' : ''}`}
-                  onClick={() => setActiveTab(item.tab)}
-                  aria-current={isActive ? 'page' : undefined}
-                >
-                  <span className="topbar-nav__item__icon" aria-hidden="true">
-                    {item.icon}
-                  </span>
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
+          <nav className="side-nav__list" aria-label="Điều hướng chính">
+            {renderNavGroup(NAV_ITEMS)}
+
+            <div className="side-nav__group-label">{!sidebarCollapsed ? 'Bảo mật & Hệ thống' : ''}</div>
+            {renderNavGroup(SYSTEM_NAV_ITEMS)}
           </nav>
+        </aside>
 
-          <div className="topbar-actions">
-            <div className="topbar-role-badge" title="Vai trò thật của tài khoản đang đăng nhập, do máy chủ xác định khi đăng nhập">
-              <span className="topbar-devmode__dot" />
-              <span>{currentRoles.map((role) => ROLE_LABELS[role] ?? role).join(', ')}</span>
-            </div>
+        <div className="app-main">
+        <div className="app-topbar-glow" aria-hidden="true" />
+        <header className="app-topbar">
+          <div className="app-topbar__brand">
+            <h1 className="app-topbar__title">{activeNavItem?.label ?? 'Vận hành dịch vụ'}</h1>
+          </div>
 
-            <div className="topbar-user" ref={userMenuRef}>
+          <div className="app-topbar__actions">
+            {/* Phím tắt phải nhìn thấy được thì mới có người dùng. Nút này vừa là chỉ dẫn,
+                vừa là lối vào cho người dùng chuột. */}
+            <button
+              type="button"
+              className="cmdk-hint"
+              title="Mở bảng lệnh (Ctrl K)"
+              onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+            >
+              {ICONS.search}
+              <span>Tìm nhanh</span>
+              <kbd className="cmdk__kbd">Ctrl K</kbd>
+            </button>
+            <button type="button" className="icon-btn" title="Trợ giúp" aria-label="Trợ giúp">
+              {ICONS.helpCircle}
+            </button>
+            <div className="notif" ref={notifRef}>
               <button
                 type="button"
-                className={`topbar-user__trigger ${userMenuOpen ? 'topbar-user__trigger--open' : ''}`}
+                className="icon-btn"
+                title="Thông báo"
+                aria-label="Thông báo"
+                aria-haspopup="menu"
+                aria-expanded={notifOpen}
+                onClick={() => setNotifOpen((open) => !open)}
+              >
+                {ICONS.bell}
+              </button>
+
+              {notifOpen && (
+                <div className="notif-panel" role="menu">
+                  <div className="notif-panel__tabs">
+                    <button
+                      type="button"
+                      className={`notif-panel__tab ${notifTab === 'ALL' ? 'notif-panel__tab--active' : ''}`}
+                      onClick={() => setNotifTab('ALL')}
+                    >
+                      Tất cả
+                    </button>
+                    <button
+                      type="button"
+                      className={`notif-panel__tab ${notifTab === 'MENTIONS' ? 'notif-panel__tab--active' : ''}`}
+                      onClick={() => setNotifTab('MENTIONS')}
+                    >
+                      Nhắc đến
+                    </button>
+                    <button
+                      type="button"
+                      className={`notif-panel__tab ${notifTab === 'SYSTEM' ? 'notif-panel__tab--active' : ''}`}
+                      onClick={() => setNotifTab('SYSTEM')}
+                    >
+                      Hệ thống
+                    </button>
+                    <span className="notif-panel__tabs-spacer" />
+                    <span className="notif-panel__chevron">{ICONS.chevronDown}</span>
+                  </div>
+
+                  <div className="notif-panel__empty">
+                    <span className="notif-panel__empty-icon">{ICONS.bell}</span>
+                    <p>Chưa có thông báo nào</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="user-chip" ref={userMenuRef}>
+              <button
+                type="button"
+                className={`user-chip__trigger ${userMenuOpen ? 'user-chip__trigger--open' : ''}`}
                 onClick={() => setUserMenuOpen((open) => !open)}
                 aria-haspopup="menu"
                 aria-expanded={userMenuOpen}
               >
                 <span className="avatar-circle">{getInitials(session.fullName)}</span>
-                <span className="topbar-user__meta">
-                  <span className="topbar-user__name">{session.fullName}</span>
-                  <span className="topbar-user__role">@{session.username}</span>
-                </span>
-                <span className="topbar-user__chevron">▾</span>
+                <span className="user-chip__name">{session.fullName}</span>
+                <span className="user-chip__chevron">{ICONS.chevronDown}</span>
               </button>
 
               {userMenuOpen && (
-                <div className="topbar-user__menu" role="menu">
-                  <div className="topbar-user__menu-header">
+                <div className="user-chip__menu" role="menu">
+                  <div className="user-chip__menu-header">
                     <strong>{session.fullName}</strong>
                     <span>@{session.username}</span>
+                    <div className="user-chip__role-badge">
+                      <span className="user-chip__role-dot" />
+                      <span>{currentRoles.map((role) => ROLE_LABELS[role] ?? role).join(', ')}</span>
+                    </div>
                   </div>
                   <button
                     type="button"
-                    className="topbar-user__menu-item"
+                    className="user-chip__menu-item"
                     role="menuitem"
                     onClick={() => {
                       setActiveTab('CHANGE_PASSWORD');
                       setUserMenuOpen(false);
                     }}
                   >
-                    🔑 Đổi mật khẩu
+                    {ICONS.key} Đổi mật khẩu
                   </button>
                   <button
                     type="button"
-                    className="topbar-user__menu-item topbar-user__menu-item--danger"
+                    className="user-chip__menu-item user-chip__menu-item--danger"
                     role="menuitem"
                     onClick={handleLogout}
                   >
-                    ↪ Đăng xuất
+                    {ICONS.logout} Đăng xuất
                   </button>
                 </div>
               )}
@@ -202,7 +337,9 @@ export default function App() {
           </div>
         </header>
 
-        <main className="app-content">
+        {/* key doi theo tab: React thay toan bo cay con, nen hieu ung xo theo tang
+            chay lai o MOI lan chuyen trang chu khong chi lan tai dau tien. */}
+        <main className="app-content" id="noi-dung-chinh" tabIndex={-1} key={activeTab}>
           {activeTab === 'CHANGE_PASSWORD' ? (
             <ChangePasswordPage onBack={() => setActiveTab('DEPARTMENTS')} onPasswordChanged={handleLogout} />
           ) : activeTab === 'CUSTOMERS' ? (
@@ -215,9 +352,15 @@ export default function App() {
           ) : activeTab === 'DEPARTMENTS' ? (
             <DepartmentTreePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'PERMISSIONS' ? (
-            <RolePermissionPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+            <RolePermissionPage
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+              onViewAuditLog={() => setActiveTab('SYSTEM_AUDIT_LOG')}
+            />
           ) : activeTab === 'MASKING' ? (
             <MaskingRulePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+          ) : activeTab === 'SYSTEM_AUDIT_LOG' ? (
+            <AuditLogPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'AUDIT_LOG' ? (
             <SensitiveAccessLogPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'TWO_FACTOR_SETTINGS' ? (
@@ -243,9 +386,11 @@ export default function App() {
                 setSelectedUserId(id);
                 setActiveTab('DETAIL');
               }}
+              onViewAuditLog={() => setActiveTab('SYSTEM_AUDIT_LOG')}
             />
           )}
         </main>
+        </div>
       </div>
     </div>
   );

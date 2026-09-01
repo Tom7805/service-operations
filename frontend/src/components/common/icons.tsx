@@ -1,0 +1,90 @@
+import {
+  PencilSimple, UserGear, Lock, LockOpen, Eye,
+  EyeSlash, ArrowCounterClockwise, DotsThreeVertical, Users, UserCheck,
+  User, UserMinus, ShieldCheck, ShieldSlash, CheckCircle,
+  Warning, Info, ClipboardText, Clock, ClockCounterClockwise,
+  X, Globe, TreeStructure, Buildings, Folder,
+  MagnifyingGlass, ArrowsClockwise, SlidersHorizontal, ArrowsDownUp, ArrowDown,
+  Plus, Trash, Envelope, Phone, Calendar,
+  Money, Tag, ChartBar, Bell, Briefcase,
+  Target, FloppyDisk, UploadSimple, DownloadSimple, Bank,
+  Receipt, LinkSimple, Key, Star, Wrench,
+  MapPin, Sparkle, FileText, Question, SignOut,
+  SidebarSimple, CaretDown, Hash, Copy, GitMerge,
+} from '@phosphor-icons/react';
+
+/**
+ * Bộ icon dùng chung cho TOÀN BỘ frontend — Phosphor Icons (MIT, https://phosphoricons.com).
+ *
+ * Vì sao không còn dùng Lucide: Lucide/Feather là lựa chọn icon MẶC ĐỊNH của hầu hết giao diện do
+ * AI sinh ra, nên nó trở thành một "dấu vân tay" dễ nhận ra. Phosphor có nét dày hơn một chút và
+ * đầu nét vuông vức hơn, hợp với ngôn ngữ tài liệu/biên tập của hệ này.
+ *
+ * Toàn bộ bộ dùng CHUNG một `weight` — đây là điều quan trọng nhất để cả bộ trông liền mạch.
+ * Kích thước hiển thị luôn đến từ CSS nơi dùng (`.icon-xs/sm/md/lg svg`, `.stat-card__icon svg`...),
+ * không đặt width/height tại đây.
+ */
+const W = 'bold' as const;
+
+export const ICONS = {
+  edit: <PencilSimple weight={W} />,
+  role: <UserGear weight={W} />,
+  lock: <Lock weight={W} />,
+  unlock: <LockOpen weight={W} />,
+  eye: <Eye weight={W} />,
+  eyeOff: <EyeSlash weight={W} />,
+  resetTwoFactor: <ArrowCounterClockwise weight={W} />,
+  more: <DotsThreeVertical weight={W} />,
+  users: <Users weight={W} />,
+  userCheck: <UserCheck weight={W} />,
+  user: <User weight={W} />,
+  userMinus: <UserMinus weight={W} />,
+  shield: <ShieldCheck weight={W} />,
+  shieldOff: <ShieldSlash weight={W} />,
+  checkCircle: <CheckCircle weight={W} />,
+  alertTriangle: <Warning weight={W} />,
+  info: <Info weight={W} />,
+  clipboardList: <ClipboardText weight={W} />,
+  clock: <Clock weight={W} />,
+  history: <ClockCounterClockwise weight={W} />,
+  close: <X weight={W} />,
+  globe: <Globe weight={W} />,
+  tree: <TreeStructure weight={W} />,
+  building: <Buildings weight={W} />,
+  folder: <Folder weight={W} />,
+  search: <MagnifyingGlass weight={W} />,
+  refresh: <ArrowsClockwise weight={W} />,
+  settings: <SlidersHorizontal weight={W} />,
+  moveVertical: <ArrowsDownUp weight={W} />,
+  arrowDown: <ArrowDown weight={W} />,
+  plus: <Plus weight={W} />,
+  trash: <Trash weight={W} />,
+  mail: <Envelope weight={W} />,
+  phone: <Phone weight={W} />,
+  calendar: <Calendar weight={W} />,
+  money: <Money weight={W} />,
+  tag: <Tag weight={W} />,
+  chart: <ChartBar weight={W} />,
+  bell: <Bell weight={W} />,
+  briefcase: <Briefcase weight={W} />,
+  target: <Target weight={W} />,
+  save: <FloppyDisk weight={W} />,
+  upload: <UploadSimple weight={W} />,
+  download: <DownloadSimple weight={W} />,
+  bank: <Bank weight={W} />,
+  receipt: <Receipt weight={W} />,
+  link: <LinkSimple weight={W} />,
+  key: <Key weight={W} />,
+  star: <Star weight={W} />,
+  wrench: <Wrench weight={W} />,
+  pin: <MapPin weight={W} />,
+  spark: <Sparkle weight={W} />,
+  document: <FileText weight={W} />,
+  helpCircle: <Question weight={W} />,
+  logout: <SignOut weight={W} />,
+  panelToggle: <SidebarSimple weight={W} />,
+  chevronDown: <CaretDown weight={W} />,
+  hash: <Hash weight={W} />,
+  copy: <Copy weight={W} />,
+  merge: <GitMerge weight={W} />,
+};

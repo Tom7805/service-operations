@@ -3,6 +3,8 @@ import { getMaskingRules } from '../api/maskingApi';
 import type { MaskingAuditLog, MaskingRule } from '../types/maskingTypes';
 import { canViewSensitiveData } from '../../../hooks/usePermission';
 import { SYSTEM_ROLES } from '../../users/types/userTypes';
+import { ICONS } from '../../../components/common/icons';
+import TableSkeleton from '../../../components/common/TableSkeleton';
 
 interface MaskingRulePageProps {
   currentUserRoles?: string[];
@@ -91,7 +93,7 @@ export default function MaskingRulePage({
     return (
       <div className="access-denied-container">
         <div className="access-denied-card">
-          <div className="access-denied-icon">🔒</div>
+          <div className="access-denied-icon">{ICONS.lock}</div>
           <span className="eyebrow text-danger">Từ chối truy cập (Access Denied)</span>
           <h2>Bạn không có thẩm quyền truy cập dữ liệu nhạy cảm</h2>
           <p>
@@ -100,9 +102,9 @@ export default function MaskingRulePage({
             <strong>Ban giám đốc</strong>. Hệ thống đã ghi nhận lần truy cập trái phép này.
           </p>
           <div className="security-log-badge">
-            <span>🛡️ Lần thử truy cập: {new Date().toLocaleString('vi-VN')}</span>
-            <span>Tài khoản: {currentUserName}</span>
-            <span>Vai trò hiện tại: {currentUserRoles.join(', ')}</span>
+            <span className="security-log-badge__item">{ICONS.shield} Lần thử truy cập: {new Date().toLocaleString('vi-VN')}</span>
+            <span className="security-log-badge__item">Tài khoản: {currentUserName}</span>
+            <span className="security-log-badge__item">Vai trò hiện tại: {currentUserRoles.join(', ')}</span>
           </div>
         </div>
       </div>
@@ -113,10 +115,10 @@ export default function MaskingRulePage({
     <div className="user-management-page">
       {toastMessage && (
         <div className={`toast-banner toast-banner--${toastMessage.type}`} role="status">
-          <span className="toast-banner__icon">{toastMessage.type === 'success' ? '✅' : '⚠️'}</span>
+          <span className="toast-banner__icon">{toastMessage.type === 'success' ? ICONS.checkCircle : ICONS.alertTriangle}</span>
           <span>{toastMessage.text}</span>
-          <button type="button" className="toast-banner__close" onClick={() => setToastMessage(null)}>
-            ✕
+          <button type="button" className="toast-banner__close" aria-label="Đóng thông báo" onClick={() => setToastMessage(null)}>
+            {ICONS.close}
           </button>
         </div>
       )}
@@ -124,39 +126,32 @@ export default function MaskingRulePage({
       {/* Page Header */}
       <div className="page-header">
         <div>
-          <div className="breadcrumb">
-            <span>Hệ thống</span> / <span>Bảo mật dữ liệu</span> /{' '}
-            <span className="active">Che dữ liệu lương & giá vốn</span>
-          </div>
           <h1 className="page-title">Che dữ liệu lương & giá vốn</h1>
-          <p className="page-subtitle">
-            Cấu hình quy tắc che dữ liệu lương, chi phí giờ công và giá vốn theo vai trò.
-            Chỉ nhân sự, kế toán và ban giám đốc mới được xem dữ liệu thật.
-          </p>
+          <p className="page-subtitle">Chỉ nhân sự, kế toán và ban giám đốc được xem dữ liệu thật.</p>
         </div>
-        <button type="button" className="btn-icon-refresh" onClick={fetchRules} title="Làm mới dữ liệu">
-          🔄
+        <button type="button" className="btn-icon-refresh" onClick={fetchRules} title="Làm mới dữ liệu" aria-label="Làm mới dữ liệu">
+          {ICONS.refresh}
         </button>
       </div>
 
       {/* KPI Stats */}
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--purple">🔐</div>
+          <div className="stat-card__icon stat-card__icon--purple">{ICONS.key}</div>
           <div>
             <span className="stat-card__label">Quy tắc che dữ liệu</span>
             <strong className="stat-card__value">{rules.length}</strong>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--green">👥</div>
+          <div className="stat-card__icon stat-card__icon--green">{ICONS.users}</div>
           <div>
             <span className="stat-card__label">Vai trò được phép xem</span>
             <strong className="stat-card__value">{allowedRoleNames.length}</strong>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--blue">📋</div>
+          <div className="stat-card__icon stat-card__icon--blue">{ICONS.clipboardList}</div>
           <div>
             <span className="stat-card__label">Hoạt động trong phiên này</span>
             <strong className="stat-card__value">{auditLogs.length}</strong>
@@ -166,7 +161,8 @@ export default function MaskingRulePage({
 
       {error && (
         <div className="alert alert--error" role="alert">
-          <span>⚠️ {error}</span>
+          <span className="alert__icon">{ICONS.alertTriangle}</span>
+          <span>{error}</span>
           <button type="button" className="btn-secondary text-dark ml-auto" onClick={fetchRules}>
             Thử lại
           </button>
@@ -176,8 +172,8 @@ export default function MaskingRulePage({
       {/* Danh sách quy tắc che dữ liệu */}
       <div className="user-table-card">
         <div className="user-table-toolbar">
-          <h3 style={{ margin: 0, fontSize: '15px', color: '#0f172a' }}>
-            📋 Danh sách quy tắc che dữ liệu
+          <h3 style={{ margin: 0, fontSize: '15px', color: '#111111', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span className="icon-sm">{ICONS.clipboardList}</span> Danh sách quy tắc che dữ liệu
           </h3>
           <span className="badge-pulse">Đang áp dụng</span>
         </div>
@@ -193,15 +189,10 @@ export default function MaskingRulePage({
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
-                    <div className="loader" style={{ margin: '0 auto 10px', borderColor: '#10b981', borderTopColor: 'transparent' }} />
-                    Đang tải danh sách quy tắc che dữ liệu...
-                  </td>
-                </tr>
+                <TableSkeleton columns={4} />
               ) : rules.length === 0 ? (
                 <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                  <td colSpan={4} style={{ textAlign: 'center', padding: '40px', color: '#787774' }}>
                     Không có quy tắc che dữ liệu nào.
                   </td>
                 </tr>
@@ -212,7 +203,7 @@ export default function MaskingRulePage({
                       <span className="checklist-code">{rule.level}</span>
                     </td>
                     <td>
-                      <strong style={{ color: '#0f172a' }}>{rule.levelLabel}</strong>
+                      <strong style={{ color: '#111111' }}>{rule.levelLabel}</strong>
                     </td>
                     <td>
                       <div className="user-tags-wrap">
@@ -240,13 +231,13 @@ export default function MaskingRulePage({
       {/* Hoạt động trong phiên hiện tại — nhật ký truy cập thật nằm ở server, không hiển thị ở đây */}
       <div className="audit-log-card" style={{ marginTop: '24px' }}>
         <div className="audit-log-header">
-          <h3 className="audit-log-title">📋 Hoạt động trong phiên làm việc này</h3>
+          <h3 className="audit-log-title"><span className="audit-log-title__icon">{ICONS.clipboardList}</span> Hoạt động trong phiên làm việc này</h3>
           <span className="badge-pulse">Chỉ trên trình duyệt, mất khi tải lại trang</span>
         </div>
         <div className="audit-log-list">
           {auditLogs.map((log) => (
             <div key={log.id} className="audit-log-item">
-              <div className="audit-log-icon">🔐</div>
+              <div className="audit-log-icon">{ICONS.key}</div>
               <div className="audit-log-meta">
                 <div className="audit-log-row">
                   <strong>{log.action}</strong>

@@ -137,16 +137,18 @@ describe('Organization Tree Module — Acceptance Criteria Tests (NCL-01-CN-003)
       />
     );
 
-    const editBtns = screen.getAllByTitle('Chỉnh sửa bộ phận');
-    fireEvent.click(editBtns[0]);
+    const menuTriggers = screen.getAllByLabelText('Thao tác');
+
+    fireEvent.click(menuTriggers[0]);
+    fireEvent.click(screen.getAllByTitle('Chỉnh sửa bộ phận')[0]);
     expect(handleEdit).toHaveBeenCalledWith(mockFlatList[0]);
 
-    const moveBtns = screen.getAllByTitle('Di chuyển vị trí bộ phận');
-    fireEvent.click(moveBtns[0]);
+    fireEvent.click(menuTriggers[0]);
+    fireEvent.click(screen.getAllByTitle('Di chuyển vị trí')[0]);
     expect(handleMove).toHaveBeenCalledWith(mockFlatList[0]);
 
-    const deleteBtns = screen.getAllByTitle('Xóa bộ phận');
-    fireEvent.click(deleteBtns[0]);
+    fireEvent.click(menuTriggers[0]);
+    fireEvent.click(screen.getAllByTitle('Xóa bộ phận')[0]);
     expect(handleDelete).toHaveBeenCalledWith(mockFlatList[0]);
   });
 
@@ -161,8 +163,8 @@ describe('Organization Tree Module — Acceptance Criteria Tests (NCL-01-CN-003)
   it('TC-05: Admin users (VT-07) view stats, audit log stream, and tree controls', () => {
     render(<DepartmentTreePage currentUserRoles={['VT-07']} currentUserName="Quản trị viên" />);
 
-    expect(screen.getByText('Màn hình khai báo cây tổ chức')).toBeInTheDocument();
-    expect(screen.getByText('Tổng số bộ phận')).toBeInTheDocument();
+    expect(screen.getByText('Khai báo cây tổ chức')).toBeInTheDocument();
+    expect(screen.getByText('Tổng bộ phận')).toBeInTheDocument();
     expect(screen.getByText(/Nhật ký khai báo cây tổ chức/i)).toBeInTheDocument();
   });
 });

@@ -4,6 +4,7 @@ import type {
   CustomerSegmentPayload,
   CustomerSegmentFormErrors,
 } from '../types/customerTypes';
+import { ICONS } from '../../../components/common/icons';
 import { COMPANY_SIZE_OPTIONS, CUSTOMER_PRIORITY_OPTIONS } from '../types/customerTypes';
 import { validateCustomerSegment } from '../validators/customerValidators';
 
@@ -115,7 +116,7 @@ export default function CustomerSegmentModal({
             </p>
           </div>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Đóng cửa sổ">
-            ✕
+            {ICONS.close}
           </button>
         </div>
 
@@ -123,7 +124,7 @@ export default function CustomerSegmentModal({
           <div className="modal-body">
             {serverError && (
               <div className="alert alert--error" role="alert" data-testid="segment-form-server-error">
-                <span>⚠️</span>
+                <span className="alert__icon">{ICONS.alertTriangle}</span>
                 <div>{serverError}</div>
               </div>
             )}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { fetchCustomers, previewCustomerMerge, mergeCustomers, CustomerApiError } from '../api/customersApi';
 import { validateCustomerMergeSelection } from '../validators/customerValidators';
+import { ICONS } from '../../../components/common/icons';
 import type {
   Customer,
   CustomerMergePreview,
@@ -63,7 +64,7 @@ function CustomerSearchPicker({
         id={id}
         type="text"
         className="form-input"
-        placeholder="🔍 Tìm theo tên hoặc mã KH-xxxxxx..."
+        placeholder="Tìm theo tên hoặc mã KH-xxxxxx..."
         value={keyword}
         onChange={(e) => setKeyword(e.target.value)}
         onFocus={() => results.length > 0 && setIsOpen(true)}
@@ -290,7 +291,7 @@ export default function CustomerMergePage({
     return (
       <div className="access-denied-container" data-testid="merge-access-denied">
         <div className="access-denied-card">
-          <div className="access-denied-icon">🚫</div>
+          <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <span className="eyebrow text-danger">Từ chối quyền truy cập (403 FORBIDDEN)</span>
           <h2>Bạn không có thẩm quyền gộp hồ sơ khách hàng</h2>
           <p>
@@ -299,9 +300,9 @@ export default function CustomerMergePage({
             truy cập này vào nhật ký bảo mật (Audit Log).
           </p>
           <div className="security-log-badge">
-            <span>🛡️ Thời điểm ghi nhận: {new Date().toLocaleString('vi-VN')}</span>
-            <span>Tài khoản: {currentUserName}</span>
-            <span>Vai trò tài khoản: {currentUserRoles.join(', ')}</span>
+            <span className="security-log-badge__item">{ICONS.shield} Thời điểm ghi nhận: {new Date().toLocaleString('vi-VN')}</span>
+            <span className="security-log-badge__item">Tài khoản: {currentUserName}</span>
+            <span className="security-log-badge__item">Vai trò tài khoản: {currentUserRoles.join(', ')}</span>
           </div>
         </div>
       </div>
@@ -318,7 +319,7 @@ export default function CustomerMergePage({
         >
           <div className="toast-notification__content">
             <span className="toast-notification__icon">
-              {toastMessage.type === 'success' ? '✅' : toastMessage.type === 'error' ? '❌' : 'ℹ️'}
+              {toastMessage.type === 'success' ? ICONS.checkCircle : toastMessage.type === 'error' ? ICONS.alertTriangle : ICONS.info}
             </span>
             <span className="toast-notification__text">{toastMessage.text}</span>
           </div>
@@ -328,22 +329,15 @@ export default function CustomerMergePage({
             onClick={() => setToastMessage(null)}
             aria-label="Đóng thông báo"
           >
-            ✕
+            {ICONS.close}
           </button>
         </div>
       )}
 
       <div className="page-header">
         <div>
-          <div className="breadcrumb">
-            <span>Trang chủ</span> <span>/</span> <span>Khách hàng</span> <span>/</span>{' '}
-            <span className="active">Gộp hồ sơ trùng</span>
-          </div>
           <h1 className="page-title">Gộp hai hồ sơ khách hàng trùng</h1>
-          <p className="page-subtitle">
-            Chuyển toàn bộ dữ liệu liên quan hiện có từ hồ sơ bị gộp về hồ sơ giữ lại để doanh thu của khách hàng
-            không bị chia nhỏ do có hai hồ sơ trùng nhau.
-          </p>
+          <p className="page-subtitle">Chuyển dữ liệu từ hồ sơ bị gộp về hồ sơ giữ lại.</p>
         </div>
       </div>
 
@@ -351,13 +345,13 @@ export default function CustomerMergePage({
         <form onSubmit={handlePreview} noValidate>
           {serverError && (
             <div className="alert alert--error" role="alert" data-testid="merge-server-error">
-              <span>⚠️</span>
+              <span className="alert__icon">{ICONS.alertTriangle}</span>
               <div>{serverError}</div>
             </div>
           )}
           {errors.general && (
             <div className="alert alert--error" role="alert">
-              <span>⚠️</span>
+              <span className="alert__icon">{ICONS.alertTriangle}</span>
               <div>{errors.general}</div>
             </div>
           )}
@@ -434,7 +428,7 @@ export default function CustomerMergePage({
                 </>
               ) : (
                 <>
-                  <span>🔍</span>
+                  <span className="icon-sm">{ICONS.search}</span>
                   <span>Xem trước ảnh hưởng</span>
                 </>
               )}
@@ -469,7 +463,7 @@ export default function CustomerMergePage({
             </div>
 
             <div className="alert alert--warning" data-testid="merge-related-record-count">
-              <span>⚠️</span>
+              <span className="alert__icon">{ICONS.alertTriangle}</span>
               <div>
                 Có <strong>{preview.relatedRecordCount}</strong> bản ghi liên quan của hồ sơ bị gộp (nhật ký khách
                 hàng, lý do bỏ qua cảnh báo trùng) sẽ được chuyển về hồ sơ giữ lại và giữ dấu vết nguồn gốc.
@@ -506,7 +500,7 @@ export default function CustomerMergePage({
         {/* Kết quả sau khi gộp thành công */}
         {mergeResult && (
           <div className="alert alert--success" data-testid="merge-success-result" style={{ marginTop: '20px' }}>
-            <span>✅</span>
+            <span className="alert__icon">{ICONS.checkCircle}</span>
             <div>
               Đã gộp thành công. Hồ sơ giữ lại <strong>{mergeResult.code}</strong> ({mergeResult.name}) hiện đã
               nhận toàn bộ dữ liệu liên quan từ hồ sơ bị gộp.
@@ -519,13 +513,13 @@ export default function CustomerMergePage({
       {localAuditLogs.length > 0 && (
         <div className="audit-log-card merge-audit-card" data-testid="merge-audit-card">
           <div className="audit-log-header">
-            <h4 className="audit-log-title">📋 Nhật ký gộp hồ sơ khách hàng trong phiên (TC-04)</h4>
+            <h4 className="audit-log-title"><span className="audit-log-title__icon">{ICONS.clipboardList}</span> Nhật ký gộp hồ sơ khách hàng trong phiên (TC-04)</h4>
             <span className="badge-pulse">{localAuditLogs.length} ghi nhận mới</span>
           </div>
           <div className="audit-log-list">
             {localAuditLogs.map((log) => (
               <div key={log.id} className="audit-log-item" data-testid="merge-audit-entry">
-                <span className="audit-log-icon">🛡️</span>
+                <span className="audit-log-icon">{ICONS.merge}</span>
                 <div className="audit-log-meta">
                   <div className="audit-log-row">
                     <span>

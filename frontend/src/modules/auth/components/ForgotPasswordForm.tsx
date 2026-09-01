@@ -39,10 +39,6 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
   if (sent) {
     return (
       <div className="login-card">
-        <div className="panel-heading">
-          <span className="panel-heading__signal" />
-          <span>Yêu cầu đã được gửi</span>
-        </div>
         <h2>Kiểm tra email của bạn</h2>
         <p className="login-card__intro">
           Nếu <strong>{email.trim()}</strong> là email đã đăng ký trong hệ thống, một liên kết khôi phục mật
@@ -57,10 +53,6 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
 
   return (
     <div className="login-card">
-      <div className="panel-heading">
-        <span className="panel-heading__signal" />
-        <span>Khôi phục mật khẩu</span>
-      </div>
       <h2>Quên mật khẩu?</h2>
       <p className="login-card__intro">Nhập email đã đăng ký, chúng tôi sẽ gửi liên kết đặt lại mật khẩu.</p>
       <form onSubmit={handleSubmit} noValidate>

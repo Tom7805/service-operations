@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { getUserById } from '../api/usersApi';
 import type { User } from '../types/userTypes';
 import { SYSTEM_DEPARTMENTS, SYSTEM_ROLES } from '../types/userTypes';
+import { ICONS } from '../components/icons';
 
 interface UserDetailPageProps {
   userId: number;
@@ -44,7 +45,8 @@ export const UserDetailPage: React.FC<UserDetailPageProps> = ({ userId, onBack }
           ← Quay lại danh sách
         </button>
         <div className="alert alert--error">
-          <span>⚠️ {error || 'Không tìm thấy người dùng'}</span>
+          <span className="alert__icon">{ICONS.alertTriangle}</span>
+          <span>{error || 'Không tìm thấy người dùng'}</span>
         </div>
       </div>
     );

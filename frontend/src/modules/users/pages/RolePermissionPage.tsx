@@ -1,18 +1,23 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import type { DepartmentInfo, ScopeType, User, UserAuditLog } from '../types/userTypes';
+import type { DepartmentInfo, ScopeType, User } from '../types/userTypes';
 import { SYSTEM_ROLES } from '../types/userTypes';
 import { getDepartmentsList, getUsers, updateUserRoleScope } from '../api/usersApi';
 import RoleScopeModal from '../components/RoleScopeModal';
 import RoleMatrixTable from '../components/RoleMatrixTable';
+import { ICONS } from '../components/icons';
+import TableSkeleton from '../../../components/common/TableSkeleton';
 
 interface RolePermissionPageProps {
   currentUserRoles?: string[];
   currentUserName?: string;
+  /** Mở trang Nhật ký hệ thống (đã tách riêng, có phân trang thật từ máy chủ). */
+  onViewAuditLog?: () => void;
 }
 
 export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
   currentUserRoles = ['VT-07'],
   currentUserName = 'Quản trị viên',
+  onViewAuditLog,
 }) => {
   // TC-04: Security guard - Only VT-07 (Quản trị viên) has permission
   const isAdmin = currentUserRoles.includes('VT-07');
@@ -33,33 +38,9 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [targetUser, setTargetUser] = useState<User | null>(null);
 
-  // Realtime Audit Logs (TC-05)
-  const [auditLogs, setAuditLogs] = useState<UserAuditLog[]>([
-    {
-      id: 'audit-perm-1',
-      timestamp: new Date(Date.now() - 3600000).toLocaleTimeString('vi-VN') + ' ' + new Date().toLocaleDateString('vi-VN'),
-      action: 'Cấu hình phân quyền',
-      performedBy: 'Quản trị viên',
-      targetUser: 'admin',
-      details: 'Gán vai trò Quản trị viên với phạm vi Toàn công ty',
-    },
-  ]);
-
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setToastMessage({ text, type });
     setTimeout(() => setToastMessage(null), 4000);
-  };
-
-  const addAuditLog = (action: string, targetUser: string, details: string) => {
-    const newLog: UserAuditLog = {
-      id: `audit-perm-${Date.now()}`,
-      timestamp: new Date().toLocaleTimeString('vi-VN') + ' ' + new Date().toLocaleDateString('vi-VN'),
-      action,
-      performedBy: currentUserName,
-      targetUser,
-      details,
-    };
-    setAuditLogs((prev) => [newLog, ...prev]);
   };
 
   const fetchData = useCallback(async () => {
@@ -108,19 +89,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
       scopeDepartmentId,
     });
 
-    const scopeDesc =
-      scopeType === 'COMPANY'
-        ? 'Toàn công ty'
-        : scopeType === 'DEPARTMENT'
-        ? `Nhánh bộ phận (ID: ${scopeDepartmentId})`
-        : 'Cá nhân (SELF)';
-
     showToast(`Đã cập nhật phân quyền cho tài khoản @${target.username} thành công`);
-    addAuditLog(
-      'Cập nhật vai trò & phạm vi',
-      target.username,
-      `Gán vai trò [${roleCodes.join(', ')}] với phạm vi dữ liệu: ${scopeDesc}`
-    );
     await fetchData();
   };
 
@@ -129,7 +98,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
     return (
       <div className="access-denied-container">
         <div className="access-denied-card">
-          <div className="access-denied-icon">🚫</div>
+          <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <span className="eyebrow text-danger">Từ chối truy cập (Access Denied)</span>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
@@ -137,8 +106,8 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
             Hệ thống đã lưu lại lần truy cập trái phép này vào nhật ký an ninh.
           </p>
           <div className="security-log-badge">
-            <span>🛡️ Lần thử truy cập: {new Date().toLocaleString('vi-VN')}</span>
-            <span>Tài khoản: {currentUserName}</span>
+            <span className="security-log-badge__item">{ICONS.shield} Lần thử truy cập: {new Date().toLocaleString('vi-VN')}</span>
+            <span className="security-log-badge__item">Tài khoản: {currentUserName}</span>
           </div>
         </div>
       </div>
@@ -175,10 +144,10 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
       {/* Toast Notification */}
       {toastMessage && (
         <div className={`toast-banner toast-banner--${toastMessage.type}`} role="status">
-          <span className="toast-banner__icon">{toastMessage.type === 'success' ? '✅' : '⚠️'}</span>
+          <span className="toast-banner__icon">{toastMessage.type === 'success' ? ICONS.checkCircle : ICONS.alertTriangle}</span>
           <span>{toastMessage.text}</span>
-          <button type="button" className="toast-banner__close" onClick={() => setToastMessage(null)}>
-            ✕
+          <button type="button" className="toast-banner__close" aria-label="Đóng thông báo" onClick={() => setToastMessage(null)}>
+            {ICONS.close}
           </button>
         </div>
       )}
@@ -186,28 +155,23 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
       {/* Page Header */}
       <div className="page-header">
         <div>
-          <div className="breadcrumb">
-            <span>Hệ thống</span> / <span>Quản trị & Phân quyền</span> / <span className="active">Phân quyền vai trò & Phạm vi dữ liệu</span>
-          </div>
-          <h1 className="page-title">Phân quyền vai trò & Phạm vi dữ liệu</h1>
-          <p className="page-subtitle">
-            Thiết lập vai trò chức năng và phạm vi truy cập dữ liệu (Toàn công ty, Nhánh bộ phận, Cá nhân).
-          </p>
+          <h1 className="page-title">Phân quyền vai trò & phạm vi dữ liệu</h1>
+          <p className="page-subtitle">Gán vai trò và phạm vi truy cập dữ liệu cho từng tài khoản.</p>
         </div>
       </div>
 
       {/* KPI Stats Cards */}
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--purple">🛡️</div>
+          <div className="stat-card__icon stat-card__icon--purple">{ICONS.shield}</div>
           <div>
             <span className="stat-card__label">Vai trò hệ thống</span>
-            <strong className="stat-card__value">9 Vai trò</strong>
+            <strong className="stat-card__value">9 vai trò</strong>
           </div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--blue">👥</div>
+          <div className="stat-card__icon stat-card__icon--blue">{ICONS.users}</div>
           <div>
             <span className="stat-card__label">Tổng tài khoản</span>
             <strong className="stat-card__value">{totalUsers}</strong>
@@ -215,25 +179,25 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
         </div>
 
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--green">🌐</div>
+          <div className="stat-card__icon stat-card__icon--green">{ICONS.globe}</div>
           <div>
-            <span className="stat-card__label">Phạm vi Toàn công ty</span>
+            <span className="stat-card__label">Toàn công ty</span>
             <strong className="stat-card__value text-success">{companyScopeUsers}</strong>
           </div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--blue">🏢</div>
+          <div className="stat-card__icon stat-card__icon--blue">{ICONS.building}</div>
           <div>
-            <span className="stat-card__label">Phạm vi Nhánh bộ phận</span>
+            <span className="stat-card__label">Nhánh bộ phận</span>
             <strong className="stat-card__value">{deptScopeUsers}</strong>
           </div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--red">👤</div>
+          <div className="stat-card__icon stat-card__icon--amber">{ICONS.user}</div>
           <div>
-            <span className="stat-card__label">Phạm vi Chỉ cá nhân</span>
+            <span className="stat-card__label">Chỉ cá nhân</span>
             <strong className="stat-card__value text-warning">{selfScopeUsers}</strong>
           </div>
         </div>
@@ -242,7 +206,8 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
       {/* Global Error Banner */}
       {error && (
         <div className="alert alert--error mb-4" role="alert">
-          <span>⚠️ {error}</span>
+          <span className="alert__icon">{ICONS.alertTriangle}</span>
+          <span>{error}</span>
           <button type="button" className="btn-secondary text-dark ml-auto" onClick={fetchData}>
             Thử lại
           </button>
@@ -259,14 +224,14 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
                 className={`status-tab ${activeTab === 'USERS' ? 'status-tab--active' : ''}`}
                 onClick={() => setActiveTab('USERS')}
               >
-                👥 Bảng phân quyền tài khoản ({users.length})
+                <span className="status-tab__icon">{ICONS.users}</span> Bảng phân quyền tài khoản ({users.length})
               </button>
               <button
                 type="button"
                 className={`status-tab ${activeTab === 'ROLES' ? 'status-tab--active' : ''}`}
                 onClick={() => setActiveTab('ROLES')}
               >
-                🛡️ Ma trận vai trò & quyền hạn (9)
+                <span className="status-tab__icon">{ICONS.shield}</span> Vai trò & quyền hạn (9)
               </button>
             </div>
           </div>
@@ -275,7 +240,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
             <div className="toolbar-filters">
               {/* Search Box */}
               <div className="search-box">
-                <span className="search-box__icon">🔍</span>
+                <span className="search-box__icon">{ICONS.search}</span>
                 <input
                   type="text"
                   className="search-box__input"
@@ -284,8 +249,8 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
                   onChange={(e) => setSearchKeyword(e.target.value)}
                 />
                 {searchKeyword && (
-                  <button type="button" className="search-box__clear" onClick={() => setSearchKeyword('')}>
-                    ✕
+                  <button type="button" className="search-box__clear" aria-label="Xóa tìm kiếm" onClick={() => setSearchKeyword('')}>
+                    {ICONS.close}
                   </button>
                 )}
               </div>
@@ -316,9 +281,9 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
                   onChange={(e) => setFilterScope(e.target.value)}
                 >
                   <option value="ALL">-- Tất cả phạm vi --</option>
-                  <option value="COMPANY">🌐 Toàn công ty (COMPANY)</option>
-                  <option value="DEPARTMENT">🏢 Nhánh bộ phận (DEPARTMENT)</option>
-                  <option value="SELF">👤 Chỉ cá nhân (SELF)</option>
+                  <option value="COMPANY">Toàn công ty (COMPANY)</option>
+                  <option value="DEPARTMENT">Nhánh bộ phận (DEPARTMENT)</option>
+                  <option value="SELF">Chỉ cá nhân (SELF)</option>
                 </select>
               </div>
 
@@ -327,8 +292,9 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
                 className="btn-icon-refresh"
                 onClick={fetchData}
                 title="Làm mới dữ liệu từ máy chủ"
+                aria-label="Làm mới dữ liệu"
               >
-                🔄
+                {ICONS.refresh}
               </button>
             </div>
           )}
@@ -350,25 +316,19 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
             <table className="user-data-table">
               <thead>
                 <tr>
-                  <th>Tài Khoản & Nhân Sự</th>
-                  <th>Bộ Phận Trực Thuộc</th>
-                  <th>Vai Trò Được Gán</th>
-                  <th>Phạm Vi Dữ Liệu (Scope)</th>
-                  <th>Trạng Thái</th>
-                  <th style={{ textAlign: 'right' }}>Thao Tác</th>
+                  <th>Tài khoản & nhân sự</th>
+                  <th>Bộ phận Trực Thuộc</th>
+                  <th>Vai trò được gán</th>
+                  <th>Phạm vi dữ liệu</th>
+                  <th style={{ textAlign: 'right' }}>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
-                      <div className="loader" style={{ margin: '0 auto 10px', borderColor: '#10b981', borderTopColor: 'transparent' }} />
-                      Đang tải dữ liệu phân quyền...
-                    </td>
-                  </tr>
+                  <TableSkeleton columns={5} />
                 ) : filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#787774' }}>
                       Không tìm thấy tài khoản nào khớp với bộ lọc.
                     </td>
                   </tr>
@@ -395,9 +355,9 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
 
                         <td>
                           {deptObj ? (
-                            <span className="cell-dept">📂 {deptObj.name}</span>
+                            <span className="cell-dept">{deptObj.name}</span>
                           ) : (
-                            <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Chưa phân bổ</span>
+                            <span className="cell-muted">Chưa phân bổ</span>
                           )}
                         </td>
 
@@ -406,70 +366,45 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
                             {u.roleCodes && u.roleCodes.length > 0 ? (
                               u.roleCodes.map((code) => {
                                 const roleInfo = SYSTEM_ROLES.find((r) => r.code === code);
-                                const badgeClass = roleInfo ? roleInfo.badgeClass : 'badge--gray';
                                 return (
-                                  <span key={code} className={`user-tag ${badgeClass}`} title={roleInfo?.name}>
-                                    <strong className="user-tag__code">{code}</strong>
-                                    <span>{roleInfo?.name || code}</span>
+                                  <span key={code} className="role-chip" title={code}>
+                                    {roleInfo?.name || code}
                                   </span>
                                 );
                               })
                             ) : (
-                              <span className="user-tag badge--gray">Chưa gán vai trò</span>
+                              <span className="cell-muted">Chưa gán vai trò</span>
                             )}
                           </div>
                         </td>
 
                         <td>
-                          {isCompany && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span className="status-pill status-pill--active" style={{ background: '#ecfdf5', color: '#059669', fontSize: '11.5px' }}>
-                                🌐 Toàn công ty (COMPANY)
-                              </span>
-                            </div>
-                          )}
+                          {isCompany && <span className="scope-chip">Toàn công ty</span>}
 
                           {isDept && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                              <span className="status-pill" style={{ background: '#eff6ff', color: '#1d4ed8', fontSize: '11.5px' }}>
-                                🏢 Nhánh bộ phận (DEPARTMENT)
-                              </span>
-                              <span style={{ fontSize: '11.5px', color: '#475569', paddingLeft: '4px' }}>
-                                ↳ {scopeDeptObj ? scopeDeptObj.name : `Bộ phận ID: ${u.scopeDepartmentId ?? 'N/A'}`}
+                            <div className="scope-chip-group">
+                              <span className="scope-chip">Nhánh bộ phận</span>
+                              <span className="scope-chip-group__sub">
+                                {scopeDeptObj ? scopeDeptObj.name : `Bộ phận ID: ${u.scopeDepartmentId ?? 'N/A'}`}
                               </span>
                             </div>
                           )}
 
-                          {isSelf && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span className="status-pill" style={{ background: '#fef3c7', color: '#b45309', fontSize: '11.5px' }}>
-                                👤 Chỉ cá nhân (SELF)
-                              </span>
-                            </div>
-                          )}
-                        </td>
-
-                        <td>
-                          {u.status === 'ACTIVE' ? (
-                            <span className="status-pill status-pill--active">
-                              <span className="status-pill__dot" /> Hoạt động
-                            </span>
-                          ) : (
-                            <span className="status-pill status-pill--locked">
-                              <span className="status-pill__dot" /> Đã khóa
-                            </span>
-                          )}
+                          {isSelf && <span className="scope-chip">Chỉ cá nhân</span>}
                         </td>
 
                         <td style={{ textAlign: 'right' }}>
+                          {/* Nút kính (phụ), KHÔNG phải nút chàm đặc: màu nhấn đổ đầy được dành riêng
+                              cho hành động chính của cả trang. Lặp nó trên từng dòng (10 nút chàm
+                              xếp dọc mép phải) làm mất hẳn ý nghĩa "đâu là hành động chính". */}
                           <button
                             type="button"
-                            className="btn-primary"
-                            style={{ padding: '6px 14px', fontSize: '12.5px' }}
+                            className="btn-secondary"
+                            style={{ padding: '7px 14px', fontSize: '13px' }}
                             onClick={() => handleOpenConfigure(u)}
                             title="Cấu hình vai trò & phạm vi dữ liệu"
                           >
-                            ⚙️ Phân quyền
+                            <span className="btn-primary__icon">{ICONS.settings}</span> Phân quyền
                           </button>
                         </td>
                       </tr>
@@ -482,27 +417,18 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
         </div>
       )}
 
-      {/* Audit Log Stream for TC-05 */}
-      <div className="audit-log-card" style={{ marginTop: '24px' }}>
-        <div className="audit-log-header">
-          <h3 className="audit-log-title">📋 Nhật ký phân quyền & phạm vi dữ liệu (Audit Log)</h3>
-          <span className="badge-pulse">Lưu vết 100% realtime</span>
-        </div>
-        <div className="audit-log-list">
-          {auditLogs.map((log) => (
-            <div key={log.id} className="audit-log-item">
-              <div className="audit-log-icon">🛡️</div>
-              <div className="audit-log-meta">
-                <div className="audit-log-row">
-                  <strong>{log.action}</strong> cho tài khoản <span className="highlight-username">@{log.targetUser}</span>
-                  <span className="audit-log-time">{log.timestamp}</span>
-                </div>
-                <p className="audit-log-details">{log.details} • Thực hiện bởi <em>{log.performedBy}</em></p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* TC-05: nhật ký phân quyền giờ nằm ở trang riêng biệt "Nhật ký hệ thống" — lưu thật trên
+          máy chủ, có phân trang, không còn là danh sách nhúng cuộn tay ở đây. */}
+      {onViewAuditLog && (
+        <button type="button" className="audit-log-link" data-reveal-target onClick={onViewAuditLog}>
+          <span className="audit-log-link__icon">{ICONS.clipboardList}</span>
+          <span className="audit-log-link__text">
+            <strong>Xem nhật ký phân quyền đầy đủ</strong>
+            <span>Toàn bộ lịch sử gán vai trò và phạm vi dữ liệu — lưu trên máy chủ</span>
+          </span>
+          <span className="audit-log-link__arrow">→</span>
+        </button>
+      )}
 
       {/* Role & Scope Configuration Modal */}
       <RoleScopeModal

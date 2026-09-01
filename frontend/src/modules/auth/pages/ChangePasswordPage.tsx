@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import ChangePasswordForm from '../components/ChangePasswordForm';
+import { ICONS } from '../../../components/common/icons';
 
 interface ChangePasswordPageProps {
   onBack: () => void;
@@ -24,21 +25,19 @@ export default function ChangePasswordPage({ onBack, onPasswordChanged }: Change
       </div>
 
       <div className="detail-card" style={{ maxWidth: 520, margin: '0 auto' }}>
-        <div className="breadcrumb">
-          <span>Tài khoản</span> / <span className="active">Đổi mật khẩu</span>
-        </div>
         <h1 className="page-title">Đổi mật khẩu</h1>
         <p className="page-subtitle" style={{ marginBottom: 24 }}>
-          Nhập mật khẩu hiện tại và mật khẩu mới để cập nhật thông tin đăng nhập của bạn.
+          Nhập mật khẩu hiện tại và mật khẩu mới.
         </p>
 
         {done ? (
           <div
             className="alert"
-            style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d' }}
+            style={{ background: '#EDF3EC', border: '1px solid rgba(52,101,56,.20)', color: '#346538' }}
             role="status"
           >
-            <span>✅ Đổi mật khẩu thành công! Đang chuyển về màn hình đăng nhập...</span>
+            <span className="alert__icon">{ICONS.checkCircle}</span>
+            <span>Đổi mật khẩu thành công! Đang chuyển về màn hình đăng nhập...</span>
           </div>
         ) : (
           <ChangePasswordForm onSuccess={handleSuccess} />

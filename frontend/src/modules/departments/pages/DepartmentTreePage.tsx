@@ -22,6 +22,7 @@ import DepartmentTree, { ViewMode } from '../components/DepartmentTree';
 import DepartmentFormModal from '../components/DepartmentFormModal';
 import DepartmentMoveModal from '../components/DepartmentMoveModal';
 import DepartmentDeleteModal from '../components/DepartmentDeleteModal';
+import { ICONS } from '../../../components/common/icons';
 
 interface DepartmentTreePageProps {
   currentUserRoles?: string[];
@@ -184,7 +185,7 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
     return (
       <div className="access-denied-container">
         <div className="access-denied-card">
-          <div className="access-denied-icon">🚫</div>
+          <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <span className="eyebrow text-danger">Từ chối truy cập (Access Denied)</span>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
@@ -192,8 +193,8 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
             Hệ thống đã ghi lại lần truy cập này vào nhật ký bảo mật.
           </p>
           <div className="security-log-badge">
-            <span>🛡️ Lần thử truy cập: {new Date().toLocaleString('vi-VN')}</span>
-            <span>Tài khoản: {currentUserName}</span>
+            <span className="security-log-badge__item">{ICONS.shield} Lần thử truy cập: {new Date().toLocaleString('vi-VN')}</span>
+            <span className="security-log-badge__item">Tài khoản: {currentUserName}</span>
           </div>
         </div>
       </div>
@@ -214,10 +215,10 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
       {/* Toast Notification Banner */}
       {toastMessage && (
         <div className={`toast-banner toast-banner--${toastMessage.type}`} role="status">
-          <span className="toast-banner__icon">{toastMessage.type === 'success' ? '✅' : '⚠️'}</span>
+          <span className="toast-banner__icon">{toastMessage.type === 'success' ? ICONS.checkCircle : ICONS.alertTriangle}</span>
           <span>{toastMessage.text}</span>
-          <button type="button" className="toast-banner__close" onClick={() => setToastMessage(null)}>
-            ✕
+          <button type="button" className="toast-banner__close" aria-label="Đóng thông báo" onClick={() => setToastMessage(null)}>
+            {ICONS.close}
           </button>
         </div>
       )}
@@ -225,45 +226,46 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
       {/* Page Header */}
       <div className="page-header">
         <div>
-          <div className="breadcrumb">
-            <span>Hệ thống</span> / <span>Quản trị & Phân quyền</span> / <span className="active">Khai báo cây tổ chức</span>
-          </div>
-          <h1 className="page-title">Màn hình khai báo cây tổ chức</h1>
-          <p className="page-subtitle">
-            Thiết lập sơ đồ thứ bậc phòng ban, đơn vị trực thuộc, gán người quản lý và quản lý mối quan hệ cây tổ chức công ty.
-          </p>
+          <h1 className="page-title">Khai báo cây tổ chức</h1>
+          <p className="page-subtitle">Thiết lập sơ đồ phòng ban và gán người quản lý.</p>
         </div>
         <div className="page-header-actions">
           <button type="button" className="btn-primary btn-lg" onClick={handleOpenCreateRoot}>
-            <span className="btn-icon">🏛️</span> Thêm bộ phận cấp gốc
+            <span className="btn-icon icon-sm">{ICONS.building}</span> Thêm bộ phận cấp gốc
           </button>
         </div>
       </div>
 
       {/* KPI Summary Cards */}
       <div className="stats-grid">
-        <div className="stat-card stat-card--blue">
+        {/* Thẻ số liệu ở đây trước không có ô icon, trong khi trang Tài khoản và Phân quyền lại có —
+            cùng một thành phần mà đọc ra thành hai thứ khác nhau tùy trang. Bổ sung cho đồng bộ. */}
+        <div className="stat-card">
+          <div className="stat-card__icon stat-card__icon--blue">{ICONS.building}</div>
           <div>
-            <span className="stat-card__label">Tổng số bộ phận</span>
+            <span className="stat-card__label">Tổng bộ phận</span>
             <strong className="stat-card__value">{totalDepts}</strong>
           </div>
         </div>
 
-        <div className="stat-card stat-card--green">
+        <div className="stat-card">
+          <div className="stat-card__icon stat-card__icon--green">{ICONS.tree}</div>
           <div>
-            <span className="stat-card__label">Đơn vị Cấp Gốc</span>
+            <span className="stat-card__label">Đơn vị cấp gốc</span>
             <strong className="stat-card__value text-success">{rootDepts}</strong>
           </div>
         </div>
 
-        <div className="stat-card stat-card--purple">
+        <div className="stat-card">
+          <div className="stat-card__icon stat-card__icon--purple">{ICONS.folder}</div>
           <div>
             <span className="stat-card__label">Bộ phận phụ thuộc</span>
             <strong className="stat-card__value">{subDepts}</strong>
           </div>
         </div>
 
-        <div className="stat-card stat-card--red">
+        <div className="stat-card">
+          <div className="stat-card__icon stat-card__icon--amber">{ICONS.userCheck}</div>
           <div>
             <span className="stat-card__label">Trưởng bộ phận</span>
             <strong className="stat-card__value">{uniqueManagers}</strong>
@@ -274,7 +276,8 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
       {/* Global Error Banner */}
       {error && (
         <div className="alert alert--error mb-4" role="alert">
-          <span>⚠️ {error}</span>
+          <span className="alert__icon">{ICONS.alertTriangle}</span>
+          <span>{error}</span>
           <button type="button" className="btn-secondary text-dark ml-auto" onClick={fetchTreeAndDepartments}>
             Thử lại
           </button>
@@ -285,7 +288,7 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
       <div className="user-table-card mb-4" style={{ borderRadius: '16px 16px 0 0', marginBottom: 0 }}>
         <div className="user-table-toolbar">
           <div className="search-box">
-            <span className="search-box__icon">🔍</span>
+            <span className="search-box__icon">{ICONS.search}</span>
             <input
               type="text"
               className="search-box__input"
@@ -294,8 +297,8 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
               onChange={(e) => setSearchKeyword(e.target.value)}
             />
             {searchKeyword && (
-              <button type="button" className="search-box__clear" onClick={() => setSearchKeyword('')}>
-                ✕
+              <button type="button" className="search-box__clear" aria-label="Xóa tìm kiếm" onClick={() => setSearchKeyword('')}>
+                {ICONS.close}
               </button>
             )}
           </div>
@@ -309,21 +312,21 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
                   className={`status-tab ${viewMode === 'TREE' ? 'status-tab--active' : ''}`}
                   onClick={() => setViewMode('TREE')}
                 >
-                  🌳 Sơ đồ Cây
+                  <span className="status-tab__icon">{ICONS.tree}</span> Sơ đồ cây
                 </button>
                 <button
                   type="button"
                   className={`status-tab ${viewMode === 'LIST' ? 'status-tab--active' : ''}`}
                   onClick={() => setViewMode('LIST')}
                 >
-                  📋 Danh sách Nhánh
+                  <span className="status-tab__icon">{ICONS.clipboardList}</span> Danh sách nhánh
                 </button>
                 <button
                   type="button"
                   className={`status-tab ${viewMode === 'TABLE' ? 'status-tab--active' : ''}`}
                   onClick={() => setViewMode('TABLE')}
                 >
-                  📊 Bảng Dữ Liệu
+                  <span className="status-tab__icon">{ICONS.chart}</span> Bảng dữ liệu
                 </button>
               </div>
             </div>
@@ -333,8 +336,9 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
               className="btn-icon-refresh"
               onClick={fetchTreeAndDepartments}
               title="Làm mới dữ liệu từ máy chủ"
+              aria-label="Làm mới dữ liệu"
             >
-              🔄
+              {ICONS.refresh}
             </button>
           </div>
         </div>
@@ -358,13 +362,13 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
       {/* Audit Log Stream section for TC-05 */}
       <div className="audit-log-card">
         <div className="audit-log-header">
-          <h3 className="audit-log-title">📋 Nhật ký khai báo cây tổ chức (Audit Log)</h3>
+          <h3 className="audit-log-title"><span className="audit-log-title__icon">{ICONS.clipboardList}</span> Nhật ký khai báo cây tổ chức (Audit Log)</h3>
           <span className="badge-pulse">Lưu vết 100% realtime</span>
         </div>
         <div className="audit-log-list">
           {auditLogs.map((log) => (
             <div key={log.id} className="audit-log-item">
-              <div className="audit-log-icon">🏛️</div>
+              <div className="audit-log-icon">{ICONS.building}</div>
               <div className="audit-log-meta">
                 <div className="audit-log-row">
                   <strong>{log.action}</strong> cho đơn vị <span className="highlight-username">{log.targetDepartment}</span>

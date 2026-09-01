@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { ScopeType, User } from '../types/userTypes';
 import { SYSTEM_ROLES } from '../types/userTypes';
+import { ICONS } from './icons';
 
 interface RoleAssignModalProps {
   isOpen: boolean;
@@ -78,7 +79,7 @@ export const RoleAssignModal: React.FC<RoleAssignModalProps> = ({
           <div className="modal-body">
             {error && (
               <div className="alert alert--error" role="alert">
-                <span className="alert__icon">⚠️</span>
+                <span className="alert__icon">{ICONS.alertTriangle}</span>
                 <p>{error}</p>
               </div>
             )}

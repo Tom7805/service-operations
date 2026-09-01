@@ -3,18 +3,22 @@ import { createUser, getUsers, resetUserTwoFactor, updateUser, updateUserStatus,
 import RoleAssignModal from '../components/RoleAssignModal';
 import UserFormModal from '../components/UserFormModal';
 import UserTable from '../components/UserTable';
-import type { CreateUserPayload, ScopeType, UpdateUserPayload, User, UserAuditLog } from '../types/userTypes';
+import { ICONS } from '../components/icons';
+import type { CreateUserPayload, ScopeType, UpdateUserPayload, User } from '../types/userTypes';
 
 interface UserListPageProps {
   currentUserRoles?: string[];
   currentUserName?: string;
   onNavigateDetail?: (userId: number) => void;
+  /** Mở trang Nhật ký hệ thống (đã tách riêng, có phân trang thật từ máy chủ). */
+  onViewAuditLog?: () => void;
 }
 
 export const UserListPage: React.FC<UserListPageProps> = ({
   currentUserRoles = ['VT-07'],
   currentUserName = 'Quản trị viên',
   onNavigateDetail,
+  onViewAuditLog,
 }) => {
   // TC-04 Permission check: Only VT-07 (Quản trị viên) can manage users
   const isAdmin = currentUserRoles.includes('VT-07');
@@ -31,21 +35,11 @@ export const UserListPage: React.FC<UserListPageProps> = ({
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [roleTargetUser, setRoleTargetUser] = useState<User | null>(null);
 
-  // Status toggle confirmation modal & Audit log (TC-05)
+  // Status toggle confirmation modal (TC-05)
   const [confirmStatusUser, setConfirmStatusUser] = useState<User | null>(null);
   // NCL-01-CN-009: xác nhận trước khi đặt lại 2FA — thao tác bắt buộc người dùng liên kết lại app mới.
   const [confirmResetTwoFactorUser, setConfirmResetTwoFactorUser] = useState<User | null>(null);
   const [resettingTwoFactor, setResettingTwoFactor] = useState(false);
-  const [auditLogs, setAuditLogs] = useState<UserAuditLog[]>([
-    {
-      id: 'log-101',
-      timestamp: new Date(Date.now() - 3600000).toLocaleTimeString('vi-VN') + ' ' + new Date().toLocaleDateString('vi-VN'),
-      action: 'Tạo tài khoản mới',
-      performedBy: 'Quản trị viên',
-      targetUser: 'admin',
-      details: 'Khởi tạo tài khoản Quản trị hệ thống',
-    },
-  ]);
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setToastMessage({ text, type });
@@ -70,19 +64,6 @@ export const UserListPage: React.FC<UserListPageProps> = ({
     fetchUsersList();
   }, [fetchUsersList]);
 
-  // Log audit activity for TC-05
-  const addAuditLog = (action: string, targetUser: string, details: string) => {
-    const newLog: UserAuditLog = {
-      id: `log-${Date.now()}`,
-      timestamp: new Date().toLocaleTimeString('vi-VN') + ' ' + new Date().toLocaleDateString('vi-VN'),
-      action,
-      performedBy: currentUserName,
-      targetUser,
-      details,
-    };
-    setAuditLogs((prev) => [newLog, ...prev]);
-  };
-
   // Handlers
   const handleOpenCreateModal = () => {
     setEditingUser(null);
@@ -102,14 +83,12 @@ export const UserListPage: React.FC<UserListPageProps> = ({
   const handleSubmitCreate = async (payload: CreateUserPayload) => {
     const created = await createUser(payload);
     showToast(`Đã tạo thành công tài khoản @${created.username}`);
-    addAuditLog('Tạo tài khoản', created.username, `Tạo tài khoản cho ${created.fullName}`);
     await fetchUsersList();
   };
 
   const handleSubmitUpdate = async (id: number, payload: UpdateUserPayload) => {
     const updated = await updateUser(id, payload);
     showToast(`Cập nhật tài khoản @${updated.username} thành công`);
-    addAuditLog('Cập nhật tài khoản', updated.username, `Cập nhật thông tin tài khoản ${updated.fullName}`);
     await fetchUsersList();
   };
 
@@ -118,7 +97,6 @@ export const UserListPage: React.FC<UserListPageProps> = ({
     if (!target) return;
     const updated = await updateUser(userId, { fullName: target.fullName, roleCodes, scopeType });
     showToast(`Đã gán ${roleCodes.length} vai trò cho tài khoản @${updated.username}`);
-    addAuditLog('Cấu hình phân quyền', updated.username, `Gán vai trò [${roleCodes.join(', ')}] với phạm vi ${scopeType}`);
     await fetchUsersList();
   };
 
@@ -132,7 +110,6 @@ export const UserListPage: React.FC<UserListPageProps> = ({
       const updated = await updateUserStatus(target.id, nextStatus);
       const actionText = nextStatus === 'LOCKED' ? 'Khóa tài khoản' : 'Mở khóa tài khoản';
       showToast(`${actionText} @${updated.username} thành công`);
-      addAuditLog(actionText, updated.username, `Đổi trạng thái tài khoản thành ${nextStatus}`);
       setConfirmStatusUser(null);
       await fetchUsersList();
     } catch (err) {
@@ -153,7 +130,6 @@ export const UserListPage: React.FC<UserListPageProps> = ({
     try {
       await resetUserTwoFactor(target.id);
       showToast(`Đã đặt lại xác thực hai bước cho @${target.username}. Lần đăng nhập kế tiếp sẽ yêu cầu quét QR liên kết app mới.`);
-      addAuditLog('Đặt lại xác thực hai bước', target.username, 'Xoá khóa TOTP đã liên kết do mất/đổi thiết bị');
       setConfirmResetTwoFactorUser(null);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Không thể đặt lại xác thực hai bước', 'error');
@@ -167,7 +143,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
     return (
       <div className="access-denied-container">
         <div className="access-denied-card">
-          <div className="access-denied-icon">🚫</div>
+          <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <span className="eyebrow text-danger">Từ chối truy cập (Access Denied)</span>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
@@ -175,8 +151,8 @@ export const UserListPage: React.FC<UserListPageProps> = ({
             Hệ thống đã ghi lại lần truy cập trái phép này vào nhật ký bảo mật.
           </p>
           <div className="security-log-badge">
-            <span>🛡️ Lần thử truy cập: {new Date().toLocaleString('vi-VN')}</span>
-            <span>Tài khoản: {currentUserName}</span>
+            <span className="security-log-badge__item">{ICONS.shield} Lần thử truy cập: {new Date().toLocaleString('vi-VN')}</span>
+            <span className="security-log-badge__item">Tài khoản: {currentUserName}</span>
           </div>
         </div>
       </div>
@@ -194,22 +170,17 @@ export const UserListPage: React.FC<UserListPageProps> = ({
       {/* Toast Banner */}
       {toastMessage && (
         <div className={`toast-banner toast-banner--${toastMessage.type}`} role="status">
-          <span className="toast-banner__icon">{toastMessage.type === 'success' ? '✅' : '⚠️'}</span>
+          <span className="toast-banner__icon">{toastMessage.type === 'success' ? ICONS.checkCircle : ICONS.alertTriangle}</span>
           <span>{toastMessage.text}</span>
-          <button type="button" className="toast-banner__close" onClick={() => setToastMessage(null)}>✕</button>
+          <button type="button" className="toast-banner__close" aria-label="Đóng thông báo" onClick={() => setToastMessage(null)}>{ICONS.close}</button>
         </div>
       )}
 
       {/* Page Header */}
       <div className="page-header">
         <div>
-          <div className="breadcrumb">
-            <span>Hệ thống</span> / <span>Quản trị & Phân quyền</span> / <span className="active">Quản lý tài khoản</span>
-          </div>
           <h1 className="page-title">Quản lý tài khoản người dùng</h1>
-          <p className="page-subtitle">
-            Tạo mới, phân vai trò, đặt phạm vi dữ liệu và theo dõi trạng thái tài khoản toàn bộ nhân sự công ty.
-          </p>
+          <p className="page-subtitle">Tạo mới, phân quyền và theo dõi trạng thái tài khoản.</p>
         </div>
         <div className="page-header-actions">
           <button type="button" className="btn-primary btn-lg" onClick={handleOpenCreateModal}>
@@ -221,7 +192,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
       {/* Stats Summary Cards */}
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--blue">👥</div>
+          <div className="stat-card__icon stat-card__icon--blue">{ICONS.users}</div>
           <div>
             <span className="stat-card__label">Tổng tài khoản</span>
             <strong className="stat-card__value">{totalCount}</strong>
@@ -229,7 +200,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
         </div>
 
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--green">🟢</div>
+          <div className="stat-card__icon stat-card__icon--green">{ICONS.userCheck}</div>
           <div>
             <span className="stat-card__label">Đang hoạt động</span>
             <strong className="stat-card__value text-success">{activeCount}</strong>
@@ -237,7 +208,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
         </div>
 
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--red">🔒</div>
+          <div className="stat-card__icon stat-card__icon--red">{ICONS.lock}</div>
           <div>
             <span className="stat-card__label">Đang bị khóa</span>
             <strong className="stat-card__value text-danger">{lockedCount}</strong>
@@ -245,7 +216,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
         </div>
 
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--purple">⚡</div>
+          <div className="stat-card__icon stat-card__icon--purple">{ICONS.shield}</div>
           <div>
             <span className="stat-card__label">Quản trị viên</span>
             <strong className="stat-card__value">{adminCount}</strong>
@@ -256,7 +227,8 @@ export const UserListPage: React.FC<UserListPageProps> = ({
       {/* Global Error Banner */}
       {error && (
         <div className="alert alert--error mb-4" role="alert">
-          <span>⚠️ {error}</span>
+          <span className="alert__icon">{ICONS.alertTriangle}</span>
+          <span>{error}</span>
           <button type="button" className="btn-link text-white ml-auto" onClick={fetchUsersList}>
             Thử lại
           </button>
@@ -275,27 +247,18 @@ export const UserListPage: React.FC<UserListPageProps> = ({
         onResetTwoFactor={(u) => setConfirmResetTwoFactorUser(u)}
       />
 
-      {/* Audit Log Stream section for TC-05 */}
-      <div className="audit-log-card">
-        <div className="audit-log-header">
-          <h3 className="audit-log-title">📋 Nhật ký thao tác tài khoản gần đây (Audit Log)</h3>
-          <span className="badge-pulse">Lưu vết 100% realtime</span>
-        </div>
-        <div className="audit-log-list">
-          {auditLogs.map((log) => (
-            <div key={log.id} className="audit-log-item">
-              <div className="audit-log-icon">📝</div>
-              <div className="audit-log-meta">
-                <div className="audit-log-row">
-                  <strong>{log.action}</strong> đối với tài khoản <span className="highlight-username">@{log.targetUser}</span>
-                  <span className="audit-log-time">{log.timestamp}</span>
-                </div>
-                <p className="audit-log-details">{log.details} • Thực hiện bởi <em>{log.performedBy}</em></p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* TC-05: nhật ký thao tác tài khoản giờ nằm ở trang riêng biệt "Nhật ký hệ thống" — lưu thật
+          trên máy chủ, có phân trang, không còn là danh sách nhúng cuộn tay ở đây. */}
+      {onViewAuditLog && (
+        <button type="button" className="audit-log-link" data-reveal-target onClick={onViewAuditLog}>
+          <span className="audit-log-link__icon">{ICONS.clipboardList}</span>
+          <span className="audit-log-link__text">
+            <strong>Xem nhật ký thao tác đầy đủ</strong>
+            <span>Toàn bộ lịch sử tạo/sửa/khóa tài khoản, phân quyền — lưu trên máy chủ</span>
+          </span>
+          <span className="audit-log-link__arrow">→</span>
+        </button>
+      )}
 
       {/* Form Modal for Create & Edit */}
       <UserFormModal
@@ -320,9 +283,10 @@ export const UserListPage: React.FC<UserListPageProps> = ({
           <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title text-warning">
-                {confirmStatusUser.status === 'LOCKED' ? '🔓 Xác nhận mở khóa tài khoản' : '🔒 Xác nhận khóa tài khoản'}
+                <span className="modal-title__icon">{confirmStatusUser.status === 'LOCKED' ? ICONS.unlock : ICONS.lock}</span>
+                {confirmStatusUser.status === 'LOCKED' ? 'Xác nhận mở khóa tài khoản' : 'Xác nhận khóa tài khoản'}
               </h3>
-              <button type="button" className="modal-close" onClick={() => setConfirmStatusUser(null)}>✕</button>
+              <button type="button" className="modal-close" aria-label="Đóng" onClick={() => setConfirmStatusUser(null)}>{ICONS.close}</button>
             </div>
             <div className="modal-body">
               <p>
@@ -330,7 +294,8 @@ export const UserListPage: React.FC<UserListPageProps> = ({
                 <strong>@{confirmStatusUser.username}</strong> ({confirmStatusUser.fullName})?
               </p>
               <div className="confirm-note-box">
-                <span>ℹ️ Hành động này sẽ được ghi vết vào Nhật ký truy cập hệ thống kèm thời điểm và thông tin tài khoản thực hiện.</span>
+                <span className="confirm-note-box__icon">{ICONS.info}</span>
+                <span>Hành động này sẽ được ghi vết vào Nhật ký truy cập hệ thống kèm thời điểm và thông tin tài khoản thực hiện.</span>
               </div>
             </div>
             <div className="modal-footer">
@@ -354,8 +319,11 @@ export const UserListPage: React.FC<UserListPageProps> = ({
         <div className="modal-backdrop" onClick={() => setConfirmResetTwoFactorUser(null)} role="dialog">
           <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title text-warning">🔁 Xác nhận đặt lại xác thực hai bước</h3>
-              <button type="button" className="modal-close" onClick={() => setConfirmResetTwoFactorUser(null)}>✕</button>
+              <h3 className="modal-title text-warning">
+                <span className="modal-title__icon">{ICONS.resetTwoFactor}</span>
+                Xác nhận đặt lại xác thực hai bước
+              </h3>
+              <button type="button" className="modal-close" aria-label="Đóng" onClick={() => setConfirmResetTwoFactorUser(null)}>{ICONS.close}</button>
             </div>
             <div className="modal-body">
               <p>
@@ -363,8 +331,9 @@ export const UserListPage: React.FC<UserListPageProps> = ({
                 <strong>@{confirmResetTwoFactorUser.username}</strong> ({confirmResetTwoFactorUser.fullName})?
               </p>
               <div className="confirm-note-box">
+                <span className="confirm-note-box__icon">{ICONS.info}</span>
                 <span>
-                  ℹ️ Chỉ dùng khi người dùng đã mất/đổi điện thoại và không còn app Authenticator nào tạo được mã
+                  Chỉ dùng khi người dùng đã mất/đổi điện thoại và không còn app Authenticator nào tạo được mã
                   cho tài khoản này nữa. Sau khi đặt lại, app cũ sẽ ngừng hoạt động — lần đăng nhập kế tiếp của
                   tài khoản này sẽ bắt buộc quét mã QR để liên kết app mới.
                 </span>

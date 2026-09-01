@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { Department } from '../types/departmentTypes';
 import { DepartmentApiError } from '../api/departmentsApi';
+import { ICONS } from '../../../components/common/icons';
 
 interface DepartmentDeleteModalProps {
   isOpen: boolean;
@@ -59,16 +60,17 @@ export const DepartmentDeleteModal: React.FC<DepartmentDeleteModalProps> = ({
     <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
       <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3 className="modal-title text-danger">🗑️ Xác nhận xóa bộ phận</h3>
-          <button type="button" className="modal-close" onClick={onClose}>
-            ✕
+          <h3 className="modal-title text-danger"><span className="modal-title__icon">{ICONS.trash}</span> Xác nhận xóa bộ phận</h3>
+          <button type="button" className="modal-close" aria-label="Đóng" onClick={onClose}>
+            {ICONS.close}
           </button>
         </div>
 
         <div className="modal-body">
           {serverError && (
             <div className="alert alert--error mb-4" role="alert">
-              <span>⚠️ {serverError}</span>
+              <span className="alert__icon">{ICONS.alertTriangle}</span>
+              <span>{serverError}</span>
             </div>
           )}
 
@@ -78,12 +80,14 @@ export const DepartmentDeleteModal: React.FC<DepartmentDeleteModalProps> = ({
 
           {hasChildren && (
             <div className="alert alert--error mb-3" style={{ fontSize: '12.5px' }}>
-              <span>⚠️ <strong>Cảnh báo:</strong> Bộ phận này hiện có bộ phận con trực thuộc. Hệ thống sẽ từ chối thao tác xóa cho đến khi các bộ phận con được di chuyển hoặc xóa.</span>
+              <span className="alert__icon">{ICONS.alertTriangle}</span>
+              <span><strong>Cảnh báo:</strong> Bộ phận này hiện có bộ phận con trực thuộc. Hệ thống sẽ từ chối thao tác xóa cho đến khi các bộ phận con được di chuyển hoặc xóa.</span>
             </div>
           )}
 
           <div className="confirm-note-box">
-            <span>ℹ️ Thao tác xóa sẽ được lưu vào nhật ký hệ thống. Không thể hoàn tác sau khi đã thực hiện.</span>
+            <span className="confirm-note-box__icon">{ICONS.info}</span>
+            <span>Thao tác xóa sẽ được lưu vào nhật ký hệ thống. Không thể hoàn tác sau khi đã thực hiện.</span>
           </div>
         </div>
 

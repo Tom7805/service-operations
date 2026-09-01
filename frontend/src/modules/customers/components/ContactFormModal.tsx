@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { CustomerContactPayload, CustomerContactFormErrors } from '../types/customerTypes';
 import { validateCustomerContact } from '../validators/customerValidators';
+import { ICONS } from '../../../components/common/icons';
 
 interface ContactFormModalProps {
   isOpen: boolean;
@@ -107,7 +108,7 @@ export default function ContactFormModal({
             onClick={onClose}
             aria-label="Đóng cửa sổ"
           >
-            ✕
+            {ICONS.close}
           </button>
         </div>
 
@@ -115,7 +116,7 @@ export default function ContactFormModal({
           <div className="modal-body">
             {serverError && (
               <div className="alert alert--error" role="alert" data-testid="contact-form-server-error">
-                <span>⚠️</span>
+                <span className="alert__icon">{ICONS.alertTriangle}</span>
                 <div>{serverError}</div>
               </div>
             )}
@@ -221,7 +222,7 @@ export default function ContactFormModal({
                   />
                   <div className="primary-contact-checkbox-label">
                     <div className="primary-contact-badge-title">
-                      <span className="badge-star-icon">⭐</span>
+                      <span className="badge-star-icon">{ICONS.star}</span>
                       <strong>Đặt làm Người liên hệ đầu mối chính</strong>
                     </div>
                     <p>

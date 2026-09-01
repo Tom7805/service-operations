@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "bounce-easing",
+        "value": "cubic-bezier(.32, 1.12, .52, 1)",
+        "createdAt": "2026-09-01T00:29:02.460Z",
+        "reason": "Finish reviewer (impeccable, ngu canh sach) da xet va CHAP NHAN: brief duoc nguoi dung ghim la Apple Liquid Glass, ma chuyen dong chu ky cua no la spring nhe. Overshoot da ha tu 1.56 xuong ~12% o 300ms, chi dung cho scale khi bam. Craft-floor: brief da ghim thang mac dinh cua rule."
+      }
+    ]
+  }
+}

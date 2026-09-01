@@ -7,6 +7,7 @@ import {
   CustomerApiError,
 } from '../api/customersApi';
 import ContactFormModal from './ContactFormModal';
+import { ICONS } from '../../../components/common/icons';
 
 interface ContactListProps {
   customerId: number;
@@ -187,7 +188,7 @@ export default function ContactList({
   if (!isAllowed) {
     return (
       <div className="access-denied-card contact-access-denied" data-testid="contact-access-denied">
-        <div className="access-denied-icon">🚫</div>
+        <div className="access-denied-icon">{ICONS.shieldOff}</div>
         <span className="eyebrow text-danger">Từ chối quyền truy cập (403 FORBIDDEN)</span>
         <h3>Không có quyền quản lý người liên hệ của khách hàng</h3>
         <p>
@@ -195,9 +196,9 @@ export default function ContactList({
           <strong>Nhân viên kinh doanh (VT-04)</strong>.
         </p>
         <div className="security-log-badge">
-          <span>🛡️ Ghi nhận Audit Log: {new Date().toLocaleString('vi-VN')}</span>
-          <span>Tài khoản thực hiện: {currentUserName}</span>
-          <span>Vai trò tài khoản: {currentUserRoles.join(', ')}</span>
+          <span className="security-log-badge__item">{ICONS.shield} Ghi nhận Audit Log: {new Date().toLocaleString('vi-VN')}</span>
+          <span className="security-log-badge__item">Tài khoản thực hiện: {currentUserName}</span>
+          <span className="security-log-badge__item">Vai trò tài khoản: {currentUserRoles.join(', ')}</span>
         </div>
       </div>
     );
@@ -214,7 +215,7 @@ export default function ContactList({
         >
           <div className="toast-notification__content">
             <span className="toast-notification__icon">
-              {toastMessage.type === 'success' ? '✅' : toastMessage.type === 'error' ? '❌' : 'ℹ️'}
+              {toastMessage.type === 'success' ? ICONS.checkCircle : toastMessage.type === 'error' ? ICONS.alertTriangle : ICONS.info}
             </span>
             <span className="toast-notification__text">{toastMessage.text}</span>
           </div>
@@ -258,7 +259,7 @@ export default function ContactList({
       {/* Thẻ tóm tắt nhanh */}
       <div className="contact-stats-grid">
         <div className="contact-stat-card">
-          <div className="contact-stat-icon contact-stat-icon--total">👥</div>
+          <div className="contact-stat-icon contact-stat-icon--total">{ICONS.users}</div>
           <div>
             <span className="contact-stat-label">Tổng người liên hệ</span>
             <div className="contact-stat-value" data-testid="stat-total-contacts">{contacts.length}</div>
@@ -266,7 +267,7 @@ export default function ContactList({
         </div>
 
         <div className="contact-stat-card">
-          <div className="contact-stat-icon contact-stat-icon--primary">⭐</div>
+          <div className="contact-stat-icon contact-stat-icon--primary">{ICONS.star}</div>
           <div>
             <span className="contact-stat-label">Đầu mối chính hiện tại</span>
             <div className="contact-stat-value text-primary-gold" data-testid="stat-primary-name">
@@ -279,7 +280,7 @@ export default function ContactList({
         </div>
 
         <div className="contact-stat-card">
-          <div className="contact-stat-icon contact-stat-icon--role">💼</div>
+          <div className="contact-stat-icon contact-stat-icon--role">{ICONS.briefcase}</div>
           <div>
             <span className="contact-stat-label">Quyền hạn thao tác</span>
             <div className="contact-stat-value text-success" style={{ fontSize: '15px' }}>
@@ -292,7 +293,7 @@ export default function ContactList({
       {/* Thanh tìm kiếm & lọc liên hệ */}
       <div className="contact-toolbar">
         <div className="search-box contact-search-box">
-          <span className="search-box__icon" aria-hidden="true">🔍</span>
+          <span className="search-box__icon" aria-hidden="true">{ICONS.search}</span>
           <input
             type="text"
             className="search-box__input"
@@ -309,7 +310,7 @@ export default function ContactList({
               onClick={() => setSearchTerm('')}
               aria-label="Xóa từ khóa tìm kiếm"
             >
-              ✕
+              {ICONS.close}
             </button>
           )}
         </div>
@@ -329,7 +330,7 @@ export default function ContactList({
         </div>
       ) : contacts.length === 0 ? (
         <div className="table-empty-state contact-empty-state" data-testid="contact-empty-state">
-          <div className="table-empty-state__icon">📇</div>
+          <div className="table-empty-state__icon">{ICONS.users}</div>
           <h3>Chưa có người liên hệ nào</h3>
           <p>
             Hồ sơ khách hàng này chưa có người liên hệ được ghi nhận. Hãy thêm người liên hệ đầu tiên để thiết lập kênh kết nối.
@@ -346,7 +347,7 @@ export default function ContactList({
         </div>
       ) : filteredContacts.length === 0 ? (
         <div className="table-empty-state contact-empty-state">
-          <div className="table-empty-state__icon">🔍</div>
+          <div className="table-empty-state__icon">{ICONS.search}</div>
           <h3>Không tìm thấy người liên hệ phù hợp</h3>
           <p>Không có kết quả nào khớp với từ khóa "{searchTerm}". Vui lòng thử từ khóa khác.</p>
           <button
@@ -390,7 +391,7 @@ export default function ContactList({
                           title="Người liên hệ đầu mối chính của khách hàng"
                           data-testid={`badge-primary-${contact.id}`}
                         >
-                          <span className="star-icon">⭐</span>
+                          <span className="star-icon">{ICONS.star}</span>
                           <span className="primary-pill-text">Chính</span>
                         </div>
                       ) : (
@@ -399,7 +400,7 @@ export default function ContactList({
                           title="Người liên hệ đầu mối phụ"
                           data-testid={`badge-secondary-${contact.id}`}
                         >
-                          <span className="user-icon">👤</span>
+                          <span className="user-icon">{ICONS.user}</span>
                           <span className="secondary-pill-text">Phụ</span>
                         </div>
                       )}
@@ -418,7 +419,7 @@ export default function ContactList({
                             {contact.fullName}
                           </span>
                           {isPrimary && (
-                            <span className="primary-label-chip">⭐ Đầu mối giao tiếp chính</span>
+                            <span className="primary-label-chip">{ICONS.star} Đầu mối giao tiếp chính</span>
                           )}
                         </div>
                       </div>
@@ -428,7 +429,7 @@ export default function ContactList({
                     <td>
                       {contact.title ? (
                         <span className="contact-title-badge" data-testid={`contact-title-${contact.id}`}>
-                          💼 {contact.title}
+                          <span className="icon-xs">{ICONS.briefcase}</span> {contact.title}
                         </span>
                       ) : (
                         <span className="cell-muted">—</span>
@@ -445,7 +446,7 @@ export default function ContactList({
                             title={`Gửi thư tới ${contact.email}`}
                             data-testid={`contact-email-${contact.id}`}
                           >
-                            ✉️ {contact.email}
+                            <span className="icon-xs">{ICONS.mail}</span> {contact.email}
                           </a>
                           <button
                             type="button"
@@ -454,7 +455,7 @@ export default function ContactList({
                             onClick={() => handleCopy(contact.email!, 'Email')}
                             aria-label={`Sao chép email ${contact.email}`}
                           >
-                            {copiedText === contact.email ? '✓' : '📋'}
+                            {copiedText === contact.email ? '✓' : <span className="icon-sm">{ICONS.copy}</span>}
                           </button>
                         </div>
                       ) : (
@@ -472,7 +473,7 @@ export default function ContactList({
                             title={`Gọi điện tới ${contact.phone}`}
                             data-testid={`contact-phone-${contact.id}`}
                           >
-                            📞 {contact.phone}
+                            <span className="icon-xs">{ICONS.phone}</span> {contact.phone}
                           </a>
                           <button
                             type="button"
@@ -481,7 +482,7 @@ export default function ContactList({
                             onClick={() => handleCopy(contact.phone!, 'Số điện thoại')}
                             aria-label={`Sao chép số điện thoại ${contact.phone}`}
                           >
-                            {copiedText === contact.phone ? '✓' : '📋'}
+                            {copiedText === contact.phone ? '✓' : <span className="icon-sm">{ICONS.copy}</span>}
                           </button>
                         </div>
                       ) : (
@@ -511,7 +512,7 @@ export default function ContactList({
                             </>
                           ) : (
                             <>
-                              <span>⭐</span>
+                              <span className="icon-sm">{ICONS.star}</span>
                               <span>Đặt làm đầu mối chính</span>
                             </>
                           )}
@@ -531,14 +532,14 @@ export default function ContactList({
         <div className="audit-log-card contact-audit-card" data-testid="contact-audit-card">
           <div className="audit-log-header">
             <h4 className="audit-log-title">
-              📋 Nhật ký thay đổi người liên hệ trong phiên (TC-04)
+              <span className="audit-log-title__icon">{ICONS.clipboardList}</span> Nhật ký thay đổi người liên hệ trong phiên (TC-04)
             </h4>
             <span className="badge-pulse">{localAuditLogs.length} ghi nhận mới</span>
           </div>
           <div className="audit-log-list">
             {localAuditLogs.map((log) => (
               <div key={log.id} className="audit-log-item" data-testid="audit-log-entry">
-                <span className="audit-log-icon">🛡️</span>
+                <span className="audit-log-icon">{ICONS.users}</span>
                 <div className="audit-log-meta">
                   <div className="audit-log-row">
                     <span>

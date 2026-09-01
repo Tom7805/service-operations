@@ -71,10 +71,6 @@ export default function ResetPasswordForm({ token, onDone }: ResetPasswordFormPr
   if (!tokenValid && !success) {
     return (
       <div className="login-card">
-        <div className="panel-heading">
-          <span className="panel-heading__signal" />
-          <span>Liên kết không hợp lệ</span>
-        </div>
         <h2>Liên kết đã hết hạn</h2>
         <p className="login-card__intro">
           Liên kết khôi phục mật khẩu không hợp lệ, đã hết hạn hoặc đã được sử dụng. Vui lòng gửi lại yêu cầu
@@ -90,10 +86,6 @@ export default function ResetPasswordForm({ token, onDone }: ResetPasswordFormPr
   if (success) {
     return (
       <div className="login-card">
-        <div className="panel-heading">
-          <span className="panel-heading__signal" />
-          <span>Thành công</span>
-        </div>
         <h2>Đặt lại mật khẩu thành công</h2>
         <p className="login-card__intro">Vui lòng đăng nhập lại bằng mật khẩu mới.</p>
         <button type="button" className="submit" onClick={onDone}>
@@ -105,10 +97,6 @@ export default function ResetPasswordForm({ token, onDone }: ResetPasswordFormPr
 
   return (
     <div className="login-card">
-      <div className="panel-heading">
-        <span className="panel-heading__signal" />
-        <span>Khôi phục mật khẩu</span>
-      </div>
       <h2>Đặt mật khẩu mới</h2>
       <form onSubmit={handleSubmit} noValidate>
         <label htmlFor="reset-new-password">Mật khẩu mới</label>

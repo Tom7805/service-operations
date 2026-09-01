@@ -3,6 +3,7 @@ import type { Customer, CustomerContact, ContactAuditItem } from '../types/custo
 import ContactList from '../components/ContactList';
 import CustomerOverviewPanel from '../components/CustomerOverviewPanel';
 import CustomerSegmentPanel from '../components/CustomerSegmentPanel';
+import { ICONS } from '../../../components/common/icons';
 
 type CustomerDetailTab = 'CONTACTS' | 'SEGMENT' | 'SUMMARY' | 'OVERVIEW' | 'AUDIT';
 
@@ -88,8 +89,6 @@ export default function CustomerDetailPage({
               ← Khách hàng
             </button>
             <span>/</span>
-            <span>Hồ sơ khách hàng</span>
-            <span>/</span>
             <span className="active">{customer.code}</span>
           </div>
 
@@ -104,7 +103,7 @@ export default function CustomerDetailPage({
                 onClick={() => handleCopyCode(customer.code)}
                 aria-label={`Sao chép mã ${customer.code}`}
               >
-                {copiedCode ? '✓' : '📋'}
+                {copiedCode ? '✓' : <span className="icon-sm">{ICONS.copy}</span>}
               </button>
             </div>
           </div>
@@ -128,11 +127,11 @@ export default function CustomerDetailPage({
       {/* Thẻ thông tin tổng quan doanh nghiệp */}
       <div className="customer-overview-card">
         <div className="customer-overview-header">
-          <div className="overview-brand-icon">🏢</div>
+          <div className="overview-brand-icon">{ICONS.building}</div>
           <div className="overview-title-meta">
             <h3>{customer.name}</h3>
             <span className="customer-industry-badge">
-              🏷️ {customer.industry || 'Chưa xác định ngành nghề'}
+              <span className="icon-xs">{ICONS.tag}</span> {customer.industry || 'Chưa xác định ngành nghề'}
             </span>
           </div>
         </div>
@@ -154,7 +153,7 @@ export default function CustomerDetailPage({
             <div className="meta-item__value">
               {customer.phone ? (
                 <a href={`tel:${customer.phone}`} className="contact-link">
-                  📞 {customer.phone}
+                  <span className="icon-xs">{ICONS.phone}</span> {customer.phone}
                 </a>
               ) : (
                 <span className="cell-muted">—</span>
@@ -165,14 +164,14 @@ export default function CustomerDetailPage({
           <div className="meta-item meta-item--wide">
             <span className="meta-item__label">Địa chỉ trụ sở chính</span>
             <div className="meta-item__value address-text">
-              📍 {customer.address || 'Chưa cập nhật địa chỉ'}
+              <span className="icon-xs">{ICONS.pin}</span> {customer.address || 'Chưa cập nhật địa chỉ'}
             </div>
           </div>
 
           <div className="meta-item">
             <span className="meta-item__label">Thời gian tạo hồ sơ</span>
             <div className="meta-item__value cell-date">
-              📅 {formatDate(customer.createdAt)}
+              <span className="icon-xs">{ICONS.calendar}</span> {formatDate(customer.createdAt)}
             </div>
           </div>
         </div>
@@ -186,7 +185,7 @@ export default function CustomerDetailPage({
           onClick={() => setActiveTab('CONTACTS')}
           data-testid="tab-btn-contacts"
         >
-          <span className="tab-icon">👥</span>
+          <span className="tab-icon">{ICONS.users}</span>
           <span>Người liên hệ (Contacts)</span>
         </button>
 
@@ -196,7 +195,7 @@ export default function CustomerDetailPage({
           onClick={() => setActiveTab('SEGMENT')}
           data-testid="tab-btn-segment"
         >
-          <span className="tab-icon">🏷️</span>
+          <span className="tab-icon">{ICONS.tag}</span>
           <span>Phân nhóm</span>
         </button>
 
@@ -206,7 +205,7 @@ export default function CustomerDetailPage({
           onClick={() => setActiveTab('SUMMARY')}
           data-testid="tab-btn-summary"
         >
-          <span className="tab-icon">📊</span>
+          <span className="tab-icon">{ICONS.chart}</span>
           <span>Hồ sơ tổng hợp</span>
         </button>
 
@@ -216,7 +215,7 @@ export default function CustomerDetailPage({
           onClick={() => setActiveTab('OVERVIEW')}
           data-testid="tab-btn-overview"
         >
-          <span className="tab-icon">🏢</span>
+          <span className="tab-icon">{ICONS.building}</span>
           <span>Hồ sơ chi tiết</span>
         </button>
 
@@ -226,7 +225,7 @@ export default function CustomerDetailPage({
           onClick={() => setActiveTab('AUDIT')}
           data-testid="tab-btn-audit"
         >
-          <span className="tab-icon">🛡️</span>
+          <span className="tab-icon">{ICONS.shield}</span>
           <span>Nhật ký kiểm toán {auditLogs.length > 0 && `(${auditLogs.length})`}</span>
         </button>
       </div>
@@ -273,17 +272,17 @@ export default function CustomerDetailPage({
 
         {activeTab === 'OVERVIEW' && (
           <div className="overview-tab-pane user-table-card" style={{ padding: '24px' }}>
-            <h3 style={{ margin: '0 0 16px', fontSize: '17px', color: '#0f172a' }}>
+            <h3 style={{ margin: '0 0 16px', fontSize: '17px', color: '#111111' }}>
               Thông tin hành chính doanh nghiệp
             </h3>
             <div className="form-grid">
               <div className="form-field">
                 <span className="form-label">Tên pháp nhân đầy đủ:</span>
-                <p style={{ fontWeight: 600, color: '#0f172a', margin: 0 }}>{customer.name}</p>
+                <p style={{ fontWeight: 600, color: '#111111', margin: 0 }}>{customer.name}</p>
               </div>
               <div className="form-field">
                 <span className="form-label">Mã khách hàng tự sinh:</span>
-                <p style={{ fontFamily: 'monospace', fontWeight: 700, color: '#059669', margin: 0 }}>
+                <p style={{ fontFamily: 'monospace', fontWeight: 700, color: '#111111', margin: 0 }}>
                   {customer.code}
                 </p>
               </div>
@@ -315,13 +314,13 @@ export default function CustomerDetailPage({
           <div className="audit-tab-pane user-table-card" style={{ padding: '24px' }}>
             <div className="audit-log-header">
               <h3 className="audit-log-title" style={{ fontSize: '17px' }}>
-                🛡️ Toàn bộ nhật ký kiểm toán khách hàng (TC-04)
+                <span className="audit-log-title__icon">{ICONS.shield}</span> Toàn bộ nhật ký kiểm toán khách hàng (TC-04)
               </h3>
               <span className="badge-pulse">Bảo mật chuẩn ISO 27001</span>
             </div>
             {auditLogs.length === 0 ? (
               <div className="table-empty-state" style={{ padding: '30px' }}>
-                <div className="table-empty-state__icon">📜</div>
+                <div className="table-empty-state__icon">{ICONS.clipboardList}</div>
                 <h4>Chưa có thao tác nào trong phiên này</h4>
                 <p>Các hành động thêm người liên hệ, thay đổi đầu mối chính sẽ được ghi nhận tại đây.</p>
               </div>
@@ -329,7 +328,7 @@ export default function CustomerDetailPage({
               <div className="audit-log-list" style={{ marginTop: '16px' }}>
                 {auditLogs.map((log) => (
                   <div key={log.id} className="audit-log-item">
-                    <span className="audit-log-icon">✅</span>
+                    <span className="audit-log-icon">{ICONS.checkCircle}</span>
                     <div className="audit-log-meta">
                       <div className="audit-log-row">
                         <span>

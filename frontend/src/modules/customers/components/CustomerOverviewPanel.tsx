@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { fetchCustomerOverview, CustomerApiError } from '../api/customersApi';
 import type {
   CustomerOverview,
   CustomerOverviewItem,
   CustomerOverviewSectionKey,
 } from '../types/customerTypes';
+import { ICONS } from '../../../components/common/icons';
 
 interface CustomerOverviewPanelProps {
   customerId: number;
@@ -19,16 +21,16 @@ interface CustomerOverviewPanelProps {
 type SectionMeta = {
   key: CustomerOverviewSectionKey;
   label: string;
-  icon: string;
+  icon: ReactNode;
   emptyHint: string;
 };
 
 const SECTIONS: SectionMeta[] = [
-  { key: 'opportunities', label: 'Cơ hội bán hàng', icon: '🎯', emptyHint: 'Chưa có cơ hội nào gắn với khách hàng này.' },
-  { key: 'contracts', label: 'Hợp đồng', icon: '📄', emptyHint: 'Chưa có hợp đồng nào được ký với khách hàng này.' },
-  { key: 'projects', label: 'Dự án', icon: '📁', emptyHint: 'Chưa có dự án nào được mở cho khách hàng này.' },
-  { key: 'invoices', label: 'Hóa đơn', icon: '🧾', emptyHint: 'Chưa phát hành hóa đơn nào cho khách hàng này.' },
-  { key: 'receivables', label: 'Công nợ phải thu', icon: '💰', emptyHint: 'Khách hàng này hiện không có công nợ phải thu.' },
+  { key: 'opportunities', label: 'Cơ hội bán hàng', icon: ICONS.target, emptyHint: 'Chưa có cơ hội nào gắn với khách hàng này.' },
+  { key: 'contracts', label: 'Hợp đồng', icon: ICONS.document, emptyHint: 'Chưa có hợp đồng nào được ký với khách hàng này.' },
+  { key: 'projects', label: 'Dự án', icon: ICONS.folder, emptyHint: 'Chưa có dự án nào được mở cho khách hàng này.' },
+  { key: 'invoices', label: 'Hóa đơn', icon: ICONS.receipt, emptyHint: 'Chưa phát hành hóa đơn nào cho khách hàng này.' },
+  { key: 'receivables', label: 'Công nợ phải thu', icon: ICONS.money, emptyHint: 'Khách hàng này hiện không có công nợ phải thu.' },
 ];
 
 const currencyFormatter = new Intl.NumberFormat('vi-VN', {
@@ -169,7 +171,7 @@ export default function CustomerOverviewPanel({
     return (
       <div className="user-table-card customer-summary-panel" data-testid="customer-summary-forbidden">
         <div className="table-error-state">
-          <div className="table-error-state__icon">🔒</div>
+          <div className="table-error-state__icon">{ICONS.lock}</div>
           <div className="table-error-state__body">
             <h3>Bạn không có quyền xem hồ sơ tổng hợp của khách hàng này</h3>
             <p>
@@ -188,7 +190,7 @@ export default function CustomerOverviewPanel({
     return (
       <div className="user-table-card customer-summary-panel" data-testid="customer-summary-notfound">
         <div className="table-empty-state">
-          <div className="table-empty-state__icon">🔍</div>
+          <div className="table-empty-state__icon">{ICONS.search}</div>
           <h3>Không tìm thấy hồ sơ khách hàng</h3>
           <p>Hồ sơ khách hàng này có thể đã bị gộp hoặc xóa khỏi hệ thống.</p>
         </div>
@@ -200,7 +202,7 @@ export default function CustomerOverviewPanel({
     return (
       <div className="user-table-card customer-summary-panel" data-testid="customer-summary-error">
         <div className="table-error-state" role="alert">
-          <div className="table-error-state__icon">⚠️</div>
+          <div className="table-error-state__icon">{ICONS.alertTriangle}</div>
           <div className="table-error-state__body">
             <h3>Không tải được hồ sơ tổng hợp</h3>
             <p>{errorMessage}</p>
@@ -231,7 +233,7 @@ export default function CustomerOverviewPanel({
           data-testid="btn-reload-summary"
           aria-label="Tải lại hồ sơ tổng hợp"
         >
-          🔄
+          {ICONS.refresh}
         </button>
       </div>
 
@@ -239,14 +241,14 @@ export default function CustomerOverviewPanel({
       {totals && (
         <div className="stats-grid customer-summary-stats">
           <div className="stat-card">
-            <div className="stat-card__icon stat-card__icon--blue">🎯</div>
+            <div className="stat-card__icon stat-card__icon--blue">{ICONS.target}</div>
             <div>
               <span className="stat-card__label">Cơ hội bán hàng</span>
               <div className="stat-card__value">{totals.opportunities}</div>
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-card__icon stat-card__icon--purple">📄</div>
+            <div className="stat-card__icon stat-card__icon--purple">{ICONS.document}</div>
             <div>
               <span className="stat-card__label">Hợp đồng · Tổng giá trị</span>
               <div className="stat-card__value" style={{ fontSize: '15px' }}>
@@ -255,21 +257,21 @@ export default function CustomerOverviewPanel({
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-card__icon stat-card__icon--green">📁</div>
+            <div className="stat-card__icon stat-card__icon--green">{ICONS.folder}</div>
             <div>
               <span className="stat-card__label">Dự án</span>
               <div className="stat-card__value">{totals.projects}</div>
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-card__icon stat-card__icon--blue">🧾</div>
+            <div className="stat-card__icon stat-card__icon--blue">{ICONS.receipt}</div>
             <div>
               <span className="stat-card__label">Hóa đơn</span>
               <div className="stat-card__value">{totals.invoices}</div>
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-card__icon stat-card__icon--red">💰</div>
+            <div className="stat-card__icon stat-card__icon--red">{ICONS.money}</div>
             <div>
               <span className="stat-card__label">Công nợ phải thu</span>
               <div className="stat-card__value text-warning" style={{ fontSize: '15px' }}>
@@ -282,7 +284,7 @@ export default function CustomerOverviewPanel({
 
       {isEmpty ? (
         <div className="table-empty-state" data-testid="customer-summary-empty" style={{ marginTop: '8px' }}>
-          <div className="table-empty-state__icon">🗂️</div>
+          <div className="table-empty-state__icon">{ICONS.folder}</div>
           <h3>Chưa phát sinh dữ liệu hợp tác</h3>
           <p>
             Khách hàng này chưa có cơ hội, hợp đồng, dự án, hóa đơn hay công nợ nào trong phạm vi bạn được xem.
@@ -293,13 +295,13 @@ export default function CustomerOverviewPanel({
         <>
           {/* Dòng thời gian hợp nhất (TC-01) */}
           <div className="customer-summary-section">
-            <h4 className="customer-summary-section__title">🕒 Dòng thời gian hợp tác</h4>
+            <h4 className="customer-summary-section__title"><span className="icon-sm">{ICONS.clock}</span> Dòng thời gian hợp tác</h4>
             <ol className="customer-timeline" data-testid="customer-summary-timeline">
               {timeline.map(({ section, item }) => (
                 <li key={`${section.key}-${item.id}`} className="customer-timeline__item">
                   <span className="customer-timeline__date">{formatDate(item.date)}</span>
                   <span className={`customer-timeline__tag customer-timeline__tag--${section.key}`}>
-                    {section.icon} {section.label}
+                    <span className="icon-xs">{section.icon}</span> {section.label}
                   </span>
                   <span className="customer-timeline__name">
                     {item.name || '(không có tên)'}
@@ -322,7 +324,7 @@ export default function CustomerOverviewPanel({
                 data-testid={`customer-summary-section-${section.key}`}
               >
                 <h4 className="customer-summary-section__title">
-                  {section.icon} {section.label} <span className="cell-muted">({items.length})</span>
+                  <span className="icon-sm">{section.icon}</span> {section.label} <span className="cell-muted">({items.length})</span>
                 </h4>
                 {items.length === 0 ? (
                   <p className="customer-summary-section__empty cell-muted">{section.emptyHint}</p>
@@ -365,7 +367,7 @@ export default function CustomerOverviewPanel({
       )}
 
       <p className="customer-summary-scope-note cell-muted">
-        ℹ️ Dữ liệu hiển thị nằm trong phạm vi truy cập của bạn theo vai trò và nhánh tổ chức được phân (QTN-01).
+        <span className="icon-xs">{ICONS.info}</span> Dữ liệu hiển thị nằm trong phạm vi truy cập của bạn theo vai trò và nhánh tổ chức được phân (QTN-01).
         Mỗi lần mở hồ sơ tổng hợp đều được hệ thống ghi vào nhật ký (người thực hiện · nội dung · thời điểm).
       </p>
     </div>

@@ -77,7 +77,6 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
           <span>Vận hành <b>dịch vụ</b></span>
         </a>
         <div className="brand-copy">
-          <p className="eyebrow">Nền tảng vận hành thông minh</p>
           <h1>Mọi quyết định đều<br /><em>có điểm tựa.</em></h1>
           <p className="brand-copy__description">Kết nối con người, dự án và dòng tiền trong một nhịp vận hành rõ ràng.</p>
           <div className="brand-signals" aria-label="Giá trị vận hành">

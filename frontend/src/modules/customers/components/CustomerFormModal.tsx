@@ -13,6 +13,7 @@ import {
   CustomerApiError,
 } from '../api/customersApi';
 import DuplicateWarningModal from './DuplicateWarningModal';
+import { ICONS } from '../../../components/common/icons';
 
 interface CustomerFormModalProps {
   isOpen: boolean;
@@ -237,7 +238,7 @@ export default function CustomerFormModal({
           <div className="modal-header">
             <div className="modal-header__title-wrap">
               <span className="modal-header__icon" aria-hidden="true">
-                🏢
+                {ICONS.building}
               </span>
               <div>
                 <h3 id="modal-title" className="modal-title">
@@ -256,7 +257,7 @@ export default function CustomerFormModal({
               disabled={submitting}
               aria-label="Đóng cửa sổ"
             >
-              ✕
+              {ICONS.close}
             </button>
           </div>
 
@@ -264,7 +265,7 @@ export default function CustomerFormModal({
             <div className="modal-body">
               {serverError && (
                 <div className="alert-box alert-box--danger" role="alert">
-                  <span className="alert-box__icon">⚠️</span>
+                  <span className="alert-box__icon">{ICONS.alertTriangle}</span>
                   <div className="alert-box__content">
                     <strong>Đã xảy ra lỗi:</strong>
                     <p>{serverError}</p>
@@ -274,7 +275,7 @@ export default function CustomerFormModal({
 
               {/* Thông tin mã khách hàng sinh tự động */}
               <div className="info-callout">
-                <span className="info-callout__icon">ℹ️</span>
+                <span className="info-callout__icon">{ICONS.info}</span>
                 <div className="info-callout__text">
                   <strong>Quy tắc mã hồ sơ:</strong> Hệ thống tự động cấp phát mã định danh duy
                   nhất (ví dụ: <code className="customer-code-badge">KH-xxxxxx</code>) và tích hợp
@@ -488,7 +489,7 @@ export default function CustomerFormModal({
                   </>
                 ) : (
                   <>
-                    <span>💾</span>
+                    <span className="icon-sm">{ICONS.save}</span>
                     <span>Lưu hồ sơ khách hàng</span>
                   </>
                 )}

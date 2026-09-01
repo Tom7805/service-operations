@@ -4,6 +4,7 @@ import {
   CUSTOMER_VALIDATION_LIMITS,
   validateDuplicateOverrideReason,
 } from '../validators/customerValidators';
+import { ICONS } from '../../../components/common/icons';
 
 interface DuplicateWarningModalProps {
   isOpen: boolean;
@@ -111,7 +112,7 @@ export default function DuplicateWarningModal({
         <div className="modal-header duplicate-modal-header">
           <div className="modal-header__title-wrap">
             <div className="duplicate-warning-icon-badge" aria-hidden="true">
-              ⚠️
+              {ICONS.alertTriangle}
             </div>
             <div>
               <div className="duplicate-header-badge">
@@ -134,14 +135,14 @@ export default function DuplicateWarningModal({
             disabled={isLoading}
             aria-label="Đóng cửa sổ và quay lại chỉnh sửa"
           >
-            ✕
+            {ICONS.close}
           </button>
         </div>
 
         <div className="modal-body duplicate-modal-body">
           {serverError && (
             <div className="alert-box alert-box--danger" role="alert">
-              <span className="alert-box__icon">❌</span>
+              <span className="alert-box__icon">{ICONS.alertTriangle}</span>
               <div className="alert-box__content">
                 <strong>Đã xảy ra lỗi:</strong>
                 <p>{serverError}</p>
@@ -151,7 +152,7 @@ export default function DuplicateWarningModal({
 
           {hasHighSimilarity && (
             <div className="duplicate-high-alert-banner" role="alert">
-              <span className="duplicate-high-alert-icon">🚨</span>
+              <span className="duplicate-high-alert-icon">{ICONS.alertTriangle}</span>
               <div className="duplicate-high-alert-text">
                 <strong>Cảnh báo mức độ nghiêm trọng:</strong>
                 <p>
@@ -166,7 +167,7 @@ export default function DuplicateWarningModal({
           {/* Khối tóm tắt hồ sơ đang tạo */}
           <div className="current-candidate-summary">
             <div className="current-candidate-header">
-              <span className="current-candidate-label">📋 Hồ sơ bạn đang dự định tạo:</span>
+              <span className="current-candidate-label"><span className="icon-sm">{ICONS.clipboardList}</span> Hồ sơ bạn đang dự định tạo:</span>
             </div>
             <div className="current-candidate-grid">
               <div className="current-field">
@@ -191,7 +192,7 @@ export default function DuplicateWarningModal({
           {/* Danh sách các ứng viên nghi trùng */}
           <div className="duplicate-candidates-section">
             <h4 className="duplicate-section-title">
-              🔍 Danh sách hồ sơ đã tồn tại trùng khớp ({candidates.length})
+              {ICONS.search} Danh sách hồ sơ đã tồn tại trùng khớp ({candidates.length})
             </h4>
 
             <div className="duplicate-candidates-list">
@@ -220,7 +221,7 @@ export default function DuplicateWarningModal({
                         >
                           <span className="similarity-badge__dot" />
                           <span className="similarity-badge__text">
-                            {isHigh ? '🚨 Trùng khớp cao' : '⚠️ Nghi ngờ trùng'} {percent}%
+                            {isHigh ? ICONS.alertTriangle : ICONS.info} {isHigh ? 'Trùng khớp cao' : 'Nghi ngờ trùng'} {percent}%
                           </span>
                         </div>
                       </div>
@@ -231,17 +232,17 @@ export default function DuplicateWarningModal({
                       <span className="matched-tags-label">Trường dữ liệu trùng khớp:</span>
                       {matchesName && (
                         <span className="matched-tag matched-tag--name">
-                          🏢 Tên công ty tương tự
+                          {ICONS.building} Tên công ty tương tự
                         </span>
                       )}
                       {matchesTaxCode && (
                         <span className="matched-tag matched-tag--tax">
-                          🔢 Trùng Mã số thuế
+                          {ICONS.hash} Trùng Mã số thuế
                         </span>
                       )}
                       {matchesPhone && (
                         <span className="matched-tag matched-tag--phone">
-                          📞 Trùng Số điện thoại
+                          {ICONS.phone} Trùng Số điện thoại
                         </span>
                       )}
                     </div>
@@ -281,7 +282,7 @@ export default function DuplicateWarningModal({
               className="override-reason-box"
             >
               <div className="override-reason-header">
-                <span className="override-icon">✍️</span>
+                <span className="override-icon">{ICONS.edit}</span>
                 <div>
                   <h5 className="override-title">Xác nhận bỏ qua cảnh báo & Tạo hồ sơ mới</h5>
                   <p className="override-desc">
@@ -389,7 +390,7 @@ export default function DuplicateWarningModal({
                 onClick={() => setShowOverrideForm(true)}
                 disabled={isLoading}
               >
-                <span>⚠️</span>
+                <span className="icon-sm">{ICONS.alertTriangle}</span>
                 <span>Vẫn tạo mới (Bỏ qua cảnh báo)</span>
               </button>
             ) : (
@@ -406,7 +407,7 @@ export default function DuplicateWarningModal({
                   </>
                 ) : (
                   <>
-                    <span>🛡️</span>
+                    <span className="icon-sm">{ICONS.shield}</span>
                     <span>Xác nhận tạo mới (Ghi nhật ký)</span>
                   </>
                 )}
