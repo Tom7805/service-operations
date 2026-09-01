@@ -41,7 +41,6 @@ export default function LoginForm({ onAuthenticated, onForgotPassword, onTwoFact
   }
 
   return <div className="login-card">
-    <div className="panel-heading"><span className="panel-heading__signal" /><span>Không gian làm việc an toàn</span></div>
     <h2>Chào mừng bạn trở lại</h2>
     <p className="login-card__intro">Đăng nhập để tiếp tục công việc của bạn.</p>
     <form onSubmit={handleSubmit} noValidate>

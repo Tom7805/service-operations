@@ -238,28 +238,34 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
 
       {/* KPI Summary Cards */}
       <div className="stats-grid">
-        <div className="stat-card stat-card--blue">
+        {/* Thẻ số liệu ở đây trước không có ô icon, trong khi trang Tài khoản và Phân quyền lại có —
+            cùng một thành phần mà đọc ra thành hai thứ khác nhau tùy trang. Bổ sung cho đồng bộ. */}
+        <div className="stat-card">
+          <div className="stat-card__icon stat-card__icon--blue">{ICONS.building}</div>
           <div>
             <span className="stat-card__label">Tổng số bộ phận</span>
             <strong className="stat-card__value">{totalDepts}</strong>
           </div>
         </div>
 
-        <div className="stat-card stat-card--green">
+        <div className="stat-card">
+          <div className="stat-card__icon stat-card__icon--green">{ICONS.tree}</div>
           <div>
             <span className="stat-card__label">Đơn vị Cấp Gốc</span>
             <strong className="stat-card__value text-success">{rootDepts}</strong>
           </div>
         </div>
 
-        <div className="stat-card stat-card--purple">
+        <div className="stat-card">
+          <div className="stat-card__icon stat-card__icon--purple">{ICONS.folder}</div>
           <div>
             <span className="stat-card__label">Bộ phận phụ thuộc</span>
             <strong className="stat-card__value">{subDepts}</strong>
           </div>
         </div>
 
-        <div className="stat-card stat-card--red">
+        <div className="stat-card">
+          <div className="stat-card__icon stat-card__icon--amber">{ICONS.userCheck}</div>
           <div>
             <span className="stat-card__label">Trưởng bộ phận</span>
             <strong className="stat-card__value">{uniqueManagers}</strong>

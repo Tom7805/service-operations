@@ -111,10 +111,6 @@ export default function TwoFactorVerifyForm({
 
   return (
     <div className="login-card">
-      <div className="panel-heading">
-        <span className="panel-heading__signal" />
-        <span>{totpEnrollment ? 'Thiết lập xác thực hai bước' : 'Xác thực hai bước'}</span>
-      </div>
 
       {totpEnrollment ? (
         <>

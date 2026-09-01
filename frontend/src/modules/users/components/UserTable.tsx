@@ -223,7 +223,7 @@ export const UserTable: React.FC<UserTableProps> = ({
         <table className="user-data-table">
           <thead>
             <tr>
-              <th scope="col" style={{ width: '60px' }}>STT</th>
+              <th scope="col" style={{ width: '46px' }}>STT</th>
               <th scope="col">Tài khoản & Họ tên</th>
               <th scope="col">Email</th>
               <th scope="col">Bộ phận</th>

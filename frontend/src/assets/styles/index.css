@@ -18,8 +18,79 @@
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 20px;
+
+  /* ===================== LIQUID GLASS (Apple, iOS/macOS 26) =====================
+     Liquid Glass KHÔNG phải "nền mờ + viền trắng" (glassmorphism 2020). Nó là một VẬT LIỆU
+     quang học, dựng từ 4 thuộc tính bắt buộc — thiếu bất kỳ cái nào là ra glassmorphism rẻ tiền:
+
+       1. LENSING (khúc xạ rìa)  — kính thật bẻ cong ánh sáng ở mép cong. Đây là thuộc tính
+          phân biệt số 1. Dựng bằng vòng viền gradient bị mask (--lg-rim-*), sáng ở nơi ánh
+          sáng hắt vào mép vát, tối ở nơi khuất — KHÔNG phải viền trắng đều một vòng.
+       2. SPECULAR (bóng chói)   — vệt sáng chuyên biệt ở mép trên, mờ dần xuống dưới.
+       3. TRANSLUCENCY           — backdrop blur KÈM tăng bão hòa; kính thật làm màu phía sau
+          rực hơn chứ không xám đi.
+       4. DEPTH                  — bóng đổ nhiều lớp CÓ độ lệch (offset), không phải quầng sáng
+          không lệch (craft-floor: quầng không lệch là trang trí, không phải chiều sâu).
+
+     PHÂN TẦNG (điều Apple nói rõ nhất, và cũng là điều cứu được tính đọc-quét của hệ vận hành):
+     kính chỉ thuộc TẦNG CHỨC NĂNG (điều hướng, thanh công cụ, nút, menu, sheet) nổi TRÊN
+     TẦNG NỘI DUNG. Tầng nội dung (bảng dữ liệu, thẻ số liệu, form) giữ nền ĐỤC để đọc được.
+     Đúng như ảnh tham chiếu 1: khung trình duyệt/thanh tìm kiếm/pill lọc/rail trái là kính,
+     còn poster phim là ảnh đục. Ảnh 3 cũng vậy: sidebar là kính, danh sách plugin là thẻ trắng đục. */
+
+  /* Tầng 1 — kính chính (cửa sổ app, popover nổi): trong nhất, blur mạnh nhất */
+  --lg-blur-window: blur(44px) saturate(185%) brightness(1.06);
+  --lg-tint-window: rgba(255,255,255,.60);
+  /* Tầng 2 — vật liệu lồng bên trong cửa sổ (sidebar): KHÔNG blur lại (blur chồng blur = đục ngầu),
+     chỉ nhuộm trong suốt để đọc ra là một tấm khác chất liệu */
+  --lg-tint-panel: rgba(255,255,255,.34);
+  /* Tầng 3 — điều khiển (nút, ô nhập, pill): blur nhẹ, nền sáng hơn để chữ luôn đủ tương phản */
+  --lg-blur-control: blur(20px) saturate(180%);
+  --lg-tint-control: rgba(255,255,255,.72);
+  --lg-tint-control-hover: rgba(255,255,255,.86);
+
+  /* Vòng khúc xạ rìa — sáng ở 2 mép đón sáng (trên-trái, dưới-phải), gần như tắt ở giữa cạnh */
+  --lg-rim: linear-gradient(145deg,
+    rgba(255,255,255,.98) 0%, rgba(255,255,255,.42) 20%, rgba(255,255,255,.05) 46%,
+    rgba(255,255,255,.34) 74%, rgba(255,255,255,.92) 100%);
+  --lg-rim-soft: linear-gradient(145deg,
+    rgba(255,255,255,.85) 0%, rgba(255,255,255,.28) 24%, rgba(255,255,255,.04) 50%,
+    rgba(255,255,255,.22) 76%, rgba(255,255,255,.70) 100%);
+  /* Vệt chói mép trên — nằm trong layer `background`, KHÔNG dùng pseudo-element (xem ghi chú
+     kỹ thuật ở DESIGN.md: ::before tuyệt đối luôn vẽ đè lên text trần của nút) */
+  --lg-specular: linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.10) 38%, transparent 62%);
+
+  /* Chiều sâu: bóng CÓ offset + nhòe mềm, nhiều lớp, không quầng phẳng */
+  --lg-shadow-control: 0 1px 2px rgba(16,24,40,.06), 0 6px 14px -6px rgba(16,24,40,.22), 0 2px 5px -2px rgba(16,24,40,.10);
+  --lg-shadow-float:   0 2px 6px rgba(16,24,40,.07), 0 18px 38px -14px rgba(16,24,40,.30), 0 6px 14px -6px rgba(16,24,40,.16);
+  --lg-shadow-window:  0 4px 12px rgba(16,24,40,.08), 0 44px 92px -32px rgba(16,24,40,.44), 0 16px 34px -18px rgba(16,24,40,.22);
+
+  /* Chuyển động "gel": Liquid Glass biến dạng đàn hồi khi chạm, không trượt tuyến tính.
+     Độ vọt (overshoot) cố tình để RẤT NHẸ (~12%, không phải 56% như đường cong nảy thường gặp):
+     đây là công cụ vận hành bấm hàng trăm lần mỗi ngày — nảy mạnh đọc ra là đồ chơi và gây mệt
+     rất nhanh. Apple cũng vọt nhẹ chứ không nảy; nảy mạnh là bản nhái hiểu sai Liquid Glass. */
+  --ease-gel: cubic-bezier(.32,1.12,.52,1);
+  --dur-gel: 300ms;
 }
 * { box-sizing: border-box; } body { margin: 0; min-width: 320px; line-height: 1.5; } button, input { font: inherit; } button { cursor: pointer; }
+
+/* ===================== BỀ MẶT DO TRÌNH DUYỆT VẼ =====================
+   Bôi đen, con trỏ nhập, thanh cuộn, vòng focus — mặc định của trình duyệt không thuộc hệ thiết
+   kế nào cả. Nhuộm chúng theo bảng màu là chi tiết rẻ nhất để cả trang đọc ra là "được dựng". */
+::selection { background: rgba(99,102,241,.24); color: #0f172a; }
+:root { accent-color: #6366f1; caret-color: #4f46e5; }
+* { scrollbar-width: thin; scrollbar-color: rgba(16,24,40,.28) transparent; }
+::-webkit-scrollbar { width: 11px; height: 11px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(16,24,40,.24); border-radius: 999px;
+  border: 3px solid transparent; background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(16,24,40,.40); background-clip: content-box; }
+::-webkit-scrollbar-corner { background: transparent; }
+/* Vòng focus dùng chung cho mọi phần tử chưa tự khai báo — điều hướng bàn phím không bao giờ
+   được rơi vào trạng thái "không biết mình đang ở đâu". */
+:focus-visible { outline: 2px solid #6366f1; outline-offset: 2px; }
 .login-shell { min-height:100vh; display:grid; grid-template-columns:minmax(0,53%) minmax(490px,47%); overflow:hidden; position:relative; }
 .login-brand { background:linear-gradient(135deg,#0a1e2b 0%,#102f3c 58%,#0c2433 100%); background-size:180% 180%; color:#f8f8f3; padding:clamp(34px,5vw,78px) clamp(38px,7vw,124px); position:relative; display:flex; flex-direction:column; overflow:hidden; animation:gradient-flow 16s ease infinite; }
 .login-brand::after { content: ''; position: absolute; width: 54vw; height: 54vw; right: -21vw; bottom: -32vw; border: 1px solid rgba(178, 205, 185, .16); border-radius: 50%; box-shadow: 0 0 0 48px rgba(178,205,185,.035), 0 0 0 120px rgba(178,205,185,.025); }
@@ -32,6 +103,74 @@
 @keyframes enter-left{from{opacity:0;transform:translateX(-22px)}to{opacity:1;transform:none}}@keyframes enter-up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}@keyframes card-enter{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{50%{transform:scale(1.1);opacity:.85}}@keyframes progress{from{transform:translateX(-100%)}to{transform:translateX(325%)}}@keyframes gradient-flow{50%{background-position:100% 50%}}@keyframes float-soft{50%{transform:translate3d(0,-14px,0) scale(1.03)}}@keyframes drift-soft{50%{transform:translate3d(18px,10px,0)}}@keyframes feature-progress{from{transform:scaleX(0)}to{transform:scaleX(1)}}@keyframes content-enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}@keyframes button-shine{0%,55%,100%{transform:translateX(-15vw) skewX(-18deg)}25%{transform:translateX(56vw) skewX(-18deg)}}@keyframes error-enter{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 @media (max-width: 820px) { .login-shell { grid-template-columns:1fr; }.login-brand { min-height:270px; padding:27px 30px; }.brand-copy { margin:45px 0 10px; }.brand-copy h1 { font-size: 39px; }.brand-copy__description,.story,.brand-footer { display:none; }.login-panel { min-height:calc(100vh - 270px); padding:50px 27px; }.login-panel::before{inset:12px;} }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; } }
+
+/* ===================== MÀN ĐĂNG NHẬP — CHUYỂN SANG LIQUID GLASS =====================
+   Đây là màn hình đầu tiên mọi quản trị viên thấy mỗi ngày, nhưng trước đợt này nó vẫn nằm ở thế
+   giới thị giác CŨ (panel xanh rêu #0b2130, thẻ bo 22px viền trắng phẳng, nút bo 10px) — tức yêu
+   cầu "toàn bộ dự án" chưa được đáp ứng. Khối dưới ghi đè khối rút gọn ở trên theo thứ tự cascade,
+   không cần sửa lại chuỗi minify dễ vỡ đó. */
+.login-panel {
+  background:
+    radial-gradient(50% 42% at 10% 6%,   rgba(255,214,150,.95) 0%, rgba(255,199,126,.50) 40%, transparent 70%),
+    radial-gradient(44% 40% at 94% 14%,  rgba(255,206,168,.70) 0%, transparent 72%),
+    radial-gradient(46% 42% at 84% 88%,  rgba(150,168,205,.55) 0%, transparent 76%),
+    linear-gradient(158deg, #f3e7d6 0%, #ded6cd 40%, #c2c5cf 100%);
+}
+.login-panel::before { display: none; } /* khung viền vuông cũ không thuộc ngôn ngữ kính */
+.login-card {
+  border: none; border-radius: 28px; padding: 40px;
+  background: var(--lg-specular), rgba(255,255,255,.62);
+  backdrop-filter: var(--lg-blur-window); -webkit-backdrop-filter: var(--lg-blur-window);
+  box-shadow: var(--lg-shadow-window);
+}
+/* Mép vát bắt sáng — lõi bị cắt rỗng nên không bao giờ đè lên nội dung thẻ */
+.login-card::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
+  background: var(--lg-rim); pointer-events: none;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask-composite: exclude;
+}
+/* Ô nhập = viên nang kính, đồng bộ với .form-input của phần còn lại hệ thống */
+.field input {
+  height: 52px; border: none; border-radius: 999px; padding: 0 48px 0 20px;
+  background: var(--lg-specular), var(--lg-tint-control);
+  box-shadow: inset 0 1px 2px rgba(16,24,40,.07), inset 0 0 0 1px rgba(255,255,255,.78), var(--lg-shadow-control);
+}
+.field input::placeholder { color: #4b5566; }
+.field input:focus {
+  border: none;
+  box-shadow: inset 0 1px 2px rgba(16,24,40,.05), inset 0 0 0 1px rgba(255,255,255,.92),
+              0 0 0 3px rgba(99,102,241,.32), var(--lg-shadow-control);
+}
+.field__toggle { top: 50%; transform: translateY(-50%); right: 14px; }
+.field__toggle:hover { transform: translateY(-50%) scale(1.12); }
+/* Nút gửi = viên nang chàm đổ đầy — cùng công thức .btn-primary, đây là hành động chính của trang */
+.submit {
+  height: 54px; border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.30) 0%, rgba(255,255,255,.06) 46%, transparent 60%),
+    linear-gradient(180deg, #7075f5 0%, #5b5fe3 52%, #4f46e5 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.46), inset 0 -2px 5px rgba(49,46,129,.30),
+    0 1px 2px rgba(79,70,229,.22), 0 14px 28px -10px rgba(79,70,229,.46), 0 5px 12px -4px rgba(79,70,229,.30);
+  transition: transform var(--dur-gel) var(--ease-gel), box-shadow var(--dur-base) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+.submit:hover:not(:disabled) {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.34) 0%, rgba(255,255,255,.08) 46%, transparent 60%),
+    linear-gradient(180deg, #7a7ff7 0%, #6367e8 52%, #5850ea 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.50), 0 1px 2px rgba(79,70,229,.22),
+    0 20px 38px -10px rgba(79,70,229,.52), 0 7px 16px -4px rgba(79,70,229,.34);
+}
+.submit:active:not(:disabled) { transform: translateY(0) scale(.98); }
+.login-card h2 { margin-top: 0; }
+.form-error { border-radius: 14px; }
+/* Ở 390px hàng này không còn khoảng trống để space-between chia, nên nhãn checkbox đâm thẳng vào
+   link "Quên mật khẩu?". Thêm gap + cho phép xuống dòng. */
+.form-options { gap: 12px; flex-wrap: wrap; }
 
 /* Bộ icon SVG dùng chung (frontend/src/components/common/icons.tsx) — thay emoji trong toàn dự án theo DESIGN.md.
    Dùng span.icon-xs/sm/md/lg bọc quanh {ICONS.xxx} thay vì viết CSS riêng cho từng chỗ. */
@@ -57,37 +196,64 @@
 
 /* User Management Module Styling */
 .user-management-page { max-width: 1280px; margin: 0 auto; padding: 24px; color: #1e293b; font-family: 'DM Sans', 'Segoe UI', Roboto, Arial, sans-serif; }
-.page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+.page-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+/* Trên màn hẹp, tiêu đề và nút hành động xếp chồng: ép chúng cạnh nhau làm tiêu đề bị bóp còn
+   3 chữ/dòng và nút bị bọc dòng (kéo theo lỗi viên nang phình ở trên). */
+@media (max-width: 640px) {
+  .page-header { flex-direction: column; align-items: stretch; }
+  .page-header .btn-primary, .page-header .btn-secondary { width: 100%; }
+}
 .breadcrumb { font-size: 14px; color: #64748b; margin-bottom: 8px; font-weight: 600; letter-spacing: 0.01em; }
 .breadcrumb .active { color: #0f172a; font-weight: 700; }
 .page-title { font-size: 26px; font-weight: 700; color: #0f172a; margin: 0 0 8px; letter-spacing: -0.01em; line-height: 1.3; }
 .page-subtitle { color: #5b6b7a; font-size: 16px; line-height: 1.6; margin: 0; }
 
-.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
-.stat-card { background: #ffffff; border: 1px solid #ececef; border-radius: var(--radius-md); padding: 18px; display: flex; align-items: center; gap: 14px; box-shadow: var(--shadow-xs); transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out); }
-.stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: #e2e5ea; }
-.stat-card__icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+/* 180px (thay vì 220px) để hàng 5 thẻ vẫn xếp vừa MỘT hàng trong khung app có sidebar —
+   ở 220px thẻ thứ 5 rơi xuống dòng riêng, để lại một mảng trống lớn lệch hẳn bố cục. */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+/* Thẻ số liệu — tấm đục r=20; icon lồng bên trong cách mép 18px → r đồng tâm = 20−18 ≈ 12. */
+.stat-card { background: #ffffff; border: none; border-radius: 20px; padding: 18px; display: flex; align-items: center; gap: 14px; box-shadow: inset 0 0 0 1px rgba(16,24,40,.06), 0 1px 2px rgba(16,24,40,.05), 0 10px 24px -14px rgba(16,24,40,.18); transition: transform var(--dur-gel) var(--ease-gel), box-shadow var(--dur-base) var(--ease-out); }
+.stat-card:hover { transform: translateY(-2px); box-shadow: inset 0 0 0 1px rgba(16,24,40,.08), 0 2px 4px rgba(16,24,40,.06), 0 18px 36px -16px rgba(16,24,40,.26); }
+.stat-card__icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
 .stat-card__icon svg { width: 22px; height: 22px; }
 .stat-card__icon--blue { background: #eff6ff; color: #2563eb; }
 .stat-card__icon--green { background: #f0fdf4; color: #16a34a; }
 .stat-card__icon--red { background: #fef2f2; color: #dc2626; }
 .stat-card__icon--purple { background: #faf5ff; color: #9333ea; }
 .stat-card__icon--amber { background: #fffbeb; color: #d97706; }
-.stat-card--blue { border-left: 3px solid #2563eb; }
-.stat-card--green { border-left: 3px solid #16a34a; }
-.stat-card--red { border-left: 3px solid #dc2626; }
-.stat-card--purple { border-left: 3px solid #9333ea; }
+/* Vạch màu bên trái thẻ đã được GỠ: craft-floor cấm border-left màu dày >1px trên thẻ/hàng/cảnh
+   báo, và ở đây nó thừa — ô icon phía trong đã mang đúng màu ngữ nghĩa đó rồi, vạch chỉ lặp lại
+   thông tin bằng một hình thức kém tinh tế hơn. Giữ lại tên lớp để không phải sửa JSX. */
+.stat-card--blue, .stat-card--green, .stat-card--red, .stat-card--purple { border-left: none; }
 .stat-card__label { font-size: 14px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 2px; }
 .stat-card__value { font-size: 22px; font-weight: 800; color: #0f172a; line-height: 1.25; font-variant-numeric: tabular-nums; }
 .text-success { color: #16a34a !important; } .text-danger { color: #dc2626 !important; } .text-warning { color: #d97706 !important; }
 
-.user-table-card { background: #ffffff; border: 1px solid #ececef; border-radius: var(--radius-lg); box-shadow: var(--shadow-xs); overflow: hidden; margin-bottom: 24px; }
-.user-table-toolbar { padding: 16px 20px; border-bottom: 1px solid #f1f5f9; display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: center; background: #f8fafc; }
+/* TẦNG NỘI DUNG — tấm ĐỤC. Đây là ranh giới quan trọng nhất của hệ: kính chỉ ở tầng chức năng,
+   còn bảng dữ liệu/thẻ số liệu giữ nền đặc để tốc độ quét không bị hy sinh cho hiệu ứng
+   (Product Principle #1). Ảnh tham chiếu làm y hệt: poster phim và thẻ plugin đều đục. */
+.user-table-card {
+  background: #ffffff; border: none; border-radius: 20px; overflow: hidden; margin-bottom: 24px;
+  box-shadow: inset 0 0 0 1px rgba(16,24,40,.06), 0 1px 2px rgba(16,24,40,.05), 0 12px 28px -14px rgba(16,24,40,.20);
+}
+/* Thanh công cụ là tầng CHỨC NĂNG nằm trong tấm nội dung → máng kính lõm nhẹ, không phải nền xám phẳng. */
+.user-table-toolbar { padding: 16px 20px; border-bottom: 1px solid rgba(16,24,40,.07); display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: center; background: linear-gradient(180deg, rgba(247,249,252,.92) 0%, rgba(241,244,249,.88) 100%); }
 .search-box { position: relative; flex: 1 1 300px; max-width: 440px; }
 .search-box__icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: #7c8a9c; display: flex; }
 .search-box__icon svg { width: 100%; height: 100%; }
-.search-box__input { width: 100%; height: 40px; padding: 0 36px 0 38px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 15px; background: #ffffff; outline: none; transition: border-color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out); }
-.search-box__input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
+/* Ô tìm kiếm = viên nang kính (đúng thanh địa chỉ/tìm kiếm ở ảnh tham chiếu 1). */
+.search-box__input {
+  width: 100%; height: 40px; padding: 0 36px 0 38px; border: none; border-radius: 999px; font-size: 15px;
+  color: #17203a; outline: none;
+  background: var(--lg-specular), var(--lg-tint-control);
+  backdrop-filter: var(--lg-blur-control); -webkit-backdrop-filter: var(--lg-blur-control);
+  box-shadow: inset 0 1px 2px rgba(16,24,40,.07), inset 0 0 0 1px rgba(255,255,255,.75), var(--lg-shadow-control);
+  transition: box-shadow 0.2s var(--ease-out), background 0.2s var(--ease-out);
+}
+/* #6b7688 cũ chỉ đạt ~4.46:1 trên nền trắng thuần — chưa đạt sàn 4.5:1, mà đây lại còn nằm
+   trên viên nang kính trong suốt nên thực tế còn thấp hơn. Ngả về sắc nền ấm thay vì xám lạnh. */
+.search-box__input::placeholder { color: #4b5566; }
+.search-box__input:focus { background: var(--lg-specular), rgba(255,255,255,.92); box-shadow: inset 0 1px 2px rgba(16,24,40,.05), inset 0 0 0 1px rgba(255,255,255,.9), 0 0 0 3px rgba(99,102,241,.32), var(--lg-shadow-control); }
 .search-box__clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #7c8a9c; font-size: 15.5px; cursor: pointer; padding: 2px 6px; display: flex; }
 .search-box__clear svg { width: 12px; height: 12px; }
 
@@ -96,18 +262,46 @@
 .toolbar-filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .filter-group { display: flex; align-items: center; gap: 8px; }
 .filter-label { font-size: 14.5px; font-weight: 600; color: #475569; white-space: nowrap; }
-.filter-select { height: 40px; border: 1px solid #cbd5e1; border-radius: 999px; padding: 0 14px; font-size: 14.5px; background: #ffffff; color: #1e293b; outline: none; transition: border-color 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out); }
-.filter-select:focus-visible { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.14); }
+.filter-select {
+  height: 40px; border: none; border-radius: 999px; padding: 0 14px; font-size: 14.5px; color: #17203a; outline: none;
+  background: var(--lg-specular), var(--lg-tint-control);
+  backdrop-filter: var(--lg-blur-control); -webkit-backdrop-filter: var(--lg-blur-control);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.75), var(--lg-shadow-control);
+  transition: box-shadow 0.15s var(--ease-out), background 0.15s var(--ease-out);
+}
+.filter-select:hover { background: var(--lg-specular), var(--lg-tint-control-hover); }
+.filter-select:focus-visible { box-shadow: inset 0 0 0 1px rgba(255,255,255,.9), 0 0 0 3px rgba(99,102,241,.32), var(--lg-shadow-control); }
 .toolbar-filters .form-input { height: 40px; }
 .toolbar-filters .btn-primary, .toolbar-filters .btn-secondary { height: 40px; padding: 0 18px; }
-.status-tabs { display: flex; background: #d6dde6; padding: 3px; border-radius: 8px; }
-.status-tab { border: none; background: transparent; padding: 6px 12px; font-size: 13.5px; font-weight: 600; color: #64748b; border-radius: 6px; cursor: pointer; transition: all 0.2s var(--ease-out); display: inline-flex; align-items: center; gap: 6px; }
+/* Segmented control kiểu ảnh 1 (TV Series / Movies / Horror…): máng kính lõm, mục đang chọn là
+   viên nang trắng nổi lên. Bán kính đồng tâm: máng r=999 (viên nang), mục con cũng viên nang. */
+.status-tabs {
+  display: flex; padding: 4px; border-radius: 999px; gap: 2px;
+  background: linear-gradient(180deg, rgba(16,24,40,.07) 0%, rgba(16,24,40,.03) 100%);
+  box-shadow: inset 0 1px 2px rgba(16,24,40,.10), inset 0 -1px 0 rgba(255,255,255,.60);
+}
+.status-tab { border: none; background: transparent; padding: 7px 15px; font-size: 13.5px; font-weight: 600; color: #55617a; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out), transform var(--dur-gel) var(--ease-gel); }
+.status-tab:hover { color: #17203a; }
+.status-tab:active { transform: scale(.97); }
 .status-tab__icon { display: flex; flex-shrink: 0; }
 .status-tab__icon svg { width: 13px; height: 13px; }
-.status-tab--active { background: #ffffff; color: #0f172a; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-.btn-icon-refresh { width: 38px; height: 38px; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; display: flex; align-items: center; justify-content: center; color: #475569; cursor: pointer; transition: all 0.2s var(--ease-out); }
-.btn-icon-refresh svg { width: 16px; height: 16px; } .btn-icon-refresh:hover { background: #f1f5f9; color: #0f172a; }
-.btn-icon-refresh:focus-visible { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.14); }
+.status-tab--active {
+  color: #17203a; font-weight: 700;
+  background: linear-gradient(180deg, rgba(255,255,255,.98) 0%, rgba(255,255,255,.88) 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,1), 0 1px 2px rgba(16,24,40,.10), 0 4px 10px -4px rgba(16,24,40,.24);
+}
+.btn-icon-refresh {
+  position: relative; width: 40px; height: 40px; border: none; border-radius: 50%;
+  background: var(--lg-specular), var(--lg-tint-control);
+  backdrop-filter: var(--lg-blur-control); -webkit-backdrop-filter: var(--lg-blur-control);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.75), var(--lg-shadow-control);
+  display: flex; align-items: center; justify-content: center; color: #3f4a5c; cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-gel) var(--ease-gel), box-shadow var(--dur-base) var(--ease-out);
+}
+.btn-icon-refresh svg { width: 16px; height: 16px; }
+.btn-icon-refresh:hover { background: var(--lg-specular), var(--lg-tint-control-hover); color: #0f172a; box-shadow: inset 0 0 0 1px rgba(255,255,255,.85), var(--lg-shadow-float); }
+.btn-icon-refresh:active { transform: rotate(-35deg) scale(.92); }
+.btn-icon-refresh:focus-visible { box-shadow: inset 0 0 0 1px rgba(255,255,255,.9), 0 0 0 3px rgba(99,102,241,.32), var(--lg-shadow-control); }
 .cell-dept--with-icon { display: inline-flex; align-items: center; gap: 5px; }
 .cell-dept__icon { display: flex; flex-shrink: 0; color: #7c8a9c; }
 .cell-dept__icon svg { width: 13px; height: 13px; }
@@ -116,11 +310,21 @@
 .btn-primary__icon { display: inline-flex; flex-shrink: 0; }
 .btn-primary__icon svg { width: 13px; height: 13px; }
 
-.table-responsive { overflow-x: auto; }
+/* Bảng rộng cuộn ngang trong khung của chính nó (craft-floor: nội dung rộng không được làm body
+   cuộn ngang). Hai vệt đổ bóng ở mép chỉ hiện khi còn nội dung bị khuất — người dùng biết là
+   cuộn được, thay vì tưởng bảng bị cắt cụt. */
+.table-responsive {
+  overflow-x: auto;
+  background:
+    linear-gradient(90deg, #ffffff 40%, rgba(255,255,255,0)) left center / 30px 100% no-repeat local,
+    linear-gradient(90deg, rgba(255,255,255,0), #ffffff 60%) right center / 30px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgba(16,24,40,.13), transparent) left center / 12px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgba(16,24,40,.13), transparent) right center / 12px 100% no-repeat scroll;
+}
 .user-data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 15px; }
 /* Header luôn 1 dòng — tránh chiều cao hàng tiêu đề lệch nhau giữa các cột dài/ngắn. */
-.user-data-table th { background: #f8fafc; color: #475569; font-weight: 700; text-transform: uppercase; font-size: 12.5px; letter-spacing: 0.05em; padding: 14px 18px; border-bottom: 1px solid #d6dde6; white-space: nowrap; }
-.user-data-table td { padding: 14px 18px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; color: #334155; }
+.user-data-table th { background: #f8fafc; color: #475569; font-weight: 700; text-transform: uppercase; font-size: 12.5px; letter-spacing: 0.05em; padding: 14px 13px; border-bottom: 1px solid #d6dde6; white-space: nowrap; }
+.user-data-table td { padding: 14px 13px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; color: #334155; }
 .user-data-table tr:hover { background: #f8fafc; }
 .user-data-table tr.row--locked { background: #fff5f5; }
 
@@ -131,10 +335,10 @@
 .user-profile-meta { display: flex; flex-direction: column; min-width: 0; }
 /* Cắt gọn 1 dòng + "..." cho các cột nội dung dài (họ tên, username, email, bộ phận) —
    trước đây tràn dòng tự do khiến chiều cao từng hàng lệch nhau, nhìn rối mắt. */
-.user-profile-fullname { font-weight: 700; color: #0f172a; font-size: 15.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
-.user-profile-username { font-size: 13.5px; color: #64748b; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
-.cell-email { font-size: 14.5px; color: #475569; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 230px; }
-.cell-dept { font-weight: 600; color: #334155; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.user-profile-fullname { font-weight: 700; color: #0f172a; font-size: 15.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 186px; }
+.user-profile-username { font-size: 13.5px; color: #64748b; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 186px; }
+.cell-email { font-size: 14.5px; color: #475569; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 178px; }
+.cell-dept { font-weight: 600; color: #334155; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 156px; }
 
 .user-tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
 
@@ -144,6 +348,9 @@
 .role-chip {
   display: inline-flex; align-items: center; padding: 4px 9px; border-radius: 999px;
   background: #f1f5f9; border: 1px solid #d6dde6; font-size: 12.5px; font-weight: 600; color: #334155;
+  /* Chặn bề rộng + cắt gọn: để chip bọc 2 dòng vừa làm cột phình đẩy cột Thao tác ra ngoài khung,
+     vừa làm chiều cao các hàng so le. Tên đầy đủ vẫn xem được qua tooltip (thuộc tính title). */
+  max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block;
 }
 
 .scope-chip {
@@ -178,12 +385,13 @@
 .table-footer { padding: 12px 20px; border-top: 1px solid #f1f5f9; background: #f8fafc; font-size: 14px; color: #64748b; }
 
 /* Modals */
-.modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 999; animation: fadeIn 0.2s ease-out; }
-.modal-card { background: #ffffff; border-radius: var(--radius-lg); width: min(100%, 640px); max-height: 85vh; display: flex; flex-direction: column; box-shadow: var(--shadow-lg); overflow: hidden; animation: modal-pop var(--dur-base) var(--ease-out) both; }
-@keyframes modal-pop { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+/* Sheet — lớp che vừa làm tối vừa làm nhòe nền (đúng cách Apple đẩy nội dung ra sau khi có sheet). */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(20,26,42,0.42); backdrop-filter: blur(20px) saturate(120%); -webkit-backdrop-filter: blur(20px) saturate(120%); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 999; animation: fadeIn 0.2s ease-out; }
+.modal-card { background: #ffffff; border-radius: 26px; width: min(100%, 640px); max-height: 85vh; display: flex; flex-direction: column; box-shadow: inset 0 0 0 1px rgba(255,255,255,.9), var(--lg-shadow-window); overflow: hidden; animation: modal-pop var(--dur-gel) var(--ease-gel) both; }
+@keyframes modal-pop { from { opacity: 0; transform: translateY(14px) scale(.95); } to { opacity: 1; transform: none; } }
 .modal-card form { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 .modal-card--md { width: min(100%, 560px); } .modal-card--sm { width: min(100%, 440px); }
-.modal-header { padding: 18px 24px; border-bottom: 1px solid #d6dde6; display: flex; justify-content: space-between; align-items: flex-start; background: #f8fafc; flex-shrink: 0; }
+.modal-header { padding: 20px 24px; border-bottom: 1px solid rgba(16,24,40,.07); display: flex; justify-content: space-between; align-items: flex-start; background: linear-gradient(180deg, rgba(248,250,253,.94) 0%, rgba(243,246,251,.90) 100%); flex-shrink: 0; }
 .modal-eyebrow { font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: #6366f1; }
 .modal-title { font-size: 18px; font-weight: 700; color: #0f172a; margin: 2px 0 0; }
 .modal-close { background: none; border: none; font-size: 18px; color: #7c8a9c; cursor: pointer; padding: 4px; border-radius: 6px; display: flex; transition: background 0.15s var(--ease-out), color 0.15s var(--ease-out); }
@@ -193,7 +401,7 @@
 .modal-title__icon { display: flex; flex-shrink: 0; }
 .modal-title__icon svg { width: 18px; height: 18px; }
 .modal-body { padding: 20px 24px; overflow-y: auto; flex: 1; min-height: 0; }
-.modal-footer { padding: 14px 24px; border-top: 1px solid #d6dde6; background: #f8fafc; display: flex; justify-content: flex-end; gap: 12px; flex-shrink: 0; }
+.modal-footer { padding: 16px 24px; border-top: 1px solid rgba(16,24,40,.07); background: linear-gradient(180deg, rgba(248,250,253,.90) 0%, rgba(243,246,251,.94) 100%); display: flex; justify-content: flex-end; gap: 12px; flex-shrink: 0; }
 
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .form-field--full { grid-column: 1 / -1; }
@@ -230,50 +438,62 @@
    đổ bóng mềm khuếch tán. Bóng láng nằm ngay trong layer `background` (không dùng pseudo-element)
    để không bao giờ đè lên chữ, dù nút có 1 dòng text trần hay bọc span/icon — an toàn với mọi nút
    sẵn có trong dự án mà không cần sửa từng file. */
+/* Nút = viên nang. Trong hệ Liquid Glass, hành động CHÍNH là viên nang ĐỔ ĐẦY màu nhấn
+   ("prominent"), hành động PHỤ mới là kính trong. Bản cũ để cả hai đều trắng đục và chỉ khác nhau
+   ở màu quầng sáng — trên thực tế gần như không phân biệt được đâu là nút chính. */
 .btn-primary, .btn-secondary {
   position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  border-radius: 999px; padding: 11px 22px; font-size: 15px; font-weight: 700; color: #101216; cursor: pointer;
-  border: 1px solid rgba(255,255,255,.9);
-  /* 4 lớp xếp từ trên xuống: bóng láng trắng nhẹ → vệt màu ngũ sắc chỉ điểm xuyết → NỀN ĐỤC GẦN NHƯ
-     ĐẶC (frosted, không phải kính trong suốt) để chữ luôn có nền sáng ổn định, không phụ thuộc vào
-     thứ đang bị blur phía sau. Tất cả nằm trong `background` (không phải pseudo-element) nên luôn ở
-     DƯỚI chữ, không cần lo z-index. */
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.7) 0%, rgba(255,255,255,.15) 55%, transparent 62%),
-    radial-gradient(ellipse 60% 90% at 12% 0%, rgba(110,150,255,.22), transparent 60%),
-    radial-gradient(ellipse 55% 85% at 90% 8%, rgba(90,225,205,.18), transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,.96) 0%, rgba(249,250,249,.94) 55%, rgba(238,240,239,.92) 100%);
-  backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
-  box-shadow:
-    inset 0 1px 1px rgba(255,255,255,1), inset 0 -2px 5px rgba(15,23,42,.06),
-    0 1px 1px rgba(15,23,42,.04), 0 14px 28px -12px rgba(15,23,42,.26), 0 4px 10px -3px rgba(15,23,42,.12);
-  transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+  border-radius: 999px; padding: 11px 22px; font-size: 15px; font-weight: 700; cursor: pointer; border: none;
+  /* Viên nang KHÔNG được xuống dòng: bo góc 999px trên nhãn 2-4 dòng biến nút thành quả cầu méo
+     (đã thấy đúng lỗi này ở nút "Phân quyền" trong bảng và nút chính trên mobile). */
+  white-space: nowrap;
+  transition: transform var(--dur-gel) var(--ease-gel), box-shadow var(--dur-base) var(--ease-out),
+              background var(--dur-fast) var(--ease-out);
+}
+.btn-primary::after, .btn-secondary::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask-composite: exclude;
 }
 .btn-primary:hover, .btn-secondary:hover { transform: translateY(-2px); }
-.btn-primary:active, .btn-secondary:active { transform: translateY(0) scale(.97); }
+.btn-primary:active, .btn-secondary:active { transform: translateY(0) scale(.96); }
+.btn-primary:focus-visible, .btn-secondary:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(99,102,241,.40), var(--lg-shadow-float); }
 .btn-lg { padding: 13px 26px; font-size: 16px; }
 
-/* Primary: thêm quầng sáng ngoài màu nhấn thương hiệu (emerald) bên dưới — đúng cách ảnh tham chiếu
-   dùng quầng sáng ấm để phân biệt nút chính với nút phụ, chỉ đổi màu quầng theo brand thay vì hổ phách.
-   Vệt màu ngũ sắc bên trong cũng nhuộm nghiêng về emerald/ngọc để ăn khớp quầng sáng bên ngoài. */
+/* CHÍNH — viên nang đặc màu nhấn, vệt chói mép trên, bóng đổ nhuộm màu nhấn. */
 .btn-primary {
+  color: #ffffff;
   background:
-    linear-gradient(180deg, rgba(255,255,255,.7) 0%, rgba(255,255,255,.15) 55%, transparent 62%),
-    radial-gradient(ellipse 60% 90% at 12% 0%, rgba(52,211,153,.24), transparent 60%),
-    radial-gradient(ellipse 55% 85% at 90% 8%, rgba(90,225,205,.18), transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,.96) 0%, rgba(249,250,249,.94) 55%, rgba(238,240,239,.92) 100%);
+    linear-gradient(180deg, rgba(255,255,255,.30) 0%, rgba(255,255,255,.06) 46%, transparent 60%),
+    linear-gradient(180deg, #7075f5 0%, #5b5fe3 52%, #4f46e5 100%);
   box-shadow:
-    inset 0 1px 1px rgba(255,255,255,1), inset 0 -2px 4px rgba(15,23,42,.05),
-    0 1px 1px rgba(15,23,42,.04), 0 16px 30px -12px rgba(99,102,241,.30), 0 5px 12px -3px rgba(99,102,241,.20);
+    inset 0 1px 0 rgba(255,255,255,.46), inset 0 -2px 5px rgba(49,46,129,.30),
+    0 1px 2px rgba(79,70,229,.22), 0 14px 28px -10px rgba(79,70,229,.46), 0 5px 12px -4px rgba(79,70,229,.30);
 }
+.btn-primary::after { background: linear-gradient(145deg, rgba(255,255,255,.70) 0%, rgba(255,255,255,.14) 42%, rgba(255,255,255,.05) 60%, rgba(255,255,255,.38) 100%); }
 .btn-primary:hover {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.34) 0%, rgba(255,255,255,.08) 46%, transparent 60%),
+    linear-gradient(180deg, #7a7ff7 0%, #6367e8 52%, #5850ea 100%);
   box-shadow:
-    inset 0 1px 1px rgba(255,255,255,1), inset 0 -2px 4px rgba(15,23,42,.05),
-    0 1px 1px rgba(15,23,42,.04), 0 20px 38px -12px rgba(99,102,241,.36), 0 6px 16px -4px rgba(99,102,241,.24);
+    inset 0 1px 0 rgba(255,255,255,.50), inset 0 -2px 5px rgba(49,46,129,.28),
+    0 1px 2px rgba(79,70,229,.22), 0 20px 38px -10px rgba(79,70,229,.52), 0 7px 16px -4px rgba(79,70,229,.34);
 }
-.btn-secondary:hover { box-shadow: inset 0 1px 1px rgba(255,255,255,1), inset 0 -2px 4px rgba(15,23,42,.05), 0 16px 30px -12px rgba(15,23,42,.26), 0 4px 10px -3px rgba(15,23,42,.14); }
-.btn-danger { background: #dc2626 !important; color: #ffffff !important; }
-.btn-success { background: #16a34a !important; color: #ffffff !important; }
+
+/* PHỤ — kính trong thật sự: thấy được thứ phía sau, mép vát bắt sáng, chữ đậm để giữ tương phản. */
+.btn-secondary {
+  color: #17203a;
+  background: var(--lg-specular), var(--lg-tint-control);
+  backdrop-filter: var(--lg-blur-control); -webkit-backdrop-filter: var(--lg-blur-control);
+  box-shadow: var(--lg-shadow-control);
+}
+.btn-secondary::after { background: var(--lg-rim); }
+.btn-secondary:hover { background: var(--lg-specular), var(--lg-tint-control-hover); box-shadow: var(--lg-shadow-float); }
+
+.btn-danger { background: linear-gradient(180deg, rgba(255,255,255,.26) 0%, transparent 58%), linear-gradient(180deg, #ef4444 0%, #dc2626 100%) !important; color: #ffffff !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.40), 0 12px 26px -10px rgba(220,38,38,.50), 0 4px 10px -3px rgba(220,38,38,.30) !important; }
+.btn-success { background: linear-gradient(180deg, rgba(255,255,255,.26) 0%, transparent 58%), linear-gradient(180deg, #22c55e 0%, #16a34a 100%) !important; color: #ffffff !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.40), 0 12px 26px -10px rgba(22,163,74,.48), 0 4px 10px -3px rgba(22,163,74,.28) !important; }
 
 .alert { padding: 12px 16px; border-radius: 10px; display: flex; gap: 12px; align-items: flex-start; font-size: 14.5px; margin-bottom: 16px; }
 /* Utility còn thiếu — dùng khắp nơi để đẩy nút "Thử lại" sang phải trong banner lỗi, nhưng chưa
@@ -325,7 +545,7 @@
 .audit-log-title__icon svg { width: 16px; height: 16px; }
 .badge-pulse { background: #ecfdf5; color: #4f46e5; border: 1px solid #a7f3d0; font-size: 12.5px; font-weight: 700; padding: 3px 10px; border-radius: 12px; }
 .audit-log-list { display: flex; flex-direction: column; gap: 10px; }
-.audit-log-item { display: flex; gap: 12px; align-items: flex-start; padding: 10px 14px; background: #f8fafc; border-radius: 10px; font-size: 14px; border-left: 3px solid #6366f1; }
+.audit-log-item { display: flex; gap: 12px; align-items: flex-start; padding: 10px 14px; background: rgba(99,102,241,.06); box-shadow: inset 0 0 0 1px rgba(99,102,241,.12); border-radius: 12px; font-size: 14px; }
 .audit-log-icon { display: flex; color: #64748b; flex-shrink: 0; margin-top: 1px; }
 .audit-log-icon svg { width: 15px; height: 15px; }
 .audit-log-meta { flex: 1; }
@@ -348,26 +568,97 @@
    một nền sáng/trơn để "trong" đọc rõ, một nền nhiều màu loang lổ sẽ làm nhiễu độ trong của kính. */
 /* Ngoại cảnh (nền ngoài khối app) tối hơn hẳn nội dung — tương phản này giúp mắt phân biệt rõ "cái gì
    là kính nổi lên" khỏi "cái gì là nền", đồng thời làm chữ trắng/sáng trên các khối kính dễ đọc hơn. */
-/* Trước đây nền ngoài xám đục/ngả nâu (#7f8792) làm cả trang nhìn "mờ", kém tương phản với khối
-   app trắng bên trong. Chuyển sang xám lạnh sáng hơn — vẫn đủ tối hơn khối app để phân biệt "kính
-   nổi lên" khỏi nền, nhưng trong và sạch hơn hẳn. */
-body { background: radial-gradient(120% 100% at 50% -10%, #dde2ea 0%, #c3c9d4 55%, #a7aebb 100%); }
+/* ===================== MÔI TRƯỜNG SAU KÍNH =====================
+   Liquid Glass chỉ tồn tại khi có thứ ĐÁNG để khúc xạ. Nền phẳng một màu làm kính "chết" —
+   không lensing, không đổi tint, không có gì chứng minh nó trong suốt. Ảnh tham chiếu 1 đặt
+   kính trên một nội thất ấm nhòe tiêu cự; đây là bản dựng lại cảnh đó bằng các quầng sáng lớn:
+   nắng ấm hắt từ cửa sổ trên-trái, mảng gỗ/da trung tính ở giữa, bóng lạnh dồn về dưới-phải.
+   Các quầng cố tình chồng lấn và lệch tâm để mỗi vùng kính bắt được một sắc độ khác nhau. */
+/* ĐIỂM NỐI ẢNH NỀN THẬT: Liquid Glass đẹp nhất khi khúc xạ một BỨC ẢNH nội thất nhòe tiêu cự
+   (đúng như ảnh tham chiếu 1), không phải gradient CSS. Phiên dựng này không có công cụ tạo ảnh,
+   nên nền hiện tại là bản dựng bằng gradient. Để thay bằng ảnh thật, chỉ cần đặt file vào
+   `frontend/src/assets/` rồi bỏ chú thích hai dòng dưới — không phải sửa gì thêm:
+     body { background-image: url('../backdrop.jpg'); background-size: cover; background-position: center; }
+   Ảnh nên: nội thất ấm, chụp xóa phông mạnh (f/1.4–f/2), nguồn sáng ở góc trên-trái. */
+body {
+  background:
+    radial-gradient(50% 42% at 8% 4%,   rgba(255,214,150,.95) 0%, rgba(255,199,126,.50) 40%, transparent 70%),
+    radial-gradient(44% 40% at 95% 8%,  rgba(255,206,168,.72) 0%, rgba(240,190,160,.26) 46%, transparent 74%),
+    radial-gradient(40% 36% at 88% 52%, rgba(186,212,248,.66) 0%, rgba(176,202,240,.24) 48%, transparent 76%),
+    radial-gradient(58% 50% at 62% 96%, rgba(96,106,130,.56) 0%, rgba(118,128,150,.22) 50%, transparent 78%),
+    radial-gradient(38% 34% at 22% 78%, rgba(214,178,140,.60) 0%, transparent 72%),
+    linear-gradient(158deg, #f3e7d6 0%, #ded6cd 34%, #c2c5cf 68%, #9ea5b4 100%);
+  background-attachment: fixed;
+}
+/* Hạt nhiễu rất mảnh — quang học thật không bao giờ mịn tuyệt đối; hạt phá vỡ dải màu (banding)
+   của các gradient lớn và làm nền đọc ra là "ảnh nhòe" chứ không phải "gradient CSS". */
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.32'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+}
 
-.app-frame { min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 22px; }
+/* ===================== VẬT LIỆU KÍNH — VÒNG KHÚC XẠ RÌA =====================
+   Kỹ thuật: vẽ MỘT vòng viền gradient dày 1px bằng mask-composite, phần lõi bị cắt rỗng hoàn
+   toàn. Vì lõi rỗng + pointer-events:none nên lớp này KHÔNG BAO GIỜ đè lên chữ hay chặn click —
+   giải được đúng cái bẫy ::before đã ghi trong DESIGN.md, mà vẫn có được mép vát bắt sáng thật
+   (viền sáng đều một vòng là dấu hiệu rõ nhất của glassmorphism giả). */
+.lg-rim { position: relative; }
+.lg-rim::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
+  background: var(--lg-rim); pointer-events: none;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask-composite: exclude;
+}
+.lg-rim--soft::after { background: var(--lg-rim-soft); }
+
+/* Người dùng bật "giảm trong suốt" (macOS/iOS/Windows) — Apple luôn ship nhánh này; trung thành
+   với Liquid Glass nghĩa là ship cả phần đục hoàn toàn, không chỉ phần đẹp. */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --lg-blur-window: none; --lg-blur-control: none;
+    --lg-tint-window: #ffffff; --lg-tint-panel: #f7f8fa;
+    --lg-tint-control: #ffffff; --lg-tint-control-hover: #f4f6f8;
+  }
+  body { background: #e9ebef; }
+  body::before { display: none; }
+}
+
+/* Biên đủ rộng để MÔI TRƯỜNG thật sự lộ ra quanh cửa sổ — kính không có gì bao quanh để so
+   sánh thì mắt không đọc ra nó trong suốt. Biên co lại trên màn hẹp để không phí chỗ. */
+.app-frame { min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: clamp(14px, 2.2vw, 34px); position: relative; z-index: 1; }
+
+/* CỬA SỔ KÍNH CHÍNH — tầng kính duy nhất blur môi trường phía sau (ảnh 1: khung trình duyệt).
+   Mọi thứ lồng bên trong KHÔNG blur lại: blur chồng blur cho ra bùn xám, không phải kính. */
 .app-shell {
-  width: 100%; max-width: 1600px; min-height: calc(100vh - 44px);
-  background: #ffffff; border: 1px solid #e6e8f5; border-radius: 28px;
-  box-shadow: 0 1px 2px rgba(79,70,229,.04), var(--shadow-lg);
+  width: 100%; max-width: 1600px; min-height: calc(100vh - clamp(28px, 4.4vw, 68px));
+  border-radius: 30px; border: none;
+  background: var(--lg-specular), var(--lg-tint-window);
+  backdrop-filter: var(--lg-blur-window); -webkit-backdrop-filter: var(--lg-blur-window);
+  box-shadow: var(--lg-shadow-window);
   display: flex; flex-direction: row; overflow: hidden; position: relative;
+}
+.app-shell::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
+  background: var(--lg-rim); pointer-events: none; z-index: 3;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask-composite: exclude;
 }
 .app-main { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
 
-/* --- Sidebar thu/mở (side-nav) --- */
+/* --- Sidebar thu/mở (side-nav) — vật liệu TẦNG 2: chỉ nhuộm trong suốt, không blur lại.
+   Bán kính đồng tâm: nằm trong cửa sổ r=30px, cách mép 0 → giữ 30px ở hai góc trái. --- */
 .side-nav {
   width: 260px; flex-shrink: 0; display: flex; flex-direction: column;
-  background: #ffffff; border-right: 1px solid #eef0ef; padding: 16px 10px;
+  background: linear-gradient(180deg, rgba(255,255,255,.46) 0%, rgba(255,255,255,.28) 100%);
+  border-right: 1px solid rgba(255,255,255,.55); padding: 16px 10px;
   transition: width var(--dur-base) var(--ease-out), padding var(--dur-base) var(--ease-out);
-  overflow: hidden;
+  overflow: hidden; position: relative;
+  box-shadow: inset -1px 0 0 rgba(16,24,40,.05);
 }
 .side-nav--collapsed { width: 76px; padding: 16px 10px; }
 
@@ -380,42 +671,73 @@ body { background: radial-gradient(120% 100% at 50% -10%, #dde2ea 0%, #c3c9d4 55
 .side-nav__brand-text { font-size: 15px; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .side-nav__brand-text b { color: #4f46e5; }
 .side-nav__toggle {
-  width: 30px; height: 30px; border-radius: var(--radius-sm); border: 1px solid #eef0ef; background: #ffffff;
-  color: #6b7280; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
-  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  width: 32px; height: 32px; border-radius: 50%; border: none;
+  background: var(--lg-specular), var(--lg-tint-control);
+  color: #43506e; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+  box-shadow: var(--lg-shadow-control);
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-gel) var(--ease-gel);
 }
 .side-nav__toggle svg { width: 15px; height: 15px; }
-.side-nav__toggle:hover { background: #f4f5f7; color: #0f172a; }
+.side-nav__toggle:hover { background: var(--lg-specular), var(--lg-tint-control-hover); color: #0f172a; }
+.side-nav__toggle:active { transform: scale(.9); }
 .side-nav--collapsed .side-nav__toggle { transform: rotate(180deg); }
 .side-nav--collapsed .side-nav__toggle:hover { transform: rotate(180deg) scale(1.05); }
 
 .side-nav__list { display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+/* Hàng điều hướng = viên nang (capsule) — hình dạng điều khiển chuẩn của Liquid Glass.
+   Mục đang chọn là một viên nang ĐỤC màu nhấn nổi trên kính (đúng ảnh tham chiếu 3), không phải
+   nền xám nhạt: trên nền kính trong, một mảng xám nhạt gần như tàng hình. */
 .side-nav__item {
   display: flex; align-items: center; gap: 11px; width: 100%; background: transparent; border: none;
-  border-radius: var(--radius-sm); padding: 9px 10px; font-size: 15px; font-weight: 600; color: #55606e;
-  cursor: pointer; text-align: left; white-space: nowrap;
-  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  border-radius: 999px; padding: 10px 14px; font-size: 15px; font-weight: 600; color: #435061;
+  cursor: pointer; text-align: left; white-space: nowrap; position: relative;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out),
+              transform var(--dur-gel) var(--ease-gel), box-shadow var(--dur-base) var(--ease-out);
 }
 .side-nav--collapsed .side-nav__item { justify-content: center; padding: 10px; }
-.side-nav__item:hover { background: #f0f1f0; color: #0f172a; }
-.side-nav__item--active { background: #eef0ef; color: #0f172a; font-weight: 700; }
-.side-nav__item__icon { display: inline-flex; flex-shrink: 0; opacity: .75; }
+.side-nav__item:hover { background: rgba(255,255,255,.62); color: #0f172a; }
+.side-nav__item:active { transform: scale(.97); }
+.side-nav__item--active {
+  background: linear-gradient(180deg, #7075f5 0%, #5b5fe3 52%, #4f46e5 100%);
+  color: #ffffff; font-weight: 700;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.42), 0 1px 2px rgba(79,70,229,.20),
+              0 8px 18px -6px rgba(79,70,229,.44), 0 3px 7px -2px rgba(79,70,229,.28);
+}
+.side-nav__item--active:hover { background: linear-gradient(180deg, #7a7ff7 0%, #6165e6 52%, #5b53e8 100%); color: #ffffff; }
+.side-nav__item__icon { display: inline-flex; flex-shrink: 0; opacity: .72; }
 .side-nav__item__icon svg { width: 17px; height: 17px; }
-.side-nav__item--active .side-nav__item__icon { opacity: 1; color: #6366f1; }
+.side-nav__item--active .side-nav__item__icon { opacity: 1; color: #ffffff; }
 .side-nav__item__label { overflow: hidden; text-overflow: ellipsis; }
 .side-nav__group-label {
-  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #9aa1ab;
-  padding: 16px 10px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 12px;
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #4b5566;
+  padding: 16px 14px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 12px;
 }
-.side-nav--collapsed .side-nav__group-label { padding: 14px 0 4px; border-top: 1px solid #eef0ef; margin: 0 6px; }
+.side-nav--collapsed .side-nav__group-label { padding: 14px 0 4px; border-top: 1px solid rgba(16,24,40,.10); margin: 0 6px; }
 
 @media (max-width: 900px) {
   .app-shell { flex-direction: column; }
-  .side-nav { width: 100% !important; flex-direction: row; align-items: center; padding: 10px 12px; overflow-x: auto; border-right: none; border-bottom: 1px solid #eef0ef; }
-  .side-nav__header { padding: 0 10px 0 0; border-right: 1px solid #eef0ef; margin-right: 8px; flex-shrink: 0; }
+  .side-nav { width: 100% !important; flex-direction: row; align-items: center; padding: 10px 12px; overflow-x: auto; border-right: none; border-bottom: 1px solid rgba(255,255,255,.55); box-shadow: inset 0 -1px 0 rgba(16,24,40,.05); }
+  .side-nav__header { padding: 0 10px 0 0; border-right: 1px solid rgba(16,24,40,.10); margin-right: 8px; flex-shrink: 0; }
   .side-nav--collapsed .side-nav__header { flex-direction: row; }
-  .side-nav__brand-text, .side-nav__item__label { display: none; }
-  .side-nav__list { flex-direction: row; overflow-y: visible; }
+  /* GIỮ nhãn chữ trên thanh ngang. Bản cũ ẩn nhãn, để lại 8 icon không tên trong một khung cuộn
+     không có dấu hiệu gì — 4 đích đến trong nhóm "Bảo mật & hệ thống" nằm ngoài màn hình mà
+     người dùng không thể biết là có. Trạng thái chỉ-icon ở ảnh tham chiếu 3 là do NGƯỜI DÙNG tự
+     thu gọn, không phải trạng thái duy nhất của một khổ màn hình. */
+  .side-nav__brand-text { display: none; }
+  .side-nav__item { padding: 8px 12px; font-size: 14px; }
+  .side-nav__item__label { display: inline; }
+  .side-nav__list { flex-direction: row; overflow-y: visible; gap: 4px; }
+  /* Nhãn nhóm xoay thành dải phân cách dọc, giữ được ranh giới "nghiệp vụ | bảo mật" khi nằm ngang */
+  .side-nav__group-label {
+    padding: 0; margin: 0 4px; min-height: 0; width: 1px; align-self: stretch;
+    background: rgba(16,24,40,.14); color: transparent; overflow: hidden; flex-shrink: 0;
+  }
+  /* Vệt mờ mép phải báo còn mục bị khuất — thay cho việc cắt cụt im lặng */
+  .side-nav {
+    background:
+      linear-gradient(90deg, rgba(255,255,255,.46), rgba(255,255,255,.46)) left / calc(100% - 24px) 100% no-repeat,
+      linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.85)) right / 24px 100% no-repeat;
+  }
 }
 
 .app-topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 28px 14px; flex-shrink: 0; position: relative; z-index: 1; }
@@ -426,21 +748,29 @@ body { background: radial-gradient(120% 100% at 50% -10%, #dde2ea 0%, #c3c9d4 55
 .app-topbar__title { font-size: 22px; font-weight: 700; color: #0f172a; letter-spacing: -0.015em; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .app-topbar__actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+/* Nút icon tròn — điều khiển kính tầng 3. Bỏ hết vệt "ngũ sắc" vẽ tay của bản cũ: kính thật lấy
+   màu từ thứ phía sau nó (saturate), không tự sơn màu cầu vồng lên mình. */
 .icon-btn {
-  width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,.9); color: #4c5560;
+  position: relative; width: 38px; height: 38px; border-radius: 50%; border: none; color: #3f4a5c;
   display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.7) 0%, rgba(255,255,255,.16) 55%, transparent 62%),
-    radial-gradient(circle at 20% 10%, rgba(110,150,255,.22), transparent 65%),
-    radial-gradient(circle at 80% 85%, rgba(170,110,255,.16), transparent 65%),
-    linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(240,242,241,.92) 100%);
-  backdrop-filter: blur(12px) saturate(160%); -webkit-backdrop-filter: blur(12px) saturate(160%);
-  box-shadow: inset 0 1px 1px rgba(255,255,255,1), inset 0 -1px 3px rgba(15,23,42,.06), 0 10px 20px -9px rgba(15,23,42,.24), 0 3px 7px -2px rgba(15,23,42,.12);
-  transition: color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+  background: var(--lg-specular), var(--lg-tint-control);
+  backdrop-filter: var(--lg-blur-control); -webkit-backdrop-filter: var(--lg-blur-control);
+  box-shadow: var(--lg-shadow-control);
+  transition: color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out),
+              transform var(--dur-gel) var(--ease-gel), box-shadow var(--dur-base) var(--ease-out);
+}
+.icon-btn::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
+  background: var(--lg-rim); pointer-events: none;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask-composite: exclude;
 }
 .icon-btn svg { width: 17px; height: 17px; }
-.icon-btn:hover { color: #0f172a; transform: translateY(-1px); box-shadow: inset 0 1px 1px rgba(255,255,255,1), inset 0 -1px 2px rgba(15,23,42,.05), 0 12px 22px -8px rgba(15,23,42,.24), 0 3px 8px -2px rgba(15,23,42,.14); }
-.icon-btn:active { transform: scale(.94); }
+.icon-btn:hover { color: #0f172a; background: var(--lg-specular), var(--lg-tint-control-hover); transform: translateY(-1px); box-shadow: var(--lg-shadow-float); }
+.icon-btn:active { transform: scale(.9); }
+.icon-btn:focus-visible { outline: none; box-shadow: var(--lg-shadow-control), 0 0 0 3px rgba(99,102,241,.35); }
 
 /* Bảng thông báo — nổi lên bên phải ngay dưới chuông, tab gạch chân + danh sách dòng có icon tròn tối màu. */
 .notif { position: relative; }
@@ -450,10 +780,14 @@ body { background: radial-gradient(120% 100% at 50% -10%, #dde2ea 0%, #c3c9d4 55
   border-radius: 999px; background: #ef4444; color: #fff; font-size: 11.5px; font-weight: 700;
   display: flex; align-items: center; justify-content: center; border: 2px solid #ffffff;
 }
+/* Popover kính — nổi TRÊN tầng nội dung. Tint đẩy lên .88 vì phía sau là bảng dữ liệu dày chữ:
+   kính quá trong ở đây sẽ cho chữ chồng chữ, vi phạm nguyên tắc "biểu đạt không được che tác vụ". */
 .notif-panel {
-  position: absolute; right: 0; top: calc(100% + 10px); width: 340px; background: #ffffff;
-  border: 1px solid #e6e8f5; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
-  z-index: 30; overflow: hidden; animation: menu-enter var(--dur-base) var(--ease-out) both;
+  position: absolute; right: 0; top: calc(100% + 10px); width: 340px; border: none;
+  background: var(--lg-specular), rgba(255,255,255,.88);
+  backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border-radius: var(--radius-lg); box-shadow: var(--lg-shadow-float);
+  z-index: 30; overflow: hidden; animation: menu-enter var(--dur-gel) var(--ease-gel) both;
 }
 .notif-panel__tabs { display: flex; align-items: center; gap: 4px; padding: 14px 16px 0; }
 .notif-panel__tab {
@@ -486,20 +820,34 @@ body { background: radial-gradient(120% 100% at 50% -10%, #dde2ea 0%, #c3c9d4 55
 
 .user-chip { position: relative; margin-left: 4px; }
 .user-chip__trigger {
-  display: flex; align-items: center; gap: 9px; background: #ffffff; border: 1px solid #e6e8f5;
+  position: relative; display: flex; align-items: center; gap: 9px; border: none;
+  background: var(--lg-specular), var(--lg-tint-control);
+  backdrop-filter: var(--lg-blur-control); -webkit-backdrop-filter: var(--lg-blur-control);
+  box-shadow: var(--lg-shadow-control);
   border-radius: 999px; padding: 5px 14px 5px 5px; cursor: pointer;
-  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  transition: background var(--dur-fast) var(--ease-out), transform var(--dur-gel) var(--ease-gel), box-shadow var(--dur-base) var(--ease-out);
 }
-.user-chip__trigger:hover, .user-chip__trigger--open { background: #eef2fd; border-color: #dde3f7; }
+.user-chip__trigger::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
+  background: var(--lg-rim); pointer-events: none;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask-composite: exclude;
+}
+.user-chip__trigger:hover, .user-chip__trigger--open { background: var(--lg-specular), var(--lg-tint-control-hover); box-shadow: var(--lg-shadow-float); }
+.user-chip__trigger:active { transform: scale(.97); }
 .user-chip__name { font-size: 14.5px; font-weight: 700; color: #0f172a; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .user-chip__chevron { color: #7c8a9c; display: inline-flex; flex-shrink: 0; transition: transform var(--dur-fast) var(--ease-out); }
 .user-chip__chevron svg { width: 13px; height: 13px; }
 .user-chip__trigger--open .user-chip__chevron { transform: rotate(180deg); }
 
 .user-chip__menu {
-  position: absolute; right: 0; top: calc(100% + 8px); width: 240px; background: #ffffff; border: 1px solid #e6e8f5;
-  border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: 6px; z-index: 30;
-  animation: menu-enter var(--dur-base) var(--ease-out) both;
+  position: absolute; right: 0; top: calc(100% + 8px); width: 240px; border: none;
+  background: var(--lg-specular), rgba(255,255,255,.88);
+  backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border-radius: var(--radius-lg); box-shadow: var(--lg-shadow-float); padding: 6px; z-index: 30;
+  animation: menu-enter var(--dur-gel) var(--ease-gel) both;
 }
 .user-chip__menu-header { padding: 10px 10px 9px; border-bottom: 1px solid #f1f5f9; margin-bottom: 6px; }
 .user-chip__menu-header strong { display: block; font-size: 14.5px; color: #0f172a; }
@@ -516,7 +864,18 @@ body { background: radial-gradient(120% 100% at 50% -10%, #dde2ea 0%, #c3c9d4 55
 .user-chip__menu-item:hover { background: #f4f5f7; }
 .user-chip__menu-item--danger { color: #dc2626; }
 .user-chip__menu-item--danger:hover { background: #fef2f2; }
-@keyframes menu-enter { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+/* ===== TƯƠNG TÁC CHỮ KÝ: popover kính NỞ RA từ nút bấm =====
+   Đây là "glass popover morph" mà hợp đồng hướng thiết kế đã cam kết. Liquid Glass không trượt
+   vào từ ngoài như một lớp phủ; nó là vật liệu nở ra từ chính điểm chạm, độ mờ kính đặc dần lên
+   trong lúc nở. Vì vậy: gốc biến đổi đặt ở góc nút, bắt đầu bị nén và gần như trong veo, kết
+   thúc đúng kích thước và đúng độ đặc của kính. Đây là MỘT khoảnh khắc được dàn dựng cho toàn hệ,
+   không phải hiệu ứng hover rải rác. */
+@keyframes menu-enter {
+  from { opacity: 0; transform: translateY(-8px) scale(.90); backdrop-filter: blur(0) saturate(100%); -webkit-backdrop-filter: blur(0) saturate(100%); }
+  60%  { opacity: 1; }
+  to   { opacity: 1; transform: none; backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%); }
+}
+.notif-panel, .user-chip__menu { transform-origin: top right; }
 
 /* Thanh điều hướng dạng pill — mục đang chọn nổi bằng nền trắng bo tròn + đổ bóng nhẹ trên nền xám be. */
 /* Track liền mạch kiểu "iOS segmented control" — nền xám be, các mục chưa chọn chỉ là chữ trần,
@@ -524,19 +883,19 @@ body { background: radial-gradient(120% 100% at 50% -10%, #dde2ea 0%, #c3c9d4 55
    nhiều lớp, vệt ánh sáng ngũ sắc mờ ở góc trên. Đúng yêu cầu — không được làm khác kiểu này. */
 /* Vệt sáng xanh/tím rất nhạt phía sau thanh điều hướng — để kính có thứ "trong suốt" để lộ ra,
    đúng cách Apple luôn đặt liquid glass trên một nền có màu/độ sáng thay đổi, không phải nền trắng trơn. */
-.app-topbar-glow {
-  position: absolute; top: -60px; left: 50%; transform: translateX(-50%); width: 640px; height: 220px;
-  background:
-    radial-gradient(ellipse 45% 100% at 30% 100%, rgba(99,140,255,.20), transparent 70%),
-    radial-gradient(ellipse 40% 100% at 75% 100%, rgba(160,110,255,.16), transparent 70%);
-  filter: blur(10px); pointer-events: none; z-index: 0;
-}
+/* Quầng sáng giả phía sau header đã bị GỠ BỎ: môi trường thật (body) giờ đã cung cấp nguồn sáng
+   để kính khúc xạ, nên thêm một quầng vẽ tay nữa là chồng hai nguồn sáng mâu thuẫn — kính sẽ đọc
+   ra là "hình vẽ" chứ không phải vật liệu. Giữ lại phần tử rỗng để không phải sửa JSX. */
+.app-topbar-glow { display: none; }
 
 .app-content { flex: 1; min-width: 0; }
 
+/* Màn hẹp GIỮ NGUYÊN cửa sổ kính, chỉ thu nhỏ lại. Quy tắc cũ (padding:0, radius:0, bỏ bóng)
+   xóa sạch vật liệu chính của cả thiết kế trên máy tính bảng lẫn điện thoại — tức lời hứa
+   "cửa sổ kính nổi trên nội thất ấm" chỉ còn đúng ở một nửa số khổ màn hình. */
 @media (max-width: 900px) {
-  .app-frame { padding: 0; }
-  .app-shell { border-radius: 0; min-height: 100vh; border: none; box-shadow: none; }
+  .app-frame { padding: 10px; }
+  .app-shell { border-radius: 22px; min-height: calc(100vh - 20px); }
   .app-topbar { padding: 14px 16px 10px; }
   .app-topbar__title { font-size: 18px; }
   .user-chip__name { display: none; }
@@ -569,7 +928,7 @@ body { background: radial-gradient(120% 100% at 50% -10%, #dde2ea 0%, #c3c9d4 55
 
 /* User Detail Page Styling */
 .user-detail-page { max-width: 900px; margin: 0 auto; padding: 28px 24px; }
-.detail-card { background: #ffffff; border: 1px solid #d6dde6; border-radius: 16px; padding: 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
+.detail-card { background: #ffffff; border: 1px solid #d6dde6; border-radius: 20px; padding: 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
 .detail-header { display: flex; align-items: center; gap: 20px; }
 .detail-name { font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 4px; }
 .detail-username { font-family: monospace; font-size: 15.5px; color: #64748b; }
@@ -605,9 +964,9 @@ body { background: radial-gradient(120% 100% at 50% -10%, #dde2ea 0%, #c3c9d4 55
 .btn-link:hover { color: #3730a3; text-decoration: underline; }
 
 /* Organization Tree Module Styling (NCL-01-CN-003) */
-.department-tree-container { display: flex; flex-direction: column; gap: 12px; background: #ffffff; border: 1px solid #d6dde6; border-radius: 0 0 16px 16px; padding: 24px 24px 18px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
+.department-tree-container { display: flex; flex-direction: column; gap: 12px; background: #ffffff; border: 1px solid #d6dde6; border-radius: 0 0 20px 20px; padding: 24px 24px 18px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
 
-.tree-loading-state, .tree-empty-state, .table-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; background: #ffffff; border: 1px solid #d6dde6; border-radius: 16px; color: #64748b; text-align: center; gap: 12px; }
+.tree-loading-state, .tree-empty-state, .table-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; background: #ffffff; border: 1px solid #d6dde6; border-radius: 20px; color: #64748b; text-align: center; gap: 12px; }
 .empty-icon, .table-empty-state__icon { font-size: 48px; display: flex; justify-content: center; color: #cbd5e1; }
 .empty-icon svg, .table-empty-state__icon svg { width: 44px; height: 44px; }
 
@@ -617,7 +976,7 @@ body { background: radial-gradient(120% 100% at 50% -10%, #dde2ea 0%, #c3c9d4 55
 .tree-node-wrapper { position: relative; margin-bottom: 8px; }
 .tree-node-wrapper:last-child { margin-bottom: 0; }
 
-.tree-node-card { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 8px; column-gap: 16px; padding: 11px 14px; background: #ffffff; border: 1px solid #d6dde6; border-radius: 10px; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
+.tree-node-card { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 8px; column-gap: 16px; padding: 11px 14px; background: #ffffff; border: 1px solid #d6dde6; border-radius: 14px; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
 .tree-node-card:hover { border-color: #6366f1; box-shadow: 0 8px 24px rgba(99,102,241,0.08); transform: translateY(-1px); }
 /* Thẻ có nhánh con (nhóm/phòng/ban) nổi bật hơn thẻ lá — nền tint nhẹ + chữ đậm hơn,
    giúp phân biệt "đây là một nhóm" ngay từ cái nhìn đầu, không cần đường nối. */
@@ -646,7 +1005,7 @@ body { background: radial-gradient(120% 100% at 50% -10%, #dde2ea 0%, #c3c9d4 55
 .badge-children { font-size: 13px; font-weight: 600; color: #2563eb; background: #eff6ff; border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 12px; }
 
 /* Branch List view (NCL-01-CN-003) — flat rows, no indentation; breadcrumb replaces nesting */
-.dept-list-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 8px; column-gap: 16px; padding: 11px 14px; background: #ffffff; border: 1px solid #d6dde6; border-radius: 10px; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
+.dept-list-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; row-gap: 8px; column-gap: 16px; padding: 11px 14px; background: #ffffff; border: 1px solid #d6dde6; border-radius: 14px; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
 .dept-list-row:hover { border-color: #2563eb; box-shadow: 0 8px 24px rgba(37,99,235,0.08); transform: translateY(-1px); }
 .dept-list-row:has(.row-menu__panel--open) { position: relative; z-index: 30; transform: none; }
 .dept-list-path { font-size: 13px; color: #7c8a9c; font-style: italic; }
@@ -903,15 +1262,10 @@ body { background: radial-gradient(120% 100% at 50% -10%, #dde2ea 0%, #c3c9d4 55
   gap: 12px;
   animation: enter-left 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-.toast-notification--success {
-  border-left: 5px solid #6366f1;
-}
-.toast-notification--error {
-  border-left: 5px solid #dc2626;
-}
-.toast-notification--info {
-  border-left: 5px solid #3b82f6;
-}
+/* Sắc thái thông báo mã hóa bằng nền nhuộm + viền vòng mảnh thay cho vạch màu dày bên trái. */
+.toast-notification--success { background: rgba(99,102,241,.07); box-shadow: inset 0 0 0 1px rgba(99,102,241,.22), var(--lg-shadow-float); }
+.toast-notification--error { background: rgba(220,38,38,.07); box-shadow: inset 0 0 0 1px rgba(220,38,38,.24), var(--lg-shadow-float); }
+.toast-notification--info { background: rgba(59,130,246,.07); box-shadow: inset 0 0 0 1px rgba(59,130,246,.22), var(--lg-shadow-float); }
 .toast-notification__content {
   display: flex;
   align-items: flex-start;
@@ -1089,7 +1443,7 @@ body { background: radial-gradient(120% 100% at 50% -10%, #dde2ea 0%, #c3c9d4 55
 .contact-table-container { background: #ffffff; border: 1px solid #d6dde6; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
 .contact-data-table th { background: #f8fafc; padding: 12px 16px; }
 .contact-data-table td { padding: 14px 16px; }
-.contact-table-row--primary { background: linear-gradient(90deg, rgba(254, 243, 199, 0.28) 0%, rgba(255, 255, 255, 0.95) 100%); border-left: 3px solid #f59e0b; }
+.contact-table-row--primary { background: linear-gradient(90deg, rgba(254, 243, 199, 0.42) 0%, rgba(255, 255, 255, 0.95) 100%); }
 .contact-table-row--primary:hover { background: linear-gradient(90deg, rgba(254, 243, 199, 0.42) 0%, #ffffff 100%) !important; }
 
 .primary-star-badge { display: inline-flex; align-items: center; gap: 4px; background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; border: 1px solid #fcd34d; padding: 3px 8px; border-radius: 999px; font-size: 13px; font-weight: 800; box-shadow: 0 1px 3px rgba(245,158,11,0.2); }
@@ -1208,7 +1562,7 @@ body { background: radial-gradient(120% 100% at 50% -10%, #dde2ea 0%, #c3c9d4 55
 .customer-summary-section__title { margin: 0 0 10px; font-size: 15px; font-weight: 700; color: #0f172a; }
 .customer-summary-section__empty { font-size: 14px; margin: 0; padding: 8px 0; }
 .customer-timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.customer-timeline__item { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 10px 12px; background: #f8fafc; border: 1px solid #d6dde6; border-left: 3px solid #6366f1; border-radius: 10px; font-size: 14px; }
+.customer-timeline__item { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 10px 12px; background: rgba(99,102,241,.06); box-shadow: inset 0 0 0 1px rgba(99,102,241,.14); border-radius: 12px; font-size: 14px; }
 .customer-timeline__date { min-width: 84px; color: #475569; font-variant-numeric: tabular-nums; }
 .customer-timeline__tag { padding: 2px 8px; border-radius: 999px; background: #eef2ff; color: #3730a3; font-weight: 600; font-size: 12.5px; white-space: nowrap; }
 .customer-timeline__tag--opportunities { background: #eff6ff; color: #1d4ed8; }
@@ -1249,17 +1603,25 @@ body { background: radial-gradient(120% 100% at 50% -10%, #dde2ea 0%, #c3c9d4 55
 .row-menu__trigger svg { width: 18px; height: 18px; }
 .row-menu__trigger:hover { background: #f1f5f9; color: #17243a; }
 .row-menu__trigger[aria-expanded="true"] { background: #eef2f7; color: #17243a; border-color: #d6dde6; }
+/* Bán kính đồng tâm (concentric radii — quy tắc hình học của Liquid Glass):
+   bán kính trong = bán kính ngoài − padding. Panel r=14, padding 6 → item r=8. */
 .row-menu__panel {
   position: absolute; right: 0; top: calc(100% + 6px); z-index: 20;
-  min-width: 216px; padding: 6px; background: #ffffff; border: 1px solid #e5e9ef;
-  border-radius: 10px; box-shadow: 0 12px 28px -8px rgba(23, 36, 58, 0.18), 0 2px 6px rgba(23, 36, 58, 0.06);
+  min-width: 216px; padding: 6px; border: none;
+  background: var(--lg-specular), rgba(255,255,255,.88);
+  backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border-radius: 14px; box-shadow: var(--lg-shadow-float);
   display: none; flex-direction: column; gap: 1px;
 }
-.row-menu__panel--open { display: flex; animation: row-menu-in 0.12s ease-out; }
-@keyframes row-menu-in { from { opacity: 0; transform: translateY(-2px); } to { opacity: 1; transform: translateY(0); } }
+.row-menu__panel--open { display: flex; animation: row-menu-in var(--dur-gel) var(--ease-gel); transform-origin: top right; }
+@keyframes row-menu-in {
+  from { opacity: 0; transform: translateY(-8px) scale(.88); backdrop-filter: blur(0) saturate(100%); -webkit-backdrop-filter: blur(0) saturate(100%); }
+  60%  { opacity: 1; }
+  to   { opacity: 1; transform: none; backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%); }
+}
 .row-menu__item {
   display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
-  padding: 8px 10px; border: none; background: transparent; border-radius: 7px;
+  padding: 8px 10px; border: none; background: transparent; border-radius: 8px;
   font-size: 14.5px; font-weight: 500; color: #334155; cursor: pointer; transition: background 0.12s var(--ease-out);
 }
 .row-menu__item:hover { background: #f1f5f9; }
@@ -1267,3 +1629,19 @@ body { background: radial-gradient(120% 100% at 50% -10%, #dde2ea 0%, #c3c9d4 55
 .row-menu__item--danger:hover { background: #fef2f2; }
 .row-menu__icon { display: flex; flex: none; width: 18px; height: 18px; color: inherit; opacity: 0.85; }
 .row-menu__icon svg { width: 100%; height: 100%; }
+
+/* ===== Panel thương hiệu màn đăng nhập — kéo về đúng thế giới màu của hệ thống =====
+   Nền cũ là xanh rêu-lam (#0a1e2b/#102f3c) từ bảng màu emerald đã bỏ; nó chọi với nhấn chàm và
+   nền ấm bên phải, đọc ra như hai sản phẩm khác nhau ghép lại. Chuyển sang xanh mực ngả chàm. */
+.login-brand { background: linear-gradient(135deg, #171a3a 0%, #232653 55%, #1b1e42 100%); }
+.login-brand::after { border-color: rgba(165,180,252,.16); box-shadow: 0 0 0 48px rgba(165,180,252,.035), 0 0 0 120px rgba(165,180,252,.025); }
+.ambient--one { background: radial-gradient(circle, rgba(129,140,248,.26), transparent 65%); }
+.ambient--two { background: radial-gradient(circle, rgba(255,199,126,.14), transparent 64%); }
+/* Số thứ tự 01/02/03 bị GỠ: craft-floor chỉ cho phép đánh số khi bản thân TRÌNH TỰ mang thông tin
+   người đọc cần. Đây là ba năng lực song song, không phải ba bước — đánh số là trang trí. */
+.story__item span { display: none; }
+.story__item { padding-top: 14px; }
+.story__item--active { background: linear-gradient(145deg, rgba(199,210,254,.16), rgba(199,210,254,.06)); border-color: rgba(165,180,252,.30); }
+.story__progress { background: #a5b4fc; }
+.highlight-detail { border-color: rgba(199,210,254,.18); background: rgba(199,210,254,.08); border-radius: 14px; }
+.brand__mark { border-radius: 10px; }

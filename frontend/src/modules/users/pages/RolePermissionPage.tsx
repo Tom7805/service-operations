@@ -398,10 +398,13 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
                         </td>
 
                         <td style={{ textAlign: 'right' }}>
+                          {/* Nút kính (phụ), KHÔNG phải nút chàm đặc: màu nhấn đổ đầy được dành riêng
+                              cho hành động chính của cả trang. Lặp nó trên từng dòng (10 nút chàm
+                              xếp dọc mép phải) làm mất hẳn ý nghĩa "đâu là hành động chính". */}
                           <button
                             type="button"
-                            className="btn-primary"
-                            style={{ padding: '6px 14px', fontSize: '12.5px' }}
+                            className="btn-secondary"
+                            style={{ padding: '7px 14px', fontSize: '13px' }}
                             onClick={() => handleOpenConfigure(u)}
                             title="Cấu hình vai trò & phạm vi dữ liệu"
                           >

@@ -95,3 +95,4 @@ docs/03-database/*.sql.bak
 
 ### === Claude Code (công cụ/skill cá nhân, không dùng chung cả team) === ###
 .claude/
+.impeccable/
