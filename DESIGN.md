@@ -332,7 +332,10 @@ Tôn trọng `prefers-reduced-motion`.
 
 Đã được rà và **chấp nhận có chủ đích** — đừng "sửa" chúng:
 
-- `.side-nav { transition: width, padding }` — detector báo `layout-transition`. Nút thu/mở sidebar
-  buộc phải đẩy lại bố cục các phần tử bên cạnh; `transform` không làm được. Thao tác chủ động, tần suất thấp.
+- **Thu/mở sidebar KHÔNG có chuyển động** — và đây là quyết định dựa trên phép đo, không phải lập luận.
+  Bản trước dùng `transition: width` với lý do "thao tác hiếm nên chấp nhận được". Đo lại trên CPU chậm 4×,
+  trang 25 dòng, 6 lần thu/mở bằng click tin cậy: **có chuyển động rơi 31/158 khung hình (20%), không có
+  chỉ rơi 10/155 (6%)**. Nguyên nhân: mỗi khung hình của chuyển động buộc cả vùng nội dung tính lại bố cục.
+  Đừng đưa `transition: width` trở lại.
 - Bundle JS tăng ~128KB so với bộ icon cũ do Phosphor tree-shake kém hơn. Đã thử import lẻ từng icon:
   gzip không đổi, chỉ làm bẩn code. Chấp nhận vì đây là công cụ nội bộ chạy trong mạng LAN.

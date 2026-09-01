@@ -674,7 +674,14 @@ body { background: var(--canvas); }
   width: 244px; flex-shrink: 0; display: flex; flex-direction: column;
   background: var(--canvas);
   border-right: 1px solid var(--line); padding: 16px 10px;
-  transition: width var(--dur-base) var(--ease-out), padding var(--dur-base) var(--ease-out);
+  /* KHONG chuyen dong chieu rong — quyet dinh dua tren PHEP DO, khong phai lap luan.
+     Do tren CPU cham 4x, trang 25 dong, 6 lan thu/mo, click tin cay:
+       co chuyen dong : 31/158 khung hinh bi roi (20%)
+       khong chuyen dong: 10/155 (6%)
+     Ly do: moi khung hinh cua chuyen dong buoc CA vung noi dung (bang 25 dong x
+     7 cot) tinh lai bo cuc. Thu/mo sidebar la thao tac chu dong va hiem — doi
+     ngay lap tuc con tot hon mot chuyen dong giat.
+     (CLS = 0 o ca hai: xe dich do nguoi dung chu dong gay ra khong tinh vao CLS.) */
   overflow: hidden; position: relative;
   box-shadow: none;
 }
