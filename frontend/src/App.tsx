@@ -165,6 +165,8 @@ export default function App() {
 
   return (
     <div className="app-frame">
+      {/* Nguoi dung ban phim khong phai Tab qua ca menu dieu huong moi toi duoc noi dung. */}
+      <a className="skip-link" href="#noi-dung-chinh">Bỏ qua điều hướng, tới nội dung chính</a>
       <div className="app-shell">
         <aside className={`side-nav ${sidebarCollapsed ? 'side-nav--collapsed' : ''}`}>
           <div className="side-nav__header">
@@ -307,7 +309,7 @@ export default function App() {
           </div>
         </header>
 
-        <main className="app-content">
+        <main className="app-content" id="noi-dung-chinh" tabIndex={-1}>
           {activeTab === 'CHANGE_PASSWORD' ? (
             <ChangePasswordPage onBack={() => setActiveTab('DEPARTMENTS')} onPasswordChanged={handleLogout} />
           ) : activeTab === 'CUSTOMERS' ? (

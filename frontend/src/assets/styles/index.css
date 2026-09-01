@@ -19,7 +19,11 @@
   --radius-lg: 16px;
   --radius-xl: 20px;
 
-  /* ===================== LIQUID GLASS (Apple, iOS/macOS 26) =====================
+  /* ===================== LIQUID GLASS (PHONG THEO Apple, iOS/macOS 26) =====================
+     GHI CHU TRUNG THUC: Apple chi tai lieu hoa Liquid Glass cho nen tang cua Apple. KHONG ton tai
+     mot `liquid-glass.css` chinh chu nao. Day la ban DUNG LAI tren web bang backdrop-filter +
+     vong vien nhieu lop + vet choi — bam sat dac tinh quang hoc that, nhung van la mot xap xi,
+     khong phai vat lieu goc cua he dieu hanh.
      Liquid Glass KHÔNG phải "nền mờ + viền trắng" (glassmorphism 2020). Nó là một VẬT LIỆU
      quang học, dựng từ 4 thuộc tính bắt buộc — thiếu bất kỳ cái nào là ra glassmorphism rẻ tiền:
 
@@ -73,6 +77,21 @@
   --dur-gel: 300ms;
 }
 * { box-sizing: border-box; } body { margin: 0; min-width: 320px; line-height: 1.5; } button, input { font: inherit; } button { cursor: pointer; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+/* Can dong cho tieu de va doan van: tranh mot chu bi bo lai mot minh o dong cuoi (orphan) —
+   loi trinh bay nay rat de thay trong tieng Viet vi tu ghep dai. */
+h1, h2, h3, .page-title, .modal-title, .tree-node-title, .section-title { text-wrap: balance; }
+p, .page-subtitle, .field-hint, .role-matrix-desc { text-wrap: pretty; }
+
+/* Lien ket nhay thang toi noi dung — bat buoc cho nguoi dung ban phim, chi hien khi duoc focus. */
+.skip-link {
+  position: absolute; left: 12px; top: -60px; z-index: 999;
+  padding: 10px 18px; border-radius: 999px; background: #4f46e5; color: #fff;
+  font-size: 14px; font-weight: 700; text-decoration: none;
+  transition: top var(--dur-base) var(--ease-out);
+}
+.skip-link:focus-visible { top: 12px; outline: 2px solid #fff; outline-offset: 2px; }
 
 /* ===================== BỀ MẶT DO TRÌNH DUYỆT VẼ =====================
    Bôi đen, con trỏ nhập, thanh cuộn, vòng focus — mặc định của trình duyệt không thuộc hệ thiết
@@ -225,7 +244,7 @@
    báo, và ở đây nó thừa — ô icon phía trong đã mang đúng màu ngữ nghĩa đó rồi, vạch chỉ lặp lại
    thông tin bằng một hình thức kém tinh tế hơn. Giữ lại tên lớp để không phải sửa JSX. */
 .stat-card--blue, .stat-card--green, .stat-card--red, .stat-card--purple { border-left: none; }
-.stat-card__label { font-size: 14px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 2px; }
+.stat-card__label { font-size: 14px; color: #6b7688; font-weight: 500; letter-spacing: 0; display: block; margin-bottom: 3px; }
 .stat-card__value { font-size: 22px; font-weight: 800; color: #0f172a; line-height: 1.25; font-variant-numeric: tabular-nums; }
 .text-success { color: #16a34a !important; } .text-danger { color: #dc2626 !important; } .text-warning { color: #d97706 !important; }
 
@@ -935,7 +954,7 @@ body::before {
 .divider { border: 0; border-top: 1px solid #f1f5f9; margin: 24px 0; }
 .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .detail-field { display: flex; flex-direction: column; gap: 4px; }
-.detail-label { font-size: 13.5px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+.detail-label { font-size: 13.5px; font-weight: 500; color: #6b7688; letter-spacing: 0; }
 .detail-value { font-size: 16px; color: #0f172a; font-weight: 600; }
 .section-title { font-size: 16px; font-weight: 700; color: #0f172a; margin: 0 0 12px; }
 .role-detail-card { border: 1px solid #d6dde6; border-radius: 10px; padding: 12px 16px; display: flex; align-items: flex-start; gap: 12px; background: #f8fafc; margin-bottom: 8px; width: 100%; }
@@ -1025,7 +1044,7 @@ body::before {
 .move-location-preview { display: flex; flex-direction: column; align-items: center; gap: 8px; background: #f8fafc; border: 1px solid #d6dde6; padding: 16px; border-radius: 12px; }
 .location-box { width: 100%; padding: 10px 14px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14.5px; }
 .location-box--active { border-color: #6366f1; background: #f0fdf4; }
-.location-label { font-size: 12.5px; text-transform: uppercase; font-weight: 700; color: #64748b; display: block; margin-bottom: 2px; }
+.location-label { font-size: 12.5px; font-weight: 500; color: #6b7688; display: block; margin-bottom: 2px; }
 .location-value { color: #0f172a; font-size: 15.5px; }
 .arrow-down { font-size: 16px; color: #6366f1; display: flex; justify-content: center; }
 .arrow-down svg { width: 18px; height: 18px; }
@@ -1369,7 +1388,7 @@ body::before {
 .current-candidate-label { font-size: 14px; font-weight: 700; color: #334155; }
 .current-candidate-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; }
 .current-field { display: flex; flex-direction: column; gap: 2px; font-size: 14.5px; }
-.current-field__name { font-size: 12.5px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+.current-field__name { font-size: 12.5px; color: #6b7688; font-weight: 500; letter-spacing: 0.03em; }
 .current-field__val { color: #0f172a; font-weight: 600; }
 
 .duplicate-section-title { font-size: 16px; font-weight: 700; color: #0f172a; margin: 0 0 12px; }
@@ -1431,7 +1450,7 @@ body::before {
 .contact-stat-icon--total { background: #eff6ff; color: #2563eb; }
 .contact-stat-icon--primary { background: #fef3c7; color: #d97706; }
 .contact-stat-icon--role { background: #f0fdf4; color: #16a34a; }
-.contact-stat-label { font-size: 13px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 2px; }
+.contact-stat-label { font-size: 13px; color: #6b7688; font-weight: 500; letter-spacing: 0.04em; display: block; margin-bottom: 2px; }
 .contact-stat-value { font-size: 18px; font-weight: 800; color: #0f172a; }
 .contact-stat-sub { font-size: 13px; color: #64748b; display: block; margin-top: 2px; }
 .text-primary-gold { color: #b45309 !important; }
@@ -1517,7 +1536,7 @@ body::before {
 
 .customer-meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px 24px; }
 .meta-item--wide { grid-column: span 2; }
-.meta-item__label { font-size: 13px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 4px; }
+.meta-item__label { font-size: 13px; font-weight: 500; color: #6b7688; letter-spacing: 0.04em; display: block; margin-bottom: 4px; }
 .meta-item__value { font-size: 15px; color: #0f172a; font-weight: 600; }
 
 .customer-tabs-bar { display: flex; gap: 8px; border-bottom: 2px solid #d6dde6; margin-bottom: 20px; padding-bottom: 2px; }
