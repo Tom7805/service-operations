@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-01T14:02:58.632121",
+  "generatedAt": "2026-09-01T15:09:46.566118",
   "title": "Vận Hành Dịch Vụ",
   "extensions": {
     "colorMeta": {
@@ -87,6 +87,26 @@
       "pale-yellow-fg": {
         "value": "#956400",
         "role": "Chữ cảnh báo"
+      },
+      "overlay-hairline": {
+        "value": "rgba(0,0,0,0.06)",
+        "role": "Đường phân cách bên trong thẻ, viền chìm"
+      },
+      "overlay-subtle": {
+        "value": "rgba(0,0,0,0.10)",
+        "role": "Đường ngăn nhóm, viền phụ"
+      },
+      "overlay-muted": {
+        "value": "rgba(0,0,0,0.14)",
+        "role": "Dải phân cách dọc, vệt bóng cuộn"
+      },
+      "overlay-strong": {
+        "value": "rgba(0,0,0,0.24)",
+        "role": "Con trượt thanh cuộn"
+      },
+      "overlay-scrim": {
+        "value": "rgba(0,0,0,0.32)",
+        "role": "Lớp che sau modal và bảng lệnh"
       }
     },
     "typographyMeta": {
@@ -176,7 +196,13 @@
     "motion": [
       {
         "name": "ease-out",
-        "value": "cubic-bezier(0.16, 1, 0.3, 1)"
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "role": "Chuyển màu, nền, viền"
+      },
+      {
+        "name": "ease-soft",
+        "value": "cubic-bezier(0.32, 0.72, 0, 1)",
+        "role": "Xổ nội dung, chuyển trang — mô phỏng quán tính"
       },
       {
         "name": "dur-fast",
@@ -187,8 +213,19 @@
         "value": "200ms"
       },
       {
+        "name": "dur-enter",
+        "value": "520ms",
+        "role": "Xổ khối khi vào trang"
+      },
+      {
+        "name": "stagger",
+        "value": "55ms",
+        "role": "Độ trễ giữa các tầng"
+      },
+      {
         "name": "press",
-        "value": "scale(0.98)"
+        "value": "scale(0.975)",
+        "role": "Phản hồi khi bấm"
       }
     ],
     "breakpoints": [

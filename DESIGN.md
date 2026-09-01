@@ -15,6 +15,11 @@ colors:
   surface-pressed: "#EAE9E6"
   line: "#EAEAEA"
   line-hover: "#DCDCDC"
+  overlay-hairline: "rgba(0,0,0,0.06)"
+  overlay-subtle: "rgba(0,0,0,0.10)"
+  overlay-muted: "rgba(0,0,0,0.14)"
+  overlay-strong: "rgba(0,0,0,0.24)"
+  overlay-scrim: "rgba(0,0,0,0.32)"
   pale-red-bg: "#FDEBEC"
   pale-red-fg: "#9F2F2D"
   pale-blue-bg: "#E1F3FE"
@@ -117,6 +122,21 @@ Bảng màu là **đơn sắc ấm** (ngả vàng rất nhẹ), cố tình trán
 |---|---|---|
 | `--line` | `#EAEAEA` | Viền thẻ, bảng, ô nhập — **giá trị mặc định cho MỌI viền** |
 | `--line-hover` | `#DCDCDC` | Viền khi rê chuột |
+
+### Thang phủ đen trung tính
+Dùng khi cần một sắc độ **thích ứng theo nền phía sau** thay vì một màu đặc: đường tóc bên
+trong thẻ, thanh cuộn, lớp che. Chỉ 5 nấc — không được tự thêm alpha mới.
+
+| Token | Giá trị | Vai trò |
+|---|---|---|
+| `--overlay-hairline` | `rgba(0,0,0,0.06)` | Đường phân cách bên trong thẻ, viền chìm |
+| `--overlay-subtle` | `rgba(0,0,0,0.10)` | Đường ngăn nhóm, viền phụ |
+| `--overlay-muted` | `rgba(0,0,0,0.14)` | Dải phân cách dọc, vệt bóng cuộn |
+| `--overlay-strong` | `rgba(0,0,0,0.24)` | Con trượt thanh cuộn |
+| `--overlay-scrim` | `rgba(0,0,0,0.32)` | Lớp che sau modal và bảng lệnh |
+
+Trước đây chỗ này có **14 giá trị alpha rời rạc** đặt tuỳ hứng (`.02 .03 .07 .13 .20 .28 .40`…) —
+cùng một vai trò mà mỗi nơi một sắc độ. Đó là drift thật, không phải chuyện thẩm mỹ.
 
 ### Màu ngữ nghĩa — chỉ 4 cặp pastel đã khử bão hòa
 Dùng theo cặp `bg` + `fg`, không bao giờ dùng lẻ. Không có màu nào ngoài 4 cặp này.
