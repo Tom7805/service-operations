@@ -106,8 +106,10 @@ describe('User Management Module — Acceptance Criteria Tests (NCL-01-CN-002)',
       />
     );
 
-    const lockBtn = screen.getByTitle('Khóa tài khoản');
-    fireEvent.click(lockBtn);
+    // Menu thao tác chỉ dựng nội dung KHI MỞ (tối ưu hiệu năng: trước đây mỗi dòng
+    // dựng sẵn 5 nút + 5 icon SVG dù menu đang đóng). Nên phải mở menu trước.
+    fireEvent.click(screen.getAllByLabelText('Thao tác')[0]);
+    fireEvent.click(screen.getByTitle('Khóa tài khoản'));
 
     expect(handleToggleStatus).toHaveBeenCalledWith(mockUsersList[0]);
   });

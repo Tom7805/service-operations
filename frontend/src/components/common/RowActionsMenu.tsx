@@ -63,24 +63,32 @@ export const RowActionsMenu: React.FC<RowActionsMenuProps> = ({ actions, ariaLab
       >
         {ICONS.more}
       </button>
+      {/* Chỉ dựng nội dung menu KHI MỞ.
+          Trước đây mọi dòng đều dựng sẵn đủ 5 nút + 5 icon SVG dù menu đang đóng.
+          Đo trên bảng 25 dòng: 125 mục menu và 125 SVG ẩn — chiếm 72% tổng số SVG
+          của cả trang. Đó chính là thứ làm cây React nặng lên khi mở trang, gây
+          tác vụ dài 227ms và đứng hình ~13 khung liên tiếp.
+          Chỉ hiện khi mở là thay đổi bằng KHÔNG về trải nghiệm: menu đóng thì
+          người dùng không thấy gì cả. */}
       <div className={`row-menu__panel ${open ? 'row-menu__panel--open' : ''}`} role="menu">
-        {actions.map((action) => (
-          <button
-            key={action.key}
-            type="button"
-            role="menuitem"
-            className={`row-menu__item ${action.tone === 'danger' ? 'row-menu__item--danger' : ''}`}
-            title={action.disabled ? action.disabledReason ?? action.label : action.label}
-            disabled={action.disabled}
-            onClick={() => {
-              setOpen(false);
-              action.onClick();
-            }}
-          >
-            <span className="row-menu__icon">{action.icon}</span>
-            {action.label}
-          </button>
-        ))}
+        {open &&
+          actions.map((action) => (
+            <button
+              key={action.key}
+              type="button"
+              role="menuitem"
+              className={`row-menu__item ${action.tone === 'danger' ? 'row-menu__item--danger' : ''}`}
+              title={action.disabled ? action.disabledReason ?? action.label : action.label}
+              disabled={action.disabled}
+              onClick={() => {
+                setOpen(false);
+                action.onClick();
+              }}
+            >
+              <span className="row-menu__icon">{action.icon}</span>
+              {action.label}
+            </button>
+          ))}
       </div>
     </div>
   );

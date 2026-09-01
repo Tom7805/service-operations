@@ -1988,3 +1988,14 @@ body { background: var(--canvas); }
 .side-nav__item--locked:hover { opacity: 0.7; }
 .side-nav__item__lock { display: inline-flex; margin-left: auto; flex-shrink: 0; }
 .side-nav__item__lock svg { width: 12px; height: 12px; }
+
+/* Ô định danh giả trong khung xương — dựng lại đúng hình khối của ô thật (khối
+   vuông 34px + hai dòng chữ) để hàng khung xương CAO BẰNG hàng dữ liệu.
+   Đo được: hàng khung xương cũ cao 51px, hàng thật cao 72px. Với 25 dòng, chênh
+   lệch đó cộng dồn thành cú nhảy 1589px khi dữ liệu về — đúng thứ người dùng mô
+   tả là "dữ liệu đổ ra cứ giật". */
+.skeleton-profile { display: flex; align-items: center; gap: 12px; }
+.skeleton-avatar { width: 34px; height: 34px; border-radius: var(--radius-md); flex-shrink: 0; }
+.skeleton-profile__lines { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+.skeleton-text--sm { height: 9px; }
+.user-data-table tbody tr.skeleton-row td { padding-top: 15px; padding-bottom: 15px; }

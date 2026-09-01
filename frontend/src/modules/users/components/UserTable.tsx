@@ -3,6 +3,7 @@ import type { User, UserStatus } from '../types/userTypes';
 import { SYSTEM_DEPARTMENTS, SYSTEM_ROLES } from '../types/userTypes';
 import { ICONS } from './icons';
 import RowActionsMenu from '../../../components/common/RowActionsMenu';
+import TableSkeleton from '../../../components/common/TableSkeleton';
 
 interface UserTableProps {
   users: User[];
@@ -170,17 +171,7 @@ export const UserTable: React.FC<UserTableProps> = ({
           </thead>
           <tbody>
             {loading ? (
-              Array.from({ length: 4 }).map((_, idx) => (
-                <tr key={idx} className="skeleton-row">
-                  <td><div className="skeleton skeleton-text" style={{ width: '20px' }} /></td>
-                  <td><div className="skeleton skeleton-text" style={{ width: '140px' }} /></td>
-                  <td><div className="skeleton skeleton-text" style={{ width: '160px' }} /></td>
-                  <td><div className="skeleton skeleton-text" style={{ width: '120px' }} /></td>
-                  <td><div className="skeleton skeleton-text" style={{ width: '150px' }} /></td>
-                  <td><div className="skeleton skeleton-pill" style={{ width: '90px' }} /></td>
-                  <td><div className="skeleton skeleton-text" style={{ width: '80px', marginLeft: 'auto' }} /></td>
-                </tr>
-              ))
+              <TableSkeleton columns={7} />
             ) : filteredUsers.length === 0 ? (
               <tr>
                 <td colSpan={7}>
