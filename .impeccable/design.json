@@ -1,0 +1,243 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-01T00:00:00Z",
+  "title": "Design System: Vận Hành Dịch Vụ",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Chàm Vận Hành",
+        "canonical": "#4f46e5",
+        "tonalRamp": ["#1e1b4b", "#312e81", "#3730a3", "#4338ca", "#4f46e5", "#6366f1", "#a5b4fc", "#eef2ff"]
+      },
+      "accent-bright": {
+        "role": "primary",
+        "displayName": "Chàm Sáng",
+        "canonical": "#6366f1",
+        "tonalRamp": ["#1e1b4b", "#312e81", "#3730a3", "#4338ca", "#4f46e5", "#6366f1", "#a5b4fc", "#eef2ff"]
+      },
+      "ink-900": {
+        "role": "neutral",
+        "displayName": "Mực Đêm",
+        "canonical": "#0f172a",
+        "tonalRamp": ["#020617", "#0f172a", "#1e293b", "#334155", "#475569", "#64748b", "#cbd5e1", "#f8fafc"]
+      },
+      "ink-on-glass": {
+        "role": "neutral",
+        "displayName": "Mực Trên Kính",
+        "canonical": "#4b5566",
+        "tonalRamp": ["#111827", "#1f2937", "#374151", "#4b5566", "#6b7280", "#9ca3af", "#d1d5db", "#f9fafb"]
+      },
+      "surface-opaque": {
+        "role": "neutral",
+        "displayName": "Tấm Đục",
+        "canonical": "#ffffff",
+        "tonalRamp": ["#0f172a", "#334155", "#64748b", "#94a3b8", "#cbd5e1", "#e2e8f0", "#f8fafc", "#ffffff"]
+      },
+      "env-sun": {
+        "role": "tertiary",
+        "displayName": "Nắng Ấm (môi trường sau kính)",
+        "canonical": "#f3e7d6",
+        "tonalRamp": ["#4a3c2a", "#6b5740", "#8e7658", "#b09879", "#cbb89e", "#ded6cd", "#f3e7d6", "#fbf5ec"]
+      },
+      "env-shade": {
+        "role": "tertiary",
+        "displayName": "Bóng Lạnh (môi trường sau kính)",
+        "canonical": "#9ea5b4",
+        "tonalRamp": ["#2b3040", "#3f4553", "#565d6d", "#6f7686", "#8890a0", "#9ea5b4", "#c2c5cf", "#e9ebef"]
+      },
+      "success": {
+        "role": "secondary",
+        "displayName": "Xanh Thành Công",
+        "canonical": "#16a34a",
+        "tonalRamp": ["#052e16", "#14532d", "#15803d", "#16a34a", "#22c55e", "#86efac", "#bbf7d0", "#f0fdf4"]
+      },
+      "danger": {
+        "role": "secondary",
+        "displayName": "Đỏ Nguy Hiểm",
+        "canonical": "#dc2626",
+        "tonalRamp": ["#450a0a", "#7f1d1d", "#991b1b", "#b91c1c", "#dc2626", "#ef4444", "#fecaca", "#fef2f2"]
+      },
+      "warning": {
+        "role": "secondary",
+        "displayName": "Hổ Phách Cảnh Báo",
+        "canonical": "#d97706",
+        "tonalRamp": ["#451a03", "#78350f", "#92400e", "#b45309", "#d97706", "#f59e0b", "#fde68a", "#fffbeb"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Chỉ dùng ở panel thương hiệu màn đăng nhập." },
+      "headline": { "displayName": "Headline", "purpose": "Tiêu đề trang (.page-title)." },
+      "title": { "displayName": "Title", "purpose": "Tiêu đề topbar cửa sổ app, tiêu đề modal/mục." },
+      "body": { "displayName": "Body", "purpose": "Nội dung bảng, nhãn nút, mục điều hướng." },
+      "label": { "displayName": "Label", "purpose": "Header cột bảng, nhãn thẻ số liệu, nhãn nhóm sidebar — UPPERCASE." },
+      "mono": { "displayName": "Mono", "purpose": "Mã nghiệp vụ: mã khách hàng, mã vai trò, username." }
+    },
+    "materials": [
+      { "name": "lg-blur-window", "value": "blur(44px) saturate(185%) brightness(1.06)", "purpose": "Tầng 1 — cửa sổ app và popover nổi. Tấm kính DUY NHẤT blur môi trường." },
+      { "name": "lg-tint-window", "value": "rgba(255,255,255,.60)", "purpose": "Nhuộm của kính tầng 1." },
+      { "name": "lg-tint-panel", "value": "rgba(255,255,255,.34)", "purpose": "Tầng 2 — sidebar lồng trong cửa sổ: chỉ nhuộm, KHÔNG blur lại." },
+      { "name": "lg-blur-control", "value": "blur(20px) saturate(180%)", "purpose": "Tầng 3 — nút, ô nhập, pill." },
+      { "name": "lg-tint-control", "value": "rgba(255,255,255,.72)", "purpose": "Nhuộm điều khiển ở trạng thái nghỉ (.86 khi hover)." },
+      { "name": "lg-rim", "value": "linear-gradient(145deg, rgba(255,255,255,.98) 0%, rgba(255,255,255,.42) 20%, rgba(255,255,255,.05) 46%, rgba(255,255,255,.34) 74%, rgba(255,255,255,.92) 100%)", "purpose": "Vòng khúc xạ rìa 1px vẽ bằng mask-composite: exclude — lõi cắt rỗng nên không bao giờ đè lên chữ." },
+      { "name": "lg-specular", "value": "linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.10) 38%, transparent 62%)", "purpose": "Vệt chói mép trên. Luôn nằm trong layer background, không bao giờ là pseudo-element." }
+    ],
+    "shadows": [
+      { "name": "lg-shadow-control", "value": "0 1px 2px rgba(16,24,40,.06), 0 6px 14px -6px rgba(16,24,40,.22), 0 2px 5px -2px rgba(16,24,40,.10)", "purpose": "Nút, ô nhập, chip ở trạng thái nghỉ." },
+      { "name": "lg-shadow-float", "value": "0 2px 6px rgba(16,24,40,.07), 0 18px 38px -14px rgba(16,24,40,.30), 0 6px 14px -6px rgba(16,24,40,.16)", "purpose": "Hover của điều khiển, menu và popover." },
+      { "name": "lg-shadow-window", "value": "0 4px 12px rgba(16,24,40,.08), 0 44px 92px -32px rgba(16,24,40,.44), 0 16px 34px -18px rgba(16,24,40,.22)", "purpose": "Cửa sổ app, modal, thẻ đăng nhập." },
+      { "name": "shadow-sm", "value": "0 1px 2px rgba(15,23,42,.04), 0 4px 10px -4px rgba(15,23,42,.08)", "purpose": "Bộ bóng trung tính kế thừa, còn dùng ở vài phần tử tầng nội dung." },
+      { "name": "content-hairline", "value": "inset 0 0 0 1px rgba(16,24,40,.06), 0 1px 2px rgba(16,24,40,.05), 0 10px 24px -14px rgba(16,24,40,.18)", "purpose": "Chiều sâu chuẩn của tấm đục ở tầng nội dung — viền nội 1px thay cho border cứng." },
+      { "name": "focus-ring-glass", "value": "0 0 0 3px rgba(99,102,241,.32)", "purpose": "Vòng focus trên bề mặt kính. Ngoại lệ duy nhất của quy tắc bóng-phải-có-offset." }
+    ],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(.16,1,.3,1)", "purpose": "Màu, bóng, kích thước." },
+      { "name": "ease-gel", "value": "cubic-bezier(.32,1.12,.52,1)", "purpose": "Biến dạng đàn hồi khi chạm (transform). Overshoot ~12% là CỐ Ý — đã rà soát và chấp nhận." },
+      { "name": "dur-fast", "value": "120ms", "purpose": "Đổi màu/nền tức thời." },
+      { "name": "dur-base", "value": "180ms", "purpose": "Bóng, viền, chiều rộng sidebar." },
+      { "name": "dur-gel", "value": "300ms", "purpose": "Transform đàn hồi, morph của popover, modal-pop." }
+    ],
+    "breakpoints": [
+      { "name": "narrow", "value": "900px" },
+      { "name": "compact-header", "value": "640px" },
+      { "name": "login-stack", "value": "820px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Hành động chính — viên nang ĐẶC màu chàm. Chỉ một cái trên mỗi màn hình.",
+      "html": "<button class=\"ds-btn-primary\">Thêm khách hàng</button>",
+      "css": ".ds-btn-primary { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: none; border-radius: 999px; padding: 11px 22px; font-family: 'DM Sans', 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px; font-weight: 700; white-space: nowrap; cursor: pointer; color: #ffffff; background: linear-gradient(180deg, rgba(255,255,255,.30) 0%, rgba(255,255,255,.06) 46%, transparent 60%), linear-gradient(180deg, #7075f5 0%, #5b5fe3 52%, #4f46e5 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.46), inset 0 -2px 5px rgba(49,46,129,.30), 0 1px 2px rgba(79,70,229,.22), 0 14px 28px -10px rgba(79,70,229,.46), 0 5px 12px -4px rgba(79,70,229,.30); transition: transform 300ms cubic-bezier(.32,1.12,.52,1), box-shadow 180ms cubic-bezier(.16,1,.3,1), background 120ms cubic-bezier(.16,1,.3,1); } .ds-btn-primary::after { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none; background: linear-gradient(145deg, rgba(255,255,255,.70) 0%, rgba(255,255,255,.14) 42%, rgba(255,255,255,.05) 60%, rgba(255,255,255,.38) 100%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; } .ds-btn-primary:hover { transform: translateY(-2px); background: linear-gradient(180deg, rgba(255,255,255,.34) 0%, rgba(255,255,255,.08) 46%, transparent 60%), linear-gradient(180deg, #7a7ff7 0%, #6367e8 52%, #5850ea 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.50), 0 1px 2px rgba(79,70,229,.22), 0 20px 38px -10px rgba(79,70,229,.52), 0 7px 16px -4px rgba(79,70,229,.34); } .ds-btn-primary:active { transform: translateY(0) scale(.96); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(99,102,241,.40), 0 2px 6px rgba(16,24,40,.07), 0 18px 38px -14px rgba(16,24,40,.30); }"
+    },
+    {
+      "name": "Secondary Button (glass)",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Hình thái mặc định của mọi nút không phải hành động chính — kính trong thật sự, mép vát bắt sáng.",
+      "html": "<button class=\"ds-btn-secondary\">Huỷ</button>",
+      "css": ".ds-btn-secondary { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: none; border-radius: 999px; padding: 11px 22px; font-family: 'DM Sans', 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px; font-weight: 700; white-space: nowrap; cursor: pointer; color: #17203a; background: linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.10) 38%, transparent 62%), rgba(255,255,255,.72); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); box-shadow: 0 1px 2px rgba(16,24,40,.06), 0 6px 14px -6px rgba(16,24,40,.22), 0 2px 5px -2px rgba(16,24,40,.10); transition: transform 300ms cubic-bezier(.32,1.12,.52,1), box-shadow 180ms cubic-bezier(.16,1,.3,1), background 120ms cubic-bezier(.16,1,.3,1); } .ds-btn-secondary::after { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none; background: linear-gradient(145deg, rgba(255,255,255,.98) 0%, rgba(255,255,255,.42) 20%, rgba(255,255,255,.05) 46%, rgba(255,255,255,.34) 74%, rgba(255,255,255,.92) 100%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; } .ds-btn-secondary:hover { transform: translateY(-2px); background: linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.10) 38%, transparent 62%), rgba(255,255,255,.86); box-shadow: 0 2px 6px rgba(16,24,40,.07), 0 18px 38px -14px rgba(16,24,40,.30), 0 6px 14px -6px rgba(16,24,40,.16); } .ds-btn-secondary:active { transform: translateY(0) scale(.96); } .ds-btn-secondary:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(99,102,241,.40), 0 2px 6px rgba(16,24,40,.07), 0 18px 38px -14px rgba(16,24,40,.30); }"
+    },
+    {
+      "name": "Glass Search Input",
+      "kind": "input",
+      "refersTo": "input-glass",
+      "description": "Ô tìm kiếm/lọc trên thanh công cụ — viên nang kính h=40px. Placeholder #4b5566 để giữ 4.5:1 trên nền trong suốt.",
+      "html": "<div class=\"ds-search\"><span class=\"ds-search__icon\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/></svg></span><input class=\"ds-search__input\" type=\"text\" placeholder=\"Tìm theo tên, mã, email...\" /></div>",
+      "css": ".ds-search { position: relative; max-width: 440px; } .ds-search__icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: #7c8a9c; display: flex; } .ds-search__icon svg { width: 100%; height: 100%; } .ds-search__input { width: 100%; height: 40px; padding: 0 36px 0 38px; border: none; border-radius: 999px; font-family: 'DM Sans', 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px; color: #17203a; outline: none; background: linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.10) 38%, transparent 62%), rgba(255,255,255,.72); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); box-shadow: inset 0 1px 2px rgba(16,24,40,.07), inset 0 0 0 1px rgba(255,255,255,.75), 0 1px 2px rgba(16,24,40,.06), 0 6px 14px -6px rgba(16,24,40,.22); transition: box-shadow .2s cubic-bezier(.16,1,.3,1), background .2s cubic-bezier(.16,1,.3,1); } .ds-search__input::placeholder { color: #4b5566; } .ds-search__input:focus { background: linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.10) 38%, transparent 62%), rgba(255,255,255,.92); box-shadow: inset 0 1px 2px rgba(16,24,40,.05), inset 0 0 0 1px rgba(255,255,255,.9), 0 0 0 3px rgba(99,102,241,.32), 0 1px 2px rgba(16,24,40,.06), 0 6px 14px -6px rgba(16,24,40,.22); }"
+    },
+    {
+      "name": "Form Input",
+      "kind": "input",
+      "refersTo": "input-form",
+      "description": "Ô nhập trong form/modal — viên nang h=44px trên nền trắng. CỐ Ý không dùng backdrop-filter: chữ đang gõ cần rõ tuyệt đối.",
+      "html": "<label class=\"ds-form-label\">Tên khách hàng <span class=\"ds-req\">*</span></label><input class=\"ds-form-input\" type=\"text\" placeholder=\"Công ty TNHH...\" />",
+      "css": ".ds-form-label { display: block; font-family: 'DM Sans', 'Segoe UI', Roboto, Arial, sans-serif; font-size: 14px; font-weight: 700; color: #334155; margin-bottom: 6px; } .ds-req { color: #dc2626; } .ds-form-input { width: 100%; height: 44px; padding: 0 16px; border: 1px solid rgba(15,23,42,.10); border-radius: 999px; font-family: 'DM Sans', 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px; color: #0f172a; outline: none; background: linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(255,255,255,.4) 50%, transparent 55%), #ffffff; box-shadow: inset 0 1px 2px rgba(15,23,42,.04), inset 0 -1px 0 rgba(255,255,255,.8); transition: border-color 180ms cubic-bezier(.16,1,.3,1), box-shadow 180ms cubic-bezier(.16,1,.3,1); } .ds-form-input::placeholder { color: #94a3b8; } .ds-form-input:focus { border-color: #6366f1; box-shadow: inset 0 1px 2px rgba(15,23,42,.04), 0 0 0 3px rgba(99,102,241,0.14); }"
+    },
+    {
+      "name": "Sidebar Nav Item",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "Hàng điều hướng = viên nang. Mục đang chọn là viên nang ĐẶC chàm nổi trên kính — nền xám nhạt sẽ tàng hình trên kính trong.",
+      "html": "<nav class=\"ds-nav\"><button class=\"ds-nav__item\"><span class=\"ds-nav__icon\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 21h18M6 21V7l6-4 6 4v14M10 9h.01M14 9h.01M10 13h.01M14 13h.01\"/></svg></span><span>Khách hàng</span></button><button class=\"ds-nav__item ds-nav__item--active\"><span class=\"ds-nav__icon\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\"/><circle cx=\"12\" cy=\"7\" r=\"4\"/></svg></span><span>Tài khoản</span></button></nav>",
+      "css": ".ds-nav { display: flex; flex-direction: column; gap: 2px; width: 240px; padding: 10px; background: linear-gradient(180deg, rgba(255,255,255,.46) 0%, rgba(255,255,255,.28) 100%); border-radius: 20px; } .ds-nav__item { display: flex; align-items: center; gap: 11px; width: 100%; background: transparent; border: none; border-radius: 999px; padding: 10px 14px; font-family: 'DM Sans', 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px; font-weight: 600; color: #435061; cursor: pointer; text-align: left; white-space: nowrap; transition: background 120ms cubic-bezier(.16,1,.3,1), color 120ms cubic-bezier(.16,1,.3,1), transform 300ms cubic-bezier(.32,1.12,.52,1), box-shadow 180ms cubic-bezier(.16,1,.3,1); } .ds-nav__icon { display: inline-flex; flex-shrink: 0; opacity: .72; } .ds-nav__icon svg { width: 17px; height: 17px; } .ds-nav__item:hover { background: rgba(255,255,255,.62); color: #0f172a; } .ds-nav__item:active { transform: scale(.97); } .ds-nav__item--active { background: linear-gradient(180deg, #7075f5 0%, #5b5fe3 52%, #4f46e5 100%); color: #ffffff; font-weight: 700; box-shadow: inset 0 1px 0 rgba(255,255,255,.42), 0 1px 2px rgba(79,70,229,.20), 0 8px 18px -6px rgba(79,70,229,.44), 0 3px 7px -2px rgba(79,70,229,.28); } .ds-nav__item--active .ds-nav__icon { opacity: 1; color: #ffffff; }"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "chip",
+      "refersTo": "segmented-tab-active",
+      "description": "Máng kính lõm; mục chưa chọn là chữ trần, mục đang chọn là viên nang trắng nổi lên.",
+      "html": "<div class=\"ds-segmented\"><button class=\"ds-segmented__tab ds-segmented__tab--active\">Tất cả</button><button class=\"ds-segmented__tab\">Đang hoạt động</button><button class=\"ds-segmented__tab\">Đã khoá</button></div>",
+      "css": ".ds-segmented { display: inline-flex; padding: 4px; border-radius: 999px; gap: 2px; background: linear-gradient(180deg, rgba(16,24,40,.07) 0%, rgba(16,24,40,.03) 100%); box-shadow: inset 0 1px 2px rgba(16,24,40,.10), inset 0 -1px 0 rgba(255,255,255,.60); } .ds-segmented__tab { border: none; background: transparent; padding: 7px 15px; font-family: 'DM Sans', 'Segoe UI', Roboto, Arial, sans-serif; font-size: 13.5px; font-weight: 600; color: #55617a; border-radius: 999px; cursor: pointer; transition: color 120ms cubic-bezier(.16,1,.3,1), background 120ms cubic-bezier(.16,1,.3,1), transform 300ms cubic-bezier(.32,1.12,.52,1); } .ds-segmented__tab:hover { color: #17203a; } .ds-segmented__tab:active { transform: scale(.97); } .ds-segmented__tab--active { color: #17203a; font-weight: 700; background: linear-gradient(180deg, rgba(255,255,255,.98) 0%, rgba(255,255,255,.88) 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,1), 0 1px 2px rgba(16,24,40,.10), 0 4px 10px -4px rgba(16,24,40,.24); } .ds-segmented__tab--active:focus-visible { outline: 2px solid #6366f1; outline-offset: 2px; }"
+    },
+    {
+      "name": "Stat Card (opaque content layer)",
+      "kind": "card",
+      "refersTo": "card-content",
+      "description": "Tấm ĐỤC r=20. Không bao giờ có backdrop-filter. Bán kính đồng tâm: 20 − 18 đệm = 12 cho ô icon.",
+      "html": "<div class=\"ds-stat-card\"><span class=\"ds-stat-card__icon ds-stat-card__icon--blue\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\"/><circle cx=\"12\" cy=\"7\" r=\"4\"/></svg></span><div><span class=\"ds-stat-card__label\">Tổng tài khoản</span><span class=\"ds-stat-card__value\">1.284</span></div></div>",
+      "css": ".ds-stat-card { background: #ffffff; border: none; border-radius: 20px; padding: 18px; display: flex; align-items: center; gap: 14px; font-family: 'DM Sans', 'Segoe UI', Roboto, Arial, sans-serif; box-shadow: inset 0 0 0 1px rgba(16,24,40,.06), 0 1px 2px rgba(16,24,40,.05), 0 10px 24px -14px rgba(16,24,40,.18); transition: transform 300ms cubic-bezier(.32,1.12,.52,1), box-shadow 180ms cubic-bezier(.16,1,.3,1); } .ds-stat-card:hover { transform: translateY(-2px); box-shadow: inset 0 0 0 1px rgba(16,24,40,.08), 0 2px 4px rgba(16,24,40,.06), 0 18px 36px -16px rgba(16,24,40,.26); } .ds-stat-card__icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; } .ds-stat-card__icon svg { width: 22px; height: 22px; } .ds-stat-card__icon--blue { background: #eff6ff; color: #2563eb; } .ds-stat-card__label { font-size: 14px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 2px; } .ds-stat-card__value { font-size: 22px; font-weight: 800; color: #0f172a; line-height: 1.25; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Status Pill",
+      "kind": "chip",
+      "refersTo": "status-pill",
+      "description": "Trạng thái mã hoá bằng HÌNH (chấm currentColor) + màu ngữ nghĩa, không chỉ bằng màu.",
+      "html": "<span class=\"ds-status-pill ds-status-pill--active\"><span class=\"ds-status-pill__dot\"></span>Đang hoạt động</span> <span class=\"ds-status-pill ds-status-pill--locked\"><span class=\"ds-status-pill__dot\"></span>Đã khoá</span>",
+      "css": ".ds-status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-family: 'DM Sans', 'Segoe UI', Roboto, Arial, sans-serif; font-size: 13.5px; font-weight: 700; white-space: nowrap; } .ds-status-pill__dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; } .ds-status-pill--active { background: #dcfce7; color: #15803d; } .ds-status-pill--locked { background: #fee2e2; color: #b91c1c; } .ds-status-pill--inactive { background: #f1f5f9; color: #64748b; }"
+    },
+    {
+      "name": "Glass Popover (morph-open)",
+      "kind": "custom",
+      "refersTo": "menu-panel",
+      "description": "Khoảnh khắc chuyển động chữ ký của hệ: kính NỞ RA từ góc nút bấm, độ đặc dâng lên trong lúc nở — không trượt vào từ ngoài.",
+      "html": "<div class=\"ds-popover-wrap\"><div class=\"ds-popover\"><button class=\"ds-popover__item\">Xem chi tiết</button><button class=\"ds-popover__item\">Phân quyền</button><button class=\"ds-popover__item ds-popover__item--danger\">Khoá tài khoản</button></div></div>",
+      "css": ".ds-popover-wrap { position: relative; height: 170px; } .ds-popover { position: absolute; right: 0; top: 0; min-width: 216px; padding: 6px; border: none; background: linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.10) 38%, transparent 62%), rgba(255,255,255,.88); backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%); border-radius: 14px; box-shadow: 0 2px 6px rgba(16,24,40,.07), 0 18px 38px -14px rgba(16,24,40,.30), 0 6px 14px -6px rgba(16,24,40,.16); display: flex; flex-direction: column; gap: 1px; transform-origin: top right; animation: ds-popover-in 300ms cubic-bezier(.32,1.12,.52,1) both; } @keyframes ds-popover-in { from { opacity: 0; transform: translateY(-8px) scale(.88); backdrop-filter: blur(0) saturate(100%); -webkit-backdrop-filter: blur(0) saturate(100%); } 60% { opacity: 1; } to { opacity: 1; transform: none; backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%); } } .ds-popover__item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 8px 10px; border: none; background: transparent; border-radius: 8px; font-family: 'DM Sans', 'Segoe UI', Roboto, Arial, sans-serif; font-size: 14.5px; font-weight: 500; color: #334155; cursor: pointer; transition: background 120ms cubic-bezier(.16,1,.3,1); } .ds-popover__item:hover { background: #f1f5f9; } .ds-popover__item:focus-visible { outline: 2px solid #6366f1; outline-offset: -2px; } .ds-popover__item--danger { color: #dc2626; } .ds-popover__item--danger:hover { background: #fef2f2; }"
+    },
+    {
+      "name": "Glass Window Shell",
+      "kind": "custom",
+      "refersTo": "window-shell",
+      "description": "Tấm kính DUY NHẤT blur môi trường. Vòng khúc xạ rìa 1px bằng mask-composite, lõi cắt rỗng nên không đè nội dung.",
+      "html": "<div class=\"ds-env\"><div class=\"ds-window\"><div class=\"ds-window__body\">Tầng nội dung đục nằm bên trong</div></div></div>",
+      "css": ".ds-env { padding: 24px; border-radius: 24px; background: radial-gradient(50% 42% at 8% 4%, rgba(255,214,150,.95) 0%, rgba(255,199,126,.50) 40%, transparent 70%), radial-gradient(40% 36% at 88% 52%, rgba(186,212,248,.66) 0%, transparent 76%), linear-gradient(158deg, #f3e7d6 0%, #ded6cd 34%, #c2c5cf 68%, #9ea5b4 100%); } .ds-window { position: relative; border-radius: 30px; border: none; padding: 22px; background: linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.10) 38%, transparent 62%), rgba(255,255,255,.60); backdrop-filter: blur(44px) saturate(185%) brightness(1.06); -webkit-backdrop-filter: blur(44px) saturate(185%) brightness(1.06); box-shadow: 0 4px 12px rgba(16,24,40,.08), 0 44px 92px -32px rgba(16,24,40,.44), 0 16px 34px -18px rgba(16,24,40,.22); } .ds-window::after { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none; background: linear-gradient(145deg, rgba(255,255,255,.98) 0%, rgba(255,255,255,.42) 20%, rgba(255,255,255,.05) 46%, rgba(255,255,255,.34) 74%, rgba(255,255,255,.92) 100%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; } .ds-window__body { background: #ffffff; border-radius: 20px; padding: 18px; font-family: 'DM Sans', 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px; color: #334155; box-shadow: inset 0 0 0 1px rgba(16,24,40,.06), 0 1px 2px rgba(16,24,40,.05), 0 10px 24px -14px rgba(16,24,40,.18); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Cửa Sổ Kính Trên Nội Thất Ấm",
+    "overview": "Đây là Apple Liquid Glass (iOS/macOS 26) dựng cho một công cụ vận hành nội bộ. Hướng thiết kế do người dùng GHIM bằng ba ảnh tham chiếu — ảnh trọng tâm là một khung cửa sổ trình duyệt bằng kính mờ nổi trên một bức ảnh nội thất ấm xóa phông, với các điều khiển hình viên nang, một pill đang chọn được đổ đầy màu giữa những pill chỉ-chữ, và bên dưới là các thẻ nội dung hoàn toàn đục.\n\nToàn bộ hệ thống được tổ chức quanh một học thuyết duy nhất: phân tầng vật liệu. Kính chỉ thuộc tầng chức năng — khung cửa sổ app, sidebar, thanh công cụ, nút, menu, sheet. Nó nổi TRÊN một tầng nội dung hoàn toàn đục — bảng dữ liệu, thẻ số liệu, form. Đây không phải sự thỏa hiệp với Apple mà là cách đọc đúng Apple: chính ảnh tham chiếu cũng làm y hệt. Nó đồng thời bảo vệ tốc độ quét thông tin của một công cụ nghiệp vụ dày dữ liệu (PRODUCT.md, Nguyên tắc #1). Ai phủ kính lên một bảng dữ liệu là đang phá hệ thống.\n\nHệ từ chối rõ ràng 'glassmorphism 2020' (nền mờ + viền trắng đều). Kính ở đây là một vật liệu quang học có bốn thuộc tính bắt buộc: khúc xạ rìa, bóng chói, trong-suốt-kèm-bão-hòa, và chiều sâu có độ lệch. Thiếu bất kỳ thuộc tính nào thì thứ dựng ra không được gọi là kính trong hệ này.",
+    "keyCharacteristics": [
+      "Cửa sổ kính r=30px nổi trên một môi trường ấm nhòe tiêu cự; biên quanh cửa sổ luôn đủ rộng để môi trường lộ ra.",
+      "Mọi điều khiển là viên nang (border-radius: 999px); mọi tấm nội dung là hình chữ nhật bo 20px, đục.",
+      "Mép vát bắt sáng bằng vòng gradient 1px mask-composite: exclude — không bao giờ là viền trắng đều.",
+      "Chàm #4f46e5 đổ đầy chỉ cho hành động chính và mục điều hướng đang chọn.",
+      "Tối đa một lớp backdrop-filter theo chiều sâu; blur chồng blur ra bùn xám.",
+      "Một khoảnh khắc chuyển động được dàn dựng: popover kính nở ra từ chính nút bấm.",
+      "Ship cả nhánh prefers-reduced-transparency: reduce đục hoàn toàn — trung thành với Apple là ship cả phần không đẹp."
+    ],
+    "rules": [
+      { "name": "The Filled-Indigo Rule", "body": "Chàm đổ đầy chỉ dành cho hành động chính của màn hình và mục điều hướng đang chọn. Không lặp lại nó trên hành động theo hàng, không dùng cho nút phụ, không dùng làm nền trang trí. Hành động phụ là kính trong — sự khác biệt chính/phụ là ĐẶC so với TRONG, không phải hai sắc độ của cùng một màu.", "section": "colors" },
+      { "name": "The Semantic-Is-Not-Brand Rule", "body": "Xanh/đỏ/hổ phách mang nghĩa (thành công/lỗi/cảnh báo) và không bao giờ được đổi theo màu thương hiệu. Ngược lại, chàm không được dùng để báo trạng thái.", "section": "colors" },
+      { "name": "The Glass-Takes-Its-Color Rule", "body": "Kính lấy màu từ thứ nằm sau nó (saturate), nó không tự sơn vệt ngũ sắc, cầu vồng hay quầng sáng vẽ tay lên mình. Mọi quầng sáng giả phía sau chrome đã bị gỡ vì chồng hai nguồn sáng mâu thuẫn khiến kính đọc ra là hình vẽ.", "section": "colors" },
+      { "name": "The Tabular-Numbers Rule", "body": "Bất cứ nơi nào nhiều con số xếp cạnh/chồng nhau (giá trị thẻ số liệu, cột tiền, cột ngày trong timeline) phải dùng font-variant-numeric: tabular-nums.", "section": "typography" },
+      { "name": "The One-Line Cell Rule", "body": "Ô bảng chứa nội dung dài cắt gọn một dòng kèm ellipsis với max-width cố định; nội dung đầy đủ đi vào thuộc tính title. Cho phép bọc dòng tự do làm chiều cao các hàng so le và đẩy cột thao tác ra ngoài khung.", "section": "typography" },
+      { "name": "The No-Wrap Capsule Rule", "body": "Nhãn của một viên nang không bao giờ được xuống dòng (white-space: nowrap). Bo 999px trên nhãn hai dòng biến nút thành quả cầu méo.", "section": "typography" },
+      { "name": "The Environment-Margin Rule", "body": "Không bao giờ để cửa sổ app chạm mép viewport ở bất kỳ khổ màn hình nào. Biên co lại chứ không biến mất — bỏ biên là xóa bằng chứng rằng cửa sổ làm bằng kính.", "section": "layout" },
+      { "name": "The One-Blur-Deep Rule", "body": "Theo bất kỳ đường xuyên tầng nào, chỉ được có MỘT backdrop-filter. Cửa sổ blur môi trường; mọi thứ lồng bên trong chỉ nhuộm trong suốt. Blur chồng blur cho ra bùn xám, không phải kính. Ngoại lệ duy nhất: popover nổi trên tầng nội dung đục, nên nó tự blur được (tint đẩy lên .88 vì phía sau là bảng dày chữ).", "section": "elevation" },
+      { "name": "The Rim-Not-Border Rule", "body": "Mép kính luôn là vòng gradient bị mask, không bao giờ là border: 1px solid rgba(255,255,255,…) đều một vòng. Viền trắng đều là dấu hiệu rõ nhất của kính giả.", "section": "elevation" },
+      { "name": "The Offset-Shadow Rule", "body": "Mọi bóng phải có độ lệch dọc. box-shadow: 0 0 Npx … (quầng không lệch) bị cấm ở mọi bề mặt nổi — nó là trang trí, không phải chiều sâu. Vòng focus là ngoại lệ duy nhất.", "section": "elevation" },
+      { "name": "The Background-Layer Rule", "body": "Bóng chói và mọi lớp phủ trang trí đi trong layer background của chính phần tử. Chỉ vòng khúc xạ rìa được dùng pseudo-element, và chỉ vì lõi của nó bị cắt rỗng.", "section": "elevation" },
+      { "name": "The Capsule-Control Rule", "body": "Nếu người dùng bấm/gõ được vào nó, nó là viên nang. Nếu nó chứa dữ liệu, nó là chữ nhật bo. Không có trường hợp ở giữa.", "section": "shapes" },
+      { "name": "The No-Color-Bar Rule", "body": "Không dùng border-left màu dày >1px trên thẻ, hàng, hay cảnh báo. Ô icon bên trong đã mang đúng màu ngữ nghĩa đó rồi, vạch chỉ lặp lại thông tin bằng một hình thức kém tinh tế hơn.", "section": "shapes" }
+    ],
+    "dos": [
+      "Do giữ mọi bảng dữ liệu, thẻ số liệu và form ở nền đục #ffffff, r=20px.",
+      "Do dựng mọi điều khiển mới bằng viên nang (999px) và mọi tấm mới bằng bán kính đồng tâm (bán kính trong = bán kính ngoài − đệm).",
+      "Do dùng vòng rìa gradient bị mask (.lg-rim hoặc ::after với mask-composite: exclude) cho mọi mép kính.",
+      "Do đặt bóng chói vào layer background của chính phần tử, không bao giờ vào pseudo-element.",
+      "Do ghép backdrop-filter: blur(...) luôn kèm saturate(≥180%).",
+      "Do dùng --ease-gel/--dur-gel cho transform và --ease-out/--dur-fast|base cho màu, bóng, kích thước.",
+      "Do mã hóa trạng thái bằng hình + màu (pill có chấm currentColor), không chỉ bằng màu.",
+      "Do cắt gọn nội dung ô bảng dài về một dòng kèm ellipsis và đưa nội dung đầy đủ vào title.",
+      "Do giữ chữ phụ tối thiểu ở #64748b, và dùng #4b5566 trở lên khi chữ đặt trên bề mặt kính.",
+      "Do cập nhật cả nhánh prefers-reduced-transparency: reduce khi thêm một biến vật liệu mới."
+    ],
+    "donts": [
+      "Don't phủ backdrop-filter lên bảng dữ liệu, thẻ số liệu hay form. Đây là vi phạm nghiêm trọng nhất có thể phạm với hệ này.",
+      "Don't xếp hai backdrop-filter chồng lên nhau theo chiều sâu.",
+      "Don't dùng border: 1px solid rgba(255,255,255,…) đều một vòng để giả mép kính.",
+      "Don't dùng bóng không lệch (0 0 Npx) làm chiều sâu — trừ vòng focus.",
+      "Don't đổ đầy chàm cho bất cứ thứ gì ngoài hành động chính và mục điều hướng đang chọn; đặc biệt không lặp lại nó trên các hành động theo hàng.",
+      "Don't đổi màu ngữ nghĩa (xanh/đỏ/hổ phách) theo màu thương hiệu, và don't dùng chàm để báo trạng thái.",
+      "Don't vẽ quầng sáng, vệt ngũ sắc hay gradient trang trí lên/sau kính — kính lấy màu từ thứ phía sau nó.",
+      "Don't dùng border-left màu dày >1px trên thẻ, hàng hay cảnh báo.",
+      "Don't bỏ bo góc / bóng / biên của cửa sổ kính trên màn hẹp; thu nhỏ nó, đừng xóa nó.",
+      "Don't để nội dung rộng làm body cuộn ngang — cho nó cuộn trong khung của chính nó.",
+      "Don't cho nhãn viên nang xuống dòng.",
+      "Don't thay --ease-gel bằng một đường cong nảy mạnh (>20% overshoot); độ vọt nhẹ là có chủ đích."
+    ],
+    "openHandoff": "Môi trường sau kính hiện được dựng bằng gradient CSS, không phải ảnh, thuần túy vì phiên dựng không có công cụ tạo ảnh. index.css giữ sẵn một dòng background-image đã chú thích ngay trên rule body, kèm art direction (nội thất ấm, xóa phông f/1.4–f/2, nguồn sáng góc trên-trái). Đây là việc bàn giao còn treo, không phải quyết định đã chốt."
+  }
+}
