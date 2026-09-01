@@ -22,7 +22,13 @@ DELETE FROM password_reset_tokens;
 ALTER TABLE password_reset_tokens
     CHANGE COLUMN token token_hash CHAR(64) NOT NULL;
 
--- Chi so unique di theo cot khi doi ten, nhung ten cu (`token`) khong con dung
--- nghia nua. Doi ten cho khop de nguoi doc sau khong hieu nham la con luu token tho.
-ALTER TABLE password_reset_tokens
-    RENAME INDEX token TO uk_password_reset_tokens_token_hash;
+-- KHONG doi ten chi so unique o day, du ten cu (`token`) gio doc ra hoi lech nghia.
+-- Ly do: `RENAME INDEX token TO ...` phu thuoc vao viec chi so DUNG TEN `token`.
+-- Ten do la do MySQL tu dat khi gap `token VARCHAR(255) NOT NULL UNIQUE` trong
+-- CREATE TABLE — dung trong phan lon truong hop, nhung khong co gi bao dam voi mot
+-- CSDL da qua sua tay hay phuc hoi tu ban sao luu. Neu ten khac, cau lenh nem loi
+-- va Flyway dung o trang thai that bai giua chung: ung dung khong len duoc, va con
+-- phai go tay `flyway_schema_history` moi chay lai duoc.
+--
+-- Doi lay mot cai ten dep khong dang de mang rui ro do. Chi so van hoat dong dung:
+-- MySQL giu no theo cot khi doi ten cot, chi la ten thi khong con khop nghia.
