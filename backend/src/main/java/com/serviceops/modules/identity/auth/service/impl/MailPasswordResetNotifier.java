@@ -7,23 +7,35 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import jakarta.mail.internet.MimeMessage;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
 
 /**
- * Ban that: gui thu khoi phuc mat khau qua SMTP. Chi ton tai o profile
- * {@code prod}.
+ * Ban gui thu qua SMTP — va tu {@link DomainReachabilityChecker}, ban nay
+ * KHONG CON gioi han theo profile hay theo "co cau hinh SMTP hay khong" nua.
  *
- * <p><b>Dung khoi dong khi chua cau hinh thu.</b> Day la diem quan trong nhat cua
- * lop nay. Spring Boot tu dong tao {@code JavaMailSender} ngay ca khi khong khai
- * bao may chu SMTP — va khi do loi chi lo ra LUC GUI, tuc luc mot nguoi dung that
- * dang cho thu. Ket qua: he thong trong nhu chay binh thuong, nhung khong ai lay
- * lai duoc mat khau, va khong ai biet cho toi khi co nguoi bao.
- * Vi vay {@link #validateConfig()} kiem tra ngay luc khoi dong va nem loi neu
- * thieu cau hinh: tha khong len duoc con hon len roi hong am tham.</p>
+ * <p><b>Mot backend, tu dong bao quat ca hai loai dia chi.</b> Truoc day he
+ * thong phan biet "mail seed" voi "mail that" bang cach nguoi van hanh doi bien
+ * {@code SMTP_HOST} qua lai giua hai lan chay — dung mot backend nhung phai
+ * doi cau hinh bang tay tuy theo dinh gui cho ai. Do la mot lo hong thiet ke
+ * that: quen doi lai (nhu da xay ra) khien mail gui cho tai khoan that lai roi
+ * vao log gia lap thay vi hop thu that.
+ *
+ * <p>Gio chi can cau hinh SMTP MOT LAN DUY NHAT (thuong tro vao mot dich vu
+ * that nhu Gmail/SES), va lop nay tu dong quyet dinh theo TUNG DIA CHI: goi
+ * {@link DomainReachabilityChecker#hasMailExchanger} de tra ban ghi MX cua ten
+ * mien truoc khi gui. Ten mien khong co MX (nhu {@code .local} cua du lieu mau)
+ * -> ghi ra log gia lap. Ten mien co MX (nhu {@code gmail.com}) -> gui that.</p>
+ *
+ * <p><b>Dung khoi dong khi chua cau hinh thu.</b> Spring Boot tu dong tao
+ * {@code JavaMailSender} ngay ca khi khong khai bao may chu SMTP — va khi do
+ * loi chi lo ra LUC GUI, tuc luc mot nguoi dung that dang cho thu. Vi vay
+ * {@link #validateConfig()} kiem tra ngay luc khoi dong va nem loi neu thieu
+ * cau hinh: tha khong len duoc con hon len roi hong am tham.</p>
  *
  * <p><b>Khong bao gio ghi token ra log.</b> Ke ca khi gui that bai — thong bao
  * loi chi noi la gui that bai cho tai khoan nao, khong kem token.</p>
@@ -44,6 +56,7 @@ public class MailPasswordResetNotifier implements PasswordResetNotifier {
             org.slf4j.LoggerFactory.getLogger("AUDIT_MOCK_EMAIL");
 
     private final JavaMailSender mailSender;
+    private final DomainReachabilityChecker domainChecker;
 
     @Value("${app.mail.from:}")
     private String fromAddress;
@@ -88,14 +101,57 @@ public class MailPasswordResetNotifier implements PasswordResetNotifier {
 
     @Override
     public void sendResetLink(User user, String rawToken, long ttlMinutes) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(fromAddress);
-        message.setTo(user.getEmail());
-        message.setSubject("Khoi phuc mat khau - Van Hanh Dich Vu");
-        message.setText(buildBody(user, rawToken, ttlMinutes));
+        // TRA MX TRUOC KHI GUI — day la thay doi quan trong nhat: mot backend
+        // DUY NHAT gio tu dong phan biet dia chi seed voi dia chi that, khong con
+        // phai doi bien moi truong bang tay giua hai lan chay nua.
+        //
+        // Ten mien nhu `service-operations.local` khong co ban ghi MX tren DNS
+        // cong khai (RFC 6762 danh rieng .local cho mang noi bo) nen o day tra ve
+        // false — router thang sang log gia lap, KHONG ton mot lan goi SMTP chac
+        // chan that bai. Ten mien that nhu gmail.com co MX nen gui qua SMTP that.
+        if (!domainChecker.hasMailExchanger(user.getEmail())) {
+            log.info("PASSWORD_RESET_DOMAIN_KHONG_TON_TAI userId={}", user.getId());
+            if (fallbackToLog) {
+                MOCK_MAIL_LOG.info(
+                        "[TEN MIEN KHONG NHAN DUOC THU - GHI RA LOG] "
+                                + "MA KHOI PHUC cho {} (het han sau {} phut): {}",
+                        user.getEmail(), ttlMinutes, rawToken);
+            }
+            return;
+        }
+
+        // MimeMessage + MimeMessageHelper thay cho SimpleMailMessage, va khai bao
+        // UTF-8 TUONG MINH ("true, UTF-8" trong constructor cua helper).
+        //
+        // Vi sao can doi: SimpleMailMessage khong co cho khai bao bo ma — no phu
+        // thuoc bo ma MAC DINH cua may chay backend. Tren mot may Windows dat bo
+        // ma he thong la cp1252 (rat pho bien), tieng Viet co dau se bi ghi sai
+        // ngay tu luc dong goi thu, TRUOC CA khi thu roi khoi may — khong lien
+        // quan gi toi Gmail hay noi nhan. Khai bao UTF-8 tuong minh loai bo hoan
+        // toan su phu thuoc do.
+        MimeMessage mimeMessage = mailSender.createMimeMessage();
+        try {
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, false, "UTF-8");
+            helper.setFrom(fromAddress);
+            helper.setTo(user.getEmail());
+            helper.setSubject("Khôi phục mật khẩu - Vận Hành Dịch Vụ");
+            helper.setText(buildBody(user, rawToken, ttlMinutes));
+        } catch (jakarta.mail.MessagingException ex) {
+            // Loi dung MimeMessageHelper (vi du dia chi "to" khong hop le) —
+            // cung phai nuot lai, cung mot ly do voi nhanh MailException ben duoi:
+            // khong duoc de lo ra ngoai tinh chat chong do email.
+            log.error("FORGOT_PASSWORD_BUILD_MAIL_FAILED userId={} nguyenNhan={}", user.getId(), ex.getMessage());
+            if (fallbackToLog) {
+                MOCK_MAIL_LOG.info(
+                        "[GUI THU THAT BAI - GHI RA LOG VI DANG O MOI TRUONG PHAT TRIEN] "
+                                + "MA KHOI PHUC cho {} (het han sau {} phut): {}",
+                        user.getEmail(), ttlMinutes, rawToken);
+            }
+            return;
+        }
 
         try {
-            mailSender.send(message);
+            mailSender.send(mimeMessage);
             // Ghi nhan de kiem toan — co userId, KHONG co token.
             log.info("PASSWORD_RESET_MAIL_SENT userId={}", user.getId());
         } catch (MailException ex) {
@@ -133,18 +189,23 @@ public class MailPasswordResetNotifier implements PasswordResetNotifier {
     private String buildBody(User user, String maKhoiPhuc, long ttlMinutes) {
         // Dat MA len dau, tach rieng mot dong. Nguoi dung mo thu ra la thay ngay
         // con so can go, khong phai doc het doan van moi tim thay.
+        //
+        // Truoc day noi dung o day viet KHONG DAU — khong phai loi ma hoa, ma
+        // ban than chuoi trong code chua tung co dau. Da viet lai co dau day du;
+        // ket hop voi MimeMessageHelper khai bao UTF-8 tuong minh o sendResetLink,
+        // dau tieng Viet gio duoc giu dung tu luc dong goi cho toi luc hien thi.
         return """
-                Chao %s,
+                Chào %s,
 
-                Ma khoi phuc mat khau cho tai khoan %s cua ban la:
+                Mã khôi phục mật khẩu cho tài khoản %s của bạn là:
 
                     %s
 
-                Nhap ma nay vao man hinh dat lai mat khau. Ma co hieu luc trong %d phut,
-                chi dung duoc mot lan, va se bi vo hieu neu nhap sai qua %d lan.
+                Nhập mã này vào màn hình đặt lại mật khẩu. Mã có hiệu lực trong %d phút,
+                chỉ dùng được một lần, và sẽ bị vô hiệu nếu nhập sai quá %d lần.
 
-                Neu ban khong yeu cau dieu nay, hay bo qua thu nay. Mat khau hien tai
-                cua ban khong thay doi.
+                Nếu bạn không yêu cầu điều này, hãy bỏ qua thư này. Mật khẩu hiện tại
+                của bạn không thay đổi.
                 """
                 .formatted(user.getFullName(), user.getUsername(), maKhoiPhuc,
                         ttlMinutes, PasswordResetToken.MAX_ATTEMPTS);

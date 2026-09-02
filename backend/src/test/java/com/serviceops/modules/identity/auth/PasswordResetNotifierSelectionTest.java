@@ -1,6 +1,7 @@
 package com.serviceops.modules.identity.auth;
 
 import com.serviceops.modules.identity.auth.service.PasswordResetNotifier;
+import com.serviceops.modules.identity.auth.service.impl.DomainReachabilityChecker;
 import com.serviceops.modules.identity.auth.service.impl.LoggingPasswordResetNotifier;
 import com.serviceops.modules.identity.auth.service.impl.MailPasswordResetNotifier;
 import org.junit.jupiter.api.Test;
@@ -23,7 +24,8 @@ class PasswordResetNotifierSelectionTest {
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
             .withConfiguration(org.springframework.boot.autoconfigure.AutoConfigurations
                     .of(MailSenderAutoConfiguration.class))
-            .withUserConfiguration(LoggingPasswordResetNotifier.class, MailPasswordResetNotifier.class);
+            .withUserConfiguration(LoggingPasswordResetNotifier.class, MailPasswordResetNotifier.class,
+                    DomainReachabilityChecker.class);
 
     @Test
     void chuaKhaiBaoSmtp_dungBanGhiLog() {

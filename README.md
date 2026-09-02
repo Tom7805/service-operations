@@ -68,7 +68,13 @@ cp .env.example .env
 cp frontend/.env.example frontend/.env
 ```
 
-Chi tiết từng biến môi trường: xem [docs/07-operations/environment-variables.md](docs/07-operations/environment-variables.md).
+> **Nếu bạn chạy backend trực tiếp bằng Maven ở Bước 4** (đa số thành viên làm vậy để có hot reload
+> nhanh), file `.env` ở gốc **không** ảnh hưởng gì tới backend — nó chỉ dùng cho Docker Compose.
+> Cần thêm một bước: `cp backend/.env.example backend/.env`. Chi tiết vì sao có hai file khác vị trí:
+> xem [docs/07-operations/environment-variables.md](docs/07-operations/environment-variables.md).
+
+File `backend/.env.example` cũng chứa hướng dẫn cấu hình gửi mã khôi phục mật khẩu qua email thật
+(tùy chọn, không bắt buộc để chạy dự án — mặc định mã hiện ra ngay trong console).
 
 ### 2.1. Cách thay thế — set biến môi trường thủ công trong máy (nếu không dùng `.env`)
 
@@ -137,6 +143,16 @@ cd backend
 
 Mặc định backend chạy tại `http://localhost:8080/api/v1`, Swagger UI tại `http://localhost:8080/api/v1/swagger-ui.html`.
 Flyway sẽ tự động tạo/cập nhật schema DB khi khởi động (profile `dev`).
+
+> Chạy kiểu này đọc cấu hình từ `backend/.env` (xem lưu ý ở Bước 2), không phải `.env` ở gốc dự án.
+
+### Quên mật khẩu / khôi phục mật khẩu
+
+Mặc định (không cần cấu hình gì), mã khôi phục 6 chữ số hiện thẳng trong cửa sổ console đang chạy
+backend — tìm dòng có `AUDIT_MOCK_EMAIL`. Đủ dùng để code và kiểm thử hằng ngày.
+
+Muốn thử gửi qua email thật trên máy bạn: mỗi người tự dùng **Gmail của chính mình**, không dùng
+chung tài khoản với thành viên khác trong team. Các bước cụ thể nằm trong `backend/.env.example`.
 
 ## 5. Chạy Frontend (local, hot reload)
 

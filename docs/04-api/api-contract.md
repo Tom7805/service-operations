@@ -425,17 +425,27 @@ hợp lệ) — Frontend chỉ nên hiển thị một thông báo chung dạng 
 
 Liên kết khôi phục có hạn dùng mặc định 30 phút và **chỉ dùng được một lần**.
 
-**`SMTP_HOST` là công tắc quyết định kênh gửi** (`PasswordResetNotifier`), không phải profile và cũng
-không phải địa chỉ email của tài khoản:
+**`SMTP_HOST` cấu hình MỘT LẦN duy nhất** (thường trỏ vào một dịch vụ gửi thư thật như Gmail/SES).
+Từ đó, mỗi lần gửi mã, hệ thống **tự động quyết định theo TỪNG địa chỉ email** — không còn phải đổi
+cấu hình bằng tay tùy theo định gửi cho ai:
 
-| `SMTP_HOST` | Profile | Kết quả |
+| | Cách quyết định | Kết quả |
 |---|---|---|
-| rỗng | `dev` / `test` | Ghi liên kết ra logger riêng `AUDIT_MOCK_EMAIL`, **không** gửi thư |
-| rỗng | `prod` | Ứng dụng **dừng khởi động** kèm thông báo nói rõ thiếu biến nào |
-| có giá trị | bất kỳ | Gửi thư thật qua SMTP. **Không bao giờ** ghi token ra log, kể cả khi gửi thất bại |
+| Tên miền **không có bản ghi MX** (ví dụ `service-operations.local` của dữ liệu mẫu) | `DomainReachabilityChecker` tra DNS trước khi gửi | Ghi ra logger `AUDIT_MOCK_EMAIL`, **không** gọi SMTP |
+| Tên miền **có bản ghi MX** (ví dụ `gmail.com`) | | Gửi thật qua SMTP. **Không bao giờ** ghi token ra log, kể cả khi gửi thất bại |
+| `SMTP_HOST` rỗng, profile `prod` | | Ứng dụng **dừng khởi động** kèm thông báo nói rõ thiếu biến nào |
 
-Nhờ vậy có thể thử chức năng gửi thư ngay trên máy phát triển (ví dụ trỏ `SMTP_HOST` vào một máy chủ
-thư cục bộ như MailHog) mà không phải dựng nguyên cấu hình production.
+**Vì sao tra MX trước thay vì cứ gọi SMTP rồi bắt lỗi:** một số máy chủ SMTP (kể cả dùng Gmail làm
+relay) chấp nhận thư ngay ở bước giao dịch (trả `250 OK`) rồi mới bounce lại **không đồng bộ** sau đó,
+khi đã thử phân giải địa chỉ đích và phát hiện không tồn tại. Nếu chỉ dựa vào `mailSender.send()`
+không ném lỗi để kết luận "gửi thành công" thì kết luận đó có thể sai. Tra MX là bước kiểm tra đồng bộ
+và đáng tin cậy hơn.
+
+Trước đây hệ thống dùng `SMTP_HOST` như một công tắc toàn cục (có cấu hình = luôn gửi thật, không có
+= luôn ghi log) — nghĩa là người vận hành phải tự đổi biến môi trường qua lại giữa hai lần chạy tùy
+theo định gửi cho tài khoản mẫu hay tài khoản thật. Đó là một lỗ hổng thiết kế: quên đổi lại khiến mã
+gửi cho tài khoản thật rơi vào log giả lập thay vì hộp thư thật. Mô hình theo domain đã thay thế hoàn
+toàn cách làm đó.
 
 Ở `prod`, thiếu `SMTP_HOST` thì dừng khởi động là **chủ đích**: nếu để lên bình thường, ứng dụng sẽ im
 lặng không gửi được thư trong khi giao diện vẫn báo "đã gửi" — người dùng bị khoá ngoài mà không ai biết.

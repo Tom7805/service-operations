@@ -2,19 +2,25 @@ package com.serviceops.modules.identity.auth;
 
 import com.serviceops.config.PasswordResetMailRequiredConfig;
 import com.serviceops.modules.identity.auth.service.impl.LoggingPasswordResetNotifier;
+import com.serviceops.modules.identity.auth.service.impl.DomainReachabilityChecker;
 import com.serviceops.modules.identity.auth.service.impl.MailPasswordResetNotifier;
 import com.serviceops.modules.identity.user.entity.User;
+import jakarta.mail.Session;
+import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.Test;
 import org.springframework.mail.MailSendException;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Khoa lai LOI HUA quan trong nhat cua dot sua nay: khong the ban giao nham ban
@@ -78,7 +84,9 @@ class PasswordResetNotifierGuardTest {
      */
     @Test
     void banThat_thieuDiaChiNguoiGui_dungKhoiDong() {
-        MailPasswordResetNotifier notifier = new MailPasswordResetNotifier(mock(JavaMailSender.class));
+        DomainReachabilityChecker domainChecker = mock(DomainReachabilityChecker.class);
+        when(domainChecker.hasMailExchanger(anyString())).thenReturn(true);
+        MailPasswordResetNotifier notifier = new MailPasswordResetNotifier(mock(JavaMailSender.class), domainChecker);
         ReflectionTestUtils.setField(notifier, "fromAddress", "");
 
         assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(notifier, "validateConfig"))
@@ -102,10 +110,17 @@ class PasswordResetNotifierGuardTest {
     @Test
     void guiThuThatBai_khongNemLoiRaNgoai() {
         JavaMailSender sender = mock(JavaMailSender.class);
-        doThrow(new MailSendException("may chu thu tu choi"))
-                .when(sender).send(any(SimpleMailMessage.class));
+        // sendResetLink gio dung MimeMessage (khai bao UTF-8 tuong minh de giu
+        // dau tieng Viet) thay vi SimpleMailMessage — phai stub createMimeMessage()
+        // tra ve mot doi tuong that, khong thi no tra ve null va sinh ra
+        // NullPointerException thay vi MailSendException nhu bai test dinh gia lap.
+        MimeMessage mime = new MimeMessage((Session) null);
+        when(sender.createMimeMessage()).thenReturn(mime);
+        doThrow(new MailSendException("may chu thu tu choi")).when(sender).send(any(MimeMessage.class));
 
-        MailPasswordResetNotifier notifier = new MailPasswordResetNotifier(sender);
+        DomainReachabilityChecker domainChecker = mock(DomainReachabilityChecker.class);
+        when(domainChecker.hasMailExchanger(anyString())).thenReturn(true);
+        MailPasswordResetNotifier notifier = new MailPasswordResetNotifier(sender, domainChecker);
         ReflectionTestUtils.setField(notifier, "fromAddress", "no-reply@congty.vn");
         ReflectionTestUtils.setField(notifier, "fallbackToLog", false);
 
@@ -122,10 +137,65 @@ class PasswordResetNotifierGuardTest {
 
     @Test
     void banThat_dayDuCauHinh_khoiDongBinhThuong() {
-        MailPasswordResetNotifier notifier = new MailPasswordResetNotifier(mock(JavaMailSender.class));
+        DomainReachabilityChecker domainChecker = mock(DomainReachabilityChecker.class);
+        MailPasswordResetNotifier notifier = new MailPasswordResetNotifier(mock(JavaMailSender.class), domainChecker);
         ReflectionTestUtils.setField(notifier, "fromAddress", "no-reply@congty.vn");
 
         assertThatCode(() -> ReflectionTestUtils.invokeMethod(notifier, "validateConfig"))
                 .doesNotThrowAnyException();
+    }
+
+    /**
+     * Test QUAN TRONG NHAT cua thiet ke moi: mot backend tu dong bao quat CA HAI
+     * loai dia chi, khong con phai doi bien moi truong bang tay giua hai lan chay.
+     *
+     * <p>Day chinh la loi hua da bi vi pham trong phien lam viec truoc — sau khi
+     * test xong voi Gmail that, nguoi van hanh (toi) da doi backend ve che do gia
+     * lap ma QUEN doi lai, khien ma gui cho tai khoan that bi roi vao log thay vi
+     * hop thu that. Domain co MX -> gui that; domain khong co MX -> ghi log, KHONG
+     * goi mailSender.send() (tranh mot lan goi SMTP chac chan that bai).</p>
+     */
+    @Test
+    void domainKhongCoMx_khongGoiSmtp_ghiLogThayVao() {
+        JavaMailSender sender = mock(JavaMailSender.class);
+        DomainReachabilityChecker domainChecker = mock(DomainReachabilityChecker.class);
+        when(domainChecker.hasMailExchanger("nv01@service-operations.local")).thenReturn(false);
+
+        MailPasswordResetNotifier notifier = new MailPasswordResetNotifier(sender, domainChecker);
+        ReflectionTestUtils.setField(notifier, "fromAddress", "no-reply@congty.vn");
+        ReflectionTestUtils.setField(notifier, "fallbackToLog", true);
+
+        User user = new User();
+        user.setId(1L);
+        user.setEmail("nv01@service-operations.local");
+        user.setUsername("nv01");
+        user.setFullName("Nguoi Dung");
+
+        notifier.sendResetLink(user, "483920", 10L);
+
+        verify(sender, never()).createMimeMessage();
+        verify(sender, never()).send(any(MimeMessage.class));
+    }
+
+    @Test
+    void domainCoMx_guiThatQuaSmtp() {
+        JavaMailSender sender = mock(JavaMailSender.class);
+        MimeMessage mime = new MimeMessage((Session) null);
+        when(sender.createMimeMessage()).thenReturn(mime);
+        DomainReachabilityChecker domainChecker = mock(DomainReachabilityChecker.class);
+        when(domainChecker.hasMailExchanger("ai.do@gmail.com")).thenReturn(true);
+
+        MailPasswordResetNotifier notifier = new MailPasswordResetNotifier(sender, domainChecker);
+        ReflectionTestUtils.setField(notifier, "fromAddress", "no-reply@congty.vn");
+
+        User user = new User();
+        user.setId(2L);
+        user.setEmail("ai.do@gmail.com");
+        user.setUsername("aido");
+        user.setFullName("Ai Do");
+
+        notifier.sendResetLink(user, "483920", 10L);
+
+        verify(sender).send(mime);
     }
 }
