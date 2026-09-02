@@ -2,71 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import type { User, UserStatus } from '../types/userTypes';
 import { SYSTEM_DEPARTMENTS, SYSTEM_ROLES } from '../types/userTypes';
 import { ICONS } from './icons';
-
-interface RowAction {
-  key: string;
-  label: string;
-  icon: React.ReactNode;
-  onClick: () => void;
-  tone?: 'default' | 'danger';
-}
-
-/** Menu thao tác gọn theo từng dòng — thay cho dãy icon rời rạc, đúng mẫu bảng dữ liệu doanh nghiệp. */
-function RowActionsMenu({ actions }: { actions: RowAction[] }) {
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscape);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [open]);
-
-  return (
-    <div className="row-menu" ref={containerRef}>
-      <button
-        type="button"
-        className="row-menu__trigger"
-        aria-label="Thao tác"
-        aria-haspopup="true"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-      >
-        {ICONS.more}
-      </button>
-      <div className={`row-menu__panel ${open ? 'row-menu__panel--open' : ''}`} role="menu">
-        {actions.map((action) => (
-          <button
-            key={action.key}
-            type="button"
-            role="menuitem"
-            className={`row-menu__item ${action.tone === 'danger' ? 'row-menu__item--danger' : ''}`}
-            title={action.label}
-            onClick={() => {
-              setOpen(false);
-              action.onClick();
-            }}
-          >
-            <span className="row-menu__icon">{action.icon}</span>
-            {action.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
+import RowActionsMenu from '../../../components/common/RowActionsMenu';
+import TableSkeleton from '../../../components/common/TableSkeleton';
 
 interface UserTableProps {
   users: User[];
@@ -156,7 +93,7 @@ export const UserTable: React.FC<UserTableProps> = ({
           />
           {search && (
             <button type="button" className="search-box__clear" onClick={() => setSearch('')} aria-label="Xóa tìm kiếm">
-              ✕
+              <span className="icon-sm">{ICONS.close}</span>
             </button>
           )}
         </div>
@@ -234,17 +171,7 @@ export const UserTable: React.FC<UserTableProps> = ({
           </thead>
           <tbody>
             {loading ? (
-              Array.from({ length: 4 }).map((_, idx) => (
-                <tr key={idx} className="skeleton-row">
-                  <td><div className="skeleton skeleton-text" style={{ width: '20px' }} /></td>
-                  <td><div className="skeleton skeleton-text" style={{ width: '140px' }} /></td>
-                  <td><div className="skeleton skeleton-text" style={{ width: '160px' }} /></td>
-                  <td><div className="skeleton skeleton-text" style={{ width: '120px' }} /></td>
-                  <td><div className="skeleton skeleton-text" style={{ width: '150px' }} /></td>
-                  <td><div className="skeleton skeleton-pill" style={{ width: '90px' }} /></td>
-                  <td><div className="skeleton skeleton-text" style={{ width: '80px', marginLeft: 'auto' }} /></td>
-                </tr>
-              ))
+              <TableSkeleton columns={7} />
             ) : filteredUsers.length === 0 ? (
               <tr>
                 <td colSpan={7}>

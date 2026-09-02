@@ -81,15 +81,14 @@ export default function EmployeeListPage({
       <div className="access-denied-container">
         <div className="access-denied-card">
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
-          <span className="eyebrow text-danger">Từ chối truy cập (Access Denied)</span>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
             Chức năng Quản lý hồ sơ nhân sự chỉ dành riêng cho vai trò <strong>Nhân sự</strong> hoặc{' '}
-            <strong>Quản trị viên</strong>. Hệ thống đã ghi lại lần truy cập trái phép này vào nhật ký
+            <strong>Quản trị viên</strong>. Hệ thống đã ghi lại lần truy cập bị từ chối này vào nhật ký
             bảo mật.
           </p>
           <div className="security-log-badge">
-            <span className="security-log-badge__item">{ICONS.shield} Lần thử truy cập: {new Date().toLocaleString('vi-VN')}</span>
+            <span className="security-log-badge__item">{ICONS.shield} Thời điểm: {new Date().toLocaleString('vi-VN')}</span>
             <span className="security-log-badge__item">Tài khoản: {currentUserName}</span>
             <span className="security-log-badge__item">Vai trò hiện tại: {currentUserRoles.join(', ')}</span>
           </div>

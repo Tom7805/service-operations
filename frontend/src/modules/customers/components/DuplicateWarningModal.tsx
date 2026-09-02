@@ -377,7 +377,7 @@ export default function DuplicateWarningModal({
               onClick={onBackToEdit}
               disabled={isLoading}
             >
-              <span>←</span>
+              <span className="icon-sm">{ICONS.arrowLeft}</span>
               <span>Quay lại chỉnh sửa thông tin</span>
             </button>
           </div>

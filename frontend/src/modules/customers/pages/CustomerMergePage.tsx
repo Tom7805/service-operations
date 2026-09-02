@@ -292,7 +292,6 @@ export default function CustomerMergePage({
       <div className="access-denied-container" data-testid="merge-access-denied">
         <div className="access-denied-card">
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
-          <span className="eyebrow text-danger">Từ chối quyền truy cập (403 FORBIDDEN)</span>
           <h2>Bạn không có thẩm quyền gộp hồ sơ khách hàng</h2>
           <p>
             Theo quy định phân quyền bảo mật (<strong>NCL-02-CN-006 · TC-03</strong>), chức năng Gộp hồ sơ khách
@@ -452,7 +451,7 @@ export default function CustomerMergePage({
                 tone="target"
               />
               <span className="merge-preview-arrow" aria-hidden="true">
-                ⇐
+                <span className="icon-sm">{ICONS.arrowLeft}</span>
               </span>
               <CustomerSummaryCard
                 title="Hồ sơ bị gộp"
@@ -485,7 +484,7 @@ export default function CustomerMergePage({
                   </>
                 ) : (
                   <>
-                    <span>✓</span>
+                    <span className="icon-sm">{ICONS.check}</span>
                     <span>Xác nhận gộp</span>
                   </>
                 )}

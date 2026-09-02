@@ -86,7 +86,7 @@ export default function EmployeeDetailPage({ employeeId, onBack }: EmployeeDetai
     return (
       <div className="user-detail-page p-6">
         <button type="button" className="btn-secondary mb-4" onClick={onBack}>
-          ← Quay lại danh sách
+          <span className="icon-sm">{ICONS.arrowLeft}</span> Quay lại danh sách
         </button>
         <div className="alert alert--error">
           <span className="alert__icon">{ICONS.alertTriangle}</span>
@@ -100,7 +100,7 @@ export default function EmployeeDetailPage({ employeeId, onBack }: EmployeeDetai
     <div className="user-detail-page">
       <div className="mb-4">
         <button type="button" className="btn-secondary" onClick={onBack}>
-          ← Quay lại danh sách hồ sơ nhân sự
+          <span className="icon-sm">{ICONS.arrowLeft}</span> Quay lại danh sách hồ sơ nhân sự
         </button>
       </div>
 

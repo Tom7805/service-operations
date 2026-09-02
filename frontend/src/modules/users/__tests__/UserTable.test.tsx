@@ -106,8 +106,10 @@ describe('User Management Module — Acceptance Criteria Tests (NCL-01-CN-002)',
       />
     );
 
-    const lockBtn = screen.getByTitle('Khóa tài khoản');
-    fireEvent.click(lockBtn);
+    // Menu thao tác chỉ dựng nội dung KHI MỞ (tối ưu hiệu năng: trước đây mỗi dòng
+    // dựng sẵn 5 nút + 5 icon SVG dù menu đang đóng). Nên phải mở menu trước.
+    fireEvent.click(screen.getAllByLabelText('Thao tác')[0]);
+    fireEvent.click(screen.getByTitle('Khóa tài khoản'));
 
     expect(handleToggleStatus).toHaveBeenCalledWith(mockUsersList[0]);
   });
@@ -140,7 +142,7 @@ describe('User Management Module — Acceptance Criteria Tests (NCL-01-CN-002)',
   it('TC-04: Non-admin users (VT-03) get Access Denied screen', () => {
     render(<UserListPage currentUserRoles={['VT-03']} currentUserName="Nhân viên IT" />);
 
-    expect(screen.getByText('Từ chối truy cập (Access Denied)')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Bạn không có thẩm quyền/i })).toBeInTheDocument();
     expect(screen.getByText(/Bạn không có thẩm quyền truy cập màn hình này/i)).toBeInTheDocument();
     expect(screen.getByText(/Chức năng Quản lý tài khoản người dùng chỉ dành riêng cho vai trò/i)).toBeInTheDocument();
   });

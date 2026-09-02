@@ -107,7 +107,6 @@ export default function CustomerSegmentModal({
       >
         <div className="modal-header">
           <div>
-            <span className="modal-eyebrow">NCL-02-CN-005 · Phân nhóm khách hàng</span>
             <h2 id="segment-modal-title" className="modal-title">
               Gán phân nhóm khách hàng
             </h2>
@@ -226,7 +225,7 @@ export default function CustomerSegmentModal({
                 </>
               ) : (
                 <>
-                  <span>✓</span>
+                  <span className="icon-sm">{ICONS.check}</span>
                   <span>Lưu phân nhóm</span>
                 </>
               )}

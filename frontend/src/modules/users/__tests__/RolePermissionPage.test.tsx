@@ -149,7 +149,7 @@ describe('Role & Data Scope Module — Acceptance Criteria Tests (NCL-01-CN-004)
   it('TC-04: Non-admin users (VT-03) receive Access Denied screen', () => {
     render(<RolePermissionPage currentUserRoles={['VT-03']} currentUserName="Nhân viên IT" />);
 
-    expect(screen.getByText('Từ chối truy cập (Access Denied)')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Bạn không có thẩm quyền/i })).toBeInTheDocument();
     expect(screen.getByText(/Bạn không có thẩm quyền truy cập màn hình này/i)).toBeInTheDocument();
     expect(screen.getByText(/Chức năng Phân quyền theo vai trò và phạm vi dữ liệu chỉ dành riêng/i)).toBeInTheDocument();
   });

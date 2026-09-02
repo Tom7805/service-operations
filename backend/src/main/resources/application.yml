@@ -7,6 +7,28 @@ spring:
     default-property-inclusion: non_null
     serialization:
       write-dates-as-timestamps: false
+  # Thu dien tu — khai bao MOT lan o day cho MOI profile.
+  #
+  # `host` rong = chua cau hinh. Khi do:
+  #   - profile dev/test : lien ket khoi phuc duoc ghi ra logger AUDIT_MOCK_EMAIL
+  #   - profile prod     : ung dung DUNG KHOI DONG (PasswordResetMailRequiredConfig)
+  # Vua dat SMTP_HOST la ban gui thu that tiep quan ngay, o BAT KY profile nao —
+  # nho vay thu duoc chuc nang gui thu tren may phat trien ma khong phai dung
+  # nguyen cau hinh production.
+  #
+  # SMTP_AUTH / SMTP_STARTTLS mac dinh bat cho may chu thu that. Voi may chu thu
+  # cuc bo kieu MailHog thi tat ca hai (SMTP_AUTH=false SMTP_STARTTLS=false).
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH:true}
+          starttls:
+            enable: ${SMTP_STARTTLS:true}
 
 server:
   port: ${SERVER_PORT:8080}
@@ -20,7 +42,22 @@ app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
   password-reset:
-    token-ttl-minutes: ${PASSWORD_RESET_TOKEN_TTL_MINUTES:30}
+    # 10 phut, khong phai 30. Ma 6 so chi co 1.000.000 kha nang nen cua so tan cong
+    # phai hep hon nhieu so voi token dai truoc day (2^256).
+    token-ttl-minutes: ${PASSWORD_RESET_TOKEN_TTL_MINUTES:10}
+    # Gioi han tan suat cho /auth/forgot-password — chan theo CA IP lan email.
+    # Long hon 2FA vi quen mat khau la thao tac binh thuong, nguoi dung that co
+    # the bam lai vai lan khi cho thu.
+    rate-limit:
+      max-attempts: ${PASSWORD_RESET_RATE_LIMIT_MAX_ATTEMPTS:5}
+      window-seconds: ${PASSWORD_RESET_RATE_LIMIT_WINDOW_SECONDS:900}
+  frontend:
+    # Goc dia chi dat vao lien ket khoi phuc gui cho nguoi dung.
+    base-url: ${FRONTEND_BASE_URL:http://localhost:5173}
+  mail:
+    # Dia chi nguoi gui. BAT BUOC o profile prod — thieu thi ung dung dung khoi
+    # dong (xem MailPasswordResetNotifier#validateConfig).
+    from: ${MAIL_FROM:}
   two-factor:
     # NCL-01-CN-009: TOTP kiểu Google Authenticator — mã sinh trên máy người dùng,
     # không gửi/nhận qua kênh nào nên không còn config kiểu "mock-otp-logging" nữa.

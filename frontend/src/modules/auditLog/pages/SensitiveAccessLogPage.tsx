@@ -117,15 +117,14 @@ export default function SensitiveAccessLogPage({
       <div className="access-denied-container">
         <div className="access-denied-card">
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
-          <span className="eyebrow text-danger">Từ chối truy cập (Access Denied)</span>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
             Chức năng tra cứu nhật ký truy cập dữ liệu nhạy cảm chỉ dành riêng cho vai trò{' '}
-            <strong>Quản trị viên</strong>. Hệ thống đã ghi nhận lần truy cập trái phép này vào
+            <strong>Quản trị viên</strong>. Nếu bạn cần quyền này, hãy liên hệ quản trị viên hệ thống vào
             nhật ký bảo mật phía máy chủ.
           </p>
           <div className="security-log-badge">
-            <span className="security-log-badge__item">{ICONS.shield} Lần thử truy cập: {new Date().toLocaleString('vi-VN')}</span>
+            <span className="security-log-badge__item">{ICONS.shield} Thời điểm: {new Date().toLocaleString('vi-VN')}</span>
             <span className="security-log-badge__item">Tài khoản: {currentUserName}</span>
             <span className="security-log-badge__item">Vai trò hiện tại: {currentUserRoles.join(', ')}</span>
           </div>
@@ -312,7 +311,7 @@ export default function SensitiveAccessLogPage({
               disabled={page <= 0 || loading}
               onClick={() => fetchLogs(page - 1)}
             >
-              ← Trang trước
+              <span className="icon-sm">{ICONS.arrowLeft}</span> Trang trước
             </button>
             <button
               type="button"
@@ -320,7 +319,7 @@ export default function SensitiveAccessLogPage({
               disabled={page + 1 >= totalPages || loading}
               onClick={() => fetchLogs(page + 1)}
             >
-              Trang sau →
+              Trang sau <span className="icon-sm">{ICONS.arrowRight}</span>
             </button>
           </div>
         </div>

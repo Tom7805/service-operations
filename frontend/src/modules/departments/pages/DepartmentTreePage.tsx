@@ -186,14 +186,13 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
       <div className="access-denied-container">
         <div className="access-denied-card">
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
-          <span className="eyebrow text-danger">Từ chối truy cập (Access Denied)</span>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
             Chức năng Khai báo cây tổ chức chỉ dành riêng cho vai trò <strong>Quản trị viên</strong>.
             Hệ thống đã ghi lại lần truy cập này vào nhật ký bảo mật.
           </p>
           <div className="security-log-badge">
-            <span className="security-log-badge__item">{ICONS.shield} Lần thử truy cập: {new Date().toLocaleString('vi-VN')}</span>
+            <span className="security-log-badge__item">{ICONS.shield} Thời điểm: {new Date().toLocaleString('vi-VN')}</span>
             <span className="security-log-badge__item">Tài khoản: {currentUserName}</span>
           </div>
         </div>

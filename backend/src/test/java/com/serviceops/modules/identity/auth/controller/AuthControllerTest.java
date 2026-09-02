@@ -16,6 +16,7 @@ import com.serviceops.security.CustomUserDetailsService;
 import com.serviceops.security.JwtAuthFilter;
 import com.serviceops.security.JwtAuthenticationEntryPoint;
 import com.serviceops.security.JwtProvider;
+import com.serviceops.security.PasswordResetRateLimiter;
 import com.serviceops.security.scope.UserScope;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -56,6 +57,13 @@ class AuthControllerTest {
 
     @MockBean
     private PasswordService passwordService;
+
+    /**
+     * /auth/forgot-password gio di qua bo gioi han tan suat truoc khi vao service.
+     * Trong lat cat @WebMvcTest phai khai bao, neu khong context khong len duoc.
+     */
+    @MockBean
+    private PasswordResetRateLimiter passwordResetRateLimiter;
 
     @MockBean
     private JwtProvider jwtProvider;
@@ -131,9 +139,10 @@ class AuthControllerTest {
 
     @Test
     void validateResetToken_khongCanDangNhap_traVeKetQua() throws Exception {
-        when(passwordService.isResetTokenValid("abc")).thenReturn(true);
+        when(passwordService.isResetCodeValid("ai.do@congty.vn", "483920")).thenReturn(true);
 
-        mockMvc.perform(get("/auth/reset-password/validate").param("token", "abc"))
+        mockMvc.perform(get("/auth/reset-password/validate")
+                        .param("email", "ai.do@congty.vn").param("code", "483920"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").value(true));
     }
@@ -144,7 +153,8 @@ class AuthControllerTest {
                 .when(passwordService).resetPassword(any());
 
         ResetPasswordReq req = new ResetPasswordReq();
-        req.setToken("het-han");
+        req.setEmail("ai.do@congty.vn");
+        req.setCode("000000");
         req.setNewPassword("MatKhauMoi2");
 
         mockMvc.perform(post("/auth/reset-password")

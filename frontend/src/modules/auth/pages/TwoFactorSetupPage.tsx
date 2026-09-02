@@ -87,14 +87,13 @@ export default function TwoFactorSetupPage({
       <div className="access-denied-container">
         <div className="access-denied-card">
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
-          <span className="eyebrow text-danger">Từ chối truy cập (Access Denied)</span>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
             Chức năng cấu hình xác thực hai bước chỉ dành riêng cho vai trò <strong>Quản trị viên</strong>.
-            Hệ thống đã lưu lại lần truy cập trái phép này vào nhật ký an ninh.
+            Nếu bạn cần quyền này, hãy liên hệ quản trị viên hệ thống.
           </p>
           <div className="security-log-badge">
-            <span className="security-log-badge__item">{ICONS.shield} Lần thử truy cập: {new Date().toLocaleString('vi-VN')}</span>
+            <span className="security-log-badge__item">{ICONS.shield} Thời điểm: {new Date().toLocaleString('vi-VN')}</span>
             <span className="security-log-badge__item">{ICONS.user} Người dùng: {currentUserName}</span>
           </div>
         </div>
@@ -193,7 +192,6 @@ export default function TwoFactorSetupPage({
           <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
-                <span className="modal-eyebrow">Xác nhận</span>
                 <h3 className="modal-title">
                   <span className="modal-title__icon">{confirmTarget.enabled ? ICONS.unlock : ICONS.lock}</span>
                   {confirmTarget.enabled ? 'Tắt xác thực hai bước' : 'Bật xác thực hai bước'}
@@ -229,7 +227,7 @@ export default function TwoFactorSetupPage({
           <span className="toast-banner__icon">{toastMessage.type === 'success' ? ICONS.checkCircle : ICONS.alertTriangle}</span>
           <span>{toastMessage.text}</span>
           <button type="button" className="toast-banner__close" onClick={() => setToastMessage(null)}>
-            ✕
+            <span className="icon-sm">{ICONS.close}</span>
           </button>
         </div>
       )}

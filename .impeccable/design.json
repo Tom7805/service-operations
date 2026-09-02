@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-01T15:27:05.838282",
+  "generatedAt": "2026-09-01T18:57:49.183654",
   "title": "Vận Hành Dịch Vụ",
   "extensions": {
     "colorMeta": {
@@ -115,48 +115,108 @@
         "fontSize": "clamp(38px, 3.6vw, 58px)",
         "fontWeight": 600,
         "lineHeight": 1.08,
-        "letterSpacing": "-0.035em"
+        "letterSpacing": "-0.036em"
       },
       "headline": {
         "fontFamily": "-apple-system, SF Pro Display, Segoe UI Variable Display, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
         "fontSize": "26px",
         "fontWeight": 600,
         "lineHeight": 1.3,
-        "letterSpacing": "-0.02em"
+        "letterSpacing": "-0.026em"
       },
       "title": {
         "fontFamily": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
         "fontSize": "18px",
         "fontWeight": 600,
         "lineHeight": 1.35,
-        "letterSpacing": "-0.01em"
+        "letterSpacing": "-0.012em"
       },
       "body": {
         "fontFamily": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
         "fontSize": "14.5px",
         "fontWeight": 400,
         "lineHeight": 1.6,
-        "letterSpacing": "0"
+        "letterSpacing": "0em"
       },
       "label": {
         "fontFamily": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
         "fontSize": "12.5px",
         "fontWeight": 700,
         "lineHeight": 1.3,
-        "letterSpacing": "0.05em"
+        "letterSpacing": "0.06em"
       },
       "mono": {
-        "fontFamily": "SF Mono, Segoe UI Mono, JetBrains Mono, Consolas, monospace",
+        "fontFamily": "SF Mono, SFMono-Regular, Segoe UI Mono, JetBrains Mono, Consolas, Liberation Mono, Menlo, monospace",
         "fontSize": "13.5px",
         "fontWeight": 400,
         "lineHeight": 1.5,
-        "letterSpacing": "0"
+        "letterSpacing": "0.03em"
+      },
+      "bodySmall": {
+        "fontFamily": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
+        "fontSize": "13.5px",
+        "fontWeight": 400,
+        "lineHeight": 1.5,
+        "letterSpacing": "0.004em"
+      },
+      "bodyLarge": {
+        "fontFamily": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
+        "fontSize": "15px",
+        "fontWeight": 400,
+        "lineHeight": 1.6,
+        "letterSpacing": "-0.004em"
+      },
+      "lead": {
+        "fontFamily": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": 400,
+        "lineHeight": 1.6,
+        "letterSpacing": "-0.008em"
+      },
+      "titleLarge": {
+        "fontFamily": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
+        "fontSize": "20px",
+        "fontWeight": 600,
+        "lineHeight": 1.3,
+        "letterSpacing": "-0.016em"
+      },
+      "section": {
+        "fontFamily": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
+        "fontSize": "24px",
+        "fontWeight": 600,
+        "lineHeight": 1.25,
+        "letterSpacing": "-0.02em"
+      },
+      "heading": {
+        "fontFamily": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
+        "fontSize": "30px",
+        "fontWeight": 600,
+        "lineHeight": 1.15,
+        "letterSpacing": "-0.032em"
+      },
+      "displaySmall": {
+        "fontFamily": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
+        "fontSize": "32px",
+        "fontWeight": 600,
+        "lineHeight": 1.12,
+        "letterSpacing": "-0.032em"
+      },
+      "displayLarge": {
+        "fontFamily": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
+        "fontSize": "40px",
+        "fontWeight": 600,
+        "lineHeight": 1.05,
+        "letterSpacing": "-0.032em"
       }
     },
     "materials": [
       {
+        "name": "Kính (lớp chức năng nổi)",
+        "recipe": "CHI tren `.app-topbar` dinh: rgba(247,246,243,.72) + backdrop-filter blur(20px) saturate(180%). Noi dung troi ben duoi. KHONG BAO GIO chong kinh len kinh, va khong bao gio dat kinh len be mat chua noi dung."
+      },
+      {
         "name": "Tấm nội dung",
-        "recipe": "background #FFFFFF + border 1px #EAEAEA + radius 12px, khong bong do"
+        "recipe": "background #FFFFFF + border 1px #EAEAEA + radius 12px, DUC HOAN TOAN, khong bong do"
       },
       {
         "name": "Máng chìm",
@@ -196,13 +256,18 @@
     "motion": [
       {
         "name": "ease-out",
-        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
-        "role": "Chuyển màu, nền, viền"
+        "value": "cubic-bezier(0.23, 1, 0.32, 1)",
+        "role": "Vào / ra"
       },
       {
-        "name": "ease-soft",
+        "name": "ease-in-out",
+        "value": "cubic-bezier(0.77, 0, 0.175, 1)",
+        "role": "Di chuyển trên màn hình"
+      },
+      {
+        "name": "ease-drawer",
         "value": "cubic-bezier(0.32, 0.72, 0, 1)",
-        "role": "Xổ nội dung, chuyển trang — mô phỏng quán tính"
+        "role": "Ngăn kéo kiểu iOS"
       },
       {
         "name": "dur-fast",
@@ -213,19 +278,19 @@
         "value": "200ms"
       },
       {
-        "name": "dur-enter",
-        "value": "520ms",
-        "role": "Xổ khối khi vào trang"
-      },
-      {
-        "name": "stagger",
-        "value": "55ms",
-        "role": "Độ trễ giữa các tầng"
+        "name": "dur-press",
+        "value": "160ms",
+        "role": "Phản hồi khi bấm"
       },
       {
         "name": "press",
-        "value": "scale(0.975)",
+        "value": "scale(0.97)",
         "role": "Phản hồi khi bấm"
+      },
+      {
+        "name": "ceiling",
+        "value": "300ms",
+        "role": "Trần cho mọi hoạt hình giao diện"
       }
     ],
     "breakpoints": [
@@ -263,6 +328,55 @@
         "metric": "clamp(26px, 2.4vw, 34px)"
       },
       "note": "Toan bo bac duoc phep. Khong tu them bac moi. Truoc day co 23 bac roi rac, nhieu cap chi lech 0.5-1px."
+    },
+    "fontStacks": {
+      "sans": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
+      "mono": "SF Mono, SFMono-Regular, Segoe UI Mono, JetBrains Mono, Consolas, Liberation Mono, Menlo, monospace",
+      "note": "Khai bao mot lan tai :root (--font-sans / --font-mono). Khong viet chuoi font truc tiep vao quy tac."
+    },
+    "trackingScale": {
+      "note": "Gian chu la HAM CUA CO CHU (apple-design 15). Chu noi dung 14.5px dung o 0 va la goc thang. Khong viet so truc tiep vao letter-spacing.",
+      "tokens": {
+        "--track-display": "-0.036em",
+        "--track-4xl": "-0.032em",
+        "--track-3xl": "-0.026em",
+        "--track-2xl": "-0.02em",
+        "--track-xl": "-0.016em",
+        "--track-lg": "-0.012em",
+        "--track-md": "-0.008em",
+        "--track-base": "-0.004em",
+        "--track-body": "0em",
+        "--track-sm": "0.004em",
+        "--track-xs": "0.008em",
+        "--track-2xs": "0.012em",
+        "--track-caps": "0.08em",
+        "--track-caps-lg": "0.06em",
+        "--track-mono": "0.03em"
+      },
+      "exceptions": [
+        "'.masked-cell' 0.14em",
+        "'.totp-manual-entry code' 0.12em"
+      ]
+    },
+    "radiusScale": {
+      "note": "Ba bac, cong 999px CHI cho pill trang thai va 50% cho hinh tron. Khong viet so truc tiep vao border-radius.",
+      "tokens": {
+        "--radius-sm": "4px",
+        "--radius-md": "8px",
+        "--radius-lg": "12px"
+      },
+      "rule": "Ban kinh trong = ban kinh ngoai - dem."
+    },
+    "accessibility": {
+      "prefers-reduced-motion": "It hon va diu hon, KHONG phai bang khong: giu mo dan va doi mau, bo tinh tien / phong to / do tre theo tang, cat han hieu ung lap vo han.",
+      "prefers-reduced-transparency": "Thanh tieu de thanh nen duc + vien 1px; bo backdrop-filter va bo mep cuon.",
+      "prefers-contrast": "Dam hoa ink-muted / ink-faint / line; vong focus day 3px; vien muc cho nut phu va o nhap.",
+      "warning": "Dung them lai quy tac `*{animation-duration:.01ms!important}` — vi !important tren `*`, no de len chinh khoi giam-chuyen-dong co can nhac."
+    },
+    "layout": {
+      "frame": "height:100dvh; overflow:hidden — khung co dinh, khong phai trang tai lieu dai.",
+      "scroller": "Vung cuon DUY NHAT la `.app-main`. Thanh ben va thanh tieu de dung yen.",
+      "evidence": "Do tren bang 25 dong: truoc khi sua, cuon xuong day thi topbar o -1516px va 0/10 muc dieu huong con nhin thay."
     }
   },
   "components": [

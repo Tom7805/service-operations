@@ -90,7 +90,6 @@ export default function CustomerSegmentPanel({
     return (
       <div className="access-denied-card segment-access-denied" data-testid="segment-access-denied">
         <div className="access-denied-icon">{ICONS.shieldOff}</div>
-        <span className="eyebrow text-danger">Từ chối quyền truy cập (403 FORBIDDEN)</span>
         <h3>Không có quyền phân nhóm khách hàng</h3>
         <p>
           Theo quy định phân quyền (<strong>NCL-02-CN-005 · TC-03</strong>), chức năng Phân nhóm khách

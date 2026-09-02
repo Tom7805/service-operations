@@ -4,6 +4,10 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+  # Cau hinh thu dien tu nam o application.yml (dung chung moi profile).
+  # Rieng o profile nay, THIEU SMTP_HOST la ung dung DUNG KHOI DONG — xem
+  # PasswordResetMailRequiredConfig. Va ban gia lap ghi token ra log khong bao
+  # gio duoc tao o day: LoggingPasswordResetNotifier mang @Profile("!prod").
   jpa:
     hibernate:
       ddl-auto: validate
@@ -11,6 +15,16 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+
+app:
+  mail:
+    # GHIM CUNG false — co y KHONG doc tu bien moi truong.
+    # O moi truong phat trien, khi gui thu that bai thi lien ket khoi phuc duoc
+    # ghi ra log de nguoi lam khong bi ket. O day thi tuyet doi khong: ai doc
+    # duoc log se dat lai duoc mat khau nguoi khac.
+    # Neu de dang `${MAIL_FALLBACK_TO_LOG:false}` thi mot dong bien moi truong
+    # dat sai luc trien khai la du mo lai lo hong. Ghim cung thi khong.
+    fallback-to-log: false
 
 logging:
   level:

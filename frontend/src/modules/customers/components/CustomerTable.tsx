@@ -118,7 +118,7 @@ export default function CustomerTable({
                     onClick={() => handleCopyCode(cust.code)}
                     aria-label={`Sao chép mã ${cust.code}`}
                   >
-                    {copiedCode === cust.code ? '✓' : <span className="icon-sm">{ICONS.copy}</span>}
+                    {copiedCode === cust.code ? <span className="icon-sm">{ICONS.check}</span> : <span className="icon-sm">{ICONS.copy}</span>}
                   </button>
                 </div>
               </td>
@@ -239,7 +239,7 @@ export default function CustomerTable({
                     title="Sao chép mã khách hàng"
                     onClick={() => handleCopyCode(cust.code)}
                   >
-                    {copiedCode === cust.code ? '✓' : <span className="icon-sm">{ICONS.copy}</span>}
+                    {copiedCode === cust.code ? <span className="icon-sm">{ICONS.check}</span> : <span className="icon-sm">{ICONS.copy}</span>}
                   </button>
                 </div>
               </td>

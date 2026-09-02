@@ -1,43 +1,47 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { AuthApiError, resetPassword, validateResetToken } from '../api/authApi';
+import { useState, type FormEvent } from 'react';
+import { AuthApiError, resetPassword } from '../api/authApi';
 import { validateResetPasswordForm, type ResetPasswordFormErrors } from '../validators/authValidators';
 
 interface ResetPasswordFormProps {
-  token: string;
+  /** Email người dùng vừa nhập ở bước "quên mật khẩu". */
+  email: string;
   onDone: () => void;
+  /** Quay lại bước nhập email để xin mã mới. */
+  onRequestNewCode: () => void;
 }
 
-export default function ResetPasswordForm({ token, onDone }: ResetPasswordFormProps) {
-  const [checking, setChecking] = useState(true);
-  const [tokenValid, setTokenValid] = useState(false);
-
+/**
+ * NCL-01-CN-008 — nhập mã khôi phục 6 chữ số + đặt mật khẩu mới.
+ *
+ * Trước đây màn này nhận một token dài từ `?token=...` trên URL và gọi API kiểm
+ * tra hiệu lực trước khi hiện form. Nay đổi sang mã 6 số gõ tay, nên:
+ *
+ * - Không còn bước "kiểm tra trước". Với một liên kết, kiểm tra trước là đúng:
+ *   người dùng bấm vào rồi mới biết nó hỏng thì rất bực. Với mã gõ tay thì
+ *   ngược lại — kiểm tra trước sẽ tạo thêm một đường thử mã mà không tính vào
+ *   số lần nhập sai, tức là đục thủng chính rào chắn chống dò.
+ * - Mã và mật khẩu mới nhập trên CÙNG một màn hình: người dùng đang mở hộp thư,
+ *   bắt họ qua hai bước chỉ để gõ 6 số là thừa.
+ */
+export default function ResetPasswordForm({ email, onDone, onRequestNewCode }: ResetPasswordFormProps) {
+  const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState<ResetPasswordFormErrors>({});
+  const [codeError, setCodeError] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    validateResetToken(token)
-      .then((valid) => {
-        if (!cancelled) setTokenValid(valid);
-      })
-      .catch(() => {
-        if (!cancelled) setTokenValid(false);
-      })
-      .finally(() => {
-        if (!cancelled) setChecking(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [token]);
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setServerError(null);
+    setCodeError(null);
+
+    if (!/^\d{6}$/.test(code)) {
+      setCodeError('Mã khôi phục gồm đúng 6 chữ số');
+      return;
+    }
 
     const validationErrors = validateResetPasswordForm({ newPassword, confirmPassword });
     if (Object.keys(validationErrors).length > 0) {
@@ -47,10 +51,9 @@ export default function ResetPasswordForm({ token, onDone }: ResetPasswordFormPr
 
     setSubmitting(true);
     try {
-      await resetPassword({ token, newPassword });
+      await resetPassword({ email, code, newPassword });
       setSuccess(true);
     } catch (err) {
-      // NCL-01-CN-008-TC-02: liên kết hết hạn/đã dùng → RESET_TOKEN_INVALID (400)
       setServerError(
         err instanceof AuthApiError ? err.message : 'Không thể khôi phục mật khẩu. Vui lòng thử lại.'
       );
@@ -58,30 +61,6 @@ export default function ResetPasswordForm({ token, onDone }: ResetPasswordFormPr
       setSubmitting(false);
     }
   };
-
-  if (checking) {
-    return (
-      <div className="login-card">
-        <p className="login-card__intro">Đang kiểm tra liên kết khôi phục mật khẩu...</p>
-      </div>
-    );
-  }
-
-  // NCL-01-CN-008-TC-02: liên kết không hợp lệ/hết hạn — kiểm tra TRƯỚC khi hiển thị form.
-  if (!tokenValid && !success) {
-    return (
-      <div className="login-card">
-        <h2>Liên kết đã hết hạn</h2>
-        <p className="login-card__intro">
-          Liên kết khôi phục mật khẩu không hợp lệ, đã hết hạn hoặc đã được sử dụng. Vui lòng gửi lại yêu cầu
-          mới.
-        </p>
-        <button type="button" className="submit" onClick={onDone}>
-          Quay lại đăng nhập
-        </button>
-      </div>
-    );
-  }
 
   if (success) {
     return (
@@ -97,8 +76,40 @@ export default function ResetPasswordForm({ token, onDone }: ResetPasswordFormPr
 
   return (
     <div className="login-card">
-      <h2>Đặt mật khẩu mới</h2>
+      <h2>Nhập mã khôi phục</h2>
+      <p className="login-card__intro">
+        Chúng tôi đã gửi mã gồm 6 chữ số tới <strong>{email}</strong>. Mã có hiệu lực trong 10 phút.
+      </p>
+
       <form onSubmit={handleSubmit} noValidate>
+        <label htmlFor="reset-code">Mã khôi phục</label>
+        <div className="field">
+          <input
+            id="reset-code"
+            type="text"
+            /* inputMode numeric + autoComplete one-time-code: điện thoại bật bàn
+               phím số, và iOS/Android tự điền mã lấy từ thư đến. */
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            value={code}
+            onChange={(e) => {
+              setCode(e.target.value.replace(/\D/g, ''));
+              if (codeError) setCodeError(null);
+            }}
+            placeholder="000000"
+            className="reset-code-input"
+            disabled={submitting}
+            autoFocus
+          />
+        </div>
+        {codeError && (
+          <p className="form-error" role="alert">
+            <span>!</span>
+            {codeError}
+          </p>
+        )}
+
         <label htmlFor="reset-new-password">Mật khẩu mới</label>
         <div className="field">
           <input
@@ -150,18 +161,15 @@ export default function ResetPasswordForm({ token, onDone }: ResetPasswordFormPr
         )}
 
         <button className="submit" type="submit" disabled={submitting}>
-          {submitting ? (
-            <>
-              <i className="loader" />
-              Đang lưu
-            </>
-          ) : (
-            <>
-              Đặt lại mật khẩu <span>→</span>
-            </>
-          )}
+          {submitting ? 'Đang xử lý...' : 'Đặt lại mật khẩu'}
         </button>
       </form>
+
+      <div className="form-options" style={{ justifyContent: 'center', marginTop: 16 }}>
+        <button type="button" className="link-button" onClick={onRequestNewCode}>
+          Chưa nhận được mã? Gửi lại
+        </button>
+      </div>
     </div>
   );
 }

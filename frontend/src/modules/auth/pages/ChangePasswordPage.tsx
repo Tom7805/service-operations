@@ -20,7 +20,7 @@ export default function ChangePasswordPage({ onBack, onPasswordChanged }: Change
     <div className="user-detail-page">
       <div className="mb-4">
         <button type="button" className="btn-secondary" onClick={onBack} disabled={done}>
-          ← Quay lại
+          <span className="icon-sm">{ICONS.arrowLeft}</span> Quay lại
         </button>
       </div>
 

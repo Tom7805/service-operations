@@ -200,7 +200,6 @@ export default function CustomerListPage({
       <div className="access-denied-container" data-testid="access-denied-view">
         <div className="access-denied-card">
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
-          <span className="eyebrow text-danger">Từ chối quyền truy cập (403 FORBIDDEN)</span>
           <h2>Bạn không có thẩm quyền tạo & quản lý hồ sơ khách hàng</h2>
           <p>
             Theo quy định phân quyền bảo mật (<strong>NCL-02-CN-001</strong>), chức năng Tạo hồ sơ khách hàng chỉ dành riêng cho{' '}
@@ -277,7 +276,7 @@ export default function CustomerListPage({
             onClick={() => setToastMessage(null)}
             aria-label="Đóng thông báo"
           >
-            ✕
+            <span className="icon-sm">{ICONS.close}</span>
           </button>
         </div>
       )}
@@ -453,7 +452,7 @@ export default function CustomerListPage({
         {/* NCL-02-CN-005 (TC-02): không có khách hàng nào thuộc nhóm được lọc */}
         {!loadError && !isLoading && customers.length > 0 && filteredCustomers.length === 0 && (
           <div className="table-empty-state" data-testid="segment-filter-empty-state">
-            <div className="table-empty-state__icon">🔎</div>
+            <div className="table-empty-state__icon">{ICONS.search}</div>
             <h3>Không có kết quả phù hợp</h3>
             <p>
               Không tìm thấy khách hàng nào khớp với từ khóa hoặc nhóm đã chọn

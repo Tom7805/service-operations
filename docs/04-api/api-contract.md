@@ -423,8 +423,50 @@ hợp lệ) — Frontend chỉ nên hiển thị một thông báo chung dạng 
 
 **Response thành công — `200 OK`:** `{ "success": true, "data": null }`
 
-QTN-04 (hệ thống chỉ dùng dữ liệu mô phỏng): "gửi email" ở giai đoạn hiện tại là ghi log phía backend
-(`[MOCK EMAIL] ...` kèm token), chưa gọi dịch vụ email thật. Liên kết khôi phục có hạn dùng mặc định 30 phút.
+Liên kết khôi phục có hạn dùng mặc định 30 phút và **chỉ dùng được một lần**.
+
+**`SMTP_HOST` cấu hình MỘT LẦN duy nhất** (thường trỏ vào một dịch vụ gửi thư thật như Gmail/SES).
+Từ đó, mỗi lần gửi mã, hệ thống **tự động quyết định theo TỪNG địa chỉ email** — không còn phải đổi
+cấu hình bằng tay tùy theo định gửi cho ai:
+
+| | Cách quyết định | Kết quả |
+|---|---|---|
+| Tên miền **không có bản ghi MX** (ví dụ `service-operations.local` của dữ liệu mẫu) | `DomainReachabilityChecker` tra DNS trước khi gửi | Ghi ra logger `AUDIT_MOCK_EMAIL`, **không** gọi SMTP |
+| Tên miền **có bản ghi MX** (ví dụ `gmail.com`) | | Gửi thật qua SMTP. **Không bao giờ** ghi token ra log, kể cả khi gửi thất bại |
+| `SMTP_HOST` rỗng, profile `prod` | | Ứng dụng **dừng khởi động** kèm thông báo nói rõ thiếu biến nào |
+
+**Vì sao tra MX trước thay vì cứ gọi SMTP rồi bắt lỗi:** một số máy chủ SMTP (kể cả dùng Gmail làm
+relay) chấp nhận thư ngay ở bước giao dịch (trả `250 OK`) rồi mới bounce lại **không đồng bộ** sau đó,
+khi đã thử phân giải địa chỉ đích và phát hiện không tồn tại. Nếu chỉ dựa vào `mailSender.send()`
+không ném lỗi để kết luận "gửi thành công" thì kết luận đó có thể sai. Tra MX là bước kiểm tra đồng bộ
+và đáng tin cậy hơn.
+
+Trước đây hệ thống dùng `SMTP_HOST` như một công tắc toàn cục (có cấu hình = luôn gửi thật, không có
+= luôn ghi log) — nghĩa là người vận hành phải tự đổi biến môi trường qua lại giữa hai lần chạy tùy
+theo định gửi cho tài khoản mẫu hay tài khoản thật. Đó là một lỗ hổng thiết kế: quên đổi lại khiến mã
+gửi cho tài khoản thật rơi vào log giả lập thay vì hộp thư thật. Mô hình theo domain đã thay thế hoàn
+toàn cách làm đó.
+
+Ở `prod`, thiếu `SMTP_HOST` thì dừng khởi động là **chủ đích**: nếu để lên bình thường, ứng dụng sẽ im
+lặng không gửi được thư trong khi giao diện vẫn báo "đã gửi" — người dùng bị khoá ngoài mà không ai biết.
+Cần đủ: `SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `MAIL_FROM`, `FRONTEND_BASE_URL`.
+
+**Mã 6 chữ số**, không phải liên kết. Mã lưu trong CSDL dưới dạng SHA-256 của chuỗi `"<userId>:<mã>"`
+(cột `password_reset_tokens.token_hash`) — đọc được bảng này cũng không đặt lại được mật khẩu của ai.
+
+Vì không gian chỉ có 1.000.000 khả năng, mã **bắt buộc** đi kèm ba rào chắn, thiếu một cái là yếu hơn hẳn
+token dài trước đây:
+
+1. **Đếm số lần nhập sai** — quá 5 lần thì mã chết, phải xin mã mới. Việc đếm chạy trong một **giao dịch
+   riêng** (`PasswordResetAttemptRecorder`): nếu đếm chung giao dịch với phần ném lỗi thì Spring cuộn ngược
+   và xoá luôn con số vừa đếm, tức rào chắn không tồn tại.
+2. **Tra cứu theo người dùng**, không theo mã trần — nên `POST /auth/reset-password` bắt buộc có `email`.
+3. **Hạn dùng 10 phút** thay vì 30.
+
+**Giới hạn tần suất:** mặc định 5 lần / 15 phút, chặn theo **cả** địa chỉ IP lẫn địa chỉ email
+(`PASSWORD_RESET_RATE_LIMIT_*`). Vượt hạn mức trả `TOO_MANY_REQUESTS`.
+
+Phản hồi **không phân biệt** "email không tồn tại" với "đã gửi liên kết", để tránh dò danh sách tài khoản hợp lệ.
 
 #### `GET /auth/reset-password/validate?token={token}`
 

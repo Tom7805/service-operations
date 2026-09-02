@@ -86,7 +86,7 @@ export default function CustomerDetailPage({
         <div>
           <div className="breadcrumb">
             <button type="button" className="breadcrumb-btn" onClick={onBack}>
-              ← Khách hàng
+              <span className="icon-sm">{ICONS.arrowLeft}</span> Khách hàng
             </button>
             <span>/</span>
             <span className="active">{customer.code}</span>
@@ -103,7 +103,7 @@ export default function CustomerDetailPage({
                 onClick={() => handleCopyCode(customer.code)}
                 aria-label={`Sao chép mã ${customer.code}`}
               >
-                {copiedCode ? '✓' : <span className="icon-sm">{ICONS.copy}</span>}
+                {copiedCode ? <span className="icon-sm">{ICONS.check}</span> : <span className="icon-sm">{ICONS.copy}</span>}
               </button>
             </div>
           </div>
@@ -119,7 +119,8 @@ export default function CustomerDetailPage({
             onClick={onBack}
             data-testid="btn-back-to-customers"
           >
-            <span>← Quay lại danh sách</span>
+            <span className="icon-sm">{ICONS.arrowLeft}</span>
+            Quay lại danh sách
           </button>
         </div>
       </div>

@@ -20,13 +20,27 @@ interface TableSkeletonProps {
  */
 const WIDTHS = ['72%', '54%', '84%', '46%', '66%', '38%', '78%'];
 
-export const TableSkeleton: React.FC<TableSkeletonProps> = ({ columns, rows = 5 }) => (
+export const TableSkeleton: React.FC<TableSkeletonProps> = ({ columns, rows = 8 }) => (
   <>
     {Array.from({ length: rows }).map((_, r) => (
-      <tr key={r} aria-hidden="true">
+      <tr key={r} aria-hidden="true" className="skeleton-row">
         {Array.from({ length: columns }).map((__, c) => (
           <td key={c}>
-            <div className="skeleton skeleton-text" style={{ width: WIDTHS[(r + c) % WIDTHS.length] }} />
+            {/* Cột đầu mô phỏng ô định danh thật (khối vuông + hai dòng chữ) để hàng
+                khung xương CAO BẰNG hàng dữ liệu. Trước đây hàng khung xương chỉ có
+                một thanh 11px nên cao 51px, còn hàng thật cao 72px — mỗi hàng lệch
+                21px, và khi dữ liệu về thì cả bảng nhảy một cú lớn. */}
+            {c === 1 ? (
+              <div className="skeleton-profile">
+                <div className="skeleton skeleton-avatar" />
+                <div className="skeleton-profile__lines">
+                  <div className="skeleton skeleton-text" style={{ width: '70%' }} />
+                  <div className="skeleton skeleton-text skeleton-text--sm" style={{ width: '44%' }} />
+                </div>
+              </div>
+            ) : (
+              <div className="skeleton skeleton-text" style={{ width: WIDTHS[(r + c) % WIDTHS.length] }} />
+            )}
           </td>
         ))}
       </tr>

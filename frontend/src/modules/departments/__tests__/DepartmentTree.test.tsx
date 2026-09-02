@@ -155,7 +155,7 @@ describe('Organization Tree Module — Acceptance Criteria Tests (NCL-01-CN-003)
   it('TC-04: Non-admin users (VT-03) get Access Denied screen', () => {
     render(<DepartmentTreePage currentUserRoles={['VT-03']} currentUserName="Nhân viên IT" />);
 
-    expect(screen.getByText('Từ chối truy cập (Access Denied)')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Bạn không có thẩm quyền/i })).toBeInTheDocument();
     expect(screen.getByText(/Bạn không có thẩm quyền truy cập màn hình này/i)).toBeInTheDocument();
     expect(screen.getByText(/Chức năng Khai báo cây tổ chức chỉ dành riêng cho vai trò/i)).toBeInTheDocument();
   });
