@@ -80,23 +80,15 @@ class PasswordResetNotifierGuardTest {
     void banThat_thieuDiaChiNguoiGui_dungKhoiDong() {
         MailPasswordResetNotifier notifier = new MailPasswordResetNotifier(mock(JavaMailSender.class));
         ReflectionTestUtils.setField(notifier, "fromAddress", "");
-        ReflectionTestUtils.setField(notifier, "frontendBaseUrl", "https://vanhanh.congty.vn");
 
         assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(notifier, "validateConfig"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("app.mail.from");
     }
 
-    @Test
-    void banThat_thieuGocDiaChiGiaoDien_dungKhoiDong() {
-        MailPasswordResetNotifier notifier = new MailPasswordResetNotifier(mock(JavaMailSender.class));
-        ReflectionTestUtils.setField(notifier, "fromAddress", "no-reply@congty.vn");
-        ReflectionTestUtils.setField(notifier, "frontendBaseUrl", "");
-
-        assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(notifier, "validateConfig"))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("app.frontend.base-url");
-    }
+    // Test "thieu goc dia chi giao dien" da bi GO BO cung voi cau hinh do: thu
+    // khoi phuc gio chua MA 6 SO chu khong con lien ket nao, nen app.frontend.base-url
+    // khong con la dieu kien de gui thu duoc.
 
     /**
      * Gui thu that bai KHONG duoc nem loi ra ngoai.
@@ -115,7 +107,6 @@ class PasswordResetNotifierGuardTest {
 
         MailPasswordResetNotifier notifier = new MailPasswordResetNotifier(sender);
         ReflectionTestUtils.setField(notifier, "fromAddress", "no-reply@congty.vn");
-        ReflectionTestUtils.setField(notifier, "frontendBaseUrl", "https://vanhanh.congty.vn");
         ReflectionTestUtils.setField(notifier, "fallbackToLog", false);
 
         User user = new User();
@@ -133,7 +124,6 @@ class PasswordResetNotifierGuardTest {
     void banThat_dayDuCauHinh_khoiDongBinhThuong() {
         MailPasswordResetNotifier notifier = new MailPasswordResetNotifier(mock(JavaMailSender.class));
         ReflectionTestUtils.setField(notifier, "fromAddress", "no-reply@congty.vn");
-        ReflectionTestUtils.setField(notifier, "frontendBaseUrl", "https://vanhanh.congty.vn");
 
         assertThatCode(() -> ReflectionTestUtils.invokeMethod(notifier, "validateConfig"))
                 .doesNotThrowAnyException();

@@ -441,8 +441,17 @@ thư cục bộ như MailHog) mà không phải dựng nguyên cấu hình produ
 lặng không gửi được thư trong khi giao diện vẫn báo "đã gửi" — người dùng bị khoá ngoài mà không ai biết.
 Cần đủ: `SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `MAIL_FROM`, `FRONTEND_BASE_URL`.
 
-**Token lưu trong CSDL dưới dạng SHA-256** (cột `password_reset_tokens.token_hash`), không phải chuỗi thô.
-Đọc được bảng này cũng không đặt lại được mật khẩu của ai.
+**Mã 6 chữ số**, không phải liên kết. Mã lưu trong CSDL dưới dạng SHA-256 của chuỗi `"<userId>:<mã>"`
+(cột `password_reset_tokens.token_hash`) — đọc được bảng này cũng không đặt lại được mật khẩu của ai.
+
+Vì không gian chỉ có 1.000.000 khả năng, mã **bắt buộc** đi kèm ba rào chắn, thiếu một cái là yếu hơn hẳn
+token dài trước đây:
+
+1. **Đếm số lần nhập sai** — quá 5 lần thì mã chết, phải xin mã mới. Việc đếm chạy trong một **giao dịch
+   riêng** (`PasswordResetAttemptRecorder`): nếu đếm chung giao dịch với phần ném lỗi thì Spring cuộn ngược
+   và xoá luôn con số vừa đếm, tức rào chắn không tồn tại.
+2. **Tra cứu theo người dùng**, không theo mã trần — nên `POST /auth/reset-password` bắt buộc có `email`.
+3. **Hạn dùng 10 phút** thay vì 30.
 
 **Giới hạn tần suất:** mặc định 5 lần / 15 phút, chặn theo **cả** địa chỉ IP lẫn địa chỉ email
 (`PASSWORD_RESET_RATE_LIMIT_*`). Vượt hạn mức trả `TOO_MANY_REQUESTS`.

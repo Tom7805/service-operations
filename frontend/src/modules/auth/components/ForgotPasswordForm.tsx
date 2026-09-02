@@ -5,14 +5,15 @@ import { validateForgotPasswordForm, type ForgotPasswordFormErrors } from '../va
 
 interface ForgotPasswordFormProps {
   onBackToLogin: () => void;
+  /** Đã gửi mã xong: chuyển thẳng sang màn nhập mã, kèm email vừa nhập. */
+  onCodeSent: (email: string) => void;
 }
 
-export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordFormProps) {
+export default function ForgotPasswordForm({ onBackToLogin, onCodeSent }: ForgotPasswordFormProps) {
   const [email, setEmail] = useState('');
   const [errors, setErrors] = useState<ForgotPasswordFormErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [sent, setSent] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -27,7 +28,11 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
     setSubmitting(true);
     try {
       await forgotPassword({ email: email.trim() });
-      setSent(true);
+      // Chuyển thẳng sang màn nhập mã. Trước đây dừng ở màn "kiểm tra email của
+      // bạn" vì người dùng phải rời ứng dụng đi bấm liên kết trong thư. Với mã gõ
+      // tay thì họ quay lại đúng màn hình này, nên bắt họ bấm thêm một nút chỉ để
+      // tới ô nhập mã là thừa một bước.
+      onCodeSent(email.trim());
     } catch (err) {
       setServerError(
         err instanceof AuthApiError ? err.message : 'Không thể gửi yêu cầu khôi phục mật khẩu. Vui lòng thử lại.'
@@ -37,25 +42,10 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
     }
   };
 
-  if (sent) {
-    return (
-      <div className="login-card">
-        <h2>Kiểm tra email của bạn</h2>
-        <p className="login-card__intro">
-          Nếu <strong>{email.trim()}</strong> là email đã đăng ký trong hệ thống, một liên kết khôi phục mật
-          khẩu đã được gửi và có hiệu lực trong 30 phút.
-        </p>
-        <button type="button" className="submit" onClick={onBackToLogin}>
-          Quay lại đăng nhập
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="login-card">
       <h2>Quên mật khẩu?</h2>
-      <p className="login-card__intro">Nhập email đã đăng ký, chúng tôi sẽ gửi liên kết đặt lại mật khẩu.</p>
+      <p className="login-card__intro">Nhập email đã đăng ký, chúng tôi sẽ gửi mã đặt lại mật khẩu.</p>
       <form onSubmit={handleSubmit} noValidate>
         <label htmlFor="forgot-email">Email</label>
         <div className="field">
@@ -92,7 +82,7 @@ export default function ForgotPasswordForm({ onBackToLogin }: ForgotPasswordForm
             </>
           ) : (
             <>
-              Gửi liên kết khôi phục <span className="icon-sm">{ICONS.arrowRight}</span>
+              Gửi mã khôi phục <span className="icon-sm">{ICONS.arrowRight}</span>
             </>
           )}
         </button>

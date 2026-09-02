@@ -23,7 +23,10 @@ export interface ForgotPasswordPayload {
 }
 
 export interface ResetPasswordPayload {
-  token: string;
+  /** Email đã nhập ở bước "quên mật khẩu" — máy chủ tra cứu mã theo người dùng. */
+  email: string;
+  /** Mã 6 chữ số nhận qua thư điện tử. */
+  code: string;
   newPassword: string;
 }
 

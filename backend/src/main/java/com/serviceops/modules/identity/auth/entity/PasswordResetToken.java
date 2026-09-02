@@ -41,6 +41,16 @@ public class PasswordResetToken extends BaseEntity {
     @Column(name = "token_hash", nullable = false, unique = true, length = 64)
     private String tokenHash;
 
+    /**
+     * So lan nhap SAI ma khoi phuc. Qua {@link #MAX_ATTEMPTS} lan thi ma chet.
+     *
+     * <p>Bat buoc phai co ke tu khi chuyen sang ma 6 so: khong gian chi 1.000.000
+     * kha nang nen khong dem so lan sai thi do het bang tay cung duoc. Token dai
+     * truoc day khong can dem vi 2^256 la khong the do.</p>
+     */
+    @Column(name = "attempts", nullable = false)
+    private int attempts = 0;
+
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
 
@@ -50,6 +60,9 @@ public class PasswordResetToken extends BaseEntity {
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    /** So lan duoc phep nhap sai truoc khi ma bi vo hieu. */
+    public static final int MAX_ATTEMPTS = 5;
+
     public boolean isExpired() {
         return LocalDateTime.now().isAfter(expiresAt);
     }
@@ -58,7 +71,12 @@ public class PasswordResetToken extends BaseEntity {
         return usedAt != null;
     }
 
+    /** Da nhap sai qua so lan cho phep — coi nhu ma da chet. */
+    public boolean isLockedOut() {
+        return attempts >= MAX_ATTEMPTS;
+    }
+
     public boolean isUsable() {
-        return !isExpired() && !isUsed();
+        return !isExpired() && !isUsed() && !isLockedOut();
     }
 }

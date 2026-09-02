@@ -48,6 +48,7 @@ public class PasswordServiceImpl implements PasswordService {
     private final PasswordEncoder passwordEncoder;
     private final PasswordPolicyValidator passwordPolicyValidator;
     private final PasswordResetNotifier passwordResetNotifier;
+    private final PasswordResetAttemptRecorder attemptRecorder;
 
     @Value("${app.password-reset.token-ttl-minutes:30}")
     private long resetTokenTtlMinutes;
@@ -79,13 +80,18 @@ public class PasswordServiceImpl implements PasswordService {
     @Transactional
     public void forgotPassword(ForgotPasswordReq request) {
         userRepository.findByEmailIgnoreCase(request.getEmail()).ifPresentOrElse(user -> {
-            String rawToken = generateSecureToken();
+            String rawToken = generateResetCode();
 
             PasswordResetToken resetToken = new PasswordResetToken();
             resetToken.setUser(user);
-            // Chi luu BAN BAM. Token tho khong duoc luu o dau ngoai lien ket gui
-            // cho dung nguoi dung do — xem V31__hash_password_reset_tokens.sql.
-            resetToken.setTokenHash(hashToken(rawToken));
+            // Chi luu BAN BAM. Ma tho khong duoc luu o dau ngoai la thu gui cho
+            // dung nguoi dung do — xem V31__hash_password_reset_tokens.sql.
+            //
+            // Bam CA userId cung ma: mot ma "483920" chi co nghia voi dung nguoi
+            // dung do. Neu chi bam rieng ma thi voi khong gian 1.000.000, hai
+            // nguoi dung khac nhau hoan toan co the nhan trung ma va ban bam se
+            // dung nhau — luc do ma cua nguoi nay mo duoc tai khoan nguoi kia.
+            resetToken.setTokenHash(hashResetCode(user.getId(), rawToken));
             resetToken.setExpiresAt(LocalDateTime.now().plusMinutes(resetTokenTtlMinutes));
             passwordResetTokenRepository.save(resetToken);
 
@@ -132,31 +138,54 @@ public class PasswordServiceImpl implements PasswordService {
 
     @Override
     @Transactional(readOnly = true)
-    public boolean isResetTokenValid(String token) {
-        return passwordResetTokenRepository.findByTokenHash(hashToken(token))
-                .map(PasswordResetToken::isUsable)
-                .orElse(false);
+    public boolean isResetCodeValid(String email, String code) {
+        return userRepository.findByEmailIgnoreCase(email)
+                .flatMap(u -> passwordResetTokenRepository
+                        .findFirstByUserIdAndUsedAtIsNullOrderByIdDesc(u.getId())
+                        .filter(PasswordResetToken::isUsable)
+                        .filter(t -> constantTimeEquals(t.getTokenHash(), hashResetCode(u.getId(), code))))
+                .isPresent();
     }
 
     @Override
     @Transactional
     public void resetPassword(ResetPasswordReq request) {
-        // Bam chuoi nguoi dung gui len roi tra cuu theo ban bam. CSDL khong he
-        // biet token tho, nen doc duoc bang nay cung khong dat lai duoc mat khau.
-        PasswordResetToken resetToken = passwordResetTokenRepository
-                .findByTokenHash(hashToken(request.getToken()))
-                .orElseThrow(() -> new BusinessRuleException(ErrorCode.RESET_TOKEN_INVALID,
-                        "Lien ket khoi phuc khong hop le, vui long gui yeu cau moi"));
+        // MOT thong diep loi duy nhat cho MOI truong hop that bai duoi day:
+        // email khong ton tai, chua xin ma, ma het han, ma da dung, nhap sai qua
+        // so lan, hay ma khong khop. Neu tach thong diep ra thi chinh phan hoi loi
+        // se tro thanh cong cu do: "email nay khong ton tai" vs "ma sai" la du de
+        // dung danh sach tai khoan hop le.
+        BusinessRuleException loiChung = new BusinessRuleException(ErrorCode.RESET_TOKEN_INVALID,
+                "Ma khoi phuc khong dung hoac da het han, vui long gui yeu cau moi");
 
-        // NCL-01-CN-008-TC-02: duong dan da qua han dung hoac da duoc dung truoc do.
+        User user = userRepository.findByEmailIgnoreCase(request.getEmail()).orElseThrow(() -> loiChung);
+
+        // Tra cuu theo NGUOI DUNG, khong theo ma. Xem PasswordResetTokenRepository
+        // de biet vi sao — tom tat: tranh trung cheo giua cac nguoi dung, va de co
+        // ban ghi ma dem so lan nhap sai.
+        PasswordResetToken resetToken = passwordResetTokenRepository
+                .findFirstByUserIdAndUsedAtIsNullOrderByIdDesc(user.getId())
+                .orElseThrow(() -> loiChung);
+
         if (!resetToken.isUsable()) {
-            throw new BusinessRuleException(ErrorCode.RESET_TOKEN_INVALID,
-                    "Duong dan khoi phuc da het han, vui long gui yeu cau moi");
+            throw loiChung;
+        }
+
+        if (!constantTimeEquals(resetToken.getTokenHash(), hashResetCode(user.getId(), request.getCode()))) {
+            // DEM SO LAN SAI trong mot GIAO DICH RIENG.
+            //
+            // Phai tach ra vi ngay sau day ta NEM LOI, ma nem loi runtime lam
+            // Spring cuon nguoc giao dich hien tai — keo theo xoa luon con so vua
+            // dem. Ban dau dem thang o day va bo dem luon quay ve 0, tuc rao chan
+            // chong do khong ton tai. Unit test khong bat duoc vi mock giu gia tri
+            // trong bo nho, khong co giao dich nao de cuon nguoc; chi chay that
+            // moi lo ra.
+            attemptRecorder.ghiNhanLanSai(resetToken.getId(), user.getId());
+            throw loiChung;
         }
 
         passwordPolicyValidator.validate(request.getNewPassword());
 
-        User user = resetToken.getUser();
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         user.bumpTokenVersion();
         userRepository.save(user);
@@ -167,10 +196,36 @@ public class PasswordServiceImpl implements PasswordService {
         log.info("PASSWORD_RESET userId={} username={}", user.getId(), user.getUsername());
     }
 
-    private String generateSecureToken() {
-        byte[] bytes = new byte[32];
-        SECURE_RANDOM.nextBytes(bytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    /**
+     * Sinh ma khoi phuc 6 chu so, tu {@link SecureRandom}.
+     *
+     * <p>Dung {@code nextInt(1_000_000)} chu khong phai {@code nextInt() % 1_000_000}:
+     * phep chia du tren mot so ngau nhien khong chia het se lam vai gia tri dau
+     * xuat hien nhieu hon cac gia tri khac (modulo bias), tuc ma khong con deu.</p>
+     *
+     * <p>Dinh dang {@code %06d} de giu du 6 chu so — thieu no thi ma 42 se hien
+     * ra la "42" thay vi "000042", va nguoi dung khong biet phai go bao nhieu so.</p>
+     */
+    private String generateResetCode() {
+        return String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
+    }
+
+    /** Bam ma GAN VOI nguoi dung, de mot ma chi co nghia voi dung tai khoan do. */
+    private String hashResetCode(Long userId, String code) {
+        return hashToken(userId + ":" + code);
+    }
+
+    /**
+     * So sanh khong phu thuoc noi dung, tranh ro thong tin qua THOI GIAN chay.
+     *
+     * <p>{@link String#equals} dung ngay khi gap ky tu dau tien khac nhau, nen
+     * thoi gian chay cua no tiet lo "doan cua ban dung duoc bao nhieu ky tu dau".
+     * Voi mot ma ngan nhu the nay, do la thu ke tan cong co the do duoc va dung
+     * de do dan tung ky tu thay vi do ca ma.</p>
+     */
+    private boolean constantTimeEquals(String a, String b) {
+        return MessageDigest.isEqual(
+                a.getBytes(StandardCharsets.UTF_8), b.getBytes(StandardCharsets.UTF_8));
     }
 
     /**

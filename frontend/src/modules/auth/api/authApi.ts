@@ -129,9 +129,10 @@ export async function forgotPassword(payload: ForgotPasswordPayload): Promise<vo
 }
 
 /** NCL-01-CN-008-TC-02: kiểm tra liên kết khôi phục còn hiệu lực trước khi hiển thị form đặt lại. */
-export async function validateResetToken(token: string): Promise<boolean> {
+export async function validateResetCode(email: string, code: string): Promise<boolean> {
   return requestAuthBackend<boolean>(
-    `${API_BASE_URL}/auth/reset-password/validate?token=${encodeURIComponent(token)}`,
+    `${API_BASE_URL}/auth/reset-password/validate`
+      + `?email=${encodeURIComponent(email)}&code=${encodeURIComponent(code)}`,
     { method: 'GET' }
   );
 }

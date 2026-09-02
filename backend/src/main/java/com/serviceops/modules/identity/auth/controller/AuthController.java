@@ -61,10 +61,20 @@ public class AuthController {
         return BaseRes.ok(null);
     }
 
-    /** NCL-01-CN-008-TC-02: kiem tra lien ket khoi phuc con hieu luc truoc khi hien thi form dat lai. */
+    /**
+     * NCL-01-CN-008-TC-02: kiem tra ma khoi phuc con hieu luc.
+     *
+     * <p>Can CA email lan ma vi may chu tra cuu ma theo nguoi dung. Diem cuoi nay
+     * KHONG lam tang so lan nhap sai — no chi de giao dien kiem tra truoc, khong
+     * phai mot lan thu that. Nhung no van di qua bo gioi han tan suat, neu khong
+     * chinh no se thanh duong do ma khong bi dem.</p>
+     */
     @GetMapping("/reset-password/validate")
-    public BaseRes<Boolean> validateResetToken(@RequestParam String token) {
-        return BaseRes.ok(passwordService.isResetTokenValid(token));
+    public BaseRes<Boolean> validateResetCode(@RequestParam String email,
+                                              @RequestParam String code,
+                                              HttpServletRequest httpRequest) {
+        passwordResetRateLimiter.check(extractIp(httpRequest), email);
+        return BaseRes.ok(passwordService.isResetCodeValid(email, code));
     }
 
     @PostMapping("/reset-password")

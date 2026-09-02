@@ -7,6 +7,7 @@ import com.serviceops.modules.identity.auth.dto.request.ResetPasswordReq;
 import com.serviceops.modules.identity.auth.entity.PasswordResetToken;
 import com.serviceops.modules.identity.auth.repository.PasswordResetTokenRepository;
 import com.serviceops.modules.identity.auth.service.PasswordResetNotifier;
+import com.serviceops.modules.identity.auth.service.impl.PasswordResetAttemptRecorder;
 import com.serviceops.modules.identity.auth.service.impl.PasswordServiceImpl;
 import com.serviceops.modules.identity.auth.validator.PasswordPolicyValidator;
 import com.serviceops.modules.identity.user.entity.User;
@@ -65,8 +66,9 @@ class PasswordResetTc03Test {
     @BeforeEach
     void setUp() {
         passwordService = new PasswordServiceImpl(userRepository, tokenRepository,
-                passwordEncoder, new PasswordPolicyValidator(), notifier);
-        ReflectionTestUtils.setField(passwordService, "resetTokenTtlMinutes", 30L);
+                passwordEncoder, new PasswordPolicyValidator(), notifier,
+                new PasswordResetAttemptRecorder(tokenRepository));
+        ReflectionTestUtils.setField(passwordService, "resetTokenTtlMinutes", 10L);
 
         user = new User();
         user.setId(7L);
@@ -147,8 +149,9 @@ class PasswordResetTc03Test {
             csdlGia.put(t.getTokenHash(), t);
             return t;
         });
-        when(tokenRepository.findByTokenHash(anyString()))
-                .thenAnswer(inv -> Optional.ofNullable(csdlGia.get(inv.<String>getArgument(0))));
+        // Tra cuu theo NGUOI DUNG (khong theo ma) — dung nhu service lam
+        when(tokenRepository.findFirstByUserIdAndUsedAtIsNullOrderByIdDesc(user.getId()))
+                .thenAnswer(inv -> csdlGia.values().stream().filter(t -> t.getUsedAt() == null).findFirst());
         when(passwordEncoder.encode("MatKhauMoi9")).thenReturn("hash-moi");
 
         // --- Buoc 1: yeu cau khoi phuc, lay token THO tu kenh gui ---
@@ -157,16 +160,17 @@ class PasswordResetTc03Test {
         passwordService.forgotPassword(forgot);
 
         ArgumentCaptor<String> rawCaptor = ArgumentCaptor.forClass(String.class);
-        verify(notifier).sendResetLink(eq(user), rawCaptor.capture(), eq(30L));
+        verify(notifier).sendResetLink(eq(user), rawCaptor.capture(), eq(10L));
         String tokenTho = rawCaptor.getValue();
 
-        // --- Buoc 2: token con hieu luc ---
-        assertThat(passwordService.isResetTokenValid(tokenTho))
-                .as("token vua tao phai dung duoc").isTrue();
+        // --- Buoc 2: ma con hieu luc ---
+        assertThat(passwordService.isResetCodeValid(user.getEmail(), tokenTho))
+                .as("ma vua tao phai dung duoc").isTrue();
 
         // --- Buoc 3: dat lai mat khau THANH CONG (TC-03.2) ---
         ResetPasswordReq reset = new ResetPasswordReq();
-        reset.setToken(tokenTho);
+        reset.setEmail(user.getEmail());
+        reset.setCode(tokenTho);
         reset.setNewPassword("MatKhauMoi9");
         passwordService.resetPassword(reset);
 
@@ -175,12 +179,13 @@ class PasswordResetTc03Test {
 
         // --- Buoc 4: token da bi danh dau va KHONG con hieu luc (TC-03.3) ---
         assertThat(csdlGia.get(csdlGia.keySet().iterator().next()).getUsedAt()).isNotNull();
-        assertThat(passwordService.isResetTokenValid(tokenTho))
-                .as("token da dung thi phai het hieu luc ngay").isFalse();
+        assertThat(passwordService.isResetCodeValid(user.getEmail(), tokenTho))
+                .as("ma da dung thi phai het hieu luc ngay").isFalse();
 
         // --- Buoc 5: DUNG LAI lan hai phai bi tu choi (chong replay) ---
         ResetPasswordReq dungLai = new ResetPasswordReq();
-        dungLai.setToken(tokenTho);
+        dungLai.setEmail(user.getEmail());
+        dungLai.setCode(tokenTho);
         dungLai.setNewPassword("MatKhauKhac8");
 
         assertThatThrownBy(() -> passwordService.resetPassword(dungLai))
@@ -194,12 +199,15 @@ class PasswordResetTc03Test {
     }
 
     @Test
-    @DisplayName("TC-03.3: token bi sua tay khong tra ve thong tin gi khac token khong ton tai")
-    void tokenBiSuaTay_cungBiTuChoi() {
-        when(tokenRepository.findByTokenHash(anyString())).thenReturn(Optional.empty());
+    @DisplayName("TC-03.3: ma bia dat khong tra ve thong tin gi khac email khong ton tai")
+    void maBiaDat_cungBiTuChoi() {
+        when(userRepository.findByEmailIgnoreCase(user.getEmail())).thenReturn(Optional.of(user));
+        when(tokenRepository.findFirstByUserIdAndUsedAtIsNullOrderByIdDesc(user.getId()))
+                .thenReturn(Optional.empty());
 
         ResetPasswordReq req = new ResetPasswordReq();
-        req.setToken("token-bia-dat");
+        req.setEmail(user.getEmail());
+        req.setCode("999999");
         req.setNewPassword("MatKhauMoi9");
 
         assertThatThrownBy(() -> passwordService.resetPassword(req))

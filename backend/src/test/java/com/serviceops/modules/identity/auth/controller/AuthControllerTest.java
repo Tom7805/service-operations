@@ -139,9 +139,10 @@ class AuthControllerTest {
 
     @Test
     void validateResetToken_khongCanDangNhap_traVeKetQua() throws Exception {
-        when(passwordService.isResetTokenValid("abc")).thenReturn(true);
+        when(passwordService.isResetCodeValid("ai.do@congty.vn", "483920")).thenReturn(true);
 
-        mockMvc.perform(get("/auth/reset-password/validate").param("token", "abc"))
+        mockMvc.perform(get("/auth/reset-password/validate")
+                        .param("email", "ai.do@congty.vn").param("code", "483920"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").value(true));
     }
@@ -152,7 +153,8 @@ class AuthControllerTest {
                 .when(passwordService).resetPassword(any());
 
         ResetPasswordReq req = new ResetPasswordReq();
-        req.setToken("het-han");
+        req.setEmail("ai.do@congty.vn");
+        req.setCode("000000");
         req.setNewPassword("MatKhauMoi2");
 
         mockMvc.perform(post("/auth/reset-password")

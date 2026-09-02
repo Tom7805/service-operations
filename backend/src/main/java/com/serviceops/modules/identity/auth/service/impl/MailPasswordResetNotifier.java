@@ -1,5 +1,6 @@
 package com.serviceops.modules.identity.auth.service.impl;
 
+import com.serviceops.modules.identity.auth.entity.PasswordResetToken;
 import com.serviceops.modules.identity.auth.service.PasswordResetNotifier;
 import com.serviceops.modules.identity.user.entity.User;
 import jakarta.annotation.PostConstruct;
@@ -47,8 +48,6 @@ public class MailPasswordResetNotifier implements PasswordResetNotifier {
     @Value("${app.mail.from:}")
     private String fromAddress;
 
-    @Value("${app.frontend.base-url:}")
-    private String frontendBaseUrl;
 
     /**
      * Khi gui thu that bai, co ghi lien ket ra log khong?
@@ -65,14 +64,17 @@ public class MailPasswordResetNotifier implements PasswordResetNotifier {
     private boolean fallbackToLog;
 
     /**
-     * {@code spring.mail.host} da duoc dieu kien tren lop bao dam, nen o day chi
-     * con kiem tra hai gia tri ma thieu chung thi thu van gui di nhung VO DUNG:
-     * khong co dia chi nguoi gui, hoac lien ket trong thu tro di dau khong biet.
+     * {@code spring.mail.host} da duoc dieu kien tren lop bao dam. Chi con kiem
+     * tra dia chi nguoi gui: thieu no thi thu van "gui" nhung khong may chu nao
+     * nhan, va loi chi lo ra khi da co nguoi dung that dang cho.
+     *
+     * <p>Truoc day cho nay con bat buoc {@code app.frontend.base-url} de dung
+     * lien ket khoi phuc. Da bo: thu gio chua MA 6 SO chu khong con lien ket nao,
+     * nen bat buoc no la chan khoi dong vi mot thu khong con duoc dung toi.</p>
      */
     @PostConstruct
     void validateConfig() {
         requireConfigured("app.mail.from (MAIL_FROM)", fromAddress);
-        requireConfigured("app.frontend.base-url (FRONTEND_BASE_URL)", frontendBaseUrl);
     }
 
     private void requireConfigured(String key, String value) {
@@ -122,33 +124,29 @@ public class MailPasswordResetNotifier implements PasswordResetNotifier {
             if (fallbackToLog) {
                 MOCK_MAIL_LOG.info(
                         "[GUI THU THAT BAI - GHI RA LOG VI DANG O MOI TRUONG PHAT TRIEN] "
-                                + "Lien ket khoi phuc cho {} (het han sau {} phut): {}",
-                        user.getEmail(), ttlMinutes, buildResetLink(rawToken));
+                                + "MA KHOI PHUC cho {} (het han sau {} phut): {}",
+                        user.getEmail(), ttlMinutes, rawToken);
             }
         }
     }
 
-    private String buildBody(User user, String rawToken, long ttlMinutes) {
+    private String buildBody(User user, String maKhoiPhuc, long ttlMinutes) {
+        // Dat MA len dau, tach rieng mot dong. Nguoi dung mo thu ra la thay ngay
+        // con so can go, khong phai doc het doan van moi tim thay.
         return """
                 Chao %s,
 
-                Chung toi nhan duoc yeu cau dat lai mat khau cho tai khoan %s.
-                Bam vao lien ket duoi day de dat mat khau moi:
+                Ma khoi phuc mat khau cho tai khoan %s cua ban la:
 
-                %s
+                    %s
 
-                Lien ket co hieu luc trong %d phut va chi dung duoc mot lan.
+                Nhap ma nay vao man hinh dat lai mat khau. Ma co hieu luc trong %d phut,
+                chi dung duoc mot lan, va se bi vo hieu neu nhap sai qua %d lan.
 
                 Neu ban khong yeu cau dieu nay, hay bo qua thu nay. Mat khau hien tai
                 cua ban khong thay doi.
                 """
-                .formatted(user.getFullName(), user.getUsername(), buildResetLink(rawToken), ttlMinutes);
-    }
-
-    private String buildResetLink(String rawToken) {
-        String base = frontendBaseUrl.endsWith("/")
-                ? frontendBaseUrl.substring(0, frontendBaseUrl.length() - 1)
-                : frontendBaseUrl;
-        return base + "/?token=" + rawToken;
+                .formatted(user.getFullName(), user.getUsername(), maKhoiPhuc,
+                        ttlMinutes, PasswordResetToken.MAX_ATTEMPTS);
     }
 }

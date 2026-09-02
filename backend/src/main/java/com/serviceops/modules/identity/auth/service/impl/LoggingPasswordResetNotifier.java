@@ -58,14 +58,8 @@ public class LoggingPasswordResetNotifier implements PasswordResetNotifier {
     @Override
     public void sendResetLink(User user, String rawToken, long ttlMinutes) {
         MOCK_MAIL_LOG.info(
-                "[GIA LAP - CHI MOI TRUONG PHAT TRIEN] Lien ket khoi phuc cho {} (het han sau {} phut): {}",
-                user.getEmail(), ttlMinutes, buildResetLink(rawToken));
+                "[GIA LAP - CHI MOI TRUONG PHAT TRIEN] MA KHOI PHUC cho {} (het han sau {} phut): {}",
+                user.getEmail(), ttlMinutes, rawToken);
     }
 
-    private String buildResetLink(String rawToken) {
-        String base = frontendBaseUrl.endsWith("/")
-                ? frontendBaseUrl.substring(0, frontendBaseUrl.length() - 1)
-                : frontendBaseUrl;
-        return base + "/?token=" + rawToken;
-    }
 }

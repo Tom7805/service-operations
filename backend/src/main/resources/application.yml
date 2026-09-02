@@ -42,7 +42,9 @@ app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
   password-reset:
-    token-ttl-minutes: ${PASSWORD_RESET_TOKEN_TTL_MINUTES:30}
+    # 10 phut, khong phai 30. Ma 6 so chi co 1.000.000 kha nang nen cua so tan cong
+    # phai hep hon nhieu so voi token dai truoc day (2^256).
+    token-ttl-minutes: ${PASSWORD_RESET_TOKEN_TTL_MINUTES:10}
     # Gioi han tan suat cho /auth/forgot-password — chan theo CA IP lan email.
     # Long hon 2FA vi quen mat khau la thao tac binh thuong, nguoi dung that co
     # the bam lai vai lan khi cho thu.

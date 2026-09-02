@@ -4,7 +4,7 @@ import {
   LoginRequestError,
   changePassword,
   forgotPassword,
-  validateResetToken,
+  validateResetCode,
   resetPassword,
   verifyTwoFactor,
   getTwoFactorConfigs,
@@ -80,18 +80,20 @@ describe('authApi (NCL-01-CN-001, NCL-01-CN-008)', () => {
     await expect(forgotPassword({ email: 'khongton@example.com' })).resolves.toBeUndefined();
   });
 
-  it('validateResetToken: trả về false khi liên kết hết hạn/không tồn tại', async () => {
+  it('validateResetCode: trả về false khi mã hết hạn/không đúng', async () => {
     vi.stubGlobal('fetch', mockFetchOnce(200, { success: true, data: false }));
-    await expect(validateResetToken('het-han')).resolves.toBe(false);
+    await expect(validateResetCode('ai.do@congty.vn', '000000')).resolves.toBe(false);
   });
 
-  it('resetPassword: ném AuthApiError với mã RESET_TOKEN_INVALID khi liên kết không hợp lệ', async () => {
+  it('resetPassword: ném AuthApiError với mã RESET_TOKEN_INVALID khi mã không hợp lệ', async () => {
     vi.stubGlobal(
       'fetch',
       mockFetchOnce(400, { success: false, errorCode: 'RESET_TOKEN_INVALID', message: 'Lien ket khong hop le' })
     );
 
-    await expect(resetPassword({ token: 'het-han', newPassword: 'MatKhauMoi2' })).rejects.toBeInstanceOf(AuthApiError);
+    await expect(
+      resetPassword({ email: 'ai.do@congty.vn', code: '000000', newPassword: 'MatKhauMoi2' })
+    ).rejects.toBeInstanceOf(AuthApiError);
   });
 
   // NCL-01-CN-009
