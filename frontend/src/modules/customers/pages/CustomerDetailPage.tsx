@@ -1,8 +1,16 @@
 import { useState } from 'react';
-import type { Customer, CustomerContact, ContactAuditItem } from '../types/customerTypes';
+import type {
+  Customer,
+  CustomerContact,
+  ContactAuditItem,
+  CustomerCreatePayload,
+  CustomerUpdateWithOverridePayload,
+} from '../types/customerTypes';
 import ContactList from '../components/ContactList';
 import CustomerOverviewPanel from '../components/CustomerOverviewPanel';
 import CustomerSegmentPanel from '../components/CustomerSegmentPanel';
+import CustomerFormModal from '../components/CustomerFormModal';
+import { updateCustomer, updateCustomerWithOverride } from '../api/customersApi';
 import { ICONS } from '../../../components/common/icons';
 
 type CustomerDetailTab = 'CONTACTS' | 'SEGMENT' | 'SUMMARY' | 'OVERVIEW' | 'AUDIT';
@@ -45,6 +53,36 @@ export default function CustomerDetailPage({
   const [activeTab, setActiveTab] = useState<CustomerDetailTab>(initialTab);
   const [auditLogs, setAuditLogs] = useState<ContactAuditItem[]>([]);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+
+  const isMerged = customer.status === 'MERGED';
+
+  const applyEdited = (updated: Customer) => {
+    setCustomer((prev) => ({ ...prev, ...updated }));
+    onCustomerUpdated?.(updated);
+  };
+
+  const handleEditSubmit = async (payload: CustomerCreatePayload) => {
+    const updated = await updateCustomer(customer.id, payload);
+    applyEdited(updated);
+    setAuditLogs((prev) => [
+      {
+        id: `update-${Date.now()}`,
+        action: 'Chỉnh sửa hồ sơ',
+        actor: currentUserName,
+        timestamp: new Date().toLocaleString('vi-VN'),
+        detail: `Cập nhật thông tin hồ sơ khách hàng ${customer.code}`,
+      },
+      ...prev,
+    ]);
+    return updated;
+  };
+
+  const handleEditOverrideSubmit = async (payload: CustomerUpdateWithOverridePayload) => {
+    const updated = await updateCustomerWithOverride(customer.id, payload);
+    applyEdited(updated);
+    return updated;
+  };
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code).then(() => {
@@ -112,7 +150,18 @@ export default function CustomerDetailPage({
           </p>
         </div>
 
-        <div>
+        <div className="customer-detail-header__actions">
+          {!isMerged && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setIsEditOpen(true)}
+              data-testid="btn-edit-customer"
+            >
+              <span className="icon-sm">{ICONS.edit}</span>
+              Chỉnh sửa hồ sơ
+            </button>
+          )}
           <button
             type="button"
             className="btn btn-secondary btn-back"
@@ -346,6 +395,15 @@ export default function CustomerDetailPage({
           </div>
         )}
       </div>
+
+      <CustomerFormModal
+        isOpen={isEditOpen}
+        mode="edit"
+        initialCustomer={customer}
+        onClose={() => setIsEditOpen(false)}
+        onSubmit={handleEditSubmit}
+        onOverrideSubmit={handleEditOverrideSubmit}
+      />
     </div>
   );
 }

@@ -5,6 +5,8 @@ import com.serviceops.modules.customer.dto.request.CustomerCreateReq;
 import com.serviceops.modules.customer.dto.request.CustomerCreateWithOverrideReq;
 import com.serviceops.modules.customer.dto.request.CustomerSearchReq;
 import com.serviceops.modules.customer.dto.request.CustomerSegmentReq;
+import com.serviceops.modules.customer.dto.request.CustomerUpdateReq;
+import com.serviceops.modules.customer.dto.request.CustomerUpdateWithOverrideReq;
 import com.serviceops.modules.customer.dto.response.CustomerRes;
 import com.serviceops.modules.customer.dto.response.CustomerOverviewRes;
 import com.serviceops.modules.customer.dto.response.DuplicateCandidateRes;
@@ -15,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -69,6 +72,24 @@ public class CustomerController {
 			@Valid @RequestBody CustomerCreateWithOverrideReq request) {
 		return BaseRes.ok("Tao ho so khach hang thanh cong (bo qua canh bao trung)",
 				customerService.createWithOverride(request.customer(), request.override()));
+	}
+
+	/** Chinh sua thong tin ho so khach hang (ten / MST / SDT / nganh / dia chi). */
+	@PutMapping("/{customerId}")
+	@PreAuthorize("hasRole('VT-04') or hasRole('VT-02')")
+	public BaseRes<CustomerRes> update(@PathVariable Long customerId,
+			@Valid @RequestBody CustomerUpdateReq request) {
+		return BaseRes.ok("Cap nhat ho so khach hang thanh cong",
+				customerService.update(customerId, request));
+	}
+
+	/** Chinh sua ho so khach hang bo qua canh bao trung, bat buoc kem ly do. */
+	@PostMapping("/{customerId}/update-with-override")
+	@PreAuthorize("hasRole('VT-04') or hasRole('VT-02')")
+	public BaseRes<CustomerRes> updateWithOverride(@PathVariable Long customerId,
+			@Valid @RequestBody CustomerUpdateWithOverrideReq request) {
+		return BaseRes.ok("Cap nhat ho so khach hang thanh cong (bo qua canh bao trung)",
+				customerService.updateWithOverride(customerId, request.customer(), request.override()));
 	}
 
 	/** NCL-02-CN-005: gan nganh nghe, quy mo va muc do uu tien cho khach hang. */

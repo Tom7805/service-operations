@@ -1351,6 +1351,47 @@ body { background: var(--canvas); }
 .priority-tag--medium { color: #956400; background: #FBF3DB; border-color: rgba(149,100,0,.22); }
 .priority-tag--high { color: #9F2F2D; background: #FDEBEC; border-color: rgba(159,47,45,.20); }
 
+/* Bảng khách hàng: 7 cột, bố cục cố định để không tràn khung (bỏ cuộn ngang).
+   Thao tác gộp vào menu kebab (⋮) như UserTable / DepartmentTree. */
+.customer-data-table { table-layout: fixed; }
+.customer-data-table th:nth-child(1), .customer-data-table td:nth-child(1) { width: 27%; }
+.customer-data-table th:nth-child(2), .customer-data-table td:nth-child(2) { width: 15%; }
+.customer-data-table th:nth-child(3), .customer-data-table td:nth-child(3) { width: 9%; }
+.customer-data-table th:nth-child(4), .customer-data-table td:nth-child(4) { width: 11%; }
+.customer-data-table th:nth-child(5), .customer-data-table td:nth-child(5) { width: 23%; }
+.customer-data-table th:nth-child(6), .customer-data-table td:nth-child(6) { width: 13%; }
+.customer-data-table th:nth-child(7), .customer-data-table td:nth-child(7) { width: 52px; }
+
+/* Dòng phụ dưới tên khách hàng: mã KH (mono) + mã số thuế, đều muted. */
+.customer-code-sub {
+  font-size: 12px;
+  color: #787774;
+  font-family: var(--font-mono);
+  letter-spacing: var(--track-mono);
+  margin-top: 2px;
+}
+.customer-taxcode-sub {
+  font-size: 12px;
+  color: #9B9A97;
+  margin-top: 1px;
+}
+
+/* Cột "Quy mô" / "Ưu tiên": mỗi cột một nhãn, cỡ chữ nhỏ hơn cho khớp bề rộng. */
+.customer-data-table td:nth-child(3) .company-size-tag,
+.customer-data-table td:nth-child(4) .priority-tag { font-size: 12.5px; padding: 2px 8px; }
+
+/* Địa chỉ: một dòng, cắt bằng dấu … — chi tiết xem ở tooltip / trang chi tiết. */
+.customer-address-cell {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.customer-actions-cell { text-align: right; overflow: visible; }
+.customer-actions-cell .row-menu { justify-content: flex-end; }
+
 .segment-current-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1424,7 +1465,7 @@ body { background: var(--canvas); }
 
 .toast-notification {
   position: fixed;
-  top: 24px;
+  bottom: 24px;
   right: 24px;
   z-index: 1050;
   min-width: 320px;
@@ -1705,6 +1746,7 @@ body { background: var(--canvas); }
 /* Customer Detail Page Styling */
 .customer-detail-page { max-width: 1280px; margin: 0 auto; padding: 24px; }
 .customer-detail-header { margin-bottom: 20px; }
+.customer-detail-header__actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .breadcrumb-btn { background: none; border: none; font-size: 14.5px; color: #787774; font-weight: 600; cursor: pointer; padding: 0; transition: color 0.15s var(--ease-out); }
 .breadcrumb-btn:hover { color: #111111; text-decoration: underline; }
 .customer-title-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 4px 0; }
@@ -1820,6 +1862,17 @@ body { background: var(--canvas); }
 .row-menu__panel--open { display: flex; animation: row-menu-in var(--dur-base) var(--ease-out); transform-origin: top right; }
 @keyframes row-menu-in {
   from { opacity: 0; transform: scale(0.97) translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+/* Dòng cuối cùng của bảng: card cha (.user-table-card) có overflow: hidden để bo
+   góc, panel mở xuống bị cắt cụt ngay rìa dưới card thay vì chờ tới mép màn
+   hình. RowActionsMenu đo trước khoảng trống lúc mở và gắn lớp này — panel bật
+   NGƯỢC LÊN TRÊN nút bấm, nằm gọn trong phần thân bảng đã hiện sẵn nên không
+   còn gì để cắt. */
+.row-menu__panel--up { top: auto; bottom: calc(100% + 4px); transform-origin: bottom right; }
+.row-menu__panel--up.row-menu__panel--open { animation: row-menu-in-up var(--dur-base) var(--ease-out); }
+@keyframes row-menu-in-up {
+  from { opacity: 0; transform: scale(0.97) translateY(4px); }
   to   { opacity: 1; transform: none; }
 }
 .row-menu__item {
@@ -2118,6 +2171,15 @@ body { background: var(--canvas); }
 .department-tree-container > .tree-node-wrapper:nth-child(n+3) { animation-delay: 60ms; }
 /* Nhanh con tuyet doi khong tu xo: chung di theo nhanh cha. */
 .tree-children-container .tree-node-wrapper { animation: none !important; }
+/* Menu (⋮) cua mot nhanh CAP GOC bi nhanh ke duoi de len: dong hoat hinh vao
+   trang ("block-in" o tren, xay ra tren animation-name gan opacity/transform)
+   khien MOI .tree-node-wrapper tu lap thanh mot ngu canh xep chong RIENG, du
+   .tree-node-card ben trong da duoc z-index: 30 (khoi :has() o tren). z-index
+   do chi thang duoc CAC PHAN TU CUNG NGU CANH voi no — tuc la trong long
+   chinh wrapper cua no — khong thang duoc wrapper KE TIEP, thu duoc ve SAU
+   theo thu tu DOM nen luon nam tren. Phai nang chinh CAI WRAPPER len thi menu
+   moi thoat duoc canh xep chong cua rieng no. */
+.tree-node-wrapper:has(.row-menu__panel--open) { z-index: 30; }
 
 /* ---------- Hé lộ khi cuộn tới (IntersectionObserver, không phải scroll listener) ----------
    Phần tử nằm dưới nếp gấp không xổ lúc tải trang — nó chờ tới khi thực sự lọt vào

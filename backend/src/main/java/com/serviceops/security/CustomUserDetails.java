@@ -16,6 +16,7 @@ public class CustomUserDetails implements UserDetails {
 
     private final Long id;
     private final String username;
+    private final String fullName;
     private final String passwordHash;
     private final boolean enabled;
     private final List<String> roleCodes;
@@ -26,6 +27,7 @@ public class CustomUserDetails implements UserDetails {
     public CustomUserDetails(User user, List<String> roleCodes, UserScope scope) {
         this.id = user.getId();
         this.username = user.getUsername();
+        this.fullName = user.getFullName();
         this.passwordHash = user.getPasswordHash();
         this.enabled = user.getStatus() == UserStatus.ACTIVE;
         this.roleCodes = roleCodes;

@@ -8,6 +8,8 @@ vi.mock('../api/customersApi', () => ({
   createCustomer: vi.fn(),
   checkCustomerDuplicate: vi.fn().mockResolvedValue([]),
   createCustomerWithOverride: vi.fn(),
+  updateCustomer: vi.fn(),
+  updateCustomerWithOverride: vi.fn(),
   CustomerApiError: class extends Error {
     constructor(public code: string, message: string, public statusCode?: number) {
       super(message);
@@ -213,6 +215,49 @@ describe('CustomerListPage Component (NCL-02-CN-001-CV-05)', () => {
 
       expect(screen.getByText('Công ty Alpha')).toBeInTheDocument();
       expect(screen.queryByText('Công ty Beta')).toBeNull();
+    });
+  });
+
+  describe('Chỉnh sửa hồ sơ khách hàng', () => {
+    it('mở menu → "Chỉnh sửa hồ sơ" → lưu thành công cập nhật ngay dòng trong bảng', async () => {
+      const initialCustomers = [
+        {
+          id: 7,
+          code: 'KH-000007',
+          name: 'Công ty Gamma',
+          taxCode: '0107777777',
+          phone: '0912345678',
+          industry: 'Logistics',
+          address: 'Đà Nẵng',
+        },
+      ];
+
+      vi.mocked(customersApi.updateCustomer).mockResolvedValue({
+        ...initialCustomers[0],
+        name: 'Công ty Gamma (đã đổi tên)',
+        taxCode: '0107777777',
+      });
+
+      render(
+        <CustomerListPage currentUserRoles={['VT-04']} initialCustomers={initialCustomers} />
+      );
+
+      fireEvent.click(screen.getByLabelText('Thao tác cho Công ty Gamma'));
+      fireEvent.click(screen.getByTestId('btn-edit-7'));
+
+      const nameInput = await screen.findByLabelText(/Tên khách hàng/i);
+      expect(nameInput).toHaveValue('Công ty Gamma');
+
+      fireEvent.change(nameInput, { target: { value: 'Công ty Gamma (đã đổi tên)' } });
+      fireEvent.click(screen.getByRole('button', { name: /Lưu thay đổi/i }));
+
+      await waitFor(() => {
+        expect(customersApi.updateCustomer).toHaveBeenCalledWith(
+          7,
+          expect.objectContaining({ name: 'Công ty Gamma (đã đổi tên)' })
+        );
+        expect(screen.getByText('Công ty Gamma (đã đổi tên)')).toBeInTheDocument();
+      });
     });
   });
 });

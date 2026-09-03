@@ -7,6 +7,9 @@ export interface AuthSession {
   roles: string[];
 }
 
+/** Thông tin phiên hiện tại từ GET /auth/me — dùng để làm mới vai trò/họ tên khi đang đăng nhập. */
+export type CurrentUser = Pick<AuthSession, 'userId' | 'username' | 'fullName' | 'roles'>;
+
 export interface ApiError {
   errorCode?: string;
   message?: string;

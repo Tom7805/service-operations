@@ -58,6 +58,15 @@ public class Customer extends BaseEntity {
 	@Column(name = "created_by", length = 100)
 	private String createdBy;
 
+	/**
+	 * Nguoi phu trach ho so (QTN-01) — mac dinh la nguoi tao. Dung de tinh
+	 * pham vi DEPARTMENT/SELF khi liet ke: phong ban cua khach hang duoc suy
+	 * GIAN TIEP tu {@code users.department_id} cua chinh chu so huu nay tai
+	 * thoi diem truy van, khong luu lap lai o day.
+	 */
+	@Column(name = "owner_id")
+	private Long ownerId;
+
 	@Column(name = "created_at", nullable = false)
 	private LocalDateTime createdAt;
 }

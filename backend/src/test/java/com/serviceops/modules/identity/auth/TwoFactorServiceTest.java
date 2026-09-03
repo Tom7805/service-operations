@@ -12,6 +12,7 @@ import com.serviceops.modules.identity.auth.repository.TwoFactorSettingRepositor
 import com.serviceops.modules.identity.auth.repository.TwoFactorConfigAuditRepository;
 import com.serviceops.modules.identity.auth.repository.UserSessionRepository;
 import com.serviceops.modules.identity.auth.service.impl.TwoFactorServiceImpl;
+import com.serviceops.modules.identity.auth.service.impl.TwoFactorVerificationTransaction;
 import com.serviceops.modules.identity.user.entity.User;
 import com.serviceops.modules.identity.user.entity.Role;
 import com.serviceops.modules.identity.user.enums.UserStatus;
@@ -83,10 +84,14 @@ class TwoFactorServiceTest {
 
 	@BeforeEach
 	void setUp() {
+		TwoFactorVerificationTransaction verificationTransaction = new TwoFactorVerificationTransaction(
+				userSessionRepository, userRepository, userRoleScopeRepository, loginAttemptService,
+				jwtProvider, twoFactorSettingRepository);
 		twoFactorService = new TwoFactorServiceImpl(userSessionRepository, twoFactorSettingRepository,
 				twoFactorConfigAuditRepository, roleRepository, userRepository, userRoleScopeRepository,
-				jwtProvider, loginAttemptService, auditLogService);
-		ReflectionTestUtils.setField(twoFactorService, "lockMinutes", 15L);
+				jwtProvider, loginAttemptService, auditLogService,
+				verificationTransaction);
+		ReflectionTestUtils.setField(twoFactorService, "lockSeconds", 900L);
 		ReflectionTestUtils.setField(twoFactorService, "challengeTtlMinutes", 10L);
 		ReflectionTestUtils.setField(twoFactorService, "issuer", "Van Hanh Dich Vu");
 
@@ -100,6 +105,7 @@ class TwoFactorServiceTest {
 		user.setTotpConfirmedAt(LocalDateTime.now().minusDays(1));
 
 		session = new UserSession();
+		ReflectionTestUtils.setField(session, "id", 99L);
 		session.setUser(user);
 		session.setTokenId("challenge-token");
 		session.setOtpAttempts(0);
@@ -257,10 +263,31 @@ class TwoFactorServiceTest {
 				.isEqualTo(ErrorCode.TWO_FACTOR_INVALID);
 	}
 
+	/**
+	 * TC-02: nhap sai ma 3 lan lien tiep thi tam khoa tai khoan.
+	 *
+	 * <p><b>Day tung la mot loi that trong ban dau, va mock CU cua test nay
+	 * KHONG bat duoc no.</b> Truoc day {@code verifyTwoFactor} tu tang
+	 * {@code session.otpAttempts} roi {@code save(session)} NGAY TRONG giao
+	 * dich thong thuong cua phuong thuc, va ngay sau do NEM {@code
+	 * BusinessRuleException} — mot RuntimeException. Spring cuon nguoc ca giao
+	 * dich, keo theo xoa luon lan luu vua goi; {@code otpAttempts} trong CSDL
+	 * khong bao gio thuc su vuot qua 0, nen ba lan nhap sai LIEN TIEP deu tra
+	 * ve {@code TWO_FACTOR_INVALID}, khong lan nao dat {@code ACCOUNT_LOCKED}.</p>
+	 *
+	 * <p>Ban mock TRUOC DAY khong phat hien duoc vi {@code findByTokenId} luon
+	 * tra ve CUNG MOT doi tuong {@code session} trong bo nho — khong co giao
+	 * dich nao de "cuon nguoc" ca, nen mock vo tinh mo phong dung hanh vi
+	 * ĐÚNG thay vi hanh vi SAI cua code that. Kien truc sua dung (xem
+	 * {@link TwoFactorVerificationTransaction}) gom toan bo logic vao MOT
+	 * giao dich duy nhat, tra ve ket qua thay vi nem loi ben trong — nen mock
+	 * don gian (khong can giao dich rieng) van kiem chung dung logic dem.</p>
+	 */
 	@Test
 	@DisplayName("TC-02: nhap sai ma 3 lan lien tiep thi tam khoa tai khoan")
 	void verifyTwoFactor_thirdInvalidCode_locksAccountAndDoesNotIssueJwt() {
 		lenient().when(userSessionRepository.findByTokenId("challenge-token")).thenReturn(Optional.of(session));
+		lenient().when(userSessionRepository.findById(99L)).thenReturn(Optional.of(session));
 		lenient().when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 		lenient().when(loginAttemptService.isLocked(user)).thenReturn(false);
 		lenient().when(userRoleScopeRepository.findRoleCodesByUserId(1L)).thenReturn(List.of("VT-05"));
@@ -270,16 +297,21 @@ class TwoFactorServiceTest {
 				.isInstanceOf(BusinessRuleException.class)
 				.extracting("errorCode")
 				.isEqualTo(ErrorCode.TWO_FACTOR_INVALID);
+		assertThat(session.getOtpAttempts()).as("lan sai thu nhat phai duoc dem").isEqualTo(1);
+
 		assertThatThrownBy(() -> twoFactorService.verifyTwoFactor(request("000000")))
 				.isInstanceOf(BusinessRuleException.class)
 				.extracting("errorCode")
 				.isEqualTo(ErrorCode.TWO_FACTOR_INVALID);
+		assertThat(session.getOtpAttempts()).as("lan sai thu hai phai duoc dem").isEqualTo(2);
+
 		assertThatThrownBy(() -> twoFactorService.verifyTwoFactor(request("000000")))
 				.isInstanceOf(BusinessRuleException.class)
 				.extracting("errorCode")
 				.isEqualTo(ErrorCode.ACCOUNT_LOCKED);
+		assertThat(session.getOtpAttempts()).as("lan sai thu ba phai dat nguong").isEqualTo(3);
 
-		verify(loginAttemptService).lockForTwoFactor(user, 15L);
+		verify(loginAttemptService).lockForTwoFactor(user, 900L);
 	}
 
 	@Test

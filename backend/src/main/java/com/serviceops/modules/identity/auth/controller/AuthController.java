@@ -5,6 +5,7 @@ import com.serviceops.modules.identity.auth.dto.request.ChangePasswordReq;
 import com.serviceops.modules.identity.auth.dto.request.ForgotPasswordReq;
 import com.serviceops.modules.identity.auth.dto.request.LoginReq;
 import com.serviceops.modules.identity.auth.dto.request.ResetPasswordReq;
+import com.serviceops.modules.identity.auth.dto.response.CurrentUserRes;
 import com.serviceops.modules.identity.auth.dto.response.LoginRes;
 import com.serviceops.modules.identity.auth.service.AuthService;
 import com.serviceops.modules.identity.auth.service.PasswordService;
@@ -83,10 +84,26 @@ public class AuthController {
         return BaseRes.ok(null);
     }
 
-    private Long currentUserId() {
+    /**
+     * NCL-01-CN-004 TC-03: FE goi dinh ky / khi focus lai de lam moi vai tro & pham vi
+     * ma khong bat dang nhap lai. Principal da duoc {@code JwtAuthFilter} nap moi tu DB
+     * o moi request nen roles/scope o day luon la moi nhat.
+     */
+    @GetMapping("/me")
+    public BaseRes<CurrentUserRes> me() {
+        CustomUserDetails principal = currentPrincipal();
+        return BaseRes.ok(new CurrentUserRes(principal.getId(), principal.getUsername(),
+                principal.getFullName(), principal.getRoleCodes(),
+                principal.getScope().type().name()));
+    }
+
+    private CustomUserDetails currentPrincipal() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        CustomUserDetails principal = (CustomUserDetails) authentication.getPrincipal();
-        return principal.getId();
+        return (CustomUserDetails) authentication.getPrincipal();
+    }
+
+    private Long currentUserId() {
+        return currentPrincipal().getId();
     }
 
     private String extractIp(HttpServletRequest request) {

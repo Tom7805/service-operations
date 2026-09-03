@@ -2,6 +2,7 @@ import type {
   ApiError,
   AuthSession,
   ChangePasswordPayload,
+  CurrentUser,
   ForgotPasswordPayload,
   LoginResponseDto,
   LoginResult,
@@ -18,6 +19,44 @@ export class LoginRequestError extends Error {
   constructor(public readonly details: ApiError, fallbackMessage: string) {
     super(details.message ?? fallbackMessage);
   }
+}
+
+/** Lỗi khi gọi GET /auth/me — mang mã HTTP để phân biệt 401 (token đã bị vô hiệu). */
+export class SessionSyncError extends Error {
+  constructor(public readonly status: number, message: string) {
+    super(message);
+    this.name = 'SessionSyncError';
+  }
+}
+
+/**
+ * NCL-01-CN-004 TC-03: lấy vai trò & họ tên hiện tại của phiên đang đăng nhập
+ * (GET /auth/me). FE gọi định kỳ / khi focus lại để áp dụng thay đổi phân quyền
+ * ngay mà không bắt đăng nhập lại.
+ */
+export async function fetchCurrentUser(token: string): Promise<CurrentUser> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/auth/me`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    throw new SessionSyncError(0, 'Không kết nối được máy chủ để làm mới phiên.');
+  }
+
+  const payload = (await response.json().catch(() => ({}))) as { data?: CurrentUser } & ApiError;
+  if (!response.ok || !payload.data) {
+    throw new SessionSyncError(response.status, payload.message ?? 'Không làm mới được phiên.');
+  }
+
+  const data = payload.data;
+  return {
+    userId: data.userId,
+    username: data.username,
+    fullName: data.fullName,
+    roles: data.roles,
+  };
 }
 
 /** Type guard: phân biệt kết quả login() là phiên đã đăng nhập hay còn chờ nhập OTP (NCL-01-CN-009). */

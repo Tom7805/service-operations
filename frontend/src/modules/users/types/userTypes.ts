@@ -139,15 +139,25 @@ export const SYSTEM_ROLES: RoleInfo[] = [
 ];
 
 // Phải khớp cây tổ chức seed ở backend: db/seed/R__seed_departments.sql
-// Một cây thống nhất quy về Ban Giám Đốc; Trung tâm Công nghệ (id 6) có 3 Tổ/Nhóm con (7-9)
-// là nơi bố trí lực lượng "Nhân viên chuyên môn" (VT-03).
+// Đúng 4 tầng phân cấp: Trung tâm (10) > Ban (1) > Phòng (2-6) > Tổ/Nhóm (7-9).
+// Trước đây id 6 ghi "Trung Tâm..." nhưng lại nằm dưới "Ban Giám Đốc" — sai
+// thứ bậc hiển thị trên cây; nay đổi tên/loại thành Phòng cho khớp đúng tầng.
 export const SYSTEM_DEPARTMENTS: DepartmentInfo[] = [
-  { id: 1, name: 'Ban Giám Đốc', code: 'BGD', parentId: null },
+  { id: 10, name: 'Trung Tâm Vận Hành', code: 'TTVH', parentId: null },
+  { id: 1, name: 'Ban Giám Đốc', code: 'BGD', parentId: 10 },
   { id: 2, name: 'Phòng Quản Lý Dự Án (PMO)', code: 'PMO', parentId: 1 },
+  { id: 11, name: 'Tổ Điều Phối Dự Án', code: 'PMO-DIEU-PHOI', parentId: 2 },
+  { id: 12, name: 'Tổ Giám Sát Tiến Độ', code: 'PMO-GIAM-SAT', parentId: 2 },
   { id: 3, name: 'Phòng Kinh Doanh & Phát Triển Thị Trường', code: 'KDH', parentId: 1 },
+  { id: 13, name: 'Tổ Kinh Doanh Trong Nước', code: 'KDH-TRONG-NUOC', parentId: 3 },
+  { id: 14, name: 'Tổ Phát Triển Thị Trường Mới', code: 'KDH-THI-TRUONG-MOI', parentId: 3 },
   { id: 4, name: 'Phòng Kế Toán - Tài Chính', code: 'KTT', parentId: 1 },
+  { id: 15, name: 'Tổ Kế Toán Tổng Hợp', code: 'KTT-TONG-HOP', parentId: 4 },
+  { id: 16, name: 'Tổ Công Nợ & Thu Chi', code: 'KTT-CONG-NO', parentId: 4 },
   { id: 5, name: 'Phòng Nhân Sự', code: 'NSU', parentId: 1 },
-  { id: 6, name: 'Trung Tâm Công Nghệ & Giải Pháp', code: 'TCN', parentId: 1 },
+  { id: 17, name: 'Tổ Tuyển Dụng & Đào Tạo', code: 'NSU-TUYEN-DUNG', parentId: 5 },
+  { id: 18, name: 'Tổ Chính Sách & Phúc Lợi', code: 'NSU-CHINH-SACH', parentId: 5 },
+  { id: 6, name: 'Phòng Công Nghệ & Giải Pháp', code: 'TCN', parentId: 1 },
   { id: 7, name: 'Nhóm Phát Triển Phần Mềm', code: 'TCN-DEV', parentId: 6 },
   { id: 8, name: 'Nhóm Tư Vấn Giải Pháp', code: 'TCN-CS', parentId: 6 },
   { id: 9, name: 'Nhóm Kiểm Thử & Đảm Bảo Chất Lượng', code: 'TCN-QA', parentId: 6 },

@@ -66,8 +66,8 @@ public class LoginAttemptService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void lockForTwoFactor(User user, long lockMinutes) {
-        user.setLockedUntil(LocalDateTime.now().plusMinutes(lockMinutes));
+    public void lockForTwoFactor(User user, long lockSeconds) {
+        user.setLockedUntil(LocalDateTime.now().plusSeconds(lockSeconds));
         userRepository.save(user);
     }
 
