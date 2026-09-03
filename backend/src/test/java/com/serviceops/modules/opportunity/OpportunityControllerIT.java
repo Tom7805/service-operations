@@ -5,13 +5,16 @@ import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.config.SecurityConfig;
 import com.serviceops.modules.opportunity.controller.OpportunityController;
+import com.serviceops.modules.opportunity.dto.request.ForecastQueryReq;
 import com.serviceops.modules.opportunity.dto.request.OpportunityCreateReq;
 import com.serviceops.modules.opportunity.dto.request.StageChangeReq;
 import com.serviceops.modules.opportunity.dto.response.OpportunityRes;
+import com.serviceops.modules.opportunity.dto.response.RevenueForecastRes;
 import com.serviceops.modules.opportunity.dto.response.StageHistoryRes;
 import com.serviceops.modules.opportunity.enums.OpportunityStage;
 import com.serviceops.modules.opportunity.service.OpportunityService;
 import com.serviceops.modules.opportunity.service.OpportunityStageService;
+import com.serviceops.modules.opportunity.service.RevenueForecastService;
 import com.serviceops.security.CustomUserDetailsService;
 import com.serviceops.security.JwtAuthFilter;
 import com.serviceops.security.JwtAuthenticationEntryPoint;
@@ -28,9 +31,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -44,6 +49,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *   hop le, TC-03 tu choi vai tro khong phu hop.
  * - PATCH /opportunities/{id}/stage va GET /opportunities/{id}/stage-history (NCL-03-CN-002):
  *   TC-01/02/03/05.
+ * - GET /opportunities/revenue-forecast (NCL-03-CN-004): TC-01 tra ve du bao dung cho vai
+ *   tro duoc phep (VT-01, VT-04), TC-03 tu choi vai tro khac, khoang ngay loc khong hop le.
  */
 @WebMvcTest(controllers = OpportunityController.class)
 @Import({SecurityConfig.class, JwtAuthFilter.class, JwtAuthenticationEntryPoint.class})
@@ -60,6 +67,9 @@ class OpportunityControllerIT {
 
 	@MockBean
 	private OpportunityStageService opportunityStageService;
+
+	@MockBean
+	private RevenueForecastService revenueForecastService;
 
 	@MockBean
 	private JwtProvider jwtProvider;
@@ -256,5 +266,73 @@ class OpportunityControllerIT {
 		mockMvc.perform(get("/opportunities/99/stage-history"))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.errorCode").value("RESOURCE_NOT_FOUND"));
+	}
+
+	// --- GET /opportunities/revenue-forecast (NCL-03-CN-004) ---
+
+	@Test
+	@DisplayName("TC-01: Ban giam doc (VT-01) xem duoc du bao doanh thu")
+	@WithMockUser(authorities = "ROLE_VT-01")
+	void allowsBoardRoleToViewRevenueForecast() throws Exception {
+		RevenueForecastRes res = new RevenueForecastRes(new BigDecimal("180000000"), List.of(
+				new RevenueForecastRes.MonthlyRevenueForecast(YearMonth.of(2026, 9), new BigDecimal("180000000"), 2)));
+		when(revenueForecastService.forecast(any())).thenReturn(res);
+
+		mockMvc.perform(get("/opportunities/revenue-forecast"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.data.totalExpectedRevenue").value(180000000))
+				.andExpect(jsonPath("$.data.months.length()").value(1))
+				.andExpect(jsonPath("$.data.months[0].month").value("2026-09"))
+				.andExpect(jsonPath("$.data.months[0].expectedRevenue").value(180000000))
+				.andExpect(jsonPath("$.data.months[0].opportunityCount").value(2));
+	}
+
+	@Test
+	@DisplayName("TC-01: Nhan vien kinh doanh (VT-04) cung xem duoc du bao doanh thu")
+	@WithMockUser(authorities = "ROLE_VT-04")
+	void allowsSalesRoleToViewRevenueForecast() throws Exception {
+		when(revenueForecastService.forecast(any())).thenReturn(new RevenueForecastRes(BigDecimal.ZERO, List.of()));
+
+		mockMvc.perform(get("/opportunities/revenue-forecast"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.data.totalExpectedRevenue").value(0))
+				.andExpect(jsonPath("$.data.months.length()").value(0));
+	}
+
+	@Test
+	@DisplayName("TC-03: vai tro khac Ban giam doc/Nhan vien kinh doanh bi tu choi xem du bao doanh thu (403)")
+	@WithMockUser(authorities = "ROLE_VT-02")
+	void deniesOtherRolesForRevenueForecast() throws Exception {
+		mockMvc.perform(get("/opportunities/revenue-forecast"))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+	}
+
+	@Test
+	@DisplayName("Tham so from/to duoc chuyen dung xuong tang service")
+	@WithMockUser(authorities = "ROLE_VT-04")
+	void passesDateRangeToService() throws Exception {
+		when(revenueForecastService.forecast(any())).thenReturn(new RevenueForecastRes(BigDecimal.ZERO, List.of()));
+
+		mockMvc.perform(get("/opportunities/revenue-forecast")
+						.param("from", "2026-09-01")
+						.param("to", "2026-12-31"))
+				.andExpect(status().isOk());
+
+		verify(revenueForecastService).forecast(
+				new ForecastQueryReq(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 12, 31)));
+	}
+
+	@Test
+	@DisplayName("TC-02: from sau to thi bao 400 VALIDATION_ERROR")
+	@WithMockUser(authorities = "ROLE_VT-04")
+	void rejectsInvalidDateRange() throws Exception {
+		mockMvc.perform(get("/opportunities/revenue-forecast")
+						.param("from", "2026-10-01")
+						.param("to", "2026-09-01"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"));
 	}
 }

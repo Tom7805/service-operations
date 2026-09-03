@@ -2,11 +2,14 @@ package com.serviceops.modules.opportunity.controller;
 
 import com.serviceops.common.api.BaseRes;
 import com.serviceops.modules.opportunity.dto.request.OpportunityCreateReq;
+import com.serviceops.modules.opportunity.dto.request.ForecastQueryReq;
 import com.serviceops.modules.opportunity.dto.request.StageChangeReq;
 import com.serviceops.modules.opportunity.dto.response.OpportunityRes;
+import com.serviceops.modules.opportunity.dto.response.RevenueForecastRes;
 import com.serviceops.modules.opportunity.dto.response.StageHistoryRes;
 import com.serviceops.modules.opportunity.service.OpportunityService;
 import com.serviceops.modules.opportunity.service.OpportunityStageService;
+import com.serviceops.modules.opportunity.service.RevenueForecastService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -17,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
@@ -32,6 +36,7 @@ public class OpportunityController {
 
 	private final OpportunityService opportunityService;
 	private final OpportunityStageService opportunityStageService;
+	private final RevenueForecastService revenueForecastService;
 
 	/** Tao co hoi ban hang moi, gan voi khach hang da co ho so (TC-01). */
 	@PostMapping
@@ -56,5 +61,19 @@ public class OpportunityController {
 	@PreAuthorize("hasRole('VT-04')")
 	public BaseRes<List<StageHistoryRes>> stageHistory(@PathVariable Long opportunityId) {
 		return BaseRes.ok(opportunityStageService.history(opportunityId));
+	}
+
+	/** Du bao doanh thu theo xac suat giai doan (NCL-03-CN-004, TC-01/02/03). */
+	@GetMapping("/revenue-forecast")
+	@PreAuthorize("hasAnyRole('VT-01', 'VT-04')")
+	public BaseRes<RevenueForecastRes> revenueForecast(
+			@RequestParam(required = false) java.time.LocalDate from,
+			@RequestParam(required = false) java.time.LocalDate to) {
+		try {
+			return BaseRes.ok(revenueForecastService.forecast(new ForecastQueryReq(from, to)));
+		} catch (IllegalArgumentException ex) {
+			throw new com.serviceops.common.exception.BusinessRuleException(
+					com.serviceops.common.exception.ErrorCode.VALIDATION_ERROR, ex.getMessage());
+		}
 	}
 }
