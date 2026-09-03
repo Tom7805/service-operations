@@ -23,6 +23,7 @@ public class OpportunityMapper {
 				opportunity.getExpectedCloseDate(),
 				opportunity.getStage() == null ? null : opportunity.getStage().name(),
 				opportunity.getStatus() == null ? null : opportunity.getStatus().name(),
+				opportunity.getProbability(),
 				opportunity.getOwnerId(),
 				opportunity.getCreatedBy(),
 				opportunity.getCreatedAt()

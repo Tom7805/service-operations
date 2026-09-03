@@ -51,6 +51,10 @@ public class Opportunity extends BaseEntity {
 	@Column(nullable = false, columnDefinition = "VARCHAR(20)")
 	private OpportunityStatus status = OpportunityStatus.OPEN;
 
+	/** Xac suat trung/dong co hoi (0-100%), cap nhat tuong ung voi moi giai doan (NCL-03-CN-002, TC-01). */
+	@Column(precision = 5, scale = 2)
+	private BigDecimal probability;
+
 	@Column(name = "created_by", length = 100)
 	private String createdBy;
 
