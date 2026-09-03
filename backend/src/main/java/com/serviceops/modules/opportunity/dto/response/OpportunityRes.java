@@ -18,6 +18,7 @@ public record OpportunityRes(
 	LocalDate expectedCloseDate,
 	String stage,
 	String status,
+	BigDecimal probability,
 	Long ownerId,
 	String createdBy,
 	LocalDateTime createdAt
