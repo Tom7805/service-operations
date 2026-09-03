@@ -73,6 +73,10 @@ public class OpportunityStageServiceImpl implements OpportunityStageService {
 		// TC-01: cap nhat xac suat tuong ung.
 		opportunity.setStage(target);
 		opportunity.setProbability(probabilityFor(target));
+		// TC-03: dat WON/LOST la giai doan chot - dong co hoi de khong the mo lai.
+		if (target == OpportunityStage.WON || target == OpportunityStage.LOST) {
+			opportunity.setStatus(OpportunityStatus.CLOSED);
+		}
 		opportunityRepository.save(opportunity);
 
 		// TC-05: ghi lich su chuyen giai doan.
