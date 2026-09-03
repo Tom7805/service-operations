@@ -23,6 +23,8 @@ vi.mock('../api/customersApi', () => ({
     receivables: [],
   }),
   updateCustomerSegment: vi.fn(),
+  updateCustomer: vi.fn(),
+  updateCustomerWithOverride: vi.fn(),
   CustomerApiError: class extends Error {
     constructor(public code: string, message: string, public statusCode?: number) {
       super(message);
@@ -267,6 +269,8 @@ describe('Phân nhóm khách hàng theo ngành và quy mô (NCL-02-CN-005)', () 
         <CustomerListPage currentUserRoles={['VT-04']} initialCustomers={initialCustomers} />
       );
 
+      // Thao tác nằm trong menu kebab (⋮) — mở menu của dòng rồi bấm "Phân nhóm".
+      fireEvent.click(screen.getByLabelText(`Thao tác cho ${mockCustomer.name}`));
       fireEvent.click(screen.getByTestId(`btn-open-segment-${mockCustomer.id}`));
 
       expect(screen.getByTestId('customer-detail-page')).toBeInTheDocument();

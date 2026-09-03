@@ -24,6 +24,29 @@ export const CUSTOMER_VALIDATION_LIMITS = {
 } as const;
 
 /**
+ * Mã số thuế doanh nghiệp Việt Nam: đúng 10 chữ số (đơn vị độc lập), hoặc
+ * 10 chữ số + gạch ngang + 3 chữ số (đơn vị trực thuộc/chi nhánh — VD
+ * 0101234567-001). Khớp Thông tư 105/2020/TT-BTC.
+ */
+const TAX_CODE_PATTERN = /^\d{10}(-\d{3})?$/;
+
+/**
+ * Số điện thoại Việt Nam sau quy hoạch 11→10 số (2018): di động 10 số bắt
+ * đầu 03/05/07/08/09 theo đúng đầu số nhà mạng đang cấp phép, hoặc cố định
+ * bắt đầu 02 (mã vùng) + 8-9 số. Không nhận dạng quốc tế (+84) — số nội bộ
+ * hồ sơ khách hàng trong nước.
+ */
+const PHONE_PATTERN = /^0(3[2-9]|5[25689]|7[06-9]|8[1-9]|9[0-9])\d{7}$|^02\d{8,9}$/;
+
+export function isValidTaxCode(taxCode: string): boolean {
+  return TAX_CODE_PATTERN.test(taxCode.trim());
+}
+
+export function isValidPhone(phone: string): boolean {
+  return PHONE_PATTERN.test(phone.trim());
+}
+
+/**
  * Kiểm tra hợp lệ dữ liệu tạo mới hồ sơ khách hàng (NCL-02-CN-001 & NCL-02-CN-002)
  * @param payload Dữ liệu tạo khách hàng
  * @returns Object chứa danh sách lỗi (nếu có)
@@ -39,14 +62,26 @@ export function validateCustomerCreate(payload: Partial<CustomerCreatePayload>):
     errors.name = `Tên khách hàng không được vượt quá ${CUSTOMER_VALIDATION_LIMITS.NAME_MAX_LENGTH} ký tự (hiện có: ${payload.name.length})`;
   }
 
-  // 2. Mã số thuế (tùy chọn, max 50 ký tự)
-  if (payload.taxCode && payload.taxCode.length > CUSTOMER_VALIDATION_LIMITS.TAX_CODE_MAX_LENGTH) {
-    errors.taxCode = `Mã số thuế không được vượt quá ${CUSTOMER_VALIDATION_LIMITS.TAX_CODE_MAX_LENGTH} ký tự (hiện có: ${payload.taxCode.length})`;
+  // 2. Mã số thuế (tùy chọn, nhưng nếu nhập thì phải đúng chuẩn 10 số, hoặc
+  // 10 số + "-" + 3 số cho chi nhánh — VD 0101234567 hoặc 0101234567-001)
+  const trimmedTaxCode = payload.taxCode?.trim();
+  if (trimmedTaxCode) {
+    if (trimmedTaxCode.length > CUSTOMER_VALIDATION_LIMITS.TAX_CODE_MAX_LENGTH) {
+      errors.taxCode = `Mã số thuế không được vượt quá ${CUSTOMER_VALIDATION_LIMITS.TAX_CODE_MAX_LENGTH} ký tự (hiện có: ${trimmedTaxCode.length})`;
+    } else if (!isValidTaxCode(trimmedTaxCode)) {
+      errors.taxCode = 'Mã số thuế không đúng định dạng (10 chữ số, VD: 0101234567; chi nhánh thêm "-XXX", VD: 0101234567-001)';
+    }
   }
 
-  // 3. Số điện thoại (tùy chọn, max 30 ký tự - NCL-02-CN-002)
-  if (payload.phone && payload.phone.length > CUSTOMER_VALIDATION_LIMITS.PHONE_MAX_LENGTH) {
-    errors.phone = `Số điện thoại không được vượt quá ${CUSTOMER_VALIDATION_LIMITS.PHONE_MAX_LENGTH} ký tự (hiện có: ${payload.phone.length})`;
+  // 3. Số điện thoại (tùy chọn, nhưng nếu nhập thì phải đúng chuẩn số Việt
+  // Nam — di động 10 số hoặc cố định 02x + 8-9 số, NCL-02-CN-002)
+  const trimmedPhone = payload.phone?.trim();
+  if (trimmedPhone) {
+    if (trimmedPhone.length > CUSTOMER_VALIDATION_LIMITS.PHONE_MAX_LENGTH) {
+      errors.phone = `Số điện thoại không được vượt quá ${CUSTOMER_VALIDATION_LIMITS.PHONE_MAX_LENGTH} ký tự (hiện có: ${trimmedPhone.length})`;
+    } else if (!isValidPhone(trimmedPhone)) {
+      errors.phone = 'Số điện thoại không đúng định dạng (di động VD: 0912345678, cố định VD: 02438123456)';
+    }
   }
 
   // 4. Ngành nghề / Lĩnh vực (tùy chọn, max 255 ký tự)
@@ -115,12 +150,14 @@ export function validateCustomerContact(
     }
   }
 
-  // 4. Số điện thoại (tùy chọn, max 30 ký tự)
-  if (
-    payload.phone &&
-    payload.phone.length > CUSTOMER_VALIDATION_LIMITS.CONTACT_PHONE_MAX_LENGTH
-  ) {
-    errors.phone = `Số điện thoại không được vượt quá ${CUSTOMER_VALIDATION_LIMITS.CONTACT_PHONE_MAX_LENGTH} ký tự`;
+  // 4. Số điện thoại (tùy chọn, nhưng nếu nhập thì phải đúng chuẩn số Việt Nam)
+  const trimmedContactPhone = payload.phone?.trim();
+  if (trimmedContactPhone) {
+    if (trimmedContactPhone.length > CUSTOMER_VALIDATION_LIMITS.CONTACT_PHONE_MAX_LENGTH) {
+      errors.phone = `Số điện thoại không được vượt quá ${CUSTOMER_VALIDATION_LIMITS.CONTACT_PHONE_MAX_LENGTH} ký tự`;
+    } else if (!isValidPhone(trimmedContactPhone)) {
+      errors.phone = 'Số điện thoại không đúng định dạng (di động VD: 0912345678, cố định VD: 02438123456)';
+    }
   }
 
   return errors;

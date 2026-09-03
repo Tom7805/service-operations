@@ -20,6 +20,10 @@ interface CustomerFormModalProps {
   onClose: () => void;
   onSubmit: (payload: CustomerCreatePayload) => Promise<Customer | void>;
   onOverrideSubmit?: (payload: CustomerCreateWithOverridePayload) => Promise<Customer | void>;
+  /** 'create' (mặc định) tạo hồ sơ mới; 'edit' chỉnh sửa hồ sơ đã có. */
+  mode?: 'create' | 'edit';
+  /** Hồ sơ đang chỉnh sửa — bắt buộc khi mode = 'edit' (để prefill và loại chính nó khỏi cảnh báo trùng). */
+  initialCustomer?: Customer | null;
 }
 
 export default function CustomerFormModal({
@@ -27,7 +31,10 @@ export default function CustomerFormModal({
   onClose,
   onSubmit,
   onOverrideSubmit,
+  mode = 'create',
+  initialCustomer = null,
 }: CustomerFormModalProps) {
+  const isEdit = mode === 'edit';
   const [name, setName] = useState('');
   const [taxCode, setTaxCode] = useState('');
   const [phone, setPhone] = useState('');
@@ -48,11 +55,11 @@ export default function CustomerFormModal({
   // Reset form và focus vào ô Tên khi mở modal
   useEffect(() => {
     if (isOpen) {
-      setName('');
-      setTaxCode('');
-      setPhone('');
-      setIndustry('');
-      setAddress('');
+      setName(isEdit ? initialCustomer?.name ?? '' : '');
+      setTaxCode(isEdit ? initialCustomer?.taxCode ?? '' : '');
+      setPhone(isEdit ? initialCustomer?.phone ?? '' : '');
+      setIndustry(isEdit ? initialCustomer?.industry ?? '' : '');
+      setAddress(isEdit ? initialCustomer?.address ?? '' : '');
       setErrors({});
       setServerError(null);
       setSubmitting(false);
@@ -65,7 +72,7 @@ export default function CustomerFormModal({
       }, 80);
       return () => clearTimeout(timer);
     }
-  }, [isOpen]);
+  }, [isOpen, isEdit, initialCustomer]);
 
   // Xử lý phím Escape để đóng modal khi không mở modal con và không submitting
   useEffect(() => {
@@ -152,8 +159,13 @@ export default function CustomerFormModal({
 
     setSubmitting(true);
     try {
-      // NCL-02-CN-002: Luồng kiểm tra chống trùng trước khi submit thật
-      const candidates = await checkCustomerDuplicate(currentPayload);
+      // NCL-02-CN-002: Luồng kiểm tra chống trùng trước khi submit thật.
+      // Khi chỉnh sửa, loại chính hồ sơ đang sửa ra khỏi danh sách nghi trùng.
+      const rawCandidates = await checkCustomerDuplicate(currentPayload);
+      const candidates =
+        isEdit && initialCustomer
+          ? rawCandidates.filter((c) => c.id !== initialCustomer.id)
+          : rawCandidates;
 
       if (candidates && candidates.length > 0) {
         // Có hồ sơ nghi trùng -> Mở modal cảnh báo để người dùng đối chiếu
@@ -242,11 +254,12 @@ export default function CustomerFormModal({
               </span>
               <div>
                 <h3 id="modal-title" className="modal-title">
-                  Tạo hồ sơ khách hàng mới
+                  {isEdit ? 'Chỉnh sửa hồ sơ khách hàng' : 'Tạo hồ sơ khách hàng mới'}
                 </h3>
                 <p className="modal-subtitle">
-                  Nhập thông tin doanh nghiệp/đối tác. Mã khách hàng (KH-xxxxxx) sẽ được hệ thống
-                  cấp tự động sau khi lưu.
+                  {isEdit
+                    ? `Cập nhật thông tin doanh nghiệp cho hồ sơ ${initialCustomer?.code ?? ''}. Mã khách hàng không thay đổi.`
+                    : 'Nhập thông tin doanh nghiệp/đối tác. Mã khách hàng (KH-xxxxxx) sẽ được hệ thống cấp tự động sau khi lưu.'}
                 </p>
               </div>
             </div>
@@ -277,9 +290,19 @@ export default function CustomerFormModal({
               <div className="info-callout">
                 <span className="info-callout__icon">{ICONS.info}</span>
                 <div className="info-callout__text">
-                  <strong>Quy tắc mã hồ sơ:</strong> Hệ thống tự động cấp phát mã định danh duy
-                  nhất (ví dụ: <code className="customer-code-badge">KH-xxxxxx</code>) và tích hợp
-                  tính năng tự động phát hiện hồ sơ trùng lặp.
+                  {isEdit ? (
+                    <>
+                      <strong>Lưu ý:</strong> Ngành nghề, quy mô và mức độ ưu tiên được quản lý ở tab
+                      <em> Phân nhóm</em>. Khi đổi Tên / MST / SĐT, hệ thống vẫn chạy kiểm tra chống
+                      trùng với các hồ sơ khác.
+                    </>
+                  ) : (
+                    <>
+                      <strong>Quy tắc mã hồ sơ:</strong> Hệ thống tự động cấp phát mã định danh duy
+                      nhất (ví dụ: <code className="customer-code-badge">KH-xxxxxx</code>) và tích hợp
+                      tính năng tự động phát hiện hồ sơ trùng lặp.
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -490,7 +513,7 @@ export default function CustomerFormModal({
                 ) : (
                   <>
                     <span className="icon-sm">{ICONS.save}</span>
-                    <span>Lưu hồ sơ khách hàng</span>
+                    <span>{isEdit ? 'Lưu thay đổi' : 'Lưu hồ sơ khách hàng'}</span>
                   </>
                 )}
               </button>

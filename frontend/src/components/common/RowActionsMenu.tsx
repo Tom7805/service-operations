@@ -10,6 +10,8 @@ export interface RowAction {
   /** Vô hiệu hóa mục nhưng vẫn hiển thị, kèm lý do trong `title`. */
   disabled?: boolean;
   disabledReason?: string;
+  /** Gắn `data-testid` lên nút mục để test truy vấn được sau khi mở menu. */
+  testId?: string;
 }
 
 interface RowActionsMenuProps {
@@ -31,6 +33,7 @@ interface RowActionsMenuProps {
  */
 export const RowActionsMenu: React.FC<RowActionsMenuProps> = ({ actions, ariaLabel = 'Thao tác' }) => {
   const [open, setOpen] = useState(false);
+  const [openUpward, setOpenUpward] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -51,6 +54,22 @@ export const RowActionsMenu: React.FC<RowActionsMenuProps> = ({ actions, ariaLab
     };
   }, [open]);
 
+  const handleToggle = () => {
+    if (!open && containerRef.current) {
+      // Bảng cha (.user-table-card) có overflow: hidden để bo góc — panel mở
+      // xuống của dòng CUỐI thì rìa dưới card cắt cụt nó ngay lập tức, không
+      // chờ tới mép màn hình. Ước lượng chiều cao panel từ số mục (mỗi mục
+      // ~38px + đệm 10px) rồi so với khoảng trống thật còn lại bên dưới nút
+      // bấm tới mép dưới màn hình — đủ để bắt luôn cả trường hợp bị cắt bởi
+      // overflow của card lẫn trường hợp trigger nằm sát đáy khung nhìn.
+      const rect = containerRef.current.getBoundingClientRect();
+      const estimatedPanelHeight = actions.length * 38 + 10;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      setOpenUpward(spaceBelow < estimatedPanelHeight + 12);
+    }
+    setOpen((v) => !v);
+  };
+
   return (
     <div className="row-menu" ref={containerRef}>
       <button
@@ -59,7 +78,7 @@ export const RowActionsMenu: React.FC<RowActionsMenuProps> = ({ actions, ariaLab
         aria-label={ariaLabel}
         aria-haspopup="true"
         aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleToggle}
       >
         {ICONS.more}
       </button>
@@ -70,13 +89,17 @@ export const RowActionsMenu: React.FC<RowActionsMenuProps> = ({ actions, ariaLab
           tác vụ dài 227ms và đứng hình ~13 khung liên tiếp.
           Chỉ hiện khi mở là thay đổi bằng KHÔNG về trải nghiệm: menu đóng thì
           người dùng không thấy gì cả. */}
-      <div className={`row-menu__panel ${open ? 'row-menu__panel--open' : ''}`} role="menu">
+      <div
+        className={`row-menu__panel ${open ? 'row-menu__panel--open' : ''} ${openUpward ? 'row-menu__panel--up' : ''}`}
+        role="menu"
+      >
         {open &&
           actions.map((action) => (
             <button
               key={action.key}
               type="button"
               role="menuitem"
+              data-testid={action.testId}
               className={`row-menu__item ${action.tone === 'danger' ? 'row-menu__item--danger' : ''}`}
               title={action.disabled ? action.disabledReason ?? action.label : action.label}
               disabled={action.disabled}

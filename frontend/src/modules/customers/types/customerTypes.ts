@@ -29,6 +29,14 @@ export interface CustomerCreatePayload {
   address?: string;
 }
 
+/** Chỉnh sửa hồ sơ khách hàng đã tạo — cùng shape với payload tạo mới. */
+export type CustomerUpdatePayload = CustomerCreatePayload;
+
+export interface CustomerUpdateWithOverridePayload {
+  customer: CustomerUpdatePayload;
+  override: DuplicateOverridePayload;
+}
+
 export interface CustomerCreateResponse {
   success: boolean;
   message: string;

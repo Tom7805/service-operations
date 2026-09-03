@@ -240,12 +240,18 @@ describe('Gộp hai hồ sơ khách hàng trùng (NCL-02-CN-006)', () => {
           canManageSegment
           onOpenSegment={vi.fn()}
           onNavigateDetail={vi.fn()}
+          canEdit
+          onEdit={vi.fn()}
         />
       );
 
       expect(screen.getByTestId('merged-badge-2')).toHaveTextContent('Đã gộp');
+
+      // Thao tác gộp trong menu kebab (⋮) — mở menu rồi mới kiểm tra trạng thái vô hiệu.
+      fireEvent.click(screen.getByLabelText('Thao tác cho Công ty TNHH ABC (chi nhánh)'));
       expect(screen.getByTestId('btn-manage-contacts-2')).toBeDisabled();
       expect(screen.getByTestId('btn-open-segment-2')).toBeDisabled();
+      expect(screen.getByTestId('btn-edit-2')).toBeDisabled();
     });
 
     it('không hiển thị nhãn "Đã gộp" với hồ sơ đang hoạt động bình thường', () => {

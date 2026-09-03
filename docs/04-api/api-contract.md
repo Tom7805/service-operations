@@ -91,12 +91,12 @@ Không cần token (endpoint công khai).
 - Khi bất kỳ API nào trả về `401` với `errorCode` khác `INVALID_CREDENTIALS`/`ACCOUNT_LOCKED` (ví dụ token hết hạn),
   điều hướng người dùng quay lại màn hình đăng nhập (đáp ứng AC-03 của story).
 - **Tài khoản mẫu (data seed) — mật khẩu tất cả là `Password@123`.** Nguồn: `backend/src/main/resources/db/seed/`.
-  Cây tổ chức: Ban Giám Đốc [1] › {PMO [2], Kinh Doanh [3], Kế Toán [4], Nhân Sự [5], Trung Tâm Công Nghệ [6]};
-  Trung Tâm Công Nghệ [6] › {Nhóm Phát Triển [7], Nhóm Tư Vấn [8], Nhóm Kiểm Thử [9]}.
+  Cây tổ chức: Trung Tâm Vận Hành [10] › Ban Giám Đốc [1] › {PMO [2], Kinh Doanh [3], Kế Toán [4], Nhân Sự [5], Phòng Công Nghệ & Giải Pháp [6]};
+  Phòng Công Nghệ & Giải Pháp [6] › {Nhóm Phát Triển [7], Nhóm Tư Vấn [8], Nhóm Kiểm Thử [9]}.
 
   | username | Vai trò | Phòng | Phạm vi dữ liệu | Ghi chú |
   |---|---|---|---|---|
-  | `admin` | `VT-07` Quản trị viên | Trung Tâm Công Nghệ | COMPANY | Tài khoản hệ thống, không có hồ sơ nhân sự |
+  | `admin` | `VT-07` Quản trị viên | Phòng Công Nghệ & Giải Pháp | COMPANY | Tài khoản hệ thống, không có hồ sơ nhân sự |
   | `giamdoc` | `VT-01` Ban giám đốc | Ban Giám Đốc | COMPANY | |
   | `pm.lead` | `VT-02` Quản lý dự án | PMO | DEPARTMENT → PMO | Trưởng phòng |
   | `pm01` | `VT-02` Quản lý dự án | PMO | SELF | |
@@ -104,7 +104,7 @@ Không cần token (endpoint công khai).
   | `sale01` | `VT-04` Kinh doanh | Kinh Doanh | SELF | |
   | `ketoan.lead` / `ketoan01` | `VT-05` Kế toán | Kế Toán | COMPANY | |
   | `nhansu` / `hr01` | `VT-06` Nhân sự | Nhân Sự | COMPANY | |
-  | `tcn.director` | `VT-02` Quản lý dự án | Trung Tâm Công Nghệ | DEPARTMENT → Trung Tâm Công Nghệ (gồm cả 3 nhóm con) | |
+  | `tcn.director` | `VT-02` Quản lý dự án | Phòng Công Nghệ & Giải Pháp | DEPARTMENT → Phòng Công Nghệ & Giải Pháp (gồm cả 3 nhóm con) | |
   | `dev.lead` / `dev01` | `VT-03` Chuyên môn | Nhóm Phát Triển Phần Mềm | SELF | |
   | `dev02` | `VT-03` Chuyên môn | Nhóm Phát Triển Phần Mềm | SELF | **Bán thời gian — 20h/tuần** |
   | `consult.lead` | `VT-03` Chuyên môn | Nhóm Tư Vấn Giải Pháp | SELF | |
@@ -753,6 +753,50 @@ kèm ghi lại lý do, dùng đúng lúc người dùng đã thấy cảnh báo 
   cần Frontend hiển thị hay xử lý gì thêm với lý do đó sau khi gửi.
 - Mọi lần tạo (kể cả bình thường lẫn override) và mọi lần bị từ chối truy cập đều được backend tự ghi nhật ký —
   Frontend không cần gọi thêm API nào để việc ghi log này xảy ra.
+
+#### `PUT /customers/{customerId}`
+
+Chỉnh sửa thông tin hồ sơ khách hàng đã tạo: `name`, `taxCode`, `phone`, `industry`, `address`. Ngành nghề /
+quy mô / mức độ ưu tiên **phân nhóm** vẫn dùng `PATCH /customers/{customerId}/segment`.
+
+**Xác thực:** token của **Nhân viên kinh doanh** (`VT-04`) hoặc **Quản lý dự án** (`VT-02`).
+
+| Trường | Kiểu | Bắt buộc | Ràng buộc |
+|---|---|---|---|
+| `name` | string | có | ≤ 255 ký tự, không để trống |
+| `taxCode` | string | không | rỗng, hoặc 10 chữ số (`0101234567`), hoặc `10 số-3 số` (`0101234567-001`) |
+| `phone` | string | không | rỗng, hoặc số di động/cố định VN hợp lệ |
+| `industry` | string | không | ≤ 255 ký tự |
+| `address` | string | không | ≤ 500 ký tự |
+
+**Response thành công:** `200` với `data` là `CustomerRes` sau khi sửa (giống `GET /customers`).
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải `VT-04` / `VT-02` |
+| 404 | `RESOURCE_NOT_FOUND` | Không có hồ sơ khách hàng với `customerId` |
+| 400 | `VALIDATION_ERROR` | Dữ liệu sai ràng buộc, **hoặc hồ sơ đã bị gộp (`MERGED`) — không cho sửa** |
+| 409 | `DUPLICATE_DATA` | Sau khi sửa, `name`/`taxCode`/`phone` trùng cao với **hồ sơ khác** (bản thân hồ sơ đang sửa được tự loại khỏi so khớp) |
+
+Backend ghi Audit Log hành động `UPDATE`.
+
+#### `POST /customers/{customerId}/update-with-override`
+
+Xác nhận lưu chỉnh sửa dù có cảnh báo trùng — dùng khi `PUT /customers/{customerId}` trả `409 DUPLICATE_DATA`.
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `customer` | object | có | Giống hệt body của `PUT /customers/{customerId}` |
+| `override.reason` | string | có | Lý do bắt buộc, ≤ 1000 ký tự |
+
+Lỗi giống `POST /customers/create-with-override`. Backend lưu lý do vào log tra soát và ghi Audit Log
+`UPDATE_WITH_OVERRIDE`.
+
+**Luồng khuyến nghị (Frontend):** người dùng sửa hồ sơ → gọi lại `POST /customers/check-duplicate` với dữ liệu
+mới, **tự lọc bỏ ứng viên có `id` trùng hồ sơ đang sửa** → nếu vẫn còn ứng viên nghi trùng thì hiện cảnh báo,
+người dùng nhập lý do → gọi `POST /customers/{customerId}/update-with-override`; nếu không còn thì gọi thẳng
+`PUT /customers/{customerId}`.
 
 ---
 

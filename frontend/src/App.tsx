@@ -5,7 +5,6 @@ import UserListPage from './modules/users/pages/UserListPage';
 import UserDetailPage from './modules/users/pages/UserDetailPage';
 import RolePermissionPage from './modules/users/pages/RolePermissionPage';
 import DepartmentTreePage from './modules/departments/pages/DepartmentTreePage';
-import MaskingRulePage from './modules/masking/pages/MaskingRulePage';
 import SensitiveAccessLogPage from './modules/auditLog/pages/SensitiveAccessLogPage';
 import AuditLogPage from './modules/auditLog/pages/AuditLogPage';
 import EmployeeListPage from './modules/employees/pages/EmployeeListPage';
@@ -17,6 +16,7 @@ import CustomerMergePage from './modules/customers/pages/CustomerMergePage';
 import { ICONS } from './components/common/icons';
 import CommandPalette from './components/common/CommandPalette';
 import useScrollReveal from './hooks/useScrollReveal';
+import { useSessionSync } from './hooks/useSessionSync';
 import type { ReactNode } from 'react';
 
 type Tab =
@@ -26,7 +26,6 @@ type Tab =
   | 'PERMISSIONS'
   | 'USERS'
   | 'DETAIL'
-  | 'MASKING'
   | 'AUDIT_LOG'
   | 'SYSTEM_AUDIT_LOG'
   | 'EMPLOYEES'
@@ -63,9 +62,6 @@ const NAV_ITEMS: NavItem[] = [
  * của tham chiếu: một nhãn xám nhỏ đứng trên nhóm mục phụ). */
 const SYSTEM_NAV_ITEMS: NavItem[] = [
   { tab: 'TWO_FACTOR_SETTINGS', icon: ICONS.key, label: '2FA', requires: ['VT-07'] },
-  // Che dữ liệu dành cho Ban giám đốc / Kế toán / Nhân sự (SENSITIVE_DATA_ROLES),
-  // không phải quản trị viên — khớp với hằng số cùng tên ở backend.
-  { tab: 'MASKING', icon: ICONS.eyeOff, label: 'Che dữ liệu', requires: ['VT-01', 'VT-05', 'VT-06'] },
   { tab: 'SYSTEM_AUDIT_LOG', icon: ICONS.history, label: 'Nhật ký hệ thống', requires: ['VT-07'] },
   { tab: 'AUDIT_LOG', icon: ICONS.shieldOff, label: 'Dữ liệu nhạy cảm', requires: ['VT-07'] },
 ];
@@ -135,10 +131,14 @@ export default function App() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  function persistSession(next: AuthSession) {
+    localStorage.setItem('token', next.accessToken);
+    localStorage.setItem('session', JSON.stringify(next));
+    setSession(next);
+  }
+
   function handleAuthenticated(newSession: AuthSession) {
-    localStorage.setItem('token', newSession.accessToken);
-    localStorage.setItem('session', JSON.stringify(newSession));
-    setSession(newSession);
+    persistSession(newSession);
   }
 
   function handleLogout() {
@@ -146,6 +146,10 @@ export default function App() {
     localStorage.removeItem('session');
     setSession(null);
   }
+
+  // NCL-01-CN-004 TC-03: admin đổi vai trò ở tab/máy khác → phiên này áp dụng ngay
+  // (làm mới khi focus lại + poll 30s), không bắt đăng nhập lại; 401 thì đăng xuất.
+  useSessionSync({ session, onRefresh: persistSession, onExpired: handleLogout });
 
   if (!session) return <LoginPage onAuthenticated={handleAuthenticated} />;
 
@@ -376,8 +380,6 @@ export default function App() {
               currentUserName={session.fullName}
               onViewAuditLog={() => setActiveTab('SYSTEM_AUDIT_LOG')}
             />
-          ) : activeTab === 'MASKING' ? (
-            <MaskingRulePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'SYSTEM_AUDIT_LOG' ? (
             <AuditLogPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'AUDIT_LOG' ? (

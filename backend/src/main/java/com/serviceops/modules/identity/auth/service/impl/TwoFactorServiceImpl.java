@@ -76,12 +76,13 @@ public class TwoFactorServiceImpl implements TwoFactorService {
 	private final JwtProvider jwtProvider;
 	private final LoginAttemptService loginAttemptService;
 	private final AuditLogService auditLogService;
+	private final TwoFactorVerificationTransaction verificationTransaction;
 
 	@Value("${app.two-factor.challenge-ttl-minutes:10}")
 	private long challengeTtlMinutes;
 
-	@Value("${app.two-factor.lock-minutes:15}")
-	private long lockMinutes;
+	@Value("${app.two-factor.lock-seconds:900}")
+	private long lockSeconds;
 
 	@Value("${app.two-factor.issuer:Van Hanh Dich Vu}")
 	private String issuer;
@@ -136,72 +137,21 @@ public class TwoFactorServiceImpl implements TwoFactorService {
 	}
 
 	@Override
-	@Transactional
 	public LoginRes verifyTwoFactor(TwoFactorVerifyReq request) {
-		UserSession session = userSessionRepository.findByTokenId(request.getChallengeToken())
-				.orElseThrow(() -> new BusinessRuleException(ErrorCode.TWO_FACTOR_INVALID,
-						"Ma xac thuc khong hop le, vui long dang nhap lai"));
-
-		if (session.isVerified() || session.getRevokedAt() != null) {
-			throw new BusinessRuleException(ErrorCode.TWO_FACTOR_INVALID,
-					"Ma xac thuc da duoc su dung, vui long dang nhap lai");
+		// KHONG con @Transactional o day nua — toan bo logic (doc co khoa bi
+		// quan, so sanh OTP, dem sai, luu, khoa tai khoan) chay trong DUNG MOT
+		// giao dich ben trong TwoFactorVerificationTransaction.execute(...), no
+		// tra ve ket qua thay vi nem loi. Phuong thuc nay chi con la lop vo mong:
+		// nhan ket qua ROI MOI nem loi tuong ung — luc do giao dich da commit
+		// xong, khong con gi de Spring cuon nguoc nua. Xem javadoc cua
+		// TwoFactorVerificationTransaction de biet vi sao khong the dung
+		// @Transactional(REQUIRES_NEW) o day (se deadlock voi khoa bi quan cua
+		// UserSessionRepository.findByTokenId).
+		TwoFactorVerifyOutcome outcome = verificationTransaction.execute(request, MAX_OTP_ATTEMPTS, lockSeconds);
+		if (outcome.thanhCong()) {
+			return outcome.loginRes();
 		}
-
-		if (LocalDateTime.now().isAfter(session.getExpiresAt())) {
-			throw new BusinessRuleException(ErrorCode.TWO_FACTOR_INVALID,
-					"Phien xac thuc da het han, vui long dang nhap lai");
-		}
-
-		User user = userRepository.findById(session.getUser().getId())
-			.orElseThrow(() -> new BusinessRuleException(ErrorCode.TWO_FACTOR_INVALID,
-				"Tai khoan khong con ton tai, vui long dang nhap lai"));
-		if (user.getStatus() != UserStatus.ACTIVE) {
-			throw new BusinessRuleException(ErrorCode.ACCOUNT_INACTIVE,
-				"Tai khoan khong con duoc phep dang nhap");
-		}
-		if (loginAttemptService.isLocked(user)) {
-			throw new BusinessRuleException(ErrorCode.ACCOUNT_LOCKED,
-				"Tai khoan dang tam khoa, vui long thu lai sau");
-		}
-
-		List<String> currentRoles = userRoleScopeRepository.findRoleCodesByUserId(user.getId());
-		if (!requiresTwoFactor(currentRoles)) {
-			throw new BusinessRuleException(ErrorCode.TWO_FACTOR_INVALID,
-				"Chinh sach xac thuc hai buoc da thay doi, vui long dang nhap lai");
-		}
-
-		if (user.getTotpSecret() == null || !TotpUtil.verifyCode(user.getTotpSecret(), request.getOtp(), TOTP_DRIFT_STEPS)) {
-			session.setOtpAttempts(session.getOtpAttempts() + 1);
-
-			if (session.getOtpAttempts() >= MAX_OTP_ATTEMPTS) {
-				// TC-02: nhap sai 3 lan lien tiep -> tam khoa dang nhap va canh bao quan tri vien.
-				loginAttemptService.lockForTwoFactor(user, lockMinutes);
-
-				log.warn("TWO_FACTOR_MAX_ATTEMPTS userId={} username={} - tam khoa dang nhap. Canh bao quan tri vien (TC-02).",
-						user.getId(), user.getUsername());
-
-				throw new BusinessRuleException(ErrorCode.ACCOUNT_LOCKED,
-						"Nhap sai ma xac thuc qua so lan cho phep. Tai khoan tam khoa, vui long thu lai sau.");
-			}
-
-			userSessionRepository.save(session);
-			throw new BusinessRuleException(ErrorCode.TWO_FACTOR_INVALID, "Ma xac thuc khong dung");
-		}
-
-		// Dung ma -> danh dau phien da su dung, xac nhan thiet lap (neu la lan dau) va cap JWT.
-		session.setVerifiedAt(LocalDateTime.now());
-		session.setRevokedAt(LocalDateTime.now());
-		userSessionRepository.save(session);
-
-		if (user.getTotpConfirmedAt() == null) {
-			user.setTotpConfirmedAt(LocalDateTime.now());
-			userRepository.save(user);
-			log.info("TWO_FACTOR_ENROLLED userId={} username={} - da lien ket app Authenticator", user.getId(), user.getUsername());
-		}
-
-		log.info("TWO_FACTOR_VERIFIED userId={} username={}", session.getUser().getId(), session.getUser().getUsername());
-
-		return issueLoginRes(user, currentRoles);
+		throw new BusinessRuleException(outcome.errorCode(), outcome.message());
 	}
 
 	@Override
@@ -269,11 +219,6 @@ public class TwoFactorServiceImpl implements TwoFactorService {
 				updater != null ? updater.getUsername() : null);
 
 		return toSetupRes(role, setting);
-	}
-
-	private LoginRes issueLoginRes(User user, List<String> roles) {
-		String token = jwtProvider.generateToken(user.getId(), user.getUsername(), roles, user.getTokenVersion());
-		return new LoginRes(token, "Bearer", user.getId(), user.getUsername(), user.getFullName(), roles);
 	}
 
 	private TwoFactorSetupRes toSetupRes(Role role) {
