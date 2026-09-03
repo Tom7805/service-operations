@@ -9,7 +9,8 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 
 /**
- * Ghi nhat ky lan <b>tu choi truy cap</b> vao chuc nang co hoi ban hang (TC-03).
+ * Ghi nhat ky lan <b>tu choi truy cap</b> vao chuc nang co hoi ban hang, ke ca lap bao
+ * gia (NCL-03-CN-001 TC-03, ap dung chung cho NCL-03-CN-003).
  *
  * <p>Khi {@code @PreAuthorize("hasRole('VT-04')")} chan yeu cau (nguoi dung khong
  * phai Nhan vien kinh doanh), {@link AccessDeniedException} duoc nem ra truoc khi
@@ -25,7 +26,8 @@ public class OpportunityAccessDeniedAspect {
 	private final OpportunityAuditLogger auditLogger;
 
 	@AfterThrowing(
-			pointcut = "within(com.serviceops.modules.opportunity.controller..*)",
+			pointcut = "within(com.serviceops.modules.opportunity.controller..*) "
+					+ "|| within(com.serviceops.modules.quotation.controller..*)",
 			throwing = "ex")
 	public void logDenied(JoinPoint joinPoint, AccessDeniedException ex) {
 		try {

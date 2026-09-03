@@ -1243,6 +1243,27 @@ Lịch sử mọi lần chuyển giai đoạn của một cơ hội (TC-05), m�
 }
 ```
 
+`fromStage` là `null` cho bản ghi đầu tiên (lúc tạo cơ hội, tự động ghi nhận giai đoạn khởi tạo `APPROACH`).
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy cơ hội ứng với `opportunityId` |
+
+**Lưu ý cho Frontend:**
+- Dùng `PATCH .../stage` để kéo-thả thẻ cơ hội giữa các cột trên bảng Kanban — nếu API trả `400 INVALID_STATE`
+  do nhảy cóc/cơ hội đã đóng, nên trả thẻ về cột cũ và hiển thị `message` cho người dùng thay vì tự cho phép di
+  chuyển tự do.
+- Sau khi cơ hội đạt `WON`/`LOST` (`status = CLOSED`), nên khóa thao tác kéo-thả/đổi giai đoạn trên giao diện,
+  không đợi gọi API mới biết bị từ chối.
+- Mọi lần chuyển giai đoạn và mọi lần bị từ chối truy cập đều được backend tự ghi nhật ký — Frontend không cần
+  gọi thêm API nào để việc ghi log này xảy ra.
+
+---
+
 ### `NCL-03-CN-003` — Lập báo giá cho cơ hội
 
 Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`). Cơ hội phải đang ở giai đoạn
@@ -1309,21 +1330,11 @@ từng vai trò rồi tính `amount = workDays * dailyRate`. Vai trò chưa có 
 Mọi lần lập báo giá được ghi vào nhật ký cơ hội. `version` tăng tuần tự theo từng
 cơ hội; phiên bản trước vẫn giữ nguyên để đối chiếu khi khách hàng yêu cầu giảm giá.
 
-`fromStage` là `null` cho bản ghi đầu tiên (lúc tạo cơ hội, tự động ghi nhận giai đoạn khởi tạo `APPROACH`).
-
-**Response lỗi:**
-
-| HTTP | `errorCode` | Khi nào xảy ra |
-|---|---|---|
-| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
-| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh |
-| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy cơ hội ứng với `opportunityId` |
-
 **Lưu ý cho Frontend:**
-- Dùng `PATCH .../stage` để kéo-thả thẻ cơ hội giữa các cột trên bảng Kanban — nếu API trả `400 INVALID_STATE`
-  do nhảy cóc/cơ hội đã đóng, nên trả thẻ về cột cũ và hiển thị `message` cho người dùng thay vì tự cho phép di
-  chuyển tự do.
-- Sau khi cơ hội đạt `WON`/`LOST` (`status = CLOSED`), nên khóa thao tác kéo-thả/đổi giai đoạn trên giao diện,
-  không đợi gọi API mới biết bị từ chối.
-- Mọi lần chuyển giai đoạn và mọi lần bị từ chối truy cập đều được backend tự ghi nhật ký — Frontend không cần
-  gọi thêm API nào để việc ghi log này xảy ra.
+- Chưa có API xem lại các phiên bản báo giá đã lập (`GET .../quotes`) trong phạm vi Epic `NCL-03` hiện tại —
+  Frontend cần tự lưu response của lần gọi `POST` gần nhất nếu muốn hiển thị lại trong phiên làm việc.
+- Dòng nào rơi vào `missingRates` (chưa có đơn giá hiệu lực cho vai trò đó) vẫn được trả về trong `items` với
+  `unitRate`/`amount` là `null` và `priced: false` — nên hiển thị cảnh báo thay vì ẩn dòng, vì dòng đó **không**
+  được cộng vào `totalAmount`.
+- Mọi lần lập báo giá và mọi lần bị từ chối truy cập đều được backend tự ghi nhật ký — Frontend không cần gọi
+  thêm API nào để việc ghi log này xảy ra.
