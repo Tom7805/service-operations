@@ -1088,3 +1088,74 @@ gộp (ví dụ còn công nợ chưa thanh toán); dữ liệu đó vẫn đư�
 - Không có API "hoàn tác gộp" — cần thao tác thủ công phía dữ liệu nếu gộp nhầm.
 - Mọi lần gộp và mọi lần bị từ chối truy cập đều được backend tự ghi nhật ký (TC-04) — Frontend không cần gọi
   thêm API nào để việc ghi log này xảy ra.
+
+---
+
+## Epic `NCL-03` — Cơ hội bán hàng
+
+### `NCL-03-CN-001` — Tạo cơ hội bán hàng
+
+Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`); vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần
+từ chối (TC-03).
+
+#### `POST /opportunities`
+
+```json
+{
+  "name": "Trien khai ERP cho Cong ty TNHH ABC",
+  "customerId": 1,
+  "expectedValue": 500000000,
+  "expectedCloseDate": "2026-12-31",
+  "ownerId": null
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `name` | string | có | Tên cơ hội, tối đa 255 ký tự — bỏ trống thì bị từ chối |
+| `customerId` | number | có | Id khách hàng **đã có hồ sơ** trong hệ thống (`NCL-02-CN-001`) — điều kiện bắt đầu của story (TC-01) |
+| `expectedValue` | number | có | Giá trị dự kiến, **phải là số dương** (>0) (TC-02) |
+| `expectedCloseDate` | string (`YYYY-MM-DD`) | không | Ngày dự kiến ký/chốt |
+| `ownerId` | number | không | Người phụ trách — bỏ trống thì mặc định là người tạo (người đang đăng nhập) |
+
+Cơ hội mới luôn được tạo ở giai đoạn đầu tiên **`APPROACH`** (tiếp cận) và trạng thái **`OPEN`** (QTN-06) —
+không truyền lên được, hệ thống tự gán.
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Tao co hoi ban hang thanh cong",
+  "data": {
+    "id": 1,
+    "name": "Trien khai ERP cho Cong ty TNHH ABC",
+    "customerId": 1,
+    "customerName": "Cong ty TNHH ABC",
+    "expectedValue": 500000000,
+    "expectedCloseDate": "2026-12-31",
+    "stage": "APPROACH",
+    "status": "OPEN",
+    "ownerId": 3,
+    "createdBy": "sale01",
+    "createdAt": "2026-09-03T10:00:00"
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 400 | `VALIDATION_ERROR` | Thiếu/để trống `name`, thiếu `customerId`, hoặc `expectedValue` để trống/bằng 0/âm (TC-02) |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy hồ sơ khách hàng ứng với `customerId` (TC-01) |
+
+**Lưu ý cho Frontend:**
+- Nên tải sẵn danh sách khách hàng (`GET /customers`) để người dùng chọn `customerId` từ danh sách có sẵn,
+  tránh nhập tay id.
+- `stage`/`status` chỉ hiển thị, không có ô nhập trên form tạo — mọi cơ hội mới đều bắt đầu ở `APPROACH`/`OPEN`.
+- Mọi lần tạo và mọi lần bị từ chối truy cập đều được backend tự ghi nhật ký (TC-04) — Frontend không cần gọi
+  thêm API nào để việc ghi log này xảy ra.
+- Chưa có API xem danh sách/chi tiết cơ hội (`GET /opportunities`) hay chuyển giai đoạn (kanban) trong phạm vi
+  story này — sẽ bổ sung ở story kế tiếp của Epic `NCL-03`.
