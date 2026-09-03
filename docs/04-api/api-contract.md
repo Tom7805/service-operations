@@ -1089,6 +1089,68 @@ gộp (ví dụ còn công nợ chưa thanh toán); dữ liệu đó vẫn đư�
 - Mọi lần gộp và mọi lần bị từ chối truy cập đều được backend tự ghi nhật ký (TC-04) — Frontend không cần gọi
   thêm API nào để việc ghi log này xảy ra.
 
+### `NCL-03-CN-004` — Dự báo doanh thu theo xác suất giai đoạn
+
+Yêu cầu token của **Ban giám đốc** (`VT-01`) hoặc **Nhân viên kinh doanh** (`VT-04`).
+API chỉ tính các cơ hội có `status = OPEN` và có `expectedCloseDate`; cơ hội đã
+đóng, bao gồm cơ hội `LOST`, và cơ hội chưa có ngày dự kiến ký sẽ được loại khỏi
+dự báo (TC-02).
+
+#### `GET /opportunities/revenue-forecast`
+
+Có thể lọc theo khoảng ngày dự kiến ký. Hai tham số đều không bắt buộc và có định
+dạng `YYYY-MM-DD`:
+
+| Tham số | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `from` | string (`YYYY-MM-DD`) | không | Tháng bắt đầu, lấy cả tháng chứa ngày này |
+| `to` | string (`YYYY-MM-DD`) | không | Tháng kết thúc, lấy cả tháng chứa ngày này |
+
+Mỗi cơ hội được tính vào tháng của `expectedCloseDate` theo công thức:
+`expectedValue * probability / 100`. Các cơ hội cùng tháng được cộng dồn; kết
+quả sắp xếp theo tháng tăng dần (TC-01). Nếu `probability` là `null`, hệ thống
+dùng giá trị `0`.
+
+**Ví dụ:** `GET /opportunities/revenue-forecast?from=2026-09-01&to=2026-12-31`
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "totalExpectedRevenue": 180000000,
+    "months": [
+      {
+        "month": "2026-09",
+        "expectedRevenue": 180000000,
+        "opportunityCount": 2
+      },
+      {
+        "month": "2026-10",
+        "expectedRevenue": 50000000,
+        "opportunityCount": 1
+      }
+    ]
+  }
+}
+```
+
+`totalExpectedRevenue` là tổng `expectedRevenue` của tất cả tháng trong kết quả.
+`opportunityCount` đếm số cơ hội mở được đưa vào tháng đó, không phải số cơ hội
+đã thắng.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Ban giám đốc hoặc Nhân viên kinh doanh |
+| 400 | `VALIDATION_ERROR` | `from` sau `to` hoặc sai định dạng ngày |
+
+API không làm thay đổi dữ liệu cơ hội và không cần endpoint riêng để tính lại; mỗi
+lần gọi sẽ đọc stage, status, probability và expected close date hiện tại.
+
 ---
 
 ## Epic `NCL-03` — Cơ hội bán hàng
