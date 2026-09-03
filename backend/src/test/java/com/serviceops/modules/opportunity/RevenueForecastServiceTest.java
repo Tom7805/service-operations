@@ -64,6 +64,26 @@ class RevenueForecastServiceTest {
 	}
 
 	@Test
+	void treatsNullProbabilityAsZeroButStillCountsOpportunity() {
+		Opportunity opportunity = new Opportunity();
+		opportunity.setName("Chua danh gia xac suat");
+		opportunity.setExpectedValue(new BigDecimal("100000000"));
+		opportunity.setProbability(null);
+		opportunity.setExpectedCloseDate(LocalDate.of(2026, 9, 1));
+		opportunity.setStage(OpportunityStage.APPROACH);
+		opportunity.setStatus(OpportunityStatus.OPEN);
+		when(opportunityRepository.findAll()).thenReturn(List.of(opportunity));
+
+		RevenueForecastRes result = service.forecast(new ForecastQueryReq(null, null));
+
+		assertThat(result.totalExpectedRevenue()).isEqualByComparingTo(BigDecimal.ZERO);
+		assertThat(result.months()).singleElement().satisfies(month -> {
+			assertThat(month.expectedRevenue()).isEqualByComparingTo(BigDecimal.ZERO);
+			assertThat(month.opportunityCount()).isEqualTo(1);
+		});
+	}
+
+	@Test
 	void filtersForecastByCloseMonthRange() {
 		when(opportunityRepository.findAll()).thenReturn(List.of(
 				opportunity("September", "100000000", "40", LocalDate.of(2026, 9, 30), OpportunityStatus.OPEN),
