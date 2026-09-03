@@ -1135,12 +1135,16 @@ không truyền lên được, hệ thống tự gán.
     "expectedCloseDate": "2026-12-31",
     "stage": "APPROACH",
     "status": "OPEN",
+    "probability": 10,
     "ownerId": 3,
     "createdBy": "sale01",
     "createdAt": "2026-09-03T10:00:00"
   }
 }
 ```
+
+> `probability` (xác suất trúng %, 0-100) có mặt trên mọi response `OpportunityRes` kể từ `NCL-03-CN-002` — luôn
+> được hệ thống tự tính theo `stage` hiện tại (xem bảng ở mục `NCL-03-CN-002` bên dưới), Frontend không tự nhập.
 
 **Response lỗi:**
 
@@ -1157,5 +1161,103 @@ không truyền lên được, hệ thống tự gán.
 - `stage`/`status` chỉ hiển thị, không có ô nhập trên form tạo — mọi cơ hội mới đều bắt đầu ở `APPROACH`/`OPEN`.
 - Mọi lần tạo và mọi lần bị từ chối truy cập đều được backend tự ghi nhật ký (TC-04) — Frontend không cần gọi
   thêm API nào để việc ghi log này xảy ra.
-- Chưa có API xem danh sách/chi tiết cơ hội (`GET /opportunities`) hay chuyển giai đoạn (kanban) trong phạm vi
-  story này — sẽ bổ sung ở story kế tiếp của Epic `NCL-03`.
+- Chuyển giai đoạn cơ hội (kanban) xem mục `NCL-03-CN-002` bên dưới. Chưa có API xem danh sách/chi tiết cơ hội
+  (`GET /opportunities`, `GET /opportunities/{id}`) trong phạm vi Epic `NCL-03` hiện tại.
+
+---
+
+### `NCL-03-CN-002` — Chuyển giai đoạn cơ hội
+
+Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`) — cùng phân quyền với `NCL-03-CN-001`; vai trò khác nhận
+`403 FORBIDDEN` và bị ghi nhật ký lần từ chối (TC-03 dùng chung cơ chế `OpportunityAccessDeniedAspect`).
+
+#### `PATCH /opportunities/{opportunityId}/stage`
+
+```json
+{ "targetStage": "PROPOSAL" }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `targetStage` | string | có | Một trong `APPROACH` · `PROPOSAL` · `NEGOTIATION` · `WON` · `LOST` |
+
+**Quy tắc chuyển giai đoạn (QTN-06, TC-02):**
+- Chỉ được chuyển sang giai đoạn **kế tiếp liền kề** theo đúng thứ tự
+  `APPROACH → PROPOSAL → NEGOTIATION → (WON | LOST)` — **không được nhảy cóc** (ví dụ `APPROACH` → `NEGOTIATION`
+  hoặc `APPROACH` → `WON` đều bị từ chối) và **không được chuyển lùi**.
+- Từ `NEGOTIATION` được chốt sang **`WON`** hoặc **`LOST`** — hai giai đoạn này ngang hàng nhau, không phải bước
+  nối tiếp nhau.
+- Khi giai đoạn đích là `WON` hoặc `LOST`, hệ thống tự động **đóng cơ hội** (`status` chuyển sang `CLOSED`) —
+  sau đó **không thể chuyển giai đoạn tiếp** cho cơ hội này nữa dù gọi lại API (TC-03).
+
+**Xác suất trúng (`probability`) được hệ thống tự cập nhật theo giai đoạn mới (TC-01), không truyền lên được:**
+
+| `stage` | `probability` |
+|---|---|
+| `APPROACH` | 10 |
+| `PROPOSAL` | 40 |
+| `NEGOTIATION` | 70 |
+| `WON` | 100 |
+| `LOST` | 0 |
+
+**Response thành công — `200 OK`:** giống hệt cấu trúc `OpportunityRes` của `POST /opportunities`, với `stage`,
+`status`, `probability` đã cập nhật theo giai đoạn mới.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 400 | `VALIDATION_ERROR` | Thiếu `targetStage` |
+| 400 | `INVALID_STATE` | Chuyển giai đoạn không hợp lệ (nhảy cóc/lùi, TC-02) hoặc cơ hội đã đóng (TC-03) — xem `message` để biết giai đoạn hợp lệ kế tiếp |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy cơ hội ứng với `opportunityId` |
+
+#### `GET /opportunities/{opportunityId}/stage-history`
+
+Lịch sử mọi lần chuyển giai đoạn của một cơ hội (TC-05), mới nhất lên đầu.
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": 2,
+      "opportunityId": 1,
+      "fromStage": "APPROACH",
+      "toStage": "PROPOSAL",
+      "changedByUsername": "sale01",
+      "changedAt": "2026-09-03T11:00:00"
+    },
+    {
+      "id": 1,
+      "opportunityId": 1,
+      "fromStage": null,
+      "toStage": "APPROACH",
+      "changedByUsername": "sale01",
+      "changedAt": "2026-09-03T10:00:00"
+    }
+  ]
+}
+```
+
+`fromStage` là `null` cho bản ghi đầu tiên (lúc tạo cơ hội, tự động ghi nhận giai đoạn khởi tạo `APPROACH`).
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy cơ hội ứng với `opportunityId` |
+
+**Lưu ý cho Frontend:**
+- Dùng `PATCH .../stage` để kéo-thả thẻ cơ hội giữa các cột trên bảng Kanban — nếu API trả `400 INVALID_STATE`
+  do nhảy cóc/cơ hội đã đóng, nên trả thẻ về cột cũ và hiển thị `message` cho người dùng thay vì tự cho phép di
+  chuyển tự do.
+- Sau khi cơ hội đạt `WON`/`LOST` (`status = CLOSED`), nên khóa thao tác kéo-thả/đổi giai đoạn trên giao diện,
+  không đợi gọi API mới biết bị từ chối.
+- Mọi lần chuyển giai đoạn và mọi lần bị từ chối truy cập đều được backend tự ghi nhật ký — Frontend không cần
+  gọi thêm API nào để việc ghi log này xảy ra.
