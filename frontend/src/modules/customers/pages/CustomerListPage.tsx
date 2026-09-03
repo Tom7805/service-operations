@@ -2,6 +2,8 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   createCustomer,
   createCustomerWithOverride,
+  updateCustomer,
+  updateCustomerWithOverride,
   fetchCustomers,
   CustomerApiError,
 } from '../api/customersApi';
@@ -13,6 +15,7 @@ import type {
   Customer,
   CustomerCreatePayload,
   CustomerCreateWithOverridePayload,
+  CustomerUpdateWithOverridePayload,
 } from '../types/customerTypes';
 
 interface CustomerListPageProps {
@@ -42,6 +45,8 @@ export default function CustomerListPage({
   const [companySizeFilter, setCompanySizeFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // Hồ sơ đang được chỉnh sửa (mở CustomerFormModal ở chế độ 'edit').
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [toastMessage, setToastMessage] = useState<{
     text: string;
     type: 'success' | 'error' | 'info';
@@ -131,6 +136,52 @@ export default function CustomerListPage({
           : err instanceof Error
           ? err.message
           : 'Không thể tạo hồ sơ khách hàng.';
+      showToast(message, 'error');
+      throw err;
+    }
+  };
+
+  const applyCustomerUpdate = (updated: Customer) => {
+    setCustomers((prev) => prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)));
+  };
+
+  const handleUpdateCustomer = async (payload: CustomerCreatePayload) => {
+    if (!editingCustomer) return;
+    try {
+      const updated = await updateCustomer(editingCustomer.id, payload);
+      applyCustomerUpdate(updated);
+      showToast(`Đã cập nhật hồ sơ khách hàng "${updated.name}".`, 'success', updated.code);
+      return updated;
+    } catch (err) {
+      const message =
+        err instanceof CustomerApiError
+          ? err.message
+          : err instanceof Error
+          ? err.message
+          : 'Không thể cập nhật hồ sơ khách hàng.';
+      showToast(message, 'error');
+      throw err;
+    }
+  };
+
+  const handleUpdateCustomerWithOverride = async (payload: CustomerUpdateWithOverridePayload) => {
+    if (!editingCustomer) return;
+    try {
+      const updated = await updateCustomerWithOverride(editingCustomer.id, payload);
+      applyCustomerUpdate(updated);
+      showToast(
+        `Đã cập nhật hồ sơ khách hàng "${updated.name}" (Đã ghi nhận lý do bỏ qua cảnh báo).`,
+        'success',
+        updated.code
+      );
+      return updated;
+    } catch (err) {
+      const message =
+        err instanceof CustomerApiError
+          ? err.message
+          : err instanceof Error
+          ? err.message
+          : 'Không thể cập nhật hồ sơ khách hàng.';
       showToast(message, 'error');
       throw err;
     }
@@ -480,6 +531,8 @@ export default function CustomerListPage({
             onNavigateDetail={handleSelectCustomer}
             canManageSegment={isAllowed}
             onOpenSegment={handleOpenSegment}
+            canEdit={isAllowed}
+            onEdit={setEditingCustomer}
           />
         )}
 
@@ -502,6 +555,16 @@ export default function CustomerListPage({
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleCreateCustomer}
         onOverrideSubmit={handleCreateCustomerWithOverride}
+      />
+
+      {/* Modal chỉnh sửa hồ sơ khách hàng */}
+      <CustomerFormModal
+        isOpen={editingCustomer !== null}
+        mode="edit"
+        initialCustomer={editingCustomer}
+        onClose={() => setEditingCustomer(null)}
+        onSubmit={handleUpdateCustomer}
+        onOverrideSubmit={handleUpdateCustomerWithOverride}
       />
     </div>
   );

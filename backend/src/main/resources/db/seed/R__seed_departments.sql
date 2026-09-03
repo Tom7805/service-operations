@@ -41,39 +41,64 @@ INSERT INTO roles (code, name, description) VALUES
 ON DUPLICATE KEY UPDATE name = VALUES(name), description = VALUES(description);
 
 -- ----------------------------------------------------------------------------
---  Cây tổ chức mô phỏng — MỘT cây thống nhất quy về Ban Giám Đốc.
+--  Cây tổ chức mô phỏng — MỘT cây thống nhất, đúng 4 tầng phân cấp:
+--  Trung tâm > Ban > Phòng > Tổ/Nhóm (mỗi tầng CHỈ trực thuộc đúng tầng liền
+--  trên, không còn hai loại ngang hàng như bản trước).
 --
---  id 1..6 giữ NGUYÊN (frontend `SYSTEM_DEPARTMENTS` tham chiếu id cứng);
---  id 6 (Trung tâm Công nghệ) từ nay trực thuộc Ban Giám Đốc thay vì đứng gốc
---  riêng — để "phạm vi Toàn công ty" đúng bằng toàn bộ nhánh dưới Ban Giám Đốc.
---  Thêm 3 TỔ/NHÓM (id 7..9) dưới Trung tâm Công nghệ: đây là nơi bố trí lực
---  lượng "Nhân viên chuyên môn" (VT-03) và để kiểm thử phạm vi "một nhánh +
---  toàn bộ đơn vị con cháu" (NCL-01-CN-004-TC-01).
+--  id 1..9 giữ NGUYÊN (frontend `SYSTEM_DEPARTMENTS` tham chiếu id cứng, và
+--  seed thứ 3 — R__seed_roles_permissions.sql — gán department_id theo đúng
+--  các id này cho từng tài khoản mẫu). Đã THÊM id 10 làm gốc mới, và đổi
+--  LOẠI của id 6 (trước ghi "Trung Tâm..." nhưng lại nằm dưới một "Ban" —
+--  hiển thị sai thứ bậc trên cây; nay đổi tên + loại cho khớp đúng tầng nó
+--  đang đứng: PHÒNG, không phải TRUNG_TÂM).
 --
---  Ràng buộc cấp bậc (V23): đơn vị con không được có cấp CAO hơn đơn vị cha.
---  Hạng: TRUNG_TAM = BAN = 0  <  PHONG = 1  <  TO = 2.
+--  Ràng buộc cấp bậc (`DepartmentHierarchyValidator`, V23): đơn vị con không
+--  được có cấp CAO hơn đơn vị cha. Hạng: TRUNG_TAM=0 < BAN=1 < PHONG=2 < TO=3.
 --
---     [1] Ban Giám Đốc ................................... BAN        (gốc)
---         ├── [2] Phòng Quản Lý Dự Án (PMO) ............. PHONG
---         ├── [3] Phòng Kinh Doanh & Phát Triển Thị Trường PHONG
---         ├── [4] Phòng Kế Toán - Tài Chính ............. PHONG
---         ├── [5] Phòng Nhân Sự ......................... PHONG
---         └── [6] Trung Tâm Công Nghệ & Giải Pháp ....... TRUNG_TAM
---             ├── [7] Nhóm Phát Triển Phần Mềm .......... TO
---             ├── [8] Nhóm Tư Vấn Giải Pháp ............. TO
---             └── [9] Nhóm Kiểm Thử & Đảm Bảo Chất Lượng  TO
+--  id 11..18: THÊM 2 Tổ/Nhóm dưới mỗi Phòng còn lại (trước đây chỉ Phòng Công
+--  Nghệ có con — cây lệch hẳn về một nhánh). Không gán trưởng bộ phận (tổ mới
+--  lập, hợp lý khi chưa có trưởng nhóm) — tránh phải bịa thêm hàng loạt tài
+--  khoản/nhân sự giả không phục vụ mục đích kiểm thử nào.
+--
+--     [10] Trung Tâm Vận Hành .......................... TRUNG_TAM  (gốc)
+--          └── [1] Ban Giám Đốc ........................ BAN
+--              ├── [2] Phòng Quản Lý Dự Án (PMO) ....... PHONG
+--              │   ├── [11] Tổ Điều Phối Dự Án .......... TO
+--              │   └── [12] Tổ Giám Sát Tiến Độ .......... TO
+--              ├── [3] Phòng KD & Phát Triển Thị Trường  PHONG
+--              │   ├── [13] Tổ Kinh Doanh Trong Nước ..... TO
+--              │   └── [14] Tổ Phát Triển Thị Trường Mới . TO
+--              ├── [4] Phòng Kế Toán - Tài Chính ........ PHONG
+--              │   ├── [15] Tổ Kế Toán Tổng Hợp .......... TO
+--              │   └── [16] Tổ Công Nợ & Thu Chi ......... TO
+--              ├── [5] Phòng Nhân Sự .................... PHONG
+--              │   ├── [17] Tổ Tuyển Dụng & Đào Tạo ...... TO
+--              │   └── [18] Tổ Chính Sách & Phúc Lợi ..... TO
+--              └── [6] Phòng Công Nghệ & Giải Pháp ...... PHONG
+--                  ├── [7] Nhóm Phát Triển Phần Mềm ..... TO
+--                  ├── [8] Nhóm Tư Vấn Giải Pháp ......... TO
+--                  └── [9] Nhóm Kiểm Thử & Đảm Bảo CL .... TO
 --
 --  Cột manager_id được gán ở file thứ 3 (sau khi đã có users). ON DUPLICATE
 --  KEY UPDATE chỉ đụng name/parent_id/unit_type nên manager_id không bị xóa.
 -- ----------------------------------------------------------------------------
 INSERT INTO departments (id, name, parent_id, unit_type) VALUES
-    (1, 'Ban Giám Đốc',                              NULL, 'BAN'),
-    (2, 'Phòng Quản Lý Dự Án (PMO)',                 1,    'PHONG'),
-    (3, 'Phòng Kinh Doanh & Phát Triển Thị Trường',  1,    'PHONG'),
-    (4, 'Phòng Kế Toán - Tài Chính',                 1,    'PHONG'),
-    (5, 'Phòng Nhân Sự',                             1,    'PHONG'),
-    (6, 'Trung Tâm Công Nghệ & Giải Pháp',           1,    'TRUNG_TAM'),
-    (7, 'Nhóm Phát Triển Phần Mềm',                  6,    'TO'),
-    (8, 'Nhóm Tư Vấn Giải Pháp',                     6,    'TO'),
-    (9, 'Nhóm Kiểm Thử & Đảm Bảo Chất Lượng',        6,    'TO')
+    (10, 'Trung Tâm Vận Hành',                        NULL, 'TRUNG_TAM'),
+    (1,  'Ban Giám Đốc',                              10,   'BAN'),
+    (2,  'Phòng Quản Lý Dự Án (PMO)',                 1,    'PHONG'),
+    (3,  'Phòng Kinh Doanh & Phát Triển Thị Trường',  1,    'PHONG'),
+    (4,  'Phòng Kế Toán - Tài Chính',                 1,    'PHONG'),
+    (5,  'Phòng Nhân Sự',                             1,    'PHONG'),
+    (6,  'Phòng Công Nghệ & Giải Pháp',               1,    'PHONG'),
+    (7,  'Nhóm Phát Triển Phần Mềm',                  6,    'TO'),
+    (8,  'Nhóm Tư Vấn Giải Pháp',                     6,    'TO'),
+    (9,  'Nhóm Kiểm Thử & Đảm Bảo Chất Lượng',        6,    'TO'),
+    (11, 'Tổ Điều Phối Dự Án',                        2,    'TO'),
+    (12, 'Tổ Giám Sát Tiến Độ',                       2,    'TO'),
+    (13, 'Tổ Kinh Doanh Trong Nước',                  3,    'TO'),
+    (14, 'Tổ Phát Triển Thị Trường Mới',              3,    'TO'),
+    (15, 'Tổ Kế Toán Tổng Hợp',                       4,    'TO'),
+    (16, 'Tổ Công Nợ & Thu Chi',                      4,    'TO'),
+    (17, 'Tổ Tuyển Dụng & Đào Tạo',                   5,    'TO'),
+    (18, 'Tổ Chính Sách & Phúc Lợi',                  5,    'TO')
 ON DUPLICATE KEY UPDATE name = VALUES(name), parent_id = VALUES(parent_id), unit_type = VALUES(unit_type);

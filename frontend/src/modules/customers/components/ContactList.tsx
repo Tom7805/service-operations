@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import type { CustomerContact, CustomerContactPayload, ContactAuditItem } from '../types/customerTypes';
 import {
   fetchCustomerContacts,
@@ -205,29 +206,32 @@ export default function ContactList({
 
   return (
     <div className="contact-manager-section" data-testid="contact-manager-section">
-      {/* Toast thông báo */}
-      {toastMessage && (
-        <div
-          className={`toast-notification toast-notification--${toastMessage.type}`}
-          role="alert"
-          aria-live="polite"
-        >
-          <div className="toast-notification__content">
-            <span className="toast-notification__icon">
-              {toastMessage.type === 'success' ? ICONS.checkCircle : toastMessage.type === 'error' ? ICONS.alertTriangle : ICONS.info}
-            </span>
-            <span className="toast-notification__text">{toastMessage.text}</span>
-          </div>
-          <button
-            type="button"
-            className="toast-notification__close"
-            onClick={() => setToastMessage(null)}
-            aria-label="Đóng thông báo"
+      {/* Toast thông báo — render qua portal ra <body> để luôn neo ở góc dưới
+          bên phải màn hình, không bị "kẹt" bên trong vùng nội dung tab. */}
+      {toastMessage &&
+        createPortal(
+          <div
+            className={`toast-notification toast-notification--${toastMessage.type}`}
+            role="alert"
+            aria-live="polite"
           >
-            <span className="icon-sm">{ICONS.close}</span>
-          </button>
-        </div>
-      )}
+            <div className="toast-notification__content">
+              <span className="toast-notification__icon">
+                {toastMessage.type === 'success' ? ICONS.checkCircle : toastMessage.type === 'error' ? ICONS.alertTriangle : ICONS.info}
+              </span>
+              <span className="toast-notification__text">{toastMessage.text}</span>
+            </div>
+            <button
+              type="button"
+              className="toast-notification__close"
+              onClick={() => setToastMessage(null)}
+              aria-label="Đóng thông báo"
+            >
+              <span className="icon-sm">{ICONS.close}</span>
+            </button>
+          </div>,
+          document.body
+        )}
 
       {/* Header & Bộ công cụ Quản lý liên hệ */}
       <div className="contact-manager-header">

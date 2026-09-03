@@ -148,6 +148,32 @@ class AuthControllerTest {
     }
 
     @Test
+    void me_khongDangNhap_traVe401() throws Exception {
+        mockMvc.perform(get("/auth/me"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void me_daDangNhap_traVeVaiTroVaHoTenHienTai() throws Exception {
+        User user = new User();
+        user.setId(7L);
+        user.setUsername("sale01");
+        user.setFullName("Do Thi Mai");
+        user.setPasswordHash("hashed");
+        user.setStatus(UserStatus.ACTIVE);
+        CustomUserDetails principal = new CustomUserDetails(user, List.of("VT-04", "VT-02"), UserScope.company());
+        var auth = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+
+        mockMvc.perform(get("/auth/me").with(authentication(auth)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.userId").value(7))
+                .andExpect(jsonPath("$.data.username").value("sale01"))
+                .andExpect(jsonPath("$.data.fullName").value("Do Thi Mai"))
+                .andExpect(jsonPath("$.data.roles").isArray())
+                .andExpect(jsonPath("$.data.roles[0]").value("VT-04"));
+    }
+
+    @Test
     void resetPassword_tokenKhongHopLe_traVe400() throws Exception {
         doThrow(new BusinessRuleException(ErrorCode.RESET_TOKEN_INVALID, "Lien ket khoi phuc khong hop le"))
                 .when(passwordService).resetPassword(any());

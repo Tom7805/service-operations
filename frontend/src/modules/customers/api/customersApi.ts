@@ -9,6 +9,8 @@ import type {
   CustomerSegmentPayload,
   CustomerMergePayload,
   CustomerMergePreview,
+  CustomerUpdatePayload,
+  CustomerUpdateWithOverridePayload,
 } from '../types/customerTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
@@ -109,6 +111,40 @@ export async function createCustomer(payload: CustomerCreatePayload): Promise<Cu
   const cleanPayload = cleanCustomerPayload(payload);
 
   return requestBackend<Customer>(`${API_BASE_URL}/customers`, {
+    method: 'POST',
+    body: JSON.stringify(cleanPayload),
+  });
+}
+
+/**
+ * Chỉnh sửa hồ sơ khách hàng đã tạo (PUT /customers/{id}) — Tên, MST, SĐT, Ngành, Địa chỉ.
+ * Bắt buộc vai trò VT-04 hoặc VT-02. Backend chạy lại kiểm tra trùng (tự loại chính hồ sơ này),
+ * chặn khi hồ sơ đã bị gộp (MERGED), ghi Audit Log `UPDATE`.
+ */
+export async function updateCustomer(
+  customerId: number,
+  payload: CustomerUpdatePayload
+): Promise<Customer> {
+  return requestBackend<Customer>(`${API_BASE_URL}/customers/${customerId}`, {
+    method: 'PUT',
+    body: JSON.stringify(cleanCustomerPayload(payload)),
+  });
+}
+
+/**
+ * Xác nhận chỉnh sửa hồ sơ khách hàng bỏ qua cảnh báo trùng
+ * (POST /customers/{id}/update-with-override) — bắt buộc truyền kèm lý do.
+ */
+export async function updateCustomerWithOverride(
+  customerId: number,
+  payload: CustomerUpdateWithOverridePayload
+): Promise<Customer> {
+  const cleanPayload: CustomerUpdateWithOverridePayload = {
+    customer: cleanCustomerPayload(payload.customer),
+    override: { reason: payload.override.reason.trim() },
+  };
+
+  return requestBackend<Customer>(`${API_BASE_URL}/customers/${customerId}/update-with-override`, {
     method: 'POST',
     body: JSON.stringify(cleanPayload),
   });

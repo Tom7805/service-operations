@@ -12,10 +12,10 @@
 --    2. Phòng ban        = vị trí trong CÂY TỔ CHỨC, dùng để giới hạn phạm vi
 --                          dữ liệu (COMPANY / DEPARTMENT / SELF — QTN-01).
 --       → Hai trục ĐỘC LẬP: một phòng chứa nhiều vai trò; một vai trò rải nhiều phòng.
---    3. "Nhân viên chuyên môn" (VT-03) thuộc Trung tâm Công nghệ và các Tổ/Nhóm
---       con của nó (id 6..9).
---    4. VT-07 (Quản trị viên) là vai trò xuyên suốt — đặt tại Trung tâm Công nghệ
---       nhưng KHÔNG có hồ sơ trong `employees` (không phải nhân sự nghiệp vụ).
+--    3. "Nhân viên chuyên môn" (VT-03) thuộc Phòng Công nghệ & Giải pháp và các
+--       Tổ/Nhóm con của nó (id 6..9).
+--    4. VT-07 (Quản trị viên) là vai trò xuyên suốt — đặt tại Phòng Công nghệ &
+--       Giải pháp nhưng KHÔNG có hồ sơ trong `employees` (không phải nhân sự nghiệp vụ).
 --    5. VT-08 KHÔNG gán cho ai (chỉ là tên gọi chung).
 --    6. VT-09 (Khách hàng) nằm NGOÀI cây tổ chức: department_id = NULL, phạm vi SELF,
 --       không có hồ sơ nhân sự.

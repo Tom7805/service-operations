@@ -11,6 +11,8 @@ import {
   updateTwoFactorConfig,
   isTwoFactorChallenge,
   AuthApiError,
+  fetchCurrentUser,
+  SessionSyncError,
 } from '../api/authApi';
 
 function mockFetchOnce(status: number, body: unknown) {
@@ -222,5 +224,33 @@ describe('authApi (NCL-01-CN-001, NCL-01-CN-008)', () => {
     );
 
     await expect(getTwoFactorConfigs()).rejects.toMatchObject({ code: 'FORBIDDEN' });
+  });
+
+  describe('fetchCurrentUser (NCL-01-CN-004 TC-03)', () => {
+    it('gọi GET /auth/me kèm Bearer token và map roles + fullName hiện tại', async () => {
+      const fetchMock = mockFetchOnce(200, {
+        success: true,
+        data: { userId: 7, username: 'sale01', fullName: 'Đỗ Thị Mai', roles: ['VT-04', 'VT-02'], scopeType: 'COMPANY' },
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      await expect(fetchCurrentUser('tok-123')).resolves.toEqual({
+        userId: 7,
+        username: 'sale01',
+        fullName: 'Đỗ Thị Mai',
+        roles: ['VT-04', 'VT-02'],
+      });
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('/auth/me'),
+        expect.objectContaining({ method: 'GET', headers: { Authorization: 'Bearer tok-123' } })
+      );
+    });
+
+    it('ném SessionSyncError với status 401 khi token đã bị vô hiệu', async () => {
+      vi.stubGlobal('fetch', mockFetchOnce(401, { success: false, message: 'Phiên đã hết hạn' }));
+
+      await expect(fetchCurrentUser('tok-cu')).rejects.toBeInstanceOf(SessionSyncError);
+      await expect(fetchCurrentUser('tok-cu')).rejects.toMatchObject({ status: 401 });
+    });
   });
 });

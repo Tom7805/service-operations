@@ -6,12 +6,14 @@ import com.serviceops.modules.customer.dto.request.CustomerCreateReq;
 import com.serviceops.modules.customer.dto.request.DuplicateOverrideReq;
 import com.serviceops.modules.customer.dto.request.CustomerSearchReq;
 import com.serviceops.modules.customer.dto.request.CustomerSegmentReq;
+import com.serviceops.modules.customer.dto.request.CustomerUpdateReq;
 import com.serviceops.modules.customer.dto.response.CustomerRes;
 import com.serviceops.modules.customer.dto.response.DuplicateCandidateRes;
 import com.serviceops.modules.customer.entity.Customer;
 import com.serviceops.modules.customer.entity.CustomerAuditLog;
 import com.serviceops.modules.customer.entity.CustomerDuplicateOverrideLog;
 import com.serviceops.modules.customer.enums.CustomerAuditAction;
+import com.serviceops.modules.customer.enums.CustomerStatus;
 import com.serviceops.modules.customer.mapper.CustomerMapper;
 import com.serviceops.modules.customer.repository.CustomerAuditLogRepository;
 import com.serviceops.modules.customer.repository.CustomerDuplicateOverrideLogRepository;
@@ -19,6 +21,11 @@ import com.serviceops.modules.customer.repository.CustomerRepository;
 import com.serviceops.modules.customer.service.CustomerDuplicateService;
 import com.serviceops.modules.customer.service.impl.CustomerServiceImpl;
 import com.serviceops.modules.customer.validator.CustomerDuplicateValidator;
+import com.serviceops.modules.identity.user.entity.User;
+import com.serviceops.modules.identity.user.repository.UserRepository;
+import com.serviceops.security.scope.CurrentUserScopeProvider;
+import com.serviceops.security.scope.DataScopeType;
+import com.serviceops.security.scope.UserScope;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -58,6 +65,12 @@ class CustomerServiceTest {
 	@Mock
 	private CustomerAuditLogRepository auditLogRepository;
 
+	@Mock
+	private CurrentUserScopeProvider currentUserScopeProvider;
+
+	@Mock
+	private UserRepository userRepository;
+
 	private final CustomerMapper customerMapper = new CustomerMapper();
 
 	private final CustomerDuplicateValidator customerDuplicateValidator = new CustomerDuplicateValidator();
@@ -67,7 +80,8 @@ class CustomerServiceTest {
 	@BeforeEach
 	void setUp() {
 		service = new CustomerServiceImpl(customerRepository, customerMapper, customerDuplicateService,
-				overrideLogRepository, auditLogRepository, customerDuplicateValidator);
+				overrideLogRepository, auditLogRepository, customerDuplicateValidator,
+				currentUserScopeProvider, userRepository);
 
 		lenient().when(customerRepository.existsByCode(anyString())).thenReturn(false);
 		lenient().when(customerDuplicateService.findDuplicates(anyString(), any(), any()))
@@ -79,6 +93,11 @@ class CustomerServiceTest {
 			}
 			return customer;
 		});
+		// Mac dinh COMPANY-wide (khong gioi han) — cac test cu trong file nay
+		// kiem tra hanh vi khong lien quan pham vi du lieu, khong nen bi anh
+		// huong boi bo loc scope moi them (QTN-01). Cac test rieng cho SELF/
+		// DEPARTMENT ben duoi tu stub lai gia tri khac.
+		lenient().when(currentUserScopeProvider.currentScope()).thenReturn(UserScope.company());
 	}
 
 	@Test
@@ -239,5 +258,181 @@ class CustomerServiceTest {
 		request.setCompanySize("Sieu nho");
 
 		assertThat(service.findAll(request)).isEmpty();
+	}
+
+	/**
+	 * QTN-01: cac test nay bat dung lai loi phat hien qua kiem thu thu cong
+	 * TC-02 (bien ban "Kich Ban Kiem Thu Van Hanh") — sale.lead va sale01
+	 * thay giong het nhau vi CustomerServiceImpl.findAll() truoc day tra ve
+	 * TOAN BO danh sach cho MOI pham vi, khong loc theo DEPARTMENT/SELF.
+	 */
+	@Test
+	@DisplayName("QTN-01: pham vi SELF chi thay ho so do chinh minh phu trach")
+	void selfScopeOnlyShowsOwnCustomers() {
+		Customer own = new Customer();
+		own.setOwnerId(10L);
+		Customer someoneElses = new Customer();
+		someoneElses.setOwnerId(20L);
+		when(customerRepository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of(own, someoneElses));
+		when(currentUserScopeProvider.currentScope()).thenReturn(new UserScope(DataScopeType.SELF, java.util.Set.of()));
+		when(currentUserScopeProvider.currentUserId()).thenReturn(10L);
+
+		assertThat(service.findAll(null)).hasSize(1);
+	}
+
+	@Test
+	@DisplayName("QTN-01: pham vi DEPARTMENT thay ho so cua nguoi phu trach cung phong, khong thay phong khac")
+	void departmentScopeOnlyShowsSameDepartmentOwners() {
+		Customer sameDept = new Customer();
+		sameDept.setOwnerId(11L);
+		Customer otherDept = new Customer();
+		otherDept.setOwnerId(21L);
+		when(customerRepository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of(sameDept, otherDept));
+		when(currentUserScopeProvider.currentScope())
+				.thenReturn(new UserScope(DataScopeType.DEPARTMENT, java.util.Set.of(3L)));
+
+		User ownerInScope = new User();
+		ownerInScope.setId(11L);
+		ownerInScope.setDepartmentId(3L);
+		User ownerOutOfScope = new User();
+		ownerOutOfScope.setId(21L);
+		ownerOutOfScope.setDepartmentId(99L);
+		when(userRepository.findById(11L)).thenReturn(java.util.Optional.of(ownerInScope));
+		when(userRepository.findById(21L)).thenReturn(java.util.Optional.of(ownerOutOfScope));
+
+		assertThat(service.findAll(null)).hasSize(1);
+	}
+
+	@Test
+	@DisplayName("QTN-01: ho so khong xac dinh nguoi phu trach bi loai khoi ket qua khi pham vi khong phai COMPANY")
+	void customerWithoutOwnerIsHiddenOutsideCompanyScope() {
+		Customer noOwner = new Customer();
+		noOwner.setOwnerId(null);
+		when(customerRepository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of(noOwner));
+		when(currentUserScopeProvider.currentScope()).thenReturn(new UserScope(DataScopeType.SELF, java.util.Set.of()));
+
+		assertThat(service.findAll(null)).isEmpty();
+	}
+
+	@Test
+	@DisplayName("NCL-02-CN-001: tao ho so thi gan nguoi tao lam nguoi phu trach (ownerId)")
+	void createSetsOwnerIdToCurrentUser() {
+		when(currentUserScopeProvider.currentUserId()).thenReturn(42L);
+
+		service.create(new CustomerCreateReq("Cong ty TNHH ABC", null, null, null, null));
+
+		ArgumentCaptor<Customer> captor = ArgumentCaptor.forClass(Customer.class);
+		verify(customerRepository).save(captor.capture());
+		assertThat(captor.getValue().getOwnerId()).isEqualTo(42L);
+	}
+
+	// --- Chinh sua ho so khach hang (PUT /customers/{id}) ---
+
+	private Customer existingCustomer(long id) {
+		Customer customer = new Customer();
+		customer.setId(id);
+		customer.setCode("KH-000123");
+		customer.setName("Cong ty cu");
+		customer.setStatus(CustomerStatus.ACTIVE);
+		return customer;
+	}
+
+	@Test
+	@DisplayName("Update: sua duoc ten/MST/SDT/nganh/dia chi va ghi nhat ky UPDATE")
+	void updatesEditableFieldsAndRecordsAudit() {
+		when(customerRepository.findById(123L)).thenReturn(java.util.Optional.of(existingCustomer(123L)));
+		CustomerUpdateReq req = new CustomerUpdateReq("Cong ty moi", "0101234567", "0987654321",
+				"Logistics", "Da Nang");
+
+		CustomerRes result = service.update(123L, req);
+
+		assertThat(result.name()).isEqualTo("Cong ty moi");
+		assertThat(result.taxCode()).isEqualTo("0101234567");
+		assertThat(result.phone()).isEqualTo("0987654321");
+
+		ArgumentCaptor<CustomerAuditLog> captor = ArgumentCaptor.forClass(CustomerAuditLog.class);
+		verify(auditLogRepository).save(captor.capture());
+		assertThat(captor.getValue().getActionType()).isEqualTo(CustomerAuditAction.UPDATE);
+	}
+
+	@Test
+	@DisplayName("Update: khong tim thay ho so thi bao RESOURCE_NOT_FOUND")
+	void rejectsUpdateWhenCustomerMissing() {
+		when(customerRepository.findById(999L)).thenReturn(java.util.Optional.empty());
+
+		assertThatThrownBy(() -> service.update(999L,
+				new CustomerUpdateReq("Cong ty moi", null, null, null, null)))
+				.isInstanceOf(BusinessRuleException.class)
+				.extracting(ex -> ((BusinessRuleException) ex).getErrorCode())
+				.isEqualTo(ErrorCode.RESOURCE_NOT_FOUND);
+		verify(customerRepository, never()).save(any());
+	}
+
+	@Test
+	@DisplayName("Update: ho so da bi gop (MERGED) thi khong cho sua")
+	void rejectsUpdateWhenCustomerMerged() {
+		Customer merged = existingCustomer(123L);
+		merged.setStatus(CustomerStatus.MERGED);
+		when(customerRepository.findById(123L)).thenReturn(java.util.Optional.of(merged));
+
+		assertThatThrownBy(() -> service.update(123L,
+				new CustomerUpdateReq("Cong ty moi", null, null, null, null)))
+				.isInstanceOf(BusinessRuleException.class)
+				.extracting(ex -> ((BusinessRuleException) ex).getErrorCode())
+				.isEqualTo(ErrorCode.VALIDATION_ERROR);
+		verify(customerRepository, never()).save(any());
+	}
+
+	@Test
+	@DisplayName("Update: chan luu khi trung ho so KHAC (giong cao), nhung bo qua chinh no")
+	void updateBlocksOnDuplicateButIgnoresSelf() {
+		when(customerRepository.findById(123L)).thenReturn(java.util.Optional.of(existingCustomer(123L)));
+		// Ket qua nghi trung gom chinh no (id=123, bi loai) va mot ho so khac giong cao (id=456).
+		when(customerDuplicateService.findDuplicates(anyString(), any(), any())).thenReturn(List.of(
+				new DuplicateCandidateRes(123L, "KH-000123", "Cong ty moi", null, null, 1.0, List.of("ten")),
+				new DuplicateCandidateRes(456L, "KH-000456", "Cong ty moi", null, null, 0.95, List.of("ten"))));
+
+		assertThatThrownBy(() -> service.update(123L,
+				new CustomerUpdateReq("Cong ty moi", null, null, null, null)))
+				.isInstanceOf(BusinessRuleException.class)
+				.extracting(ex -> ((BusinessRuleException) ex).getErrorCode())
+				.isEqualTo(ErrorCode.DUPLICATE_DATA);
+		verify(customerRepository, never()).save(any());
+	}
+
+	@Test
+	@DisplayName("Update: chi nghi trung voi CHINH minh thi van luu binh thuong")
+	void updateAllowsWhenOnlySelfMatches() {
+		when(customerRepository.findById(123L)).thenReturn(java.util.Optional.of(existingCustomer(123L)));
+		when(customerDuplicateService.findDuplicates(anyString(), any(), any())).thenReturn(List.of(
+				new DuplicateCandidateRes(123L, "KH-000123", "Cong ty moi", null, null, 1.0, List.of("ten"))));
+
+		CustomerRes result = service.update(123L,
+				new CustomerUpdateReq("Cong ty moi", null, null, null, null));
+
+		assertThat(result.name()).isEqualTo("Cong ty moi");
+		verify(customerRepository).save(any(Customer.class));
+	}
+
+	@Test
+	@DisplayName("UpdateWithOverride: ghi log ly do va nhat ky UPDATE_WITH_OVERRIDE, khong chan trung")
+	void updateWithOverrideSkipsBlockingAndLogsReason() {
+		when(customerRepository.findById(123L)).thenReturn(java.util.Optional.of(existingCustomer(123L)));
+
+		CustomerRes result = service.updateWithOverride(123L,
+				new CustomerUpdateReq("Cong ty moi", null, null, null, null),
+				new DuplicateOverrideReq("Hai phap nhan doc lap"));
+
+		assertThat(result.name()).isEqualTo("Cong ty moi");
+
+		ArgumentCaptor<CustomerDuplicateOverrideLog> overrideCaptor =
+				ArgumentCaptor.forClass(CustomerDuplicateOverrideLog.class);
+		verify(overrideLogRepository).save(overrideCaptor.capture());
+		assertThat(overrideCaptor.getValue().getReason()).isEqualTo("Hai phap nhan doc lap");
+
+		ArgumentCaptor<CustomerAuditLog> auditCaptor = ArgumentCaptor.forClass(CustomerAuditLog.class);
+		verify(auditLogRepository).save(auditCaptor.capture());
+		assertThat(auditCaptor.getValue().getActionType())
+				.isEqualTo(CustomerAuditAction.UPDATE_WITH_OVERRIDE);
 	}
 }

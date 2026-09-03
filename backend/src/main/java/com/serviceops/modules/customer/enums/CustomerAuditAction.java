@@ -30,6 +30,12 @@ public enum CustomerAuditAction {
     /** Cap nhat nganh nghe, quy mo va muc do uu tien khach hang (NCL-02-CN-005). */
     SEGMENT_UPDATE,
 
+    /** Chinh sua thong tin ho so khach hang (ten / MST / SDT / nganh / dia chi). */
+    UPDATE,
+
+    /** Chinh sua ho so khach hang khi bo qua canh bao trung, kem ly do. */
+    UPDATE_WITH_OVERRIDE,
+
     /** Gop ho so khach hang trung, ghi tren ho so "giu lai" (NCL-02-CN-006, TC-04). */
     MERGE
 }
