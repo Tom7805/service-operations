@@ -1261,3 +1261,80 @@ Lịch sử mọi lần chuyển giai đoạn của một cơ hội (TC-05), m�
   không đợi gọi API mới biết bị từ chối.
 - Mọi lần chuyển giai đoạn và mọi lần bị từ chối truy cập đều được backend tự ghi nhật ký — Frontend không cần
   gọi thêm API nào để việc ghi log này xảy ra.
+
+---
+
+### `NCL-03-CN-003` — Lập báo giá cho cơ hội
+
+Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`). Cơ hội phải đang ở giai đoạn
+`PROPOSAL`; mỗi lần lập báo giá tạo một phiên bản mới và không ghi đè phiên bản cũ.
+
+#### `POST /opportunities/{opportunityId}/quotes`
+
+```json
+{
+  "items": [
+    { "professionalRole": "Lap trinh vien cao cap", "workDays": 20 },
+    { "professionalRole": "Kiem thu", "workDays": 10 }
+  ]
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `items` | array | có | Ít nhất một dòng báo giá |
+| `items[].professionalRole` | string | có | Vai trò chuyên môn, không để trống |
+| `items[].workDays` | number | có | Số ngày công dự kiến, phải lớn hơn 0 |
+
+Backend tra đơn giá bán có `effectiveFrom <= ngày lập`, chọn bản ghi mới nhất của
+từng vai trò rồi tính `amount = workDays * dailyRate`. Vai trò chưa có đơn giá
+được trả trong `missingRates`, dòng đó có `unitRate: null`, `amount: null` và không
+được cộng vào `totalAmount` (TC-02). Đơn giá không nhận từ request.
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Lap bao gia thanh cong",
+  "data": {
+    "id": 1,
+    "opportunityId": 12,
+    "version": 1,
+    "totalAmount": 150000000,
+    "items": [
+      {
+        "professionalRole": "Lap trinh vien cao cap",
+        "workDays": 20,
+        "unitRate": 5000000,
+        "amount": 100000000,
+        "priced": true
+      }
+    ],
+    "missingRates": [],
+    "createdBy": "sale01",
+    "createdAt": "2026-09-03T10:00:00"
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh |
+| 400 | `VALIDATION_ERROR` | Không có dòng, vai trò trống hoặc số ngày công không dương |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy cơ hội |
+| 400 | `INVALID_STATE` | Cơ hội chưa ở giai đoạn `PROPOSAL` |
+
+Mọi lần lập báo giá được ghi vào nhật ký cơ hội. `version` tăng tuần tự theo từng
+cơ hội; phiên bản trước vẫn giữ nguyên để đối chiếu khi khách hàng yêu cầu giảm giá.
+
+**Lưu ý cho Frontend:**
+- Chưa có API xem lại các phiên bản báo giá đã lập (`GET .../quotes`) trong phạm vi Epic `NCL-03` hiện tại —
+  Frontend cần tự lưu response của lần gọi `POST` gần nhất nếu muốn hiển thị lại trong phiên làm việc.
+- Dòng nào rơi vào `missingRates` (chưa có đơn giá hiệu lực cho vai trò đó) vẫn được trả về trong `items` với
+  `unitRate`/`amount` là `null` và `priced: false` — nên hiển thị cảnh báo thay vì ẩn dòng, vì dòng đó **không**
+  được cộng vào `totalAmount`.
+- Mọi lần lập báo giá và mọi lần bị từ chối truy cập đều được backend tự ghi nhật ký — Frontend không cần gọi
+  thêm API nào để việc ghi log này xảy ra.
