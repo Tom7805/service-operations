@@ -1243,6 +1243,72 @@ Lịch sử mọi lần chuyển giai đoạn của một cơ hội (TC-05), m�
 }
 ```
 
+### `NCL-03-CN-003` — Lập báo giá cho cơ hội
+
+Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`). Cơ hội phải đang ở giai đoạn
+`PROPOSAL`; mỗi lần lập báo giá tạo một phiên bản mới và không ghi đè phiên bản cũ.
+
+#### `POST /opportunities/{opportunityId}/quotes`
+
+```json
+{
+  "items": [
+    { "professionalRole": "Lap trinh vien cao cap", "workDays": 20 },
+    { "professionalRole": "Kiem thu", "workDays": 10 }
+  ]
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `items` | array | có | Ít nhất một dòng báo giá |
+| `items[].professionalRole` | string | có | Vai trò chuyên môn, không để trống |
+| `items[].workDays` | number | có | Số ngày công dự kiến, phải lớn hơn 0 |
+
+Backend tra đơn giá bán có `effectiveFrom <= ngày lập`, chọn bản ghi mới nhất của
+từng vai trò rồi tính `amount = workDays * dailyRate`. Vai trò chưa có đơn giá
+được trả trong `missingRates`, dòng đó có `unitRate: null`, `amount: null` và không
+được cộng vào `totalAmount` (TC-02). Đơn giá không nhận từ request.
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Lap bao gia thanh cong",
+  "data": {
+    "id": 1,
+    "opportunityId": 12,
+    "version": 1,
+    "totalAmount": 150000000,
+    "items": [
+      {
+        "professionalRole": "Lap trinh vien cao cap",
+        "workDays": 20,
+        "unitRate": 5000000,
+        "amount": 100000000,
+        "priced": true
+      }
+    ],
+    "missingRates": [],
+    "createdBy": "sale01",
+    "createdAt": "2026-09-03T10:00:00"
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh |
+| 400 | `VALIDATION_ERROR` | Không có dòng, vai trò trống hoặc số ngày công không dương |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy cơ hội |
+| 400 | `INVALID_STATE` | Cơ hội chưa ở giai đoạn `PROPOSAL` |
+
+Mọi lần lập báo giá được ghi vào nhật ký cơ hội. `version` tăng tuần tự theo từng
+cơ hội; phiên bản trước vẫn giữ nguyên để đối chiếu khi khách hàng yêu cầu giảm giá.
+
 `fromStage` là `null` cho bản ghi đầu tiên (lúc tạo cơ hội, tự động ghi nhận giai đoạn khởi tạo `APPROACH`).
 
 **Response lỗi:**
