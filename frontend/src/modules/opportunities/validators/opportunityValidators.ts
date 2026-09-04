@@ -82,7 +82,12 @@ export function validateQuoteCreate(items: QuoteItemReq[]): QuoteValidationResul
       hasError = true;
     }
 
-    if (item.workDays === undefined || item.workDays === null || isNaN(item.workDays)) {
+    if (
+      item.workDays === undefined ||
+      item.workDays === null ||
+      (item.workDays as unknown) === '' ||
+      isNaN(item.workDays)
+    ) {
       fieldErrors[`items[${idx}].workDays`] = 'Số ngày công không được để trống';
       hasError = true;
     } else if (item.workDays <= 0) {
