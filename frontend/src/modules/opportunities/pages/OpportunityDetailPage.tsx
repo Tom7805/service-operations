@@ -31,6 +31,17 @@ function formatActivityLabel(type: string): string {
   return ACTIVITY_OPTIONS.find((item) => item.value === type)?.label ?? type;
 }
 
+const PARTICIPANTS_MAX_LENGTH = 500;
+const CONTENT_MAX_LENGTH = 2000;
+
+/** Giờ địa phương cho input datetime-local — toISOString() trả về UTC nên không được dùng ở đây. */
+function toLocalDatetimeInputValue(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
+    date.getHours()
+  )}:${pad(date.getMinutes())}`;
+}
+
 function formatDateTime(isoValue?: string | null): string {
   if (!isoValue) return '—';
   const date = new Date(isoValue);
@@ -56,7 +67,7 @@ export default function OpportunityDetailPage({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [form, setForm] = useState<OpportunityActivityCreatePayload>({
     activityType: 'CALL',
-    occurredAt: new Date().toISOString().slice(0, 16),
+    occurredAt: toLocalDatetimeInputValue(new Date()),
     participants: '',
     content: '',
   });
@@ -65,6 +76,7 @@ export default function OpportunityDetailPage({
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isSalesAllowed) return;
     let cancelled = false;
 
     async function loadActivities() {
@@ -99,6 +111,10 @@ export default function OpportunityDetailPage({
     if (!form.activityType) next.activityType = 'Loại hoạt động không được để trống';
     if (!form.occurredAt) next.occurredAt = 'Thời điểm hoạt động không được để trống';
     if (!form.content.trim()) next.content = 'Nội dung trao đổi không được để trống';
+    else if (form.content.length > CONTENT_MAX_LENGTH)
+      next.content = `Nội dung trao đổi không được vượt quá ${CONTENT_MAX_LENGTH} ký tự`;
+    if ((form.participants?.length ?? 0) > PARTICIPANTS_MAX_LENGTH)
+      next.participants = `Người tham gia không được vượt quá ${PARTICIPANTS_MAX_LENGTH} ký tự`;
     return next;
   }, [form]);
 
@@ -132,7 +148,7 @@ export default function OpportunityDetailPage({
       setActivities((prev) => [created, ...prev]);
       setForm({
         activityType: 'CALL',
-        occurredAt: new Date().toISOString().slice(0, 16),
+        occurredAt: toLocalDatetimeInputValue(new Date()),
         participants: '',
         content: '',
       });
@@ -258,6 +274,7 @@ export default function OpportunityDetailPage({
                     onChange={(e) => handleChange('participants', e.target.value)}
                     aria-label="Người tham gia"
                     placeholder="Ví dụ: Nguyễn Huy, Anh Lan"
+                    maxLength={PARTICIPANTS_MAX_LENGTH}
                   />
                   {errors.participants && <small className="field-error">{errors.participants}</small>}
                 </label>
@@ -270,6 +287,7 @@ export default function OpportunityDetailPage({
                     aria-label="Nội dung trao đổi"
                     rows={5}
                     placeholder="Nhập nội dung trao đổi, kế hoạch chăm sóc hoặc quyết định với khách hàng..."
+                    maxLength={CONTENT_MAX_LENGTH}
                   />
                   {errors.content && <small className="field-error">{errors.content}</small>}
                 </label>

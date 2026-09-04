@@ -13,6 +13,7 @@ import ChangePasswordPage from './modules/auth/pages/ChangePasswordPage';
 import TwoFactorSetupPage from './modules/auth/pages/TwoFactorSetupPage';
 import CustomerListPage from './modules/customers/pages/CustomerListPage';
 import CustomerMergePage from './modules/customers/pages/CustomerMergePage';
+import OpportunityDetailPage from './modules/opportunities/pages/OpportunityDetailPage';
 import { ICONS } from './components/common/icons';
 import CommandPalette from './components/common/CommandPalette';
 import useScrollReveal from './hooks/useScrollReveal';
@@ -30,6 +31,7 @@ type Tab =
   | 'SYSTEM_AUDIT_LOG'
   | 'EMPLOYEES'
   | 'EMPLOYEE_DETAIL'
+  | 'OPPORTUNITY_DETAIL'
   | 'CHANGE_PASSWORD'
   | 'TWO_FACTOR_SETTINGS';
 
@@ -55,6 +57,7 @@ const NAV_ITEMS: NavItem[] = [
   { tab: 'DEPARTMENTS', icon: ICONS.tree, label: 'Tổ chức', requires: ['VT-07'] },
   { tab: 'USERS', icon: ICONS.user, label: 'Tài khoản', matches: ['DETAIL'], requires: ['VT-07'] },
   { tab: 'EMPLOYEES', icon: ICONS.users, label: 'Nhân sự', matches: ['EMPLOYEE_DETAIL'], requires: ['VT-06', 'VT-07'] },
+  { tab: 'OPPORTUNITY_DETAIL', icon: ICONS.building, label: 'Cơ hội', requires: ['VT-04'] },
   { tab: 'PERMISSIONS', icon: ICONS.shield, label: 'Phân quyền', requires: ['VT-07'] },
 ];
 
@@ -102,6 +105,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('DEPARTMENTS');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
+  const [opportunityIdInput, setOpportunityIdInput] = useState('');
+  const [selectedOpportunityId, setSelectedOpportunityId] = useState<number | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -397,6 +402,36 @@ export default function App() {
                 setActiveTab('EMPLOYEE_DETAIL');
               }}
             />
+          ) : activeTab === 'OPPORTUNITY_DETAIL' ? (
+            selectedOpportunityId ? (
+              <OpportunityDetailPage
+                opportunityId={selectedOpportunityId}
+                currentUserRoles={currentRoles}
+                currentUserName={session.fullName}
+              />
+            ) : (
+              <div className="opportunity-id-picker">
+                <h2>Ghi nhận hoạt động chăm sóc cơ hội</h2>
+                <p>Nhập mã cơ hội để xem lịch sử và ghi nhận hoạt động chăm sóc.</p>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const id = Number(opportunityIdInput);
+                    if (Number.isInteger(id) && id > 0) setSelectedOpportunityId(id);
+                  }}
+                >
+                  <input
+                    type="number"
+                    min={1}
+                    value={opportunityIdInput}
+                    onChange={(e) => setOpportunityIdInput(e.target.value)}
+                    placeholder="Mã cơ hội"
+                    aria-label="Mã cơ hội"
+                  />
+                  <button type="submit" className="btn btn-primary">Mở cơ hội</button>
+                </form>
+              </div>
+            )
           ) : activeTab === 'DETAIL' && selectedUserId ? (
             <UserDetailPage userId={selectedUserId} onBack={() => setActiveTab('USERS')} />
           ) : (
