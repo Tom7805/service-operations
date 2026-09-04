@@ -2,12 +2,14 @@ import type {
   OpportunityCreatePayload,
   OpportunityFormErrors,
   OpportunityStage,
+  QuoteItemReq,
 } from '../types/opportunityTypes';
 import { ACTIVE_STAGES_ORDER, STAGE_CONFIGS } from '../types/opportunityTypes';
 
 export const OPPORTUNITY_LIMITS = {
   NAME_MAX_LENGTH: 255,
   MAX_EXPECTED_VALUE: 1_000_000_000_000_000, // 1 triệu tỷ VNĐ trần kỹ thuật
+  MAX_WORK_DAYS: 3650, // Tối đa 10 năm công / dòng báo giá
 };
 
 /**
@@ -52,6 +54,61 @@ export function validateOpportunityCreate(payload: OpportunityCreatePayload): Op
   }
 
   return errors;
+}
+
+/**
+ * Kiểm tra tính hợp lệ của dữ liệu lập báo giá (NCL-03-CN-003)
+ */
+export interface QuoteValidationResult {
+  valid: boolean;
+  generalError?: string;
+  fieldErrors: Record<string, string>;
+}
+
+export function validateQuoteCreate(items: QuoteItemReq[]): QuoteValidationResult {
+  const fieldErrors: Record<string, string> = {};
+
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return {
+      valid: false,
+      generalError: 'Báo giá phải có ít nhất một dòng chuyên môn (TC-02)',
+      fieldErrors: {},
+    };
+  }
+
+  let hasError = false;
+
+  items.forEach((item, idx) => {
+    if (!item.professionalRole || item.professionalRole.trim().length === 0) {
+      fieldErrors[`items[${idx}].professionalRole`] = 'Vai trò chuyên môn không được để trống';
+      hasError = true;
+    } else if (item.professionalRole.trim().length > 255) {
+      fieldErrors[`items[${idx}].professionalRole`] = 'Tên vai trò chuyên môn không được quá 255 ký tự';
+      hasError = true;
+    }
+
+    if (
+      item.workDays === undefined ||
+      item.workDays === null ||
+      (item.workDays as unknown) === '' ||
+      isNaN(item.workDays)
+    ) {
+      fieldErrors[`items[${idx}].workDays`] = 'Số ngày công không được để trống';
+      hasError = true;
+    } else if (item.workDays <= 0) {
+      fieldErrors[`items[${idx}].workDays`] = 'Số ngày công phải lớn hơn 0';
+      hasError = true;
+    } else if (item.workDays > OPPORTUNITY_LIMITS.MAX_WORK_DAYS) {
+      fieldErrors[`items[${idx}].workDays`] = `Số ngày công không được vượt quá ${OPPORTUNITY_LIMITS.MAX_WORK_DAYS}`;
+      hasError = true;
+    }
+  });
+
+  return {
+    valid: !hasError,
+    generalError: hasError ? 'Vui lòng kiểm tra lại thông tin các dòng báo giá bên dưới' : undefined,
+    fieldErrors,
+  };
 }
 
 /**

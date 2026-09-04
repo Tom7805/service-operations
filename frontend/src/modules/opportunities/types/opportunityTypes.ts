@@ -16,9 +16,11 @@ export type OpportunityStatus =
 
 export interface Opportunity {
   id: number;
+  code?: string;
   name: string;
   customerId: number;
   customerName?: string;
+  customerCode?: string;
   expectedValue: number;
   expectedCloseDate?: string | null;
   stage: OpportunityStage | string;
@@ -27,6 +29,7 @@ export interface Opportunity {
   ownerId?: number | null;
   createdBy?: string;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface OpportunityCreatePayload {
@@ -121,3 +124,54 @@ export const STAGE_CONFIGS: Record<OpportunityStage, StageMeta> = {
 
 /** Thứ tự các giai đoạn đang hoạt động (ACTIVE) */
 export const ACTIVE_STAGES_ORDER: OpportunityStage[] = ['APPROACH', 'PROPOSAL', 'NEGOTIATION'];
+
+/* -------------------------------------------------------------------------- */
+/*  Lập báo giá cho cơ hội (NCL-03-CN-003)                                     */
+/* -------------------------------------------------------------------------- */
+
+/** Dòng báo giá gửi lên máy chủ (POST /opportunities/{id}/quotes) */
+export interface QuoteItemReq {
+  professionalRole: string;
+  workDays: number;
+}
+
+/** Yêu cầu lập báo giá cho cơ hội */
+export interface QuoteCreateReq {
+  items: QuoteItemReq[];
+}
+
+/** Dòng báo giá trả về từ máy chủ sau khi áp đơn giá */
+export interface QuoteItemRes {
+  id?: number;
+  professionalRole: string;
+  workDays: number;
+  unitRate: number | null;
+  amount: number | null;
+  priced: boolean;
+}
+
+/** Bản ghi báo giá hoàn chỉnh từ máy chủ */
+export interface QuoteRes {
+  id: number;
+  opportunityId: number;
+  version: number;
+  totalAmount: number;
+  currency?: string;
+  effectiveDate?: string;
+  items: QuoteItemRes[];
+  missingRates: string[];
+  createdBy?: string;
+  createdAt?: string;
+}
+
+/** Danh sách vai trò chuyên môn phổ biến để gợi ý khi lập báo giá */
+export const POPULAR_PROFESSIONAL_ROLES = [
+  'Quản lý dự án (Project Manager)',
+  'Kiến trúc sư giải pháp (Solution Architect)',
+  'Lập trình viên cao cấp (Senior Developer)',
+  'Lập trình viên (Developer)',
+  'Kỹ sư kiểm thử phần mềm (QA/QC Engineer)',
+  'Thiết kế giao diện & trải nghiệm (UI/UX Designer)',
+  'Kỹ sư hệ thống / DevOps (DevOps Engineer)',
+  'Chuyên viên phân tích nghiệp vụ (Business Analyst)',
+];
