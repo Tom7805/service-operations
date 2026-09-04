@@ -44,3 +44,34 @@ ON DUPLICATE KEY UPDATE
     participants  = VALUES(participants),
     content       = VALUES(content),
     created_by    = VALUES(created_by);
+
+-- ----------------------------------------------------------------------------
+--  DU LIEU NEN BO SUNG CHO NCL-03-CN-007 — BAO CAO DUONG ONG BAN HANG
+--  10 co hoi (2003..2012) trai tren ca 5 giai doan de bao cao /opportunities/
+--  pipeline-report co du lieu ngay (TC-01). Co hoi 2007 la co hoi "dong lau
+--  bat thuong": NEGOTIATION / OPEN, created_at cach hien tai hon 60 ngay va
+--  chua co ban ghi opportunity_stage_history nen so ngay o giai doan tinh tu
+--  created_at (TC-02).
+--  Idempotent qua ON DUPLICATE KEY UPDATE theo id co dinh.
+-- ----------------------------------------------------------------------------
+INSERT INTO opportunities (id, name, customer_id, expected_value, expected_close_date, stage, status, probability, created_by, created_at)
+VALUES
+    (2003, 'Nang cap ha tang mang cho Thuong Mai Mien Bac',        1002, 120000000, '2026-11-30', 'APPROACH',    'OPEN',    10,  'sale01',    '2026-08-20 09:00:00'),
+    (2004, 'Trien khai cong thong tin noi bo Sao Viet',            1004, 180000000, '2026-12-15', 'APPROACH',    'OPEN',    10,  'pm01',      '2026-08-28 09:00:00'),
+    (2005, 'Chuan hoa quy trinh kho van Logistics Toan Cau',       1005, 260000000, '2026-10-31', 'PROPOSAL',    'OPEN',    40,  'pm.lead',   '2026-07-25 09:00:00'),
+    (2006, 'Tu van tai chinh - ke toan cho Minh Duc giai doan 2',  1006, 340000000, '2026-10-20', 'PROPOSAL',    'OPEN',    40,  'ketoan01',  '2026-08-05 09:00:00'),
+    (2012, 'Mo rong module bao gia cho Giai Phap So Viet',         1001, 300000000, '2026-11-10', 'PROPOSAL',    'OPEN',    40,  'sale01',    '2026-08-12 09:00:00'),
+    (2007, 'Dam phan hop dong CRM mo rong An Phat',                1003, 500000000, '2026-09-30', 'NEGOTIATION', 'OPEN',    70,  'sale.lead', '2026-05-20 09:00:00'),
+    (2008, 'Dam phan goi bao tri he thong Sao Viet',               1004, 300000000, '2026-10-05', 'NEGOTIATION', 'OPEN',    70,  'pm01',      '2026-08-18 09:00:00'),
+    (2009, 'Trien khai ERP giai doan 1 cho Minh Duc',              1006, 350000000, '2026-08-31', 'WON',         'CLOSED',  100, 'ketoan01',  '2026-06-10 09:00:00'),
+    (2010, 'Goi ho tro van hanh cho Logistics Toan Cau',          1005, 250000000, '2026-08-20', 'WON',         'CLOSED',  100, 'pm.lead',   '2026-06-25 09:00:00'),
+    (2011, 'Du an so hoa tai lieu Thuong Mai Mien Bac',            1002, 150000000, '2026-08-15', 'LOST',        'CLOSED',  0,   'sale01',    '2026-06-18 09:00:00')
+ON DUPLICATE KEY UPDATE
+    name                = VALUES(name),
+    customer_id         = VALUES(customer_id),
+    expected_value      = VALUES(expected_value),
+    expected_close_date = VALUES(expected_close_date),
+    stage               = VALUES(stage),
+    status              = VALUES(status),
+    probability         = VALUES(probability),
+    created_by          = VALUES(created_by);

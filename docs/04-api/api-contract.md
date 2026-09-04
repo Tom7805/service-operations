@@ -1595,3 +1595,64 @@ danh sách. Luôn xem được, **kể cả khi cơ hội đã đóng** (TC-02 c
   gọi `POST` rồi mới nhận `400 INVALID_STATE`); nếu vẫn gọi và nhận lỗi này, hiển thị đúng thông điệp trả về.
 - Mọi lần thêm hoạt động thành công đều được backend tự ghi vào nhật ký cơ hội (TC-04) — Frontend không cần gọi
   thêm API nào để việc ghi log này xảy ra.
+
+---
+
+### `NCL-03-CN-007` — Báo cáo đường ống bán hàng theo giai đoạn
+
+Yêu cầu token của **Ban giám đốc** (`VT-01`) hoặc **Nhân viên kinh doanh** (`VT-04`) — cùng phạm vi phân quyền
+với báo cáo dự báo doanh thu `NCL-03-CN-004`. Vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối
+(TC-03, dùng chung cơ chế `OpportunityAccessDeniedAspect`). Mỗi lần gọi thành công, backend ghi một dòng
+`REPORT_VIEW` vào nhật ký cơ hội (`opportunity_audit_logs`) — người thực hiện, nội dung tóm tắt, thời điểm
+(TC-04); Frontend không cần gọi thêm API nào để việc ghi log này xảy ra.
+
+#### `GET /opportunities/pipeline-report`
+
+Không có tham số. Báo cáo là ảnh chụp **hiện tại** của toàn bộ cơ hội, gom theo `stage`.
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "totalOpportunityCount": 12,
+    "totalExpectedValue": 3150000000,
+    "stalledThresholdDays": 60,
+    "generatedAt": "2026-09-04T11:20:31",
+    "stages": [
+      { "stage": "APPROACH",    "opportunityCount": 4, "totalExpectedValue": 700000000,  "averageDaysInStage": 18, "stalledCount": 0, "stalledOpportunityIds": [] },
+      { "stage": "PROPOSAL",    "opportunityCount": 3, "totalExpectedValue": 900000000,  "averageDaysInStage": 25, "stalledCount": 0, "stalledOpportunityIds": [] },
+      { "stage": "NEGOTIATION", "opportunityCount": 2, "totalExpectedValue": 800000000,  "averageDaysInStage": 47, "stalledCount": 1, "stalledOpportunityIds": [2007] },
+      { "stage": "WON",         "opportunityCount": 2, "totalExpectedValue": 600000000,  "averageDaysInStage": 5,  "stalledCount": 0, "stalledOpportunityIds": [] },
+      { "stage": "LOST",        "opportunityCount": 1, "totalExpectedValue": 150000000,  "averageDaysInStage": 3,  "stalledCount": 0, "stalledOpportunityIds": [] }
+    ]
+  }
+}
+```
+
+| Trường | Kiểu | Ghi chú |
+|---|---|---|
+| `totalOpportunityCount` | number | Tổng số cơ hội đưa vào báo cáo (mọi trạng thái). |
+| `totalExpectedValue` | number | Tổng `expectedValue` của tất cả cơ hội. |
+| `stalledThresholdDays` | number | Ngưỡng (ngày) để coi một cơ hội còn mở là "đọng lâu bất thường" — hiện cố định `60` (TC-02). |
+| `generatedAt` | string (`date-time`) | Thời điểm máy chủ sinh báo cáo — cũng là mốc tính `averageDaysInStage`. |
+| `stages` | array | **Luôn đủ 5 dòng** theo đúng thứ tự `APPROACH → PROPOSAL → NEGOTIATION → WON → LOST`; giai đoạn không có cơ hội trả về các số `0` / mảng rỗng (không bị bỏ khỏi danh sách). |
+| `stages[].opportunityCount` | number | Số cơ hội đang ở giai đoạn đó (TC-01). |
+| `stages[].totalExpectedValue` | number | Tổng giá trị dự kiến của các cơ hội trong giai đoạn (TC-01). |
+| `stages[].averageDaysInStage` | number | Số ngày trung bình (làm tròn) mỗi cơ hội đã nằm ở giai đoạn hiện tại; `0` khi không có cơ hội. Mốc bắt đầu là lần **chuyển vào** giai đoạn hiện tại (bản ghi `opportunity_stage_history` mới nhất có `toStage` = giai đoạn hiện tại), hoặc `createdAt` nếu cơ hội chưa từng chuyển giai đoạn (TC-01). |
+| `stages[].stalledCount` | number | Số cơ hội còn mở (`status = OPEN`) ở giai đoạn trung gian đã nằm **quá** `stalledThresholdDays` ngày (TC-02). Giai đoạn `WON`/`LOST` luôn `0`. |
+| `stages[].stalledOpportunityIds` | array<number> | Id các cơ hội bị đánh dấu đọng lâu, để giao diện mở tầng chi tiết (TC-02). |
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Ban giám đốc (`VT-01`) hoặc Nhân viên kinh doanh (`VT-04`) — hệ thống ghi nhật ký lần từ chối (TC-03) |
+
+**Lưu ý cho Frontend:**
+- API là ảnh chụp hiện tại; không có tham số lọc theo khoảng ngày trong phạm vi story này.
+- Vẽ phễu (funnel) theo đúng thứ tự `stages` trả về; hiển thị cảnh báo "đọng lâu bất thường" cho các giai đoạn
+  có `stalledCount > 0`, dùng `stalledOpportunityIds` để liên kết tới chi tiết cơ hội.
+- Cột giá trị dùng chung đơn vị tiền với các API cơ hội khác (VND, số nguyên).
