@@ -6,11 +6,13 @@ import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.config.SecurityConfig;
 import com.serviceops.modules.opportunity.controller.OpportunityController;
 import com.serviceops.modules.opportunity.dto.request.ForecastQueryReq;
+import com.serviceops.modules.opportunity.dto.request.OpportunityCloseReq;
 import com.serviceops.modules.opportunity.dto.request.OpportunityCreateReq;
 import com.serviceops.modules.opportunity.dto.request.StageChangeReq;
 import com.serviceops.modules.opportunity.dto.response.OpportunityRes;
 import com.serviceops.modules.opportunity.dto.response.RevenueForecastRes;
 import com.serviceops.modules.opportunity.dto.response.StageHistoryRes;
+import com.serviceops.modules.opportunity.enums.LossReason;
 import com.serviceops.modules.opportunity.enums.OpportunityStage;
 import com.serviceops.modules.opportunity.service.OpportunityService;
 import com.serviceops.modules.opportunity.service.OpportunityStageService;
@@ -35,6 +37,7 @@ import java.time.YearMonth;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -86,7 +89,7 @@ class OpportunityControllerIT {
 		when(opportunityService.create(any())).thenReturn(new OpportunityRes(
 				1L, "Trien khai ERP", 10L, "Cong ty TNHH ABC", new BigDecimal("500000000"),
 				LocalDate.now().plusMonths(1), "APPROACH", "OPEN", new BigDecimal("10"),
-				42L, "sale01", LocalDateTime.now()));
+				42L, "sale01", LocalDateTime.now(), null, null, null, null));
 
 		mockMvc.perform(post("/opportunities")
 						.contentType("application/json")
@@ -155,7 +158,8 @@ class OpportunityControllerIT {
 	void allowsSalesRoleToChangeStage() throws Exception {
 		when(opportunityStageService.changeStage(any())).thenReturn(new OpportunityRes(
 				1L, "Trien khai ERP", 10L, null, new BigDecimal("500000000"), null,
-				"PROPOSAL", "OPEN", new BigDecimal("40"), 42L, "sale01", LocalDateTime.now()));
+				"PROPOSAL", "OPEN", new BigDecimal("40"), 42L, "sale01", LocalDateTime.now(),
+				null, null, null, null));
 
 		mockMvc.perform(patch("/opportunities/1/stage")
 						.contentType("application/json")
@@ -264,6 +268,121 @@ class OpportunityControllerIT {
 				new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Khong tim thay co hoi voi id=99"));
 
 		mockMvc.perform(get("/opportunities/99/stage-history"))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.errorCode").value("RESOURCE_NOT_FOUND"));
+	}
+
+	// --- POST /opportunities/{id}/close (NCL-03-CN-005) ---
+
+	@Test
+	@DisplayName("TC-01: Nhan vien kinh doanh dong co hoi voi ket qua THUA kem ly do va doi thu")
+	@WithMockUser(authorities = "ROLE_VT-04")
+	void allowsSalesRoleToCloseOpportunityAsLost() throws Exception {
+		OpportunityCloseReq req = new OpportunityCloseReq(OpportunityStage.LOST, LossReason.PRICE_TOO_HIGH,
+				"Gia cao hon doi thu 15%", "Doi thu ABC");
+		when(opportunityStageService.closeOpportunity(eq(1L), any())).thenReturn(new OpportunityRes(
+				1L, "Trien khai ERP", 10L, null, new BigDecimal("500000000"), null,
+				"LOST", "CLOSED", BigDecimal.ZERO, 42L, "sale01", LocalDateTime.now(),
+				"PRICE_TOO_HIGH", "Gia cao hon doi thu 15%", "Doi thu ABC", LocalDateTime.now()));
+
+		mockMvc.perform(post("/opportunities/1/close")
+						.contentType("application/json")
+						.content(objectMapper.writeValueAsString(req)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.data.stage").value("LOST"))
+				.andExpect(jsonPath("$.data.status").value("CLOSED"))
+				.andExpect(jsonPath("$.data.lossReason").value("PRICE_TOO_HIGH"))
+				.andExpect(jsonPath("$.data.competitorName").value("Doi thu ABC"));
+	}
+
+	@Test
+	@DisplayName("TC-01: Nhan vien kinh doanh dong co hoi voi ket qua THANG")
+	@WithMockUser(authorities = "ROLE_VT-04")
+	void allowsSalesRoleToCloseOpportunityAsWon() throws Exception {
+		OpportunityCloseReq req = new OpportunityCloseReq(OpportunityStage.WON, null, null, null);
+		when(opportunityStageService.closeOpportunity(eq(1L), any())).thenReturn(new OpportunityRes(
+				1L, "Trien khai ERP", 10L, null, new BigDecimal("500000000"), null,
+				"WON", "CLOSED", new BigDecimal("100"), 42L, "sale01", LocalDateTime.now(),
+				null, null, null, LocalDateTime.now()));
+
+		mockMvc.perform(post("/opportunities/1/close")
+						.contentType("application/json")
+						.content(objectMapper.writeValueAsString(req)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.data.stage").value("WON"))
+				.andExpect(jsonPath("$.data.status").value("CLOSED"));
+	}
+
+	@Test
+	@DisplayName("TC-03: vai tro khong phai Nhan vien kinh doanh bi tu choi dong co hoi (403)")
+	@WithMockUser(authorities = "ROLE_VT-02")
+	void deniesOtherRolesForClose() throws Exception {
+		OpportunityCloseReq req = new OpportunityCloseReq(OpportunityStage.LOST, LossReason.PRICE_TOO_HIGH, null, null);
+
+		mockMvc.perform(post("/opportunities/1/close")
+						.contentType("application/json")
+						.content(objectMapper.writeValueAsString(req)))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+	}
+
+	@Test
+	@DisplayName("Thieu result thi bao 400")
+	@WithMockUser(authorities = "ROLE_VT-04")
+	void rejectsMissingResult() throws Exception {
+		OpportunityCloseReq req = new OpportunityCloseReq(null, null, null, null);
+
+		mockMvc.perform(post("/opportunities/1/close")
+						.contentType("application/json")
+						.content(objectMapper.writeValueAsString(req)))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	@DisplayName("TC-02: chon ket qua THUA nhung khong nhap ly do thi bao 400 VALIDATION_ERROR")
+	@WithMockUser(authorities = "ROLE_VT-04")
+	void rejectsLostResultWithoutReason() throws Exception {
+		OpportunityCloseReq req = new OpportunityCloseReq(OpportunityStage.LOST, null, null, null);
+		when(opportunityStageService.closeOpportunity(eq(1L), any())).thenThrow(
+				new BusinessRuleException(ErrorCode.VALIDATION_ERROR,
+						"Phai chon ly do khi ghi nhan co hoi thua (LOST)"));
+
+		mockMvc.perform(post("/opportunities/1/close")
+						.contentType("application/json")
+						.content(objectMapper.writeValueAsString(req)))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"));
+	}
+
+	@Test
+	@DisplayName("Co hoi chua o giai doan dam phan thi bao 400 INVALID_STATE")
+	@WithMockUser(authorities = "ROLE_VT-04")
+	void rejectsCloseWhenNotInNegotiation() throws Exception {
+		OpportunityCloseReq req = new OpportunityCloseReq(OpportunityStage.WON, null, null, null);
+		when(opportunityStageService.closeOpportunity(eq(1L), any())).thenThrow(
+				new BusinessRuleException(ErrorCode.INVALID_STATE,
+						"Chi duoc ghi nhan ket qua thang/thua khi co hoi dang o giai doan dam phan (NEGOTIATION)"));
+
+		mockMvc.perform(post("/opportunities/1/close")
+						.contentType("application/json")
+						.content(objectMapper.writeValueAsString(req)))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.errorCode").value("INVALID_STATE"));
+	}
+
+	@Test
+	@DisplayName("Khong tim thay co hoi thi bao 404")
+	@WithMockUser(authorities = "ROLE_VT-04")
+	void returnsNotFoundWhenClosingMissingOpportunity() throws Exception {
+		OpportunityCloseReq req = new OpportunityCloseReq(OpportunityStage.WON, null, null, null);
+		when(opportunityStageService.closeOpportunity(eq(99L), any())).thenThrow(
+				new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Khong tim thay co hoi voi id=99"));
+
+		mockMvc.perform(post("/opportunities/99/close")
+						.contentType("application/json")
+						.content(objectMapper.writeValueAsString(req)))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.errorCode").value("RESOURCE_NOT_FOUND"));
 	}
