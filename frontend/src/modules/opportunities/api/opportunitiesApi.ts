@@ -1,5 +1,7 @@
 import type {
   Opportunity,
+  OpportunityActivity,
+  OpportunityActivityCreatePayload,
   OpportunityClosePayload,
   OpportunityCreatePayload,
   OpportunityCreateResponse,
@@ -225,6 +227,44 @@ export async function fetchRevenueForecast(
 
   const res = await requestBackend<{ success: boolean; data: RevenueForecastData }>(
     url.toString()
+  );
+
+  return res.data;
+}
+
+/**
+ * NCL-03-CN-006 (TC-01, TC-02): Lấy lịch sử hoạt động chăm sóc cơ hội
+ * (GET /opportunities/{opportunityId}/activities). Xem được ngay cả khi cơ hội đã đóng.
+ */
+export async function fetchOpportunityActivities(
+  opportunityId: number
+): Promise<OpportunityActivity[]> {
+  const res = await requestBackend<{ success: boolean; data: OpportunityActivity[] }>(
+    `${API_BASE_URL}/opportunities/${opportunityId}/activities`
+  );
+
+  return res.data ?? [];
+}
+
+/**
+ * NCL-03-CN-006 (TC-01, TC-03): Ghi nhận hoạt động chăm sóc mới cho cơ hội
+ * (POST /opportunities/{opportunityId}/activities). Yêu cầu vai trò Nhân viên kinh doanh (VT-04).
+ */
+export async function createOpportunityActivity(
+  opportunityId: number,
+  payload: OpportunityActivityCreatePayload
+): Promise<OpportunityActivity> {
+  const res = await requestBackend<{ success: boolean; message?: string; data: OpportunityActivity }>(
+    `${API_BASE_URL}/opportunities/${opportunityId}/activities`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        activityType: payload.activityType,
+        occurredAt: payload.occurredAt,
+        participants: payload.participants?.trim() || undefined,
+        content: payload.content.trim(),
+      }),
+    }
   );
 
   return res.data;

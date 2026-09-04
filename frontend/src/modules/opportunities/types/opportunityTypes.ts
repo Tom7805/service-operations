@@ -280,3 +280,45 @@ export interface OpportunityClosePayload {
   reasonDetail?: string;
   competitorName?: string;
 }
+
+/* -------------------------------------------------------------------------- */
+/*  Ghi nhận hoạt động chăm sóc cơ hội (NCL-03-CN-006)                         */
+/* -------------------------------------------------------------------------- */
+
+export type ActivityType = 'CALL' | 'MEETING' | 'EMAIL' | 'NOTE';
+
+export interface OpportunityActivity {
+  id: number;
+  opportunityId: number;
+  activityType: ActivityType;
+  occurredAt: string;
+  participants?: string | null;
+  content: string;
+  createdBy?: string | null;
+  createdAt?: string | null;
+}
+
+export interface OpportunityActivityCreatePayload {
+  activityType: ActivityType;
+  occurredAt: string;
+  participants?: string;
+  content: string;
+}
+
+export interface OpportunityActivityFormErrors {
+  activityType?: string;
+  occurredAt?: string;
+  participants?: string;
+  content?: string;
+  general?: string;
+}
+
+export interface OpportunitySummary {
+  id: number;
+  name: string;
+  customerId?: number | null;
+  customerName?: string | null;
+  status: OpportunityStatus;
+  stage?: string | null;
+  expectedCloseDate?: string | null;
+}
