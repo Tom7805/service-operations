@@ -14,5 +14,8 @@ public enum OpportunityAuditAction {
 	CLOSE_WON,
 
 	/** Dong co hoi voi ket qua THUA, kem ly do thua (NCL-03-CN-005, TC-02/TC-04). */
-	CLOSE_LOST
+	CLOSE_LOST,
+
+	/** Them mot hoat dong cham soc moi cho co hoi (NCL-03-CN-006, TC-04). */
+	ACTIVITY_ADD
 }

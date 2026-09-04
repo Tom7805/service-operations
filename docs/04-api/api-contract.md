@@ -1494,3 +1494,104 @@ mới (luôn có mặt trên `OpportunityRes` kể từ story này, `null` nếu
   ở mục `NCL-03-CN-002`.
 - Mọi lần đóng cơ hội và mọi lần bị từ chối truy cập đều được backend tự ghi nhật ký — Frontend không cần gọi
   thêm API nào để việc ghi log này xảy ra.
+
+---
+
+### `NCL-03-CN-006` — Ghi nhận hoạt động chăm sóc cơ hội
+
+Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`) — cùng phân quyền với `NCL-03-CN-001`/`002`/`005`; vai trò
+khác nhận `403 FORBIDDEN` cho **cả hai** endpoint dưới đây, bị ghi nhật ký lần từ chối (TC-03, dùng chung cơ chế
+`OpportunityAccessDeniedAspect`).
+
+> Cơ hội dùng để thử hai endpoint dưới đây có thể tạo qua `POST /opportunities` (`NCL-03-CN-001`), hoặc dùng id
+> cơ hội mẫu đã seed sẵn: `2001` (gắn khách hàng `1001`, chủ `sale01`) hoặc `2002` (gắn khách hàng `1003`, chủ
+> `sale.lead`).
+
+#### `GET /opportunities/{opportunityId}/activities`
+
+Dòng thời gian chăm sóc của một cơ hội — hoạt động có **thời điểm diễn ra** (`occurredAt`) gần nhất hiện ở đầu
+danh sách. Luôn xem được, **kể cả khi cơ hội đã đóng** (TC-02 chỉ chặn thao tác thêm mới).
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 2,
+      "opportunityId": 2001,
+      "activityType": "MEETING",
+      "occurredAt": "2026-01-12T09:30:00",
+      "participants": "sale01, anh Minh (khach hang), anh Tuan (khach hang)",
+      "content": "Hop demo truc tiep tai van phong khach hang, hen gui bao gia truoc 20/01.",
+      "createdBy": "sale01",
+      "createdAt": "2026-01-12T11:00:00"
+    },
+    {
+      "id": 1,
+      "opportunityId": 2001,
+      "activityType": "CALL",
+      "occurredAt": "2026-01-06T14:00:00",
+      "participants": "sale01, chi Lan (khach hang)",
+      "content": "Goi gioi thieu giai phap CRM, khach hang quan tam module bao gia tu dong.",
+      "createdBy": "sale01",
+      "createdAt": "2026-01-06T14:05:00"
+    }
+  ]
+}
+```
+
+#### `POST /opportunities/{opportunityId}/activities`
+
+```json
+{
+  "activityType": "CALL",
+  "occurredAt": "2026-01-06T14:00:00",
+  "participants": "sale01, chi Lan (khach hang)",
+  "content": "Goi gioi thieu giai phap CRM, khach hang quan tam module bao gia tu dong."
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `activityType` | string | có | Một trong `CALL` (gọi điện) · `MEETING` (gặp mặt) · `EMAIL` (thư điện tử) · `NOTE` (ghi chú khác) |
+| `occurredAt` | string (ISO-8601 `date-time`) | có | Thời điểm hoạt động **diễn ra** — có thể nhập bù một cuộc gọi/cuộc gặp đã xảy ra trước đó, khác với thời điểm ghi nhận vào hệ thống (`createdAt`, do máy chủ tự sinh) |
+| `participants` | string | không | Người tham gia, dạng văn bản tự do, tối đa 500 ký tự |
+| `content` | string | có | Nội dung trao đổi, tối đa 2000 ký tự — bỏ trống (hoặc toàn khoảng trắng) thì bị từ chối |
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Ghi nhan hoat dong cham soc thanh cong",
+  "data": {
+    "id": 3,
+    "opportunityId": 2001,
+    "activityType": "CALL",
+    "occurredAt": "2026-01-06T14:00:00",
+    "participants": "sale01, chi Lan (khach hang)",
+    "content": "Goi gioi thieu giai phap CRM, khach hang quan tam module bao gia tu dong.",
+    "createdBy": "sale01",
+    "createdAt": "2026-01-15T10:20:31"
+  }
+}
+```
+
+**Response lỗi (áp dụng cho cả hai endpoint trên):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh (`VT-04`) — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 400 | `VALIDATION_ERROR` | Thiếu `activityType`/`occurredAt`, hoặc `content` để trống |
+| 400 | `INVALID_STATE` | Chỉ ở `POST`: cơ hội **đã đóng** (`status = CLOSED`, tức đã `WON` hoặc `LOST`) — chỉ còn xem lại lịch sử, không thêm được hoạt động mới (TC-02) |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy `opportunityId` |
+
+**Lưu ý cho Frontend:**
+- Trên màn hình chi tiết cơ hội, hiển thị dòng thời gian (`GET`) theo thứ tự trả về (mới nhất trước) — không cần
+  tự sắp xếp lại.
+- Khi cơ hội đã đóng (`status = CLOSED`, xem `NCL-03-CN-002`/`005`), vẫn gọi `GET` bình thường để hiển thị lịch
+  sử, nhưng nên **ẩn/khoá nút "Thêm hoạt động"** trên giao diện dựa vào trạng thái cơ hội đã biết trước (tránh
+  gọi `POST` rồi mới nhận `400 INVALID_STATE`); nếu vẫn gọi và nhận lỗi này, hiển thị đúng thông điệp trả về.
+- Mọi lần thêm hoạt động thành công đều được backend tự ghi vào nhật ký cơ hội (TC-04) — Frontend không cần gọi
+  thêm API nào để việc ghi log này xảy ra.

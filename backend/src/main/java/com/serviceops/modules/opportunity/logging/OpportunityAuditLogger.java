@@ -50,6 +50,14 @@ public class OpportunityAuditLogger {
 		record(opportunityId, action, detail);
 	}
 
+	/**
+	 * Ghi nhat ky them hoat dong cham soc cho co hoi (NCL-03-CN-006, TC-04). Chay
+	 * trong transaction them hoat dong de log duoc luu cung voi hoat dong vua tao.
+	 */
+	public void recordActivityAdd(Long opportunityId, String detail) {
+		record(opportunityId, OpportunityAuditAction.ACTIVITY_ADD, detail);
+	}
+
 	private void record(Long opportunityId, OpportunityAuditAction action, String detail) {
 		OpportunityAuditLog audit = new OpportunityAuditLog();
 		audit.setOpportunityId(opportunityId);
