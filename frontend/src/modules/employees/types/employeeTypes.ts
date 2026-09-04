@@ -13,6 +13,15 @@ export interface Employee {
   endDate: string | null;
 }
 
+/** Tài khoản trong hệ thống — dùng cho combobox trong form tạo hồ sơ nhân sự. */
+export interface AssignableUser {
+  id: number;
+  username: string;
+  fullName: string;
+  /** true nếu tài khoản này đã có hồ sơ nhân sự (không cho chọn lại). */
+  hasEmployeeProfile: boolean;
+}
+
 export interface EmploymentContract {
   id: number;
   employeeId: number;

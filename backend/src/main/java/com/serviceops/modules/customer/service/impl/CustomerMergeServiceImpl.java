@@ -1,5 +1,7 @@
 package com.serviceops.modules.customer.service.impl;
 
+import com.serviceops.common.audit.AuditTargetType;
+import com.serviceops.common.audit.service.AuditLogService;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.customer.dto.request.CustomerMergeReq;
@@ -48,6 +50,7 @@ public class CustomerMergeServiceImpl implements CustomerMergeService {
 	private final CustomerAuditLogRepository auditLogRepository;
 	private final CustomerDuplicateOverrideLogRepository overrideLogRepository;
 	private final CustomerMergeLogRepository mergeLogRepository;
+	private final AuditLogService systemAuditLogService;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -152,10 +155,15 @@ public class CustomerMergeServiceImpl implements CustomerMergeService {
 		CustomerAuditLog auditLog = new CustomerAuditLog();
 		auditLog.setCustomerId(target.getId());
 		auditLog.setActionType(CustomerAuditAction.MERGE);
-		auditLog.setDetail("Da gop ho so " + source.getCode() + " (" + source.getName() + ") vao ho so nay");
+		String detail = "Da gop ho so " + source.getCode() + " (" + source.getName() + ") vao ho so nay";
+		auditLog.setDetail(detail);
 		auditLog.setActorUserId(currentUserId());
 		auditLog.setActorUsername(currentUsername());
 		auditLogRepository.save(auditLog);
+
+		// Ghi vao Nhat ky he thong tong hop (/audit-logs) — luu ben vung, chi VT-07 xem duoc.
+		systemAuditLogService.record(CustomerAuditAction.MERGE.displayLabel(), AuditTargetType.CUSTOMER,
+				target.getId(), target.getName(), detail);
 	}
 
 	private String currentUsername() {

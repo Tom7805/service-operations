@@ -1,10 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { getDepartmentsList, getUsers } from '../../users/api/usersApi';
-import type { DepartmentInfo, User } from '../../users/types/userTypes';
-import type { Employee, EmployeeCreatePayload, EmployeeUpdatePayload } from '../types/employeeTypes';
+import { getDepartmentsList } from '../../users/api/usersApi';
+import type { DepartmentInfo } from '../../users/types/userTypes';
+import { getAssignableUsers } from '../api/employeesApi';
+import type { AssignableUser, Employee, EmployeeCreatePayload, EmployeeUpdatePayload } from '../types/employeeTypes';
 import { DEFAULT_STANDARD_HOURS_PER_WEEK } from '../types/employeeTypes';
 import { validateCreateEmployee, validateUpdateEmployee, type FormErrors } from '../validators/employeeValidators';
 import { ICONS } from '../../../components/common/icons';
+import UserSelect from './UserSelect';
 
 interface EmployeeFormModalProps {
   isOpen: boolean;
@@ -23,7 +25,9 @@ export default function EmployeeFormModal({
 }: EmployeeFormModalProps) {
   const isEdit = Boolean(editingEmployee);
 
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<AssignableUser[]>([]);
+  const [usersLoaded, setUsersLoaded] = useState(false);
+  const [usersError, setUsersError] = useState<string | null>(null);
   const [departments, setDepartments] = useState<DepartmentInfo[]>([]);
 
   const [userId, setUserId] = useState<number | ''>('');
@@ -39,7 +43,18 @@ export default function EmployeeFormModal({
 
   useEffect(() => {
     if (!isOpen) return;
-    getUsers().then(setUsers).catch(() => setUsers([]));
+    setUsersLoaded(false);
+    setUsersError(null);
+    getAssignableUsers()
+      .then((list) => {
+        setUsers(list);
+        setUsersLoaded(true);
+      })
+      .catch((err) => {
+        setUsers([]);
+        setUsersLoaded(true);
+        setUsersError(err instanceof Error ? err.message : 'Không tải được danh sách tài khoản nhân viên.');
+      });
     getDepartmentsList().then(setDepartments).catch(() => setDepartments([]));
   }, [isOpen]);
 
@@ -161,25 +176,23 @@ export default function EmployeeFormModal({
                     disabled
                   />
                 ) : (
-                  <select
-                    id="employee-user-input"
-                    className={`form-select ${errors.userId ? 'form-input--error' : ''}`}
+                  <UserSelect
+                    inputId="employee-user-input"
+                    users={users}
                     value={userId}
-                    onChange={(e) => {
-                      setUserId(e.target.value ? Number(e.target.value) : '');
+                    onChange={(id) => {
+                      setUserId(id);
                       if (errors.userId) setErrors({ ...errors, userId: undefined });
                     }}
                     disabled={submitting}
-                  >
-                    <option value="">-- Chọn tài khoản --</option>
-                    {users.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        @{u.username} — {u.fullName}
-                      </option>
-                    ))}
-                  </select>
+                    hasError={Boolean(errors.userId)}
+                  />
                 )}
                 {errors.userId && <span className="field-error">{errors.userId}</span>}
+                {!isEdit && usersError && <span className="field-error">{usersError}</span>}
+                {!isEdit && !usersError && usersLoaded && users.length === 0 && (
+                  <span className="field-hint">Hệ thống chưa có tài khoản nào.</span>
+                )}
                 {isEdit && <span className="field-hint">Tài khoản gắn với hồ sơ không thể thay đổi.</span>}
               </div>
 

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import type {
   Customer,
   CustomerContact,
-  ContactAuditItem,
   CustomerCreatePayload,
   CustomerUpdateWithOverridePayload,
 } from '../types/customerTypes';
@@ -13,7 +12,7 @@ import CustomerFormModal from '../components/CustomerFormModal';
 import { updateCustomer, updateCustomerWithOverride } from '../api/customersApi';
 import { ICONS } from '../../../components/common/icons';
 
-type CustomerDetailTab = 'CONTACTS' | 'SEGMENT' | 'SUMMARY' | 'OVERVIEW' | 'AUDIT';
+type CustomerDetailTab = 'CONTACTS' | 'SEGMENT' | 'SUMMARY' | 'OVERVIEW';
 
 interface CustomerDetailPageProps {
   customer?: Customer;
@@ -51,7 +50,6 @@ export default function CustomerDetailPage({
   );
 
   const [activeTab, setActiveTab] = useState<CustomerDetailTab>(initialTab);
-  const [auditLogs, setAuditLogs] = useState<ContactAuditItem[]>([]);
   const [copiedCode, setCopiedCode] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
@@ -65,16 +63,6 @@ export default function CustomerDetailPage({
   const handleEditSubmit = async (payload: CustomerCreatePayload) => {
     const updated = await updateCustomer(customer.id, payload);
     applyEdited(updated);
-    setAuditLogs((prev) => [
-      {
-        id: `update-${Date.now()}`,
-        action: 'Chỉnh sửa hồ sơ',
-        actor: currentUserName,
-        timestamp: new Date().toLocaleString('vi-VN'),
-        detail: `Cập nhật thông tin hồ sơ khách hàng ${customer.code}`,
-      },
-      ...prev,
-    ]);
     return updated;
   };
 
@@ -89,10 +77,6 @@ export default function CustomerDetailPage({
       setCopiedCode(true);
       setTimeout(() => setCopiedCode(false), 2000);
     });
-  };
-
-  const handleAuditLogged = (log: ContactAuditItem) => {
-    setAuditLogs((prev) => [log, ...prev]);
   };
 
   // NCL-02-CN-005 (TC-01): đồng bộ nhãn phân nhóm mới nhất vào hồ sơ chi tiết và trả về danh sách.
@@ -269,15 +253,6 @@ export default function CustomerDetailPage({
           <span>Hồ sơ chi tiết</span>
         </button>
 
-        <button
-          type="button"
-          className={`customer-tab-btn ${activeTab === 'AUDIT' ? 'customer-tab-btn--active' : ''}`}
-          onClick={() => setActiveTab('AUDIT')}
-          data-testid="tab-btn-audit"
-        >
-          <span className="tab-icon">{ICONS.shield}</span>
-          <span>Nhật ký kiểm toán {auditLogs.length > 0 && `(${auditLogs.length})`}</span>
-        </button>
       </div>
 
       {/* Nội dung tương ứng với từng Tab */}
@@ -289,7 +264,6 @@ export default function CustomerDetailPage({
             currentUserRoles={currentUserRoles}
             currentUserName={currentUserName}
             initialContacts={initialContacts}
-            onAuditLogged={handleAuditLogged}
           />
         )}
 
@@ -299,7 +273,6 @@ export default function CustomerDetailPage({
             currentUserRoles={currentUserRoles}
             currentUserName={currentUserName}
             onSegmentUpdated={handleSegmentUpdated}
-            onAuditLogged={handleAuditLogged}
           />
         )}
 
@@ -308,15 +281,6 @@ export default function CustomerDetailPage({
             customerId={customer.id}
             customerName={customer.name}
             currentUserRoles={currentUserRoles}
-            onLoaded={({ at, itemCount }) =>
-              handleAuditLogged({
-                id: `overview-${Date.now()}`,
-                action: 'Xem hồ sơ tổng hợp',
-                actor: currentUserName,
-                timestamp: at,
-                detail: `Đã mở hồ sơ tổng hợp của khách hàng ${customer.code} — tải ${itemCount} bản ghi liên quan`,
-              })
-            }
           />
         )}
 
@@ -360,40 +324,6 @@ export default function CustomerDetailPage({
           </div>
         )}
 
-        {activeTab === 'AUDIT' && (
-          <div className="audit-tab-pane user-table-card" style={{ padding: '24px' }}>
-            <div className="audit-log-header">
-              <h3 className="audit-log-title" style={{ fontSize: '17px' }}>
-                <span className="audit-log-title__icon">{ICONS.shield}</span> Toàn bộ nhật ký kiểm toán khách hàng (TC-04)
-              </h3>
-              <span className="badge-pulse">Bảo mật chuẩn ISO 27001</span>
-            </div>
-            {auditLogs.length === 0 ? (
-              <div className="table-empty-state" style={{ padding: '30px' }}>
-                <div className="table-empty-state__icon">{ICONS.clipboardList}</div>
-                <h4>Chưa có thao tác nào trong phiên này</h4>
-                <p>Các hành động thêm người liên hệ, thay đổi đầu mối chính sẽ được ghi nhận tại đây.</p>
-              </div>
-            ) : (
-              <div className="audit-log-list" style={{ marginTop: '16px' }}>
-                {auditLogs.map((log) => (
-                  <div key={log.id} className="audit-log-item">
-                    <span className="audit-log-icon">{ICONS.checkCircle}</span>
-                    <div className="audit-log-meta">
-                      <div className="audit-log-row">
-                        <span>
-                          Người thực hiện: <strong className="highlight-username">{log.actor}</strong>
-                        </span>
-                        <span className="audit-log-time">{log.timestamp}</span>
-                      </div>
-                      <div className="audit-log-details">{log.detail}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       <CustomerFormModal

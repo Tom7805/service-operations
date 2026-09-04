@@ -1,5 +1,7 @@
 package com.serviceops.modules.customer.service.impl;
 
+import com.serviceops.common.audit.AuditTargetType;
+import com.serviceops.common.audit.service.AuditLogService;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.customer.dto.request.CustomerCreateReq;
@@ -55,6 +57,7 @@ public class CustomerServiceImpl implements CustomerService {
 	private final CustomerDuplicateValidator customerDuplicateValidator;
 	private final CurrentUserScopeProvider currentUserScopeProvider;
 	private final UserRepository userRepository;
+	private final AuditLogService systemAuditLogService;
 
 	@Override
 	public CustomerRes create(CustomerCreateReq request) {
@@ -320,5 +323,9 @@ public class CustomerServiceImpl implements CustomerService {
 		log.setActorUserId(currentUserScopeProvider.currentUserId());
 		log.setActorUsername(currentUsername());
 		auditLogRepository.save(log);
+
+		// Ghi vao Nhat ky he thong tong hop (/audit-logs) — luu ben vung, chi VT-07 xem duoc.
+		String customerName = customerRepository.findById(customerId).map(Customer::getName).orElse(null);
+		systemAuditLogService.record(action.displayLabel(), AuditTargetType.CUSTOMER, customerId, customerName, detail);
 	}
 }
