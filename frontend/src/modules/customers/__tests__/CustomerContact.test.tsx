@@ -232,7 +232,7 @@ describe('Customer Contact Management Frontend (NCL-02-CN-003)', () => {
   });
 
   describe('NCL-02-CN-003-TC-04: Lưu lịch sử (Nhật ký thao tác)', () => {
-    it('khi có thay đổi liên quan tới người liên hệ -> hệ thống ghi lại người thực hiện, nội dung và thời điểm', async () => {
+    it('khi thêm người liên hệ -> gọi API tạo (backend ghi vào Nhật ký hệ thống) và cập nhật danh sách', async () => {
       const newContactMock: CustomerContact = {
         id: 4,
         customerId: 10,
@@ -259,12 +259,17 @@ describe('Customer Contact Management Frontend (NCL-02-CN-003)', () => {
       });
       fireEvent.click(screen.getByTestId('btn-submit-contact'));
 
-      // Kiểm tra thẻ nhật ký kiểm toán xuất hiện
+      // Việc ghi nhật ký (người thực hiện / nội dung / thời điểm) do backend đảm nhiệm khi API được gọi.
       await waitFor(() => {
-        expect(screen.getByTestId('contact-audit-card')).toBeInTheDocument();
-        expect(screen.getByText(/Nguyễn Sales/i)).toBeInTheDocument();
-        expect(screen.getByText(/Thêm người liên hệ: Phạm Nhật Ký/i)).toBeInTheDocument();
+        expect(customersApi.addCustomerContact).toHaveBeenCalledWith(
+          10,
+          expect.objectContaining({ fullName: 'Phạm Nhật Ký' })
+        );
+        expect(screen.getByText('Phạm Nhật Ký')).toBeInTheDocument();
       });
+
+      // Không còn thẻ "nhật ký trong phiên" ở màn hình nghiệp vụ.
+      expect(screen.queryByTestId('contact-audit-card')).not.toBeInTheDocument();
     });
   });
 
@@ -290,7 +295,7 @@ describe('Customer Contact Management Frontend (NCL-02-CN-003)', () => {
       expect(onBackMock).toHaveBeenCalledTimes(1);
     });
 
-    it('chuyển đổi qua lại giữa các tab Hồ sơ, Người liên hệ và Nhật ký kiểm toán', () => {
+    it('chuyển đổi qua lại giữa các tab Hồ sơ chi tiết và Người liên hệ', () => {
       render(
         <CustomerDetailPage
           customer={mockCustomer}
@@ -307,12 +312,11 @@ describe('Customer Contact Management Frontend (NCL-02-CN-003)', () => {
       fireEvent.click(screen.getByTestId('tab-btn-overview'));
       expect(screen.getByText('Thông tin hành chính doanh nghiệp')).toBeInTheDocument();
 
-      // Chuyển sang Tab Nhật ký kiểm toán
-      fireEvent.click(screen.getByTestId('tab-btn-audit'));
-      expect(screen.getByText(/Toàn bộ nhật ký kiểm toán khách hàng/i)).toBeInTheDocument();
+      // Không còn tab "Nhật ký kiểm toán" nhúng trong trang (chuyển sang trang /audit-logs riêng).
+      expect(screen.queryByTestId('tab-btn-audit')).not.toBeInTheDocument();
     });
 
-    it('NCL-02-CN-004: mở tab "Hồ sơ tổng hợp" gọi API overview và ghi một dòng vào nhật ký kiểm toán', async () => {
+    it('NCL-02-CN-004: mở tab "Hồ sơ tổng hợp" gọi API overview (backend ghi nhật ký xem)', async () => {
       render(
         <CustomerDetailPage
           customer={mockCustomer}
@@ -328,13 +332,6 @@ describe('Customer Contact Management Frontend (NCL-02-CN-003)', () => {
       await waitFor(() => {
         expect(customersApi.fetchCustomerOverview).toHaveBeenCalledWith(10);
         expect(screen.getByTestId('customer-summary-empty')).toBeInTheDocument();
-      });
-
-      // TC-03: thao tác xem đã được ghi vào luồng nhật ký của trang
-      fireEvent.click(screen.getByTestId('tab-btn-audit'));
-      await waitFor(() => {
-        expect(screen.getByText(/Đã mở hồ sơ tổng hợp của khách hàng KH-123456/i)).toBeInTheDocument();
-        expect(screen.getByText(/Trần Quản Lý/i)).toBeInTheDocument();
       });
     });
   });

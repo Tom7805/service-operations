@@ -80,6 +80,27 @@ export default function AuditLogPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appliedFilters]);
 
+  // Tự lọc sau khi người dùng ngừng thao tác ~400ms — không cần bấm "Tìm kiếm".
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setAppliedFilters((prev) => {
+        const next = {
+          actorUsername: usernameInput.trim(),
+          targetType: targetTypeInput,
+          from: fromInput,
+          to: toInput,
+        };
+        const unchanged =
+          prev.actorUsername === next.actorUsername &&
+          prev.targetType === next.targetType &&
+          prev.from === next.from &&
+          prev.to === next.to;
+        return unchanged ? prev : next;
+      });
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [usernameInput, targetTypeInput, fromInput, toInput]);
+
   const handleApplyFilters = (e: FormEvent) => {
     e.preventDefault();
     setAppliedFilters({
@@ -248,8 +269,8 @@ export default function AuditLogPage({
                       <span className="role-chip">{entry.action}</span>
                     </td>
                     <td>{TARGET_TYPE_LABELS[entry.targetType]}</td>
-                    <td className="cell-dept">{entry.targetLabel ?? '—'}</td>
-                    <td className="cell-email">{entry.detail ?? '—'}</td>
+                    <td><span className="cell-dept">{entry.targetLabel ?? '—'}</span></td>
+                    <td className="audit-detail-cell">{entry.detail ?? '—'}</td>
                   </tr>
                 ))
               )}

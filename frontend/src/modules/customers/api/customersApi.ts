@@ -12,6 +12,7 @@ import type {
   CustomerUpdatePayload,
   CustomerUpdateWithOverridePayload,
 } from '../types/customerTypes';
+import { normalizePhone } from '../validators/customerValidators';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -84,7 +85,7 @@ function cleanCustomerPayload(payload: CustomerCreatePayload): CustomerCreatePay
   return {
     name: payload.name.trim(),
     taxCode: payload.taxCode?.trim() || undefined,
-    phone: payload.phone?.trim() || undefined,
+    phone: payload.phone ? normalizePhone(payload.phone) || undefined : undefined,
     industry: payload.industry?.trim() || undefined,
     address: payload.address?.trim() || undefined,
   };
@@ -220,7 +221,7 @@ export async function addCustomerContact(
     fullName: payload.fullName.trim(),
     title: payload.title?.trim() || undefined,
     email: payload.email?.trim() || undefined,
-    phone: payload.phone?.trim() || undefined,
+    phone: payload.phone ? normalizePhone(payload.phone) || undefined : undefined,
     isPrimary: Boolean(payload.isPrimary),
   };
 

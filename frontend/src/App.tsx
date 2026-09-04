@@ -14,6 +14,8 @@ import TwoFactorSetupPage from './modules/auth/pages/TwoFactorSetupPage';
 import CustomerListPage from './modules/customers/pages/CustomerListPage';
 import CustomerMergePage from './modules/customers/pages/CustomerMergePage';
 import OpportunityDetailPage from './modules/opportunities/pages/OpportunityDetailPage';
+import OpportunityListPage from './modules/opportunities/pages/OpportunityListPage';
+import RevenueForecastPage from './modules/opportunities/pages/RevenueForecastPage';
 import { ICONS } from './components/common/icons';
 import CommandPalette from './components/common/CommandPalette';
 import useScrollReveal from './hooks/useScrollReveal';
@@ -22,6 +24,8 @@ import type { ReactNode } from 'react';
 
 type Tab =
   | 'CUSTOMERS'
+  | 'OPPORTUNITIES'
+  | 'REVENUE_FORECAST'
   | 'CUSTOMER_MERGE'
   | 'DEPARTMENTS'
   | 'PERMISSIONS'
@@ -53,6 +57,8 @@ interface NavItem {
 /** Điều hướng chính — vận hành nghiệp vụ hàng ngày. */
 const NAV_ITEMS: NavItem[] = [
   { tab: 'CUSTOMERS', icon: ICONS.building, label: 'Khách hàng', requires: ['VT-04', 'VT-02'] },
+  { tab: 'OPPORTUNITIES', icon: ICONS.target, label: 'Cơ hội bán hàng', requires: ['VT-04'] },
+  { tab: 'REVENUE_FORECAST', icon: ICONS.chart, label: 'Dự báo doanh thu', requires: ['VT-01', 'VT-04'] },
   { tab: 'CUSTOMER_MERGE', icon: ICONS.merge, label: 'Gộp KH trùng', requires: ['VT-07'] },
   { tab: 'DEPARTMENTS', icon: ICONS.tree, label: 'Tổ chức', requires: ['VT-07'] },
   { tab: 'USERS', icon: ICONS.user, label: 'Tài khoản', matches: ['DETAIL'], requires: ['VT-07'] },
@@ -372,6 +378,16 @@ export default function App() {
             <ChangePasswordPage onBack={() => setActiveTab('DEPARTMENTS')} onPasswordChanged={handleLogout} />
           ) : activeTab === 'CUSTOMERS' ? (
             <CustomerListPage
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+            />
+          ) : activeTab === 'OPPORTUNITIES' ? (
+            <OpportunityListPage
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+            />
+          ) : activeTab === 'REVENUE_FORECAST' ? (
+            <RevenueForecastPage
               currentUserRoles={currentRoles}
               currentUserName={session.fullName}
             />
