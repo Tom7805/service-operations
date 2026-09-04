@@ -1,6 +1,7 @@
 package com.serviceops.modules.opportunity.entity;
 
 import com.serviceops.common.entity.BaseEntity;
+import com.serviceops.modules.opportunity.enums.LossReason;
 import com.serviceops.modules.opportunity.enums.OpportunityStage;
 import com.serviceops.modules.opportunity.enums.OpportunityStatus;
 import jakarta.persistence.Column;
@@ -54,6 +55,26 @@ public class Opportunity extends BaseEntity {
 	/** Xac suat trung/dong co hoi (0-100%), cap nhat tuong ung voi moi giai doan (NCL-03-CN-002, TC-01). */
 	@Column(precision = 5, scale = 2)
 	private BigDecimal probability;
+
+	/**
+	 * Ly do thua (NCL-03-CN-005, TC-02) — chi co gia tri khi co hoi dong voi ket qua
+	 * {@link OpportunityStage#LOST}, luon la {@code null} voi ket qua {@link OpportunityStage#WON}.
+	 */
+	@Enumerated(EnumType.STRING)
+	@Column(name = "loss_reason", columnDefinition = "VARCHAR(30)")
+	private LossReason lossReason;
+
+	/** Ghi chu chi tiet them cho ket qua dong co hoi (NCL-03-CN-005), khong bat buoc. */
+	@Column(name = "close_reason_detail", length = 500)
+	private String closeReasonDetail;
+
+	/** Ten doi thu canh tranh neu co (NCL-03-CN-005), khong bat buoc. */
+	@Column(name = "competitor_name", length = 255)
+	private String competitorName;
+
+	/** Thoi diem co hoi duoc dong voi ket qua thang/thua (NCL-03-CN-005). */
+	@Column(name = "closed_at")
+	private LocalDateTime closedAt;
 
 	@Column(name = "created_by", length = 100)
 	private String createdBy;

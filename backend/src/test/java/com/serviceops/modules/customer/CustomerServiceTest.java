@@ -71,6 +71,9 @@ class CustomerServiceTest {
 	@Mock
 	private UserRepository userRepository;
 
+	@Mock
+	private com.serviceops.common.audit.service.AuditLogService systemAuditLogService;
+
 	private final CustomerMapper customerMapper = new CustomerMapper();
 
 	private final CustomerDuplicateValidator customerDuplicateValidator = new CustomerDuplicateValidator();
@@ -81,7 +84,7 @@ class CustomerServiceTest {
 	void setUp() {
 		service = new CustomerServiceImpl(customerRepository, customerMapper, customerDuplicateService,
 				overrideLogRepository, auditLogRepository, customerDuplicateValidator,
-				currentUserScopeProvider, userRepository);
+				currentUserScopeProvider, userRepository, systemAuditLogService);
 
 		lenient().when(customerRepository.existsByCode(anyString())).thenReturn(false);
 		lenient().when(customerDuplicateService.findDuplicates(anyString(), any(), any()))

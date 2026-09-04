@@ -1,5 +1,6 @@
 package com.serviceops.modules.opportunity.service;
 
+import com.serviceops.modules.opportunity.dto.request.OpportunityCloseReq;
 import com.serviceops.modules.opportunity.dto.request.StageChangeReq;
 import com.serviceops.modules.opportunity.dto.response.OpportunityRes;
 import com.serviceops.modules.opportunity.dto.response.StageHistoryRes;
@@ -24,4 +25,22 @@ public interface OpportunityStageService {
 	 * Lay lich su chuyen giai doan cua mot co hoi (TC-05).
 	 */
 	List<StageHistoryRes> history(Long opportunityId);
+
+	/**
+	 * Ghi nhan ket qua thang/thua khi dong mot co hoi (NCL-03-CN-005).
+	 *
+	 * <p>Dieu kien bat dau: co hoi dang o giai doan {@code NEGOTIATION} — kiem soat
+	 * qua cung co che thu tu giai doan voi {@link #changeStage} (QTN-06): chi tu
+	 * NEGOTIATION moi duoc chot sang WON/LOST, sai giai doan hoac co hoi da dong deu
+	 * bi tu choi voi {@code INVALID_STATE}. Ket qua {@code LOST} bat buoc phai co ly
+	 * do (TC-02) — thieu ly do bi tu choi voi {@code VALIDATION_ERROR}. Sau khi dong,
+	 * lich su chuyen giai doan van duoc ghi (giong {@link #changeStage}) va thao tac
+	 * duoc ghi nhat ky rieng {@code CLOSE_WON}/{@code CLOSE_LOST} (TC-04).</p>
+	 *
+	 * @param opportunityId Id co hoi can dong.
+	 * @param request Ket qua (WON/LOST), ly do thua, ghi chu chi tiet va doi thu canh
+	 *                tranh neu co.
+	 * @return co hoi sau khi dong, kem ket qua va ly do da luu de phuc vu bao cao.
+	 */
+	OpportunityRes closeOpportunity(Long opportunityId, OpportunityCloseReq request);
 }

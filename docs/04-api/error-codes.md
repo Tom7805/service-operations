@@ -11,9 +11,9 @@ theo `errorCode`, không nên switch theo `message` (vì `message` có thể đ�
 | `ACCOUNT_INACTIVE` | 401 | Tài khoản bị quản trị viên khóa thủ công | `NCL-01-CN-001` |
 | `DUPLICATE_DATA` | 409 | Dữ liệu bị trùng (ví dụ tên tài khoản đã tồn tại, hoặc tài khoản đã có hồ sơ nhân sự) | `NCL-01-CN-002`, `NCL-01-CN-007` |
 | `VALIDATION_ERROR` | 400 | Dữ liệu đầu vào không hợp lệ — xem thêm mảng `fieldErrors` trong response | Toàn bộ API có `@Valid` |
-| `RESOURCE_NOT_FOUND` | 404 | Không tìm thấy bản ghi hoặc vai trò | `NCL-01-CN-002` và các API tra cứu theo id |
-| `INVALID_STATE` | 400 | Thao tác chuyển trạng thái không hợp lệ, hoặc vi phạm ràng buộc nghiệp vụ (ví dụ ngày kết thúc sớm hơn ngày bắt đầu) | `NCL-01-CN-002`, `NCL-01-CN-003`, `NCL-01-CN-007` |
-| `FORBIDDEN` | 403 | Có tài khoản hợp lệ nhưng không đủ quyền truy cập dữ liệu/chức năng | Các story áp dụng `QTN-01` (phân quyền theo vai trò và cây tổ chức) và `QTN-03` — ví dụ `NCL-01-CN-002`, `NCL-01-CN-006` |
+| `RESOURCE_NOT_FOUND` | 404 | Không tìm thấy bản ghi hoặc vai trò | `NCL-01-CN-002` và các API tra cứu theo id, ví dụ `NCL-03-CN-006` |
+| `INVALID_STATE` | 400 | Thao tác chuyển trạng thái không hợp lệ, hoặc vi phạm ràng buộc nghiệp vụ (ví dụ ngày kết thúc sớm hơn ngày bắt đầu, hoặc thêm hoạt động chăm sóc vào cơ hội đã đóng) | `NCL-01-CN-002`, `NCL-01-CN-003`, `NCL-01-CN-007`, `NCL-03-CN-006` |
+| `FORBIDDEN` | 403 | Có tài khoản hợp lệ nhưng không đủ quyền truy cập dữ liệu/chức năng | Các story áp dụng `QTN-01` (phân quyền theo vai trò và cây tổ chức) và `QTN-03` — ví dụ `NCL-01-CN-002`, `NCL-01-CN-006`, `NCL-02-CN-003`, `NCL-03-CN-006` |
 | `RESET_TOKEN_INVALID` | 400 | Liên kết khôi phục mật khẩu không tồn tại, đã hết hạn, hoặc đã được dùng | `NCL-01-CN-008` |
 | `INTERNAL_ERROR` | 500 | Lỗi hệ thống không lường trước — không phải lỗi do dữ liệu người dùng nhập | Toàn hệ thống |
 | `UNAUTHORIZED` | 401 | Gọi API cần đăng nhập nhưng chưa gửi hoặc gửi sai `Authorization: Bearer <token>` | Toàn hệ thống (áp dụng tự động bởi tầng bảo mật, không gắn với story cụ thể) |

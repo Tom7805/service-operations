@@ -1,6 +1,7 @@
 import type {
   Opportunity,
   OpportunityCreatePayload,
+  OpportunityCreateResponse,
   OpportunityStage,
   StageHistoryItem,
   CustomerOption,
@@ -65,11 +66,11 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
         message =
           'Bạn không có quyền thực hiện thao tác này. Chức năng quản lý cơ hội bán hàng yêu cầu vai trò Nhân viên kinh doanh (VT-04).';
       } else if (response.status === 404) {
-        message = 'Không tìm thấy thông tin cơ hội bán hàng tương ứng trên hệ thống.';
+        message = 'Không tìm thấy dữ liệu tương ứng trên hệ thống (khách hàng hoặc cơ hội bán hàng).';
       } else if (response.status === 401) {
         message = 'Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.';
       } else if (response.status === 400) {
-        message = 'Yêu cầu chuyển giai đoạn không hợp lệ theo quy tắc nghiệp vụ.';
+        message = 'Yêu cầu không hợp lệ theo quy tắc nghiệp vụ.';
       } else {
         message = 'Đã xảy ra lỗi khi gửi yêu cầu đến máy chủ.';
       }
@@ -89,21 +90,19 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
 
 /**
  * NCL-03-CN-001: Tạo cơ hội bán hàng mới
+ * Yêu cầu vai trò Nhân viên kinh doanh (VT-04).
  */
 export async function createOpportunity(payload: OpportunityCreatePayload): Promise<Opportunity> {
-  const res = await requestBackend<{ success: boolean; data: Opportunity }>(
-    `${API_BASE_URL}/opportunities`,
-    {
-      method: 'POST',
-      body: JSON.stringify({
-        name: payload.name.trim(),
-        customerId: payload.customerId,
-        expectedValue: payload.expectedValue,
-        expectedCloseDate: payload.expectedCloseDate ? payload.expectedCloseDate.trim() : null,
-        ownerId: payload.ownerId ?? null,
-      }),
-    }
-  );
+  const res = await requestBackend<OpportunityCreateResponse>(`${API_BASE_URL}/opportunities`, {
+    method: 'POST',
+    body: JSON.stringify({
+      name: payload.name.trim(),
+      customerId: payload.customerId,
+      expectedValue: payload.expectedValue,
+      expectedCloseDate: payload.expectedCloseDate ? payload.expectedCloseDate.trim() : null,
+      ownerId: payload.ownerId ?? null,
+    }),
+  });
 
   return res.data;
 }
@@ -141,25 +140,27 @@ export async function fetchOpportunityStageHistory(
 }
 
 /**
- * Tải danh sách khách hàng có sẵn trong hệ thống
+ * Tải danh sách khách hàng đã có hồ sơ để người dùng lựa chọn trên giao diện
+ * Tránh việc phải nhập mã ID thủ công (NCL-03-CN-001 lưu ý cho Frontend).
+ *
+ * Lưu ý: hàm này KHÔNG nuốt lỗi — nếu backend trả 401/403/5xx thì ném
+ * `OpportunityApiError` để giao diện phân biệt được "không có khách hàng nào"
+ * với "tải danh sách thất bại". Chỉ trả mảng rỗng khi backend thực sự trả `data: []`.
  */
 export async function fetchCustomersForSelect(): Promise<CustomerOption[]> {
-  try {
-    const res = await requestBackend<{ success: boolean; data: CustomerOption[] }>(
-      `${API_BASE_URL}/customers`
-    );
-    if (res.data && Array.isArray(res.data)) {
-      return res.data
-        .filter((c) => c.status !== 'MERGED')
-        .map((c) => ({
-          id: c.id,
-          code: c.code,
-          name: c.name,
-          status: c.status,
-        }));
-    }
-    return [];
-  } catch {
+  const res = await requestBackend<{ success: boolean; data: CustomerOption[] }>(
+    `${API_BASE_URL}/customers`
+  );
+  if (!res.data || !Array.isArray(res.data)) {
     return [];
   }
+  // Chỉ lấy các khách hàng chưa bị gộp (MERGED) nếu có trạng thái
+  return res.data
+    .filter((c) => c.status !== 'MERGED')
+    .map((c) => ({
+      id: c.id,
+      code: c.code,
+      name: c.name,
+      status: c.status,
+    }));
 }

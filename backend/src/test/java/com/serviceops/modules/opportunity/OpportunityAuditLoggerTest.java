@@ -23,7 +23,8 @@ import static org.mockito.Mockito.when;
 
 /**
  * Unit test OpportunityAuditLogger - ghi nhat ky tao co hoi (TC-04) va nhat ky
- * tu choi truy cap (TC-03), NCL-03-CN-001.
+ * tu choi truy cap (TC-03), NCL-03-CN-001; ghi nhat ky dong co hoi voi ket qua
+ * thang/thua (TC-04), NCL-03-CN-005.
  */
 @ExtendWith(MockitoExtension.class)
 class OpportunityAuditLoggerTest {
@@ -93,5 +94,59 @@ class OpportunityAuditLoggerTest {
 		ArgumentCaptor<OpportunityAuditLog> captor = ArgumentCaptor.forClass(OpportunityAuditLog.class);
 		verify(repository).save(captor.capture());
 		assertThat(captor.getValue().getActorId()).isEqualTo(0L);
+	}
+
+	@Test
+	@DisplayName("TC-04 (NCL-03-CN-005): dong co hoi voi ket qua LOST thi ghi nhat ky CLOSE_LOST gan voi id co hoi")
+	void recordsCloseLostWithOpportunityId() {
+		when(currentUserScopeProvider.currentUserId()).thenReturn(7L);
+		SecurityContextHolder.getContext().setAuthentication(
+				new TestingAuthenticationToken("sale01", null));
+
+		logger.recordClose(100L, OpportunityAuditAction.CLOSE_LOST,
+				"Dong co hoi voi ket qua THUA - ly do: PRICE_TOO_HIGH");
+
+		ArgumentCaptor<OpportunityAuditLog> captor = ArgumentCaptor.forClass(OpportunityAuditLog.class);
+		verify(repository).save(captor.capture());
+		OpportunityAuditLog saved = captor.getValue();
+		assertThat(saved.getOpportunityId()).isEqualTo(100L);
+		assertThat(saved.getActionType()).isEqualTo(OpportunityAuditAction.CLOSE_LOST);
+		assertThat(saved.getDetail()).contains("PRICE_TOO_HIGH");
+		assertThat(saved.getActorId()).isEqualTo(7L);
+		assertThat(saved.getActorUsername()).isEqualTo("sale01");
+		assertThat(saved.getCreatedAt()).isNotNull();
+	}
+
+	@Test
+	@DisplayName("TC-04 (NCL-03-CN-005): dong co hoi voi ket qua WON thi ghi nhat ky CLOSE_WON")
+	void recordsCloseWonWithOpportunityId() {
+		when(currentUserScopeProvider.currentUserId()).thenReturn(7L);
+		SecurityContextHolder.getContext().setAuthentication(
+				new TestingAuthenticationToken("sale01", null));
+
+		logger.recordClose(100L, OpportunityAuditAction.CLOSE_WON, "Dong co hoi voi ket qua THANG");
+
+		ArgumentCaptor<OpportunityAuditLog> captor = ArgumentCaptor.forClass(OpportunityAuditLog.class);
+		verify(repository).save(captor.capture());
+		assertThat(captor.getValue().getActionType()).isEqualTo(OpportunityAuditAction.CLOSE_WON);
+	}
+
+	@Test
+	@DisplayName("TC-04 (NCL-03-CN-006): them hoat dong cham soc thi ghi nhat ky ACTIVITY_ADD gan voi id co hoi")
+	void recordsActivityAddWithOpportunityId() {
+		when(currentUserScopeProvider.currentUserId()).thenReturn(7L);
+		SecurityContextHolder.getContext().setAuthentication(
+				new TestingAuthenticationToken("sale01", null));
+
+		logger.recordActivityAdd(100L, "Ghi nhan hoat dong cham soc loai CALL");
+
+		ArgumentCaptor<OpportunityAuditLog> captor = ArgumentCaptor.forClass(OpportunityAuditLog.class);
+		verify(repository).save(captor.capture());
+		OpportunityAuditLog saved = captor.getValue();
+		assertThat(saved.getOpportunityId()).isEqualTo(100L);
+		assertThat(saved.getActionType()).isEqualTo(OpportunityAuditAction.ACTIVITY_ADD);
+		assertThat(saved.getDetail()).contains("CALL");
+		assertThat(saved.getActorId()).isEqualTo(7L);
+		assertThat(saved.getActorUsername()).isEqualTo("sale01");
 	}
 }

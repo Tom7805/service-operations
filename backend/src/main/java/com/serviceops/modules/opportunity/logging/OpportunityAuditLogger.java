@@ -34,11 +34,47 @@ public class OpportunityAuditLogger {
 	 * cung voi co hoi.
 	 */
 	public void recordCreate(Long opportunityId, String detail) {
+		record(opportunityId, OpportunityAuditAction.CREATE, detail);
+	}
+
+	/**
+	 * Ghi nhat ky dong co hoi voi ket qua thang/thua (NCL-03-CN-005, TC-04). Chay
+	 * trong transaction dong de log duoc luu cung voi thay doi giai doan/trang thai
+	 * cua co hoi — neu giao dich dong bi rollback thi log cung khong duoc ghi, tranh
+	 * nhat ky "mo côi" khong khop voi du lieu thuc te.
+	 *
+	 * @param action {@link OpportunityAuditAction#CLOSE_WON} hoac {@link OpportunityAuditAction#CLOSE_LOST}.
+	 * @param detail Noi dung mo ta ket qua, bao gom ly do thua va doi thu neu co.
+	 */
+	public void recordClose(Long opportunityId, OpportunityAuditAction action, String detail) {
+		record(opportunityId, action, detail);
+	}
+
+	/**
+	 * Ghi nhat ky them hoat dong cham soc cho co hoi (NCL-03-CN-006, TC-04). Chay
+	 * trong transaction them hoat dong de log duoc luu cung voi hoat dong vua tao.
+	 */
+	public void recordActivityAdd(Long opportunityId, String detail) {
+		record(opportunityId, OpportunityAuditAction.ACTIVITY_ADD, detail);
+	}
+
+	/**
+	 * Ghi nhat ky moi lan sinh bao cao duong ong ban hang theo giai doan
+	 * (NCL-03-CN-007, TC-04) — nguoi thuc hien, noi dung (so co hoi / so co hoi dong
+	 * lau) va thoi diem. Khong gan voi mot co hoi cu the nen {@code opportunityId} de
+	 * {@code null}. Chay trong cung transaction voi truy van bao cao.
+	 */
+	public void recordReportView(String detail) {
+		record(null, OpportunityAuditAction.REPORT_VIEW, detail);
+	}
+
+	private void record(Long opportunityId, OpportunityAuditAction action, String detail) {
 		OpportunityAuditLog audit = new OpportunityAuditLog();
 		audit.setOpportunityId(opportunityId);
-		audit.setActionType(OpportunityAuditAction.CREATE);
+		audit.setActionType(action);
 		audit.setDetail(detail);
-		audit.setActorId(currentUserScopeProvider.currentUserId());
+		Long actorId = currentUserScopeProvider.currentUserId();
+		audit.setActorId(actorId == null ? 0L : actorId);
 		audit.setActorUsername(currentUsername());
 		audit.setCreatedAt(LocalDateTime.now());
 		repository.save(audit);

@@ -37,6 +37,12 @@ export interface OpportunityCreatePayload {
   ownerId?: number | null;
 }
 
+export interface OpportunityCreateResponse {
+  success: boolean;
+  message: string;
+  data: Opportunity;
+}
+
 export interface StageChangePayload {
   targetStage: OpportunityStage;
 }
