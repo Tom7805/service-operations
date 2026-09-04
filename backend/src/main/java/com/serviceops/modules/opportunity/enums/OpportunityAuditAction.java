@@ -17,5 +17,8 @@ public enum OpportunityAuditAction {
 	CLOSE_LOST,
 
 	/** Them mot hoat dong cham soc moi cho co hoi (NCL-03-CN-006, TC-04). */
-	ACTIVITY_ADD
+	ACTIVITY_ADD,
+
+	/** Sinh bao cao duong ong ban hang theo giai doan (NCL-03-CN-007, TC-04). */
+	REPORT_VIEW
 }
