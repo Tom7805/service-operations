@@ -5,6 +5,7 @@ import com.serviceops.modules.identity.employee.dto.request.EmployeeCreateReq;
 import com.serviceops.modules.identity.employee.dto.request.EmployeeSearchReq;
 import com.serviceops.modules.identity.employee.dto.request.EmployeeUpdateReq;
 import com.serviceops.modules.identity.employee.dto.request.EmploymentContractCreateReq;
+import com.serviceops.modules.identity.employee.dto.response.AssignableUserRes;
 import com.serviceops.modules.identity.employee.dto.response.EmployeeDetailRes;
 import com.serviceops.modules.identity.employee.dto.response.EmployeeRes;
 import com.serviceops.modules.identity.employee.dto.response.EmploymentContractRes;
@@ -37,6 +38,15 @@ public class EmployeeController {
     @GetMapping
     public BaseRes<List<EmployeeRes>> findAll(EmployeeSearchReq request) {
         return BaseRes.ok(employeeService.findAll(request));
+    }
+
+    /**
+     * Danh sach tai khoan chua co ho so nhan su — dung cho combobox trong form tao ho so.
+     * Nhan su (VT-06) can du lieu nay nhung khong duoc goi /users (chi VT-07).
+     */
+    @GetMapping("/assignable-users")
+    public BaseRes<List<AssignableUserRes>> findAssignableUsers() {
+        return BaseRes.ok(employeeService.findAssignableUsers());
     }
 
     @GetMapping("/{id}")

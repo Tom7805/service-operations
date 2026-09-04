@@ -180,7 +180,7 @@ describe('Gộp hai hồ sơ khách hàng trùng (NCL-02-CN-006)', () => {
   });
 
   describe('NCL-02-CN-006-TC-04: Lưu lịch sử (Nhật ký thao tác)', () => {
-    it('khi có thao tác gộp hồ sơ -> hệ thống ghi lại người thực hiện, nội dung và thời điểm', async () => {
+    it('khi có thao tác gộp hồ sơ -> gọi API gộp (backend ghi vào Nhật ký hệ thống)', async () => {
       vi.mocked(customersApi.previewCustomerMerge).mockResolvedValue(mockPreview);
       vi.mocked(customersApi.mergeCustomers).mockResolvedValue(targetCustomer);
 
@@ -194,10 +194,14 @@ describe('Gộp hai hồ sơ khách hàng trùng (NCL-02-CN-006)', () => {
       fireEvent.click(screen.getByTestId('btn-confirm-merge'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('merge-audit-card')).toBeInTheDocument();
-        expect(screen.getByText(/Trần Quản Trị/i)).toBeInTheDocument();
-        expect(screen.getByText(/Đã gộp hồ sơ KH-000002/i)).toBeInTheDocument();
+        expect(customersApi.mergeCustomers).toHaveBeenCalledWith({
+          targetCustomerId: 1,
+          sourceCustomerId: 2,
+        });
       });
+
+      // Không còn thẻ "nhật ký trong phiên" trên màn hình gộp hồ sơ.
+      expect(screen.queryByTestId('merge-audit-card')).not.toBeInTheDocument();
     });
   });
 

@@ -65,6 +65,9 @@ class CustomerMergeServiceTest {
 	@Mock
 	private CustomUserDetails userDetails;
 
+	@Mock
+	private com.serviceops.common.audit.service.AuditLogService systemAuditLogService;
+
 	private final CustomerMapper customerMapper = new CustomerMapper();
 
 	private CustomerMergeServiceImpl service;
@@ -75,7 +78,7 @@ class CustomerMergeServiceTest {
 	@BeforeEach
 	void setUp() {
 		service = new CustomerMergeServiceImpl(customerRepository, customerMapper, auditLogRepository,
-				overrideLogRepository, mergeLogRepository);
+				overrideLogRepository, mergeLogRepository, systemAuditLogService);
 
 		target = new Customer();
 		target.setId(1L);

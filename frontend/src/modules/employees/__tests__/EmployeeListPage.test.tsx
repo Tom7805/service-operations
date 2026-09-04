@@ -10,6 +10,7 @@ const mockUpdateEmployee = vi.fn();
 
 vi.mock('../api/employeesApi', () => ({
   getEmployees: (...args: unknown[]) => mockGetEmployees(...args),
+  getAssignableUsers: vi.fn(() => Promise.resolve([])),
   createEmployee: (...args: unknown[]) => mockCreateEmployee(...args),
   updateEmployee: (...args: unknown[]) => mockUpdateEmployee(...args),
   EmployeeApiError: class EmployeeApiError extends Error {
