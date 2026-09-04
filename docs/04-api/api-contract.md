@@ -1400,3 +1400,97 @@ cơ hội; phiên bản trước vẫn giữ nguyên để đối chiếu khi kh
   được cộng vào `totalAmount`.
 - Mọi lần lập báo giá và mọi lần bị từ chối truy cập đều được backend tự ghi nhật ký — Frontend không cần gọi
   thêm API nào để việc ghi log này xảy ra.
+
+---
+
+### `NCL-03-CN-005` — Ghi nhận kết quả thắng thua của cơ hội
+
+Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`) — cùng phân quyền với `NCL-03-CN-001`/`002`; vai trò khác
+nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối (TC-03, dùng chung cơ chế `OpportunityAccessDeniedAspect`).
+
+#### `POST /opportunities/{opportunityId}/close`
+
+Điều kiện bắt đầu: **cơ hội phải đang ở giai đoạn đàm phán (`NEGOTIATION`)** — dùng chung luật thứ tự giai đoạn
+với `NCL-03-CN-002` (QTN-06: chỉ từ `NEGOTIATION` mới được chốt sang `WON`/`LOST`). Đây là API **chuyên dụng** để
+đóng cơ hội kèm ghi nhận lý do — khác với `PATCH .../stage` (dùng cho kéo-thả Kanban qua các giai đoạn trung
+gian), API này **bắt buộc** phải nhập lý do khi kết quả là thua.
+
+```json
+{
+  "result": "LOST",
+  "lossReason": "PRICE_TOO_HIGH",
+  "reasonDetail": "Gia cao hon doi thu 15%",
+  "competitorName": "Cong ty XYZ"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `result` | string | có | Chỉ chấp nhận `WON` hoặc `LOST` — giá trị khác (`APPROACH`/`PROPOSAL`/`NEGOTIATION`) bị từ chối |
+| `lossReason` | string | **có, chỉ khi `result = LOST`** | Một trong `PRICE_TOO_HIGH` · `LOST_TO_COMPETITOR` · `BUDGET_CUT` · `TIMING_NOT_RIGHT` · `REQUIREMENT_MISMATCH` · `NO_RESPONSE` · `OTHER` — để trống khi thua bị từ chối (TC-02). Bỏ qua/không lưu khi `result = WON` |
+| `reasonDetail` | string | không | Ghi chú chi tiết thêm (tối đa 500 ký tự), dùng được cho cả hai kết quả |
+| `competitorName` | string | không | Tên đối thủ cạnh tranh nếu có (tối đa 255 ký tự) |
+
+Khi đóng thành công, hệ thống tự động: cập nhật `stage` = `result`, `status` = `CLOSED`, `probability` = `100`
+(nếu `WON`) hoặc `0` (nếu `LOST`) — giống bảng xác suất ở mục `NCL-03-CN-002`; ghi thêm một bản ghi vào lịch sử
+chuyển giai đoạn (`GET .../stage-history`, `fromStage = NEGOTIATION`); và ghi nhật ký riêng `CLOSE_WON`/`CLOSE_LOST`
+kèm lý do/đối thủ (TC-04). Sau khi đóng, cơ hội **không thể mở lại hay đóng lần nữa** (gọi lại API này hay
+`PATCH .../stage` đều bị từ chối `INVALID_STATE`, giống `NCL-03-CN-002` TC-03).
+
+**Response thành công — `200 OK`:** giống cấu trúc `OpportunityRes` của `POST /opportunities`, có thêm 4 trường
+mới (luôn có mặt trên `OpportunityRes` kể từ story này, `null` nếu cơ hội chưa đóng hoặc không nhập):
+
+```json
+{
+  "success": true,
+  "message": "Ghi nhan ket qua co hoi thanh cong",
+  "data": {
+    "id": 12,
+    "name": "Trien khai ERP cho Cong ty TNHH ABC",
+    "customerId": 1,
+    "customerName": "Cong ty TNHH ABC",
+    "expectedValue": 500000000,
+    "expectedCloseDate": "2026-12-31",
+    "stage": "LOST",
+    "status": "CLOSED",
+    "probability": 0,
+    "ownerId": 3,
+    "createdBy": "sale01",
+    "createdAt": "2026-09-01T10:00:00",
+    "lossReason": "PRICE_TOO_HIGH",
+    "closeReasonDetail": "Gia cao hon doi thu 15%",
+    "competitorName": "Cong ty XYZ",
+    "closedAt": "2026-09-03T15:30:00"
+  }
+}
+```
+
+| Trường mới trong `OpportunityRes` | Kiểu | Ghi chú |
+|---|---|---|
+| `lossReason` | string \| null | Chỉ có giá trị khi `stage = LOST`, luôn `null` khi `stage = WON` hoặc cơ hội chưa đóng |
+| `closeReasonDetail` | string \| null | Ghi chú chi tiết đã nhập lúc đóng, `null` nếu không nhập |
+| `competitorName` | string \| null | Tên đối thủ đã nhập lúc đóng, `null` nếu không nhập |
+| `closedAt` | string (ISO datetime) \| null | Thời điểm đóng cơ hội, `null` nếu cơ hội còn đang mở |
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 400 | `VALIDATION_ERROR` | Thiếu `result`, hoặc `result` không phải `WON`/`LOST`, hoặc `result = LOST` mà thiếu `lossReason` (TC-02) |
+| 400 | `INVALID_STATE` | Cơ hội chưa ở giai đoạn `NEGOTIATION` (điều kiện bắt đầu của story), hoặc cơ hội đã đóng từ trước — không cho đóng lại |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy cơ hội ứng với `opportunityId` |
+
+**Lưu ý cho Frontend:**
+- Chỉ mở nút "Ghi nhận kết quả thắng/thua" khi cơ hội đang ở giai đoạn `NEGOTIATION` (kiểm tra `stage` trên dữ
+  liệu đang có) — tránh gọi API rồi mới biết bị từ chối `INVALID_STATE`.
+- Khi người dùng chọn kết quả **Thua**, bắt buộc hiển thị ô chọn `lossReason` (dropdown theo danh sách 7 giá trị
+  ở trên) là trường bắt buộc trên form trước khi cho xác nhận — form không nên tự gọi API nếu ô này còn trống,
+  dù backend cũng chặn lại (TC-02).
+- Khi chọn kết quả **Thắng**, ẩn ô `lossReason` (không cần nhập) nhưng vẫn có thể để người dùng ghi `reasonDetail`
+  (vd: "thắng nhờ giá tốt hơn") và `competitorName` nếu muốn lưu lại phục vụ báo cáo.
+- Sau khi đóng thành công, khóa mọi thao tác đổi giai đoạn/đóng lại trên giao diện của cơ hội đó, tương tự lưu ý
+  ở mục `NCL-03-CN-002`.
+- Mọi lần đóng cơ hội và mọi lần bị từ chối truy cập đều được backend tự ghi nhật ký — Frontend không cần gọi
+  thêm API nào để việc ghi log này xảy ra.

@@ -1,6 +1,7 @@
 package com.serviceops.modules.opportunity.controller;
 
 import com.serviceops.common.api.BaseRes;
+import com.serviceops.modules.opportunity.dto.request.OpportunityCloseReq;
 import com.serviceops.modules.opportunity.dto.request.OpportunityCreateReq;
 import com.serviceops.modules.opportunity.dto.request.ForecastQueryReq;
 import com.serviceops.modules.opportunity.dto.request.StageChangeReq;
@@ -61,6 +62,18 @@ public class OpportunityController {
 	@PreAuthorize("hasRole('VT-04')")
 	public BaseRes<List<StageHistoryRes>> stageHistory(@PathVariable Long opportunityId) {
 		return BaseRes.ok(opportunityStageService.history(opportunityId));
+	}
+
+	/**
+	 * Ghi nhan ket qua thang/thua khi dong co hoi (NCL-03-CN-005, TC-01/02/04).
+	 * Chi Nhan vien kinh doanh; co hoi phai dang o giai doan dam phan (NEGOTIATION).
+	 */
+	@PostMapping("/{opportunityId}/close")
+	@PreAuthorize("hasRole('VT-04')")
+	public BaseRes<OpportunityRes> close(@PathVariable Long opportunityId,
+			@Valid @RequestBody OpportunityCloseReq request) {
+		return BaseRes.ok("Ghi nhan ket qua co hoi thanh cong",
+				opportunityStageService.closeOpportunity(opportunityId, request));
 	}
 
 	/** Du bao doanh thu theo xac suat giai doan (NCL-03-CN-004, TC-01/02/03). */

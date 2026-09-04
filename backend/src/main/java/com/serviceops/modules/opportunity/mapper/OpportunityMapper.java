@@ -26,7 +26,11 @@ public class OpportunityMapper {
 				opportunity.getProbability(),
 				opportunity.getOwnerId(),
 				opportunity.getCreatedBy(),
-				opportunity.getCreatedAt()
+				opportunity.getCreatedAt(),
+				opportunity.getLossReason() == null ? null : opportunity.getLossReason().name(),
+				opportunity.getCloseReasonDetail(),
+				opportunity.getCompetitorName(),
+				opportunity.getClosedAt()
 		);
 	}
 }
