@@ -530,6 +530,7 @@ export default function CustomerFormModal({
         onBackToEdit={() => setIsDuplicateModalOpen(false)}
         onConfirmOverride={handleConfirmOverride}
         isLoading={isOverriding}
+        isEdit={isEdit}
       />
     </>
   );

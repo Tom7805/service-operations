@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import type { CustomerContact, CustomerContactPayload, ContactAuditItem } from '../types/customerTypes';
+import type { CustomerContact, CustomerContactPayload } from '../types/customerTypes';
 import {
   fetchCustomerContacts,
   addCustomerContact,
@@ -16,7 +16,6 @@ interface ContactListProps {
   currentUserRoles?: string[];
   currentUserName?: string;
   initialContacts?: CustomerContact[];
-  onAuditLogged?: (audit: ContactAuditItem) => void;
 }
 
 export default function ContactList({
@@ -25,7 +24,6 @@ export default function ContactList({
   currentUserRoles = ['VT-04'],
   currentUserName = 'Người dùng',
   initialContacts,
-  onAuditLogged,
 }: ContactListProps) {
   // NCL-02-CN-003 / TC-03: Chỉ Nhân viên kinh doanh (VT-04) được quyền quản lý người liên hệ
   const isAllowed = currentUserRoles.includes('VT-04');
@@ -40,27 +38,12 @@ export default function ContactList({
     text: string;
     type: 'success' | 'error' | 'info';
   } | null>(null);
-  const [localAuditLogs, setLocalAuditLogs] = useState<ContactAuditItem[]>([]);
 
   const showToast = (text: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToastMessage({ text, type });
     setTimeout(() => {
       setToastMessage(null);
     }, 5000);
-  };
-
-  const recordAudit = (action: string, detail: string) => {
-    const newLog: ContactAuditItem = {
-      id: `${Date.now()}-${Math.random()}`,
-      action,
-      actor: currentUserName,
-      timestamp: new Date().toLocaleString('vi-VN'),
-      detail,
-    };
-    setLocalAuditLogs((prev) => [newLog, ...prev]);
-    if (onAuditLogged) {
-      onAuditLogged(newLog);
-    }
   };
 
   const loadContacts = async () => {
@@ -108,10 +91,7 @@ export default function ContactList({
         }
       });
 
-      // TC-04: Lưu lịch sử thao tác
-      const auditText = `Thêm người liên hệ: ${newContact.fullName}${newContact.isPrimary ? ' (Đầu mối chính)' : ''}`;
-      recordAudit('CONTACT_ADD', auditText);
-
+      // Nhật ký thao tác do backend ghi vào Nhật ký hệ thống (/audit-logs).
       showToast(
         `Thêm người liên hệ "${newContact.fullName}" thành công!${newContact.isPrimary ? ' (Đã đặt làm đầu mối chính)' : ''}`,
         'success'
@@ -141,10 +121,6 @@ export default function ContactList({
         const demotedOthers = withoutTarget.map((c) => ({ ...c, isPrimary: false }));
         return [{ ...contact, ...updatedContact, isPrimary: true }, ...demotedOthers];
       });
-
-      // TC-04: Lưu lịch sử thao tác
-      const auditText = `Đánh dấu đầu mối chính: ${contact.fullName}`;
-      recordAudit('CONTACT_SET_PRIMARY', auditText);
 
       showToast(`Đã chuyển "${contact.fullName}" thành người liên hệ đầu mối chính!`, 'success');
     } catch (err) {
@@ -527,34 +503,6 @@ export default function ContactList({
               })}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {/* Nhật ký thao tác người liên hệ cục bộ (TC-04) */}
-      {localAuditLogs.length > 0 && (
-        <div className="audit-log-card contact-audit-card" data-testid="contact-audit-card">
-          <div className="audit-log-header">
-            <h4 className="audit-log-title">
-              <span className="audit-log-title__icon">{ICONS.clipboardList}</span> Nhật ký thay đổi người liên hệ trong phiên (TC-04)
-            </h4>
-            <span className="badge-pulse">{localAuditLogs.length} ghi nhận mới</span>
-          </div>
-          <div className="audit-log-list">
-            {localAuditLogs.map((log) => (
-              <div key={log.id} className="audit-log-item" data-testid="audit-log-entry">
-                <span className="audit-log-icon">{ICONS.users}</span>
-                <div className="audit-log-meta">
-                  <div className="audit-log-row">
-                    <span>
-                      Người thực hiện: <strong className="highlight-username">{log.actor}</strong>
-                    </span>
-                    <span className="audit-log-time">{log.timestamp}</span>
-                  </div>
-                  <div className="audit-log-details">{log.detail}</div>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       )}
 

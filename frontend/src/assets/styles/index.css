@@ -534,6 +534,8 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
 .user-profile-fullname { font-weight: 700; color: #111111; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 186px; }
 .user-profile-username { font-size: 13.5px; color: #787774; font-family: var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 186px; }
 .cell-email { font-size: 14.5px; color: #5F5E5B; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 178px; }
+/* Cột "Chi tiết" của trang Nhật ký hệ thống — cho phép xuống dòng, không cắt cụt. */
+.audit-detail-cell { font-size: 14px; color: #5F5E5B; min-width: 220px; max-width: 420px; white-space: normal; word-break: break-word; }
 .cell-dept { font-weight: 600; color: #2F3437; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 156px; }
 
 .user-tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -626,6 +628,40 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
 .form-input--error { border-color: var(--pale-red-fg) !important; }
 .field-error { color: var(--pale-red-fg); font-size: 13.5px; margin-top: 5px; display: block; font-weight: 400; }
 .field-hint { color: #787774; font-size: 13.5px; margin-top: 4px; display: block; }
+
+/* Combobox chọn tài khoản (UserSelect) — danh sách nằm gọn trong hộp cuộn, không dùng popup <select> gốc. */
+.user-select { position: relative; }
+.user-select__trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  text-align: left; cursor: pointer; background: var(--surface);
+}
+.user-select__trigger:disabled { cursor: not-allowed; opacity: 0.6; }
+.user-select__trigger > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-select__placeholder { color: var(--ink-faint); }
+.user-select__chevron { display: flex; flex-shrink: 0; color: var(--ink-faint); }
+.user-select__chevron svg { width: 16px; height: 16px; }
+.user-select__trigger[aria-expanded="true"] .user-select__chevron { transform: rotate(180deg); }
+
+.user-select__list {
+  position: absolute; z-index: 50; top: calc(100% + 4px); left: 0; right: 0;
+  margin: 0; padding: 4px; list-style: none;
+  max-height: 240px; overflow-y: auto; overscroll-behavior: contain;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-md, 0 8px 24px rgba(0,0,0,0.12));
+}
+.user-select__option {
+  display: flex; align-items: center; gap: 2px; flex-wrap: wrap;
+  padding: 8px 10px; border-radius: var(--radius-sm); font-size: 14px; cursor: pointer;
+  color: var(--ink);
+}
+.user-select__option.is-active { background: #EDF3EC; }
+.user-select__option.is-selected { font-weight: 700; }
+.user-select__option.is-disabled { color: var(--ink-faint); cursor: not-allowed; }
+.user-select__uname { font-family: var(--font-mono); }
+.user-select__tag {
+  margin-left: 6px; font-size: 12px; color: #787774;
+  background: #F1F0EE; border-radius: var(--radius-sm); padding: 0 6px;
+}
 .password-input-wrap { position: relative; }
 .password-toggle-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 16px; color: #787774; display: flex; }
 .password-toggle-btn svg { width: 17px; height: 17px; }

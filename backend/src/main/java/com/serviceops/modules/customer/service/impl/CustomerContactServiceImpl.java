@@ -1,8 +1,11 @@
 package com.serviceops.modules.customer.service.impl;
 
+import com.serviceops.common.audit.AuditTargetType;
+import com.serviceops.common.audit.service.AuditLogService;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.customer.dto.request.CustomerContactReq;
+import com.serviceops.modules.customer.entity.Customer;
 import com.serviceops.modules.customer.dto.response.CustomerContactRes;
 import com.serviceops.modules.customer.entity.CustomerAuditLog;
 import com.serviceops.modules.customer.entity.CustomerContact;
@@ -38,6 +41,7 @@ public class CustomerContactServiceImpl implements CustomerContactService {
 	private final CustomerContactRepository customerContactRepository;
 	private final CustomerContactMapper customerContactMapper;
 	private final CustomerAuditLogRepository auditLogRepository;
+	private final AuditLogService systemAuditLogService;
 
 	@Override
 	public List<CustomerContactRes> listByCustomer(Long customerId) {
@@ -150,5 +154,13 @@ public class CustomerContactServiceImpl implements CustomerContactService {
 		log.setActorUserId(currentUserId());
 		log.setActorUsername(currentUsername());
 		auditLogRepository.save(log);
+
+		// Ghi song song vao Nhat ky he thong tong hop (trang /audit-logs) — noi luu ben vung va chi
+		// vai tro co quyen (VT-07) moi xem duoc, thay cho danh sach "nhat ky trong phien" trên trinh duyet.
+		String customerName = customerRepository.findById(customerId)
+				.map(Customer::getName)
+				.orElse(null);
+		systemAuditLogService.record(action.displayLabel(), AuditTargetType.CUSTOMER, customerId,
+				customerName, detail);
 	}
 }

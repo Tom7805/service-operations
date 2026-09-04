@@ -110,14 +110,6 @@ export interface CustomerContactFormErrors {
   general?: string;
 }
 
-export interface ContactAuditItem {
-  id: string;
-  action: string;
-  actor: string;
-  timestamp: string;
-  detail: string;
-}
-
 /**
  * NCL-02-CN-004 — Xem hồ sơ tổng hợp của khách hàng.
  * Một dòng trong bức tranh toàn cảnh (cơ hội / hợp đồng / dự án / hóa đơn / công nợ).
