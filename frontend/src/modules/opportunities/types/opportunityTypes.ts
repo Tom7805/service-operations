@@ -30,6 +30,14 @@ export interface Opportunity {
   createdBy?: string;
   createdAt?: string;
   updatedAt?: string;
+  /** NCL-03-CN-005 — chỉ có giá trị khi stage = LOST */
+  lossReason?: LossReason | null;
+  /** NCL-03-CN-005 — ghi chú chi tiết kết quả lúc đóng cơ hội */
+  closeReasonDetail?: string | null;
+  /** NCL-03-CN-005 — tên đối thủ cạnh tranh nếu có */
+  competitorName?: string | null;
+  /** NCL-03-CN-005 — thời điểm đóng cơ hội (WON/LOST), null khi còn mở */
+  closedAt?: string | null;
 }
 
 export interface OpportunityCreatePayload {
@@ -204,4 +212,71 @@ export interface ForecastQueryParams {
   from?: string;
   /** Ngày/tháng kết thúc (YYYY-MM-DD hoặc YYYY-MM) */
   to?: string;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Ghi nhận kết quả thắng thua của cơ hội (NCL-03-CN-005)                     */
+/* -------------------------------------------------------------------------- */
+
+/** 7 lý do thua chuẩn hóa theo backend enum LossReason.java (NCL-03-CN-005, TC-01/TC-02) */
+export type LossReason =
+  | 'PRICE_TOO_HIGH'
+  | 'LOST_TO_COMPETITOR'
+  | 'BUDGET_CUT'
+  | 'TIMING_NOT_RIGHT'
+  | 'REQUIREMENT_MISMATCH'
+  | 'NO_RESPONSE'
+  | 'OTHER';
+
+export interface LossReasonOption {
+  value: LossReason;
+  label: string;
+  description: string;
+}
+
+export const LOSS_REASON_OPTIONS: LossReasonOption[] = [
+  {
+    value: 'PRICE_TOO_HIGH',
+    label: 'Giá cao hơn kỳ vọng / ngân sách',
+    description: 'Giá đề xuất cao hơn kỳ vọng hoặc ngân sách cho phép của khách hàng',
+  },
+  {
+    value: 'LOST_TO_COMPETITOR',
+    label: 'Mất vào tay đối thủ cạnh tranh',
+    description: 'Khách hàng chọn giải pháp hoặc dịch vụ của đối thủ cạnh tranh khác',
+  },
+  {
+    value: 'BUDGET_CUT',
+    label: 'Khách hàng bị cắt / hết ngân sách',
+    description: 'Dự án của khách hàng bị cắt hoặc không còn nguồn ngân sách triển khai',
+  },
+  {
+    value: 'TIMING_NOT_RIGHT',
+    label: 'Thời điểm chưa phù hợp / hoãn dự án',
+    description: 'Khách hàng quyết định hoãn hoặc tạm dừng dự án sang thời điểm khác',
+  },
+  {
+    value: 'REQUIREMENT_MISMATCH',
+    label: 'Năng lực / giải pháp chưa đáp ứng yêu cầu',
+    description: 'Giải pháp hoặc năng lực đề xuất chưa hoàn toàn khớp với bài toán khách hàng',
+  },
+  {
+    value: 'NO_RESPONSE',
+    label: 'Khách hàng ngừng phản hồi',
+    description: 'Khách hàng ngừng liên lạc, không phản hồi các đề xuất tiếp theo',
+  },
+  {
+    value: 'OTHER',
+    label: 'Lý do khác',
+    description: 'Lý do khác ngoài các mục trên (chi tiết xem ở phần ghi chú)',
+  },
+];
+
+/** Request payload đóng cơ hội với kết quả thắng/thua (POST /opportunities/{id}/close) */
+export interface OpportunityClosePayload {
+  result: 'WON' | 'LOST';
+  /** Bắt buộc khi result = LOST (TC-02) */
+  lossReason?: LossReason;
+  reasonDetail?: string;
+  competitorName?: string;
 }

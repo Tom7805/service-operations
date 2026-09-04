@@ -1,10 +1,17 @@
 import { useState, useMemo } from 'react';
 import type { Opportunity, OpportunityStage, QuoteRes } from '../types/opportunityTypes';
-import { STAGE_CONFIGS } from '../types/opportunityTypes';
+import { STAGE_CONFIGS, LOSS_REASON_OPTIONS } from '../types/opportunityTypes';
 import OpportunityFormModal from '../components/OpportunityFormModal';
 import StageTransitionControl from '../components/StageTransitionControl';
 import QuoteBuilder from '../components/QuoteBuilder';
+import OpportunityCloseModal from '../components/OpportunityCloseModal';
 import { ICONS } from '../../../components/common/icons';
+
+/** NCL-03-CN-005 — nhãn tiếng Việt cho lý do thua đã lưu của cơ hội. */
+function lossReasonLabel(reason?: string | null): string | null {
+  if (!reason) return null;
+  return LOSS_REASON_OPTIONS.find((o) => o.value === reason)?.label ?? reason;
+}
 
 interface OpportunityListPageProps {
   currentUserRoles?: string[];
@@ -27,6 +34,9 @@ export default function OpportunityListPage({
   // Lập báo giá cho cơ hội (NCL-03-CN-003) — chưa có API GET nên lưu tạm theo phiên
   const [quoteTargetOpportunity, setQuoteTargetOpportunity] = useState<Opportunity | null>(null);
   const [sessionQuotes, setSessionQuotes] = useState<Record<number, QuoteRes>>({});
+
+  // Ghi nhận kết quả thắng/thua của cơ hội (NCL-03-CN-005)
+  const [closeTargetOpportunity, setCloseTargetOpportunity] = useState<Opportunity | null>(null);
 
   const [toastMessage, setToastMessage] = useState<{
     text: string;
@@ -57,6 +67,13 @@ export default function OpportunityListPage({
   const handleQuoteCreated = (quote: QuoteRes) => {
     setSessionQuotes((prev) => ({ ...prev, [quote.opportunityId]: quote }));
     showToast(`Lập báo giá phiên bản #${quote.version} thành công!`, 'success');
+  };
+
+  const handleOpportunityClosed = (updated: Opportunity) => {
+    setOpportunities((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+    setSelectedOpportunity((prev) => (prev && prev.id === updated.id ? updated : prev));
+    const outcome = updated.stage === 'WON' ? 'Thắng' : 'Thua';
+    showToast(`Đã ghi nhận kết quả ${outcome} cho "${updated.name}".`, 'success');
   };
 
   const filteredOpportunities = useMemo(() => {
@@ -729,14 +746,75 @@ export default function OpportunityListPage({
                         </span>
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                        <button
-                          type="button"
-                          className={`btn ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
-                          onClick={() => setSelectedOpportunity(isSelected ? null : opp)}
-                          style={{ fontSize: '12.5px', padding: '4px 10px' }}
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: '8px',
+                            justifyContent: 'flex-end',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                          }}
                         >
-                          {isSelected ? 'Đang chọn' : 'Chuyển giai đoạn'}
-                        </button>
+                          {isClosed ? (
+                            <div style={{ textAlign: 'right' }}>
+                              <span
+                                data-testid={`badge-closed-${opp.id}`}
+                                style={{
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  color: 'var(--ink-muted)',
+                                }}
+                              >
+                                Đã hoàn tất
+                              </span>
+                              {opp.stage === 'LOST' && (opp.lossReason || opp.competitorName) && (
+                                <div
+                                  data-testid={`loss-reason-info-${opp.id}`}
+                                  style={{
+                                    fontSize: '11.5px',
+                                    color: 'var(--pale-red-fg)',
+                                    marginTop: '2px',
+                                  }}
+                                >
+                                  {lossReasonLabel(opp.lossReason)}
+                                  {opp.competitorName ? ` · Đối thủ: ${opp.competitorName}` : ''}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            isAllowed &&
+                            (opp.stage === 'NEGOTIATION' ? (
+                              <button
+                                type="button"
+                                className="btn btn-secondary"
+                                onClick={() => setCloseTargetOpportunity(opp)}
+                                data-testid={`btn-close-opportunity-${opp.id}`}
+                                style={{ fontSize: '12.5px', padding: '4px 10px' }}
+                              >
+                                Ghi nhận kết quả
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="btn btn-secondary"
+                                disabled
+                                data-testid={`btn-disabled-close-${opp.id}`}
+                                title="Cơ hội phải ở giai đoạn Đàm phán mới ghi nhận được kết quả thắng/thua"
+                                style={{ fontSize: '12.5px', padding: '4px 10px', opacity: 0.55 }}
+                              >
+                                Chưa thể chốt
+                              </button>
+                            ))
+                          )}
+                          <button
+                            type="button"
+                            className={`btn ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
+                            onClick={() => setSelectedOpportunity(isSelected ? null : opp)}
+                            style={{ fontSize: '12.5px', padding: '4px 10px' }}
+                          >
+                            {isSelected ? 'Đang chọn' : 'Chuyển giai đoạn'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -752,6 +830,15 @@ export default function OpportunityListPage({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={handleCreatedSuccess}
+      />
+
+      {/* Modal ghi nhận kết quả thắng/thua (NCL-03-CN-005) */}
+      <OpportunityCloseModal
+        isOpen={Boolean(closeTargetOpportunity)}
+        opportunity={closeTargetOpportunity}
+        currentUserRoles={currentUserRoles}
+        onClose={() => setCloseTargetOpportunity(null)}
+        onSuccess={handleOpportunityClosed}
       />
 
       {/* Modal lập báo giá cho cơ hội (NCL-03-CN-003) */}

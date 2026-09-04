@@ -1,5 +1,6 @@
 import type {
   Opportunity,
+  OpportunityClosePayload,
   OpportunityCreatePayload,
   OpportunityCreateResponse,
   OpportunityStage,
@@ -122,6 +123,31 @@ export async function changeOpportunityStage(
     {
       method: 'PATCH',
       body: JSON.stringify({ targetStage }),
+    }
+  );
+
+  return res.data;
+}
+
+/**
+ * NCL-03-CN-005 (TC-01, TC-02, TC-03): Ghi nhận kết quả thắng/thua khi đóng cơ hội
+ * (POST /opportunities/{opportunityId}/close). Yêu cầu vai trò Nhân viên kinh doanh (VT-04).
+ * Điều kiện: cơ hội phải đang ở giai đoạn đàm phán (NEGOTIATION) và chưa đóng.
+ */
+export async function closeOpportunity(
+  opportunityId: number,
+  payload: OpportunityClosePayload
+): Promise<Opportunity> {
+  const res = await requestBackend<{ success: boolean; message?: string; data: Opportunity }>(
+    `${API_BASE_URL}/opportunities/${opportunityId}/close`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        result: payload.result,
+        lossReason: payload.result === 'LOST' ? payload.lossReason : null,
+        reasonDetail: payload.reasonDetail?.trim() || null,
+        competitorName: payload.competitorName?.trim() || null,
+      }),
     }
   );
 
