@@ -213,6 +213,86 @@ describe('CustomerFormModal Component (NCL-02-CN-001 & NCL-02-CN-002)', () => {
     });
   });
 
+  it('luồng chỉnh sửa: tự loại chính hồ sơ đang sửa khỏi cảnh báo trùng và gọi update-with-override với copy đúng ngữ cảnh', async () => {
+    vi.mocked(customersApi.checkCustomerDuplicate).mockResolvedValue([
+      {
+        id: 9,
+        code: 'KH-000009',
+        name: 'Công ty Cổ phần Misa Telecom',
+        taxCode: '0101234567',
+        phone: '0987654321',
+        similarity: 0.95,
+        matchedFields: ['ten', 'maSoThue'],
+      },
+    ]);
+
+    const onOverrideSubmit = vi.fn().mockResolvedValue({
+      id: 5,
+      code: 'KH-000005',
+      name: 'Công ty Cổ phần Misa Telecom',
+    });
+    const onClose = vi.fn();
+
+    render(
+      <CustomerFormModal
+        isOpen={true}
+        mode="edit"
+        initialCustomer={{
+          id: 5,
+          code: 'KH-000005',
+          name: 'Công ty Cổ phần Misa',
+          taxCode: '0101234567',
+          phone: '0987654321',
+          industry: null,
+          address: null,
+        }}
+        onClose={onClose}
+        onSubmit={vi.fn()}
+        onOverrideSubmit={onOverrideSubmit}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText(/Tên khách hàng/i), {
+      target: { value: 'Công ty Cổ phần Misa Telecom' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Lưu thay đổi/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: /Phát hiện hồ sơ khách hàng tương tự/i })
+      ).toBeInTheDocument();
+      // Ứng viên trùng với chính hồ sơ đang sửa (id: 5) phải bị tự loại — chỉ còn ứng viên khác (id: 9)
+      expect(screen.getByText('KH-000009')).toBeInTheDocument();
+    });
+
+    // Copy phải phản ánh đúng ngữ cảnh "chỉnh sửa" — không gợi ý rằng thao tác này tạo hồ sơ mới
+    expect(screen.getByText(/Hồ sơ bạn đang chỉnh sửa:/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Vẫn lưu thay đổi \(Bỏ qua cảnh báo\)/i }));
+
+    fireEvent.change(screen.getByLabelText(/Lý do xác nhận lưu thay đổi/i), {
+      target: { value: 'Hai chi nhánh hạch toán độc lập của Misa' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Xác nhận lưu \(Ghi nhật ký\)/i }));
+
+    await waitFor(() => {
+      expect(onOverrideSubmit).toHaveBeenCalledWith({
+        customer: {
+          name: 'Công ty Cổ phần Misa Telecom',
+          taxCode: '0101234567',
+          phone: '0987654321',
+          industry: undefined,
+          address: undefined,
+        },
+        override: {
+          reason: 'Hai chi nhánh hạch toán độc lập của Misa',
+        },
+      });
+      expect(onClose).toHaveBeenCalled();
+    });
+  });
+
   it('đóng modal khi nhấn phím Escape', () => {
     const onClose = vi.fn();
     render(

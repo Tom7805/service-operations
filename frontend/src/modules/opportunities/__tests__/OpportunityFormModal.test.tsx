@@ -34,6 +34,7 @@ const mockCreatedOpportunity: Opportunity = {
   expectedCloseDate: '2026-12-31',
   stage: 'APPROACH',
   status: 'OPEN',
+  probability: 10,
   ownerId: 3,
   createdBy: 'sale01',
   createdAt: '2026-09-04T09:00:00',

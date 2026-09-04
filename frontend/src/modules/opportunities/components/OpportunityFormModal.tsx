@@ -287,7 +287,7 @@ export default function OpportunityFormModal({
               <span style={{ flexShrink: 0, color: 'var(--ink-muted)' }}>{ICONS.info}</span>
               <span>
                 Cơ hội mới luôn tự động bắt đầu ở giai đoạn <strong>Tiếp cận</strong> (<code>APPROACH</code>)
-                và trạng thái <strong>Đang xử lý</strong> (<code>OPEN</code>) theo quy định QTN-06.
+                và trạng thái <strong>Đang xử lý</strong> (<code>OPEN</code>) theo quy định QTN-06 (10% xác suất).
               </span>
             </div>
 

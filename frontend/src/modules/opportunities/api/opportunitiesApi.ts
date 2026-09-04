@@ -2,6 +2,8 @@ import type {
   Opportunity,
   OpportunityCreatePayload,
   OpportunityCreateResponse,
+  OpportunityStage,
+  StageHistoryItem,
   CustomerOption,
 } from '../types/opportunityTypes';
 
@@ -53,6 +55,8 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
         ? 'RESOURCE_NOT_FOUND'
         : response.status === 401
         ? 'UNAUTHORIZED'
+        : response.status === 400
+        ? 'INVALID_STATE'
         : 'UNKNOWN_ERROR');
 
     let message = payload.message;
@@ -60,11 +64,13 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
     if (!message) {
       if (response.status === 403) {
         message =
-          'Bạn không có quyền thực hiện thao tác này. Chức năng tạo cơ hội bán hàng yêu cầu vai trò Nhân viên kinh doanh (VT-04).';
+          'Bạn không có quyền thực hiện thao tác này. Chức năng quản lý cơ hội bán hàng yêu cầu vai trò Nhân viên kinh doanh (VT-04).';
       } else if (response.status === 404) {
-        message = 'Không tìm thấy hồ sơ khách hàng trong hệ thống (TC-01).';
+        message = 'Không tìm thấy dữ liệu tương ứng trên hệ thống (khách hàng hoặc cơ hội bán hàng).';
       } else if (response.status === 401) {
         message = 'Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.';
+      } else if (response.status === 400) {
+        message = 'Yêu cầu không hợp lệ theo quy tắc nghiệp vụ.';
       } else {
         message = 'Đã xảy ra lỗi khi gửi yêu cầu đến máy chủ.';
       }
@@ -99,6 +105,38 @@ export async function createOpportunity(payload: OpportunityCreatePayload): Prom
   });
 
   return res.data;
+}
+
+/**
+ * NCL-03-CN-002: Chuyển giai đoạn cơ hội bán hàng (PATCH /opportunities/{opportunityId}/stage)
+ * Tuân thủ quy tắc QTN-06 (TC-01, TC-02, TC-03)
+ */
+export async function changeOpportunityStage(
+  opportunityId: number,
+  targetStage: OpportunityStage
+): Promise<Opportunity> {
+  const res = await requestBackend<{ success: boolean; message?: string; data: Opportunity }>(
+    `${API_BASE_URL}/opportunities/${opportunityId}/stage`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ targetStage }),
+    }
+  );
+
+  return res.data;
+}
+
+/**
+ * NCL-03-CN-002 (TC-05): Lấy lịch sử chuyển giai đoạn (GET /opportunities/{opportunityId}/stage-history)
+ */
+export async function fetchOpportunityStageHistory(
+  opportunityId: number
+): Promise<StageHistoryItem[]> {
+  const res = await requestBackend<{ success: boolean; data: StageHistoryItem[] }>(
+    `${API_BASE_URL}/opportunities/${opportunityId}/stage-history`
+  );
+
+  return res.data ?? [];
 }
 
 /**

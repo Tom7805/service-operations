@@ -42,8 +42,16 @@ export function isValidTaxCode(taxCode: string): boolean {
   return TAX_CODE_PATTERN.test(taxCode.trim());
 }
 
+/**
+ * Chuẩn hoá số điện thoại người dùng gõ (bỏ khoảng trắng xen giữa các cụm số,
+ * VD: "0912 345 678" -> "0912345678") — Backend chỉ chấp nhận chuỗi số liền mạch.
+ */
+export function normalizePhone(phone: string): string {
+  return phone.trim().replace(/\s+/g, '');
+}
+
 export function isValidPhone(phone: string): boolean {
-  return PHONE_PATTERN.test(phone.trim());
+  return PHONE_PATTERN.test(normalizePhone(phone));
 }
 
 /**

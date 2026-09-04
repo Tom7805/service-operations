@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   validateOpportunityCreate,
+  canTransitionStage,
+  getNextAllowedStages,
   formatVNDInput,
   parseVNDInput,
   convertVNDToWords,
@@ -8,8 +10,65 @@ import {
 } from '../validators/opportunityValidators';
 import type { OpportunityCreatePayload } from '../types/opportunityTypes';
 
-describe('Opportunity Validators (NCL-03-CN-001)', () => {
-  describe('validateOpportunityCreate', () => {
+describe('Opportunity Validators & Stage Transition (NCL-03-CN-001 & NCL-03-CN-002)', () => {
+  describe('canTransitionStage (QTN-06, TC-02, TC-03)', () => {
+    it('TC-02: cho phép chuyển giai đoạn kế tiếp liền kề (APPROACH -> PROPOSAL)', () => {
+      const result = canTransitionStage('APPROACH', 'PROPOSAL', 'OPEN');
+      expect(result.allowed).toBe(true);
+    });
+
+    it('TC-02: cho phép chuyển giai đoạn kế tiếp liền kề (PROPOSAL -> NEGOTIATION)', () => {
+      const result = canTransitionStage('PROPOSAL', 'NEGOTIATION', 'OPEN');
+      expect(result.allowed).toBe(true);
+    });
+
+    it('TC-02: từ NEGOTIATION cho phép chốt sang WON hoặc LOST', () => {
+      const wonResult = canTransitionStage('NEGOTIATION', 'WON', 'OPEN');
+      expect(wonResult.allowed).toBe(true);
+
+      const lostResult = canTransitionStage('NEGOTIATION', 'LOST', 'OPEN');
+      expect(lostResult.allowed).toBe(true);
+    });
+
+    it('TC-02: từ chối nhảy cóc (APPROACH -> NEGOTIATION hoặc APPROACH -> WON)', () => {
+      const skipToNego = canTransitionStage('APPROACH', 'NEGOTIATION', 'OPEN');
+      expect(skipToNego.allowed).toBe(false);
+      expect(skipToNego.reason).toContain('Không thể nhảy cóc');
+
+      const skipToWon = canTransitionStage('APPROACH', 'WON', 'OPEN');
+      expect(skipToWon.allowed).toBe(false);
+      expect(skipToWon.reason).toContain('Không thể nhảy cóc');
+    });
+
+    it('TC-02: từ chối chuyển lùi (PROPOSAL -> APPROACH hoặc NEGOTIATION -> PROPOSAL)', () => {
+      const backResult = canTransitionStage('PROPOSAL', 'APPROACH', 'OPEN');
+      expect(backResult.allowed).toBe(false);
+      expect(backResult.reason).toContain('Không thể chuyển lùi');
+    });
+
+    it('TC-03: từ chối chuyển giai đoạn khi cơ hội đã đóng (status = CLOSED)', () => {
+      const closedResult = canTransitionStage('WON', 'PROPOSAL', 'CLOSED');
+      expect(closedResult.allowed).toBe(false);
+      expect(closedResult.reason).toContain('Cơ hội đã hoàn tất và đóng');
+    });
+
+    it('cho phép giữ nguyên giai đoạn hiện tại (current === target)', () => {
+      const sameResult = canTransitionStage('PROPOSAL', 'PROPOSAL', 'OPEN');
+      expect(sameResult.allowed).toBe(true);
+    });
+  });
+
+  describe('getNextAllowedStages', () => {
+    it('trả về đúng danh sách giai đoạn kế tiếp theo từng nấc', () => {
+      expect(getNextAllowedStages('APPROACH', 'OPEN')).toEqual(['PROPOSAL']);
+      expect(getNextAllowedStages('PROPOSAL', 'OPEN')).toEqual(['NEGOTIATION']);
+      expect(getNextAllowedStages('NEGOTIATION', 'OPEN')).toEqual(['WON', 'LOST']);
+      expect(getNextAllowedStages('WON', 'CLOSED')).toEqual([]);
+      expect(getNextAllowedStages('LOST', 'CLOSED')).toEqual([]);
+    });
+  });
+
+  describe('validateOpportunityCreate (NCL-03-CN-001)', () => {
     it('báo lỗi khi tên cơ hội bị để trống hoặc chỉ có khoảng trắng', () => {
       const payload: OpportunityCreatePayload = {
         name: '   ',

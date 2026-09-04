@@ -1,4 +1,9 @@
-import type { OpportunityCreatePayload, OpportunityFormErrors } from '../types/opportunityTypes';
+import type {
+  OpportunityCreatePayload,
+  OpportunityFormErrors,
+  OpportunityStage,
+} from '../types/opportunityTypes';
+import { ACTIVE_STAGES_ORDER, STAGE_CONFIGS } from '../types/opportunityTypes';
 
 export const OPPORTUNITY_LIMITS = {
   NAME_MAX_LENGTH: 255,
@@ -47,6 +52,91 @@ export function validateOpportunityCreate(payload: OpportunityCreatePayload): Op
   }
 
   return errors;
+}
+
+/**
+ * Kiểm tra quy tắc chuyển giai đoạn theo thứ tự nghiêm ngặt (QTN-06 & NCL-03-CN-002, TC-02, TC-03)
+ * APPROACH -> PROPOSAL -> NEGOTIATION -> [WON | LOST]
+ */
+export function canTransitionStage(
+  currentStage: OpportunityStage | string,
+  targetStage: OpportunityStage | string,
+  status?: string
+): { allowed: boolean; reason?: string } {
+  if (!currentStage || !targetStage) {
+    return { allowed: false, reason: 'Giai đoạn không hợp lệ' };
+  }
+
+  if (currentStage === targetStage) {
+    return { allowed: true };
+  }
+
+  // TC-03: Cơ hội đã chốt hoặc đóng (CLOSED, WON, LOST) không thể chuyển tiếp
+  if (status === 'CLOSED' || currentStage === 'WON' || currentStage === 'LOST') {
+    return {
+      allowed: false,
+      reason: 'Cơ hội đã hoàn tất và đóng (status = CLOSED). Không thể chuyển giai đoạn tiếp theo.',
+    };
+  }
+
+  const currentIndex = ACTIVE_STAGES_ORDER.indexOf(currentStage as OpportunityStage);
+  if (currentIndex < 0) {
+    return { allowed: false, reason: 'Giai đoạn hiện tại không xác định' };
+  }
+
+  const isLastActive = currentIndex === ACTIVE_STAGES_ORDER.length - 1; // Đang ở NEGOTIATION
+
+  // Từ NEGOTIATION cho phép chốt sang WON hoặc LOST
+  if (isLastActive && (targetStage === 'WON' || targetStage === 'LOST')) {
+    return { allowed: true };
+  }
+
+  const targetIndex = ACTIVE_STAGES_ORDER.indexOf(targetStage as OpportunityStage);
+
+  // Không được chuyển lùi
+  if (targetIndex !== -1 && targetIndex < currentIndex) {
+    return {
+      allowed: false,
+      reason: `Không thể chuyển lùi từ ${STAGE_CONFIGS[currentStage as OpportunityStage]?.shortLabel ?? currentStage} về ${STAGE_CONFIGS[targetStage as OpportunityStage]?.shortLabel ?? targetStage}`,
+    };
+  }
+
+  // Không được nhảy cóc (phải đúng bước kế tiếp liền kề: targetIndex === currentIndex + 1)
+  if (targetIndex !== currentIndex + 1) {
+    const nextAllowed = ACTIVE_STAGES_ORDER[currentIndex + 1];
+    return {
+      allowed: false,
+      reason: `Quy tắc QTN-06: Không thể nhảy cóc. Giai đoạn kế tiếp hợp lệ là ${STAGE_CONFIGS[nextAllowed]?.shortLabel ?? nextAllowed}.`,
+    };
+  }
+
+  return { allowed: true };
+}
+
+/**
+ * Lấy danh sách các giai đoạn tiếp theo hợp lệ mà cơ hội có thể chuyển tới
+ */
+export function getNextAllowedStages(
+  currentStage: OpportunityStage | string,
+  status?: string
+): OpportunityStage[] {
+  if (status === 'CLOSED' || currentStage === 'WON' || currentStage === 'LOST') {
+    return [];
+  }
+
+  if (currentStage === 'APPROACH') {
+    return ['PROPOSAL'];
+  }
+
+  if (currentStage === 'PROPOSAL') {
+    return ['NEGOTIATION'];
+  }
+
+  if (currentStage === 'NEGOTIATION') {
+    return ['WON', 'LOST'];
+  }
+
+  return [];
 }
 
 /**

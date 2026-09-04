@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
-import type { Opportunity } from '../types/opportunityTypes';
+import type { Opportunity, OpportunityStage } from '../types/opportunityTypes';
+import { STAGE_CONFIGS } from '../types/opportunityTypes';
 import OpportunityFormModal from '../components/OpportunityFormModal';
+import StageTransitionControl from '../components/StageTransitionControl';
 import { ICONS } from '../../../components/common/icons';
 
 interface OpportunityListPageProps {
@@ -10,15 +12,17 @@ interface OpportunityListPageProps {
 }
 
 export default function OpportunityListPage({
-  currentUserRoles = [],
+  currentUserRoles = ['VT-04'],
   initialOpportunities = [],
 }: OpportunityListPageProps) {
-  // NCL-03-CN-001 (TC-03): Chỉ Nhân viên kinh doanh (VT-04) có quyền tạo cơ hội bán hàng.
   const isAllowed = currentUserRoles.includes('VT-04');
 
   const [opportunities, setOpportunities] = useState<Opportunity[]>(initialOpportunities);
+  const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [stageFilter, setStageFilter] = useState<string>('ALL');
+
   const [toastMessage, setToastMessage] = useState<{
     text: string;
     type: 'success' | 'error' | 'info';
@@ -33,26 +37,45 @@ export default function OpportunityListPage({
 
   const handleCreatedSuccess = (newOpportunity: Opportunity) => {
     setOpportunities((prev) => [newOpportunity, ...prev]);
+    setSelectedOpportunity(newOpportunity);
     showToast(`Tạo cơ hội bán hàng "${newOpportunity.name}" thành công!`, 'success');
   };
 
-  const filteredOpportunities = useMemo(() => {
-    if (!searchTerm.trim()) return opportunities;
-    const term = searchTerm.toLowerCase().trim();
-    return opportunities.filter(
-      (o) =>
-        o.name.toLowerCase().includes(term) ||
-        (o.customerName && o.customerName.toLowerCase().includes(term))
+  const handleOpportunityUpdated = (updated: Opportunity) => {
+    setOpportunities((prev) =>
+      prev.map((o) => (o.id === updated.id ? updated : o))
     );
-  }, [opportunities, searchTerm]);
+    setSelectedOpportunity(updated);
+    showToast(`Đã cập nhật giai đoạn cho "${updated.name}" thành công!`, 'success');
+  };
 
-  // Thống kê nhanh
-  const totalValue = useMemo(() => {
+  const filteredOpportunities = useMemo(() => {
+    return opportunities.filter((o) => {
+      const matchSearch =
+        !searchTerm.trim() ||
+        o.name.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
+        (o.customerName && o.customerName.toLowerCase().includes(searchTerm.toLowerCase().trim()));
+
+      const matchStage = stageFilter === 'ALL' || o.stage === stageFilter;
+
+      return matchSearch && matchStage;
+    });
+  }, [opportunities, searchTerm, stageFilter]);
+
+  // Thống kê số liệu
+  const totalExpectedValue = useMemo(() => {
     return opportunities.reduce((acc, o) => acc + (o.expectedValue || 0), 0);
   }, [opportunities]);
 
-  const approachCount = useMemo(() => {
-    return opportunities.filter((o) => o.stage === 'APPROACH').length;
+  const weightedForecastValue = useMemo(() => {
+    return opportunities.reduce((acc, o) => {
+      const prob = o.probability || 0;
+      return acc + (o.expectedValue || 0) * (prob / 100);
+    }, 0);
+  }, [opportunities]);
+
+  const wonCount = useMemo(() => {
+    return opportunities.filter((o) => o.stage === 'WON').length;
   }, [opportunities]);
 
   const formatCurrency = (amount: number): string => {
@@ -60,24 +83,6 @@ export default function OpportunityListPage({
       style: 'currency',
       currency: 'VND',
     }).format(amount);
-  };
-
-  // Nhãn hiển thị tiếng Việt cho giai đoạn / trạng thái. Story NCL-03-CN-001 chỉ
-  // sinh ra APPROACH/OPEN, nhưng bảng đọc theo dữ liệu thật để không phải sửa lại
-  // khi story chuyển giai đoạn (kanban) bổ sung các giá trị còn lại.
-  const STAGE_LABELS: Record<string, string> = {
-    APPROACH: 'Tiếp cận',
-    DISCOVERY: 'Tìm hiểu',
-    PROPOSAL: 'Đề xuất',
-    NEGOTIATION: 'Đàm phán',
-    WON: 'Thắng',
-    LOST: 'Thua',
-  };
-  const STATUS_LABELS: Record<string, string> = {
-    OPEN: 'Đang xử lý',
-    WON: 'Thắng',
-    LOST: 'Thua',
-    ABANDONED: 'Đã hủy',
   };
 
   const formatDate = (dateStr?: string | null): string => {
@@ -142,10 +147,10 @@ export default function OpportunityListPage({
               margin: '0 0 6px 0',
             }}
           >
-            Cơ hội bán hàng
+            Quản lý cơ hội bán hàng & Phễu chuyển đổi
           </h2>
           <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '14.5px' }}>
-            Khởi tạo và theo dõi các cơ hội kinh doanh mới gắn liền với hồ sơ khách hàng.
+            Theo dõi tiến trình bán hàng, chuyển giai đoạn tuần tự và dự báo doanh số theo xác suất (QTN-06).
           </p>
         </div>
 
@@ -158,7 +163,7 @@ export default function OpportunityListPage({
               style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
             >
               <span className="icon-sm">{ICONS.plus}</span>
-              <span>Tạo cơ hội bán hàng</span>
+              <span>Tạo cơ hội mới</span>
             </button>
           ) : (
             <div
@@ -181,7 +186,7 @@ export default function OpportunityListPage({
         </div>
       </div>
 
-      {/* Cảnh báo phân quyền nếu không có VT-04 */}
+      {/* Cảnh báo nếu không có quyền VT-04 */}
       {!isAllowed && (
         <div
           style={{
@@ -201,13 +206,44 @@ export default function OpportunityListPage({
         >
           <span style={{ flexShrink: 0, marginTop: '2px' }}>{ICONS.alertTriangle}</span>
           <div>
-            <strong>Thông báo phân quyền (NCL-03-CN-001 TC-03):</strong>
+            <strong>Phân quyền nghiệp vụ (NCL-03-CN-002 TC-03):</strong>
             <p style={{ margin: '4px 0 0' }}>
-              Tài khoản hiện tại của bạn không mang vai trò <strong>Nhân viên kinh doanh</strong> (<code>VT-04</code>).
-              Hệ thống chỉ cho phép nhân viên kinh doanh khởi tạo cơ hội bán hàng. Mọi yêu cầu trái quyền sẽ bị từ chối
-              và ghi nhật ký giám sát.
+              Bạn đang sử dụng tài khoản không có vai trò <strong>Nhân viên kinh doanh</strong> (<code>VT-04</code>).
+              Hệ thống chỉ cho phép nhân viên kinh doanh chuyển đổi giai đoạn cơ hội.
             </p>
           </div>
+        </div>
+      )}
+
+      {/* Bộ điều khiển chuyển giai đoạn cho cơ hội đang chọn (NCL-03-CN-002) */}
+      {selectedOpportunity && (
+        <div>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '10px',
+            }}
+          >
+            <span style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--ink-soft)' }}>
+              Đang điều khiển: <strong style={{ color: 'var(--ink-strong)' }}>{selectedOpportunity.name}</strong>
+              {selectedOpportunity.customerName && ` (${selectedOpportunity.customerName})`}
+            </span>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setSelectedOpportunity(null)}
+              style={{ padding: '2px 8px', fontSize: '12px' }}
+            >
+              Thu gọn thanh tiến trình
+            </button>
+          </div>
+          <StageTransitionControl
+            opportunity={selectedOpportunity}
+            onOpportunityUpdated={handleOpportunityUpdated}
+            currentUserRoles={currentUserRoles}
+          />
         </div>
       )}
 
@@ -216,7 +252,7 @@ export default function OpportunityListPage({
         className="stats-grid"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
           gap: '1px',
           background: 'var(--line)',
           border: '1px solid var(--line)',
@@ -237,7 +273,7 @@ export default function OpportunityListPage({
               marginBottom: '8px',
             }}
           >
-            Tổng cơ hội (phiên)
+            Tổng số cơ hội
           </div>
           <div
             style={{
@@ -265,7 +301,7 @@ export default function OpportunityListPage({
               marginBottom: '8px',
             }}
           >
-            Giai đoạn tiếp cận (APPROACH)
+            Chốt thành công (WON)
           </div>
           <div
             style={{
@@ -277,7 +313,7 @@ export default function OpportunityListPage({
               fontVariantNumeric: 'tabular-nums',
             }}
           >
-            {approachCount}
+            {wonCount}
           </div>
         </div>
 
@@ -297,7 +333,7 @@ export default function OpportunityListPage({
           </div>
           <div
             style={{
-              fontSize: '24px',
+              fontSize: '22px',
               fontWeight: 600,
               color: 'var(--ink-strong)',
               lineHeight: 1.1,
@@ -305,12 +341,40 @@ export default function OpportunityListPage({
               fontVariantNumeric: 'tabular-nums',
             }}
           >
-            {formatCurrency(totalValue)}
+            {formatCurrency(totalExpectedValue)}
+          </div>
+        </div>
+
+        <div style={{ background: 'var(--surface)', padding: '16px 20px' }}>
+          <div
+            style={{
+              fontFamily: 'var(--font-mono, monospace)',
+              fontSize: '11px',
+              fontWeight: 500,
+              textTransform: 'uppercase',
+              letterSpacing: 'var(--track-caps)',
+              color: 'var(--ink-muted)',
+              marginBottom: '8px',
+            }}
+          >
+            Dự báo theo xác suất (Weighted)
+          </div>
+          <div
+            style={{
+              fontSize: '22px',
+              fontWeight: 600,
+              color: 'var(--pale-blue-fg)',
+              lineHeight: 1.1,
+              fontFamily: 'var(--font-mono, monospace)',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {formatCurrency(weightedForecastValue)}
           </div>
         </div>
       </div>
 
-      {/* Bộ lọc & Tìm kiếm */}
+      {/* Thanh bộ lọc & Tìm kiếm */}
       <div
         style={{
           display: 'flex',
@@ -321,28 +385,44 @@ export default function OpportunityListPage({
           flexWrap: 'wrap',
         }}
       >
-        <div style={{ position: 'relative', minWidth: '320px', maxWidth: '480px', flex: 1 }}>
-          <span
-            style={{
-              position: 'absolute',
-              left: '12px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: 'var(--ink-muted)',
-              pointerEvents: 'none',
-              display: 'flex',
-            }}
+        <div style={{ display: 'flex', gap: '12px', flex: 1, flexWrap: 'wrap', minWidth: '320px' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: '260px', maxWidth: '440px' }}>
+            <span
+              style={{
+                position: 'absolute',
+                left: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'var(--ink-muted)',
+                pointerEvents: 'none',
+                display: 'flex',
+              }}
+            >
+              {ICONS.search}
+            </span>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="Tìm theo tên cơ hội hoặc khách hàng..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ paddingLeft: '36px' }}
+            />
+          </div>
+
+          <select
+            className="form-select"
+            value={stageFilter}
+            onChange={(e) => setStageFilter(e.target.value)}
+            style={{ width: 'auto', minWidth: '200px' }}
           >
-            {ICONS.search}
-          </span>
-          <input
-            type="text"
-            className="form-input"
-            placeholder="Tìm theo tên cơ hội hoặc khách hàng..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ paddingLeft: '36px' }}
-          />
+            <option value="ALL">Tất cả giai đoạn</option>
+            <option value="APPROACH">Tiếp cận (10%)</option>
+            <option value="PROPOSAL">Đề xuất (40%)</option>
+            <option value="NEGOTIATION">Đàm phán (70%)</option>
+            <option value="WON">Chốt thành công (100%)</option>
+            <option value="LOST">Đóng thất bại (0%)</option>
+          </select>
         </div>
 
         <div style={{ fontSize: '13.5px', color: 'var(--ink-muted)' }}>
@@ -424,9 +504,10 @@ export default function OpportunityListPage({
                     textTransform: 'uppercase',
                     letterSpacing: 'var(--track-caps)',
                     color: 'var(--ink-muted)',
+                    textAlign: 'center',
                   }}
                 >
-                  Ngày dự kiến chốt
+                  Xác suất
                 </th>
                 <th
                   style={{
@@ -439,7 +520,7 @@ export default function OpportunityListPage({
                     color: 'var(--ink-muted)',
                   }}
                 >
-                  Giai đoạn
+                  Giai đoạn hiện tại
                 </th>
                 <th
                   style={{
@@ -463,9 +544,10 @@ export default function OpportunityListPage({
                     textTransform: 'uppercase',
                     letterSpacing: 'var(--track-caps)',
                     color: 'var(--ink-muted)',
+                    textAlign: 'right',
                   }}
                 >
-                  Thời điểm tạo
+                  Thao tác
                 </th>
               </tr>
             </thead>
@@ -490,14 +572,16 @@ export default function OpportunityListPage({
                         {ICONS.target}
                       </div>
                       <h4 style={{ margin: '0 0 6px', color: 'var(--ink)', fontSize: '16px', fontWeight: 600 }}>
-                        {searchTerm ? 'Không tìm thấy cơ hội phù hợp' : 'Chưa có cơ hội bán hàng nào'}
+                        {searchTerm || stageFilter !== 'ALL'
+                          ? 'Không tìm thấy cơ hội phù hợp'
+                          : 'Chưa có cơ hội bán hàng nào'}
                       </h4>
                       <p style={{ margin: '0 0 16px', fontSize: '13.5px', lineHeight: '1.5' }}>
-                        {searchTerm
-                          ? 'Thử thay đổi từ khóa tìm kiếm hoặc xóa bộ lọc để xem lại danh sách.'
-                          : 'Bắt đầu quy trình bán hàng bằng cách khởi tạo cơ hội mới gắn với hồ sơ khách hàng đã có trong hệ thống.'}
+                        {searchTerm || stageFilter !== 'ALL'
+                          ? 'Thử thay đổi từ khóa hoặc bộ lọc giai đoạn để hiển thị kết quả.'
+                          : 'Bắt đầu quy trình kinh doanh bằng cách tạo cơ hội mới gắn liền với hồ sơ khách hàng.'}
                       </p>
-                      {!searchTerm && isAllowed && (
+                      {!searchTerm && stageFilter === 'ALL' && isAllowed && (
                         <button
                           type="button"
                           className="btn btn-secondary"
@@ -512,104 +596,125 @@ export default function OpportunityListPage({
                   </td>
                 </tr>
               ) : (
-                filteredOpportunities.map((opp) => (
-                  <tr
-                    key={opp.id}
-                    style={{
-                      borderBottom: '1px solid var(--line)',
-                      transition: 'background 0.15s ease',
-                    }}
-                  >
-                    <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--ink-strong)' }}>
-                      {opp.name}
-                    </td>
-                    <td style={{ padding: '12px 16px', color: 'var(--ink)' }}>
-                      {opp.customerName || `Khách hàng #${opp.customerId}`}
-                    </td>
-                    <td
+                filteredOpportunities.map((opp) => {
+                  const stageConfig = STAGE_CONFIGS[opp.stage as OpportunityStage];
+                  const isSelected = selectedOpportunity?.id === opp.id;
+                  const isClosed = opp.status === 'CLOSED';
+
+                  return (
+                    <tr
+                      key={opp.id}
                       style={{
-                        padding: '12px 16px',
-                        textAlign: 'right',
-                        fontFamily: 'var(--font-mono, monospace)',
-                        fontVariantNumeric: 'tabular-nums',
-                        fontWeight: 600,
-                        color: 'var(--ink-strong)',
+                        borderBottom: '1px solid var(--line)',
+                        background: isSelected ? 'var(--surface-sunken)' : 'transparent',
+                        transition: 'background 0.15s ease',
                       }}
                     >
-                      {formatCurrency(opp.expectedValue)}
-                    </td>
-                    <td style={{ padding: '12px 16px', color: 'var(--ink-soft)' }}>
-                      {formatDate(opp.expectedCloseDate)}
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span
+                      <td style={{ padding: '12px 16px' }}>
+                        <div style={{ fontWeight: 600, color: 'var(--ink-strong)' }}>{opp.name}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--ink-muted)', marginTop: '2px' }}>
+                          Dự kiến: {formatDate(opp.expectedCloseDate)}
+                        </div>
+                      </td>
+                      <td style={{ padding: '12px 16px', color: 'var(--ink)' }}>
+                        {opp.customerName || `Khách hàng #${opp.customerId}`}
+                      </td>
+                      <td
                         style={{
-                          padding: '2px 8px',
-                          background: 'var(--pale-green-bg)',
-                          color: 'var(--pale-green-fg)',
-                          borderRadius: '999px',
-                          fontSize: '12px',
+                          padding: '12px 16px',
+                          textAlign: 'right',
+                          fontFamily: 'var(--font-mono, monospace)',
+                          fontVariantNumeric: 'tabular-nums',
                           fontWeight: 600,
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
+                          color: 'var(--ink-strong)',
                         }}
                       >
+                        {formatCurrency(opp.expectedValue)}
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                         <span
                           style={{
-                            width: '6px',
-                            height: '6px',
-                            borderRadius: '50%',
-                            background: 'currentColor',
+                            fontFamily: 'var(--font-mono, monospace)',
+                            fontWeight: 600,
+                            fontSize: '13px',
+                            color:
+                              opp.stage === 'WON'
+                                ? 'var(--pale-green-fg)'
+                                : opp.stage === 'LOST'
+                                ? 'var(--pale-red-fg)'
+                                : 'var(--ink-strong)',
                           }}
-                        />
-                        {STAGE_LABELS[opp.stage] ?? opp.stage}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span
-                        style={{
-                          padding: '2px 8px',
-                          background: 'var(--pale-blue-bg)',
-                          color: 'var(--pale-blue-fg)',
-                          borderRadius: '999px',
-                          fontSize: '12px',
-                          fontWeight: 600,
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                        }}
-                      >
+                        >
+                          {opp.probability}%
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
                         <span
                           style={{
-                            width: '6px',
-                            height: '6px',
-                            borderRadius: '50%',
-                            background: 'currentColor',
+                            padding: '3px 10px',
+                            borderRadius: '999px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            background:
+                              opp.stage === 'WON'
+                                ? 'var(--pale-green-bg)'
+                                : opp.stage === 'LOST'
+                                ? 'var(--pale-red-bg)'
+                                : 'var(--surface-alt)',
+                            color:
+                              opp.stage === 'WON'
+                                ? 'var(--pale-green-fg)'
+                                : opp.stage === 'LOST'
+                                ? 'var(--pale-red-fg)'
+                                : 'var(--ink-strong)',
+                            border: '1px solid var(--line)',
                           }}
-                        />
-                        {STATUS_LABELS[opp.status] ?? opp.status}
-                      </span>
-                    </td>
-                    <td
-                      style={{
-                        padding: '12px 16px',
-                        color: 'var(--ink-muted)',
-                        fontSize: '13px',
-                        fontFamily: 'var(--font-mono, monospace)',
-                      }}
-                    >
-                      {formatDate(opp.createdAt)}
-                    </td>
-                  </tr>
-                ))
+                        >
+                          <span
+                            style={{
+                              width: '6px',
+                              height: '6px',
+                              borderRadius: '50%',
+                              background: 'currentColor',
+                            }}
+                          />
+                          {stageConfig?.shortLabel ?? opp.stage}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span
+                          style={{
+                            fontSize: '12.5px',
+                            color: isClosed ? 'var(--ink-muted)' : 'var(--pale-blue-fg)',
+                            fontWeight: 500,
+                          }}
+                        >
+                          {isClosed ? 'Đã đóng' : 'Đang xử lý'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                        <button
+                          type="button"
+                          className={`btn ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
+                          onClick={() => setSelectedOpportunity(isSelected ? null : opp)}
+                          style={{ fontSize: '12.5px', padding: '4px 10px' }}
+                        >
+                          {isSelected ? 'Đang chọn' : 'Chuyển giai đoạn'}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Modal tạo cơ hội bán hàng */}
+      {/* Modal tạo cơ hội */}
       <OpportunityFormModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
