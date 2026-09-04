@@ -13,10 +13,7 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 /**
- * Nhat ky co hoi (NCL-03-CN-006, TC-04): ghi lai nguoi thuc hien, noi dung va
- * thoi diem cua cac thao tac nghiep vu tren mot co hoi. Dung chung cho toan
- * bo cac story cua Epic NCL-03 tren cung bang nay, giong quy uoc
- * {@code customer_audit_logs} cua module khach hang.
+ * Nhat ky co hoi ban hang (NCL-03-CN-001, TC-04): nguoi thuc hien, noi dung va thoi diem.
  */
 @Getter
 @Setter
@@ -34,13 +31,12 @@ public class OpportunityAuditLog extends BaseEntity {
 	@Column(name = "detail", length = 1000)
 	private String detail;
 
-	/** Nguoi thuc hien. NULL khi khong xac dinh duoc CustomUserDetails (yeu cau chua xac thuc). */
-	@Column(name = "actor_id")
-	private Long actorUserId;
+	@Column(name = "actor_id", nullable = false)
+	private Long actorId;
 
 	@Column(name = "actor_username", length = 100)
 	private String actorUsername;
 
-	@Column(name = "created_at", insertable = false, updatable = false)
+	@Column(name = "created_at", nullable = false)
 	private LocalDateTime createdAt;
 }

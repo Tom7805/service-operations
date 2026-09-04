@@ -6,15 +6,12 @@ import com.serviceops.modules.opportunity.dto.request.ActivityCreateReq;
 import com.serviceops.modules.opportunity.dto.response.ActivityRes;
 import com.serviceops.modules.opportunity.entity.Opportunity;
 import com.serviceops.modules.opportunity.entity.OpportunityActivity;
-import com.serviceops.modules.opportunity.entity.OpportunityAuditLog;
-import com.serviceops.modules.opportunity.enums.OpportunityAuditAction;
 import com.serviceops.modules.opportunity.enums.OpportunityStatus;
+import com.serviceops.modules.opportunity.logging.OpportunityAuditLogger;
 import com.serviceops.modules.opportunity.mapper.OpportunityActivityMapper;
 import com.serviceops.modules.opportunity.repository.OpportunityActivityRepository;
-import com.serviceops.modules.opportunity.repository.OpportunityAuditLogRepository;
 import com.serviceops.modules.opportunity.repository.OpportunityRepository;
 import com.serviceops.modules.opportunity.service.OpportunityActivityService;
-import com.serviceops.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -29,7 +26,8 @@ import java.util.List;
  * dien tu...) — moi hoat dong gan voi mot co hoi cu the, tao thanh dong thoi
  * gian cham soc cua co hoi do (TC-01). Chi co hoi con o trang thai
  * {@link OpportunityStatus#OPEN} moi duoc them hoat dong moi; co hoi da dong
- * chi con xem lai lich su (TC-02).
+ * ({@link OpportunityStatus#CLOSED}, tuc da WON hoac LOST — xem
+ * {@code NCL-03-CN-002}/{@code 005}) chi con xem lai lich su (TC-02).
  */
 @Slf4j
 @Service
@@ -40,7 +38,7 @@ public class OpportunityActivityServiceImpl implements OpportunityActivityServic
 	private final OpportunityRepository opportunityRepository;
 	private final OpportunityActivityRepository opportunityActivityRepository;
 	private final OpportunityActivityMapper opportunityActivityMapper;
-	private final OpportunityAuditLogRepository auditLogRepository;
+	private final OpportunityAuditLogger auditLogger;
 
 	@Override
 	public List<ActivityRes> listByOpportunity(Long opportunityId) {
@@ -78,8 +76,7 @@ public class OpportunityActivityServiceImpl implements OpportunityActivityServic
 		OpportunityActivity saved = opportunityActivityRepository.save(activity);
 
 		// TC-04: moi lan them hoat dong thanh cong deu ghi lai nguoi thuc hien, noi dung va thoi diem.
-		recordAudit(opportunityId, OpportunityAuditAction.ACTIVITY_ADD,
-				"Ghi nhan hoat dong cham soc loai " + saved.getActivityType());
+		auditLogger.recordActivityAdd(opportunityId, "Ghi nhan hoat dong cham soc loai " + saved.getActivityType());
 
 		log.info("OPPORTUNITY_ACTIVITY_ADDED opportunityId={} activityId={} type={}", opportunityId, saved.getId(),
 				saved.getActivityType());
@@ -103,23 +100,5 @@ public class OpportunityActivityServiceImpl implements OpportunityActivityServic
 	private String currentUsername() {
 		var authentication = SecurityContextHolder.getContext().getAuthentication();
 		return authentication == null ? null : authentication.getName();
-	}
-
-	private Long currentUserId() {
-		var authentication = SecurityContextHolder.getContext().getAuthentication();
-		if (authentication == null || !(authentication.getPrincipal() instanceof CustomUserDetails details)) {
-			return null;
-		}
-		return details.getId();
-	}
-
-	private void recordAudit(Long opportunityId, OpportunityAuditAction action, String detail) {
-		OpportunityAuditLog auditLog = new OpportunityAuditLog();
-		auditLog.setOpportunityId(opportunityId);
-		auditLog.setActionType(action);
-		auditLog.setDetail(detail);
-		auditLog.setActorUserId(currentUserId());
-		auditLog.setActorUsername(currentUsername());
-		auditLogRepository.save(auditLog);
 	}
 }

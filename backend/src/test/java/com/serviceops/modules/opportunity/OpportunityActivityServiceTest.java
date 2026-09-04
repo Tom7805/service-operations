@@ -6,21 +6,17 @@ import com.serviceops.modules.opportunity.dto.request.ActivityCreateReq;
 import com.serviceops.modules.opportunity.dto.response.ActivityRes;
 import com.serviceops.modules.opportunity.entity.Opportunity;
 import com.serviceops.modules.opportunity.entity.OpportunityActivity;
-import com.serviceops.modules.opportunity.entity.OpportunityAuditLog;
 import com.serviceops.modules.opportunity.enums.ActivityType;
-import com.serviceops.modules.opportunity.enums.OpportunityAuditAction;
 import com.serviceops.modules.opportunity.enums.OpportunityStatus;
+import com.serviceops.modules.opportunity.logging.OpportunityAuditLogger;
 import com.serviceops.modules.opportunity.mapper.OpportunityActivityMapper;
 import com.serviceops.modules.opportunity.repository.OpportunityActivityRepository;
-import com.serviceops.modules.opportunity.repository.OpportunityAuditLogRepository;
 import com.serviceops.modules.opportunity.repository.OpportunityRepository;
 import com.serviceops.modules.opportunity.service.impl.OpportunityActivityServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -33,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -53,7 +50,7 @@ class OpportunityActivityServiceTest {
 	private OpportunityActivityRepository opportunityActivityRepository;
 
 	@Mock
-	private OpportunityAuditLogRepository auditLogRepository;
+	private OpportunityAuditLogger auditLogger;
 
 	private final OpportunityActivityMapper opportunityActivityMapper = new OpportunityActivityMapper();
 
@@ -62,7 +59,7 @@ class OpportunityActivityServiceTest {
 	@BeforeEach
 	void setUp() {
 		service = new OpportunityActivityServiceImpl(opportunityRepository, opportunityActivityRepository,
-				opportunityActivityMapper, auditLogRepository);
+				opportunityActivityMapper, auditLogger);
 
 		lenient().when(opportunityActivityRepository.save(any(OpportunityActivity.class))).thenAnswer(inv -> {
 			OpportunityActivity activity = inv.getArgument(0);
@@ -113,11 +110,11 @@ class OpportunityActivityServiceTest {
 		assertThat(captor.getValue().getParticipants()).isNull();
 	}
 
-	@ParameterizedTest(name = "NCL-03-CN-006 TC-02: co hoi o trang thai {0} thi tu choi them hoat dong moi")
-	@EnumSource(value = OpportunityStatus.class, names = {"WON", "LOST"})
-	void rejectsAddingActivityWhenOpportunityIsClosed(OpportunityStatus closedStatus) {
+	@Test
+	@DisplayName("NCL-03-CN-006 TC-02: co hoi da dong (CLOSED) thi tu choi them hoat dong moi")
+	void rejectsAddingActivityWhenOpportunityIsClosed() {
 		Opportunity closed = openOpportunity();
-		closed.setStatus(closedStatus);
+		closed.setStatus(OpportunityStatus.CLOSED);
 		when(opportunityRepository.findById(10L)).thenReturn(Optional.of(closed));
 
 		ActivityCreateReq req = new ActivityCreateReq(ActivityType.CALL, LocalDateTime.now(), null, "Noi dung");
@@ -128,7 +125,7 @@ class OpportunityActivityServiceTest {
 				.isEqualTo(ErrorCode.INVALID_STATE);
 
 		verify(opportunityActivityRepository, never()).save(any());
-		verify(auditLogRepository, never()).save(any());
+		verify(auditLogger, never()).recordActivityAdd(any(), any());
 	}
 
 	@Test
@@ -190,17 +187,16 @@ class OpportunityActivityServiceTest {
 	}
 
 	@Test
-	@DisplayName("NCL-03-CN-006 TC-04: them hoat dong thanh cong thi ghi nhat ky ACTIVITY_ADD")
+	@DisplayName("NCL-03-CN-006 TC-04: them hoat dong thanh cong thi ghi nhat ky ACTIVITY_ADD qua OpportunityAuditLogger")
 	void recordsAuditLogOnAddActivity() {
 		when(opportunityRepository.findById(10L)).thenReturn(Optional.of(openOpportunity()));
 
 		service.addActivity(10L,
 				new ActivityCreateReq(ActivityType.MEETING, LocalDateTime.now(), null, "Hop demo truc tiep"));
 
-		ArgumentCaptor<OpportunityAuditLog> captor = ArgumentCaptor.forClass(OpportunityAuditLog.class);
-		verify(auditLogRepository).save(captor.capture());
-		assertThat(captor.getValue().getActionType()).isEqualTo(OpportunityAuditAction.ACTIVITY_ADD);
-		assertThat(captor.getValue().getOpportunityId()).isEqualTo(10L);
+		ArgumentCaptor<String> detailCaptor = ArgumentCaptor.forClass(String.class);
+		verify(auditLogger).recordActivityAdd(eq(10L), detailCaptor.capture());
+		assertThat(detailCaptor.getValue()).contains("MEETING");
 	}
 
 	@Test
