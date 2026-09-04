@@ -104,26 +104,25 @@ export async function createOpportunity(payload: OpportunityCreatePayload): Prom
 /**
  * Tải danh sách khách hàng đã có hồ sơ để người dùng lựa chọn trên giao diện
  * Tránh việc phải nhập mã ID thủ công (NCL-03-CN-001 lưu ý cho Frontend).
+ *
+ * Lưu ý: hàm này KHÔNG nuốt lỗi — nếu backend trả 401/403/5xx thì ném
+ * `OpportunityApiError` để giao diện phân biệt được "không có khách hàng nào"
+ * với "tải danh sách thất bại". Chỉ trả mảng rỗng khi backend thực sự trả `data: []`.
  */
 export async function fetchCustomersForSelect(): Promise<CustomerOption[]> {
-  try {
-    const res = await requestBackend<{ success: boolean; data: CustomerOption[] }>(
-      `${API_BASE_URL}/customers`
-    );
-    if (res.data && Array.isArray(res.data)) {
-      // Chỉ lấy các khách hàng chưa bị gộp (MERGED) nếu có trạng thái
-      return res.data
-        .filter((c) => c.status !== 'MERGED')
-        .map((c) => ({
-          id: c.id,
-          code: c.code,
-          name: c.name,
-          status: c.status,
-        }));
-    }
-    return [];
-  } catch {
-    // Nếu gặp lỗi khi tải danh sách khách hàng, trả về mảng rỗng để không chặn modal
+  const res = await requestBackend<{ success: boolean; data: CustomerOption[] }>(
+    `${API_BASE_URL}/customers`
+  );
+  if (!res.data || !Array.isArray(res.data)) {
     return [];
   }
+  // Chỉ lấy các khách hàng chưa bị gộp (MERGED) nếu có trạng thái
+  return res.data
+    .filter((c) => c.status !== 'MERGED')
+    .map((c) => ({
+      id: c.id,
+      code: c.code,
+      name: c.name,
+      status: c.status,
+    }));
 }

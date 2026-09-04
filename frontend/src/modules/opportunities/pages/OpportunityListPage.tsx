@@ -10,7 +10,7 @@ interface OpportunityListPageProps {
 }
 
 export default function OpportunityListPage({
-  currentUserRoles = ['VT-04'],
+  currentUserRoles = [],
   initialOpportunities = [],
 }: OpportunityListPageProps) {
   // NCL-03-CN-001 (TC-03): Chỉ Nhân viên kinh doanh (VT-04) có quyền tạo cơ hội bán hàng.
@@ -60,6 +60,24 @@ export default function OpportunityListPage({
       style: 'currency',
       currency: 'VND',
     }).format(amount);
+  };
+
+  // Nhãn hiển thị tiếng Việt cho giai đoạn / trạng thái. Story NCL-03-CN-001 chỉ
+  // sinh ra APPROACH/OPEN, nhưng bảng đọc theo dữ liệu thật để không phải sửa lại
+  // khi story chuyển giai đoạn (kanban) bổ sung các giá trị còn lại.
+  const STAGE_LABELS: Record<string, string> = {
+    APPROACH: 'Tiếp cận',
+    DISCOVERY: 'Tìm hiểu',
+    PROPOSAL: 'Đề xuất',
+    NEGOTIATION: 'Đàm phán',
+    WON: 'Thắng',
+    LOST: 'Thua',
+  };
+  const STATUS_LABELS: Record<string, string> = {
+    OPEN: 'Đang xử lý',
+    WON: 'Thắng',
+    LOST: 'Thua',
+    ABANDONED: 'Đã hủy',
   };
 
   const formatDate = (dateStr?: string | null): string => {
@@ -545,7 +563,7 @@ export default function OpportunityListPage({
                             background: 'currentColor',
                           }}
                         />
-                        Tiếp cận
+                        {STAGE_LABELS[opp.stage] ?? opp.stage}
                       </span>
                     </td>
                     <td style={{ padding: '12px 16px' }}>
@@ -570,7 +588,7 @@ export default function OpportunityListPage({
                             background: 'currentColor',
                           }}
                         />
-                        Đang xử lý
+                        {STATUS_LABELS[opp.status] ?? opp.status}
                       </span>
                     </td>
                     <td

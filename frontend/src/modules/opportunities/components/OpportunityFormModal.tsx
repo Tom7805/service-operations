@@ -41,6 +41,7 @@ export default function OpportunityFormModal({
 
   const [customers, setCustomers] = useState<CustomerOption[]>(initialCustomerList ?? []);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [customerLoadError, setCustomerLoadError] = useState<string | null>(null);
 
   const [errors, setErrors] = useState<OpportunityFormErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
@@ -59,10 +60,21 @@ export default function OpportunityFormModal({
 
     let isMounted = true;
     setLoadingCustomers(true);
+    setCustomerLoadError(null);
     fetchCustomersForSelect()
       .then((data) => {
         if (isMounted) {
           setCustomers(data);
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          setCustomers([]);
+          setCustomerLoadError(
+            err instanceof Error && err.message
+              ? err.message
+              : 'Không tải được danh sách khách hàng. Vui lòng thử lại.'
+          );
         }
       })
       .finally(() => {
@@ -85,6 +97,7 @@ export default function OpportunityFormModal({
       setExpectedCloseDate('');
       setErrors({});
       setServerError(null);
+      setCustomerLoadError(null);
       setSubmitting(false);
 
       const timer = setTimeout(() => {
@@ -343,11 +356,19 @@ export default function OpportunityFormModal({
                     {errors.customerId}
                   </span>
                 )}
-                {!errors.customerId && customers.length === 0 && !loadingCustomers && (
-                  <span className="field-hint">
-                    Chưa tìm thấy khách hàng nào. Vui lòng tạo hồ sơ khách hàng trước (NCL-02-CN-001).
+                {!errors.customerId && customerLoadError && !loadingCustomers && (
+                  <span className="field-error" role="alert">
+                    {customerLoadError}
                   </span>
                 )}
+                {!errors.customerId &&
+                  !customerLoadError &&
+                  customers.length === 0 &&
+                  !loadingCustomers && (
+                    <span className="field-hint">
+                      Chưa tìm thấy khách hàng nào. Vui lòng tạo hồ sơ khách hàng trước (NCL-02-CN-001).
+                    </span>
+                  )}
               </div>
 
               {/* Giá trị dự kiến */}

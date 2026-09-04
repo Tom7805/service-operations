@@ -79,6 +79,19 @@ describe('OpportunityFormModal Component (NCL-03-CN-001 & FE-QA CV-05)', () => {
     expect(screen.getByText('[KH-000001] Công ty TNHH Giải Pháp Công Nghệ ABC')).toBeInTheDocument();
   });
 
+  it('hiển thị lỗi tải danh sách khách hàng (không nuốt lỗi) thay vì thông báo "chưa có khách hàng"', async () => {
+    vi.mocked(opportunitiesApi.fetchCustomersForSelect).mockRejectedValueOnce(
+      new opportunitiesApi.OpportunityApiError('FORBIDDEN', 'Bạn không đủ quyền xem danh sách khách hàng.', 403)
+    );
+
+    render(<OpportunityFormModal isOpen={true} onClose={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Bạn không đủ quyền xem danh sách khách hàng.')).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/Chưa tìm thấy khách hàng nào/i)).not.toBeInTheDocument();
+  });
+
   it('báo lỗi validation khi để trống các trường bắt buộc và bấm submit', async () => {
     render(<OpportunityFormModal isOpen={true} onClose={vi.fn()} initialCustomerList={mockCustomers} />);
 
