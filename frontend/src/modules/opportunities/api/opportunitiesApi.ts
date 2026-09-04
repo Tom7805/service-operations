@@ -5,6 +5,8 @@ import type {
   OpportunityStage,
   StageHistoryItem,
   CustomerOption,
+  RevenueForecastData,
+  ForecastQueryParams,
 } from '../types/opportunityTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
@@ -163,4 +165,41 @@ export async function fetchCustomersForSelect(): Promise<CustomerOption[]> {
       name: c.name,
       status: c.status,
     }));
+}
+
+/**
+ * Chuẩn hóa tham số ngày về YYYY-MM-DD cho Spring Boot LocalDate.
+ * Nếu người dùng truyền 'YYYY-MM' thì bổ sung ngày đầu tháng (from) hoặc ngày cuối tháng (to).
+ */
+function normalizeDateParam(val: string | undefined, isEnd = false): string | undefined {
+  const trimmed = val?.trim();
+  if (!trimmed) return undefined;
+  if (/^\d{4}-\d{2}$/.test(trimmed)) {
+    if (!isEnd) return `${trimmed}-01`;
+    const [year, month] = trimmed.split('-').map(Number);
+    const lastDay = new Date(year, month, 0).getDate();
+    return `${trimmed}-${String(lastDay).padStart(2, '0')}`;
+  }
+  return trimmed;
+}
+
+/**
+ * NCL-03-CN-004 (TC-01, TC-02, TC-03): Lấy báo cáo dự báo doanh thu theo xác suất giai đoạn
+ * (GET /opportunities/revenue-forecast). Yêu cầu vai trò Ban giám đốc (VT-01) hoặc
+ * Nhân viên kinh doanh (VT-04). Backend loại các cơ hội đã đóng theo quy tắc QTN-07.
+ */
+export async function fetchRevenueForecast(
+  params?: ForecastQueryParams
+): Promise<RevenueForecastData> {
+  const url = new URL(`${API_BASE_URL}/opportunities/revenue-forecast`);
+  const from = normalizeDateParam(params?.from, false);
+  const to = normalizeDateParam(params?.to, true);
+  if (from) url.searchParams.set('from', from);
+  if (to) url.searchParams.set('to', to);
+
+  const res = await requestBackend<{ success: boolean; data: RevenueForecastData }>(
+    url.toString()
+  );
+
+  return res.data;
 }

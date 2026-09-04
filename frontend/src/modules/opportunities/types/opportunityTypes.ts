@@ -175,3 +175,33 @@ export const POPULAR_PROFESSIONAL_ROLES = [
   'Kỹ sư hệ thống / DevOps (DevOps Engineer)',
   'Chuyên viên phân tích nghiệp vụ (Business Analyst)',
 ];
+
+/* -------------------------------------------------------------------------- */
+/*  Dự báo doanh thu theo xác suất giai đoạn (NCL-03-CN-004)                   */
+/* -------------------------------------------------------------------------- */
+
+/** Dự báo doanh thu của một tháng (NCL-03-CN-004, TC-01) */
+export interface MonthlyRevenueForecast {
+  /** Định dạng tháng YYYY-MM (ví dụ: '2026-09') */
+  month: string;
+  /** Doanh thu kỳ vọng đã nhân xác suất giai đoạn (VNĐ) */
+  expectedRevenue: number;
+  /** Số cơ hội mở có ngày dự kiến ký nằm trong tháng */
+  opportunityCount: number;
+}
+
+/** Dữ liệu trả về từ API dự báo doanh thu (GET /opportunities/revenue-forecast) */
+export interface RevenueForecastData {
+  /** Tổng doanh thu kỳ vọng của các tháng trong khoảng lọc (VNĐ) */
+  totalExpectedRevenue: number;
+  /** Danh sách dự báo theo từng tháng, tăng dần theo thời gian */
+  months: MonthlyRevenueForecast[];
+}
+
+/** Tham số lọc thời gian cho báo cáo dự báo doanh thu */
+export interface ForecastQueryParams {
+  /** Ngày/tháng bắt đầu (YYYY-MM-DD hoặc YYYY-MM) */
+  from?: string;
+  /** Ngày/tháng kết thúc (YYYY-MM-DD hoặc YYYY-MM) */
+  to?: string;
+}
