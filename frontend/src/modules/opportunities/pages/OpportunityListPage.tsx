@@ -1,13 +1,17 @@
-import { useMemo, useState } from "react";
-import { ICONS } from "../../../components/common/icons";
-import { fetchStageHistory } from "../api/opportunitiesApi";
-import OpportunityCloseModal from "../components/OpportunityCloseModal";
-import {
-  LOSS_REASON_OPTIONS,
-  OPPORTUNITY_STAGES,
-  type Opportunity,
-  type StageHistoryItem,
-} from "../types/opportunityTypes";
+import { useState, useMemo } from 'react';
+import type { Opportunity, OpportunityStage, QuoteRes } from '../types/opportunityTypes';
+import { STAGE_CONFIGS, LOSS_REASON_OPTIONS } from '../types/opportunityTypes';
+import OpportunityFormModal from '../components/OpportunityFormModal';
+import StageTransitionControl from '../components/StageTransitionControl';
+import QuoteBuilder from '../components/QuoteBuilder';
+import OpportunityCloseModal from '../components/OpportunityCloseModal';
+import { ICONS } from '../../../components/common/icons';
+
+/** NCL-03-CN-005 — nhãn tiếng Việt cho lý do thua đã lưu của cơ hội. */
+function lossReasonLabel(reason?: string | null): string | null {
+  if (!reason) return null;
+  return LOSS_REASON_OPTIONS.find((o) => o.value === reason)?.label ?? reason;
+}
 
 interface OpportunityListPageProps {
   currentUserRoles?: string[];
@@ -15,548 +19,801 @@ interface OpportunityListPageProps {
   initialOpportunities?: Opportunity[];
 }
 
-const currencyFormatter = new Intl.NumberFormat("vi-VN", {
-  style: "currency",
-  currency: "VND",
-  maximumFractionDigits: 0,
-});
-
-/** Dữ liệu mẫu chuẩn cho cơ hội bán hàng nếu chưa có dữ liệu từ prop */
-const DEFAULT_OPPORTUNITIES: Opportunity[] = [
-  {
-    id: 1,
-    name: "Triển khai hệ thống ERP cho Công ty ABC",
-    customerId: 101,
-    customerName: "Công ty Cổ phần Công nghệ ABC",
-    expectedValue: 500000000,
-    expectedCloseDate: "2026-09-30",
-    stage: "NEGOTIATION",
-    status: "OPEN",
-    probability: 70,
-    ownerId: 1,
-    createdBy: "sale01",
-    createdAt: "2026-08-15T09:00:00",
-  },
-  {
-    id: 2,
-    name: "Cung cấp giải pháp CRM & Chăm sóc khách hàng",
-    customerId: 102,
-    customerName: "Tập đoàn Bán lẻ Miền Nam",
-    expectedValue: 250000000,
-    expectedCloseDate: "2026-10-15",
-    stage: "NEGOTIATION",
-    status: "OPEN",
-    probability: 70,
-    ownerId: 1,
-    createdBy: "sale01",
-    createdAt: "2026-08-20T14:30:00",
-  },
-  {
-    id: 3,
-    name: "Nâng cấp hạ tầng dịch vụ Cloud cho Ngân hàng X",
-    customerId: 103,
-    customerName: "Ngân hàng TMCP X",
-    expectedValue: 800000000,
-    expectedCloseDate: "2026-11-20",
-    stage: "PROPOSAL",
-    status: "OPEN",
-    probability: 40,
-    ownerId: 1,
-    createdBy: "sale01",
-    createdAt: "2026-08-25T11:15:00",
-  },
-  {
-    id: 4,
-    name: "Tư vấn chuyển đổi số doanh nghiệp SME",
-    customerId: 104,
-    customerName: "Công ty May mặc Tân Bình",
-    expectedValue: 120000000,
-    expectedCloseDate: "2026-08-30",
-    stage: "LOST",
-    status: "CLOSED",
-    probability: 0,
-    lossReason: "PRICE_TOO_HIGH",
-    closeReasonDetail: "Khách hàng ngân sách hạn chế, chi phí đề xuất vượt 20%",
-    competitorName: "Phần mềm Á Châu",
-    closedAt: "2026-08-29T16:00:00",
-    ownerId: 1,
-    createdBy: "sale01",
-    createdAt: "2026-08-01T10:00:00",
-  },
-  {
-    id: 5,
-    name: "Bảo trì hệ thống thông tin nội bộ 2026",
-    customerId: 105,
-    customerName: "Công ty Logistics Nam Việt",
-    expectedValue: 180000000,
-    expectedCloseDate: "2026-08-20",
-    stage: "WON",
-    status: "CLOSED",
-    probability: 100,
-    closeReasonDetail:
-      "Khách hàng hài lòng với chất lượng dịch vụ các năm trước",
-    closedAt: "2026-08-18T10:30:00",
-    ownerId: 1,
-    createdBy: "sale01",
-    createdAt: "2026-07-15T09:30:00",
-  },
-];
-
 export default function OpportunityListPage({
-  currentUserRoles = ["VT-04"],
-  currentUserName = "Nhân viên kinh doanh",
-  initialOpportunities,
+  currentUserRoles = ['VT-04'],
+  initialOpportunities = [],
 }: OpportunityListPageProps) {
-  // NCL-03-CN-005-TC-03: Chỉ Nhân viên kinh doanh (VT-04) mới được phép thực hiện
-  const isSales = currentUserRoles.includes("VT-04");
+  const isAllowed = currentUserRoles.includes('VT-04');
 
-  const [opportunities, setOpportunities] = useState<Opportunity[]>(
-    initialOpportunities ?? DEFAULT_OPPORTUNITIES,
-  );
+  const [opportunities, setOpportunities] = useState<Opportunity[]>(initialOpportunities);
+  const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [stageFilter, setStageFilter] = useState<string>('ALL');
 
-  // Bộ lọc & Tìm kiếm
-  const [searchTerm, setSearchTerm] = useState("");
-  const [stageFilter, setStageFilter] = useState<string>("ALL");
+  // Lập báo giá cho cơ hội (NCL-03-CN-003) — chưa có API GET nên lưu tạm theo phiên
+  const [quoteTargetOpportunity, setQuoteTargetOpportunity] = useState<Opportunity | null>(null);
+  const [sessionQuotes, setSessionQuotes] = useState<Record<number, QuoteRes>>({});
 
-  // Modal đóng cơ hội (NCL-03-CN-005)
-  const [closingOpportunity, setClosingOpportunity] =
-    useState<Opportunity | null>(null);
+  // Ghi nhận kết quả thắng/thua của cơ hội (NCL-03-CN-005)
+  const [closeTargetOpportunity, setCloseTargetOpportunity] = useState<Opportunity | null>(null);
 
-  // Modal lịch sử chuyển giai đoạn (TC-04)
-  const [historyOpportunity, setHistoryOpportunity] =
-    useState<Opportunity | null>(null);
-  const [stageHistoryList, setStageHistoryList] = useState<StageHistoryItem[]>(
-    [],
-  );
-  const [loadingHistory, setLoadingHistory] = useState(false);
-
-  // Toast thông báo
   const [toastMessage, setToastMessage] = useState<{
     text: string;
-    type: "success" | "error" | "info";
+    type: 'success' | 'error' | 'info';
   } | null>(null);
 
-  const showToast = (
-    text: string,
-    type: "success" | "error" | "info" = "success",
-  ) => {
+  const showToast = (text: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToastMessage({ text, type });
-    setTimeout(() => setToastMessage(null), 5000);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 5000);
   };
 
-  // Xem lịch sử chuyển giai đoạn (TC-04)
-  const handleOpenHistory = async (opp: Opportunity) => {
-    setHistoryOpportunity(opp);
-    setLoadingHistory(true);
-    try {
-      const history = await fetchStageHistory(opp.id);
-      setStageHistoryList(history);
-    } catch {
-      // Fallback lịch sử hiển thị
-      setStageHistoryList([
-        {
-          id: 1,
-          opportunityId: opp.id,
-          fromStage: "NEGOTIATION",
-          toStage: opp.stage,
-          changedByUsername: opp.createdBy || "sale01",
-          changedAt: opp.closedAt || new Date().toISOString(),
-        },
-      ]);
-    } finally {
-      setLoadingHistory(false);
-    }
+  const handleCreatedSuccess = (newOpportunity: Opportunity) => {
+    setOpportunities((prev) => [newOpportunity, ...prev]);
+    setSelectedOpportunity(newOpportunity);
+    showToast(`Tạo cơ hội bán hàng "${newOpportunity.name}" thành công!`, 'success');
   };
 
-  // Cập nhật sau khi đóng cơ hội thành công (TC-01, TC-04)
-  const handleCloseSuccess = (updated: Opportunity) => {
+  const handleOpportunityUpdated = (updated: Opportunity) => {
     setOpportunities((prev) =>
-      prev.map((o) => (o.id === updated.id ? { ...o, ...updated } : o)),
+      prev.map((o) => (o.id === updated.id ? updated : o))
     );
-
-    const isWon = updated.stage === "WON";
-    showToast(
-      `Đã ghi nhận kết quả ${isWon ? "THẮNG (WON)" : "THẤT BẠI (LOST)"} cho cơ hội "${updated.name}" thành công!`,
-      "success",
-    );
+    setSelectedOpportunity(updated);
+    showToast(`Đã cập nhật giai đoạn cho "${updated.name}" thành công!`, 'success');
   };
 
-  // Lọc danh sách cơ hội
+  const handleQuoteCreated = (quote: QuoteRes) => {
+    setSessionQuotes((prev) => ({ ...prev, [quote.opportunityId]: quote }));
+    showToast(`Lập báo giá phiên bản #${quote.version} thành công!`, 'success');
+  };
+
+  const handleOpportunityClosed = (updated: Opportunity) => {
+    setOpportunities((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+    setSelectedOpportunity((prev) => (prev && prev.id === updated.id ? updated : prev));
+    const outcome = updated.stage === 'WON' ? 'Thắng' : 'Thua';
+    showToast(`Đã ghi nhận kết quả ${outcome} cho "${updated.name}".`, 'success');
+  };
+
   const filteredOpportunities = useMemo(() => {
-    return opportunities.filter((item) => {
+    return opportunities.filter((o) => {
       const matchSearch =
         !searchTerm.trim() ||
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.customerName &&
-          item.customerName.toLowerCase().includes(searchTerm.toLowerCase()));
+        o.name.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
+        (o.customerName && o.customerName.toLowerCase().includes(searchTerm.toLowerCase().trim()));
 
-      if (!matchSearch) return false;
+      const matchStage = stageFilter === 'ALL' || o.stage === stageFilter;
 
-      if (stageFilter === "NEGOTIATION_OPEN") {
-        return item.stage === "NEGOTIATION" && item.status === "OPEN";
-      }
-      if (stageFilter === "WON") return item.stage === "WON";
-      if (stageFilter === "LOST") return item.stage === "LOST";
-      if (stageFilter === "OPEN") return item.status === "OPEN";
-      if (stageFilter === "CLOSED") return item.status === "CLOSED";
-
-      return true;
+      return matchSearch && matchStage;
     });
   }, [opportunities, searchTerm, stageFilter]);
 
-  // Thống kê nhanh
-  const stats = useMemo(() => {
-    const total = opportunities.length;
-    const negotiationCount = opportunities.filter(
-      (o) => o.stage === "NEGOTIATION" && o.status === "OPEN",
-    ).length;
-    const wonCount = opportunities.filter((o) => o.stage === "WON").length;
-    const lostCount = opportunities.filter((o) => o.stage === "LOST").length;
-
-    return { total, negotiationCount, wonCount, lostCount };
+  // Thống kê số liệu
+  const totalExpectedValue = useMemo(() => {
+    return opportunities.reduce((acc, o) => acc + (o.expectedValue || 0), 0);
   }, [opportunities]);
 
-  // TC-03: Từ chối truy cập nếu không phải Nhân viên kinh doanh (VT-04)
-  if (!isSales) {
-    return (
-      <div
-        className="access-denied-container"
-        data-testid="opportunity-access-denied"
-      >
-        <div className="access-denied-card">
-          <div className="access-denied-icon">{ICONS.shieldOff}</div>
-          <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
-          <p>
-            Chức năng quản lý và ghi nhận kết quả thắng thua của cơ hội bán hàng
-            chỉ dành riêng cho vai trò{" "}
-            <strong>Nhân viên kinh doanh (VT-04)</strong>. Các vai trò khác bị
-            từ chối truy cập và được ghi nhật ký bảo mật phía máy chủ (TC-03).
-          </p>
-          <div className="security-log-badge">
-            <span className="security-log-badge__item">
-              {ICONS.shield} Thời điểm: {new Date().toLocaleString("vi-VN")}
-            </span>
-            <span className="security-log-badge__item">
-              Tài khoản: {currentUserName}
-            </span>
-            <span className="security-log-badge__item">
-              Vai trò hiện tại: {currentUserRoles.join(", ")}
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const weightedForecastValue = useMemo(() => {
+    return opportunities.reduce((acc, o) => {
+      const prob = o.probability || 0;
+      return acc + (o.expectedValue || 0) * (prob / 100);
+    }, 0);
+  }, [opportunities]);
+
+  const wonCount = useMemo(() => {
+    return opportunities.filter((o) => o.stage === 'WON').length;
+  }, [opportunities]);
+
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+    }).format(amount);
+  };
+
+  const formatDate = (dateStr?: string | null): string => {
+    if (!dateStr) return '—';
+    try {
+      const d = new Date(dateStr);
+      return isNaN(d.getTime()) ? dateStr : d.toLocaleDateString('vi-VN');
+    } catch {
+      return dateStr;
+    }
+  };
 
   return (
-    <div className="user-management-page" data-testid="opportunity-list-page">
+    <div className="page-container" style={{ padding: '24px', maxWidth: '1280px', margin: '0 auto' }}>
       {/* Toast thông báo */}
       {toastMessage && (
         <div
-          className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg border text-sm max-w-md animate-fade-in ${
-            toastMessage.type === "success"
-              ? "bg-emerald-50 border-emerald-300 text-emerald-900"
-              : "bg-rose-50 border-rose-300 text-rose-900"
-          }`}
-          data-testid="toast-notification"
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '24px',
+            zIndex: 1050,
+            padding: '12px 20px',
+            background: toastMessage.type === 'success' ? 'var(--pale-green-bg)' : 'var(--pale-red-bg)',
+            color: toastMessage.type === 'success' ? 'var(--pale-green-fg)' : 'var(--pale-red-fg)',
+            border: `1px solid ${toastMessage.type === 'success' ? 'rgba(52, 101, 56, 0.25)' : 'rgba(159, 47, 45, 0.25)'}`,
+            borderRadius: 'var(--radius-md)',
+            boxShadow: 'var(--shadow-md)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            fontSize: '14px',
+            fontWeight: 500,
+            animation: 'fadeIn 0.2s var(--ease-out)',
+          }}
         >
-          <div className="flex items-center gap-2">
-            <span>{toastMessage.type === "success" ? "✓" : "✕"}</span>
-            <span>{toastMessage.text}</span>
+          <span>{toastMessage.type === 'success' ? ICONS.checkCircle : ICONS.alertTriangle}</span>
+          <span>{toastMessage.text}</span>
+        </div>
+      )}
+
+      {/* Header trang */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: '24px',
+          flexWrap: 'wrap',
+          gap: '16px',
+        }}
+      >
+        <div>
+          <h2
+            style={{
+              fontSize: '24px',
+              fontWeight: 600,
+              color: 'var(--ink-strong)',
+              letterSpacing: 'var(--track-2xl)',
+              margin: '0 0 6px 0',
+            }}
+          >
+            Quản lý cơ hội bán hàng & Phễu chuyển đổi
+          </h2>
+          <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '14.5px' }}>
+            Theo dõi tiến trình bán hàng, chuyển giai đoạn tuần tự và dự báo doanh số theo xác suất (QTN-06).
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: '12px' }}>
+          {isAllowed ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => setIsModalOpen(true)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            >
+              <span className="icon-sm">{ICONS.plus}</span>
+              <span>Tạo cơ hội mới</span>
+            </button>
+          ) : (
+            <div
+              style={{
+                padding: '8px 14px',
+                background: 'var(--surface-sunken)',
+                border: '1px solid var(--line)',
+                borderRadius: 'var(--radius-md)',
+                color: 'var(--ink-muted)',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <span>{ICONS.lock}</span>
+              <span>Yêu cầu vai trò Nhân viên kinh doanh (VT-04)</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Cảnh báo nếu không có quyền VT-04 */}
+      {!isAllowed && (
+        <div
+          style={{
+            marginBottom: '24px',
+            padding: '14px 18px',
+            background: 'var(--pale-yellow-bg)',
+            color: 'var(--pale-yellow-fg)',
+            border: '1px solid rgba(149, 100, 0, 0.25)',
+            borderRadius: 'var(--radius-md)',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '12px',
+            fontSize: '14px',
+            lineHeight: '1.5',
+          }}
+          role="note"
+        >
+          <span style={{ flexShrink: 0, marginTop: '2px' }}>{ICONS.alertTriangle}</span>
+          <div>
+            <strong>Phân quyền nghiệp vụ (NCL-03-CN-002 TC-03):</strong>
+            <p style={{ margin: '4px 0 0' }}>
+              Bạn đang sử dụng tài khoản không có vai trò <strong>Nhân viên kinh doanh</strong> (<code>VT-04</code>).
+              Hệ thống chỉ cho phép nhân viên kinh doanh chuyển đổi giai đoạn cơ hội.
+            </p>
           </div>
         </div>
       )}
 
-      {/* Page Header */}
-      <div className="page-header">
+      {/* Bộ điều khiển chuyển giai đoạn cho cơ hội đang chọn (NCL-03-CN-002) */}
+      {selectedOpportunity && (
         <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">
-              {ICONS.target} QUY TRÌNH BÁN HÀNG
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '10px',
+            }}
+          >
+            <span style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--ink-soft)' }}>
+              Đang điều khiển: <strong style={{ color: 'var(--ink-strong)' }}>{selectedOpportunity.name}</strong>
+              {selectedOpportunity.customerName && ` (${selectedOpportunity.customerName})`}
             </span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">
-              STORY NCL-03-CN-005 · CHU KỲ SỐ MỘT
-            </span>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {isAllowed && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setQuoteTargetOpportunity(selectedOpportunity)}
+                  style={{
+                    padding: '2px 8px',
+                    fontSize: '12px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <span className="icon-sm">{ICONS.receipt}</span>
+                  <span>
+                    {sessionQuotes[selectedOpportunity.id]
+                      ? `Xem báo giá (v${sessionQuotes[selectedOpportunity.id].version})`
+                      : 'Lập báo giá'}
+                  </span>
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setSelectedOpportunity(null)}
+                style={{ padding: '2px 8px', fontSize: '12px' }}
+              >
+                Thu gọn thanh tiến trình
+              </button>
+            </div>
           </div>
-          <h1 className="page-title">Cơ hội bán hàng & Ghi nhận kết quả</h1>
-          <p className="page-subtitle">
-            Theo dõi đường ống cơ hội, đàm phán và ghi nhận lý do thắng hoặc
-            thua của cơ hội để công ty rút kinh nghiệm cho các lần sau (QTN-06).
-          </p>
+          <StageTransitionControl
+            opportunity={selectedOpportunity}
+            onOpportunityUpdated={handleOpportunityUpdated}
+            currentUserRoles={currentUserRoles}
+          />
         </div>
-      </div>
+      )}
 
-      {/* Thẻ chỉ số tổng quan (KPI Stat Cards) */}
-      <div className="stats-grid" data-testid="opportunity-stats-grid">
-        <div className="stat-card">
-          <span className="stat-card__label">
-            <span className="stat-card__icon stat-card__icon--blue">
-              {ICONS.target}
-            </span>
+      {/* Bảng chỉ số thống kê phân khoang chuẩn DESIGN.md */}
+      <div
+        className="stats-grid"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: '1px',
+          background: 'var(--line)',
+          border: '1px solid var(--line)',
+          borderRadius: 'var(--radius-lg)',
+          overflow: 'hidden',
+          marginBottom: '24px',
+        }}
+      >
+        <div style={{ background: 'var(--surface)', padding: '16px 20px' }}>
+          <div
+            style={{
+              fontFamily: 'var(--font-mono, monospace)',
+              fontSize: '11px',
+              fontWeight: 500,
+              textTransform: 'uppercase',
+              letterSpacing: 'var(--track-caps)',
+              color: 'var(--ink-muted)',
+              marginBottom: '8px',
+            }}
+          >
             Tổng số cơ hội
-          </span>
-          <span className="stat-card__value">{stats.total}</span>
+          </div>
+          <div
+            style={{
+              fontSize: '28px',
+              fontWeight: 600,
+              color: 'var(--ink-strong)',
+              lineHeight: 1,
+              fontFamily: 'var(--font-mono, monospace)',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {opportunities.length}
+          </div>
         </div>
 
-        <div className="stat-card">
-          <span className="stat-card__label">
-            <span className="stat-card__icon stat-card__icon--amber">
-              {ICONS.clock}
-            </span>
-            Đang đàm phán (Cần chốt)
-          </span>
-          <span className="stat-card__value text-warning">
-            {stats.negotiationCount}
-          </span>
+        <div style={{ background: 'var(--surface)', padding: '16px 20px' }}>
+          <div
+            style={{
+              fontFamily: 'var(--font-mono, monospace)',
+              fontSize: '11px',
+              fontWeight: 500,
+              textTransform: 'uppercase',
+              letterSpacing: 'var(--track-caps)',
+              color: 'var(--ink-muted)',
+              marginBottom: '8px',
+            }}
+          >
+            Chốt thành công (WON)
+          </div>
+          <div
+            style={{
+              fontSize: '28px',
+              fontWeight: 600,
+              color: 'var(--pale-green-fg)',
+              lineHeight: 1,
+              fontFamily: 'var(--font-mono, monospace)',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {wonCount}
+          </div>
         </div>
 
-        <div className="stat-card">
-          <span className="stat-card__label">
-            <span className="stat-card__icon stat-card__icon--green">
-              {ICONS.checkCircle}
-            </span>
-            Cơ hội đã thắng (WON)
-          </span>
-          <span className="stat-card__value text-success">
-            {stats.wonCount}
-          </span>
+        <div style={{ background: 'var(--surface)', padding: '16px 20px' }}>
+          <div
+            style={{
+              fontFamily: 'var(--font-mono, monospace)',
+              fontSize: '11px',
+              fontWeight: 500,
+              textTransform: 'uppercase',
+              letterSpacing: 'var(--track-caps)',
+              color: 'var(--ink-muted)',
+              marginBottom: '8px',
+            }}
+          >
+            Tổng giá trị dự kiến
+          </div>
+          <div
+            style={{
+              fontSize: '22px',
+              fontWeight: 600,
+              color: 'var(--ink-strong)',
+              lineHeight: 1.1,
+              fontFamily: 'var(--font-mono, monospace)',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {formatCurrency(totalExpectedValue)}
+          </div>
         </div>
 
-        <div className="stat-card">
-          <span className="stat-card__label">
-            <span className="stat-card__icon stat-card__icon--red">
-              {ICONS.close}
-            </span>
-            Cơ hội đã thất bại (LOST)
-          </span>
-          <span className="stat-card__value text-danger">
-            {stats.lostCount}
-          </span>
+        <div style={{ background: 'var(--surface)', padding: '16px 20px' }}>
+          <div
+            style={{
+              fontFamily: 'var(--font-mono, monospace)',
+              fontSize: '11px',
+              fontWeight: 500,
+              textTransform: 'uppercase',
+              letterSpacing: 'var(--track-caps)',
+              color: 'var(--ink-muted)',
+              marginBottom: '8px',
+            }}
+          >
+            Dự báo theo xác suất (Weighted)
+          </div>
+          <div
+            style={{
+              fontSize: '22px',
+              fontWeight: 600,
+              color: 'var(--pale-blue-fg)',
+              lineHeight: 1.1,
+              fontFamily: 'var(--font-mono, monospace)',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {formatCurrency(weightedForecastValue)}
+          </div>
         </div>
       </div>
 
-      {/* Toolbar bộ lọc & tìm kiếm */}
-      <div className="user-table-card mb-6">
-        <div className="user-table-toolbar">
-          <div className="search-box">
-            <span className="search-box__icon">{ICONS.search}</span>
+      {/* Thanh bộ lọc & Tìm kiếm */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '16px',
+          gap: '12px',
+          flexWrap: 'wrap',
+        }}
+      >
+        <div style={{ display: 'flex', gap: '12px', flex: 1, flexWrap: 'wrap', minWidth: '320px' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: '260px', maxWidth: '440px' }}>
+            <span
+              style={{
+                position: 'absolute',
+                left: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'var(--ink-muted)',
+                pointerEvents: 'none',
+                display: 'flex',
+              }}
+            >
+              {ICONS.search}
+            </span>
             <input
               type="text"
-              className="search-box__input"
+              className="form-input"
               placeholder="Tìm theo tên cơ hội hoặc khách hàng..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              data-testid="search-opportunity-input"
+              style={{ paddingLeft: '36px' }}
             />
-            {searchTerm && (
-              <button
-                type="button"
-                className="search-box__clear"
-                onClick={() => setSearchTerm("")}
-              >
-                {ICONS.close}
-              </button>
-            )}
           </div>
 
-          <div className="toolbar-filters">
-            <div className="filter-group">
-              <label htmlFor="stage-filter-select" className="filter-label">
-                Lọc trạng thái:
-              </label>
-              <select
-                id="stage-filter-select"
-                className="filter-select"
-                value={stageFilter}
-                onChange={(e) => setStageFilter(e.target.value)}
-                data-testid="select-stage-filter"
-              >
-                <option value="ALL">Tất cả giai đoạn</option>
-                <option value="NEGOTIATION_OPEN">
-                  Đang đàm phán (Cần chốt)
-                </option>
-                <option value="OPEN">Tất cả đang mở</option>
-                <option value="WON">Đã thắng (WON)</option>
-                <option value="LOST">Đã thất bại (LOST)</option>
-                <option value="CLOSED">Tất cả đã đóng</option>
-              </select>
-            </div>
-          </div>
+          <select
+            className="form-select"
+            value={stageFilter}
+            onChange={(e) => setStageFilter(e.target.value)}
+            style={{ width: 'auto', minWidth: '200px' }}
+          >
+            <option value="ALL">Tất cả giai đoạn</option>
+            <option value="APPROACH">Tiếp cận (10%)</option>
+            <option value="PROPOSAL">Đề xuất (40%)</option>
+            <option value="NEGOTIATION">Đàm phán (70%)</option>
+            <option value="WON">Chốt thành công (100%)</option>
+            <option value="LOST">Đóng thất bại (0%)</option>
+          </select>
         </div>
 
-        {/* Danh sách cơ hội dạng bảng */}
-        <div className="table-responsive">
-          <table className="user-data-table" data-testid="opportunity-table">
+        <div style={{ fontSize: '13.5px', color: 'var(--ink-muted)' }}>
+          Hiển thị <strong>{filteredOpportunities.length}</strong> cơ hội
+        </div>
+      </div>
+
+      {/* Bảng danh sách cơ hội */}
+      <div
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--line)',
+          borderRadius: 'var(--radius-lg)',
+          overflow: 'hidden',
+        }}
+      >
+        <div style={{ overflowX: 'auto' }}>
+          <table
+            style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              textAlign: 'left',
+              fontSize: '14px',
+            }}
+          >
             <thead>
-              <tr>
-                <th>Tên cơ hội bán hàng</th>
-                <th>Khách hàng</th>
-                <th className="text-right">Giá trị kỳ vọng</th>
-                <th className="text-center">Giai đoạn</th>
-                <th className="text-center">Trạng thái</th>
-                <th className="text-center">Xác suất</th>
-                <th>Kết quả / Lý do đóng</th>
-                <th className="text-right">Thao tác</th>
+              <tr
+                style={{
+                  background: 'var(--surface-alt)',
+                  borderBottom: '1px solid var(--line)',
+                }}
+              >
+                <th
+                  style={{
+                    padding: '12px 16px',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    textTransform: 'uppercase',
+                    letterSpacing: 'var(--track-caps)',
+                    color: 'var(--ink-muted)',
+                  }}
+                >
+                  Tên cơ hội
+                </th>
+                <th
+                  style={{
+                    padding: '12px 16px',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    textTransform: 'uppercase',
+                    letterSpacing: 'var(--track-caps)',
+                    color: 'var(--ink-muted)',
+                  }}
+                >
+                  Khách hàng
+                </th>
+                <th
+                  style={{
+                    padding: '12px 16px',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    textTransform: 'uppercase',
+                    letterSpacing: 'var(--track-caps)',
+                    color: 'var(--ink-muted)',
+                    textAlign: 'right',
+                  }}
+                >
+                  Giá trị dự kiến
+                </th>
+                <th
+                  style={{
+                    padding: '12px 16px',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    textTransform: 'uppercase',
+                    letterSpacing: 'var(--track-caps)',
+                    color: 'var(--ink-muted)',
+                    textAlign: 'center',
+                  }}
+                >
+                  Xác suất
+                </th>
+                <th
+                  style={{
+                    padding: '12px 16px',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    textTransform: 'uppercase',
+                    letterSpacing: 'var(--track-caps)',
+                    color: 'var(--ink-muted)',
+                  }}
+                >
+                  Giai đoạn hiện tại
+                </th>
+                <th
+                  style={{
+                    padding: '12px 16px',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    textTransform: 'uppercase',
+                    letterSpacing: 'var(--track-caps)',
+                    color: 'var(--ink-muted)',
+                  }}
+                >
+                  Trạng thái
+                </th>
+                <th
+                  style={{
+                    padding: '12px 16px',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    textTransform: 'uppercase',
+                    letterSpacing: 'var(--track-caps)',
+                    color: 'var(--ink-muted)',
+                    textAlign: 'right',
+                  }}
+                >
+                  Thao tác
+                </th>
               </tr>
             </thead>
             <tbody>
               {filteredOpportunities.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-ink-muted">
-                    Không tìm thấy cơ hội nào phù hợp với bộ lọc tìm kiếm.
+                  <td colSpan={7} style={{ padding: '48px 24px', textAlign: 'center' }}>
+                    <div style={{ maxWidth: '380px', margin: '0 auto', color: 'var(--ink-muted)' }}>
+                      <div
+                        style={{
+                          width: '48px',
+                          height: '48px',
+                          borderRadius: 'var(--radius-md)',
+                          background: 'var(--surface-sunken)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'var(--ink-muted)',
+                          marginBottom: '12px',
+                        }}
+                      >
+                        {ICONS.target}
+                      </div>
+                      <h4 style={{ margin: '0 0 6px', color: 'var(--ink)', fontSize: '16px', fontWeight: 600 }}>
+                        {searchTerm || stageFilter !== 'ALL'
+                          ? 'Không tìm thấy cơ hội phù hợp'
+                          : 'Chưa có cơ hội bán hàng nào'}
+                      </h4>
+                      <p style={{ margin: '0 0 16px', fontSize: '13.5px', lineHeight: '1.5' }}>
+                        {searchTerm || stageFilter !== 'ALL'
+                          ? 'Thử thay đổi từ khóa hoặc bộ lọc giai đoạn để hiển thị kết quả.'
+                          : 'Bắt đầu quy trình kinh doanh bằng cách tạo cơ hội mới gắn liền với hồ sơ khách hàng.'}
+                      </p>
+                      {!searchTerm && stageFilter === 'ALL' && isAllowed && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => setIsModalOpen(true)}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                        >
+                          <span className="icon-sm">{ICONS.plus}</span>
+                          <span>Tạo cơ hội đầu tiên</span>
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
                 filteredOpportunities.map((opp) => {
-                  const isNegotiationOpen =
-                    opp.stage === "NEGOTIATION" && opp.status === "OPEN";
-                  const isClosed = opp.status === "CLOSED";
-                  const lossOption = LOSS_REASON_OPTIONS.find(
-                    (o) => o.value === opp.lossReason,
-                  );
+                  const stageConfig = STAGE_CONFIGS[opp.stage as OpportunityStage];
+                  const isSelected = selectedOpportunity?.id === opp.id;
+                  const isClosed = opp.status === 'CLOSED';
 
                   return (
-                    <tr key={opp.id} data-testid={`opportunity-row-${opp.id}`}>
-                      {/* Tên cơ hội */}
-                      <td className="font-semibold text-ink-strong">
-                        <div>{opp.name}</div>
-                        <div className="text-xs font-mono text-ink-faint">
-                          Mã: OP-{String(opp.id).padStart(4, "0")}
+                    <tr
+                      key={opp.id}
+                      style={{
+                        borderBottom: '1px solid var(--line)',
+                        background: isSelected ? 'var(--surface-sunken)' : 'transparent',
+                        transition: 'background 0.15s ease',
+                      }}
+                    >
+                      <td style={{ padding: '12px 16px' }}>
+                        <div style={{ fontWeight: 600, color: 'var(--ink-strong)' }}>{opp.name}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--ink-muted)', marginTop: '2px' }}>
+                          Dự kiến: {formatDate(opp.expectedCloseDate)}
                         </div>
                       </td>
-
-                      {/* Khách hàng */}
-                      <td>{opp.customerName || "—"}</td>
-
-                      {/* Giá trị dự kiến */}
-                      <td className="text-right font-mono font-medium text-ink-strong">
-                        {opp.expectedValue != null
-                          ? currencyFormatter.format(opp.expectedValue)
-                          : "—"}
+                      <td style={{ padding: '12px 16px', color: 'var(--ink)' }}>
+                        {opp.customerName || `Khách hàng #${opp.customerId}`}
                       </td>
-
-                      {/* Giai đoạn */}
-                      <td className="text-center">
+                      <td
+                        style={{
+                          padding: '12px 16px',
+                          textAlign: 'right',
+                          fontFamily: 'var(--font-mono, monospace)',
+                          fontVariantNumeric: 'tabular-nums',
+                          fontWeight: 600,
+                          color: 'var(--ink-strong)',
+                        }}
+                      >
+                        {formatCurrency(opp.expectedValue)}
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                         <span
-                          className={`badge ${
-                            opp.stage === "WON"
-                              ? "badge--green"
-                              : opp.stage === "LOST"
-                                ? "badge--red"
-                                : opp.stage === "NEGOTIATION"
-                                  ? "badge--gold"
-                                  : "badge--blue"
-                          }`}
+                          style={{
+                            fontFamily: 'var(--font-mono, monospace)',
+                            fontWeight: 600,
+                            fontSize: '13px',
+                            color:
+                              opp.stage === 'WON'
+                                ? 'var(--pale-green-fg)'
+                                : opp.stage === 'LOST'
+                                ? 'var(--pale-red-fg)'
+                                : 'var(--ink-strong)',
+                          }}
                         >
-                          {OPPORTUNITY_STAGES[opp.stage]?.label ?? opp.stage}
+                          {opp.probability}%
                         </span>
                       </td>
-
-                      {/* Trạng thái */}
-                      <td className="text-center">
+                      <td style={{ padding: '12px 16px' }}>
                         <span
-                          className={`text-xs font-semibold px-2 py-0.5 rounded ${
-                            isClosed
-                              ? "bg-surface-sunken text-ink-muted"
-                              : "bg-emerald-50 text-emerald-800"
-                          }`}
+                          style={{
+                            padding: '3px 10px',
+                            borderRadius: '999px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            background:
+                              opp.stage === 'WON'
+                                ? 'var(--pale-green-bg)'
+                                : opp.stage === 'LOST'
+                                ? 'var(--pale-red-bg)'
+                                : 'var(--surface-alt)',
+                            color:
+                              opp.stage === 'WON'
+                                ? 'var(--pale-green-fg)'
+                                : opp.stage === 'LOST'
+                                ? 'var(--pale-red-fg)'
+                                : 'var(--ink-strong)',
+                            border: '1px solid var(--line)',
+                          }}
                         >
-                          {isClosed ? "Đã đóng" : "Đang mở"}
+                          <span
+                            style={{
+                              width: '6px',
+                              height: '6px',
+                              borderRadius: '50%',
+                              background: 'currentColor',
+                            }}
+                          />
+                          {stageConfig?.shortLabel ?? opp.stage}
                         </span>
                       </td>
-
-                      {/* Xác suất */}
-                      <td className="text-center font-mono font-semibold">
-                        {opp.probability != null ? `${opp.probability}%` : "—"}
+                      <td style={{ padding: '12px 16px' }}>
+                        <span
+                          style={{
+                            fontSize: '12.5px',
+                            color: isClosed ? 'var(--ink-muted)' : 'var(--pale-blue-fg)',
+                            fontWeight: 500,
+                          }}
+                        >
+                          {isClosed ? 'Đã đóng' : 'Đang xử lý'}
+                        </span>
                       </td>
-
-                      {/* Kết quả / Lý do đóng (NCL-03-CN-005) */}
-                      <td>
-                        {opp.stage === "LOST" ? (
-                          <div
-                            className="text-xs space-y-0.5"
-                            data-testid={`loss-reason-info-${opp.id}`}
-                          >
-                            <div className="font-semibold text-danger">
-                              {lossOption?.label || opp.lossReason}
-                            </div>
-                            {opp.competitorName && (
-                              <div className="text-ink-muted">
-                                Đối thủ: <strong>{opp.competitorName}</strong>
-                              </div>
-                            )}
-                            {opp.closeReasonDetail && (
-                              <div
-                                className="text-ink-faint italic truncate max-w-xs"
-                                title={opp.closeReasonDetail}
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: '8px',
+                            justifyContent: 'flex-end',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                          }}
+                        >
+                          {isClosed ? (
+                            <div style={{ textAlign: 'right' }}>
+                              <span
+                                data-testid={`badge-closed-${opp.id}`}
+                                style={{
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  color: 'var(--ink-muted)',
+                                }}
                               >
-                                "{opp.closeReasonDetail}"
-                              </div>
-                            )}
-                          </div>
-                        ) : opp.stage === "WON" ? (
-                          <div className="text-xs space-y-0.5">
-                            <div className="font-semibold text-success">
-                              Ký hợp đồng thành công
+                                Đã hoàn tất
+                              </span>
+                              {opp.stage === 'LOST' && (opp.lossReason || opp.competitorName) && (
+                                <div
+                                  data-testid={`loss-reason-info-${opp.id}`}
+                                  style={{
+                                    fontSize: '11.5px',
+                                    color: 'var(--pale-red-fg)',
+                                    marginTop: '2px',
+                                  }}
+                                >
+                                  {lossReasonLabel(opp.lossReason)}
+                                  {opp.competitorName ? ` · Đối thủ: ${opp.competitorName}` : ''}
+                                </div>
+                              )}
                             </div>
-                            {opp.closeReasonDetail && (
-                              <div
-                                className="text-ink-faint italic truncate max-w-xs"
-                                title={opp.closeReasonDetail}
+                          ) : (
+                            isAllowed &&
+                            (opp.stage === 'NEGOTIATION' ? (
+                              <button
+                                type="button"
+                                className="btn btn-secondary"
+                                onClick={() => setCloseTargetOpportunity(opp)}
+                                data-testid={`btn-close-opportunity-${opp.id}`}
+                                style={{ fontSize: '12.5px', padding: '4px 10px' }}
                               >
-                                "{opp.closeReasonDetail}"
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-ink-faint">—</span>
-                        )}
-                      </td>
-
-                      {/* Thao tác (TC-01, TC-04) */}
-                      <td className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {/* Nút xem lịch sử chuyển giai đoạn */}
+                                Ghi nhận kết quả
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="btn btn-secondary"
+                                disabled
+                                data-testid={`btn-disabled-close-${opp.id}`}
+                                title="Cơ hội phải ở giai đoạn Đàm phán mới ghi nhận được kết quả thắng/thua"
+                                style={{ fontSize: '12.5px', padding: '4px 10px', opacity: 0.55 }}
+                              >
+                                Chưa thể chốt
+                              </button>
+                            ))
+                          )}
                           <button
                             type="button"
-                            className="btn-secondary text-xs px-2.5 py-1"
-                            onClick={() => handleOpenHistory(opp)}
-                            title="Xem lịch sử chuyển giai đoạn"
-                            data-testid={`btn-view-history-${opp.id}`}
+                            className={`btn ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
+                            onClick={() => setSelectedOpportunity(isSelected ? null : opp)}
+                            style={{ fontSize: '12.5px', padding: '4px 10px' }}
                           >
-                            {ICONS.history}
+                            {isSelected ? 'Đang chọn' : 'Chuyển giai đoạn'}
                           </button>
-
-                          {/* Nút Ghi nhận kết quả thắng/thua */}
-                          {isNegotiationOpen ? (
-                            <button
-                              type="button"
-                              className="btn-primary text-xs px-3 py-1"
-                              onClick={() => setClosingOpportunity(opp)}
-                              title="Ghi nhận kết quả thắng hoặc thua của cơ hội (NCL-03-CN-005)"
-                              data-testid={`btn-close-opportunity-${opp.id}`}
-                            >
-                              {ICONS.checkCircle} Chốt kết quả
-                            </button>
-                          ) : isClosed ? (
-                            <span
-                              className="text-xs text-ink-faint px-2 py-1 font-mono border border-line rounded"
-                              data-testid={`badge-closed-${opp.id}`}
-                            >
-                              Đã hoàn tất
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              className="btn-secondary text-xs px-2.5 py-1 opacity-50 cursor-not-allowed"
-                              disabled
-                              title="Chỉ ghi nhận kết quả khi cơ hội ở giai đoạn Thương lượng / Đàm phán (NEGOTIATION)"
-                              data-testid={`btn-disabled-close-${opp.id}`}
-                            >
-                              Chưa thể chốt
-                            </button>
-                          )}
                         </div>
                       </td>
                     </tr>
@@ -568,80 +825,32 @@ export default function OpportunityListPage({
         </div>
       </div>
 
-      {/* Modal ghi nhận kết quả thắng/thua (NCL-03-CN-005) */}
-      {closingOpportunity && (
-        <OpportunityCloseModal
-          isOpen={!!closingOpportunity}
-          opportunity={closingOpportunity}
-          currentUserRoles={currentUserRoles}
-          onClose={() => setClosingOpportunity(null)}
-          onSuccess={handleCloseSuccess}
-        />
-      )}
+      {/* Modal tạo cơ hội */}
+      <OpportunityFormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={handleCreatedSuccess}
+      />
 
-      {/* Modal xem lịch sử chuyển giai đoạn (TC-04) */}
-      {historyOpportunity && (
-        <div className="modal-backdrop" data-testid="stage-history-modal">
-          <div className="modal-card modal-card--md">
-            <div className="modal-header">
-              <div className="modal-title">
-                <span className="modal-title__icon">{ICONS.history}</span>
-                <span>Lịch sử giai đoạn: {historyOpportunity.name}</span>
-              </div>
-              <button
-                type="button"
-                className="modal-close"
-                onClick={() => setHistoryOpportunity(null)}
-                data-testid="btn-close-history-modal"
-              >
-                {ICONS.close}
-              </button>
-            </div>
-            <div className="modal-body">
-              {loadingHistory ? (
-                <div className="p-8 text-center text-ink-muted">
-                  Đang tải lịch sử...
-                </div>
-              ) : stageHistoryList.length === 0 ? (
-                <div className="p-8 text-center text-ink-muted">
-                  Chưa có lịch sử thay đổi giai đoạn.
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {stageHistoryList.map((h) => (
-                    <div
-                      key={h.id}
-                      className="p-3 border border-line rounded-md bg-surface-alt text-sm flex items-center justify-between"
-                    >
-                      <div>
-                        <div className="font-semibold text-ink-strong">
-                          {h.fromStage ? `${h.fromStage} → ` : ""}
-                          {h.toStage}
-                        </div>
-                        <div className="text-xs text-ink-faint">
-                          Người thực hiện:{" "}
-                          <strong>{h.changedByUsername}</strong>
-                        </div>
-                      </div>
-                      <div className="text-xs font-mono text-ink-muted">
-                        {new Date(h.changedAt).toLocaleString("vi-VN")}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setHistoryOpportunity(null)}
-              >
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Modal ghi nhận kết quả thắng/thua (NCL-03-CN-005) */}
+      <OpportunityCloseModal
+        isOpen={Boolean(closeTargetOpportunity)}
+        opportunity={closeTargetOpportunity}
+        currentUserRoles={currentUserRoles}
+        onClose={() => setCloseTargetOpportunity(null)}
+        onSuccess={handleOpportunityClosed}
+      />
+
+      {/* Modal lập báo giá cho cơ hội (NCL-03-CN-003) */}
+      {quoteTargetOpportunity && (
+        <QuoteBuilder
+          opportunity={quoteTargetOpportunity}
+          isOpen={Boolean(quoteTargetOpportunity)}
+          onClose={() => setQuoteTargetOpportunity(null)}
+          onQuoteCreated={handleQuoteCreated}
+          currentUserRoles={currentUserRoles}
+          initialQuote={sessionQuotes[quoteTargetOpportunity.id] ?? null}
+        />
       )}
     </div>
   );

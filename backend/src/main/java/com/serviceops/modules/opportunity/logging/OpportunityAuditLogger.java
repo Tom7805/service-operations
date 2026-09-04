@@ -50,12 +50,31 @@ public class OpportunityAuditLogger {
 		record(opportunityId, action, detail);
 	}
 
+	/**
+	 * Ghi nhat ky them hoat dong cham soc cho co hoi (NCL-03-CN-006, TC-04). Chay
+	 * trong transaction them hoat dong de log duoc luu cung voi hoat dong vua tao.
+	 */
+	public void recordActivityAdd(Long opportunityId, String detail) {
+		record(opportunityId, OpportunityAuditAction.ACTIVITY_ADD, detail);
+	}
+
+	/**
+	 * Ghi nhat ky moi lan sinh bao cao duong ong ban hang theo giai doan
+	 * (NCL-03-CN-007, TC-04) — nguoi thuc hien, noi dung (so co hoi / so co hoi dong
+	 * lau) va thoi diem. Khong gan voi mot co hoi cu the nen {@code opportunityId} de
+	 * {@code null}. Chay trong cung transaction voi truy van bao cao.
+	 */
+	public void recordReportView(String detail) {
+		record(null, OpportunityAuditAction.REPORT_VIEW, detail);
+	}
+
 	private void record(Long opportunityId, OpportunityAuditAction action, String detail) {
 		OpportunityAuditLog audit = new OpportunityAuditLog();
 		audit.setOpportunityId(opportunityId);
 		audit.setActionType(action);
 		audit.setDetail(detail);
-		audit.setActorId(currentUserScopeProvider.currentUserId());
+		Long actorId = currentUserScopeProvider.currentUserId();
+		audit.setActorId(actorId == null ? 0L : actorId);
 		audit.setActorUsername(currentUsername());
 		audit.setCreatedAt(LocalDateTime.now());
 		repository.save(audit);

@@ -13,6 +13,8 @@ interface DuplicateWarningModalProps {
   onBackToEdit: () => void;
   onConfirmOverride: (reason: string) => Promise<void>;
   isLoading?: boolean;
+  /** true khi cảnh báo này phát sinh từ luồng chỉnh sửa (update-with-override) thay vì tạo mới. */
+  isEdit?: boolean;
 }
 
 export default function DuplicateWarningModal({
@@ -22,6 +24,7 @@ export default function DuplicateWarningModal({
   onBackToEdit,
   onConfirmOverride,
   isLoading = false,
+  isEdit = false,
 }: DuplicateWarningModalProps) {
   const [showOverrideForm, setShowOverrideForm] = useState(false);
   const [reason, setReason] = useState('');
@@ -167,7 +170,7 @@ export default function DuplicateWarningModal({
           {/* Khối tóm tắt hồ sơ đang tạo */}
           <div className="current-candidate-summary">
             <div className="current-candidate-header">
-              <span className="current-candidate-label"><span className="icon-sm">{ICONS.clipboardList}</span> Hồ sơ bạn đang dự định tạo:</span>
+              <span className="current-candidate-label"><span className="icon-sm">{ICONS.clipboardList}</span> {isEdit ? 'Hồ sơ bạn đang chỉnh sửa:' : 'Hồ sơ bạn đang dự định tạo:'}</span>
             </div>
             <div className="current-candidate-grid">
               <div className="current-field">
@@ -284,7 +287,11 @@ export default function DuplicateWarningModal({
               <div className="override-reason-header">
                 <span className="override-icon">{ICONS.edit}</span>
                 <div>
-                  <h5 className="override-title">Xác nhận bỏ qua cảnh báo & Tạo hồ sơ mới</h5>
+                  <h5 className="override-title">
+                    {isEdit
+                      ? 'Xác nhận bỏ qua cảnh báo & Lưu thay đổi'
+                      : 'Xác nhận bỏ qua cảnh báo & Tạo hồ sơ mới'}
+                  </h5>
                   <p className="override-desc">
                     Vui lòng cung cấp lý do cụ thể vì sao đây là hai khách hàng khác nhau. Dữ liệu này
                     sẽ được lưu vào <strong>Nhật ký kiểm toán (Audit Log)</strong> để phục vụ hậu kiểm.
@@ -295,7 +302,7 @@ export default function DuplicateWarningModal({
               <div className="form-group">
                 <div className="form-label-row">
                   <label htmlFor="override-reason-input" className="form-label required">
-                    Lý do xác nhận tạo mới
+                    {isEdit ? 'Lý do xác nhận lưu thay đổi' : 'Lý do xác nhận tạo mới'}
                   </label>
                   <span
                     className={`char-counter ${
@@ -391,7 +398,7 @@ export default function DuplicateWarningModal({
                 disabled={isLoading}
               >
                 <span className="icon-sm">{ICONS.alertTriangle}</span>
-                <span>Vẫn tạo mới (Bỏ qua cảnh báo)</span>
+                <span>{isEdit ? 'Vẫn lưu thay đổi (Bỏ qua cảnh báo)' : 'Vẫn tạo mới (Bỏ qua cảnh báo)'}</span>
               </button>
             ) : (
               <button
@@ -403,12 +410,12 @@ export default function DuplicateWarningModal({
                 {isLoading ? (
                   <>
                     <span className="spinner-sm" aria-hidden="true" />
-                    <span>Đang lưu hồ sơ và ghi log...</span>
+                    <span>{isEdit ? 'Đang lưu thay đổi và ghi log...' : 'Đang lưu hồ sơ và ghi log...'}</span>
                   </>
                 ) : (
                   <>
                     <span className="icon-sm">{ICONS.shield}</span>
-                    <span>Xác nhận tạo mới (Ghi nhật ký)</span>
+                    <span>{isEdit ? 'Xác nhận lưu (Ghi nhật ký)' : 'Xác nhận tạo mới (Ghi nhật ký)'}</span>
                   </>
                 )}
               </button>

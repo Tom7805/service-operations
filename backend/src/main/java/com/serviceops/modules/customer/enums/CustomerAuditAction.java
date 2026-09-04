@@ -37,5 +37,22 @@ public enum CustomerAuditAction {
     UPDATE_WITH_OVERRIDE,
 
     /** Gop ho so khach hang trung, ghi tren ho so "giu lai" (NCL-02-CN-006, TC-04). */
-    MERGE
+    MERGE;
+
+    /**
+     * Nhan hanh dong hien thi tren trang Nhat ky he thong tong hop ({@code /audit-logs}).
+     */
+    public String displayLabel() {
+        return switch (this) {
+            case CREATE, CREATE_WITH_OVERRIDE -> "Tạo hồ sơ khách hàng";
+            case BLOCKED_DUPLICATE -> "Chặn tạo hồ sơ trùng";
+            case VIEW_OVERVIEW -> "Xem hồ sơ tổng hợp khách hàng";
+            case DENIED_ACCESS -> "Từ chối truy cập khách hàng";
+            case CONTACT_ADD -> "Thêm người liên hệ";
+            case CONTACT_SET_PRIMARY -> "Đánh dấu đầu mối chính";
+            case SEGMENT_UPDATE -> "Cập nhật phân nhóm khách hàng";
+            case UPDATE, UPDATE_WITH_OVERRIDE -> "Chỉnh sửa hồ sơ khách hàng";
+            case MERGE -> "Gộp hồ sơ khách hàng";
+        };
+    }
 }

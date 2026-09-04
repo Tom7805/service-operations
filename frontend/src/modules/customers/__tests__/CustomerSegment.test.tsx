@@ -204,7 +204,7 @@ describe('Phân nhóm khách hàng theo ngành và quy mô (NCL-02-CN-005)', () 
   });
 
   describe('NCL-02-CN-005-TC-04: Lưu lịch sử (Nhật ký thao tác)', () => {
-    it('khi có thay đổi phân nhóm -> hệ thống ghi lại người thực hiện, nội dung và thời điểm', async () => {
+    it('khi có thay đổi phân nhóm -> gọi API cập nhật (backend ghi vào Nhật ký hệ thống)', async () => {
       const updatedMock: Customer = {
         ...mockCustomer,
         companySize: 'Lớn',
@@ -226,10 +226,14 @@ describe('Phân nhóm khách hàng theo ngành và quy mô (NCL-02-CN-005)', () 
       fireEvent.click(screen.getByTestId('btn-submit-segment'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('segment-audit-card')).toBeInTheDocument();
-        expect(screen.getByText(/Nguyễn Sales/i)).toBeInTheDocument();
-        expect(screen.getByText(/Cập nhật phân nhóm: ngành nghề/i)).toBeInTheDocument();
+        expect(customersApi.updateCustomerSegment).toHaveBeenCalledWith(
+          mockCustomer.id,
+          expect.any(Object)
+        );
       });
+
+      // Không còn thẻ "nhật ký trong phiên" trên màn hình phân nhóm.
+      expect(screen.queryByTestId('segment-audit-card')).not.toBeInTheDocument();
     });
   });
 

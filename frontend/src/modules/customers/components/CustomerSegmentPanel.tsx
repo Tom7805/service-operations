@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { Customer, CustomerSegmentPayload, ContactAuditItem } from '../types/customerTypes';
+import type { Customer, CustomerSegmentPayload } from '../types/customerTypes';
 import { updateCustomerSegment, CustomerApiError } from '../api/customersApi';
 import CustomerSegmentModal from './CustomerSegmentModal';
 import { ICONS } from '../../../components/common/icons';
@@ -10,7 +10,6 @@ interface CustomerSegmentPanelProps {
   currentUserRoles?: string[];
   currentUserName?: string;
   onSegmentUpdated?: (updated: Customer) => void;
-  onAuditLogged?: (audit: ContactAuditItem) => void;
 }
 
 /** Trả về sắc thái hiển thị (màu) tương ứng mức độ ưu tiên đã chọn. */
@@ -31,14 +30,12 @@ export default function CustomerSegmentPanel({
   currentUserRoles = ['VT-04'],
   currentUserName = 'Người dùng',
   onSegmentUpdated,
-  onAuditLogged,
 }: CustomerSegmentPanelProps) {
   // NCL-02-CN-005 / TC-03: chỉ Nhân viên kinh doanh (VT-04) hoặc Quản lý dự án (VT-02) được phân nhóm khách hàng.
   const isAllowed = currentUserRoles.includes('VT-04') || currentUserRoles.includes('VT-02');
 
   const [currentCustomer, setCurrentCustomer] = useState<Customer>(customer);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [localAuditLogs, setLocalAuditLogs] = useState<ContactAuditItem[]>([]);
   const [toastMessage, setToastMessage] = useState<{
     text: string;
     type: 'success' | 'error' | 'info';
@@ -49,29 +46,12 @@ export default function CustomerSegmentPanel({
     setTimeout(() => setToastMessage(null), 5000);
   };
 
-  const recordAudit = (action: string, detail: string) => {
-    const newLog: ContactAuditItem = {
-      id: `${Date.now()}-${Math.random()}`,
-      action,
-      actor: currentUserName,
-      timestamp: new Date().toLocaleString('vi-VN'),
-      detail,
-    };
-    setLocalAuditLogs((prev) => [newLog, ...prev]);
-    onAuditLogged?.(newLog);
-  };
-
-  // TC-01 / TC-04: Gán nhãn phân nhóm rồi lưu — ghi lại người thực hiện, nội dung và thời điểm.
+  // TC-01: Gán nhãn phân nhóm rồi lưu. Nhật ký thao tác do backend ghi vào Nhật ký hệ thống (/audit-logs).
   const handleSubmit = async (payload: CustomerSegmentPayload) => {
     try {
       const updated = await updateCustomerSegment(currentCustomer.id, payload);
       setCurrentCustomer(updated);
       onSegmentUpdated?.(updated);
-
-      recordAudit(
-        'SEGMENT_UPDATE',
-        `Cập nhật phân nhóm: ngành nghề "${updated.industry}", quy mô "${updated.companySize}", mức độ ưu tiên "${updated.priority}"`
-      );
 
       showToast('Cập nhật phân nhóm khách hàng thành công!', 'success');
     } catch (err) {
@@ -212,32 +192,6 @@ export default function CustomerSegmentPanel({
           </div>
         </div>
       </div>
-
-      {/* Nhật ký thao tác phân nhóm cục bộ (TC-04) */}
-      {localAuditLogs.length > 0 && (
-        <div className="audit-log-card segment-audit-card" data-testid="segment-audit-card">
-          <div className="audit-log-header">
-            <h4 className="audit-log-title"><span className="audit-log-title__icon">{ICONS.clipboardList}</span> Nhật ký thay đổi phân nhóm trong phiên (TC-04)</h4>
-            <span className="badge-pulse">{localAuditLogs.length} ghi nhận mới</span>
-          </div>
-          <div className="audit-log-list">
-            {localAuditLogs.map((log) => (
-              <div key={log.id} className="audit-log-item" data-testid="segment-audit-entry">
-                <span className="audit-log-icon">{ICONS.tag}</span>
-                <div className="audit-log-meta">
-                  <div className="audit-log-row">
-                    <span>
-                      Người thực hiện: <strong className="highlight-username">{log.actor}</strong>
-                    </span>
-                    <span className="audit-log-time">{log.timestamp}</span>
-                  </div>
-                  <div className="audit-log-details">{log.detail}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Biểu mẫu gán phân nhóm */}
       <CustomerSegmentModal
