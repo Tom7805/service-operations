@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
-import type { Opportunity, OpportunityStage } from '../types/opportunityTypes';
+import type { Opportunity, OpportunityStage, QuoteRes } from '../types/opportunityTypes';
 import { STAGE_CONFIGS } from '../types/opportunityTypes';
 import OpportunityFormModal from '../components/OpportunityFormModal';
 import StageTransitionControl from '../components/StageTransitionControl';
+import QuoteBuilder from '../components/QuoteBuilder';
 import { ICONS } from '../../../components/common/icons';
 
 interface OpportunityListPageProps {
@@ -22,6 +23,10 @@ export default function OpportunityListPage({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [stageFilter, setStageFilter] = useState<string>('ALL');
+
+  // Lập báo giá cho cơ hội (NCL-03-CN-003) — chưa có API GET nên lưu tạm theo phiên
+  const [quoteTargetOpportunity, setQuoteTargetOpportunity] = useState<Opportunity | null>(null);
+  const [sessionQuotes, setSessionQuotes] = useState<Record<number, QuoteRes>>({});
 
   const [toastMessage, setToastMessage] = useState<{
     text: string;
@@ -47,6 +52,11 @@ export default function OpportunityListPage({
     );
     setSelectedOpportunity(updated);
     showToast(`Đã cập nhật giai đoạn cho "${updated.name}" thành công!`, 'success');
+  };
+
+  const handleQuoteCreated = (quote: QuoteRes) => {
+    setSessionQuotes((prev) => ({ ...prev, [quote.opportunityId]: quote }));
+    showToast(`Lập báo giá phiên bản #${quote.version} thành công!`, 'success');
   };
 
   const filteredOpportunities = useMemo(() => {
@@ -230,14 +240,37 @@ export default function OpportunityListPage({
               Đang điều khiển: <strong style={{ color: 'var(--ink-strong)' }}>{selectedOpportunity.name}</strong>
               {selectedOpportunity.customerName && ` (${selectedOpportunity.customerName})`}
             </span>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setSelectedOpportunity(null)}
-              style={{ padding: '2px 8px', fontSize: '12px' }}
-            >
-              Thu gọn thanh tiến trình
-            </button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {isAllowed && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setQuoteTargetOpportunity(selectedOpportunity)}
+                  style={{
+                    padding: '2px 8px',
+                    fontSize: '12px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <span className="icon-sm">{ICONS.receipt}</span>
+                  <span>
+                    {sessionQuotes[selectedOpportunity.id]
+                      ? `Xem báo giá (v${sessionQuotes[selectedOpportunity.id].version})`
+                      : 'Lập báo giá'}
+                  </span>
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setSelectedOpportunity(null)}
+                style={{ padding: '2px 8px', fontSize: '12px' }}
+              >
+                Thu gọn thanh tiến trình
+              </button>
+            </div>
           </div>
           <StageTransitionControl
             opportunity={selectedOpportunity}
@@ -720,6 +753,18 @@ export default function OpportunityListPage({
         onClose={() => setIsModalOpen(false)}
         onSuccess={handleCreatedSuccess}
       />
+
+      {/* Modal lập báo giá cho cơ hội (NCL-03-CN-003) */}
+      {quoteTargetOpportunity && (
+        <QuoteBuilder
+          opportunity={quoteTargetOpportunity}
+          isOpen={Boolean(quoteTargetOpportunity)}
+          onClose={() => setQuoteTargetOpportunity(null)}
+          onQuoteCreated={handleQuoteCreated}
+          currentUserRoles={currentUserRoles}
+          initialQuote={sessionQuotes[quoteTargetOpportunity.id] ?? null}
+        />
+      )}
     </div>
   );
 }

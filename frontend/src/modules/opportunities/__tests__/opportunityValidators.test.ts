@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   validateOpportunityCreate,
+  validateQuoteCreate,
   canTransitionStage,
   getNextAllowedStages,
   formatVNDInput,
@@ -8,7 +9,7 @@ import {
   convertVNDToWords,
   OPPORTUNITY_LIMITS,
 } from '../validators/opportunityValidators';
-import type { OpportunityCreatePayload } from '../types/opportunityTypes';
+import type { OpportunityCreatePayload, QuoteItemReq } from '../types/opportunityTypes';
 
 describe('Opportunity Validators & Stage Transition (NCL-03-CN-001 & NCL-03-CN-002)', () => {
   describe('canTransitionStage (QTN-06, TC-02, TC-03)', () => {
@@ -174,6 +175,45 @@ describe('Opportunity Validators & Stage Transition (NCL-03-CN-001 & NCL-03-CN-0
       expect(convertVNDToWords(500000000)).toBe('Năm trăm triệu đồng');
       expect(convertVNDToWords(1500000000)).toBe('Một tỷ năm trăm triệu đồng');
       expect(convertVNDToWords(0)).toBe('');
+    });
+  });
+
+  describe('validateQuoteCreate (NCL-03-CN-003, TC-02)', () => {
+    it('báo lỗi khi danh sách dòng báo giá rỗng', () => {
+      const result = validateQuoteCreate([]);
+      expect(result.valid).toBe(false);
+      expect(result.generalError).toContain('ít nhất một dòng');
+    });
+
+    it('báo lỗi khi để trống vai trò hoặc số ngày công không dương', () => {
+      const items: QuoteItemReq[] = [
+        { professionalRole: '', workDays: 10 },
+        { professionalRole: 'Kỹ sư kiểm thử', workDays: 0 },
+        { professionalRole: 'Lập trình viên', workDays: -3 },
+      ];
+      const result = validateQuoteCreate(items);
+      expect(result.valid).toBe(false);
+      expect(result.fieldErrors['items[0].professionalRole']).toBe('Vai trò chuyên môn không được để trống');
+      expect(result.fieldErrors['items[1].workDays']).toBe('Số ngày công phải lớn hơn 0');
+      expect(result.fieldErrors['items[2].workDays']).toBe('Số ngày công phải lớn hơn 0');
+    });
+
+    it('báo lỗi khi số ngày công vượt quá giới hạn', () => {
+      const result = validateQuoteCreate([{ professionalRole: 'Tư vấn', workDays: 4000 }]);
+      expect(result.valid).toBe(false);
+      expect(result.fieldErrors['items[0].workDays']).toContain(
+        String(OPPORTUNITY_LIMITS.MAX_WORK_DAYS)
+      );
+    });
+
+    it('hợp lệ khi mọi dòng có vai trò và ngày công dương', () => {
+      const items: QuoteItemReq[] = [
+        { professionalRole: 'Kiến trúc sư giải pháp', workDays: 15 },
+        { professionalRole: 'Lập trình viên cao cấp', workDays: 45.5 },
+      ];
+      const result = validateQuoteCreate(items);
+      expect(result.valid).toBe(true);
+      expect(Object.keys(result.fieldErrors)).toHaveLength(0);
     });
   });
 });
