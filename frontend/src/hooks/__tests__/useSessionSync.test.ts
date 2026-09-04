@@ -21,7 +21,9 @@ const session: AuthSession = {
 };
 
 describe('useSessionSync (NCL-01-CN-004 TC-03)', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('làm mới phiên khi máy chủ trả về vai trò khác', async () => {
     vi.mocked(authApi.fetchCurrentUser).mockResolvedValue({
