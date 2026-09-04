@@ -43,7 +43,8 @@ export function isValidTaxCode(taxCode: string): boolean {
 }
 
 export function isValidPhone(phone: string): boolean {
-  return PHONE_PATTERN.test(phone.trim());
+  const normalized = phone.trim().replace(/[\s.-]/g, '');
+  return PHONE_PATTERN.test(normalized);
 }
 
 /**

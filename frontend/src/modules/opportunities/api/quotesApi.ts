@@ -1,0 +1,106 @@
+import type { QuoteCreateReq, QuoteRes } from '../types/opportunityTypes';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
+
+export class QuoteApiError extends Error {
+  constructor(
+    public readonly code: string,
+    message: string,
+    public readonly statusCode?: number,
+    public readonly fieldErrors?: Array<{ field: string; message: string }>
+  ) {
+    super(message);
+    this.name = 'QuoteApiError';
+  }
+}
+
+async function requestBackend<T>(url: string, options: RequestInit = {}): Promise<T> {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...((options.headers as Record<string, string>) || {}),
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(url, { ...options, headers });
+  } catch {
+    throw new QuoteApiError(
+      'NETWORK_ERROR',
+      'Không thể kết nối đến máy chủ backend. Vui lòng kiểm tra lại dịch vụ máy chủ.',
+      503
+    );
+  }
+
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok || payload.success === false) {
+    const code =
+      payload.errorCode ||
+      payload.code ||
+      (response.status === 403
+        ? 'FORBIDDEN'
+        : response.status === 404
+        ? 'RESOURCE_NOT_FOUND'
+        : response.status === 401
+        ? 'UNAUTHORIZED'
+        : response.status === 400
+        ? 'INVALID_STATE'
+        : 'UNKNOWN_ERROR');
+
+    let message = payload.message;
+
+    if (!message) {
+      if (response.status === 403) {
+        message =
+          'Bạn không có quyền thực hiện thao tác này. Chức năng lập báo giá yêu cầu vai trò Nhân viên kinh doanh (VT-04).';
+      } else if (response.status === 404) {
+        message = 'Không tìm thấy cơ hội bán hàng tương ứng trên hệ thống.';
+      } else if (response.status === 401) {
+        message = 'Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.';
+      } else if (response.status === 400) {
+        message = 'Yêu cầu lập báo giá không hợp lệ. Cơ hội phải đang ở giai đoạn Đề xuất (PROPOSAL).';
+      } else {
+        message = 'Đã xảy ra lỗi khi gửi yêu cầu lập báo giá.';
+      }
+    }
+
+    const fieldErrors = Array.isArray(payload.fieldErrors)
+      ? payload.fieldErrors
+      : Array.isArray(payload.errors)
+      ? payload.errors
+      : undefined;
+
+    throw new QuoteApiError(code, message, response.status, fieldErrors);
+  }
+
+  return payload as T;
+}
+
+/**
+ * NCL-03-CN-003: Lập báo giá cho cơ hội bán hàng (POST /opportunities/{opportunityId}/quotes)
+ * Yêu cầu vai trò Nhân viên kinh doanh (VT-04) và cơ hội ở giai đoạn PROPOSAL.
+ */
+export async function createOpportunityQuote(
+  opportunityId: number,
+  req: QuoteCreateReq
+): Promise<QuoteRes> {
+  const res = await requestBackend<{ success: boolean; message?: string; data: QuoteRes }>(
+    `${API_BASE_URL}/opportunities/${opportunityId}/quotes`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        items: req.items.map((item) => ({
+          professionalRole: item.professionalRole.trim(),
+          workDays: Number(item.workDays),
+        })),
+      }),
+    }
+  );
+
+  return res.data;
+}
