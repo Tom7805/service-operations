@@ -3,8 +3,10 @@ package com.serviceops.modules.contract;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.contract.dto.request.ContractCreateFromOpportunityReq;
+import com.serviceops.modules.contract.dto.request.ContractTypeLimitReq;
 import com.serviceops.modules.contract.dto.response.ContractRes;
 import com.serviceops.modules.contract.entity.Contract;
+import com.serviceops.modules.contract.enums.ContractAuditAction;
 import com.serviceops.modules.contract.enums.ContractStatus;
 import com.serviceops.modules.contract.enums.ContractType;
 import com.serviceops.modules.contract.logging.ContractAuditLogger;
@@ -245,6 +247,72 @@ ArgumentCaptor<String> detailCaptor = ArgumentCaptor.forClass(String.class);
 verify(auditLogger).recordContractCreate(eq(1L), detailCaptor.capture());
 assertThat(detailCaptor.getValue()).contains("HD-").contains("tu co hoi id=1").contains("bao gia id=30");
 }
+
+	@Test
+	@DisplayName("TC-01: khai bao loai theo gio va han muc tran thanh cong, ghi nhat ky TYPE_LIMIT_UPDATE")
+	void updatesTypeAndLimit() {
+		Contract existing = contract(5L, "500000000");
+		when(contractRepository.findById(5L)).thenReturn(Optional.of(existing));
+		when(contractRepository.save(any(Contract.class))).thenAnswer(inv -> inv.getArgument(0));
+
+		ContractTypeLimitReq request = new ContractTypeLimitReq(
+				ContractType.TIME_AND_MATERIAL, null, new BigDecimal("600000000"));
+		ContractRes res = service.updateTypeAndLimit(5L, request);
+
+		assertThat(res.contractType()).isEqualTo(ContractType.TIME_AND_MATERIAL.name());
+		assertThat(res.limitValue()).isEqualByComparingTo("600000000");
+		// totalValue khong truyen thi giu nguyen gia tri hien tai.
+		assertThat(res.totalValue()).isEqualByComparingTo("500000000");
+		verify(contractLimitValidator).validate(new BigDecimal("500000000"), new BigDecimal("600000000"));
+
+		ArgumentCaptor<String> detailCaptor = ArgumentCaptor.forClass(String.class);
+		verify(contractAuditLogger).record(eq(5L), eq(ContractAuditAction.TYPE_LIMIT_UPDATE), detailCaptor.capture());
+		assertThat(detailCaptor.getValue()).contains("TIME_AND_MATERIAL").contains("600000000");
+	}
+
+	@Test
+	@DisplayName("TC-02 (QTN-19): han muc nho hon gia tri hop dong thi bao loi va khong luu")
+	void rejectsLimitBelowContractValue() {
+		when(contractRepository.findById(5L)).thenReturn(Optional.of(contract(5L, "500000000")));
+		org.mockito.Mockito.doThrow(new BusinessRuleException(ErrorCode.VALIDATION_ERROR,
+						"Han muc tran khong duoc nho hon gia tri hop dong (QTN-19)"))
+				.when(contractLimitValidator).validate(any(), any());
+
+		ContractTypeLimitReq request = new ContractTypeLimitReq(
+				ContractType.TIME_AND_MATERIAL, null, new BigDecimal("400000000"));
+		assertThatThrownBy(() -> service.updateTypeAndLimit(5L, request))
+				.isInstanceOf(BusinessRuleException.class)
+				.extracting(ex -> ((BusinessRuleException) ex).getErrorCode())
+				.isEqualTo(ErrorCode.VALIDATION_ERROR);
+
+		verify(contractRepository, never()).save(any());
+		verify(contractAuditLogger, never()).record(any(), any(), anyString());
+	}
+
+	@Test
+	@DisplayName("Khong tim thay hop dong khi khai bao thi bao RESOURCE_NOT_FOUND")
+	void rejectsTypeLimitUpdateWhenContractMissing() {
+		when(contractRepository.findById(99L)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> service.updateTypeAndLimit(99L, new ContractTypeLimitReq(
+						ContractType.FIXED_PRICE, null, null)))
+				.isInstanceOf(BusinessRuleException.class)
+				.extracting(ex -> ((BusinessRuleException) ex).getErrorCode())
+				.isEqualTo(ErrorCode.RESOURCE_NOT_FOUND);
+	}
+
+	private Contract contract(long id, String totalValue) {
+		Contract contract = new Contract();
+		contract.setId(id);
+		contract.setContractCode("HD-TEST");
+		contract.setName("Hop dong ERP");
+		contract.setCustomerId(1L);
+		contract.setContractType(ContractType.FIXED_PRICE);
+		contract.setTotalValue(new BigDecimal(totalValue));
+		contract.setStatus(ContractStatus.DRAFT);
+		return contract;
+	}
+
 
 private ContractCreateFromOpportunityReq request() {
 return new ContractCreateFromOpportunityReq(
