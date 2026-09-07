@@ -1920,3 +1920,99 @@ Trả về danh sách mốc thanh toán hiện tại của hợp đồng, cùng 
   dùng thấy lệch trước khi bấm lưu, thay vì chỉ dựa vào lỗi `400` trả về sau khi gửi.
 - Khi người dùng nhập theo tỷ lệ, có thể hiển thị số tiền quy đổi tạm thời ở FE để xem trước, nhưng số tiền
   chính thức luôn lấy từ `data[].amount` trong response trả về sau khi lưu thành công.
+
+---
+
+### `NCL-04-CN-004` — Lập phụ lục điều chỉnh hợp đồng
+
+Yêu cầu token của **Kế toán** (`VT-05`) — vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối vào
+`contract_audit_logs` (TC-03, dùng chung `ContractAccessDeniedAspect` với `NCL-04-CN-002`/`NCL-04-CN-003` vì cùng
+nằm trong gói controller của hợp đồng). Điều kiện bắt đầu: hợp đồng đã khai báo loại hình và giá trị (xem
+`NCL-04-CN-002`).
+
+Khác với mốc thanh toán (`NCL-04-CN-003`, mỗi lần `POST` **thay thế toàn bộ** danh sách), mỗi lần gọi `POST` ở
+đây là **thêm mới** một phụ lục (giữ lại lịch sử các phụ lục đã lập trước đó, không xoá/ghi đè). Phụ luc phải
+điều chỉnh **ít nhất một** trong hai nội dung — giá trị hợp đồng (`newTotalValue`) hoặc thời hạn (`newEndDate`)
+— thiếu cả hai bị từ chối `VALIDATION_ERROR` (TC-02). Bỏ trống một trường nghĩa là **không điều chỉnh** nội dung
+đó, hợp đồng giữ nguyên giá trị/thời hạn hiện tại cho nội dung đó.
+
+Áp dụng lại **QTN-19**: nếu hợp đồng đã có hạn mức trần (`limitValue`, xem `NCL-04-CN-002`), giá trị hợp đồng sau
+điều chỉnh không được vượt hạn mức đó — nếu không hệ thống từ chối lưu (`ContractLimitValidator`, dùng chung với
+`NCL-04-CN-002`). Nếu điều chỉnh thời hạn, `newEndDate` không được sớm hơn `startDate` hiện tại của hợp đồng.
+Lập phụ lục thành công ghi một dòng `AMENDMENT_CREATE` vào nhật ký hợp đồng — người thực hiện, nội dung (số phụ
+lục, giá trị/thời hạn cũ → mới), thời điểm (TC-04); Frontend không cần gọi thêm API nào để việc ghi log này xảy
+ra.
+
+#### `POST /contracts/{contractId}/amendments`
+
+```json
+{
+  "reason": "Bo sung khoi luong cong viec theo yeu cau khach hang",
+  "effectiveDate": "2026-06-01",
+  "newTotalValue": 1200000000,
+  "newEndDate": "2027-06-30",
+  "notes": "Phu luc 01"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `reason` | string | có | Lý do lập phụ lục, tối đa 500 ký tự |
+| `effectiveDate` | string (`yyyy-MM-dd`) | có | Ngày phụ lục có hiệu lực |
+| `newTotalValue` | number | không* | Giá trị hợp đồng mới sau điều chỉnh; bỏ trống = không điều chỉnh giá trị; không được âm |
+| `newEndDate` | string (`yyyy-MM-dd`) | không* | Ngày kết thúc mới; bỏ trống = không điều chỉnh thời hạn; không được sớm hơn `startDate` hiện tại của hợp đồng |
+| `notes` | string | không | Ghi chú thêm, tối đa 1000 ký tự |
+
+\* Phải có **ít nhất một** trong `newTotalValue` hoặc `newEndDate`; thiếu cả hai bị từ chối `VALIDATION_ERROR`.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Lap phu luc dieu chinh hop dong thanh cong",
+  "data": {
+    "id": 1,
+    "contractId": 5,
+    "amendmentNo": "PL-HD-4K7X2Q9-01",
+    "reason": "Bo sung khoi luong cong viec theo yeu cau khach hang",
+    "oldTotalValue": 1000000000,
+    "newTotalValue": 1200000000,
+    "oldEndDate": "2026-12-31",
+    "newEndDate": "2027-06-30",
+    "effectiveDate": "2026-06-01",
+    "notes": "Phu luc 01",
+    "createdBy": "ke_toan01",
+    "createdAt": "2026-09-07T10:15:00"
+  }
+}
+```
+
+`amendmentNo` sinh tự động theo mẫu `PL-<mã hợp đồng>-NN`, `NN` là số thứ tự phụ lục của hợp đồng (bắt đầu từ
+`01`). `oldTotalValue`/`oldEndDate` là giá trị/thời hạn của hợp đồng **trước** khi phụ lục này có hiệu lực — chỉ
+được ghi khi nội dung tương ứng thực sự được điều chỉnh (ví dụ: phụ lục chỉ đổi `newEndDate` thì `oldTotalValue`
+và `newTotalValue` đều `null`).
+
+#### `GET /contracts/{contractId}/amendments`
+
+Trả về lịch sử phụ lục của hợp đồng, cùng cấu trúc `data[]` như trên, phụ lục lập gần nhất hiển thị trước
+(`createdAt` giảm dần).
+
+**Response lỗi (cả hai API):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng với `{contractId}` |
+| 400 | `VALIDATION_ERROR` | Thiếu `reason`/`effectiveDate`; `newTotalValue` âm; thiếu cả `newTotalValue` và `newEndDate`; **hoặc** giá trị hợp đồng sau điều chỉnh vượt hạn mức trần đã khai báo (QTN-19) |
+| 400 | `INVALID_STATE` | `newEndDate` sớm hơn `startDate` hiện tại của hợp đồng |
+
+**Lưu ý cho Frontend:**
+- Gọi `GET` để hiển thị lịch sử phụ lục trên màn hình chi tiết hợp đồng — khác với mốc thanh toán, danh sách
+  này chỉ tăng dần theo thời gian, không có thao tác sửa/xoá phụ lục đã lập.
+- Sau khi lập phụ lục thành công, giá trị/thời hạn hiển thị trên màn hình hợp đồng (từ API `NCL-04-CN-001`) cần
+  được làm mới vì `totalValue`/`endDate` của hợp đồng đã được cập nhật theo phụ lục.
+- Khi chỉ muốn điều chỉnh một nội dung (ví dụ chỉ gia hạn), không gửi trường còn lại (hoặc gửi `null`) — không
+  gửi lại giá trị hiện tại vào `newTotalValue`, vì hệ thống vẫn coi đó là một lần điều chỉnh giá trị (ghi vào
+  lịch sử phụ lục dù số tiền không đổi).
