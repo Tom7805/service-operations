@@ -94,6 +94,10 @@ mockMvc.perform(patch("/contracts/5/type-limit")
 .content("{\"contractType\":\"FIXED_PRICE\"}"))
 .andExpect(status().isForbidden())
 .andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+
+// Viec ghi nhat ky DENIED_ACCESS (TC-04) duoc kiem soat boi ContractAccessDeniedAspect va
+// duoc unit test rieng o ContractAccessDeniedAspectTest - @WebMvcTest khong bat AOP weaving
+// nen khong the verify truc tiep loi goi den contractAuditLogger tu day.
 }
 
 @Test
