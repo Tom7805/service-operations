@@ -1827,3 +1827,82 @@ Cùng cấu trúc `ContractRes` của `NCL-04-CN-001`, thêm `limitValue` (`numb
   (nhỏ hơn giá trị hợp đồng khác 0) trừ khi hợp đồng có giá trị bằng 0.
 - Lỗi `VALIDATION_ERROR` do vượt hạn mức nên hiển thị đúng `message` backend trả về (đã nêu rõ là do QTN-19) và
   gợi ý người dùng tăng hạn mức hoặc giảm giá trị hợp đồng.
+
+### `NCL-04-CN-003` — Quản lý mốc thanh toán của hợp đồng
+
+Yêu cầu token của **Kế toán** (`VT-05`). Hệ thống lưu lại toàn bộ danh sách mốc
+thanh toán và chỉ chấp nhận khi tổng số tiền các mốc bằng đúng `totalValue` của
+hợp đồng (TC-01, TC-02, QTN-19). Mỗi mốc có thể khai báo theo tỷ lệ phần trăm
+hoặc số tiền; nếu gửi cả hai, số tiền phải khớp với tỷ lệ.
+
+#### `GET /contracts/{contractId}/milestones`
+
+Trả về danh sách mốc theo ngày dự kiến tăng dần. Mốc mới có trạng thái `PENDING`;
+các trạng thái `READY_TO_INVOICE` và `INVOICED` dành cho các story nghiệm thu và
+hóa đơn tiếp theo.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": 101,
+      "contractId": 5,
+      "name": "Nghiem thu giai doan 1",
+      "percentage": 30.00,
+      "amount": 300000000,
+      "expectedDate": "2026-11-30",
+      "acceptanceCondition": "Khach hang ky bien ban nghiem thu",
+      "status": "PENDING",
+      "createdBy": "ketoan01"
+    }
+  ]
+}
+```
+
+#### `PUT /contracts/{contractId}/milestones`
+
+Thay thế toàn bộ danh sách mốc của hợp đồng trong một giao dịch. Gửi mảng rỗng
+hoặc tổng khác giá trị hợp đồng sẽ bị từ chối và không thay đổi dữ liệu cũ.
+
+**Request:**
+
+```json
+[
+  {
+    "name": "Nghiem thu giai doan 1",
+    "percentage": 30,
+    "expectedDate": "2026-11-30",
+    "acceptanceCondition": "Khach hang ky bien ban nghiem thu"
+  },
+  {
+    "name": "Ban giao va quyet toan",
+    "percentage": 70,
+    "expectedDate": "2027-03-31",
+    "acceptanceCondition": "Hoan tat ban giao"
+  }
+]
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `name` | string | có | Tên mốc, không được để trống. |
+| `percentage` | number | không | Từ `0.01` đến `100`; backend tính `amount` theo giá trị hợp đồng. |
+| `amount` | number | không | Số tiền dương; dùng thay cho `percentage` hoặc gửi đồng thời để đối chiếu. |
+| `expectedDate` | date | không | Ngày dự kiến thanh toán. |
+| `acceptanceCondition` | string | không | Điều kiện nghiệm thu, tối đa 1000 ký tự. |
+
+**Response thành công — `200 OK`:** `data` là danh sách mốc đã lưu, cùng cấu
+trúc từng phần tử như response của `GET`.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`); hệ thống ghi `DENIED_ACCESS`. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng với `{contractId}`. |
+| 400 | `VALIDATION_ERROR` | Mảng rỗng, thiếu tỷ lệ/số tiền, số tiền không hợp lệ, tỷ lệ không khớp số tiền hoặc tổng mốc khác `totalValue`. |

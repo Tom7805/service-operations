@@ -9,6 +9,7 @@ import com.serviceops.modules.contract.dto.response.ContractRes;
 import com.serviceops.modules.contract.logging.ContractAccessDeniedAspect;
 import com.serviceops.modules.contract.logging.ContractAuditLogger;
 import com.serviceops.modules.contract.service.ContractService;
+import com.serviceops.modules.contract.service.ContractMilestoneService;
 import com.serviceops.security.CustomUserDetailsService;
 import com.serviceops.security.JwtAuthFilter;
 import com.serviceops.security.JwtAuthenticationEntryPoint;
@@ -52,6 +53,9 @@ private ObjectMapper objectMapper;
 
 @MockBean
 private ContractService contractService;
+
+@MockBean
+private ContractMilestoneService contractMilestoneService;
 
 @MockBean
 private ContractAuditLogger contractAuditLogger;
