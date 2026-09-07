@@ -12,19 +12,19 @@ import java.time.LocalDateTime;
  * @param status        Trang thai hop dong; hop dong moi luon la DRAFT.
  */
 public record ContractRes(
-Long id,
-String contractCode,
-String name,
-Long opportunityId,
-Long customerId,
-String customerName,
-Long quoteId,
-String contractType,
-BigDecimal totalValue,
-LocalDate startDate,
-LocalDate endDate,
-String status,
-String notes,
-String createdBy,
-LocalDateTime createdAt
+		Long id,
+		String contractCode,
+		String name,
+		Long opportunityId,
+		Long customerId,
+		String customerName,
+		Long quoteId,
+		String contractType,
+		BigDecimal totalValue,
+		LocalDate startDate,
+		LocalDate endDate,
+		String status,
+		String notes,
+		String createdBy,
+		LocalDateTime createdAt
 ) {}

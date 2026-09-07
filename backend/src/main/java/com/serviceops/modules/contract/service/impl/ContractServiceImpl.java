@@ -39,86 +39,86 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class ContractServiceImpl implements ContractService {
 
-private final OpportunityRepository opportunityRepository;
-private final QuoteRepository quoteRepository;
-private final ContractRepository contractRepository;
-private final CustomerRepository customerRepository;
-private final ContractMapper contractMapper;
-private final OpportunityAuditLogger auditLogger;
+	private final OpportunityRepository opportunityRepository;
+	private final QuoteRepository quoteRepository;
+	private final ContractRepository contractRepository;
+	private final CustomerRepository customerRepository;
+	private final ContractMapper contractMapper;
+	private final OpportunityAuditLogger auditLogger;
 
-@Override
-@Transactional
-public ContractRes createFromOpportunity(Long opportunityId, ContractCreateFromOpportunityReq request) {
-Opportunity opportunity = opportunityRepository.findById(opportunityId)
-.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
-"Khong tim thay co hoi voi id=" + opportunityId));
+	@Override
+	@Transactional
+	public ContractRes createFromOpportunity(Long opportunityId, ContractCreateFromOpportunityReq request) {
+		Opportunity opportunity = opportunityRepository.findById(opportunityId)
+				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
+						"Khong tim thay co hoi voi id=" + opportunityId));
 
-// QTN-08 (TC-02): hop dong chi tao tu co hoi da thang. Co hoi con dang mo
-// (chua chot WON) phai duoc cap nhat ket qua truoc khi tao hop dong.
-if (opportunity.getStage() != OpportunityStage.WON) {
-throw new BusinessRuleException(ErrorCode.INVALID_STATE,
-"Co hoi chua o trang thai thang (WON), yeu cau cap nhat ket qua co hoi truoc khi tao hop dong");
-}
+		// QTN-08 (TC-02): hop dong chi tao tu co hoi da thang. Co hoi con dang mo
+		// (chua chot WON) phai duoc cap nhat ket qua truoc khi tao hop dong.
+		if (opportunity.getStage() != OpportunityStage.WON) {
+			throw new BusinessRuleException(ErrorCode.INVALID_STATE,
+					"Co hoi chua o trang thai thang (WON), yeu cau cap nhat ket qua co hoi truoc khi tao hop dong");
+		}
 
-// Chong tao trung: mot co hoi thang chi tao duoc mot hop dong (rang buoc
-// UNIQUE(opportunity_id) o tang DB la lop phong ve cuoi cung).
-if (contractRepository.existsByOpportunityId(opportunityId)) {
-throw new BusinessRuleException(ErrorCode.INVALID_STATE,
-"Co hoi nay da co hop dong, khong the tao them");
-}
+		// Chong tao trung: mot co hoi thang chi tao duoc mot hop dong (rang buoc
+		// UNIQUE(opportunity_id) o tang DB la lop phong ve cuoi cung).
+		if (contractRepository.existsByOpportunityId(opportunityId)) {
+			throw new BusinessRuleException(ErrorCode.INVALID_STATE,
+					"Co hoi nay da co hop dong, khong the tao them");
+		}
 
-// Dieu kien bat dau: co hoi thang phai co bao gia de dung san gia tri/noi dung.
-Quote quote = quoteRepository.findTopByOpportunityIdOrderByVersionDesc(opportunityId)
-.orElseThrow(() -> new BusinessRuleException(ErrorCode.VALIDATION_ERROR,
-"Co hoi thang chua co bao gia, khong the dung san hop dong"));
+		// Dieu kien bat dau: co hoi thang phai co bao gia de dung san gia tri/noi dung.
+		Quote quote = quoteRepository.findTopByOpportunityIdOrderByVersionDesc(opportunityId)
+				.orElseThrow(() -> new BusinessRuleException(ErrorCode.VALIDATION_ERROR,
+						"Co hoi thang chua co bao gia, khong the dung san hop dong"));
 
-if (request.startDate() != null && request.endDate() != null
-&& request.endDate().isBefore(request.startDate())) {
-throw new BusinessRuleException(ErrorCode.INVALID_STATE,
-"Ngay ket thuc hop dong khong duoc som hon ngay bat dau");
-}
+		if (request.startDate() != null && request.endDate() != null
+				&& request.endDate().isBefore(request.startDate())) {
+			throw new BusinessRuleException(ErrorCode.INVALID_STATE,
+					"Ngay ket thuc hop dong khong duoc som hon ngay bat dau");
+		}
 
-Contract contract = new Contract();
-contract.setContractCode(generateContractCode());
-contract.setName(request.name() != null && !request.name().isBlank()
-? request.name().trim()
-: opportunity.getName());
-contract.setOpportunityId(opportunityId);
-contract.setCustomerId(opportunity.getCustomerId());
-contract.setQuoteId(quote.getId());
-contract.setContractType(request.contractType());
-contract.setTotalValue(request.totalValue() != null ? request.totalValue() : quote.getTotalAmount());
-contract.setStartDate(request.startDate());
-contract.setEndDate(request.endDate());
-contract.setStatus(ContractStatus.DRAFT);
-contract.setNotes(request.notes());
-contract.setCreatedBy(currentUsername());
-contract.setCreatedAt(LocalDateTime.now());
-contract = contractRepository.save(contract);
+		Contract contract = new Contract();
+		contract.setContractCode(generateContractCode());
+		contract.setName(request.name() != null && !request.name().isBlank()
+				? request.name().trim()
+				: opportunity.getName());
+		contract.setOpportunityId(opportunityId);
+		contract.setCustomerId(opportunity.getCustomerId());
+		contract.setQuoteId(quote.getId());
+		contract.setContractType(request.contractType());
+		contract.setTotalValue(request.totalValue() != null ? request.totalValue() : quote.getTotalAmount());
+		contract.setStartDate(request.startDate());
+		contract.setEndDate(request.endDate());
+		contract.setStatus(ContractStatus.DRAFT);
+		contract.setNotes(request.notes());
+		contract.setCreatedBy(currentUsername());
+		contract.setCreatedAt(LocalDateTime.now());
+		contract = contractRepository.save(contract);
 
-// TC-04: ghi nguoi thuc hien, noi dung va thoi diem tao hop dong vao nhat ky.
-auditLogger.recordContractCreate(opportunityId,
-"Tao hop dong " + contract.getContractCode()
-+ " tu co hoi id=" + opportunityId
-+ ", gia tri=" + contract.getTotalValue()
-+ " tu bao gia id=" + quote.getId());
+		// TC-04: ghi nguoi thuc hien, noi dung va thoi diem tao hop dong vao nhat ky.
+		auditLogger.recordContractCreate(opportunityId,
+				"Tao hop dong " + contract.getContractCode()
+						+ " tu co hoi id=" + opportunityId
+						+ ", gia tri=" + contract.getTotalValue()
+						+ " tu bao gia id=" + quote.getId());
 
-log.info("CONTRACT_CREATED contractId={} code={} opportunityId={} by={}",
-contract.getId(), contract.getContractCode(), opportunityId, contract.getCreatedBy());
+		log.info("CONTRACT_CREATED contractId={} code={} opportunityId={} by={}",
+				contract.getId(), contract.getContractCode(), opportunityId, contract.getCreatedBy());
 
-String customerName = customerRepository.findById(contract.getCustomerId())
-.map(Customer::getName)
-.orElse(null);
-return contractMapper.toResponse(contract, customerName);
-}
+		String customerName = customerRepository.findById(contract.getCustomerId())
+				.map(Customer::getName)
+				.orElse(null);
+		return contractMapper.toResponse(contract, customerName);
+	}
 
-/** Ma hop dong duy nhat: HD- + thoi diem tao (ms) - du doc lap trong truong hop 2 nguoi tao cung luc. */
-private String generateContractCode() {
-return "HD-" + Long.toString(System.currentTimeMillis(), 36).toUpperCase();
-}
+	/** Ma hop dong duy nhat: HD- + thoi diem tao (ms) - du doc lap trong truong hop 2 nguoi tao cung luc. */
+	private String generateContractCode() {
+		return "HD-" + Long.toString(System.currentTimeMillis(), 36).toUpperCase();
+	}
 
-private String currentUsername() {
-Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-return auth == null ? null : auth.getName();
-}
+	private String currentUsername() {
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		return auth == null ? null : auth.getName();
+	}
 }

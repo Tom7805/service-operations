@@ -6,12 +6,12 @@ package com.serviceops.modules.contract.enums;
  */
 public enum ContractType {
 
-/** Tra theo thoi gian - nhan luc dua tren don gia ngay (bill rate). */
-TIME_AND_MATERIAL,
+	/** Tra theo thoi gian - nhan luc dua tren don gia ngay (bill rate). */
+	TIME_AND_MATERIAL,
 
-/** Tra theo goi dinh muc cho pham vi da chot. */
-FIXED_PRICE,
+	/** Tra theo goi dinh muc cho pham vi da chot. */
+	FIXED_PRICE,
 
-/** Tra phi dinh ky bao tri/ho tro theo chu ky. */
-MAINTENANCE
+	/** Tra phi dinh ky bao tri/ho tro theo chu ky. */
+	MAINTENANCE
 }

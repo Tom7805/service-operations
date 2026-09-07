@@ -23,18 +23,18 @@ import java.time.LocalDate;
  * @param notes        Ghi chu/noi dung bo sung, toi da 1000 ky tu.
  */
 public record ContractCreateFromOpportunityReq(
-@Size(max = 255, message = "Ten hop dong khong qua 255 ky tu")
-String name,
+		@Size(max = 255, message = "Ten hop dong khong qua 255 ky tu")
+		String name,
 
-@NotNull(message = "Phai chon loai hop dong")
-ContractType contractType,
+		@NotNull(message = "Phai chon loai hop dong")
+		ContractType contractType,
 
-BigDecimal totalValue,
+		BigDecimal totalValue,
 
-LocalDate startDate,
+		LocalDate startDate,
 
-LocalDate endDate,
+		LocalDate endDate,
 
-@Size(max = 1000, message = "Ghi chu khong qua 1000 ky tu")
-String notes
+		@Size(max = 1000, message = "Ghi chu khong qua 1000 ky tu")
+		String notes
 ) {}

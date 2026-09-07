@@ -13,9 +13,9 @@ import java.util.Optional;
  */
 public interface ContractRepository extends JpaRepository<Contract, Long> {
 
-/** Tim hop dong tao tu mot co hoi (NULL neu co hoi chua co hop dong). */
-Optional<Contract> findByOpportunityId(Long opportunityId);
+	/** Tim hop dong tao tu mot co hoi (NULL neu co hoi chua co hop dong). */
+	Optional<Contract> findByOpportunityId(Long opportunityId);
 
-/** Kiem tra nhanh co hoi da co hop dong hay chua, chong tao trung. */
-boolean existsByOpportunityId(Long opportunityId);
+	/** Kiem tra nhanh co hoi da co hop dong hay chua, chong tao trung. */
+	boolean existsByOpportunityId(Long opportunityId);
 }

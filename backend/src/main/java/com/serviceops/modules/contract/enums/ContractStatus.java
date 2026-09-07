@@ -8,15 +8,15 @@ package com.serviceops.modules.contract.enums;
  */
 public enum ContractStatus {
 
-/** Hop dong dung san, chua duoc bo sung/kich hoat. Trang thai khoi tao. */
-DRAFT,
+	/** Hop dong dung san, chua duoc bo sung/kich hoat. Trang thai khoi tao. */
+	DRAFT,
 
-/** Hop dong dang hieu luc. */
-ACTIVE,
+	/** Hop dong dang hieu luc. */
+	ACTIVE,
 
-/** Hop dong da hoan thanh dung han. */
-COMPLETED,
+	/** Hop dong da hoan thanh dung han. */
+	COMPLETED,
 
-/** Hop dong da cham dut truoc han. */
-TERMINATED
+	/** Hop dong da cham dut truoc han. */
+	TERMINATED
 }
