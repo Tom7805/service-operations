@@ -1656,3 +1656,98 @@ Không có tham số. Báo cáo là ảnh chụp **hiện tại** của toàn b�
 - Vẽ phễu (funnel) theo đúng thứ tự `stages` trả về; hiển thị cảnh báo "đọng lâu bất thường" cho các giai đoạn
   có `stalledCount > 0`, dùng `stalledOpportunityIds` để liên kết tới chi tiết cơ hội.
 - Cột giá trị dùng chung đơn vị tiền với các API cơ hội khác (VND, số nguyên).
+
+---
+
+## Epic `NCL-04` — Quản lý hợp đồng
+
+### `NCL-04-CN-001` — Tạo hợp đồng từ cơ hội đã thắng
+
+Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`) — vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần
+từ chối (TC-03, dùng chung cơ chế `OpportunityAccessDeniedAspect` vì endpoint nằm trong module cơ hội).
+Áp dụng quy tắc **QTN-08: hợp đồng chỉ tạo được từ cơ hội đã thắng (`stage = WON`)** (TC-02).
+
+Máy chủ **tự động dựng sẵn** hợp đồng từ cơ hội: `customerId` (khách hàng của cơ hội), giá trị (lấy
+`totalAmount` của **báo giá version mới nhất**), và ghi nguồn (`quoteId`) để truy ngược về phía bán hàng.
+Frontend chỉ gửi các trường người dùng bổ sung; **không** chấp nhận `customerId`/`quoteId` từ client để tránh
+sai lệch dữ liệu bán hàng. Hợp đồng mới luôn ở trạng thái `DRAFT` và được **liên kết ngược về cơ hội** qua
+`opportunityId` — mỗi cơ hội thắng chỉ tạo được **một** hợp đồng (UNIQUE ở DB, kiểm trước ở tầng service).
+Tạo thành công sẽ ghi một dòng `CONTRACT_CREATE` vào nhật ký cơ hội — người thực hiện, nội dung, thời điểm
+(TC-04); Frontend không cần gọi API nào thêm để ghi log này.
+
+#### `POST /opportunities/{opportunityId}/contract`
+
+```json
+{
+  "name": "Hop dong trien khai ERP Cong ty TNHH ABC",
+  "contractType": "FIXED_PRICE",
+  "totalValue": 500000000,
+  "startDate": "2026-10-01",
+  "endDate": "2027-09-30",
+  "notes": "Tra theo 3 cot moc nghiem thu"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `name` | string | không | Tên hợp đồng (tối đa 255 ký tự); bỏ trống thì lấy tên cơ hội |
+| `contractType` | string | có | Một trong `TIME_AND_MATERIAL` · `FIXED_PRICE` · `MAINTENANCE` |
+| `totalValue` | number | không | Giá trị hợp đồng tự điều chỉnh; bỏ trống thì dùng `totalAmount` của báo giá mới nhất |
+| `startDate` | string (`date`) | không | Ngày bắt đầu hiệu lực; có thể bổ sung sau ở bước hoàn thiện hợp đồng |
+| `endDate` | string (`date`) | không | Phải **không sớm hơn** `startDate` nếu cả hai đều gửi |
+| `notes` | string | không | Ghi chú/nội dung bổ sung (tối đa 1000 ký tự) |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Tao hop dong tu co hoi thanh cong",
+  "data": {
+    "id": 5,
+    "contractCode": "HD-4K7X2Q9",
+    "name": "Trien khai ERP cho Cong ty TNHH ABC",
+    "opportunityId": 12,
+    "customerId": 1,
+    "customerName": "Cong ty TNHH ABC",
+    "quoteId": 30,
+    "contractType": "FIXED_PRICE",
+    "totalValue": 500000000,
+    "startDate": "2026-10-01",
+    "endDate": "2027-09-30",
+    "status": "DRAFT",
+    "notes": "Tra theo 3 cot moc nghiem thu",
+    "createdBy": "sale01",
+    "createdAt": "2026-09-07T10:15:00"
+  }
+}
+```
+
+| Trường | Kiểu | Ghi chú |
+|---|---|---|
+| `id` | number | Id hợp đồng vừa tạo. |
+| `contractCode` | string | Mã hợp đồng duy nhất, sinh tự động (tiền tố `HD-`). |
+| `opportunityId` | number \| null | **Liên kết ngược về cơ hội gốc** — luôn có giá trị với hợp đồng tạo từ cơ hội (TC-01). |
+| `customerId` / `customerName` | number / string | Khách hàng lấy từ cơ hội; tên để hiển thị. |
+| `quoteId` | number \| null | Báo giá version mới nhất dùng dựng hợp đồng (truy nguồn bán hàng). |
+| `totalValue` | number | Giá trị hợp đồng = `totalValue` người dùng nhập nếu có, ngược lại `totalAmount` của báo giá. |
+| `status` | string | Luôn `DRAFT` ngay sau khi tạo; hợp đồng "dựng sẵn, chờ bổ sung". |
+| `createdBy` / `createdAt` | string / `date-time` | Người thực hiện và thời điểm tạo (TC-04). |
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh (`VT-04`) — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại cơ hội với `{opportunityId}` |
+| 400 | `INVALID_STATE` | Cơ hội chưa ở giai đoạn `WON` — "yêu cầu cập nhật kết quả cơ hội trước" (TC-02); **hoặc** cơ hội đã có hợp đồng; **hoặc** `endDate` sớm hơn `startDate` |
+| 400 | `VALIDATION_ERROR` | Thiếu `contractType`, tên/ghi chú vượt quá độ dài cho phép; **hoặc** cơ hội thắng chưa có báo giá nào để dựng giá trị |
+
+**Lưu ý cho Frontend:**
+- Chỉ hiển thị nút "Tạo hợp đồng" khi `opportunity.stage === 'WON'` và chưa có hợp đồng liên kết (TC-02);
+  với cơ hội chưa thắng, vô hiệu nút và hướng dẫn cập nhật kết quả cơ hội trước.
+- Sau khi tạo thành công, điều hướng sang màn hình chi tiết hợp đồng (trạng thái `DRAFT`) để người dùng
+  hoàn thiện thông tin; hợp đồng này là đầu vào cho tính năng mở dự án (story sau của Epic NCL-04).
+- Lỗi `INVALID_STATE` hiển thị đúng `message` trả về từ backend (đã diễn giải rõ nguyên nhân: chưa thắng /
+  đã có hợp đồng / sai ngày).

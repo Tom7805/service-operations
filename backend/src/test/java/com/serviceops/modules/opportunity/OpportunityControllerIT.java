@@ -14,6 +14,8 @@ import com.serviceops.modules.opportunity.dto.response.RevenueForecastRes;
 import com.serviceops.modules.opportunity.dto.response.StageHistoryRes;
 import com.serviceops.modules.opportunity.enums.LossReason;
 import com.serviceops.modules.opportunity.enums.OpportunityStage;
+import com.serviceops.modules.contract.dto.response.ContractRes;
+import com.serviceops.modules.contract.service.ContractService;
 import com.serviceops.modules.opportunity.service.OpportunityService;
 import com.serviceops.modules.opportunity.service.OpportunityStageService;
 import com.serviceops.modules.opportunity.service.RevenueForecastService;
@@ -56,7 +58,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *   tro duoc phep (VT-01, VT-04), TC-03 tu choi vai tro khac, khoang ngay loc khong hop le.
  */
 @WebMvcTest(controllers = OpportunityController.class)
-@Import({SecurityConfig.class, JwtAuthFilter.class, JwtAuthenticationEntryPoint.class})
+@Import({SecurityConfig.class, JwtAuthFilter.class, JwtAuthenticationEntryPoint.class,
+		com.serviceops.modules.opportunity.logging.OpportunityAccessDeniedAspect.class})
 class OpportunityControllerIT {
 
 	@Autowired
@@ -73,6 +76,12 @@ class OpportunityControllerIT {
 
 	@MockBean
 	private RevenueForecastService revenueForecastService;
+
+	@MockBean
+	private ContractService contractService;
+
+	@MockBean
+	private com.serviceops.modules.opportunity.logging.OpportunityAuditLogger opportunityAuditLogger;
 
 	@MockBean
 	private JwtProvider jwtProvider;
@@ -454,5 +463,50 @@ class OpportunityControllerIT {
 						.param("to", "2026-09-01"))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"));
+	}
+
+	@Test
+	@DisplayName("NCL-04-CN-001 TC-01: VT-04 tao hop dong tu co hoi thanh cong, tra ContractRes")
+	@WithMockUser(authorities = "ROLE_VT-04")
+	void createsContractFromOpportunity() throws Exception {
+		ContractRes res = new ContractRes(5L, "HD-4K7X2Q9", "Hop dong ERP", 1L, 1L,
+				"Cong ty TNHH ABC", 30L, "FIXED_PRICE", new BigDecimal("500000000"),
+				LocalDate.of(2026, 10, 1), LocalDate.of(2027, 9, 30), "DRAFT",
+				null, "sale01", LocalDateTime.now());
+		when(contractService.createFromOpportunity(eq(1L), any())).thenReturn(res);
+
+		String body = "{\"contractType\":\"FIXED_PRICE\",\"startDate\":\"2026-10-01\",\"endDate\":\"2027-09-30\"}";
+		mockMvc.perform(post("/opportunities/1/contract")
+						.contentType("application/json")
+						.content(body))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.id").value(5))
+				.andExpect(jsonPath("$.data.opportunityId").value(1))
+				.andExpect(jsonPath("$.data.status").value("DRAFT"));
+
+		verify(contractService).createFromOpportunity(eq(1L), any());
+	}
+
+	@Test
+	@DisplayName("NCL-04-CN-001 TC-03: vai tro khac VT-04 bi tu choi 403 khi tao hop dong")
+	@WithMockUser(authorities = "ROLE_VT-05")
+	void deniesOtherRolesForContractCreation() throws Exception {
+		mockMvc.perform(post("/opportunities/1/contract")
+						.contentType("application/json")
+						.content("{\"contractType\":\"FIXED_PRICE\"}"))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+
+		// Viec ghi nhat ky DENIED_ACCESS duoc kiem soat boi OpportunityAccessDeniedAspect
+		// va da duoc unit test rieng (OpportunityAccessDeniedAspectTest).
+	}
+
+	@Test
+	@DisplayName("NCL-04-CN-001: chua dang nhap thi bao 401 khi tao hop dong")
+	void requiresAuthenticationForContractCreation() throws Exception {
+		mockMvc.perform(post("/opportunities/1/contract")
+						.contentType("application/json")
+						.content("{\"contractType\":\"FIXED_PRICE\"}"))
+				.andExpect(status().isUnauthorized());
 	}
 }
