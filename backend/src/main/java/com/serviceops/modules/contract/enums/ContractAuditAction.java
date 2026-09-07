@@ -17,6 +17,9 @@ MILESTONE_UPDATE,
 /** Lap phu luc dieu chinh gia tri va/hoac thoi han hop dong (NCL-04-CN-004, TC-04). */
 AMENDMENT_CREATE,
 
-/** Truy cap chuc nang hop dong bi tu choi vi khong co quyen (NCL-04-CN-002/003/004, TC-03). */
+/** Ghi nhan gia tri da dung cua hop dong tu gio cong/hoa don (NCL-04-CN-005, TC-04). */
+LIMIT_USAGE_UPDATE,
+
+/** Truy cap chuc nang hop dong bi tu choi vi khong co quyen (NCL-04-CN-002/003/004/005, TC-03). */
 DENIED_ACCESS
 }

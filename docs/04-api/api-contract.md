@@ -2016,3 +2016,102 @@ Trả về lịch sử phụ lục của hợp đồng, cùng cấu trúc `data[
 - Khi chỉ muốn điều chỉnh một nội dung (ví dụ chỉ gia hạn), không gửi trường còn lại (hoặc gửi `null`) — không
   gửi lại giá trị hiện tại vào `newTotalValue`, vì hệ thống vẫn coi đó là một lần điều chỉnh giá trị (ghi vào
   lịch sử phụ lục dù số tiền không đổi).
+
+---
+
+### `NCL-04-CN-005` — Cảnh báo khi sắp vượt hạn mức hợp đồng
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`) hoặc **Kế toán** (`VT-05`) — vai trò khác nhận `403 FORBIDDEN` và bị
+ghi nhật ký lần từ chối vào `contract_audit_logs` (TC-03, dùng chung `ContractAccessDeniedAspect` với các API khác
+của hợp đồng). Điều kiện bắt đầu: hợp đồng đã khai báo hạn mức (xem `NCL-04-CN-002`) và dự án đã phát sinh giờ công.
+
+Hệ thống cộng dồn giá trị phát sinh vào `usedValue` — "giá trị đã dùng" của hợp đồng — mỗi khi có giờ công được
+duyệt hoặc hoá đơn được lập (`source` tương ứng `TIMESHEET_APPROVAL` hoặc `INVOICE`). Hai nguồn có cách xử lý khi
+sắp/đã chạm hạn mức khác nhau:
+- **`TIMESHEET_APPROVAL`**: luôn được ghi nhận, kể cả khi làm vượt hạn mức — chỉ trả về cờ cảnh báo
+  (`nearingLimit`/`overLimit`) để Frontend hiển thị, không chặn nghiệp vụ chấm công.
+- **`INVOICE`**: bị từ chối (`400 VALIDATION_ERROR`) nếu ghi nhận sẽ làm `usedValue` vượt quá `limitValue` — theo
+  đúng QTN-19, kế toán phải lập phụ lục điều chỉnh hạn mức (`NCL-04-CN-004`) trước khi xuất hoá đơn tiếp.
+
+`nearingLimit = true` khi tỷ lệ đã dùng đạt từ **80%** hạn mức trở lên (TC-01). Mỗi lần ghi nhận thành công (`POST`)
+đều ghi một dòng `LIMIT_USAGE_UPDATE` vào nhật ký hợp đồng — người thực hiện, nội dung (nguồn, giá trị phát sinh,
+giá trị đã dùng, có đang cảnh báo hay không), thời điểm (TC-04); Frontend không cần gọi thêm API nào để việc ghi
+log này xảy ra.
+
+#### `GET /contracts/{contractId}/usage`
+
+Trả về tình trạng hạn mức hiện tại của hợp đồng, không làm thay đổi dữ liệu.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Tinh trang han muc hop dong",
+  "data": {
+    "contractId": 5,
+    "totalValue": 1000000000,
+    "limitValue": 1000000000,
+    "usedValue": 300000000,
+    "remainingValue": 700000000,
+    "usageRatio": 30.00,
+    "nearingLimit": false,
+    "overLimit": false
+  }
+}
+```
+
+#### `POST /contracts/{contractId}/usage`
+
+```json
+{
+  "amount": 50000000,
+  "source": "TIMESHEET_APPROVAL"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `amount` | number | có | Giá trị phát sinh thêm; phải lớn hơn 0 |
+| `source` | string | có | `TIMESHEET_APPROVAL` (không chặn, chỉ cảnh báo) hoặc `INVOICE` (bị chặn nếu vượt hạn mức — QTN-19) |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Ghi nhan gia tri phat sinh thanh cong",
+  "data": {
+    "contractId": 5,
+    "totalValue": 1000000000,
+    "limitValue": 1000000000,
+    "usedValue": 850000000,
+    "remainingValue": 150000000,
+    "usageRatio": 85.00,
+    "nearingLimit": true,
+    "overLimit": false
+  }
+}
+```
+
+`limitValue`, `usageRatio`, `remainingValue` đều là `null` khi hợp đồng **không đặt hạn mức** — trường hợp này
+`nearingLimit`/`overLimit` luôn là `false` và mọi giá trị phát sinh (kể cả từ `INVOICE`) đều được ghi nhận không
+giới hạn.
+
+**Response lỗi (cả hai API):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Quản lý dự án (`VT-02`) hoặc Kế toán (`VT-05`) — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng với `{contractId}` |
+| 400 | `VALIDATION_ERROR` | Thiếu `amount`/`source`; `amount` không dương; **hoặc** ghi nhận từ `INVOICE` làm vượt hạn mức tran (TC-02, QTN-19) |
+
+**Lưu ý cho Frontend:**
+- Gọi `GET` khi mở màn hình chi tiết hợp đồng để hiển thị thanh tiến trình hạn mức; gọi `POST` từ các luồng
+  nghiệp vụ khác (duyệt bảng chấm công, lập hoá đơn) ngay sau khi thao tác đó thành công.
+- Khi `nearingLimit = true`, hiển thị cảnh báo màu vàng cho Quản lý dự án kèm `remainingValue` để họ kịp đàm phán
+  phụ lục; khi nhận lỗi `VALIDATION_ERROR` từ nguồn `INVOICE`, dẫn người dùng sang màn hình lập phụ lục điều chỉnh
+  hạn mức (`NCL-04-CN-004`) thay vì chỉ hiển thị lỗi chung chung.
+- `usageRatio` có thể vượt quá `100` khi `overLimit = true` (chỉ xảy ra với nguồn `TIMESHEET_APPROVAL`, vì nguồn
+  `INVOICE` đã bị chặn trước khi vượt) — không giả định giá trị này luôn nằm trong khoảng 0–100.
