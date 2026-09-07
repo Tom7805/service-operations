@@ -20,5 +20,8 @@ public enum OpportunityAuditAction {
 	ACTIVITY_ADD,
 
 	/** Sinh bao cao duong ong ban hang theo giai doan (NCL-03-CN-007, TC-04). */
-	REPORT_VIEW
+	REPORT_VIEW,
+
+	/** Tao hop dong tu co hoi da thang (NCL-04-CN-001, TC-04). */
+	CONTRACT_CREATE
 }
