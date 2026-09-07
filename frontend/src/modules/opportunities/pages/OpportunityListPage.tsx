@@ -21,7 +21,7 @@ interface OpportunityListPageProps {
   /** Mở màn "Ghi nhận hoạt động chăm sóc cơ hội" cho đúng cơ hội đang chọn —
    *  trước đây màn đó chỉ vào được bằng cách tự gõ tay mã số cơ hội, không ai
    *  đoán được mã số nếu không tra database. */
-  onOpenActivities?: (opportunityId: number) => void;
+  onOpenActivities?: (opportunityId: number, opportunityName: string) => void;
 }
 
 export default function OpportunityListPage({
@@ -330,7 +330,7 @@ export default function OpportunityListPage({
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  onClick={() => onOpenActivities(selectedOpportunity.id)}
+                  onClick={() => onOpenActivities(selectedOpportunity.id, selectedOpportunity.name)}
                   style={{
                     padding: '2px 8px',
                     fontSize: '12px',

@@ -2828,3 +2828,48 @@ body { background: var(--canvas); }
 .activity-form__select:hover, .activity-form__input:hover, .activity-form__textarea:hover { border-color: #DCDCDC; }
 .activity-form__input::placeholder, .activity-form__textarea::placeholder { color: var(--ink-faint); }
 .activity-form__actions { display: flex; justify-content: flex-end; padding-top: 4px; border-top: 1px solid var(--overlay-hairline); }
+.activity-back-link {
+  display: inline-flex; align-items: center; gap: 6px; margin-bottom: 14px;
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-size: 13.5px; font-weight: 600; color: var(--ink-muted);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+.activity-back-link svg { width: 14px; height: 14px; }
+.activity-back-link:hover { color: var(--ink-strong); }
+.access-denied-card .btn-secondary { margin-top: 4px; }
+
+/* Bộ chọn cơ hội theo tên/khách hàng thay cho ô nhập mã ID mù (không nơi nào
+   trong hệ thống hiển thị ID để tra cứu). */
+.opportunity-picker { display: flex; flex-direction: column; gap: 12px; }
+.opportunity-picker__search { position: relative; }
+.opportunity-picker__search-icon {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; color: var(--ink-faint); display: flex;
+}
+.opportunity-picker__search-icon svg { width: 100%; height: 100%; }
+.opportunity-picker__input {
+  width: 100%; height: 42px; padding: 0 14px 0 36px; border: 1px solid var(--line);
+  border-radius: var(--radius-md); font-size: 14.5px; color: var(--ink); background: var(--surface);
+  outline: none; transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+.opportunity-picker__input:focus { border-color: var(--ink-strong); box-shadow: var(--shadow-focus); }
+.opportunity-picker__input::placeholder { color: var(--ink-faint); }
+.opportunity-picker__hint { font-size: 13.5px; color: var(--ink-muted); padding: 8px 2px; }
+.opportunity-picker__hint--error { color: var(--pale-red-fg); }
+.opportunity-picker__list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: var(--radius-md); overflow: hidden; }
+.opportunity-picker__item {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 11px 14px; background: var(--surface); border: none; border-bottom: 1px solid var(--overlay-hairline);
+  cursor: pointer; text-align: left; font-size: 14px; color: var(--ink);
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.opportunity-picker__list li:last-child .opportunity-picker__item { border-bottom: none; }
+.opportunity-picker__item:hover { background: var(--surface-alt); }
+.opportunity-picker__item-name { font-weight: 600; color: var(--ink-strong); }
+.opportunity-picker__item-customer { font-size: 12.5px; color: var(--ink-muted); flex-shrink: 0; }
+.activity-customer-line {
+  display: flex; align-items: center; gap: 6px; margin-top: 6px;
+  font-size: 13.5px; color: var(--ink-muted);
+}
+.activity-customer-line svg { width: 14px; height: 14px; flex-shrink: 0; }
+.activity-customer-line strong { color: var(--ink-strong); font-weight: 600; }

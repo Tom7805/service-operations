@@ -14,6 +14,7 @@ import TwoFactorSetupPage from './modules/auth/pages/TwoFactorSetupPage';
 import CustomerListPage from './modules/customers/pages/CustomerListPage';
 import CustomerMergePage from './modules/customers/pages/CustomerMergePage';
 import OpportunityDetailPage from './modules/opportunities/pages/OpportunityDetailPage';
+import OpportunitySearchPicker from './modules/opportunities/components/OpportunitySearchPicker';
 import OpportunityListPage from './modules/opportunities/pages/OpportunityListPage';
 import RevenueForecastPage from './modules/opportunities/pages/RevenueForecastPage';
 import PipelineReportPage from './modules/reports/pages/PipelineReportPage';
@@ -122,8 +123,12 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('DEPARTMENTS');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
-  const [opportunityIdInput, setOpportunityIdInput] = useState('');
   const [selectedOpportunityId, setSelectedOpportunityId] = useState<number | null>(null);
+  const [selectedOpportunityName, setSelectedOpportunityName] = useState<string | undefined>(undefined);
+  /** Nhớ người dùng vào màn "Ghi nhận chăm sóc" từ đâu để nút quay lại trả về
+   *  đúng chỗ: từ danh sách "Cơ hội bán hàng" thì về lại danh sách, còn tự tìm
+   *  trực tiếp trong tab "Cơ hội" thì quay về ô tìm kiếm. */
+  const [activityOrigin, setActivityOrigin] = useState<'LIST' | 'PICKER' | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -411,8 +416,10 @@ export default function App() {
             <OpportunityListPage
               currentUserRoles={currentRoles}
               currentUserName={session.fullName}
-              onOpenActivities={(id) => {
+              onOpenActivities={(id, name) => {
                 setSelectedOpportunityId(id);
+                setSelectedOpportunityName(name);
+                setActivityOrigin('LIST');
                 setActiveTab('OPPORTUNITY_DETAIL');
               }}
             />
@@ -489,8 +496,16 @@ export default function App() {
             selectedOpportunityId ? (
               <OpportunityDetailPage
                 opportunityId={selectedOpportunityId}
+                opportunityName={selectedOpportunityName}
                 currentUserRoles={currentRoles}
                 currentUserName={session.fullName}
+                backLabel={activityOrigin === 'LIST' ? 'Quay lại Cơ hội bán hàng' : 'Tìm cơ hội khác'}
+                onBack={() => {
+                  setSelectedOpportunityId(null);
+                  setSelectedOpportunityName(undefined);
+                  if (activityOrigin === 'LIST') setActiveTab('OPPORTUNITIES');
+                  setActivityOrigin(null);
+                }}
               />
             ) : (
               <div className="user-management-page">
@@ -503,42 +518,21 @@ export default function App() {
                     </div>
                     <h1 className="page-title">Ghi nhận hoạt động chăm sóc cơ hội</h1>
                     <p className="page-subtitle">
-                      Xem lại lịch sử chăm sóc và ghi nhận cuộc gọi, email hoặc buổi gặp mới cho một cơ hội cụ thể.
-                      Cách nhanh hơn: mở "Cơ hội bán hàng", chọn một cơ hội rồi bấm{' '}
-                      <strong>"Ghi nhận chăm sóc"</strong> — không cần nhớ mã số.
+                      Đây là màn hình xem lại lịch sử chăm sóc và ghi nhận cuộc gọi, email hoặc buổi gặp mới cho
+                      một cơ hội cụ thể — tìm bằng tên cơ hội hoặc tên khách hàng bên dưới. Cách nhanh hơn: mở{' '}
+                      <strong>"Cơ hội bán hàng"</strong>, chọn một cơ hội rồi bấm <strong>"Ghi nhận chăm sóc"</strong>.
                     </p>
                   </div>
                 </div>
 
                 <div className="user-table-card" style={{ padding: '24px' }}>
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const id = Number(opportunityIdInput);
-                      if (Number.isInteger(id) && id > 0) setSelectedOpportunityId(id);
+                  <OpportunitySearchPicker
+                    onSelect={(id, name) => {
+                      setSelectedOpportunityId(id);
+                      setSelectedOpportunityName(name);
+                      setActivityOrigin('PICKER');
                     }}
-                    style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', flexWrap: 'wrap' }}
-                  >
-                    <div className="filter-group" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}>
-                      <label htmlFor="opportunity-id-input" className="filter-label">
-                        Mã cơ hội
-                      </label>
-                      <input
-                        id="opportunity-id-input"
-                        type="number"
-                        min={1}
-                        className="form-input"
-                        style={{ width: '220px' }}
-                        value={opportunityIdInput}
-                        onChange={(e) => setOpportunityIdInput(e.target.value)}
-                        placeholder="Ví dụ: 2001"
-                        aria-label="Mã cơ hội"
-                      />
-                    </div>
-                    <button type="submit" className="btn-primary">
-                      {ICONS.search} Mở cơ hội
-                    </button>
-                  </form>
+                  />
                 </div>
               </div>
             )
