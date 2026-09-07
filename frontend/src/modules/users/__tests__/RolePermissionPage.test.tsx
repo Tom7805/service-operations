@@ -169,7 +169,7 @@ describe('Role & Data Scope Module — Acceptance Criteria Tests (NCL-01-CN-004)
     const matrixTabBtn = screen.getByRole('button', { name: /Vai trò & quyền hạn/i });
     fireEvent.click(matrixTabBtn);
 
-    expect(screen.getByText('Quản lý dự án (PM)')).toBeInTheDocument();
-    expect(screen.getByText('Nhân sự (HR)')).toBeInTheDocument();
+    expect(screen.getAllByText('Quản lý dự án').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Nhân sự').length).toBeGreaterThan(0);
   });
 });

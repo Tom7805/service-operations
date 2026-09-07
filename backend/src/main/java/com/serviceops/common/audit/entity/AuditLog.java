@@ -31,6 +31,10 @@ public class AuditLog extends BaseEntity {
 	@Column(name = "actor_username", length = 100)
 	private String actorUsername;
 
+	/** Mã vai trò (VT-xx) của người thực hiện tại thời điểm ghi log; NULL nếu không xác định. */
+	@Column(name = "actor_role", length = 20)
+	private String actorRole;
+
 	/** Hành động, dạng chữ dễ đọc (VD: "Tạo tài khoản", "Cấu hình phân quyền"). */
 	@Column(nullable = false, length = 100)
 	private String action;

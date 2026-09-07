@@ -142,7 +142,7 @@ describe('StageTransitionControl Component (NCL-03-CN-002 & FE-QA CV-05)', () =>
   it('TC-03: khóa hoàn toàn chức năng chuyển giai đoạn khi cơ hội đã đóng (status = CLOSED)', () => {
     render(<StageTransitionControl opportunity={mockClosedWonOpportunity} />);
 
-    expect(screen.getByText(/Cơ hội đã đóng \(status = CLOSED\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Cơ hội đã đóng\. Quy tắc hệ thống không cho phép chuyển tiếp/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Chuyển sang/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Chốt Thành công/i })).not.toBeInTheDocument();
   });
@@ -155,7 +155,7 @@ describe('StageTransitionControl Component (NCL-03-CN-002 & FE-QA CV-05)', () =>
       />
     );
 
-    expect(screen.getByText(/Chức năng chuyển giai đoạn yêu cầu vai trò Nhân viên kinh doanh \(VT-04\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Chức năng chuyển giai đoạn yêu cầu vai trò Nhân viên kinh doanh/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Chuyển sang/i })).not.toBeInTheDocument();
   });
 

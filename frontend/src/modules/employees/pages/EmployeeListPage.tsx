@@ -4,6 +4,7 @@ import EmployeeFormModal from '../components/EmployeeFormModal';
 import EmployeeTable from '../components/EmployeeTable';
 import type { Employee, EmployeeCreatePayload, EmployeeUpdatePayload } from '../types/employeeTypes';
 import { DEFAULT_STANDARD_HOURS_PER_WEEK } from '../types/employeeTypes';
+import { roleLabels } from '../../../utils/roleLabel';
 import { ICONS } from '../../../components/common/icons';
 
 interface EmployeeListPageProps {
@@ -90,7 +91,7 @@ export default function EmployeeListPage({
           <div className="security-log-badge">
             <span className="security-log-badge__item">{ICONS.shield} Thời điểm: {new Date().toLocaleString('vi-VN')}</span>
             <span className="security-log-badge__item">Tài khoản: {currentUserName}</span>
-            <span className="security-log-badge__item">Vai trò hiện tại: {currentUserRoles.join(', ')}</span>
+            <span className="security-log-badge__item">Vai trò hiện tại: {roleLabels(currentUserRoles)}</span>
           </div>
         </div>
       </div>

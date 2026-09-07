@@ -180,7 +180,7 @@ describe('QuoteBuilder Component (NCL-03-CN-003-CV-03 & CV-05)', () => {
     const addBtn = screen.getByRole('button', { name: /Thêm dòng báo giá/i });
     fireEvent.click(addBtn);
 
-    const roleInputs = screen.getAllByPlaceholderText(/Nhập hoặc chọn vai trò/i);
+    const roleInputs = screen.getAllByPlaceholderText(/Nhập hoặc chọn vị trí/i);
     expect(roleInputs.length).toBe(3);
 
     fireEvent.change(roleInputs[2], { target: { value: 'Kiến trúc sư giải pháp' } });
@@ -228,7 +228,7 @@ describe('QuoteBuilder Component (NCL-03-CN-003-CV-03 & CV-05)', () => {
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
-      expect(screen.getByText('Vai trò chuyên môn không được để trống')).toBeInTheDocument();
+      expect(screen.getByText('Vị trí / chức danh không được để trống')).toBeInTheDocument();
       expect(screen.getByText('Số ngày công phải lớn hơn 0')).toBeInTheDocument();
     });
 

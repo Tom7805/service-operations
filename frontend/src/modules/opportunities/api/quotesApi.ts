@@ -57,7 +57,7 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
     if (!message) {
       if (response.status === 403) {
         message =
-          'Bạn không có quyền thực hiện thao tác này. Chức năng lập báo giá yêu cầu vai trò Nhân viên kinh doanh (VT-04).';
+          'Bạn không có quyền thực hiện thao tác này. Chức năng lập báo giá yêu cầu vai trò Nhân viên kinh doanh.';
       } else if (response.status === 404) {
         message = 'Không tìm thấy cơ hội bán hàng tương ứng trên hệ thống.';
       } else if (response.status === 401) {
@@ -79,6 +79,29 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
   }
 
   return payload as T;
+}
+
+export interface BillRateOption {
+  professionalRole: string;
+  dailyRate: number;
+  effectiveFrom: string;
+}
+
+/**
+ * NCL-03-CN-003: Danh sách chức danh đang có đơn giá bán hiệu lực (GET /bill-rates/current)
+ * Dùng để dựng ô chọn chức danh trên form lập báo giá, tránh gõ tay sai tên
+ * khiến hệ thống không tra được đơn giá. Nếu backend chưa có quyền xem
+ * (403) hoặc lỗi mạng, trả về mảng rỗng để form vẫn dùng được ở chế độ gõ tay.
+ */
+export async function fetchCurrentBillRates(): Promise<BillRateOption[]> {
+  try {
+    const res = await requestBackend<{ success: boolean; data: BillRateOption[] }>(
+      `${API_BASE_URL}/bill-rates/current`
+    );
+    return res.data ?? [];
+  } catch {
+    return [];
+  }
 }
 
 /**

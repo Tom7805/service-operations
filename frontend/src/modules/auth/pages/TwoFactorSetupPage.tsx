@@ -68,7 +68,7 @@ export default function TwoFactorSetupPage({
       const updated = await updateTwoFactorConfig(target.roleId, { enabled: nextEnabled });
       setConfigs((prev) => prev.map((item) => (item.roleId === updated.roleId ? updated : item)));
       showToast(
-        `Đã ${nextEnabled ? 'bật' : 'tắt'} xác thực hai bước cho vai trò ${target.roleCode} — ${target.roleName}`
+        `Đã ${nextEnabled ? 'bật' : 'tắt'} xác thực hai bước cho vai trò ${target.roleName}`
       );
     } catch (err) {
       showToast(
@@ -133,13 +133,13 @@ export default function TwoFactorSetupPage({
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', padding: 32, color: '#787774' }}>
+                  <td colSpan={4} style={{ textAlign: 'center', padding: 32, color: '#5B5A57' }}>
                     Đang tải cấu hình...
                   </td>
                 </tr>
               ) : configs.length === 0 ? (
                 <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', padding: 32, color: '#787774' }}>
+                  <td colSpan={4} style={{ textAlign: 'center', padding: 32, color: '#5B5A57' }}>
                     Chưa có vai trò nào trong hệ thống.
                   </td>
                 </tr>
@@ -147,7 +147,6 @@ export default function TwoFactorSetupPage({
                 configs.map((config) => (
                   <tr key={config.roleId}>
                     <td>
-                      <span className="role-code">{config.roleCode}</span>{' '}
                       <span className="role-title">{config.roleName}</span>
                     </td>
                     <td>
@@ -201,7 +200,7 @@ export default function TwoFactorSetupPage({
             <div className="modal-body">
               <p>
                 Bạn có chắc chắn muốn {confirmTarget.enabled ? 'tắt' : 'bật'} xác thực hai bước cho vai trò{' '}
-                <strong>{confirmTarget.roleCode} — {confirmTarget.roleName}</strong>?
+                <strong>{confirmTarget.roleName}</strong>?
                 {!confirmTarget.enabled && (
                   <>
                     {' '}

@@ -394,7 +394,8 @@ class OpportunityControllerIT {
 	@WithMockUser(authorities = "ROLE_VT-01")
 	void allowsBoardRoleToViewRevenueForecast() throws Exception {
 		RevenueForecastRes res = new RevenueForecastRes(new BigDecimal("180000000"), List.of(
-				new RevenueForecastRes.MonthlyRevenueForecast(YearMonth.of(2026, 9), new BigDecimal("180000000"), 2)));
+				new RevenueForecastRes.MonthlyRevenueForecast(YearMonth.of(2026, 9), new BigDecimal("180000000"), 2,
+						List.of())));
 		when(revenueForecastService.forecast(any())).thenReturn(res);
 
 		mockMvc.perform(get("/opportunities/revenue-forecast"))

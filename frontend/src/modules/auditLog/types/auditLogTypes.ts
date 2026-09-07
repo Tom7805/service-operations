@@ -54,6 +54,8 @@ export interface AuditLogEntry {
   id: number;
   actorUserId: number | null;
   actorUsername: string | null;
+  /** Mã vai trò người thực hiện (VT-xx) tại thời điểm ghi log; null nếu không xác định. */
+  actorRole: string | null;
   action: string;
   targetType: AuditTargetType;
   targetId: number | null;
@@ -89,3 +91,6 @@ export const TARGET_TYPE_LABELS: Record<AuditTargetType, string> = {
   MASKING: 'Che dữ liệu',
   GENERAL: 'Khác',
 };
+
+// Tên vai trò dùng chung toàn dự án — xem `src/utils/roleLabel.ts`.
+export { ROLE_LABELS, roleLabel, roleLabels } from '../../../utils/roleLabel';

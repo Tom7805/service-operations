@@ -218,7 +218,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
             <tbody>
               {filteredFlatData.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#787774' }}>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#5B5A57' }}>
                     Không tìm thấy bộ phận nào phù hợp với từ khóa "{searchKeyword}".
                   </td>
                 </tr>
@@ -253,7 +253,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
                         {parentDept ? (
                           <span className="cell-dept">{parentDept.name}</span>
                         ) : (
-                          <span style={{ color: '#9B9A97', fontStyle: 'italic' }}>-- Cấp cao nhất --</span>
+                          <span style={{ color: '#6B6A67', fontStyle: 'italic' }}>-- Cấp cao nhất --</span>
                         )}
                       </td>
                       <td>

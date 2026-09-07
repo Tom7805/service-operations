@@ -9,6 +9,7 @@ vi.mock('../api/customersApi', () => ({
   fetchCustomers: vi.fn(),
   previewCustomerMerge: vi.fn(),
   mergeCustomers: vi.fn(),
+  checkCustomerMergeAccess: vi.fn().mockResolvedValue(undefined),
   CustomerApiError: class extends Error {
     constructor(public code: string, message: string, public statusCode?: number) {
       super(message);
@@ -176,6 +177,15 @@ describe('Gộp hai hồ sơ khách hàng trùng (NCL-02-CN-006)', () => {
 
       expect(screen.queryByTestId('merge-access-denied')).toBeNull();
       expect(screen.getByTestId('btn-preview-merge')).toBeInTheDocument();
+    });
+
+    it('luôn gọi thật xuống backend khi vào trang, kể cả khi bị từ chối ở giao diện — để lần từ chối thực sự được ghi vào Nhật ký hệ thống thay vì chỉ báo suông', async () => {
+      render(<CustomerMergePage currentUserRoles={['VT-04']} />);
+
+      expect(screen.getByTestId('merge-access-denied')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(customersApi.checkCustomerMergeAccess).toHaveBeenCalledTimes(1);
+      });
     });
   });
 

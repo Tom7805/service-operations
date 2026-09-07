@@ -6,6 +6,7 @@ import type {
   CustomerOverviewItem,
   CustomerOverviewSectionKey,
 } from '../types/customerTypes';
+import { roleLabels } from '../../../utils/roleLabel';
 import { ICONS } from '../../../components/common/icons';
 
 interface CustomerOverviewPanelProps {
@@ -175,11 +176,11 @@ export default function CustomerOverviewPanel({
           <div className="table-error-state__body">
             <h3>Bạn không có quyền xem hồ sơ tổng hợp của khách hàng này</h3>
             <p>
-              Theo quy tắc phân quyền (<strong>QTN-01</strong>), chức năng này chỉ dành cho{' '}
-              <strong>Nhân viên kinh doanh (VT-04)</strong> hoặc <strong>Quản lý dự án (VT-02)</strong>, và chỉ
+              Theo quy tắc phân quyền, chức năng này chỉ dành cho{' '}
+              <strong>Nhân viên kinh doanh</strong> hoặc <strong>Quản lý dự án</strong>, và chỉ
               trong phạm vi dữ liệu được phân. Hệ thống đã ghi lại lần từ chối truy cập này.
             </p>
-            <p className="cell-muted">Vai trò hiện tại: {currentUserRoles.join(', ') || '(không xác định)'}</p>
+            <p className="cell-muted">Vai trò hiện tại: {roleLabels(currentUserRoles) || '(không xác định)'}</p>
           </div>
         </div>
       </div>
@@ -367,7 +368,7 @@ export default function CustomerOverviewPanel({
       )}
 
       <p className="customer-summary-scope-note cell-muted">
-        <span className="icon-xs">{ICONS.info}</span> Dữ liệu hiển thị nằm trong phạm vi truy cập của bạn theo vai trò và nhánh tổ chức được phân (QTN-01).
+        <span className="icon-xs">{ICONS.info}</span> Dữ liệu hiển thị nằm trong phạm vi truy cập của bạn theo vai trò và nhánh tổ chức được phân.
         Mỗi lần mở hồ sơ tổng hợp đều được hệ thống ghi vào nhật ký (người thực hiện · nội dung · thời điểm).
       </p>
     </div>

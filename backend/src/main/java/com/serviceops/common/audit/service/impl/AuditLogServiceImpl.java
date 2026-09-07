@@ -52,6 +52,11 @@ public class AuditLogServiceImpl implements AuditLogService {
 		currentUser().ifPresent(user -> {
 			log.setActorUserId(user.getId());
 			log.setActorUsername(user.getUsername());
+			// Vai trò chính (mã đầu tiên) tại thời điểm ghi log — để cột "Người thực hiện" hiển thị
+			// "@user · Tên vai trò" đồng nhất cho mọi loại thao tác.
+			if (user.getRoleCodes() != null && !user.getRoleCodes().isEmpty()) {
+				log.setActorRole(user.getRoleCodes().get(0));
+			}
 		});
 		repository.save(log);
 	}
@@ -70,8 +75,9 @@ public class AuditLogServiceImpl implements AuditLogService {
 	}
 
 	private AuditLogRes toResponse(AuditLog log) {
-		return new AuditLogRes(log.getId(), log.getActorUserId(), log.getActorUsername(), log.getAction(),
-			log.getTargetType(), log.getTargetId(), log.getTargetLabel(), log.getDetail(), log.getPerformedAt());
+		return new AuditLogRes(log.getId(), log.getActorUserId(), log.getActorUsername(), log.getActorRole(),
+			log.getAction(), log.getTargetType(), log.getTargetId(), log.getTargetLabel(), log.getDetail(),
+			log.getPerformedAt());
 	}
 
 	private Optional<CustomUserDetails> currentUser() {

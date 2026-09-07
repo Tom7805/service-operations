@@ -39,6 +39,18 @@ public class OpportunityController {
 	private final OpportunityStageService opportunityStageService;
 	private final RevenueForecastService revenueForecastService;
 
+	/**
+	 * Danh sach toan bo co hoi ban hang (pipeline QTN-06), moi nhat len truoc.
+	 * Chi doc: ngoai Nhan vien kinh doanh (VT-04), Ban giam doc (VT-01) va Quan ly
+	 * du an (VT-02) cung duoc xem danh sach de theo doi tien do — nhung khong tao/
+	 * chuyen giai doan duoc (backlog NCL-03: vao xem duoc, thao tac thi khong).
+	 */
+	@GetMapping
+	@PreAuthorize("hasAnyRole('VT-01', 'VT-02', 'VT-04')")
+	public BaseRes<List<OpportunityRes>> list() {
+		return BaseRes.ok(opportunityService.list());
+	}
+
 	/** Tao co hoi ban hang moi, gan voi khach hang da co ho so (TC-01). */
 	@PostMapping
 	@PreAuthorize("hasRole('VT-04')")

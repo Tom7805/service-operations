@@ -18,6 +18,8 @@ public class AuditLogRes {
 	private Long id;
 	private Long actorUserId;
 	private String actorUsername;
+	/** Mã vai trò người thực hiện (VT-xx); null nếu không xác định. */
+	private String actorRole;
 	private String action;
 	private AuditTargetType targetType;
 	private Long targetId;

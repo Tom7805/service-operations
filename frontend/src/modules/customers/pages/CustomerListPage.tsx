@@ -10,6 +10,7 @@ import {
 import CustomerFormModal from '../components/CustomerFormModal';
 import CustomerTable from '../components/CustomerTable';
 import CustomerDetailPage from './CustomerDetailPage';
+import { roleLabels } from '../../../utils/roleLabel';
 import { ICONS } from '../../../components/common/icons';
 import type {
   Customer,
@@ -253,14 +254,14 @@ export default function CustomerListPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền tạo & quản lý hồ sơ khách hàng</h2>
           <p>
-            Theo quy định phân quyền bảo mật (<strong>NCL-02-CN-001</strong>), chức năng Tạo hồ sơ khách hàng chỉ dành riêng cho{' '}
-            <strong>Nhân viên kinh doanh (VT-04)</strong> hoặc <strong>Quản lý dự án (VT-02)</strong>.
+            Theo quy định phân quyền bảo mật, chức năng Tạo hồ sơ khách hàng chỉ dành riêng cho{' '}
+            <strong>Nhân viên kinh doanh</strong> hoặc <strong>Quản lý dự án</strong>.
             Hệ thống đã ghi lại lần từ chối truy cập này vào nhật ký bảo mật (Audit Log).
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">{ICONS.shield} Thời điểm ghi nhận: {new Date().toLocaleString('vi-VN')}</span>
             <span className="security-log-badge__item">Tài khoản: {currentUserName}</span>
-            <span className="security-log-badge__item">Vai trò tài khoản: {currentUserRoles.join(', ')}</span>
+            <span className="security-log-badge__item">Vai trò tài khoản: {roleLabels(currentUserRoles)}</span>
           </div>
         </div>
       </div>
@@ -374,7 +375,7 @@ export default function CustomerListPage({
           <div>
             <span className="stat-card__label">Vai trò thực hiện</span>
             <div className="stat-card__value" style={{ fontSize: '16px' }}>
-              {currentUserRoles.includes('VT-04') ? 'Kinh doanh (VT-04)' : 'Quản lý dự án (VT-02)'}
+              {currentUserRoles.includes('VT-04') ? 'Nhân viên kinh doanh' : 'Quản lý dự án'}
             </div>
           </div>
         </div>

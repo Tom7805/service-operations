@@ -111,23 +111,18 @@ export default function DuplicateWarningModal({
       aria-labelledby="duplicate-modal-title"
     >
       <div className="modal-card duplicate-modal-card">
-        {/* Header cảnh báo */}
+        {/* Header */}
         <div className="modal-header duplicate-modal-header">
           <div className="modal-header__title-wrap">
             <div className="duplicate-warning-icon-badge" aria-hidden="true">
               {ICONS.alertTriangle}
             </div>
             <div>
-              <div className="duplicate-header-badge">
-                <span>CẢNH BÁO TRÙNG LẶP HỒ SƠ</span>
-                <span className="duplicate-count-pill">{candidates.length} hồ sơ nghi trùng</span>
-              </div>
               <h3 id="duplicate-modal-title" className="modal-title duplicate-title">
-                Phát hiện hồ sơ khách hàng tương tự trong hệ thống
+                Phát hiện {candidates.length} hồ sơ tương tự
               </h3>
               <p className="modal-subtitle">
-                Hệ thống phát hiện thông tin bạn vừa nhập có mức độ tương đồng cao với dữ liệu hiện có.
-                Vui lòng đối chiếu kỹ trước khi quyết định tạo mới.
+                Thông tin bạn vừa nhập trùng khớp với dữ liệu đã có. Đối chiếu bên dưới trước khi quyết định.
               </p>
             </div>
           </div>
@@ -153,40 +148,26 @@ export default function DuplicateWarningModal({
             </div>
           )}
 
-          {hasHighSimilarity && (
-            <div className="duplicate-high-alert-banner" role="alert">
-              <span className="duplicate-high-alert-icon">{ICONS.alertTriangle}</span>
-              <div className="duplicate-high-alert-text">
-                <strong>Cảnh báo mức độ nghiêm trọng:</strong>
-                <p>
-                  Có hồ sơ trùng khớp từ <strong>90% trở lên</strong>. Hệ thống sẽ{' '}
-                  <span className="text-danger-strong">chặn lưu thông thường</span>. Nếu đây thực sự
-                  là hai khách hàng khác nhau, bạn bắt buộc phải nhập lý do giải trình.
-                </p>
-              </div>
-            </div>
-          )}
-
           {/* Khối tóm tắt hồ sơ đang tạo */}
           <div className="current-candidate-summary">
             <div className="current-candidate-header">
-              <span className="current-candidate-label"><span className="icon-sm">{ICONS.clipboardList}</span> {isEdit ? 'Hồ sơ bạn đang chỉnh sửa:' : 'Hồ sơ bạn đang dự định tạo:'}</span>
+              <span className="current-candidate-label">{isEdit ? 'Hồ sơ đang chỉnh sửa' : 'Hồ sơ dự định tạo'}</span>
             </div>
             <div className="current-candidate-grid">
               <div className="current-field">
-                <span className="current-field__name">Tên khách hàng:</span>
+                <span className="current-field__name">Tên khách hàng</span>
                 <strong className="current-field__val">{currentPayload.name}</strong>
               </div>
               <div className="current-field">
-                <span className="current-field__name">Mã số thuế:</span>
+                <span className="current-field__name">Mã số thuế</span>
                 <span className="current-field__val">{currentPayload.taxCode || '—'}</span>
               </div>
               <div className="current-field">
-                <span className="current-field__name">Số điện thoại:</span>
+                <span className="current-field__name">Số điện thoại</span>
                 <span className="current-field__val">{currentPayload.phone || '—'}</span>
               </div>
               <div className="current-field">
-                <span className="current-field__name">Ngành nghề:</span>
+                <span className="current-field__name">Ngành nghề</span>
                 <span className="current-field__val">{currentPayload.industry || '—'}</span>
               </div>
             </div>
@@ -194,80 +175,38 @@ export default function DuplicateWarningModal({
 
           {/* Danh sách các ứng viên nghi trùng */}
           <div className="duplicate-candidates-section">
-            <h4 className="duplicate-section-title">
-              {ICONS.search} Danh sách hồ sơ đã tồn tại trùng khớp ({candidates.length})
-            </h4>
+            <h4 className="duplicate-section-title">Hồ sơ trùng khớp</h4>
 
             <div className="duplicate-candidates-list">
               {candidates.map((cand, idx) => {
-                const percent = Math.round(cand.similarity * 100);
-                const isHigh = cand.similarity >= 0.9;
                 const matchesName = cand.matchedFields.includes('ten');
                 const matchesTaxCode = cand.matchedFields.includes('maSoThue');
                 const matchesPhone = cand.matchedFields.includes('soDienThoai');
 
                 return (
-                  <div
-                    key={cand.id || cand.code || idx}
-                    className={`candidate-card ${isHigh ? 'candidate-card--high' : 'candidate-card--medium'}`}
-                  >
+                  <div key={cand.id || cand.code || idx} className="candidate-card">
                     <div className="candidate-card__header">
                       <div className="candidate-card__identity">
-                        <span className="candidate-code-pill">{cand.code}</span>
                         <h5 className="candidate-name">{cand.name}</h5>
-                      </div>
-                      <div className="candidate-similarity-wrap">
-                        <div
-                          className={`similarity-badge ${
-                            isHigh ? 'similarity-badge--high' : 'similarity-badge--medium'
-                          }`}
-                        >
-                          <span className="similarity-badge__dot" />
-                          <span className="similarity-badge__text">
-                            {isHigh ? ICONS.alertTriangle : ICONS.info} {isHigh ? 'Trùng khớp cao' : 'Nghi ngờ trùng'} {percent}%
-                          </span>
-                        </div>
+                        <span className="candidate-code-pill">{cand.code}</span>
                       </div>
                     </div>
 
-                    {/* Matched fields tags */}
-                    <div className="candidate-matched-tags">
-                      <span className="matched-tags-label">Trường dữ liệu trùng khớp:</span>
-                      {matchesName && (
-                        <span className="matched-tag matched-tag--name">
-                          {ICONS.building} Tên công ty tương tự
-                        </span>
-                      )}
-                      {matchesTaxCode && (
-                        <span className="matched-tag matched-tag--tax">
-                          {ICONS.hash} Trùng Mã số thuế
-                        </span>
-                      )}
-                      {matchesPhone && (
-                        <span className="matched-tag matched-tag--phone">
-                          {ICONS.phone} Trùng Số điện thoại
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Comparison details */}
                     <div className="candidate-comparison-table">
                       <div className={`comp-row ${matchesName ? 'comp-row--matched' : ''}`}>
-                        <span className="comp-label">Tên đầy đủ:</span>
+                        <span className="comp-label">Tên đầy đủ</span>
                         <span className="comp-value">{cand.name}</span>
-                        {matchesName && <span className="comp-match-indicator">Trùng khớp</span>}
+                        {matchesName && <span className="comp-match-tag comp-match-tag--soft">Khá giống</span>}
                       </div>
-
                       <div className={`comp-row ${matchesTaxCode ? 'comp-row--matched' : ''}`}>
-                        <span className="comp-label">Mã số thuế:</span>
+                        <span className="comp-label">Mã số thuế</span>
                         <span className="comp-value">{cand.taxCode || '—'}</span>
-                        {matchesTaxCode && <span className="comp-match-indicator">Trùng khớp</span>}
+                        {matchesTaxCode && <span className="comp-match-tag">Trùng</span>}
                       </div>
-
                       <div className={`comp-row ${matchesPhone ? 'comp-row--matched' : ''}`}>
-                        <span className="comp-label">Số điện thoại:</span>
+                        <span className="comp-label">Số điện thoại</span>
                         <span className="comp-value">{cand.phone || '—'}</span>
-                        {matchesPhone && <span className="comp-match-indicator">Trùng khớp</span>}
+                        {matchesPhone && <span className="comp-match-tag">Trùng</span>}
                       </div>
                     </div>
                   </div>
@@ -275,6 +214,12 @@ export default function DuplicateWarningModal({
               })}
             </div>
           </div>
+
+          {hasHighSimilarity && !showOverrideForm && (
+            <p className="duplicate-high-note">
+              Có hồ sơ trùng nhiều thông tin nên hệ thống chặn lưu mặc định — nếu đây thực sự là hai khách hàng khác nhau, bạn sẽ cần nhập lý do giải trình ở bước tiếp theo.
+            </p>
+          )}
 
           {/* Form nhập lý do bỏ qua cảnh báo */}
           {showOverrideForm && (
@@ -301,8 +246,8 @@ export default function DuplicateWarningModal({
 
               <div className="form-group">
                 <div className="form-label-row">
-                  <label htmlFor="override-reason-input" className="form-label required">
-                    {isEdit ? 'Lý do xác nhận lưu thay đổi' : 'Lý do xác nhận tạo mới'}
+                  <label htmlFor="override-reason-input" className="reason-input-title required">
+                    Giải trình lý do
                   </label>
                   <span
                     className={`char-counter ${
@@ -314,20 +259,23 @@ export default function DuplicateWarningModal({
                     {reason.length}/{CUSTOMER_VALIDATION_LIMITS.OVERRIDE_REASON_MAX_LENGTH}
                   </span>
                 </div>
-                <textarea
-                  ref={reasonInputRef}
-                  id="override-reason-input"
-                  name="reason"
-                  rows={3}
-                  className={`form-textarea ${reasonError ? 'form-input--error' : ''}`}
-                  placeholder="Ví dụ: Hai pháp nhân độc lập thuộc cùng tập đoàn / Trùng tên viết tắt nhưng khác MST và đại diện pháp luật..."
-                  value={reason}
-                  onChange={handleReasonChange}
-                  disabled={isLoading}
-                  maxLength={CUSTOMER_VALIDATION_LIMITS.OVERRIDE_REASON_MAX_LENGTH + 20}
-                  aria-invalid={Boolean(reasonError)}
-                  aria-describedby={reasonError ? 'override-reason-error' : undefined}
-                />
+                <div className="reason-textarea-shell">
+                  <textarea
+                    ref={reasonInputRef}
+                    id="override-reason-input"
+                    name="reason"
+                    rows={3}
+                    className="reason-textarea-shell__input"
+                    placeholder="Ví dụ: Hai pháp nhân độc lập thuộc cùng tập đoàn / Trùng tên viết tắt nhưng khác MST và đại diện pháp luật..."
+                    value={reason}
+                    onChange={handleReasonChange}
+                    disabled={isLoading}
+                    maxLength={CUSTOMER_VALIDATION_LIMITS.OVERRIDE_REASON_MAX_LENGTH + 20}
+                    aria-invalid={Boolean(reasonError)}
+                    aria-describedby={reasonError ? 'override-reason-error' : undefined}
+                    spellCheck={false}
+                  />
+                </div>
                 {reasonError && (
                   <p id="override-reason-error" className="field-error-text" role="alert">
                     {reasonError}

@@ -11,11 +11,42 @@ const mockForecastData: RevenueForecastData = {
       month: "2026-09",
       expectedRevenue: 180000000,
       opportunityCount: 2,
+      opportunities: [
+        {
+          id: 2001,
+          name: "Triển khai hệ thống CRM cho Công ty CP Giải Pháp Số Việt",
+          customerName: "Công ty CP Giải Pháp Số Việt",
+          expectedValue: 500000000,
+          probability: 30,
+          weightedRevenue: 150000000,
+          expectedCloseDate: "2026-09-15",
+        },
+        {
+          id: 2002,
+          name: "Tư vấn quy trình xây dựng số cho An Phát",
+          customerName: "An Phát",
+          expectedValue: 300000000,
+          probability: 10,
+          weightedRevenue: 30000000,
+          expectedCloseDate: "2026-09-20",
+        },
+      ],
     },
     {
       month: "2026-10",
       expectedRevenue: 50000000,
       opportunityCount: 1,
+      opportunities: [
+        {
+          id: 2003,
+          name: "Bàn giao công nghệ cốt lõi cho ACBank",
+          customerName: "Công ty TNHH ACBank",
+          expectedValue: 500000000,
+          probability: 10,
+          weightedRevenue: 50000000,
+          expectedCloseDate: "2026-10-05",
+        },
+      ],
     },
   ],
 };
@@ -24,8 +55,8 @@ vi.mock("../api/opportunitiesApi", () => ({
   fetchRevenueForecast: vi.fn().mockResolvedValue({
     totalExpectedRevenue: 230000000,
     months: [
-      { month: "2026-09", expectedRevenue: 180000000, opportunityCount: 2 },
-      { month: "2026-10", expectedRevenue: 50000000, opportunityCount: 1 },
+      { month: "2026-09", expectedRevenue: 180000000, opportunityCount: 2, opportunities: [] },
+      { month: "2026-10", expectedRevenue: 50000000, opportunityCount: 1, opportunities: [] },
     ],
   }),
   OpportunityApiError: class extends Error {
@@ -168,6 +199,30 @@ describe("RevenueForecastPage Component (NCL-03-CN-004)", () => {
       expect(screen.getByTestId("forecast-visual-chart")).toBeInTheDocument();
       expect(screen.getByTestId("chart-bar-2026-09")).toBeInTheDocument();
       expect(screen.getByTestId("chart-bar-2026-10")).toBeInTheDocument();
+    });
+
+    it("bấm nhãn 'X cơ hội mở' để bung/thu danh sách cơ hội cấu thành tháng đó", async () => {
+      render(
+        <RevenueForecastPage
+          currentUserRoles={["VT-01"]}
+          initialData={mockForecastData}
+        />,
+      );
+
+      const toggle = screen.getByTestId("chart-toggle-2026-09");
+      expect(screen.queryByTestId("chart-drill-2026-09")).toBeNull();
+
+      // Bung chi tiết: thấy đúng 2 cơ hội cấu thành doanh thu tháng 09/2026
+      fireEvent.click(toggle);
+      const drill = screen.getByTestId("chart-drill-2026-09");
+      expect(drill).toHaveTextContent(
+        "Triển khai hệ thống CRM cho Công ty CP Giải Pháp Số Việt",
+      );
+      expect(drill).toHaveTextContent("Tư vấn quy trình xây dựng số cho An Phát");
+
+      // Thu lại
+      fireEvent.click(toggle);
+      expect(screen.queryByTestId("chart-drill-2026-09")).toBeNull();
     });
 
     it("hiển thị bảng chi tiết từng tháng với tỷ trọng % và số cơ hội mở", async () => {
@@ -329,12 +384,69 @@ describe("RevenueForecastPage Component (NCL-03-CN-004)", () => {
       fireEvent.click(toggleBtn);
       expect(screen.getByTestId("rule-info-panel")).toBeInTheDocument();
       expect(
-        screen.getByText(/QUY TẮC NGHIỆP VỤ `QTN-07`/i),
+        screen.getByText(/Quy tắc tính dự báo doanh thu/i),
       ).toBeInTheDocument();
 
       // Tắt panel
       fireEvent.click(toggleBtn);
       expect(screen.queryByTestId("rule-info-panel")).toBeNull();
+    });
+  });
+
+  describe("Cảnh báo dữ liệu thiếu xác suất giai đoạn", () => {
+    it("hiện cảnh báo khi có cơ hội mở nhưng probability = null", async () => {
+      const dataWithMissingProbability = {
+        ...mockForecastData,
+        months: [
+          {
+            month: "2026-09",
+            expectedRevenue: 169200000,
+            opportunityCount: 2,
+            opportunities: [
+              mockForecastData.months[0].opportunities[0],
+              {
+                id: 2013,
+                name: "Triển khai giải pháp ARG với công ty TNHH APex",
+                customerName: "Công ty TNHH APex",
+                expectedValue: 500000000,
+                probability: null,
+                weightedRevenue: 0,
+                expectedCloseDate: "2026-09-30",
+              },
+            ],
+          },
+        ],
+      };
+
+      render(
+        <RevenueForecastPage
+          currentUserRoles={["VT-01"]}
+          initialData={dataWithMissingProbability}
+        />,
+      );
+
+      const warning = screen.getByTestId("forecast-missing-probability-warning");
+      expect(warning).toHaveTextContent(
+        "Triển khai giải pháp ARG với công ty TNHH APex",
+      );
+
+      // Bung chi tiết tháng 09 để thấy nhãn "Thiếu xác suất" gắn đúng dòng
+      fireEvent.click(screen.getByTestId("chart-toggle-2026-09"));
+      const drill = screen.getByTestId("chart-drill-2026-09");
+      expect(drill).toHaveTextContent("Thiếu xác suất");
+    });
+
+    it("không hiện cảnh báo khi mọi cơ hội đều có xác suất hợp lệ", () => {
+      render(
+        <RevenueForecastPage
+          currentUserRoles={["VT-01"]}
+          initialData={mockForecastData}
+        />,
+      );
+
+      expect(
+        screen.queryByTestId("forecast-missing-probability-warning"),
+      ).toBeNull();
     });
   });
 });

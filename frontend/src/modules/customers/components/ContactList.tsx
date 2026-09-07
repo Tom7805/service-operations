@@ -8,6 +8,7 @@ import {
   CustomerApiError,
 } from '../api/customersApi';
 import ContactFormModal from './ContactFormModal';
+import { roleLabels } from '../../../utils/roleLabel';
 import { ICONS } from '../../../components/common/icons';
 
 interface ContactListProps {
@@ -168,13 +169,13 @@ export default function ContactList({
         <div className="access-denied-icon">{ICONS.shieldOff}</div>
         <h3>Không có quyền quản lý người liên hệ của khách hàng</h3>
         <p>
-          Theo quy định an ninh dữ liệu khách hàng (<strong>NCL-02-CN-003 · TC-03</strong>), chức năng Quản lý người liên hệ chỉ dành riêng cho{' '}
-          <strong>Nhân viên kinh doanh (VT-04)</strong>.
+          Theo quy định an ninh dữ liệu khách hàng, chức năng Quản lý người liên hệ chỉ dành riêng cho{' '}
+          <strong>Nhân viên kinh doanh</strong>.
         </p>
         <div className="security-log-badge">
           <span className="security-log-badge__item">{ICONS.shield} Ghi nhận Audit Log: {new Date().toLocaleString('vi-VN')}</span>
           <span className="security-log-badge__item">Tài khoản thực hiện: {currentUserName}</span>
-          <span className="security-log-badge__item">Vai trò tài khoản: {currentUserRoles.join(', ')}</span>
+          <span className="security-log-badge__item">Vai trò tài khoản: {roleLabels(currentUserRoles)}</span>
         </div>
       </div>
     );
@@ -214,7 +215,7 @@ export default function ContactList({
         <div>
           <div className="contact-section-eyebrow">
             <span className="dot-pulse" />
-            <span>NCL-02-CN-003 · Danh bạ đầu mối</span>
+            <span>Danh bạ đầu mối</span>
           </div>
           <h2 className="contact-section-title">Danh sách người liên hệ</h2>
           <p className="contact-section-subtitle">
@@ -263,7 +264,7 @@ export default function ContactList({
           <div>
             <span className="contact-stat-label">Quyền hạn thao tác</span>
             <div className="contact-stat-value text-success" style={{ fontSize: '15px' }}>
-              Nhân viên kinh doanh (VT-04)
+              Nhân viên kinh doanh
             </div>
           </div>
         </div>

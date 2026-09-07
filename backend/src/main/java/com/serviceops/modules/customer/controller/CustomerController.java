@@ -37,9 +37,12 @@ public class CustomerController {
 	/**
 	 * NCL-02-CN-001 (buoc D/P): Sales (VT-04) va PM (VT-02) xem danh sach ho so khach hang hien co,
 	 * lam diem vao man hinh Xem ho so tong hop (NCL-02-CN-004). Ho tro tim theo ten / ma KH / MST / SDT.
+	 * Cho phep them Quan tri vien (VT-07) vi man hinh Gop KH trung (NCL-02-CN-006) can tim/chon ho so
+	 * qua endpoint nay - admin da co the xem toan bo du lieu ho so bat ky qua man hinh Xem truoc gop
+	 * (khong kiem tra quyen so huu theo id), nen cho tim theo tu khoa o day khong mo them quyen moi.
 	 */
 	@GetMapping
-	@PreAuthorize("hasRole('VT-04') or hasRole('VT-02')")
+	@PreAuthorize("hasRole('VT-04') or hasRole('VT-02') or hasRole('VT-07')")
 	public BaseRes<List<CustomerRes>> list(CustomerSearchReq request) {
 		return BaseRes.ok(customerService.findAll(request));
 	}

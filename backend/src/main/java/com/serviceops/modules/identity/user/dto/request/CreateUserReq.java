@@ -22,7 +22,7 @@ public record CreateUserReq(
         String email,
         Long departmentId,
         @NotEmpty(message = "Phải chọn ít nhất một vai trò")
-        List<@NotBlank(message = "Mã vai trò không được để trống") String> roleCodes,
+        List<@NotBlank(message = "Vai trò không được để trống") String> roleCodes,
         String scopeType,
         Long scopeDepartmentId
 ) {}

@@ -127,7 +127,7 @@ export default function CustomerTable({
         icon: ICONS.tag,
         onClick: () => onOpenSegment(cust),
         disabled: isMerged,
-        disabledReason: 'Hồ sơ đã bị gộp — không thể phân nhóm tiếp (NCL-02-CN-006)',
+        disabledReason: 'Hồ sơ đã bị gộp — không thể phân nhóm tiếp',
         testId: `btn-open-segment-${cust.id}`,
       });
     }

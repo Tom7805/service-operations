@@ -2,8 +2,11 @@ package com.serviceops.common.exception;
 
 import com.serviceops.common.api.ErrorResponse;
 import com.serviceops.common.api.FieldError;
+import com.serviceops.common.audit.AccessDeniedAuditRecorder;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -19,7 +22,12 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @RestControllerAdvice
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
+
+    // ObjectProvider de test @WebMvcTest (khong nap tang JPA) van khoi tao duoc advice nay:
+    // getIfAvailable() tra null thay vi lam vo ApplicationContext.
+    private final ObjectProvider<AccessDeniedAuditRecorder> accessDeniedAuditRecorderProvider;
 
     @ExceptionHandler(BusinessRuleException.class)
     public ResponseEntity<ErrorResponse> handleBusinessRule(BusinessRuleException ex) {
@@ -40,6 +48,12 @@ public class GlobalExceptionHandler {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication != null ? authentication.getName() : "anonymous";
         log.warn("ACCESS_DENIED username={} method={} uri={}", username, request.getMethod(), request.getRequestURI());
+
+        // Ghi Nhat ky he thong lan tu choi truy cap (su kien bao mat, khong gan ban ghi nghiep vu nao).
+        AccessDeniedAuditRecorder recorder = accessDeniedAuditRecorderProvider.getIfAvailable();
+        if (recorder != null) {
+            recorder.record(request.getMethod(), request.getRequestURI());
+        }
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(ErrorResponse.of(ErrorCode.FORBIDDEN.name(), "Ban khong co quyen thuc hien thao tac nay"));
     }

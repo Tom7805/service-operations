@@ -286,8 +286,8 @@ export default function OpportunityFormModal({
             >
               <span style={{ flexShrink: 0, color: 'var(--ink-muted)' }}>{ICONS.info}</span>
               <span>
-                Cơ hội mới luôn tự động bắt đầu ở giai đoạn <strong>Tiếp cận</strong> (<code>APPROACH</code>)
-                và trạng thái <strong>Đang xử lý</strong> (<code>OPEN</code>) theo quy định QTN-06 (10% xác suất).
+                Cơ hội mới luôn tự động bắt đầu ở giai đoạn <strong>Tiếp cận</strong>
+                và trạng thái <strong>Đang xử lý</strong> theo quy định (10% xác suất).
               </span>
             </div>
 
@@ -366,7 +366,7 @@ export default function OpportunityFormModal({
                   customers.length === 0 &&
                   !loadingCustomers && (
                     <span className="field-hint">
-                      Chưa tìm thấy khách hàng nào. Vui lòng tạo hồ sơ khách hàng trước (NCL-02-CN-001).
+                      Chưa tìm thấy khách hàng nào. Vui lòng tạo hồ sơ khách hàng trước.
                     </span>
                   )}
               </div>

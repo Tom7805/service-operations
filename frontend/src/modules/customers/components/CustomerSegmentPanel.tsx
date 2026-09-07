@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import type { Customer, CustomerSegmentPayload } from '../types/customerTypes';
 import { updateCustomerSegment, CustomerApiError } from '../api/customersApi';
 import CustomerSegmentModal from './CustomerSegmentModal';
+import { roleLabels } from '../../../utils/roleLabel';
 import { ICONS } from '../../../components/common/icons';
 
 interface CustomerSegmentPanelProps {
@@ -73,14 +74,14 @@ export default function CustomerSegmentPanel({
         <div className="access-denied-icon">{ICONS.shieldOff}</div>
         <h3>Không có quyền phân nhóm khách hàng</h3>
         <p>
-          Theo quy định phân quyền (<strong>NCL-02-CN-005 · TC-03</strong>), chức năng Phân nhóm khách
-          hàng chỉ dành riêng cho <strong>Nhân viên kinh doanh (VT-04)</strong> hoặc{' '}
-          <strong>Quản lý dự án (VT-02)</strong>.
+          Theo quy định phân quyền, chức năng Phân nhóm khách
+          hàng chỉ dành riêng cho <strong>Nhân viên kinh doanh</strong> hoặc{' '}
+          <strong>Quản lý dự án</strong>.
         </p>
         <div className="security-log-badge">
           <span className="security-log-badge__item">{ICONS.shield} Ghi nhận Audit Log: {new Date().toLocaleString('vi-VN')}</span>
           <span className="security-log-badge__item">Tài khoản thực hiện: {currentUserName}</span>
-          <span className="security-log-badge__item">Vai trò tài khoản: {currentUserRoles.join(', ')}</span>
+          <span className="security-log-badge__item">Vai trò tài khoản: {roleLabels(currentUserRoles)}</span>
         </div>
       </div>
     );
@@ -120,7 +121,7 @@ export default function CustomerSegmentPanel({
         <div>
           <div className="contact-section-eyebrow">
             <span className="dot-pulse" />
-            <span>NCL-02-CN-005 · Phân nhóm khách hàng</span>
+            <span>Phân nhóm khách hàng</span>
           </div>
           <h2 className="contact-section-title">Ngành nghề, quy mô & mức độ ưu tiên</h2>
           <p className="contact-section-subtitle">

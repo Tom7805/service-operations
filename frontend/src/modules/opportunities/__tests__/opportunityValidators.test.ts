@@ -193,7 +193,7 @@ describe('Opportunity Validators & Stage Transition (NCL-03-CN-001 & NCL-03-CN-0
       ];
       const result = validateQuoteCreate(items);
       expect(result.valid).toBe(false);
-      expect(result.fieldErrors['items[0].professionalRole']).toBe('Vai trò chuyên môn không được để trống');
+      expect(result.fieldErrors['items[0].professionalRole']).toBe('Vị trí / chức danh không được để trống');
       expect(result.fieldErrors['items[1].workDays']).toBe('Số ngày công phải lớn hơn 0');
       expect(result.fieldErrors['items[2].workDays']).toBe('Số ngày công phải lớn hơn 0');
     });

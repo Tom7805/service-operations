@@ -7,6 +7,7 @@ import {
   type SensitiveAccessLogEntry,
   type SensitiveDataTypeCode,
 } from '../types/auditLogTypes';
+import { roleLabels } from '../../../utils/roleLabel';
 import { ICONS } from '../../../components/common/icons';
 import TableSkeleton from '../../../components/common/TableSkeleton';
 
@@ -126,7 +127,7 @@ export default function SensitiveAccessLogPage({
           <div className="security-log-badge">
             <span className="security-log-badge__item">{ICONS.shield} Thời điểm: {new Date().toLocaleString('vi-VN')}</span>
             <span className="security-log-badge__item">Tài khoản: {currentUserName}</span>
-            <span className="security-log-badge__item">Vai trò hiện tại: {currentUserRoles.join(', ')}</span>
+            <span className="security-log-badge__item">Vai trò hiện tại: {roleLabels(currentUserRoles)}</span>
           </div>
         </div>
       </div>
@@ -270,7 +271,7 @@ export default function SensitiveAccessLogPage({
               ) : entries.length === 0 ? (
                 <tr>
                   {/* TC-02: không có bản ghi nào thỏa bộ lọc */}
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#787774' }}>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#5B5A57' }}>
                     Không tìm thấy nhật ký truy cập nào thỏa bộ lọc đã chọn.
                   </td>
                 </tr>

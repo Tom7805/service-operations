@@ -267,7 +267,7 @@ export default function EmployeeFormModal({
                   disabled={submitting}
                 />
                 {errors.endDate && <span className="field-error">{errors.endDate}</span>}
-                <span className="field-hint">Không được sớm hơn ngày vào làm (TC-03).</span>
+                <span className="field-hint">Không được sớm hơn ngày vào làm.</span>
               </div>
 
               {/* Giờ làm việc chuẩn */}
@@ -290,8 +290,7 @@ export default function EmployeeFormModal({
                 {errors.standardHoursPerWeek && <span className="field-error">{errors.standardHoursPerWeek}</span>}
                 <span className="field-hint">
                   Là mẫu số của tỷ lệ giờ tính phí. Để trống sẽ mặc định {DEFAULT_STANDARD_HOURS_PER_WEEK}; nếu
-                  nhập giá trị khác (ví dụ 20 cho bán thời gian) hệ thống lưu đúng giá trị đó, không tự làm tròn
-                  (TC-01, TC-02).
+                  nhập giá trị khác (ví dụ 20 cho bán thời gian) hệ thống lưu đúng giá trị đó, không tự làm tròn.
                 </span>
               </div>
             </div>

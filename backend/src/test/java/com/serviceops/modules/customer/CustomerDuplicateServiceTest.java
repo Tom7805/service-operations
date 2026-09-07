@@ -12,7 +12,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -37,7 +36,7 @@ class CustomerDuplicateServiceTest {
 	void setUp() {
 		service = new CustomerDuplicateServiceImpl(customerRepository);
 		lenient().when(customerRepository.findByNameContainingIgnoreCase(anyString())).thenReturn(List.of());
-		lenient().when(customerRepository.findByTaxCode(anyString())).thenReturn(Optional.empty());
+		lenient().when(customerRepository.findByTaxCode(anyString())).thenReturn(List.of());
 	}
 
 	private Customer customer(Long id, String name, String taxCode, String phone) {
@@ -54,7 +53,7 @@ class CustomerDuplicateServiceTest {
 	@DisplayName("TC-01: cung ma so thue thi phai hien ho so nghi trung voi diem giong cao")
 	void findsBlockingDuplicateByTaxCode() {
 		when(customerRepository.findByTaxCode("0101234567"))
-				.thenReturn(Optional.of(customer(1L, "Cong ty TNHH ABC", "0101234567", "0987654321")));
+				.thenReturn(List.of(customer(1L, "Cong ty TNHH ABC", "0101234567", "0987654321")));
 
 		List<DuplicateCandidateRes> candidates =
 				service.findDuplicates("Cong Ty TNHH ABC", "0101234567", "0987654321");

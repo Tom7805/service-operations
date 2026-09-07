@@ -16,18 +16,25 @@
 --  dang nhap va thu chuc nang ghi nhan hoat dong cham soc. Ca hai deu o giai
 --  doan APPROACH / trang thai OPEN nen van them duoc hoat dong moi.
 --
+--  probability = 10 (dung QTN-06/StageTransitionValidator.initialProbability())
+--  vi ca hai deu o giai doan APPROACH — INSERT ban dau thieu cot nay khien
+--  probability luon la NULL sau moi lan seed lai tu dau, lam thang 05/2026 va
+--  06/2026 tren "Du bao doanh thu" luon hien 0 d du gia tri du kien khac 0
+--  (phat hien khi doi chieu thu cong voi giao dien).
+--
 --  Idempotent qua ON DUPLICATE KEY UPDATE theo id co dinh.
 -- ----------------------------------------------------------------------------
-INSERT INTO opportunities (id, name, customer_id, expected_value, expected_close_date, stage, status, created_by, created_at)
+INSERT INTO opportunities (id, name, customer_id, expected_value, expected_close_date, stage, status, probability, created_by, created_at)
 VALUES
-    (2001, 'Trien khai he thong CRM cho Cong ty CP Giai Phap So Viet', 1001, 500000000, '2026-06-30', 'APPROACH', 'OPEN', 'sale01', '2026-01-05 09:00:00'),
-    (2002, 'Tu van quy trinh xay dung so cho An Phat', 1003, 300000000, '2026-05-31', 'APPROACH', 'OPEN', 'sale.lead', '2026-01-10 10:30:00')
+    (2001, 'Trien khai he thong CRM cho Cong ty CP Giai Phap So Viet', 1001, 500000000, '2026-06-30', 'APPROACH', 'OPEN', 10, 'sale01', '2026-01-05 09:00:00'),
+    (2002, 'Tu van quy trinh xay dung so cho An Phat', 1003, 300000000, '2026-05-31', 'APPROACH', 'OPEN', 10, 'sale.lead', '2026-01-10 10:30:00')
 ON DUPLICATE KEY UPDATE
     name                = VALUES(name),
     expected_value      = VALUES(expected_value),
     expected_close_date = VALUES(expected_close_date),
     stage               = VALUES(stage),
     status              = VALUES(status),
+    probability         = VALUES(probability),
     created_by          = VALUES(created_by);
 
 INSERT INTO opportunity_activities (id, opportunity_id, activity_type, occurred_at, participants, content, created_by, created_at)

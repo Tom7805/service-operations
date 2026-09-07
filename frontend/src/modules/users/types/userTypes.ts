@@ -82,7 +82,7 @@ export const SYSTEM_ROLES: RoleInfo[] = [
   },
   {
     code: 'VT-02',
-    name: 'Quản lý dự án (PM)',
+    name: 'Quản lý dự án',
     description: 'Quản lý tiến độ dự án, phân công nhiệm vụ, quản lý chi phí & phê duyệt chấm công',
     badgeClass: 'badge--blue',
     capabilities: ['Tạo & quản lý dự án', 'Giao việc cho nhân sự', 'Phê duyệt Timesheet', 'Theo dõi ngân sách & tiến độ'],
@@ -110,7 +110,7 @@ export const SYSTEM_ROLES: RoleInfo[] = [
   },
   {
     code: 'VT-06',
-    name: 'Nhân sự (HR)',
+    name: 'Nhân sự',
     description: 'Quản lý hồ sơ nhân sự, hợp đồng lao động, chi phí lương và ngày nghỉ lễ',
     badgeClass: 'badge--pink',
     capabilities: ['Quản lý hồ sơ nhân viên', 'Cấu hình chi phí lương (Cost Rate)', 'Quản lý hợp đồng lao động', 'Quản lý ngày nghỉ'],

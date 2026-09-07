@@ -153,7 +153,7 @@ export default function EmployeeDetailPage({ employeeId, onBack }: EmployeeDetai
           <h3 className="section-title">Hợp đồng lao động</h3>
 
           {employee.contracts.length === 0 ? (
-            <p style={{ color: '#787774', fontSize: 13.5 }}>Chưa có hợp đồng lao động nào được ghi nhận.</p>
+            <p style={{ color: '#5B5A57', fontSize: 13.5 }}>Chưa có hợp đồng lao động nào được ghi nhận.</p>
           ) : (
             <div className="table-responsive">
               <table className="user-data-table">
@@ -245,7 +245,7 @@ export default function EmployeeDetailPage({ employeeId, onBack }: EmployeeDetai
                 disabled={submittingContract}
               />
               {contractErrors.endDate && <span className="field-error">{contractErrors.endDate}</span>}
-              <span className="field-hint">Không được sớm hơn ngày bắt đầu (TC-03).</span>
+              <span className="field-hint">Không được sớm hơn ngày bắt đầu.</span>
             </div>
 
             <div className="form-field form-field--full" style={{ display: 'flex', justifyContent: 'flex-end' }}>

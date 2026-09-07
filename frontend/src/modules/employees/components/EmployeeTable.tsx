@@ -71,7 +71,7 @@ export default function EmployeeTable({ employees, loading, onEdit, onViewDetail
               <TableSkeleton columns={7} />
             ) : filteredEmployees.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#787774' }}>
+                <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#5B5A57' }}>
                   Không tìm thấy hồ sơ nhân sự nào.
                 </td>
               </tr>

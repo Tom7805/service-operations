@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { Opportunity, OpportunityStage, QuoteRes } from '../types/opportunityTypes';
 import { STAGE_CONFIGS, LOSS_REASON_OPTIONS } from '../types/opportunityTypes';
+import { fetchOpportunities, OpportunityApiError } from '../api/opportunitiesApi';
 import OpportunityFormModal from '../components/OpportunityFormModal';
 import StageTransitionControl from '../components/StageTransitionControl';
 import QuoteBuilder from '../components/QuoteBuilder';
@@ -17,15 +18,22 @@ interface OpportunityListPageProps {
   currentUserRoles?: string[];
   currentUserName?: string;
   initialOpportunities?: Opportunity[];
+  /** Mở màn "Ghi nhận hoạt động chăm sóc cơ hội" cho đúng cơ hội đang chọn —
+   *  trước đây màn đó chỉ vào được bằng cách tự gõ tay mã số cơ hội, không ai
+   *  đoán được mã số nếu không tra database. */
+  onOpenActivities?: (opportunityId: number) => void;
 }
 
 export default function OpportunityListPage({
   currentUserRoles = ['VT-04'],
   initialOpportunities = [],
+  onOpenActivities,
 }: OpportunityListPageProps) {
   const isAllowed = currentUserRoles.includes('VT-04');
 
   const [opportunities, setOpportunities] = useState<Opportunity[]>(initialOpportunities);
+  const [isLoading, setIsLoading] = useState(initialOpportunities.length === 0);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -49,6 +57,44 @@ export default function OpportunityListPage({
       setToastMessage(null);
     }, 5000);
   };
+
+  // Tải danh sách cơ hội từ máy chủ khi mở trang, để cơ hội vừa tạo không biến
+  // mất sau khi chuyển sang trang khác rồi quay lại (state trong bộ nhớ bị huỷ
+  // khi component unmount). Bỏ qua khi đã được truyền sẵn dữ liệu (test/SSR).
+  useEffect(() => {
+    if (initialOpportunities.length > 0) return;
+
+    let cancelled = false;
+    setIsLoading(true);
+    setLoadError(null);
+
+    fetchOpportunities()
+      .then((data) => {
+        if (!cancelled) setOpportunities(data);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        // 403: tài khoản không có vai trò xem pipeline (VT-04). Trang đã hiển thị
+        // sẵn cảnh báo phân quyền màu vàng, nên không cần thêm banner đỏ.
+        if (err instanceof OpportunityApiError && err.statusCode === 403) {
+          setOpportunities([]);
+          return;
+        }
+        const message =
+          err instanceof OpportunityApiError
+            ? err.message
+            : 'Không tải được danh sách cơ hội bán hàng. Vui lòng thử lại.';
+        setLoadError(message);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleCreatedSuccess = (newOpportunity: Opportunity) => {
     setOpportunities((prev) => [newOpportunity, ...prev]);
@@ -177,7 +223,7 @@ export default function OpportunityListPage({
             Quản lý cơ hội bán hàng & Phễu chuyển đổi
           </h2>
           <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '14.5px' }}>
-            Theo dõi tiến trình bán hàng, chuyển giai đoạn tuần tự và dự báo doanh số theo xác suất (QTN-06).
+            Theo dõi tiến trình bán hàng, chuyển giai đoạn tuần tự và dự báo doanh số theo xác suất.
           </p>
         </div>
 
@@ -207,7 +253,7 @@ export default function OpportunityListPage({
               }}
             >
               <span>{ICONS.lock}</span>
-              <span>Yêu cầu vai trò Nhân viên kinh doanh (VT-04)</span>
+              <span>Yêu cầu vai trò Nhân viên kinh doanh</span>
             </div>
           )}
         </div>
@@ -233,10 +279,11 @@ export default function OpportunityListPage({
         >
           <span style={{ flexShrink: 0, marginTop: '2px' }}>{ICONS.alertTriangle}</span>
           <div>
-            <strong>Phân quyền nghiệp vụ (NCL-03-CN-002 TC-03):</strong>
+            <strong>Chế độ chỉ xem:</strong>
             <p style={{ margin: '4px 0 0' }}>
-              Bạn đang sử dụng tài khoản không có vai trò <strong>Nhân viên kinh doanh</strong> (<code>VT-04</code>).
-              Hệ thống chỉ cho phép nhân viên kinh doanh chuyển đổi giai đoạn cơ hội.
+              Tài khoản của bạn không có vai trò <strong>Nhân viên kinh doanh</strong> nên
+              chỉ theo dõi được đường ống bán hàng, không tạo cơ hội hoặc chuyển giai đoạn. Các thao tác này
+              chỉ dành cho nhân viên kinh doanh.
             </p>
           </div>
         </div>
@@ -279,6 +326,23 @@ export default function OpportunityListPage({
                   </span>
                 </button>
               )}
+              {onOpenActivities && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => onOpenActivities(selectedOpportunity.id)}
+                  style={{
+                    padding: '2px 8px',
+                    fontSize: '12px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <span className="icon-sm">{ICONS.clock}</span>
+                  <span>Ghi nhận chăm sóc</span>
+                </button>
+              )}
               <button
                 type="button"
                 className="btn btn-secondary"
@@ -294,6 +358,28 @@ export default function OpportunityListPage({
             onOpportunityUpdated={handleOpportunityUpdated}
             currentUserRoles={currentUserRoles}
           />
+        </div>
+      )}
+
+      {/* Lỗi tải danh sách cơ hội từ máy chủ */}
+      {loadError && (
+        <div
+          role="alert"
+          style={{
+            marginBottom: '16px',
+            padding: '12px 16px',
+            background: 'var(--pale-red-bg)',
+            color: 'var(--pale-red-fg)',
+            border: '1px solid rgba(159, 47, 45, 0.25)',
+            borderRadius: 'var(--radius-md)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            fontSize: '13.5px',
+          }}
+        >
+          <span style={{ flexShrink: 0 }}>{ICONS.alertTriangle}</span>
+          <span>{loadError}</span>
         </div>
       )}
 
@@ -602,7 +688,13 @@ export default function OpportunityListPage({
               </tr>
             </thead>
             <tbody>
-              {filteredOpportunities.length === 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={7} style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--ink-muted)' }}>
+                    Đang tải danh sách cơ hội bán hàng…
+                  </td>
+                </tr>
+              ) : filteredOpportunities.length === 0 ? (
                 <tr>
                   <td colSpan={7} style={{ padding: '48px 24px', textAlign: 'center' }}>
                     <div style={{ maxWidth: '380px', margin: '0 auto', color: 'var(--ink-muted)' }}>

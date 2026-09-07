@@ -23,6 +23,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * NCL-03-CN-001: Tao co hoi ban hang.
@@ -45,6 +49,29 @@ public class OpportunityServiceImpl implements OpportunityService {
 	private final CurrentUserScopeProvider currentUserScopeProvider;
 
 	@Override
+	@Transactional(readOnly = true)
+	public List<OpportunityRes> list() {
+		List<Opportunity> opportunities = opportunityRepository.findAllByOrderByCreatedAtDesc();
+		if (opportunities.isEmpty()) {
+			return List.of();
+		}
+
+		// Lay ten khach hang theo lo de tranh N+1 query.
+		Map<Long, String> customerNameById = customerRepository
+				.findAllById(opportunities.stream()
+						.map(Opportunity::getCustomerId)
+						.filter(java.util.Objects::nonNull)
+						.distinct()
+						.toList())
+				.stream()
+				.collect(Collectors.toMap(Customer::getId, Customer::getName, (a, b) -> a));
+
+		return opportunities.stream()
+				.map(o -> opportunityMapper.toResponse(o, customerNameById.get(o.getCustomerId())))
+				.toList();
+	}
+
+	@Override
 	public OpportunityRes create(OpportunityCreateReq request) {
 		String name = request.name().trim();
 		if (name.isEmpty()) {
@@ -63,6 +90,14 @@ public class OpportunityServiceImpl implements OpportunityService {
 					"Gia tri du kien phai la so duong");
 		}
 
+		// Chan tao trung ten cho cung mot khach hang — tranh tao lap lai nhieu
+		// ban ghi giong het nhau (da tung xay ra voi du lieu that trong he
+		// thong, gay dem trung va sai lech so lieu du bao doanh thu).
+		if (opportunityRepository.existsByCustomerIdAndNameIgnoreCase(customer.getId(), name)) {
+			throw new BusinessRuleException(ErrorCode.DUPLICATE_DATA,
+					"Khach hang nay da co co hoi trung ten \"" + name + "\". Vui long doi ten khac de phan biet.");
+		}
+
 		Opportunity opportunity = new Opportunity();
 		opportunity.setName(name);
 		opportunity.setCustomerId(customer.getId());
@@ -71,8 +106,11 @@ public class OpportunityServiceImpl implements OpportunityService {
 		// Nguoi phu trach: mac dinh la nguoi tao neu khong duoc chi dinh.
 		opportunity.setOwnerId(request.ownerId() != null
 				? request.ownerId() : currentUserScopeProvider.currentUserId());
-		// QTN-06 / TC-01: co hoi duoc tao o giai doan dau tien.
+		// QTN-06 / TC-01: co hoi duoc tao o giai doan dau tien, kem dung xac suat cua giai
+		// doan do (truoc day thieu dong nay nen probability = null, giao dien hien "% xac
+		// suat" thay vi "10% xac suat").
 		opportunity.setStage(stageTransitionValidator.initialStage());
+		opportunity.setProbability(stageTransitionValidator.initialProbability());
 		opportunity.setStatus(OpportunityStatus.OPEN);
 		opportunity.setCreatedBy(currentUsername());
 		opportunity.setCreatedAt(LocalDateTime.now());

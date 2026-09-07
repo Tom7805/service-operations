@@ -422,16 +422,16 @@ export default function StageTransitionControl({
           {isClosed ? (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--ink-muted)' }}>
               <span>{ICONS.lock}</span>
-              <span>Cơ hội đã đóng (status = CLOSED). Quy tắc hệ thống không cho phép chuyển tiếp (TC-03).</span>
+              <span>Cơ hội đã đóng. Quy tắc hệ thống không cho phép chuyển tiếp.</span>
             </span>
           ) : !isAllowedRole ? (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--ink-muted)' }}>
               <span>{ICONS.lock}</span>
-              <span>Chức năng chuyển giai đoạn yêu cầu vai trò Nhân viên kinh doanh (VT-04).</span>
+              <span>Chức năng chuyển giai đoạn yêu cầu vai trò Nhân viên kinh doanh.</span>
             </span>
           ) : (
             <span>
-              Quy tắc QTN-06: Chỉ được chuyển tuần tự sang bước kế tiếp liền kề, không nhảy cóc hay chuyển lùi.
+              Quy tắc: Chỉ được chuyển tuần tự sang bước kế tiếp liền kề, không nhảy cóc hay chuyển lùi.
             </span>
           )}
         </div>
@@ -547,13 +547,12 @@ export default function StageTransitionControl({
                   <>
                     Bạn có chắc chắn muốn chốt cơ hội <strong>{opportunity.name}</strong> với kết quả{' '}
                     <strong>Thành công (Won - 100% xác suất)</strong>? Sau khi chốt, cơ hội sẽ tự động chuyển sang
-                    trạng thái <strong>ĐÃ ĐÓNG (CLOSED)</strong> và không thể chuyển giai đoạn tiếp theo (TC-03).
+                    trạng thái <strong>ĐÃ ĐÓNG</strong> và không thể chuyển giai đoạn tiếp theo.
                   </>
                 ) : (
                   <>
                     Bạn có chắc chắn muốn đóng cơ hội <strong>{opportunity.name}</strong> với kết quả{' '}
-                    <strong>Thất bại (Lost - 0% xác suất)</strong>? Sau khi đóng, hồ sơ cơ hội sẽ khóa vĩnh viễn
-                    (TC-03).
+                    <strong>Thất bại (Lost - 0% xác suất)</strong>? Sau khi đóng, hồ sơ cơ hội sẽ khóa vĩnh viễn.
                   </>
                 )}
               </p>
@@ -605,7 +604,7 @@ export default function StageTransitionControl({
               marginBottom: '12px',
             }}
           >
-            Nhật ký các lần chuyển giai đoạn (TC-05)
+            Nhật ký các lần chuyển giai đoạn
           </div>
 
           {loadingHistory ? (

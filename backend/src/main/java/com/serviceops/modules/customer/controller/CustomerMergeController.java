@@ -8,6 +8,7 @@ import com.serviceops.modules.customer.service.CustomerMergeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,6 +29,19 @@ import org.springframework.web.bind.annotation.RestController;
 public class CustomerMergeController {
 
 	private final CustomerMergeService customerMergeService;
+
+	/**
+	 * Kiem tra quyen truy cap man hinh Gop KH trung (khong lam gi ngoai kiem tra quyen).
+	 * Frontend goi endpoint nay ngay khi mo trang - neu bi tu choi (403) thi
+	 * {@link com.serviceops.modules.customer.logging.CustomerDuplicateAccessDeniedAspect}
+	 * se ghi nhat ky lan tu choi that su (khong chi hien thong bao "da ghi nhat ky" o
+	 * giao dien ma khong co request nao thuc su goi len backend).
+	 */
+	@GetMapping("/access-check")
+	@PreAuthorize("hasRole('VT-07')")
+	public BaseRes<Void> accessCheck() {
+		return BaseRes.ok(null);
+	}
 
 	/** Xem truoc anh huong truoc khi gop that - khong thay doi du lieu. */
 	@PostMapping("/preview")

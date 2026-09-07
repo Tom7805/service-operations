@@ -236,7 +236,7 @@ describe('Ghi nhận kết quả thắng thua của cơ hội (NCL-03-CN-005)', 
         />,
       );
 
-      expect(screen.getByText(/Phân quyền nghiệp vụ/i)).toBeInTheDocument();
+      expect(screen.getByText(/Chế độ chỉ xem/i)).toBeInTheDocument();
       expect(screen.queryByTestId('btn-close-opportunity-1')).toBeNull();
       expect(screen.queryByTestId('btn-disabled-close-2')).toBeNull();
     });

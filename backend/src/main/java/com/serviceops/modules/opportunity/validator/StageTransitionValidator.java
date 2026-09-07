@@ -3,6 +3,7 @@ package com.serviceops.modules.opportunity.validator;
 import com.serviceops.modules.opportunity.enums.OpportunityStage;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -23,6 +24,16 @@ public class StageTransitionValidator {
 	/** Giai doan khoi tao khi tao co hoi moi (NCL-03-CN-001, TC-01). */
 	public OpportunityStage initialStage() {
 		return OpportunityStage.APPROACH;
+	}
+
+	/**
+	 * Xac suat mac dinh cua giai doan khoi tao (NCL-03-CN-001, TC-01) — phai khop voi
+	 * xac suat cua {@link OpportunityStage#APPROACH} o {@code OpportunityStageServiceImpl}.
+	 * Truoc day OpportunityServiceImpl.create() khong goi ham nao ca nen truong probability
+	 * bi de trong (null), khien giao dien hien "% xac suat" thay vi "10% xac suat".
+	 */
+	public BigDecimal initialProbability() {
+		return new BigDecimal("10");
 	}
 
 	/**

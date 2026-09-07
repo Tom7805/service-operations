@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { AuditLogApiError, searchAuditLogs } from '../api/auditLogApi';
-import { TARGET_TYPE_LABELS, type AuditLogEntry, type AuditTargetType } from '../types/auditLogTypes';
+import { TARGET_TYPE_LABELS, roleLabel, type AuditLogEntry, type AuditTargetType } from '../types/auditLogTypes';
 import { ICONS } from '../../../components/common/icons';
 import TableSkeleton from '../../../components/common/TableSkeleton';
 
@@ -141,7 +141,9 @@ export default function AuditLogPage({
       <div className="page-header">
         <div>
           <h1 className="page-title">Nhật ký thao tác hệ thống</h1>
-          <p className="page-subtitle">Toàn bộ thao tác tài khoản, phân quyền, xác thực hai bước — lưu trên máy chủ.</p>
+          <p className="page-subtitle">
+            Toàn bộ thao tác nghiệp vụ và lần từ chối truy cập trái phép trên mọi module — lưu trên máy chủ.
+          </p>
         </div>
         <button
           type="button"
@@ -160,13 +162,6 @@ export default function AuditLogPage({
           <div>
             <span className="stat-card__label">Tổng số bản ghi thỏa bộ lọc</span>
             <strong className="stat-card__value">{totalElements}</strong>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--purple">{ICONS.history}</div>
-          <div>
-            <span className="stat-card__label">Số trang</span>
-            <strong className="stat-card__value">{totalPages}</strong>
           </div>
         </div>
       </div>
@@ -188,8 +183,7 @@ export default function AuditLogPage({
               <span className="filter-label">Người thực hiện</span>
               <input
                 type="text"
-                className="form-input"
-                style={{ height: 38, width: 180 }}
+                className="form-input audit-filter-username"
                 placeholder="vd: admin"
                 value={usernameInput}
                 onChange={(e) => setUsernameInput(e.target.value)}
@@ -244,18 +238,21 @@ export default function AuditLogPage({
                 <th>Thời điểm</th>
                 <th>Người thực hiện</th>
                 <th>Hành động</th>
-                <th>Loại đối tượng</th>
                 <th>Đối tượng</th>
                 <th>Chi tiết</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <TableSkeleton columns={6} />
+                <TableSkeleton columns={5} />
               ) : entries.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#787774' }}>
-                    Không tìm thấy bản ghi nào thỏa bộ lọc đã chọn.
+                  <td colSpan={5}>
+                    <div className="table-empty-state">
+                      <div className="empty-icon">{ICONS.clipboardList}</div>
+                      <h3>Không tìm thấy bản ghi nào</h3>
+                      <p>Thử điều chỉnh người thực hiện, loại đối tượng hoặc khoảng thời gian đang lọc.</p>
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -264,13 +261,22 @@ export default function AuditLogPage({
                     <td>{formatDateTime(entry.performedAt)}</td>
                     <td>
                       <span className="user-profile-username">@{entry.actorUsername ?? '—'}</span>
+                      {entry.actorRole && (
+                        <span className="audit-actor-role">{roleLabel(entry.actorRole)}</span>
+                      )}
                     </td>
                     <td>
-                      <span className="role-chip">{entry.action}</span>
+                      <span className="role-chip" title={entry.action}>{entry.action}</span>
                     </td>
-                    <td>{TARGET_TYPE_LABELS[entry.targetType]}</td>
-                    <td><span className="cell-dept">{entry.targetLabel ?? '—'}</span></td>
-                    <td className="audit-detail-cell">{entry.detail ?? '—'}</td>
+                    {/* Đối tượng: bản ghi nghiệp vụ cụ thể HOẶC tên chức năng (sự kiện bảo mật); trống
+                        (VD lần từ chối truy cập không nhận diện được chức năng) -> ghi rõ bằng lời thay
+                        vì để trống/dấu gạch ngang trông như thiếu dữ liệu. */}
+                    {entry.targetLabel ? (
+                      <td><span className="cell-dept" title={entry.targetLabel}>{entry.targetLabel}</span></td>
+                    ) : (
+                      <td><span className="cell-muted">Không có</span></td>
+                    )}
+                    <td className="audit-detail-cell" title={entry.detail ?? undefined}>{entry.detail || '—'}</td>
                   </tr>
                 ))
               )}
@@ -278,11 +284,11 @@ export default function AuditLogPage({
           </table>
         </div>
 
-        <div className="table-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="table-footer table-footer--paginated">
           <span>
             Trang {totalPages === 0 ? 0 : page + 1}/{totalPages} — {totalElements} bản ghi
           </span>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="table-footer__pagination">
             <button type="button" className="btn-secondary" disabled={page <= 0 || loading} onClick={() => fetchLogs(page - 1)}>
               <span className="icon-sm">{ICONS.arrowLeft}</span> Trang trước
             </button>

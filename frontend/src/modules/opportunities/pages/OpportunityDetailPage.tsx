@@ -27,6 +27,13 @@ const ACTIVITY_OPTIONS = [
   { value: 'NOTE', label: 'Ghi chú' },
 ] as const;
 
+const ACTIVITY_ICON: Record<string, keyof typeof ICONS> = {
+  CALL: 'phone',
+  MEETING: 'users',
+  EMAIL: 'mail',
+  NOTE: 'clipboardList',
+};
+
 function formatActivityLabel(type: string): string {
   return ACTIVITY_OPTIONS.find((item) => item.value === type)?.label ?? type;
 }
@@ -174,7 +181,7 @@ export default function OpportunityDetailPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Không có quyền ghi nhận hoạt động chăm sóc</h2>
           <p>
-            Theo quy định NCL-03-CN-006, chỉ <strong>Nhân viên kinh doanh (VT-04)</strong> mới được thao tác với lịch sử chăm sóc cơ hội.
+            Theo quy định, chỉ <strong>Nhân viên kinh doanh</strong> mới được thao tác với lịch sử chăm sóc cơ hội.
           </p>
         </div>
       </div>
@@ -185,45 +192,68 @@ export default function OpportunityDetailPage({
     <div className="opportunity-detail-page" data-testid="opportunity-detail-page">
       <div className="page-header">
         <div>
-          <div className="section-eyebrow">NCL-03-CN-006 • Ghi nhận hoạt động chăm sóc</div>
+          <div className="page-header__kicker">
+            <span className="page-header__tag">{ICONS.target} CƠ HỘI BÁN HÀNG</span>
+            <span className="page-header__dot" />
+            <span className="page-header__meta">GHI NHẬN CHĂM SÓC</span>
+          </div>
           <h1>{opportunityName}</h1>
         </div>
-        <div className="status-badge">{isClosed ? 'Đã đóng' : 'Đang mở'}</div>
+        <div className="page-header__actions">
+          <span className={`activity-status-pill${isClosed ? ' activity-status-pill--closed' : ''}`}>
+            <span className="activity-status-pill__dot" />
+            {isClosed ? 'Đã đóng' : 'Đang mở'}
+          </span>
+        </div>
       </div>
 
       {isClosed && (
-        <div className="info-banner" data-testid="activity-readonly-banner">
-          Cơ hội đã đóng, hệ thống chỉ cho phép xem lại lịch sử chăm sóc và không thể thêm hoạt động mới.
+        <div className="alert-box alert-box--info" data-testid="activity-readonly-banner">
+          <span className="alert-box__icon">{ICONS.info}</span>
+          <div className="alert-box__content">
+            <p>Cơ hội đã đóng, hệ thống chỉ cho phép xem lại lịch sử chăm sóc và không thể thêm hoạt động mới.</p>
+          </div>
         </div>
       )}
 
-      {loadError && <div className="error-panel">{loadError}</div>}
+      {loadError && (
+        <div className="alert-box alert-box--danger">
+          <span className="alert-box__icon">{ICONS.alertTriangle}</span>
+          <div className="alert-box__content">
+            <p>{loadError}</p>
+          </div>
+        </div>
+      )}
 
-      <div className="content-grid">
-        <section className="panel">
-          <div className="panel-header">
+      <div className="activity-layout">
+        <section className="activity-panel activity-panel--timeline">
+          <div className="activity-panel__head">
             <h2>Lịch sử chăm sóc</h2>
+            {activities.length > 0 && <span className="activity-panel__count">{activities.length}</span>}
           </div>
 
           {isLoading ? (
-            <div className="empty-state">Đang tải lịch sử chăm sóc…</div>
+            <div className="activity-empty-state">Đang tải lịch sử chăm sóc…</div>
           ) : activities.length === 0 ? (
-            <div className="empty-state">Chưa có hoạt động chăm sóc nào cho cơ hội này.</div>
+            <div className="activity-empty-state">
+              <span className="activity-empty-state__icon">{ICONS.clipboardList}</span>
+              Chưa có hoạt động chăm sóc nào cho cơ hội này.
+            </div>
           ) : (
             <div className="timeline-list" data-testid="activity-timeline">
               {activities.map((activity) => (
                 <div key={activity.id} className="timeline-item">
-                  <div className="timeline-dot" />
-                  <div className="timeline-content">
-                    <div className="timeline-topline">
+                  <span className="timeline-item__icon">{ICONS[ACTIVITY_ICON[activity.activityType] ?? 'clipboardList']}</span>
+                  <div className="timeline-item__body">
+                    <div className="timeline-item__topline">
                       <strong>{formatActivityLabel(activity.activityType)}</strong>
-                      <span>{formatDateTime(activity.occurredAt)}</span>
+                      <span className="timeline-item__time">{formatDateTime(activity.occurredAt)}</span>
                     </div>
-                    {activity.participants && <div className="muted">Tham gia: {activity.participants}</div>}
-                    <p>{activity.content}</p>
-                    <div className="timeline-meta">
-                      <span>Người thực hiện: {activity.createdBy ?? currentUserName}</span>
-                    </div>
+                    {activity.participants && (
+                      <div className="timeline-item__participants">Tham gia: {activity.participants}</div>
+                    )}
+                    <p className="timeline-item__content">{activity.content}</p>
+                    <div className="timeline-item__meta">Người thực hiện: {activity.createdBy ?? currentUserName}</div>
                   </div>
                 </div>
               ))}
@@ -232,16 +262,17 @@ export default function OpportunityDetailPage({
         </section>
 
         {!isClosed && (
-          <section className="panel">
-            <div className="panel-header">
+          <section className="activity-panel activity-panel--form">
+            <div className="activity-panel__head">
               <h2>Thêm hoạt động mới</h2>
             </div>
 
-            <form onSubmit={handleSubmit} noValidate>
-              <div className="form-grid">
-                <label>
-                  <span>Loại hoạt động</span>
+            <form onSubmit={handleSubmit} noValidate className="activity-form">
+              <div className="activity-form__row">
+                <label className="activity-form__field">
+                  <span className="activity-form__label">Loại hoạt động</span>
                   <select
+                    className="activity-form__select"
                     value={form.activityType}
                     onChange={(e) => handleChange('activityType', e.target.value)}
                     aria-label="Loại hoạt động"
@@ -255,9 +286,10 @@ export default function OpportunityDetailPage({
                   {errors.activityType && <small className="field-error">{errors.activityType}</small>}
                 </label>
 
-                <label>
-                  <span>Thời điểm</span>
+                <label className="activity-form__field">
+                  <span className="activity-form__label">Thời điểm</span>
                   <input
+                    className="activity-form__input"
                     type="datetime-local"
                     value={form.occurredAt}
                     onChange={(e) => handleChange('occurredAt', e.target.value)}
@@ -265,39 +297,55 @@ export default function OpportunityDetailPage({
                   />
                   {errors.occurredAt && <small className="field-error">{errors.occurredAt}</small>}
                 </label>
-
-                <label className="full-width">
-                  <span>Người tham gia</span>
-                  <input
-                    type="text"
-                    value={form.participants}
-                    onChange={(e) => handleChange('participants', e.target.value)}
-                    aria-label="Người tham gia"
-                    placeholder="Ví dụ: Nguyễn Huy, Anh Lan"
-                    maxLength={PARTICIPANTS_MAX_LENGTH}
-                  />
-                  {errors.participants && <small className="field-error">{errors.participants}</small>}
-                </label>
-
-                <label className="full-width">
-                  <span>Nội dung trao đổi</span>
-                  <textarea
-                    value={form.content}
-                    onChange={(e) => handleChange('content', e.target.value)}
-                    aria-label="Nội dung trao đổi"
-                    rows={5}
-                    placeholder="Nhập nội dung trao đổi, kế hoạch chăm sóc hoặc quyết định với khách hàng..."
-                    maxLength={CONTENT_MAX_LENGTH}
-                  />
-                  {errors.content && <small className="field-error">{errors.content}</small>}
-                </label>
               </div>
 
-              {errors.general && <div className="error-panel">{errors.general}</div>}
-              {submitMessage && <div className="success-panel">{submitMessage}</div>}
+              <label className="activity-form__field activity-form__field--full">
+                <span className="activity-form__label">Người tham gia</span>
+                <input
+                  className="activity-form__input"
+                  type="text"
+                  value={form.participants}
+                  onChange={(e) => handleChange('participants', e.target.value)}
+                  aria-label="Người tham gia"
+                  placeholder="Ví dụ: Nguyễn Huy, Anh Lan"
+                  maxLength={PARTICIPANTS_MAX_LENGTH}
+                />
+                {errors.participants && <small className="field-error">{errors.participants}</small>}
+              </label>
 
-              <div className="form-actions">
-                <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+              <label className="activity-form__field activity-form__field--full">
+                <span className="activity-form__label">Nội dung trao đổi</span>
+                <textarea
+                  className="activity-form__textarea"
+                  value={form.content}
+                  onChange={(e) => handleChange('content', e.target.value)}
+                  aria-label="Nội dung trao đổi"
+                  rows={5}
+                  placeholder="Nhập nội dung trao đổi, kế hoạch chăm sóc hoặc quyết định với khách hàng..."
+                  maxLength={CONTENT_MAX_LENGTH}
+                />
+                {errors.content && <small className="field-error">{errors.content}</small>}
+              </label>
+
+              {errors.general && (
+                <div className="alert-box alert-box--danger">
+                  <span className="alert-box__icon">{ICONS.alertTriangle}</span>
+                  <div className="alert-box__content">
+                    <p>{errors.general}</p>
+                  </div>
+                </div>
+              )}
+              {submitMessage && (
+                <div className="alert-box alert-box--success">
+                  <span className="alert-box__icon">{ICONS.checkCircle}</span>
+                  <div className="alert-box__content">
+                    <p>{submitMessage}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="activity-form__actions">
+                <button type="submit" className="btn-primary" disabled={isSubmitting}>
                   {isSubmitting ? 'Đang lưu…' : 'Lưu hoạt động'}
                 </button>
               </div>

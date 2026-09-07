@@ -81,10 +81,10 @@ export function validateQuoteCreate(items: QuoteItemReq[]): QuoteValidationResul
 
   items.forEach((item, idx) => {
     if (!item.professionalRole || item.professionalRole.trim().length === 0) {
-      fieldErrors[`items[${idx}].professionalRole`] = 'Vai trò chuyên môn không được để trống';
+      fieldErrors[`items[${idx}].professionalRole`] = 'Vị trí / chức danh không được để trống';
       hasError = true;
     } else if (item.professionalRole.trim().length > 255) {
-      fieldErrors[`items[${idx}].professionalRole`] = 'Tên vai trò chuyên môn không được quá 255 ký tự';
+      fieldErrors[`items[${idx}].professionalRole`] = 'Tên vị trí / chức danh không được quá 255 ký tự';
       hasError = true;
     }
 

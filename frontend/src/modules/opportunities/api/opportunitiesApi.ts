@@ -69,7 +69,7 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
     if (!message) {
       if (response.status === 403) {
         message =
-          'Bạn không có quyền thực hiện thao tác này. Chức năng quản lý cơ hội bán hàng yêu cầu vai trò Nhân viên kinh doanh (VT-04).';
+          'Bạn không có quyền thực hiện thao tác này. Chức năng quản lý cơ hội bán hàng yêu cầu vai trò Nhân viên kinh doanh.';
       } else if (response.status === 404) {
         message = 'Không tìm thấy dữ liệu tương ứng trên hệ thống (khách hàng hoặc cơ hội bán hàng).';
       } else if (response.status === 401) {
@@ -91,6 +91,19 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
   }
 
   return payload as T;
+}
+
+/**
+ * NCL-03-CN-001: Lấy danh sách toàn bộ cơ hội bán hàng (GET /opportunities),
+ * mới nhất lên trước. Dùng để trang "Quản lý cơ hội bán hàng" tải lại dữ liệu
+ * từ máy chủ mỗi lần mở, tránh mất cơ hội vừa tạo khi chuyển trang.
+ */
+export async function fetchOpportunities(): Promise<Opportunity[]> {
+  const res = await requestBackend<{ success: boolean; data: Opportunity[] }>(
+    `${API_BASE_URL}/opportunities`
+  );
+
+  return Array.isArray(res.data) ? res.data : [];
 }
 
 /**

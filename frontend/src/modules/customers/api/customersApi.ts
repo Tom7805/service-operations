@@ -58,11 +58,11 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
 
     if (!message) {
       if (response.status === 403) {
-        message = 'Bạn không có quyền thực hiện thao tác này. Chức năng yêu cầu vai trò Nhân viên kinh doanh (VT-04) hoặc Quản lý dự án (VT-02).';
+        message = 'Bạn không có quyền thực hiện thao tác này. Chức năng yêu cầu vai trò Nhân viên kinh doanh hoặc Quản lý dự án.';
       } else if (response.status === 401) {
         message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
       } else if (response.status === 409) {
-        message = 'Hệ thống phát hiện hồ sơ khách hàng đã có độ trùng lặp cao (NCL-02-CN-002). Vui lòng xác nhận tạo mới kèm lý do.';
+        message = 'Hệ thống phát hiện hồ sơ khách hàng đã có độ trùng lặp cao. Vui lòng xác nhận tạo mới kèm lý do.';
       } else if (response.status === 400) {
         message = 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại các trường thông tin.';
       } else {
@@ -267,6 +267,17 @@ export async function updateCustomerSegment(
     method: 'PATCH',
     body: JSON.stringify(cleanPayload),
   });
+}
+
+/**
+ * NCL-02-CN-006 (TC-03): Kiểm tra quyền truy cập màn hình Gộp KH trùng qua chính backend
+ * (GET /customers/merge/access-check) thay vì chỉ kiểm tra vai trò ở phía frontend — nếu chỉ chặn
+ * ở frontend, không có request thật nào gửi lên server nên hành vi từ chối sẽ KHÔNG được ghi vào
+ * Nhật ký hệ thống dù giao diện có thông báo "đã ghi nhật ký". Gọi endpoint này khi vào trang để
+ * lần từ chối (403) được backend ghi log thật (CustomerDuplicateAccessDeniedAspect).
+ */
+export async function checkCustomerMergeAccess(): Promise<void> {
+  await requestBackend<void>(`${API_BASE_URL}/customers/merge/access-check`, { method: 'GET' });
 }
 
 /**

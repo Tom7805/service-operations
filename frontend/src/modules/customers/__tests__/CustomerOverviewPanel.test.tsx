@@ -116,7 +116,7 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
       expect(screen.getByTestId('customer-summary-forbidden')).toBeInTheDocument();
     });
     expect(screen.getByText(/không có quyền xem hồ sơ tổng hợp/i)).toBeInTheDocument();
-    expect(screen.getByText(/QTN-01/)).toBeInTheDocument();
+    expect(screen.getByText(/Theo quy tắc phân quyền/i)).toBeInTheDocument();
   });
 
   it('hiển thị trạng thái "không tìm thấy" khi Backend trả 404', async () => {

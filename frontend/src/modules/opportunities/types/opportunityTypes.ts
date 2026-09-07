@@ -172,7 +172,7 @@ export interface QuoteRes {
   createdAt?: string;
 }
 
-/** Danh sách vai trò chuyên môn phổ biến để gợi ý khi lập báo giá */
+/** Danh sách vị trí / chức danh phổ biến để gợi ý khi lập báo giá */
 export const POPULAR_PROFESSIONAL_ROLES = [
   'Quản lý dự án (Project Manager)',
   'Kiến trúc sư giải pháp (Solution Architect)',
@@ -188,6 +188,21 @@ export const POPULAR_PROFESSIONAL_ROLES = [
 /*  Dự báo doanh thu theo xác suất giai đoạn (NCL-03-CN-004)                   */
 /* -------------------------------------------------------------------------- */
 
+/** Một cơ hội đang đóng góp vào doanh thu kỳ vọng của một tháng — hiện ra khi
+ *  bấm nhãn "X cơ hội mở" trên biểu đồ để xem cơ hội nào cấu thành con số đó. */
+export interface OpportunityForecastItem {
+  id: number;
+  name: string;
+  customerName: string | null;
+  expectedValue: number;
+  /** null nghĩa là cơ hội đang mở nhưng chưa có xác suất giai đoạn — dữ liệu
+   *  bất thường (lẽ ra mọi cơ hội mở đều có xác suất từ khi tạo), hệ thống
+   *  tạm tính như 0% nên weightedRevenue của dòng này luôn là 0. */
+  probability: number | null;
+  weightedRevenue: number;
+  expectedCloseDate: string;
+}
+
 /** Dự báo doanh thu của một tháng (NCL-03-CN-004, TC-01) */
 export interface MonthlyRevenueForecast {
   /** Định dạng tháng YYYY-MM (ví dụ: '2026-09') */
@@ -196,6 +211,8 @@ export interface MonthlyRevenueForecast {
   expectedRevenue: number;
   /** Số cơ hội mở có ngày dự kiến ký nằm trong tháng */
   opportunityCount: number;
+  /** Danh sách cơ hội cấu thành con số của tháng này, sắp xếp giảm dần theo mức đóng góp */
+  opportunities: OpportunityForecastItem[];
 }
 
 /** Dữ liệu trả về từ API dự báo doanh thu (GET /opportunities/revenue-forecast) */

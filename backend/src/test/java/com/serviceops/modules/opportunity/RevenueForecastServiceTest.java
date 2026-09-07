@@ -5,6 +5,7 @@ import com.serviceops.modules.opportunity.dto.response.RevenueForecastRes;
 import com.serviceops.modules.opportunity.entity.Opportunity;
 import com.serviceops.modules.opportunity.enums.OpportunityStage;
 import com.serviceops.modules.opportunity.enums.OpportunityStatus;
+import com.serviceops.modules.customer.repository.CustomerRepository;
 import com.serviceops.modules.opportunity.repository.OpportunityRepository;
 import com.serviceops.modules.opportunity.service.impl.RevenueForecastServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,11 +28,14 @@ class RevenueForecastServiceTest {
 	@Mock
 	private OpportunityRepository opportunityRepository;
 
+	@Mock
+	private CustomerRepository customerRepository;
+
 	private RevenueForecastServiceImpl service;
 
 	@BeforeEach
 	void setUp() {
-		service = new RevenueForecastServiceImpl(opportunityRepository);
+		service = new RevenueForecastServiceImpl(opportunityRepository, customerRepository);
 	}
 
 	@Test

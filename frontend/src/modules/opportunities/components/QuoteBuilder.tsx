@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type {
   Opportunity,
   QuoteItemReq,
@@ -12,8 +12,11 @@ import {
   validateQuoteCreate,
   convertVNDToWords,
 } from '../validators/opportunityValidators';
-import { createOpportunityQuote, QuoteApiError } from '../api/quotesApi';
+import { createOpportunityQuote, fetchCurrentBillRates, QuoteApiError, type BillRateOption } from '../api/quotesApi';
 import { ICONS } from '../../../components/common/icons';
+
+/** Giá trị đặc biệt của ô chọn chức danh khi người dùng muốn tự gõ tay thay vì chọn từ danh mục có sẵn. */
+const MANUAL_ROLE_ENTRY = '__manual__';
 
 interface QuoteBuilderProps {
   opportunity: Opportunity;
@@ -45,6 +48,23 @@ export default function QuoteBuilder({
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Danh sách chức danh đang có đơn giá bán hiệu lực, dùng để dựng ô chọn
+  // thay vì bắt người dùng gõ tay dễ sai chính tả (NCL-03-CN-003).
+  const [billRates, setBillRates] = useState<BillRateOption[]>([]);
+  // Các dòng đang ở chế độ gõ tay (chọn "Nhập chức danh khác") thay vì chọn từ danh mục.
+  const [manualRoleRows, setManualRoleRows] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    fetchCurrentBillRates().then((rates) => {
+      if (!cancelled) setBillRates(rates);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
 
   // Kết quả báo giá vừa tạo hoặc truyền sẵn
   const [latestQuote, setLatestQuote] = useState<QuoteRes | null>(initialQuote);
@@ -96,7 +116,7 @@ export default function QuoteBuilder({
     // Kiểm tra điều kiện giai đoạn bắt buộc PROPOSAL (NCL-03-CN-003)
     if (!isProposalStage) {
       setGeneralError(
-        `Quy tắc QTN-06: Cơ hội phải đang ở giai đoạn Đề xuất giải pháp (PROPOSAL) để lập báo giá. Cơ hội hiện tại đang ở giai đoạn "${STAGE_CONFIGS[opportunity.stage as keyof typeof STAGE_CONFIGS]?.shortLabel ?? opportunity.stage}".`
+        `Cơ hội phải đang ở giai đoạn Đề xuất giải pháp để lập báo giá. Cơ hội hiện tại đang ở giai đoạn "${STAGE_CONFIGS[opportunity.stage as keyof typeof STAGE_CONFIGS]?.shortLabel ?? opportunity.stage}".`
       );
       return;
     }
@@ -227,9 +247,11 @@ export default function QuoteBuilder({
           </div>
         </div>
 
-        {/* Datalist gợi ý vai trò chuyên môn */}
+        {/* Datalist gợi ý vị trí / chức danh khi ở chế độ gõ tay: ưu tiên dữ liệu
+            thật từ bảng đơn giá (đảm bảo khớp), kèm danh sách gợi ý tĩnh dự
+            phòng khi chưa tải được đơn giá (mất mạng, chưa có quyền xem...). */}
         <datalist id="popular-roles-suggestions">
-          {POPULAR_PROFESSIONAL_ROLES.map((role) => (
+          {[...new Set([...billRates.map((r) => r.professionalRole), ...POPULAR_PROFESSIONAL_ROLES])].map((role) => (
             <option key={role} value={role} />
           ))}
         </datalist>
@@ -256,8 +278,8 @@ export default function QuoteBuilder({
             >
               <span style={{ flexShrink: 0, marginTop: '2px' }}>{ICONS.alertTriangle}</span>
               <div>
-                <strong>Quy định nghiệp vụ (NCL-03-CN-003):</strong> Báo giá chỉ được phép khởi tạo khi cơ hội
-                ở giai đoạn <strong>Đề xuất giải pháp (PROPOSAL)</strong>. Cơ hội hiện tại đang ở giai đoạn{' '}
+                <strong>Quy định nghiệp vụ:</strong> Báo giá chỉ được phép khởi tạo khi cơ hội
+                ở giai đoạn <strong>Đề xuất giải pháp</strong>. Cơ hội hiện tại đang ở giai đoạn{' '}
                 <code>{opportunity.stage}</code>. Vui lòng chuyển giai đoạn cơ hội sang Đề xuất trước khi tạo báo giá.
               </div>
             </div>
@@ -283,8 +305,7 @@ export default function QuoteBuilder({
             >
               <span style={{ flexShrink: 0, marginTop: '2px' }}>{ICONS.lock}</span>
               <div>
-                <strong>Từ chối truy cập:</strong> Chức năng lập báo giá yêu cầu vai trò Nhân viên kinh doanh
-                (<code>VT-04</code>).
+                <strong>Từ chối truy cập:</strong> Chức năng lập báo giá yêu cầu vai trò Nhân viên kinh doanh.
               </div>
             </div>
           )}
@@ -372,9 +393,9 @@ export default function QuoteBuilder({
                 >
                   <span style={{ flexShrink: 0, marginTop: '2px' }}>{ICONS.alertTriangle}</span>
                   <div>
-                    <strong>Cảnh báo chưa có đơn giá hiệu lực (TC-02):</strong>
+                    <strong>Cảnh báo chưa có đơn giá hiệu lực:</strong>
                     <p style={{ margin: '4px 0 0' }}>
-                      Các vai trò sau chưa được cấu hình đơn giá bán:{' '}
+                      Các vị trí sau chưa được cấu hình đơn giá bán:{' '}
                       <strong>{latestQuote.missingRates.join(', ')}</strong>. Các dòng này được đánh dấu{' '}
                       <code>priced: false</code> và <strong>không được cộng vào tổng tiền báo giá</strong>.
                     </p>
@@ -395,7 +416,7 @@ export default function QuoteBuilder({
                   <thead>
                     <tr style={{ background: 'var(--surface-alt)', borderBottom: '1px solid var(--line)' }}>
                       <th style={{ padding: '10px 14px', textAlign: 'center', width: '48px' }}>#</th>
-                      <th style={{ padding: '10px 14px', textAlign: 'left' }}>Vai trò chuyên môn</th>
+                      <th style={{ padding: '10px 14px', textAlign: 'left' }}>Vị trí / chức danh</th>
                       <th style={{ padding: '10px 14px', textAlign: 'right', width: '120px' }}>Ngày công</th>
                       <th style={{ padding: '10px 14px', textAlign: 'right', width: '160px' }}>Đơn giá/ngày</th>
                       <th style={{ padding: '10px 14px', textAlign: 'right', width: '180px' }}>Thành tiền</th>
@@ -543,7 +564,7 @@ export default function QuoteBuilder({
                     <tr style={{ background: 'var(--surface-alt)', borderBottom: '1px solid var(--line)' }}>
                       <th style={{ padding: '10px 12px', textAlign: 'center', width: '48px' }}>#</th>
                       <th style={{ padding: '10px 12px', textAlign: 'left' }}>
-                        Vai trò chuyên môn <span className="req">*</span>
+                        Vị trí / chức danh <span className="req">*</span>
                       </th>
                       <th style={{ padding: '10px 12px', textAlign: 'right', width: '160px' }}>
                         Số ngày công <span className="req">*</span>
@@ -562,17 +583,86 @@ export default function QuoteBuilder({
                             {idx + 1}
                           </td>
                           <td style={{ padding: '10px 12px' }}>
-                            <input
-                              type="text"
-                              list="popular-roles-suggestions"
-                              className={`form-input ${roleError ? 'form-input--error' : ''}`}
-                              placeholder="Nhập hoặc chọn vai trò chuyên môn..."
-                              value={item.professionalRole}
-                              onChange={(e) => handleItemChange(idx, 'professionalRole', e.target.value)}
-                              disabled={submitting || !isProposalStage || !isAllowedRole}
-                              aria-label={`Vai trò chuyên môn dòng ${idx + 1}`}
-                            />
-                            {roleError && <span className="field-error">{roleError}</span>}
+                            {(() => {
+                              const hasBillRateOptions = billRates.length > 0;
+                              const isKnownRole = billRates.some(
+                                (r) => r.professionalRole === item.professionalRole
+                              );
+                              const isManual =
+                                !hasBillRateOptions || manualRoleRows.has(idx) || (item.professionalRole !== '' && !isKnownRole);
+
+                              if (!isManual) {
+                                // Chế độ chọn: chỉ liệt kê chức danh ĐANG có đơn giá bán hiệu lực
+                                // trong bảng bill_rates, nên chọn xong là chắc chắn tra được đơn giá,
+                                // không còn tình trạng gõ sai tên khiến hệ thống báo "chưa có đơn giá".
+                                return (
+                                  <>
+                                    <select
+                                      className={`form-input ${roleError ? 'form-input--error' : ''}`}
+                                      value={item.professionalRole}
+                                      onChange={(e) => {
+                                        if (e.target.value === MANUAL_ROLE_ENTRY) {
+                                          setManualRoleRows((prev) => new Set(prev).add(idx));
+                                          handleItemChange(idx, 'professionalRole', '');
+                                          return;
+                                        }
+                                        handleItemChange(idx, 'professionalRole', e.target.value);
+                                      }}
+                                      disabled={submitting || !isProposalStage || !isAllowedRole}
+                                      aria-label={`Vị trí / chức danh dòng ${idx + 1}`}
+                                    >
+                                      <option value="" disabled>
+                                        — Chọn chức danh có sẵn —
+                                      </option>
+                                      {billRates.map((rate) => (
+                                        <option key={rate.professionalRole} value={rate.professionalRole}>
+                                          {rate.professionalRole} — {formatCurrency(rate.dailyRate)}/ngày
+                                        </option>
+                                      ))}
+                                      <option value={MANUAL_ROLE_ENTRY}>✎ Nhập chức danh khác (thủ công)…</option>
+                                    </select>
+                                    {roleError && <span className="field-error">{roleError}</span>}
+                                  </>
+                                );
+                              }
+
+                              // Chế độ gõ tay: dành cho chức danh chưa được kế toán khai đơn giá
+                              // (đúng tình huống cảnh báo "missingRates" của story) hoặc khi chưa
+                              // tải được danh mục đơn giá (mất mạng, chưa có quyền xem...).
+                              return (
+                                <>
+                                  <input
+                                    type="text"
+                                    list="popular-roles-suggestions"
+                                    className={`form-input ${roleError ? 'form-input--error' : ''}`}
+                                    placeholder="Nhập hoặc chọn vị trí / chức danh..."
+                                    value={item.professionalRole}
+                                    onChange={(e) => handleItemChange(idx, 'professionalRole', e.target.value)}
+                                    disabled={submitting || !isProposalStage || !isAllowedRole}
+                                    aria-label={`Vị trí / chức danh dòng ${idx + 1}`}
+                                  />
+                                  {roleError && <span className="field-error">{roleError}</span>}
+                                  {hasBillRateOptions && (
+                                    <button
+                                      type="button"
+                                      className="btn-link"
+                                      style={{ fontSize: '12px', marginTop: '4px', padding: 0 }}
+                                      onClick={() => {
+                                        setManualRoleRows((prev) => {
+                                          const next = new Set(prev);
+                                          next.delete(idx);
+                                          return next;
+                                        });
+                                        handleItemChange(idx, 'professionalRole', '');
+                                      }}
+                                      disabled={submitting || !isProposalStage || !isAllowedRole}
+                                    >
+                                      ← Chọn từ danh mục có sẵn
+                                    </button>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </td>
                           <td style={{ padding: '10px 12px', textAlign: 'right' }}>
                             <input

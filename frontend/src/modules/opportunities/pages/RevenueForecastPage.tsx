@@ -6,6 +6,7 @@ import {
   type FormEvent,
 } from "react";
 import { ICONS } from "../../../components/common/icons";
+import { roleLabels } from "../../../utils/roleLabel";
 import {
   fetchRevenueForecast,
   OpportunityApiError,
@@ -72,6 +73,9 @@ export default function RevenueForecastPage({
     }),
   );
   const [showRuleInfo, setShowRuleInfo] = useState(false);
+
+  // Tháng đang bung chi tiết danh sách cơ hội (bấm nhãn "X cơ hội mở" trên biểu đồ)
+  const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
 
   const loadForecast = useCallback(
     async (
@@ -168,6 +172,14 @@ export default function RevenueForecastPage({
     return Math.round(totalRevenue / months.length);
   }, [totalRevenue, months.length]);
 
+  // Cơ hội đang mở nhưng chưa có xác suất giai đoạn (probability = null) —
+  // bị tính ngầm như 0% nên đóng góp 0 vào dự báo mà không ai biết nếu không
+  // có cảnh báo này. Dữ liệu hợp lệ không bao giờ rơi vào trường hợp này vì
+  // OpportunityServiceImpl.create() luôn gán xác suất khởi tạo ngay khi tạo.
+  const opportunitiesMissingProbability = useMemo(() => {
+    return months.flatMap((m) => m.opportunities ?? []).filter((o) => o.probability == null);
+  }, [months]);
+
   // TC-03: Từ chối truy cập nếu không có thẩm quyền
   if (!isAllowed) {
     return (
@@ -180,8 +192,8 @@ export default function RevenueForecastPage({
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
             Chức năng dự báo doanh thu theo xác suất giai đoạn chỉ dành riêng
-            cho vai trò <strong>Ban giám đốc (VT-01)</strong> hoặc{" "}
-            <strong>Nhân viên kinh doanh (VT-04)</strong>.
+            cho vai trò <strong>Ban giám đốc</strong> hoặc{" "}
+            <strong>Nhân viên kinh doanh</strong>.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">
@@ -191,7 +203,7 @@ export default function RevenueForecastPage({
               Tài khoản: {currentUserName}
             </span>
             <span className="security-log-badge__item">
-              Vai trò hiện tại: {currentUserRoles.join(", ")}
+              Vai trò hiện tại: {roleLabels(currentUserRoles)}
             </span>
           </div>
         </div>
@@ -210,7 +222,7 @@ export default function RevenueForecastPage({
             </span>
             <span className="page-header__dot" />
             <span className="page-header__meta">
-              QUY TẮC QTN-07 · CHU KỲ SỐ MỘT
+              QUY TẮC DỰ BÁO DOANH THU
             </span>
           </div>
           <h1 className="page-title">
@@ -227,22 +239,24 @@ export default function RevenueForecastPage({
             type="button"
             className="btn-secondary"
             onClick={() => setShowRuleInfo((prev) => !prev)}
-            title="Xem quy tắc nghiệp vụ tính dự báo (QTN-07)"
+            title="Xem quy tắc nghiệp vụ tính dự báo"
             data-testid="btn-toggle-rules"
           >
-            {ICONS.info} Quy tắc tính QTN-07
+            {ICONS.info} Quy tắc tính dự báo
           </button>
           <button
             type="button"
             className="btn-primary"
             onClick={() => loadForecast(appliedFilters, true)}
             disabled={loading || refreshing}
-            title="Tính lại dự báo doanh thu theo trạng thái cơ hội mới nhất (TC-02)"
+            title="Tính lại dự báo doanh thu theo trạng thái cơ hội mới nhất"
             data-testid="btn-refresh-forecast"
           >
-            <span className={refreshing ? "inline-block animate-spin" : ""}>
-              {ICONS.refresh}
-            </span>{" "}
+            {refreshing ? (
+              <span className="spinner-sm" aria-hidden="true" />
+            ) : (
+              ICONS.refresh
+            )}{" "}
             {refreshing ? "Đang đồng bộ..." : "Làm mới số liệu"}
           </button>
         </div>
@@ -250,24 +264,21 @@ export default function RevenueForecastPage({
 
       {/* Thông tin quy tắc nghiệp vụ QTN-07 (TC-04) */}
       {showRuleInfo && (
-        <div
-          className="bg-surface border border-line rounded-lg p-4 mb-5 text-sm text-ink-muted leading-relaxed"
-          data-testid="rule-info-panel"
-        >
-          <div className="flex items-center justify-between font-semibold text-ink-strong mb-2">
-            <span className="flex items-center gap-1.5">
-              {ICONS.document} QUY TẮC NGHIỆP VỤ `QTN-07` — DỰ BÁO DOANH THU
-              THEO XÁC SUẤT GIAI ĐOẠN
+        <div className="forecast-rule-panel" data-testid="rule-info-panel">
+          <div className="forecast-rule-panel__head">
+            <span className="forecast-rule-panel__title">
+              {ICONS.document} Quy tắc tính dự báo doanh thu
             </span>
             <button
               type="button"
-              className="text-ink-faint hover:text-ink-strong"
+              className="forecast-rule-panel__close"
               onClick={() => setShowRuleInfo(false)}
+              aria-label="Đóng bảng quy tắc"
             >
               {ICONS.close}
             </button>
           </div>
-          <ul className="list-disc pl-5 space-y-1">
+          <ul className="forecast-rule-panel__list">
             <li>
               <strong>Công thức:</strong> Doanh thu dự báo = Giá trị cơ hội ×
               Xác suất giai đoạn hiện tại (%).
@@ -277,9 +288,9 @@ export default function RevenueForecastPage({
               mở (<code>status = OPEN</code>) và đã có ngày dự kiến ký hợp đồng.
             </li>
             <li>
-              <strong>Loại trừ tự động (TC-02):</strong> Cơ hội đã đóng (bao gồm
-              cơ hội <code>LOST</code> thất bại hoặc <code>WON</code> đã thắng)
-              và cơ hội chưa có ngày chốt sẽ bị loại khỏi dự báo.
+              <strong>Loại trừ tự động:</strong> Cơ hội đã đóng (bao gồm cơ hội{" "}
+              <code>LOST</code> thất bại hoặc <code>WON</code> đã thắng) và cơ
+              hội chưa có ngày chốt sẽ bị loại khỏi dự báo.
             </li>
             <li>
               <strong>Cập nhật tức thì:</strong> Mỗi lần bấm <em>Làm mới</em>,
@@ -291,7 +302,7 @@ export default function RevenueForecastPage({
       )}
 
       {/* Bảng điều khiển bộ lọc thời gian */}
-      <div className="user-table-card mb-6">
+      <div className="user-table-card">
         <form
           onSubmit={handleFilterSubmit}
           className="user-table-toolbar"
@@ -352,18 +363,13 @@ export default function RevenueForecastPage({
             )}
           </div>
 
-          <div className="text-xs text-ink-muted flex items-center gap-2">
-            <span>
-              {ICONS.clock} Cập nhật lúc: <strong>{lastUpdated}</strong>
-            </span>
+          <div className="forecast-updated-at">
+            {ICONS.clock} Cập nhật lúc: <strong>{lastUpdated}</strong>
           </div>
         </form>
 
         {validationError && (
-          <div
-            className="px-5 py-3 border-t border-line bg-pale-red-bg text-pale-red-fg text-sm flex items-center gap-2"
-            data-testid="filter-validation-error"
-          >
+          <div className="forecast-filter-error" data-testid="filter-validation-error">
             <span>{ICONS.alertTriangle}</span>
             <span>{validationError}</span>
           </div>
@@ -373,21 +379,42 @@ export default function RevenueForecastPage({
       {/* Báo lỗi tải dữ liệu */}
       {error && (
         <div
-          className="p-4 mb-6 rounded-lg border border-pale-red-fg bg-pale-red-bg text-pale-red-fg flex items-center justify-between"
+          className="alert-box alert-box--danger"
+          style={{ justifyContent: "space-between" }}
           data-testid="forecast-error-state"
         >
-          <div className="flex items-center gap-2">
-            <span>{ICONS.alertTriangle}</span>
-            <span>{error}</span>
-          </div>
+          <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {ICONS.alertTriangle} {error}
+          </span>
           <button
             type="button"
-            className="btn-secondary text-xs"
+            className="btn-secondary"
             onClick={() => loadForecast(appliedFilters)}
             data-testid="btn-retry-forecast"
           >
             Thử lại
           </button>
+        </div>
+      )}
+
+      {/* Cảnh báo dữ liệu: cơ hội mở nhưng thiếu xác suất giai đoạn (đang bị tính như 0%) */}
+      {opportunitiesMissingProbability.length > 0 && (
+        <div className="alert-box alert-box--warning" data-testid="forecast-missing-probability-warning">
+          <span>{ICONS.alertTriangle}</span>
+          <div>
+            <strong>Cảnh báo dữ liệu:</strong> {opportunitiesMissingProbability.length} cơ hội
+            đang mở nhưng chưa có xác suất giai đoạn, hệ thống tạm tính đóng góp của các cơ hội
+            này là 0 đ vào dự báo — có thể khiến tổng doanh thu kỳ vọng thấp hơn thực tế:
+            <ul className="forecast-data-warning-list">
+              {opportunitiesMissingProbability.map((o) => (
+                <li key={o.id}>
+                  <strong>{o.name}</strong>
+                  {o.customerName ? ` — ${o.customerName}` : ""} (
+                  {formatVND(o.expectedValue)})
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       )}
 
@@ -440,106 +467,149 @@ export default function RevenueForecastPage({
 
       {/* Biểu đồ thanh trực quan theo từng tháng (Visual Bar Chart) */}
       {months.length > 0 && (
-        <div
-          className="user-table-card mb-6 p-5"
-          data-testid="forecast-visual-chart"
-        >
-          <div className="flex items-center justify-between mb-4 border-b border-line pb-3">
-            <div>
-              <h2 className="text-base font-semibold text-ink-strong">
-                Phân bổ doanh thu kỳ vọng theo tháng
-              </h2>
-              <p className="text-xs text-ink-muted">
-                Tương quan giá trị kỳ vọng (VNĐ) và khối lượng cơ hội mở sắp về
-              </p>
+        <div className="user-table-card" data-testid="forecast-visual-chart">
+          <div className="forecast-chart">
+            <div className="forecast-chart__head">
+              <div>
+                <h2 className="forecast-chart__title">
+                  Phân bổ doanh thu kỳ vọng theo tháng
+                </h2>
+                <p className="forecast-chart__subtitle">
+                  Tương quan giá trị kỳ vọng (VNĐ) và khối lượng cơ hội mở sắp về
+                </p>
+              </div>
+              <span className="forecast-chart__peak">
+                Tháng cao nhất: {formatVND(maxMonthRevenue)}
+              </span>
             </div>
-            <span className="text-xs font-mono text-ink-faint">
-              Đỉnh kỳ vọng: {formatVND(maxMonthRevenue)}
-            </span>
-          </div>
 
-          <div className="space-y-4 pt-1">
-            {months.map((m) => {
-              const percentOfMax =
-                maxMonthRevenue > 0
-                  ? Math.round((m.expectedRevenue / maxMonthRevenue) * 100)
-                  : 0;
-              const percentOfTotal =
-                totalRevenue > 0
-                  ? ((m.expectedRevenue / totalRevenue) * 100).toFixed(1)
-                  : "0.0";
+            <div className="forecast-chart__rows">
+              {months.map((m) => {
+                const percentOfMax =
+                  maxMonthRevenue > 0
+                    ? Math.round((m.expectedRevenue / maxMonthRevenue) * 100)
+                    : 0;
+                const percentOfTotal =
+                  totalRevenue > 0
+                    ? ((m.expectedRevenue / totalRevenue) * 100).toFixed(1)
+                    : "0.0";
 
-              return (
-                <div
-                  key={m.month}
-                  className="group"
-                  data-testid={`chart-bar-${m.month}`}
-                >
-                  <div className="flex items-center justify-between text-sm mb-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-ink-strong w-28">
-                        {formatMonthDisplay(m.month)}
-                      </span>
-                      <span className="badge badge--blue text-xs">
-                        {m.opportunityCount} cơ hội mở
-                      </span>
+                const isExpanded = expandedMonth === m.month;
+                const hasOpportunities = m.opportunities && m.opportunities.length > 0;
+
+                return (
+                  <div key={m.month} data-testid={`chart-bar-${m.month}`}>
+                    <div className="forecast-chart__row-top">
+                      <div className="forecast-chart__row-left">
+                        <span className="forecast-chart__month">
+                          {formatMonthDisplay(m.month)}
+                        </span>
+                        <button
+                          type="button"
+                          className="forecast-chart__toggle"
+                          onClick={() =>
+                            setExpandedMonth((prev) => (prev === m.month ? null : m.month))
+                          }
+                          disabled={!hasOpportunities}
+                          aria-expanded={isExpanded}
+                          data-testid={`chart-toggle-${m.month}`}
+                          title={
+                            hasOpportunities
+                              ? "Xem danh sách cơ hội trong tháng này"
+                              : "Không có dữ liệu chi tiết"
+                          }
+                        >
+                          {m.opportunityCount} cơ hội mở
+                          {hasOpportunities && (
+                            <span className="forecast-chart__toggle-caret">
+                              {isExpanded ? "▲" : "▼"}
+                            </span>
+                          )}
+                        </button>
+                      </div>
+                      <div className="forecast-chart__row-right">
+                        <span className="forecast-chart__amount">
+                          {formatVND(m.expectedRevenue)}
+                        </span>
+                        <span className="forecast-chart__share">
+                          {percentOfTotal}%
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono text-ink-strong font-semibold">
-                        {formatVND(m.expectedRevenue)}
-                      </span>
-                      <span className="text-xs text-ink-faint w-12 text-right">
-                        {percentOfTotal}%
-                      </span>
-                    </div>
-                  </div>
 
-                  <div className="h-3 w-full bg-surface-sunken rounded-full overflow-hidden border border-line-soft">
-                    <div
-                      className="h-full bg-ink-strong transition-all duration-500 rounded-full"
-                      style={{ width: `${Math.max(percentOfMax, 2)}%` }}
-                    />
+                    <div className="forecast-chart__track">
+                      <div
+                        className="forecast-chart__fill"
+                        style={{ width: `${Math.max(percentOfMax, 2)}%` }}
+                      />
+                    </div>
+
+                    {isExpanded && hasOpportunities && (
+                      <div
+                        className="forecast-chart__drill"
+                        data-testid={`chart-drill-${m.month}`}
+                      >
+                        {m.opportunities.map((opp) => (
+                          <div key={opp.id} className="forecast-chart__drill-item">
+                            <div className="forecast-chart__drill-main">
+                              <span className="forecast-chart__drill-name">
+                                {opp.name}
+                                {opp.probability == null && (
+                                  <span className="forecast-chart__drill-flag">
+                                    Thiếu xác suất
+                                  </span>
+                                )}
+                              </span>
+                              {opp.customerName && (
+                                <span className="forecast-chart__drill-customer">
+                                  {opp.customerName}
+                                </span>
+                              )}
+                            </div>
+                            <div className="forecast-chart__drill-meta">
+                              <span>
+                                {new Date(opp.expectedCloseDate).toLocaleDateString("vi-VN")}
+                              </span>
+                              <span>
+                                {opp.probability == null ? "—" : `${opp.probability}%`} xác suất
+                              </span>
+                              <span className="forecast-chart__drill-value">
+                                {formatVND(opp.weightedRevenue)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
 
       {/* Bảng chi tiết doanh thu theo tháng (TC-01) */}
       <div className="user-table-card" data-testid="forecast-table-card">
-        <div className="px-5 py-4 border-b border-line flex items-center justify-between bg-surface-alt">
-          <h2 className="text-sm font-semibold text-ink-strong uppercase tracking-wide font-mono">
+        <div className="forecast-table-head">
+          <h2 className="forecast-table-head__title">
             Chi tiết dự báo theo từng tháng
           </h2>
-          <span className="text-xs text-ink-muted">
+          <span className="forecast-table-head__count">
             Hiển thị {months.length} tháng
           </span>
         </div>
 
         {loading ? (
-          <div
-            className="p-12 text-center text-ink-muted"
-            data-testid="forecast-loading-state"
-          >
-            <span className="inline-block animate-spin text-2xl mb-2">
-              {ICONS.refresh}
-            </span>
+          <div className="forecast-loading-state" data-testid="forecast-loading-state">
+            <span className="spinner-lg" aria-hidden="true" />
             <p>Đang tính toán dự báo doanh thu...</p>
           </div>
         ) : months.length === 0 ? (
-          <div
-            className="table-empty-state p-12 text-center"
-            data-testid="forecast-empty-state"
-          >
-            <div className="table-empty-state__icon flex justify-center mb-3 text-ink-faint">
-              {ICONS.chart}
-            </div>
-            <h3 className="text-base font-semibold text-ink-strong mb-1">
-              Chưa có dữ liệu dự báo doanh thu
-            </h3>
-            <p className="text-sm text-ink-muted max-w-md mx-auto">
+          <div className="table-empty-state" data-testid="forecast-empty-state">
+            <div className="table-empty-state__icon">{ICONS.chart}</div>
+            <h3>Chưa có dữ liệu dự báo doanh thu</h3>
+            <p>
               Không tìm thấy cơ hội mở nào có ngày dự kiến ký nằm trong khoảng
               thời gian đã chọn. Các cơ hội đã đóng (thắng hoặc thất bại) tự
               động không được tính vào dự báo.
@@ -567,32 +637,24 @@ export default function RevenueForecastPage({
 
                   return (
                     <tr key={m.month} data-testid={`forecast-row-${m.month}`}>
-                      <td className="font-semibold text-ink-strong">
+                      <td>
                         {formatMonthDisplay(m.month)}
-                        <span className="ml-2 font-mono text-xs text-ink-faint">
+                        <span className="forecast-table__month-code">
                           ({m.month})
                         </span>
                       </td>
-                      <td className="text-right font-mono font-medium text-ink-strong">
+                      <td className="text-right mono-cell">
                         {formatVND(m.expectedRevenue)}
                       </td>
-                      <td className="text-center font-mono">
-                        <span className="inline-flex items-center justify-center min-w-[28px] h-6 px-2 rounded bg-surface-sunken text-xs font-semibold text-ink">
-                          {m.opportunityCount}
-                        </span>
+                      <td className="text-center">
+                        <span className="count-chip">{m.opportunityCount}</span>
                       </td>
-                      <td className="text-right font-mono font-medium text-ink-strong">
-                        {share}%
-                      </td>
+                      <td className="text-right mono-cell">{share}%</td>
                       <td>
                         {isHigh ? (
-                          <span className="badge badge--green text-xs">
-                            Kỳ trọng điểm
-                          </span>
+                          <span className="badge badge--green">Kỳ trọng điểm</span>
                         ) : (
-                          <span className="badge badge--blue text-xs">
-                            Bình thường
-                          </span>
+                          <span className="badge badge--blue">Bình thường</span>
                         )}
                       </td>
                     </tr>
@@ -600,19 +662,13 @@ export default function RevenueForecastPage({
                 })}
               </tbody>
               <tfoot>
-                <tr className="bg-surface-sunken font-semibold border-t-2 border-line">
-                  <td className="text-ink-strong uppercase text-xs font-mono">
-                    TỔNG CỘNG
-                  </td>
-                  <td className="text-right font-mono text-ink-strong text-base">
+                <tr className="forecast-table__total-row">
+                  <td className="forecast-table__total-label">TỔNG CỘNG</td>
+                  <td className="text-right mono-cell">
                     {formatVND(totalRevenue)}
                   </td>
-                  <td className="text-center font-mono text-ink-strong">
-                    {totalOpportunities}
-                  </td>
-                  <td className="text-right font-mono text-ink-strong">
-                    100.0%
-                  </td>
+                  <td className="text-center mono-cell">{totalOpportunities}</td>
+                  <td className="text-right mono-cell">100.0%</td>
                   <td>—</td>
                 </tr>
               </tfoot>

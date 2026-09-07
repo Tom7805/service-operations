@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { fetchCustomers, previewCustomerMerge, mergeCustomers, CustomerApiError } from '../api/customersApi';
+import {
+  fetchCustomers,
+  previewCustomerMerge,
+  mergeCustomers,
+  checkCustomerMergeAccess,
+  CustomerApiError,
+} from '../api/customersApi';
 import { validateCustomerMergeSelection } from '../validators/customerValidators';
+import { roleLabels } from '../../../utils/roleLabel';
 import { ICONS } from '../../../components/common/icons';
 import type {
   Customer,
@@ -171,6 +178,18 @@ export default function CustomerMergePage({
   // NCL-02-CN-006 / TC-03: chỉ Quản trị viên (VT-07) được gộp hồ sơ khách hàng.
   const isAllowed = currentUserRoles.includes('VT-07');
 
+  // Luôn gọi thật xuống backend khi vào trang này (bất kể kết quả kiểm tra vai trò ở
+  // client là gì) — để nếu bị từ chối, backend thực sự ghi nhận lần từ chối vào Nhật ký
+  // hệ thống (qua CustomerDuplicateAccessDeniedAspect). Trước đây màn hình "Từ chối truy
+  // cập" chỉ chặn ở phía frontend, không có request nào gửi lên server nên dù giao diện
+  // có ghi "đã ghi vào nhật ký bảo mật", thực tế không có gì được ghi cả.
+  useEffect(() => {
+    checkCustomerMergeAccess().catch(() => {
+      // Bỏ qua lỗi ở đây — giao diện đã tự quyết định hiện màn hình từ chối dựa trên
+      // isAllowed, lệnh gọi này chỉ nhằm đảm bảo có 1 request thật để backend ghi log.
+    });
+  }, []);
+
   const [targetIdInput, setTargetIdInput] = useState('');
   const [sourceIdInput, setSourceIdInput] = useState('');
   const [errors, setErrors] = useState<CustomerMergeFormErrors>({});
@@ -276,14 +295,14 @@ export default function CustomerMergePage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền gộp hồ sơ khách hàng</h2>
           <p>
-            Theo quy định phân quyền bảo mật (<strong>NCL-02-CN-006 · TC-03</strong>), chức năng Gộp hồ sơ khách
-            hàng trùng chỉ dành riêng cho <strong>Quản trị viên (VT-07)</strong>. Hệ thống đã ghi lại lần từ chối
+            Theo quy định phân quyền bảo mật, chức năng Gộp hồ sơ khách
+            hàng trùng chỉ dành riêng cho <strong>Quản trị viên</strong>. Hệ thống đã ghi lại lần từ chối
             truy cập này vào nhật ký bảo mật (Audit Log).
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">{ICONS.shield} Thời điểm ghi nhận: {new Date().toLocaleString('vi-VN')}</span>
             <span className="security-log-badge__item">Tài khoản: {currentUserName}</span>
-            <span className="security-log-badge__item">Vai trò tài khoản: {currentUserRoles.join(', ')}</span>
+            <span className="security-log-badge__item">Vai trò tài khoản: {roleLabels(currentUserRoles)}</span>
           </div>
         </div>
       </div>
@@ -339,59 +358,71 @@ export default function CustomerMergePage({
 
           <div className="form-grid">
             <div className="form-field">
-              <label htmlFor="merge-target-id" className="form-label">
-                ID hồ sơ giữ lại <span className="req">*</span>
+              <label htmlFor="merge-target-search" className="form-label">
+                Hồ sơ giữ lại <span className="req">*</span>
               </label>
               <CustomerSearchPicker
                 id="merge-target-search"
                 disabled={isPreviewing || isMerging}
                 onSelect={(customer) => setTargetIdInput(String(customer.id))}
               />
-              <input
-                id="merge-target-id"
-                type="number"
-                min={1}
-                className={`form-input ${errors.targetCustomerId ? 'form-input--error' : ''}`}
-                placeholder="VD: 1"
-                value={targetIdInput}
-                onChange={(e) => setTargetIdInput(e.target.value)}
-                disabled={isPreviewing || isMerging}
-              />
-              {errors.targetCustomerId && (
-                <span className="field-error" role="alert">
-                  {errors.targetCustomerId}
-                </span>
-              )}
-              <span className="field-hint">
-                Tìm và chọn ở ô phía trên, hoặc gõ tay ID nội bộ của hồ sơ chính — sẽ nhận toàn bộ dữ liệu liên quan.
-              </span>
+              <span className="field-hint">Sẽ nhận toàn bộ dữ liệu liên quan của hồ sơ bên cạnh.</span>
+
+              <details className="advanced-id-field">
+                <summary>Nhập ID nội bộ thủ công</summary>
+                <label htmlFor="merge-target-id" className="form-label form-label--sm">
+                  ID hồ sơ giữ lại <span className="req">*</span>
+                </label>
+                <input
+                  id="merge-target-id"
+                  type="number"
+                  min={1}
+                  className={`form-input ${errors.targetCustomerId ? 'form-input--error' : ''}`}
+                  placeholder="VD: 1"
+                  value={targetIdInput}
+                  onChange={(e) => setTargetIdInput(e.target.value)}
+                  disabled={isPreviewing || isMerging}
+                />
+                {errors.targetCustomerId && (
+                  <span className="field-error" role="alert">
+                    {errors.targetCustomerId}
+                  </span>
+                )}
+              </details>
             </div>
 
             <div className="form-field">
-              <label htmlFor="merge-source-id" className="form-label">
-                ID hồ sơ bị gộp <span className="req">*</span>
+              <label htmlFor="merge-source-search" className="form-label">
+                Hồ sơ bị gộp <span className="req">*</span>
               </label>
               <CustomerSearchPicker
                 id="merge-source-search"
                 disabled={isPreviewing || isMerging}
                 onSelect={(customer) => setSourceIdInput(String(customer.id))}
               />
-              <input
-                id="merge-source-id"
-                type="number"
-                min={1}
-                className={`form-input ${errors.sourceCustomerId ? 'form-input--error' : ''}`}
-                placeholder="VD: 2"
-                value={sourceIdInput}
-                onChange={(e) => setSourceIdInput(e.target.value)}
-                disabled={isPreviewing || isMerging}
-              />
-              {errors.sourceCustomerId && (
-                <span className="field-error" role="alert">
-                  {errors.sourceCustomerId}
-                </span>
-              )}
-              <span className="field-hint">Hồ sơ phụ — sẽ chuyển sang trạng thái "Đã gộp" sau khi xác nhận.</span>
+              <span className="field-hint">Sẽ chuyển sang trạng thái "Đã gộp" sau khi xác nhận.</span>
+
+              <details className="advanced-id-field">
+                <summary>Nhập ID nội bộ thủ công</summary>
+                <label htmlFor="merge-source-id" className="form-label form-label--sm">
+                  ID hồ sơ bị gộp <span className="req">*</span>
+                </label>
+                <input
+                  id="merge-source-id"
+                  type="number"
+                  min={1}
+                  className={`form-input ${errors.sourceCustomerId ? 'form-input--error' : ''}`}
+                  placeholder="VD: 2"
+                  value={sourceIdInput}
+                  onChange={(e) => setSourceIdInput(e.target.value)}
+                  disabled={isPreviewing || isMerging}
+                />
+                {errors.sourceCustomerId && (
+                  <span className="field-error" role="alert">
+                    {errors.sourceCustomerId}
+                  </span>
+                )}
+              </details>
             </div>
           </div>
 

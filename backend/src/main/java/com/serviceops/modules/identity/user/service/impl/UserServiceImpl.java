@@ -90,7 +90,7 @@ public class UserServiceImpl implements UserService {
         UserRes result = toResponse(userRepository.save(user));
         if (roleScopeChanged) {
             auditLogService.record("Cấu hình phân quyền", AuditTargetType.ROLE_SCOPE, user.getId(), user.getUsername(),
-                "Gán vai trò [" + String.join(", ", request.roleCodes()) + "] với phạm vi " + request.scopeType());
+                "Gán vai trò [" + roleNames(request.roleCodes()) + "] với phạm vi " + request.scopeType());
         } else {
             auditLogService.record("Cập nhật tài khoản", AuditTargetType.USER, user.getId(), user.getUsername(),
                 "Cập nhật thông tin tài khoản " + user.getFullName());
@@ -152,6 +152,18 @@ public class UserServiceImpl implements UserService {
         }
         log.info("USER_ROLE_SCOPE_CHANGED userId={} roles={} scopeType={} scopeDepartmentId={}",
                 user.getId(), roleCodes, type.name(), resolvedScopeDepartmentId);
+    }
+
+    /** Đổi danh sách mã vai trò sang tên tiếng Việt để ghi vào nhật ký (không hiển thị mã cho người dùng). */
+    private String roleNames(List<String> roleCodes) {
+        if (roleCodes == null || roleCodes.isEmpty()) {
+            return "";
+        }
+        return roleCodes.stream()
+                .map(code -> roleRepository.findByCode(code.trim())
+                        .map(Role::getName)
+                        .orElse(code))
+                .collect(java.util.stream.Collectors.joining(", "));
     }
 
     private User getUser(Long id) {

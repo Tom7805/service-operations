@@ -20,6 +20,7 @@ import PipelineReportPage from './modules/reports/pages/PipelineReportPage';
 import { ICONS } from './components/common/icons';
 import CommandPalette from './components/common/CommandPalette';
 import useScrollReveal from './hooks/useScrollReveal';
+import { roleLabels } from './utils/roleLabel';
 import { useSessionSync } from './hooks/useSessionSync';
 import type { ReactNode } from 'react';
 
@@ -55,14 +56,31 @@ interface NavItem {
    * mới gặp ngõ cụt.
    */
   requires?: string[];
+  /**
+   * Đặt khi trang KHÔNG chặn hẳn người thiếu `requires` mà chỉ hạ xuống chế độ
+   * xem (ví dụ "Cơ hội bán hàng": ai cũng xem được đường ống, chỉ riêng thao
+   * tác tạo/chuyển giai đoạn mới cần đúng vai trò). Nếu để trống, mặc định coi
+   * là chặn hẳn (bấm vào sẽ gặp màn "Không có thẩm quyền").
+   *
+   * Icon khóa 🔒 chỉ nên xuất hiện cho mục chặn hẳn — dùng chung cho cả hai
+   * loại từng khiến người dùng hiểu lầm "khóa mà vẫn bấm vào xem được, vậy
+   * khóa để làm gì" (xem log phản hồi ngày 07/09/2026).
+   */
+  viewOnlyHint?: string;
 }
 
 /** Điều hướng chính — vận hành nghiệp vụ hàng ngày. */
 const NAV_ITEMS: NavItem[] = [
   { tab: 'CUSTOMERS', icon: ICONS.building, label: 'Khách hàng', requires: ['VT-04', 'VT-02'] },
-  { tab: 'OPPORTUNITIES', icon: ICONS.target, label: 'Cơ hội bán hàng', requires: ['VT-04'] },
+  {
+    tab: 'OPPORTUNITIES', icon: ICONS.target, label: 'Cơ hội bán hàng', requires: ['VT-01', 'VT-02', 'VT-04'],
+    // OpportunityListPage cho MỌI vai trò xem đường ống bán hàng — chỉ chặn
+    // thao tác tạo/chuyển giai đoạn nếu thiếu vai trò Nhân viên kinh doanh
+    // (VT-04). Không phải màn hình chặn hẳn như các mục khác.
+    viewOnlyHint: 'Cơ hội bán hàng — chế độ chỉ xem, cần vai trò Nhân viên kinh doanh để tạo hoặc chuyển giai đoạn',
+  },
   { tab: 'REVENUE_FORECAST', icon: ICONS.chart, label: 'Dự báo doanh thu', requires: ['VT-01', 'VT-04'] },
-  { tab: 'REPORTS', icon: ICONS.chart, label: 'Báo cáo', matches: ['PIPELINE_REPORT'], requires: ['VT-01', 'VT-04'] },
+  { tab: 'REPORTS', icon: ICONS.document, label: 'Báo cáo', matches: ['PIPELINE_REPORT'], requires: ['VT-01', 'VT-04'] },
   { tab: 'CUSTOMER_MERGE', icon: ICONS.merge, label: 'Gộp KH trùng', requires: ['VT-07'] },
   { tab: 'DEPARTMENTS', icon: ICONS.tree, label: 'Tổ chức', requires: ['VT-07'] },
   { tab: 'USERS', icon: ICONS.user, label: 'Tài khoản', matches: ['DETAIL'], requires: ['VT-07'] },
@@ -81,17 +99,6 @@ const SYSTEM_NAV_ITEMS: NavItem[] = [
 
 const ALL_NAV_ITEMS: NavItem[] = [...NAV_ITEMS, ...SYSTEM_NAV_ITEMS];
 
-const ROLE_LABELS: Record<string, string> = {
-  'VT-01': 'Ban giám đốc',
-  'VT-02': 'Quản lý dự án',
-  'VT-03': 'Nhân viên chuyên môn',
-  'VT-04': 'Nhân viên kinh doanh',
-  'VT-05': 'Kế toán',
-  'VT-06': 'Nhân sự',
-  'VT-07': 'Quản trị viên',
-  'VT-08': 'Nhân viên công ty',
-  'VT-09': 'Khách hàng',
-};
 
 function readStoredSession(): AuthSession | null {
   const raw = localStorage.getItem('session');
@@ -183,7 +190,17 @@ export default function App() {
   const renderNavGroup = (items: NavItem[]) =>
     items.map((item) => {
       const isActive = activeTab === item.tab || (item.matches ?? []).includes(activeTab);
-      const locked = !canAccess(item);
+      const underprivileged = !canAccess(item);
+      // Chỉ mục CHẶN HẲN mới coi là "locked" (mờ đi + icon khóa). Mục chỉ hạ
+      // xuống chế độ xem (viewOnlyHint) vẫn mở được bình thường, không mờ,
+      // không có icon khóa — tránh hiểu lầm "khóa mà vẫn bấm vào xem được".
+      const isViewOnlyForUser = underprivileged && Boolean(item.viewOnlyHint);
+      const locked = underprivileged && !item.viewOnlyHint;
+      const title = locked
+        ? `${item.label} — cần vai trò khác`
+        : isViewOnlyForUser
+        ? item.viewOnlyHint
+        : (sidebarCollapsed ? item.label : undefined);
       return (
         <button
           key={item.tab}
@@ -191,7 +208,7 @@ export default function App() {
           className={`side-nav__item ${isActive ? 'side-nav__item--active' : ''} ${locked ? 'side-nav__item--locked' : ''}`}
           onClick={() => setActiveTab(item.tab)}
           aria-current={isActive ? 'page' : undefined}
-          title={locked ? `${item.label} — cần vai trò khác` : (sidebarCollapsed ? item.label : undefined)}
+          title={title}
         >
           <span className="side-nav__item__icon" aria-hidden="true">
             {item.icon}
@@ -200,6 +217,11 @@ export default function App() {
           {!sidebarCollapsed && locked && (
             <span className="side-nav__item__lock" aria-label="Cần vai trò khác">
               {ICONS.lock}
+            </span>
+          )}
+          {!sidebarCollapsed && isViewOnlyForUser && (
+            <span className="side-nav__item__view-only" aria-label="Chế độ chỉ xem">
+              Chỉ xem
             </span>
           )}
         </button>
@@ -347,7 +369,7 @@ export default function App() {
                     <span>@{session.username}</span>
                     <div className="user-chip__role-badge">
                       <span className="user-chip__role-dot" />
-                      <span>{currentRoles.map((role) => ROLE_LABELS[role] ?? role).join(', ')}</span>
+                      <span>{roleLabels(currentRoles)}</span>
                     </div>
                   </div>
                   <button
@@ -389,6 +411,10 @@ export default function App() {
             <OpportunityListPage
               currentUserRoles={currentRoles}
               currentUserName={session.fullName}
+              onOpenActivities={(id) => {
+                setSelectedOpportunityId(id);
+                setActiveTab('OPPORTUNITY_DETAIL');
+              }}
             />
           ) : activeTab === 'REVENUE_FORECAST' ? (
             <RevenueForecastPage
@@ -396,15 +422,37 @@ export default function App() {
               currentUserName={session.fullName}
             />
           ) : activeTab === 'REPORTS' ? (
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Báo cáo</h2>
-              <div className="space-y-2">
+            <div className="user-management-page">
+              <div className="page-header">
+                <div>
+                  <div className="page-header__kicker">
+                    <span className="page-header__tag">{ICONS.document} VẬN HÀNH</span>
+                    <span className="page-header__dot" />
+                    <span className="page-header__meta">TRUNG TÂM BÁO CÁO</span>
+                  </div>
+                  <h1 className="page-title">Báo cáo</h1>
+                  <p className="page-subtitle">
+                    Chọn một báo cáo để xem chi tiết. Danh sách sẽ mở rộng dần khi công ty cần thêm
+                    góc nhìn vận hành mới.
+                  </p>
+                </div>
+              </div>
+
+              <div className="report-catalog-grid">
                 <button
                   type="button"
-                  className="btn btn-primary"
+                  className="report-card"
                   onClick={() => setActiveTab('PIPELINE_REPORT')}
                 >
-                  Báo cáo đường ống bán hàng theo giai đoạn
+                  <span className="report-card__icon">{ICONS.target}</span>
+                  <span className="report-card__body">
+                    <span className="report-card__title">Đường ống bán hàng theo giai đoạn</span>
+                    <span className="report-card__desc">
+                      Số cơ hội, giá trị dự kiến và số ngày trung bình đứng ở mỗi giai đoạn — kèm
+                      cảnh báo cơ hội đọng lâu bất thường.
+                    </span>
+                  </span>
+                  <span className="report-card__arrow">{ICONS.arrowRight}</span>
                 </button>
               </div>
             </div>
@@ -445,26 +493,53 @@ export default function App() {
                 currentUserName={session.fullName}
               />
             ) : (
-              <div className="opportunity-id-picker">
-                <h2>Ghi nhận hoạt động chăm sóc cơ hội</h2>
-                <p>Nhập mã cơ hội để xem lịch sử và ghi nhận hoạt động chăm sóc.</p>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const id = Number(opportunityIdInput);
-                    if (Number.isInteger(id) && id > 0) setSelectedOpportunityId(id);
-                  }}
-                >
-                  <input
-                    type="number"
-                    min={1}
-                    value={opportunityIdInput}
-                    onChange={(e) => setOpportunityIdInput(e.target.value)}
-                    placeholder="Mã cơ hội"
-                    aria-label="Mã cơ hội"
-                  />
-                  <button type="submit" className="btn btn-primary">Mở cơ hội</button>
-                </form>
+              <div className="user-management-page">
+                <div className="page-header">
+                  <div>
+                    <div className="page-header__kicker">
+                      <span className="page-header__tag">{ICONS.building} CƠ HỘI BÁN HÀNG</span>
+                      <span className="page-header__dot" />
+                      <span className="page-header__meta">CHĂM SÓC CƠ HỘI</span>
+                    </div>
+                    <h1 className="page-title">Ghi nhận hoạt động chăm sóc cơ hội</h1>
+                    <p className="page-subtitle">
+                      Xem lại lịch sử chăm sóc và ghi nhận cuộc gọi, email hoặc buổi gặp mới cho một cơ hội cụ thể.
+                      Cách nhanh hơn: mở "Cơ hội bán hàng", chọn một cơ hội rồi bấm{' '}
+                      <strong>"Ghi nhận chăm sóc"</strong> — không cần nhớ mã số.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="user-table-card" style={{ padding: '24px' }}>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const id = Number(opportunityIdInput);
+                      if (Number.isInteger(id) && id > 0) setSelectedOpportunityId(id);
+                    }}
+                    style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', flexWrap: 'wrap' }}
+                  >
+                    <div className="filter-group" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}>
+                      <label htmlFor="opportunity-id-input" className="filter-label">
+                        Mã cơ hội
+                      </label>
+                      <input
+                        id="opportunity-id-input"
+                        type="number"
+                        min={1}
+                        className="form-input"
+                        style={{ width: '220px' }}
+                        value={opportunityIdInput}
+                        onChange={(e) => setOpportunityIdInput(e.target.value)}
+                        placeholder="Ví dụ: 2001"
+                        aria-label="Mã cơ hội"
+                      />
+                    </div>
+                    <button type="submit" className="btn-primary">
+                      {ICONS.search} Mở cơ hội
+                    </button>
+                  </form>
+                </div>
               </div>
             )
           ) : activeTab === 'DETAIL' && selectedUserId ? (

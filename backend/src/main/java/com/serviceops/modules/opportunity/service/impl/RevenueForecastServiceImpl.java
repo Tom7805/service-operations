@@ -1,7 +1,7 @@
 package com.serviceops.modules.opportunity.service.impl;
 
-import com.serviceops.common.exception.BusinessRuleException;
-import com.serviceops.common.exception.ErrorCode;
+import com.serviceops.modules.customer.entity.Customer;
+import com.serviceops.modules.customer.repository.CustomerRepository;
 import com.serviceops.modules.opportunity.dto.request.ForecastQueryReq;
 import com.serviceops.modules.opportunity.dto.response.RevenueForecastRes;
 import com.serviceops.modules.opportunity.entity.Opportunity;
@@ -14,17 +14,25 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
 public class RevenueForecastServiceImpl implements RevenueForecastService {
 
 	private final OpportunityRepository opportunityRepository;
+	private final CustomerRepository customerRepository;
 
-	public RevenueForecastServiceImpl(OpportunityRepository opportunityRepository) {
+	public RevenueForecastServiceImpl(OpportunityRepository opportunityRepository,
+			CustomerRepository customerRepository) {
 		this.opportunityRepository = opportunityRepository;
+		this.customerRepository = customerRepository;
 	}
 
 	@Override
@@ -50,14 +58,43 @@ public class RevenueForecastServiceImpl implements RevenueForecastService {
 			MonthlyAccumulator accumulator = byMonth.computeIfAbsent(month, ignored -> new MonthlyAccumulator());
 			accumulator.revenue = accumulator.revenue.add(weightedRevenue);
 			accumulator.opportunityCount++;
+			accumulator.items.add(new OpportunityAccumulatorItem(opportunity, weightedRevenue));
 		}
+
+		// Lay ten khach hang theo lo cho tat ca co hoi cua moi thang, tranh N+1 query
+		// (cung cach OpportunityServiceImpl.list() dang dung).
+		Map<Long, String> customerNameById = customerRepository
+				.findAllById(byMonth.values().stream()
+						.flatMap(acc -> acc.items.stream())
+						.map(item -> item.opportunity.getCustomerId())
+						.filter(Objects::nonNull)
+						.distinct()
+						.toList())
+				.stream()
+				.collect(Collectors.toMap(Customer::getId, Customer::getName, (a, b) -> a));
 
 		BigDecimal total = byMonth.values().stream()
 				.map(accumulator -> accumulator.revenue)
 				.reduce(BigDecimal.ZERO, BigDecimal::add);
+
 		return new RevenueForecastRes(total, byMonth.entrySet().stream()
-				.map(entry -> new RevenueForecastRes.MonthlyRevenueForecast(entry.getKey(), entry.getValue().revenue,
-						entry.getValue().opportunityCount))
+				.map(entry -> {
+					MonthlyAccumulator accumulator = entry.getValue();
+					List<RevenueForecastRes.OpportunityForecastItem> opportunities = accumulator.items.stream()
+							// Cơ hội đóng góp nhiều nhất hiện lên trước khi bung chi tiết.
+							.sorted(Comparator.comparing((OpportunityAccumulatorItem it) -> it.weightedRevenue).reversed())
+							.map(it -> new RevenueForecastRes.OpportunityForecastItem(
+									it.opportunity.getId(),
+									it.opportunity.getName(),
+									customerNameById.get(it.opportunity.getCustomerId()),
+									it.opportunity.getExpectedValue(),
+									it.opportunity.getProbability(),
+									it.weightedRevenue,
+									it.opportunity.getExpectedCloseDate()))
+							.toList();
+					return new RevenueForecastRes.MonthlyRevenueForecast(entry.getKey(), accumulator.revenue,
+							accumulator.opportunityCount, opportunities);
+				})
 				.toList());
 	}
 
@@ -71,5 +108,8 @@ public class RevenueForecastServiceImpl implements RevenueForecastService {
 	private static final class MonthlyAccumulator {
 		private BigDecimal revenue = BigDecimal.ZERO;
 		private int opportunityCount;
+		private final List<OpportunityAccumulatorItem> items = new ArrayList<>();
 	}
+
+	private record OpportunityAccumulatorItem(Opportunity opportunity, BigDecimal weightedRevenue) {}
 }
