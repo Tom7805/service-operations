@@ -24,6 +24,7 @@ public class ContractMapper {
 				contract.getQuoteId(),
 				contract.getContractType() == null ? null : contract.getContractType().name(),
 				contract.getTotalValue(),
+				contract.getLimitValue(),
 				contract.getStartDate(),
 				contract.getEndDate(),
 				contract.getStatus() == null ? null : contract.getStatus().name(),

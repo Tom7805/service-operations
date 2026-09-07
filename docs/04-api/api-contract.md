@@ -1751,3 +1751,79 @@ Tạo thành công sẽ ghi một dòng `CONTRACT_CREATE` vào nhật ký cơ h�
   hoàn thiện thông tin; hợp đồng này là đầu vào cho tính năng mở dự án (story sau của Epic NCL-04).
 - Lỗi `INVALID_STATE` hiển thị đúng `message` trả về từ backend (đã diễn giải rõ nguyên nhân: chưa thắng /
   đã có hợp đồng / sai ngày).
+
+---
+
+### `NCL-04-CN-002` — Khai báo loại hợp đồng và hạn mức
+
+Yêu cầu token của **Kế toán** (`VT-05`) — vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối vào
+`contract_audit_logs` (TC-03, `ContractAccessDeniedAspect`). Điều kiện bắt đầu: hợp đồng đã được tạo (xem
+`NCL-04-CN-001`).
+
+Áp dụng **QTN-19**: hạn mức trần (nếu khai báo) không được âm và không được nhỏ hơn giá trị hợp đồng sau khi
+điều chỉnh — nếu không hệ thống từ chối lưu (TC-02). `limitValue = null` nghĩa là **không đặt hạn mức** ("nếu
+có" theo user story), không phải `0`. Khai báo thành công ghi một dòng `TYPE_LIMIT_UPDATE` vào nhật ký hợp đồng
+— người thực hiện, nội dung (loại/giá trị/hạn mức cũ-mới), thời điểm (TC-04); Frontend không cần gọi thêm API
+nào để việc ghi log này xảy ra.
+
+#### `PATCH /contracts/{contractId}/type-limit`
+
+```json
+{
+  "contractType": "TIME_AND_MATERIAL",
+  "totalValue": 500000000,
+  "limitValue": 600000000
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `contractType` | string | có | Một trong `TIME_AND_MATERIAL` · `FIXED_PRICE` · `MAINTENANCE` · `MILESTONE` (TC-01) |
+| `totalValue` | number | không | Điều chỉnh giá trị hợp đồng; bỏ trống thì **giữ nguyên** giá trị hiện tại của hợp đồng; không được âm |
+| `limitValue` | number | không | Hạn mức trần xuất hóa đơn; bỏ trống = không đặt hạn mức; không được âm và không được nhỏ hơn giá trị hợp đồng (đã điều chỉnh nếu có) — QTN-19 (TC-02) |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Khai bao loai hop dong va han muc thanh cong",
+  "data": {
+    "id": 5,
+    "contractCode": "HD-4K7X2Q9",
+    "name": "Hop dong ERP",
+    "opportunityId": 12,
+    "customerId": 1,
+    "customerName": "Cong ty TNHH ABC",
+    "quoteId": 30,
+    "contractType": "TIME_AND_MATERIAL",
+    "totalValue": 500000000,
+    "limitValue": 600000000,
+    "startDate": "2026-10-01",
+    "endDate": "2027-09-30",
+    "status": "DRAFT",
+    "notes": null,
+    "createdBy": "ke_toan01",
+    "createdAt": "2026-09-07T10:15:00"
+  }
+}
+```
+
+Cùng cấu trúc `ContractRes` của `NCL-04-CN-001`, thêm `limitValue` (`number | null`).
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng với `{contractId}` |
+| 400 | `VALIDATION_ERROR` | Thiếu `contractType`; `totalValue`/`limitValue` âm; **hoặc** hạn mức nhỏ hơn giá trị hợp đồng (TC-02, QTN-19) |
+
+**Lưu ý cho Frontend:**
+- Chỉ hiển thị màn hình này cho tài khoản Kế toán; các vai trò khác không nên thấy nút vào chức năng (dù backend
+  đã tự chặn 403, ẩn ở giao diện giúp trải nghiệm rõ ràng hơn).
+- Khi để trống ô hạn mức, gửi `limitValue: null` (hoặc bỏ trường) — không gửi `0`, vì `0` sẽ luôn bị từ chối
+  (nhỏ hơn giá trị hợp đồng khác 0) trừ khi hợp đồng có giá trị bằng 0.
+- Lỗi `VALIDATION_ERROR` do vượt hạn mức nên hiển thị đúng `message` backend trả về (đã nêu rõ là do QTN-19) và
+  gợi ý người dùng tăng hạn mức hoặc giảm giá trị hợp đồng.

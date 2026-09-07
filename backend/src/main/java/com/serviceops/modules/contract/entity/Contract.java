@@ -59,6 +59,14 @@ public class Contract extends BaseEntity {
 	@Column(name = "total_value", nullable = false, precision = 18, scale = 2)
 	private BigDecimal totalValue;
 
+	/**
+	 * Han muc tran gia tri xuat hoa don (NCL-04-CN-002, QTN-19) do Ke toan khai
+	 * bao; NULL = khong dat han muc. Rang buoc limitValue >= totalValue (khi co
+	 * gia tri) kiem soat o tang service - TC-02.
+	 */
+	@Column(name = "limit_value", precision = 18, scale = 2)
+	private BigDecimal limitValue;
+
 	@Column(name = "start_date")
 	private LocalDate startDate;
 
