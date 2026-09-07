@@ -7,9 +7,11 @@ import com.serviceops.modules.contract.dto.response.ContractRes;
 import com.serviceops.modules.contract.entity.Contract;
 import com.serviceops.modules.contract.enums.ContractStatus;
 import com.serviceops.modules.contract.enums.ContractType;
+import com.serviceops.modules.contract.logging.ContractAuditLogger;
 import com.serviceops.modules.contract.mapper.ContractMapper;
 import com.serviceops.modules.contract.repository.ContractRepository;
 import com.serviceops.modules.contract.service.impl.ContractServiceImpl;
+import com.serviceops.modules.contract.validator.ContractLimitValidator;
 import com.serviceops.modules.customer.entity.Customer;
 import com.serviceops.modules.customer.repository.CustomerRepository;
 import com.serviceops.modules.opportunity.entity.Opportunity;
@@ -66,6 +68,12 @@ private CustomerRepository customerRepository;
 @Mock
 private OpportunityAuditLogger auditLogger;
 
+@Mock
+private ContractLimitValidator contractLimitValidator;
+
+@Mock
+private ContractAuditLogger contractAuditLogger;
+
 private final ContractMapper contractMapper = new ContractMapper();
 
 private ContractServiceImpl service;
@@ -73,7 +81,8 @@ private ContractServiceImpl service;
 @BeforeEach
 void setUp() {
 service = new ContractServiceImpl(opportunityRepository, quoteRepository,
-contractRepository, customerRepository, contractMapper, auditLogger);
+contractRepository, customerRepository, contractMapper, auditLogger,
+contractLimitValidator, contractAuditLogger);
 SecurityContextHolder.getContext().setAuthentication(
 new TestingAuthenticationToken("sale01", "n/a"));
 }

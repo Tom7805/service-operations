@@ -3,12 +3,16 @@ package com.serviceops.modules.contract.service.impl;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.contract.dto.request.ContractCreateFromOpportunityReq;
+import com.serviceops.modules.contract.dto.request.ContractTypeLimitReq;
 import com.serviceops.modules.contract.dto.response.ContractRes;
 import com.serviceops.modules.contract.entity.Contract;
+import com.serviceops.modules.contract.enums.ContractAuditAction;
 import com.serviceops.modules.contract.enums.ContractStatus;
+import com.serviceops.modules.contract.logging.ContractAuditLogger;
 import com.serviceops.modules.contract.mapper.ContractMapper;
 import com.serviceops.modules.contract.repository.ContractRepository;
 import com.serviceops.modules.contract.service.ContractService;
+import com.serviceops.modules.contract.validator.ContractLimitValidator;
 import com.serviceops.modules.customer.entity.Customer;
 import com.serviceops.modules.customer.repository.CustomerRepository;
 import com.serviceops.modules.opportunity.entity.Opportunity;
@@ -45,6 +49,8 @@ public class ContractServiceImpl implements ContractService {
 	private final CustomerRepository customerRepository;
 	private final ContractMapper contractMapper;
 	private final OpportunityAuditLogger auditLogger;
+	private final ContractLimitValidator contractLimitValidator;
+	private final ContractAuditLogger contractAuditLogger;
 
 	@Override
 	@Transactional
@@ -105,6 +111,45 @@ public class ContractServiceImpl implements ContractService {
 
 		log.info("CONTRACT_CREATED contractId={} code={} opportunityId={} by={}",
 				contract.getId(), contract.getContractCode(), opportunityId, contract.getCreatedBy());
+
+		String customerName = customerRepository.findById(contract.getCustomerId())
+				.map(Customer::getName)
+				.orElse(null);
+		return contractMapper.toResponse(contract, customerName);
+	}
+
+	@Override
+	@Transactional
+	public ContractRes updateTypeAndLimit(Long contractId, ContractTypeLimitReq request) {
+		Contract contract = contractRepository.findById(contractId)
+				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
+						"Khong tim thay hop dong voi id=" + contractId));
+
+		// Dieu chinh gia tri: null = giu nguyen gia tri hien tai cua hop dong.
+		BigDecimal resolvedTotalValue = request.totalValue() != null
+				? request.totalValue()
+				: contract.getTotalValue();
+
+		// QTN-19 (TC-02): han muc tran (neu co) phai khong nho hon gia tri hop dong,
+		// neu khong he thong se khong the chinh sach chot hoa don khong vuot muc tran.
+		contractLimitValidator.validate(resolvedTotalValue, request.limitValue());
+
+		BigDecimal oldLimit = contract.getLimitValue();
+		contract.setContractType(request.contractType());
+		contract.setTotalValue(resolvedTotalValue);
+		contract.setLimitValue(request.limitValue());
+		contract = contractRepository.save(contract);
+
+		// TC-04: ghi nguoi thuc hien (Ke toan), noi dung thay doi va thoi diem.
+		contractAuditLogger.record(contractId, ContractAuditAction.TYPE_LIMIT_UPDATE,
+				"Khai bao loai hop dong=" + request.contractType().name()
+						+ ", gia tri=" + contract.getTotalValue()
+						+ ", han muc tran=" + (request.limitValue() == null ? "khong dat" : request.limitValue())
+						+ (oldLimit == null ? "" : " (han muc cu=" + oldLimit + ")"));
+
+		log.info("CONTRACT_TYPE_LIMIT_UPDATED contractId={} type={} total={} limit={} by={}",
+				contractId, request.contractType(), contract.getTotalValue(),
+				request.limitValue(), currentUsername());
 
 		String customerName = customerRepository.findById(contract.getCustomerId())
 				.map(Customer::getName)

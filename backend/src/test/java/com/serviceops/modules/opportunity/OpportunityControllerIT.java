@@ -471,6 +471,7 @@ class OpportunityControllerIT {
 	void createsContractFromOpportunity() throws Exception {
 		ContractRes res = new ContractRes(5L, "HD-4K7X2Q9", "Hop dong ERP", 1L, 1L,
 				"Cong ty TNHH ABC", 30L, "FIXED_PRICE", new BigDecimal("500000000"),
+				new BigDecimal("500000000"),
 				LocalDate.of(2026, 10, 1), LocalDate.of(2027, 9, 30), "DRAFT",
 				null, "sale01", LocalDateTime.now());
 		when(contractService.createFromOpportunity(eq(1L), any())).thenReturn(res);

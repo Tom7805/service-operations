@@ -1,6 +1,7 @@
 package com.serviceops.modules.contract.service;
 
 import com.serviceops.modules.contract.dto.request.ContractCreateFromOpportunityReq;
+import com.serviceops.modules.contract.dto.request.ContractTypeLimitReq;
 import com.serviceops.modules.contract.dto.response.ContractRes;
 
 /**
@@ -26,4 +27,21 @@ public interface ContractService {
 	 *         neu co hoi chua co bao gia
 	 */
 	ContractRes createFromOpportunity(Long opportunityId, ContractCreateFromOpportunityReq request);
+
+	/**
+	 * Khai bao loai hop dong, gia tri va han muc tran (NCL-04-CN-002, QTN-19).
+	 *
+	 * <p>Ke toan (VT-05) chon loai hop dong (tron goi/theo gio/theo moc), co the
+	 * dieu chinh gia tri va nhap han muc tran neu co. Han muc (khi co gia tri)
+	 * phai khong nho hon gia tri hop dong de dam bao khong xuat hoa don vuot muc
+	 * tran (TC-02). Moi khai bao thanh cong duoc ghi nhat ky hop dong (TC-04).</p>
+	 *
+	 * @param contractId id hop dong da tao (dieu kien bat dau cua story)
+	 * @param request    loai hop dong + gia tri dieu chinh (null = giu nguyen) + han muc (null = khong dat)
+	 * @return hop dong sau khi cap nhat
+	 * @throws com.serviceops.common.exception.BusinessRuleException
+	 *         RESOURCE_NOT_FOUND neu khong ton tai hop dong; VALIDATION_ERROR neu
+	 *         han muc khong hop le (am hoac nho hon gia tri hop dong)
+	 */
+	ContractRes updateTypeAndLimit(Long contractId, ContractTypeLimitReq request);
 }

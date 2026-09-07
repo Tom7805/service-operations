@@ -21,6 +21,7 @@ public record ContractRes(
 		Long quoteId,
 		String contractType,
 		BigDecimal totalValue,
+		BigDecimal limitValue,
 		LocalDate startDate,
 		LocalDate endDate,
 		String status,
