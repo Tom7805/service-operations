@@ -13,5 +13,8 @@ public enum ContractType {
 	FIXED_PRICE,
 
 	/** Tra phi dinh ky bao tri/ho tro theo chu ky. */
-	MAINTENANCE
+	MAINTENANCE,
+
+	/** Tra theo cot moc nghiem thu/doi tac (theo moc) - NCL-04-CN-002. */
+	MILESTONE
 }
