@@ -1827,3 +1827,96 @@ Cùng cấu trúc `ContractRes` của `NCL-04-CN-001`, thêm `limitValue` (`numb
   (nhỏ hơn giá trị hợp đồng khác 0) trừ khi hợp đồng có giá trị bằng 0.
 - Lỗi `VALIDATION_ERROR` do vượt hạn mức nên hiển thị đúng `message` backend trả về (đã nêu rõ là do QTN-19) và
   gợi ý người dùng tăng hạn mức hoặc giảm giá trị hợp đồng.
+
+---
+
+### `NCL-04-CN-003` — Quản lý mốc thanh toán của hợp đồng
+
+Yêu cầu token của **Kế toán** (`VT-05`) — vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối vào
+`contract_audit_logs` (TC-03, dùng chung `ContractAccessDeniedAspect` với `NCL-04-CN-002` vì cùng nằm trong gói
+controller của hợp đồng). Điều kiện bắt đầu: hợp đồng đã khai báo loại hình và giá trị (xem `NCL-04-CN-002`).
+
+Mỗi lần gọi `POST` là **thay thế toàn bộ** danh sách mốc hiện có của hợp đồng (không phải thêm nối tiếp) — phù
+hợp với thao tác "khai báo lại danh sách mốc" khi kế toán chỉnh sửa. Tổng số tiền (`amount`) của các mốc trong
+danh sách gửi lên phải **đúng bằng** giá trị hợp đồng (`totalValue` của hợp đồng, không phải giá trị gửi trong
+request), nếu không hệ thống từ chối lưu và giữ nguyên danh sách mốc cũ (TC-01/TC-02). Khai báo thành công ghi
+một dòng `MILESTONE_UPDATE` vào nhật ký hợp đồng — người thực hiện, nội dung (số lượng mốc, tổng giá trị), thời
+điểm (TC-04); Frontend không cần gọi thêm API nào để việc ghi log này xảy ra.
+
+Mỗi mốc trong danh sách nhập **tỷ lệ (`percentage`) hoặc số tiền (`amount`)** — không bắt buộc cả hai:
+- Chỉ nhập `percentage`: hệ thống tự quy đổi `amount = totalValue × percentage / 100` (làm tròn 2 chữ số thập
+  phân, `HALF_UP`).
+- Nhập `amount`: dùng trực tiếp số tiền đã nhập, `percentage` chỉ mang tính hiển thị (không dùng để tính toán).
+- Không nhập cả hai: bị từ chối `VALIDATION_ERROR`.
+
+#### `POST /contracts/{contractId}/milestones`
+
+```json
+{
+  "milestones": [
+    { "name": "Tam ung", "percentage": 30, "expectedDate": "2026-10-15", "acceptanceCondition": "Ky hop dong" },
+    { "name": "Nghiem thu giai doan 1", "percentage": 30, "expectedDate": "2027-01-15", "acceptanceCondition": "Ban giao module loi" },
+    { "name": "Nghiem thu cuoi cung", "percentage": 40, "expectedDate": "2027-06-30", "acceptanceCondition": "Nghiem thu toan bo he thong" }
+  ]
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `milestones` | array | có | Danh sách mốc — không được rỗng (TC-01); mỗi phần tử theo cấu trúc bên dưới |
+| `milestones[].name` | string | có | Tên mốc thanh toán, không được để trống |
+| `milestones[].percentage` | number | không* | Tỷ lệ % so với giá trị hợp đồng (0–100) |
+| `milestones[].amount` | number | không* | Số tiền của mốc; không được âm |
+| `milestones[].expectedDate` | string (`yyyy-MM-dd`) | không | Ngày dự kiến đạt mốc |
+| `milestones[].acceptanceCondition` | string | không | Điều kiện nghiệm thu, tối đa 500 ký tự |
+
+\* Mỗi mốc phải có **ít nhất một** trong `percentage` hoặc `amount`; thiếu cả hai bị từ chối `VALIDATION_ERROR`.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Cap nhat moc thanh toan thanh cong",
+  "data": [
+    {
+      "id": 1,
+      "contractId": 5,
+      "name": "Tam ung",
+      "percentage": 30,
+      "amount": 300000000,
+      "expectedDate": "2026-10-15",
+      "acceptanceCondition": "Ky hop dong",
+      "status": "PLANNED",
+      "sortOrder": 0,
+      "createdAt": "2026-09-07T10:15:00"
+    }
+  ]
+}
+```
+
+`status` luôn là `PLANNED` với mốc mới khai báo — các story sau (`NCL-12` Nghiệm thu và bàn giao, `QTN-25`) sẽ
+cập nhật trạng thái khi mốc được gắn với phiếu nghiệm thu đã ký. `sortOrder` phản ánh đúng thứ tự các mốc trong
+mảng `milestones` đã gửi lên.
+
+#### `GET /contracts/{contractId}/milestones`
+
+Trả về danh sách mốc thanh toán hiện tại của hợp đồng, cùng cấu trúc `data` như trên, sắp theo `sortOrder`.
+
+**Response lỗi (cả hai API):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng với `{contractId}` |
+| 400 | `VALIDATION_ERROR` | Thiếu `name`; mốc thiếu cả `percentage` và `amount`; `percentage`/`amount` âm hoặc `percentage` > 100; danh sách `milestones` rỗng; **hoặc** tổng số tiền các mốc không đúng bằng giá trị hợp đồng (TC-02) |
+
+**Lưu ý cho Frontend:**
+- Gọi `GET` để lấy danh sách mốc hiện có trước khi hiển thị màn hình chỉnh sửa, vì `POST` luôn thay thế toàn bộ
+  — nếu chỉ muốn sửa một mốc, phải gửi lại **toàn bộ** danh sách (kể cả các mốc không đổi), nếu không danh sách
+  cũ sẽ bị mất.
+- Hiển thị tổng số tiền đang nhập và so với giá trị hợp đồng ngay trên form (validate phía client) để người
+  dùng thấy lệch trước khi bấm lưu, thay vì chỉ dựa vào lỗi `400` trả về sau khi gửi.
+- Khi người dùng nhập theo tỷ lệ, có thể hiển thị số tiền quy đổi tạm thời ở FE để xem trước, nhưng số tiền
+  chính thức luôn lấy từ `data[].amount` trong response trả về sau khi lưu thành công.
