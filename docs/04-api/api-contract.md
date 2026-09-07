@@ -1906,3 +1906,61 @@ trúc từng phần tử như response của `GET`.
 | 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`); hệ thống ghi `DENIED_ACCESS`. |
 | 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng với `{contractId}`. |
 | 400 | `VALIDATION_ERROR` | Mảng rỗng, thiếu tỷ lệ/số tiền, số tiền không hợp lệ, tỷ lệ không khớp số tiền hoặc tổng mốc khác `totalValue`. |
+
+### `NCL-04-CN-004` — Lập phụ lục điều chỉnh hợp đồng
+
+Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`). Phụ lục chỉ được lập cho hợp đồng đang hiệu lực
+(`status = ACTIVE`). Giá trị điều chỉnh dương là tăng, âm là giảm; backend cập nhật `totalValue` trong cùng
+giao dịch và lưu snapshot trước/sau để truy vết. Nếu hợp đồng có hạn mức, giá trị sau điều chỉnh không được
+vượt hạn mức. Mỗi lần lập thành công ghi `APPENDIX_CREATE` vào `contract_audit_logs`.
+
+#### `POST /contracts/{contractId}/appendices`
+
+**Request:**
+```json
+{
+  "content": "Mo rong pham vi trien khai giai doan 2",
+  "adjustmentValue": 200000000,
+  "effectiveDate": "2026-10-01"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `content` | string | có | Nội dung thay đổi, tối đa 1000 ký tự. |
+| `adjustmentValue` | number | có | Khác `0`; số dương là tăng, số âm là giảm. |
+| `effectiveDate` | date | có | Nằm trong khoảng ngày hiệu lực của hợp đồng nếu hợp đồng có khai báo khoảng này. |
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Lap phu luc dieu chinh hop dong thanh cong",
+  "data": {
+    "id": 101,
+    "contractId": 5,
+    "content": "Mo rong pham vi trien khai giai doan 2",
+    "adjustmentValue": 200000000,
+    "valueBefore": 500000000,
+    "valueAfter": 700000000,
+    "effectiveDate": "2026-10-01",
+    "createdBy": "sale01",
+    "createdAt": "2026-09-07T10:15:00"
+  }
+}
+```
+
+#### `GET /contracts/{contractId}/appendices`
+
+Trả về các phụ lục theo `effectiveDate` tăng dần; danh sách rỗng nếu hợp đồng chưa có phụ lục.
+Mỗi phần tử có cùng cấu trúc với `data` của API tạo phụ lục.
+
+**Response lỗi cho cả hai API:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh (`VT-04`). |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng với `{contractId}`. |
+| 400 | `INVALID_STATE` | Hợp đồng chưa `ACTIVE`, hoặc ngày hiệu lực nằm ngoài thời hạn hợp đồng. |
+| 400 | `VALIDATION_ERROR` | Thiếu dữ liệu, nội dung quá dài, giá trị điều chỉnh bằng 0, tổng sau điều chỉnh âm hoặc vượt hạn mức. |

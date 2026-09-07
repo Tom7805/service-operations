@@ -1,16 +1,20 @@
 package com.serviceops.modules.contract.controller;
 
 import com.serviceops.common.api.BaseRes;
+import com.serviceops.modules.contract.dto.request.ContractAppendixCreateReq;
 import com.serviceops.modules.contract.dto.request.ContractTypeLimitReq;
 import com.serviceops.modules.contract.dto.request.ContractMilestoneReq;
+import com.serviceops.modules.contract.dto.response.ContractAppendixRes;
 import com.serviceops.modules.contract.dto.response.ContractMilestoneRes;
 import com.serviceops.modules.contract.dto.response.ContractRes;
 import com.serviceops.modules.contract.service.ContractMilestoneService;
+import com.serviceops.modules.contract.service.ContractAppendixService;
 import com.serviceops.modules.contract.service.ContractService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -32,6 +36,23 @@ public class ContractController {
 
 private final ContractService contractService;
 private final ContractMilestoneService contractMilestoneService;
+private final ContractAppendixService contractAppendixService;
+
+/** NCL-04-CN-004: lap phu luc dieu chinh hop dong. */
+@PostMapping("/{contractId}/appendices")
+@PreAuthorize("hasRole('VT-04')")
+public BaseRes<ContractAppendixRes> createAppendix(@PathVariable Long contractId,
+		@Valid @RequestBody ContractAppendixCreateReq request) {
+	return BaseRes.ok("Lap phu luc dieu chinh hop dong thanh cong",
+			contractAppendixService.create(contractId, request));
+}
+
+/** NCL-04-CN-004: xem lich su phu luc cua hop dong. */
+@GetMapping("/{contractId}/appendices")
+@PreAuthorize("hasRole('VT-04')")
+public BaseRes<List<ContractAppendixRes>> listAppendices(@PathVariable Long contractId) {
+	return BaseRes.ok(contractAppendixService.list(contractId));
+}
 
 /**
  * Khai bao loai hop dong (tron goi/theo gio/theo moc), gia tri va han muc tran

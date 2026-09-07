@@ -5,10 +5,12 @@ import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.config.SecurityConfig;
 import com.serviceops.modules.contract.controller.ContractController;
+import com.serviceops.modules.contract.dto.response.ContractAppendixRes;
 import com.serviceops.modules.contract.dto.response.ContractRes;
 import com.serviceops.modules.contract.logging.ContractAccessDeniedAspect;
 import com.serviceops.modules.contract.logging.ContractAuditLogger;
 import com.serviceops.modules.contract.service.ContractService;
+import com.serviceops.modules.contract.service.ContractAppendixService;
 import com.serviceops.modules.contract.service.ContractMilestoneService;
 import com.serviceops.security.CustomUserDetailsService;
 import com.serviceops.security.JwtAuthFilter;
@@ -32,6 +34,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -56,6 +59,9 @@ private ContractService contractService;
 
 @MockBean
 private ContractMilestoneService contractMilestoneService;
+
+@MockBean
+private ContractAppendixService contractAppendixService;
 
 @MockBean
 private ContractAuditLogger contractAuditLogger;
@@ -126,5 +132,38 @@ mockMvc.perform(patch("/contracts/99/type-limit")
 .content("{\"contractType\":\"FIXED_PRICE\"}"))
 .andExpect(status().isNotFound())
 .andExpect(jsonPath("$.errorCode").value("RESOURCE_NOT_FOUND"));
+}
+
+@Test
+@DisplayName("NCL-04-CN-004: nhan vien kinh doanh duoc lap phu luc")
+@WithMockUser(authorities = "ROLE_VT-04")
+void allowsSalesRoleToCreateAppendix() throws Exception {
+	when(contractAppendixService.create(eq(5L), any())).thenReturn(new ContractAppendixRes(
+			101L, 5L, "Mo rong pham vi", new BigDecimal("200000000"),
+			new BigDecimal("500000000"), new BigDecimal("700000000"),
+			LocalDate.of(2026, 10, 1), "sale01", LocalDateTime.now()));
+
+	mockMvc.perform(post("/contracts/5/appendices")
+				.contentType("application/json")
+				.content(objectMapper.writeValueAsString(java.util.Map.of(
+						"content", "Mo rong pham vi",
+						"adjustmentValue", 200000000,
+						"effectiveDate", "2026-10-01"))))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.valueBefore").value(500000000))
+			.andExpect(jsonPath("$.data.valueAfter").value(700000000));
+
+	verify(contractAppendixService).create(eq(5L), any());
+}
+
+@Test
+@DisplayName("NCL-04-CN-004: vai tro khac kinh doanh bi tu choi khi lap phu luc")
+@WithMockUser(authorities = "ROLE_VT-05")
+void deniesAccountingRoleFromCreatingAppendix() throws Exception {
+	mockMvc.perform(post("/contracts/5/appendices")
+				.contentType("application/json")
+				.content("{\"content\":\"Dieu chinh\",\"adjustmentValue\":1000000,\"effectiveDate\":\"2026-10-01\"}"))
+			.andExpect(status().isForbidden())
+			.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
 }
 }
