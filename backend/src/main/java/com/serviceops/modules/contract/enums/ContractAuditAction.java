@@ -20,6 +20,9 @@ AMENDMENT_CREATE,
 /** Ghi nhan gia tri da dung cua hop dong tu gio cong/hoa don (NCL-04-CN-005, TC-04). */
 LIMIT_USAGE_UPDATE,
 
-/** Truy cap chuc nang hop dong bi tu choi vi khong co quyen (NCL-04-CN-002/003/004/005, TC-03). */
+/** Gui nhac hop dong sap het hieu luc toi ke toan va nguoi phu trach (NCL-04-CN-006, TC-04). */
+EXPIRY_REMINDER,
+
+/** Truy cap chuc nang hop dong bi tu choi vi khong co quyen (NCL-04-CN-002/003/004/005/006, TC-03). */
 DENIED_ACCESS
 }

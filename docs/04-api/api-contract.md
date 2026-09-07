@@ -2115,3 +2115,95 @@ giới hạn.
   hạn mức (`NCL-04-CN-004`) thay vì chỉ hiển thị lỗi chung chung.
 - `usageRatio` có thể vượt quá `100` khi `overLimit = true` (chỉ xảy ra với nguồn `TIMESHEET_APPROVAL`, vì nguồn
   `INVOICE` đã bị chặn trước khi vượt) — không giả định giá trị này luôn nằm trong khoảng 0–100.
+
+---
+
+### `NCL-04-CN-006` — Nhắc hợp đồng sắp hết hiệu lực
+
+Yêu cầu token của **Kế toán** (`VT-05`) — vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối vào
+`contract_audit_logs` (TC-03, dùng chung `ContractAccessDeniedAspect` với các API khác của hợp đồng). Điều kiện bắt
+đầu: hợp đồng đã khai báo ngày kết thúc hiệu lực (`endDate`, xem `NCL-04-CN-001`).
+
+Hệ thống **tự chạy rà soát hằng ngày** (job nội bộ, mặc định 6h sáng) để tìm hợp đồng đang **`ACTIVE`** có
+`endDate` rơi trong vòng **30 ngày tới** và gửi nhắc (ghi nhật ký `EXPIRY_REMINDER`) cho từng hợp đồng — người
+thực hiện ghi trong nhật ký là hệ thống, nội dung nêu rõ mã hợp đồng, số ngày còn lại và người phụ trách
+(`createdBy` của hợp đồng, đóng vai trò nhân viên kinh doanh phụ trách). `POST /run` bên dưới kích hoạt **thủ
+công** đúng luồng xử lý này — dùng để kiểm tra hoặc chạy lại khi cần, không phải một API tách biệt.
+
+Theo **QTN-27**: một hợp đồng đã được nhắc trong ngày hôm nay thì các lần rà soát tiếp theo trong cùng ngày đó sẽ
+**bỏ qua**, không gửi nhắc trùng và không ghi thêm nhật ký. Hợp đồng ngoài cửa sổ 30 ngày (còn quá xa hoặc đã hết
+hạn) sẽ không xuất hiện trong kết quả `POST /run` — hợp đồng **đã hết hạn** được xử lý riêng ở `GET /overdue`
+(TC-02).
+
+#### `POST /contracts/expiry-reminders/run`
+
+Không có phần thân yêu cầu.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Da gui nhac hop dong sap het hieu luc",
+  "data": [
+    {
+      "contractId": 5,
+      "contractCode": "HD-4K7X2Q9",
+      "name": "Hop dong ERP",
+      "customerId": 1,
+      "endDate": "2026-10-02",
+      "daysRemaining": 25,
+      "status": "ACTIVE",
+      "createdBy": "sale01",
+      "alertType": "EXPIRING_SOON"
+    }
+  ]
+}
+```
+
+`data` chỉ chứa các hợp đồng **thực sự vừa được gửi nhắc** ở lần gọi này — hợp đồng đã được nhắc trước đó trong
+cùng ngày sẽ không xuất hiện lại (QTN-27), mảng rỗng nghĩa là không có hợp đồng nào cần nhắc hoặc tất cả đã được
+nhắc trong ngày.
+
+#### `GET /contracts/expiry-reminders/overdue`
+
+Trả về danh sách hợp đồng đã **hết hiệu lực** (`endDate` đã qua) nhưng **vẫn ở trạng thái `ACTIVE`** — tức là chưa
+được đóng (`NCL-05-CN-006`) hay gia hạn (`NCL-04-CN-007`), dấu hiệu công việc có thể đang chạy ngoài hợp đồng
+(TC-02). Cùng cấu trúc `data[]` như trên, nhưng `alertType` là `OVERDUE_ACTIVE` và `daysRemaining` là **số âm**
+(số ngày đã quá hạn).
+
+```json
+{
+  "success": true,
+  "message": "Hop dong da het hieu luc nhung van dang chay",
+  "data": [
+    {
+      "contractId": 9,
+      "contractCode": "HD-9F2K1A0",
+      "name": "Hop dong bao tri",
+      "customerId": 3,
+      "endDate": "2026-08-20",
+      "daysRemaining": -15,
+      "status": "ACTIVE",
+      "createdBy": "sale02",
+      "alertType": "OVERDUE_ACTIVE"
+    }
+  ]
+}
+```
+
+**Response lỗi (cả hai API):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) — hệ thống ghi nhật ký lần từ chối (TC-03) |
+
+**Lưu ý cho Frontend:**
+- Đây không phải API để FE tự chủ động gọi định kỳ — hệ thống đã tự rà soát hằng ngày. `POST /run` chỉ nên có
+  trong màn hình quản trị/kiểm tra thủ công dành cho Kế toán, không đặt trong luồng thao tác thường ngày.
+- `GET /overdue` nên đặt ở màn hình cảnh báo hợp đồng (dashboard) và gọi mỗi khi mở màn hình — đây là dữ liệu
+  "trạng thái hiện tại", không phải log một-lần như `POST /run`.
+- Vì `createdBy` là người tạo hợp đồng, nếu nhân viên kinh doanh phụ trách thực tế đã đổi (chuyển giao khách
+  hàng), giá trị này có thể không còn đúng người cần liên hệ — cân nhắc bổ sung trường "người phụ trách hiện tại"
+  ở story sau nếu nghiệp vụ yêu cầu.
