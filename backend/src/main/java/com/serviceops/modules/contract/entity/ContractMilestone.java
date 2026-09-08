@@ -38,8 +38,15 @@ public class ContractMilestone extends BaseEntity {
     @Column(name = "acceptance_condition", length = 1000)
     private String acceptanceCondition;
 
+    /**
+     * columnDefinition khai tuong minh VARCHAR(30) — thieu no thi Hibernate 6
+     * tren dialect MySQL tu suy luan sang kieu ENUM goc cua co so du lieu
+     * thay vi VARCHAR, gay loi validate schema luc khoi dong ung dung du
+     * migration (V44) da tao dung cot VARCHAR(30). Cung quy uoc voi
+     * Contract.status/contractType va ContractAuditLog.actionType.
+     */
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
+    @Column(nullable = false, columnDefinition = "VARCHAR(30)")
     private ContractMilestoneStatus status = ContractMilestoneStatus.PENDING;
 
     @Column(name = "created_by", length = 100)
