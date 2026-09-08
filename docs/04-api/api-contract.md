@@ -1656,3 +1656,436 @@ Không có tham số. Báo cáo là ảnh chụp **hiện tại** của toàn b�
 - Vẽ phễu (funnel) theo đúng thứ tự `stages` trả về; hiển thị cảnh báo "đọng lâu bất thường" cho các giai đoạn
   có `stalledCount > 0`, dùng `stalledOpportunityIds` để liên kết tới chi tiết cơ hội.
 - Cột giá trị dùng chung đơn vị tiền với các API cơ hội khác (VND, số nguyên).
+
+---
+
+## Epic `NCL-04` — Quản lý hợp đồng
+
+### `NCL-04-CN-001` — Tạo hợp đồng từ cơ hội đã thắng
+
+Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`) — vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần
+từ chối (TC-03, dùng chung cơ chế `OpportunityAccessDeniedAspect` vì endpoint nằm trong module cơ hội).
+Áp dụng quy tắc **QTN-08: hợp đồng chỉ tạo được từ cơ hội đã thắng (`stage = WON`)** (TC-02).
+
+Máy chủ **tự động dựng sẵn** hợp đồng từ cơ hội: `customerId` (khách hàng của cơ hội), giá trị (lấy
+`totalAmount` của **báo giá version mới nhất**), và ghi nguồn (`quoteId`) để truy ngược về phía bán hàng.
+Frontend chỉ gửi các trường người dùng bổ sung; **không** chấp nhận `customerId`/`quoteId` từ client để tránh
+sai lệch dữ liệu bán hàng. Hợp đồng mới luôn ở trạng thái `DRAFT` và được **liên kết ngược về cơ hội** qua
+`opportunityId` — mỗi cơ hội thắng chỉ tạo được **một** hợp đồng (UNIQUE ở DB, kiểm trước ở tầng service).
+Tạo thành công sẽ ghi một dòng `CONTRACT_CREATE` vào nhật ký cơ hội — người thực hiện, nội dung, thời điểm
+(TC-04); Frontend không cần gọi API nào thêm để ghi log này.
+
+#### `POST /opportunities/{opportunityId}/contract`
+
+```json
+{
+  "name": "Hop dong trien khai ERP Cong ty TNHH ABC",
+  "contractType": "FIXED_PRICE",
+  "totalValue": 500000000,
+  "startDate": "2026-10-01",
+  "endDate": "2027-09-30",
+  "notes": "Tra theo 3 cot moc nghiem thu"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `name` | string | không | Tên hợp đồng (tối đa 255 ký tự); bỏ trống thì lấy tên cơ hội |
+| `contractType` | string | có | Một trong `TIME_AND_MATERIAL` · `FIXED_PRICE` · `MAINTENANCE` |
+| `totalValue` | number | không | Giá trị hợp đồng tự điều chỉnh; bỏ trống thì dùng `totalAmount` của báo giá mới nhất |
+| `startDate` | string (`date`) | không | Ngày bắt đầu hiệu lực; có thể bổ sung sau ở bước hoàn thiện hợp đồng |
+| `endDate` | string (`date`) | không | Phải **không sớm hơn** `startDate` nếu cả hai đều gửi |
+| `notes` | string | không | Ghi chú/nội dung bổ sung (tối đa 1000 ký tự) |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Tao hop dong tu co hoi thanh cong",
+  "data": {
+    "id": 5,
+    "contractCode": "HD-4K7X2Q9",
+    "name": "Trien khai ERP cho Cong ty TNHH ABC",
+    "opportunityId": 12,
+    "customerId": 1,
+    "customerName": "Cong ty TNHH ABC",
+    "quoteId": 30,
+    "contractType": "FIXED_PRICE",
+    "totalValue": 500000000,
+    "startDate": "2026-10-01",
+    "endDate": "2027-09-30",
+    "status": "DRAFT",
+    "notes": "Tra theo 3 cot moc nghiem thu",
+    "createdBy": "sale01",
+    "createdAt": "2026-09-07T10:15:00"
+  }
+}
+```
+
+| Trường | Kiểu | Ghi chú |
+|---|---|---|
+| `id` | number | Id hợp đồng vừa tạo. |
+| `contractCode` | string | Mã hợp đồng duy nhất, sinh tự động (tiền tố `HD-`). |
+| `opportunityId` | number \| null | **Liên kết ngược về cơ hội gốc** — luôn có giá trị với hợp đồng tạo từ cơ hội (TC-01). |
+| `customerId` / `customerName` | number / string | Khách hàng lấy từ cơ hội; tên để hiển thị. |
+| `quoteId` | number \| null | Báo giá version mới nhất dùng dựng hợp đồng (truy nguồn bán hàng). |
+| `totalValue` | number | Giá trị hợp đồng = `totalValue` người dùng nhập nếu có, ngược lại `totalAmount` của báo giá. |
+| `status` | string | Luôn `DRAFT` ngay sau khi tạo; hợp đồng "dựng sẵn, chờ bổ sung". |
+| `createdBy` / `createdAt` | string / `date-time` | Người thực hiện và thời điểm tạo (TC-04). |
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh (`VT-04`) — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại cơ hội với `{opportunityId}` |
+| 400 | `INVALID_STATE` | Cơ hội chưa ở giai đoạn `WON` — "yêu cầu cập nhật kết quả cơ hội trước" (TC-02); **hoặc** cơ hội đã có hợp đồng; **hoặc** `endDate` sớm hơn `startDate` |
+| 400 | `VALIDATION_ERROR` | Thiếu `contractType`, tên/ghi chú vượt quá độ dài cho phép; **hoặc** cơ hội thắng chưa có báo giá nào để dựng giá trị |
+
+**Lưu ý cho Frontend:**
+- Chỉ hiển thị nút "Tạo hợp đồng" khi `opportunity.stage === 'WON'` và chưa có hợp đồng liên kết (TC-02);
+  với cơ hội chưa thắng, vô hiệu nút và hướng dẫn cập nhật kết quả cơ hội trước.
+- Sau khi tạo thành công, điều hướng sang màn hình chi tiết hợp đồng (trạng thái `DRAFT`) để người dùng
+  hoàn thiện thông tin; hợp đồng này là đầu vào cho tính năng mở dự án (story sau của Epic NCL-04).
+- Lỗi `INVALID_STATE` hiển thị đúng `message` trả về từ backend (đã diễn giải rõ nguyên nhân: chưa thắng /
+  đã có hợp đồng / sai ngày).
+
+---
+
+### `NCL-04-CN-002` — Khai báo loại hợp đồng và hạn mức
+
+Yêu cầu token của **Kế toán** (`VT-05`) — vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối vào
+`contract_audit_logs` (TC-03, `ContractAccessDeniedAspect`). Điều kiện bắt đầu: hợp đồng đã được tạo (xem
+`NCL-04-CN-001`).
+
+Áp dụng **QTN-19**: hạn mức trần (nếu khai báo) không được âm và không được nhỏ hơn giá trị hợp đồng sau khi
+điều chỉnh — nếu không hệ thống từ chối lưu (TC-02). `limitValue = null` nghĩa là **không đặt hạn mức** ("nếu
+có" theo user story), không phải `0`. Khai báo thành công ghi một dòng `TYPE_LIMIT_UPDATE` vào nhật ký hợp đồng
+— người thực hiện, nội dung (loại/giá trị/hạn mức cũ-mới), thời điểm (TC-04); Frontend không cần gọi thêm API
+nào để việc ghi log này xảy ra.
+
+#### `PATCH /contracts/{contractId}/type-limit`
+
+```json
+{
+  "contractType": "TIME_AND_MATERIAL",
+  "totalValue": 500000000,
+  "limitValue": 600000000
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `contractType` | string | có | Một trong `TIME_AND_MATERIAL` · `FIXED_PRICE` · `MAINTENANCE` · `MILESTONE` (TC-01) |
+| `totalValue` | number | không | Điều chỉnh giá trị hợp đồng; bỏ trống thì **giữ nguyên** giá trị hiện tại của hợp đồng; không được âm |
+| `limitValue` | number | không | Hạn mức trần xuất hóa đơn; bỏ trống = không đặt hạn mức; không được âm và không được nhỏ hơn giá trị hợp đồng (đã điều chỉnh nếu có) — QTN-19 (TC-02) |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Khai bao loai hop dong va han muc thanh cong",
+  "data": {
+    "id": 5,
+    "contractCode": "HD-4K7X2Q9",
+    "name": "Hop dong ERP",
+    "opportunityId": 12,
+    "customerId": 1,
+    "customerName": "Cong ty TNHH ABC",
+    "quoteId": 30,
+    "contractType": "TIME_AND_MATERIAL",
+    "totalValue": 500000000,
+    "limitValue": 600000000,
+    "startDate": "2026-10-01",
+    "endDate": "2027-09-30",
+    "status": "DRAFT",
+    "notes": null,
+    "createdBy": "ke_toan01",
+    "createdAt": "2026-09-07T10:15:00"
+  }
+}
+```
+
+Cùng cấu trúc `ContractRes` của `NCL-04-CN-001`, thêm `limitValue` (`number | null`).
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng với `{contractId}` |
+| 400 | `VALIDATION_ERROR` | Thiếu `contractType`; `totalValue`/`limitValue` âm; **hoặc** hạn mức nhỏ hơn giá trị hợp đồng (TC-02, QTN-19) |
+
+**Lưu ý cho Frontend:**
+- Chỉ hiển thị màn hình này cho tài khoản Kế toán; các vai trò khác không nên thấy nút vào chức năng (dù backend
+  đã tự chặn 403, ẩn ở giao diện giúp trải nghiệm rõ ràng hơn).
+- Khi để trống ô hạn mức, gửi `limitValue: null` (hoặc bỏ trường) — không gửi `0`, vì `0` sẽ luôn bị từ chối
+  (nhỏ hơn giá trị hợp đồng khác 0) trừ khi hợp đồng có giá trị bằng 0.
+- Lỗi `VALIDATION_ERROR` do vượt hạn mức nên hiển thị đúng `message` backend trả về (đã nêu rõ là do QTN-19) và
+  gợi ý người dùng tăng hạn mức hoặc giảm giá trị hợp đồng.
+
+### `NCL-04-CN-003` — Quản lý mốc thanh toán của hợp đồng
+
+Yêu cầu token của **Kế toán** (`VT-05`). Hệ thống lưu lại toàn bộ danh sách mốc
+thanh toán và chỉ chấp nhận khi tổng số tiền các mốc bằng đúng `totalValue` của
+hợp đồng (TC-01, TC-02, QTN-19). Mỗi mốc có thể khai báo theo tỷ lệ phần trăm
+hoặc số tiền; nếu gửi cả hai, số tiền phải khớp với tỷ lệ.
+
+#### `GET /contracts/{contractId}/milestones`
+
+Trả về danh sách mốc theo ngày dự kiến tăng dần. Mốc mới có trạng thái `PENDING`;
+các trạng thái `READY_TO_INVOICE` và `INVOICED` dành cho các story nghiệm thu và
+hóa đơn tiếp theo.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": 101,
+      "contractId": 5,
+      "name": "Nghiem thu giai doan 1",
+      "percentage": 30.00,
+      "amount": 300000000,
+      "expectedDate": "2026-11-30",
+      "acceptanceCondition": "Khach hang ky bien ban nghiem thu",
+      "status": "PENDING",
+      "createdBy": "ketoan01"
+    }
+  ]
+}
+```
+
+#### `PUT /contracts/{contractId}/milestones`
+
+Thay thế toàn bộ danh sách mốc của hợp đồng trong một giao dịch. Gửi mảng rỗng
+hoặc tổng khác giá trị hợp đồng sẽ bị từ chối và không thay đổi dữ liệu cũ.
+
+**Request:**
+
+```json
+[
+  {
+    "name": "Nghiem thu giai doan 1",
+    "percentage": 30,
+    "expectedDate": "2026-11-30",
+    "acceptanceCondition": "Khach hang ky bien ban nghiem thu"
+  },
+  {
+    "name": "Ban giao va quyet toan",
+    "percentage": 70,
+    "expectedDate": "2027-03-31",
+    "acceptanceCondition": "Hoan tat ban giao"
+  }
+]
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `name` | string | có | Tên mốc, không được để trống. |
+| `percentage` | number | không | Từ `0.01` đến `100`; backend tính `amount` theo giá trị hợp đồng. |
+| `amount` | number | không | Số tiền dương; dùng thay cho `percentage` hoặc gửi đồng thời để đối chiếu. |
+| `expectedDate` | date | không | Ngày dự kiến thanh toán. |
+| `acceptanceCondition` | string | không | Điều kiện nghiệm thu, tối đa 1000 ký tự. |
+
+**Response thành công — `200 OK`:** `data` là danh sách mốc đã lưu, cùng cấu
+trúc từng phần tử như response của `GET`.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`); hệ thống ghi `DENIED_ACCESS`. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng với `{contractId}`. |
+| 400 | `VALIDATION_ERROR` | Mảng rỗng, thiếu tỷ lệ/số tiền, số tiền không hợp lệ, tỷ lệ không khớp số tiền hoặc tổng mốc khác `totalValue`. |
+
+### `NCL-04-CN-004` — Lập phụ lục điều chỉnh hợp đồng
+
+Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`). Phụ lục chỉ được lập cho hợp đồng đang hiệu lực
+(`status = ACTIVE`). Giá trị điều chỉnh dương là tăng, âm là giảm; backend cập nhật `totalValue` trong cùng
+giao dịch và lưu snapshot trước/sau để truy vết. Nếu hợp đồng có hạn mức, giá trị sau điều chỉnh không được
+vượt hạn mức. Mỗi lần lập thành công ghi `APPENDIX_CREATE` vào `contract_audit_logs`.
+
+#### `POST /contracts/{contractId}/appendices`
+
+**Request:**
+```json
+{
+  "content": "Mo rong pham vi trien khai giai doan 2",
+  "adjustmentValue": 200000000,
+  "effectiveDate": "2026-10-01"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `content` | string | có | Nội dung thay đổi, tối đa 1000 ký tự. |
+| `adjustmentValue` | number | có | Khác `0`; số dương là tăng, số âm là giảm. |
+| `effectiveDate` | date | có | Nằm trong khoảng ngày hiệu lực của hợp đồng nếu hợp đồng có khai báo khoảng này. |
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Lap phu luc dieu chinh hop dong thanh cong",
+  "data": {
+    "id": 101,
+    "contractId": 5,
+    "content": "Mo rong pham vi trien khai giai doan 2",
+    "adjustmentValue": 200000000,
+    "valueBefore": 500000000,
+    "valueAfter": 700000000,
+    "effectiveDate": "2026-10-01",
+    "createdBy": "sale01",
+    "createdAt": "2026-09-07T10:15:00"
+  }
+}
+```
+
+#### `GET /contracts/{contractId}/appendices`
+
+Trả về các phụ lục theo `effectiveDate` tăng dần; danh sách rỗng nếu hợp đồng chưa có phụ lục.
+Mỗi phần tử có cùng cấu trúc với `data` của API tạo phụ lục.
+
+**Response lỗi cho cả hai API:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh (`VT-04`). |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng với `{contractId}`. |
+| 400 | `INVALID_STATE` | Hợp đồng chưa `ACTIVE`, hoặc ngày hiệu lực nằm ngoài thời hạn hợp đồng. |
+| 400 | `VALIDATION_ERROR` | Thiếu dữ liệu, nội dung quá dài, giá trị điều chỉnh bằng 0, tổng sau điều chỉnh âm hoặc vượt hạn mức. |
+
+### `NCL-04-CN-005` — Cảnh báo khi sắp vượt hạn mức hợp đồng
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`) hoặc **Kế toán** (`VT-05`). Vì hệ thống chưa có module hóa đơn
+riêng (Epic NCL-10 chưa xây), `usedValue` lấy tổng giá trị các mốc thanh toán đã chuyển trạng thái
+`INVOICED` — đại diện cho phần "đã xuất hóa đơn" của hợp đồng. Ngưỡng cảnh báo cố định **80%** hạn mức.
+
+#### `GET /contracts/{contractId}/usage`
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "data": {
+    "contractId": 5,
+    "totalValue": 500000000,
+    "limitValue": 500000000,
+    "usedValue": 420000000,
+    "remainingValue": 80000000,
+    "usedPercentage": 84,
+    "nearLimit": true,
+    "overLimit": false
+  }
+}
+```
+
+Khi hợp đồng không khai báo hạn mức (`limitValue = null`), `usedPercentage`, `nearLimit`, `overLimit` luôn
+trả về trung tính (`null`/`false`) — không có gì để cảnh báo.
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Quản lý dự án hoặc Kế toán. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng với `{contractId}`. |
+
+---
+
+### `NCL-04-CN-006` — Nhắc hợp đồng sắp hết hiệu lực
+
+Yêu cầu token của **Kế toán** (`VT-05`). Trả về các hợp đồng đang `ACTIVE` có `endDate` nằm trong vòng
+`days` ngày kể từ hôm nay (mặc định 30), sắp xếp theo ngày hết hạn gần nhất trước.
+
+#### `GET /contracts/expiring?days=30`
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "contractId": 5,
+      "contractCode": "HD-4K7X2Q9",
+      "name": "Hop dong ERP",
+      "customerId": 1,
+      "endDate": "2026-10-05",
+      "daysRemaining": 12
+    }
+  ]
+}
+```
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`). |
+| 400 | `VALIDATION_ERROR` | `days` là số âm. |
+
+---
+
+### `NCL-04-CN-007` — Gia hạn hợp đồng
+
+Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`). Chỉ gia hạn được hợp đồng đang `ACTIVE`; hợp đồng đã
+`COMPLETED`/`TERMINATED` ("đã đóng") bị từ chối và được đề nghị lập hợp đồng mới thay vì gia hạn (TC-02).
+Ngày kết thúc mới phải sau ngày kết thúc hiện tại. Giá trị bổ sung (nếu có) được cộng vào `totalValue` và
+vẫn phải tuân thủ hạn mức tràn (QTN-19) như phụ lục điều chỉnh.
+
+#### `POST /contracts/{contractId}/renewals`
+
+**Request:**
+```json
+{
+  "newEndDate": "2027-06-30",
+  "additionalValue": 100000000,
+  "notes": "Khach hang dong y tiep tuc them 6 thang"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `newEndDate` | date | có | Phải sau `endDate` hiện tại của hợp đồng. |
+| `additionalValue` | number | không | `null`/`0` = giữ nguyên giá trị hợp đồng. |
+| `notes` | string | không | Ghi chú lý do gia hạn. |
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Gia han hop dong thanh cong",
+  "data": {
+    "id": 12,
+    "contractId": 5,
+    "previousEndDate": "2026-12-31",
+    "newEndDate": "2027-06-30",
+    "additionalValue": 100000000,
+    "valueBefore": 500000000,
+    "valueAfter": 600000000,
+    "notes": "Khach hang dong y tiep tuc them 6 thang",
+    "createdBy": "sale01",
+    "createdAt": "2026-09-08T10:00:00"
+  }
+}
+```
+
+#### `GET /contracts/{contractId}/renewals`
+
+Trả về lịch sử gia hạn của hợp đồng, mới nhất trước; danh sách rỗng nếu chưa từng gia hạn. Mỗi phần tử có
+cùng cấu trúc với `data` của API gia hạn.
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh (`VT-04`). |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng với `{contractId}`. |
+| 400 | `INVALID_STATE` | Hợp đồng không ở trạng thái `ACTIVE`. |
+| 400 | `VALIDATION_ERROR` | Thiếu `newEndDate`, `newEndDate` không sau ngày kết thúc hiện tại, hoặc giá trị sau gia hạn vượt hạn mức. |

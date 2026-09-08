@@ -68,6 +68,15 @@ public class OpportunityAuditLogger {
 		record(null, OpportunityAuditAction.REPORT_VIEW, detail);
 	}
 
+	/**
+	 * Ghi nhat ky tao hop dong tu co hoi da thang (NCL-04-CN-001, TC-04) — nguoi
+	 * thuc hien, ma hop dong vua tao va thoi diem. Chay trong cung transaction
+	 * voi viec tao hop dong de log khop voi du lieu thuc te.
+	 */
+	public void recordContractCreate(Long opportunityId, String detail) {
+		record(opportunityId, OpportunityAuditAction.CONTRACT_CREATE, detail);
+	}
+
 	private void record(Long opportunityId, OpportunityAuditAction action, String detail) {
 		OpportunityAuditLog audit = new OpportunityAuditLog();
 		audit.setOpportunityId(opportunityId);

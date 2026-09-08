@@ -15,8 +15,8 @@
         "files": [
           "frontend/src/modules/opportunities/pages/OpportunityListPage.tsx"
         ],
-        "createdAt": "2026-09-07T06:55:47.762Z",
-        "reason": "pre-existing stats-grid headline numbers, unrelated to this edit; large by design, not the too-small text the user flagged"
+        "createdAt": "2026-09-08T02:21:07.681Z",
+        "reason": "pre-existing stats-grid headline numbers (Tổng số cơ hội, Chốt thành công), not touched this session; large by design intent, not the too-small issue previously reported"
       },
       {
         "rule": "design-system-font-size",
@@ -24,8 +24,8 @@
         "files": [
           "frontend/src/modules/opportunities/pages/OpportunityListPage.tsx"
         ],
-        "createdAt": "2026-09-07T06:55:47.844Z",
-        "reason": "pre-existing stats-grid headline numbers, unrelated to this edit; large by design, not the too-small text the user flagged"
+        "createdAt": "2026-09-08T02:21:07.755Z",
+        "reason": "pre-existing stats-grid headline numbers (Tổng giá trị dự kiến, Dự báo Weighted), not touched this session; large by design intent"
       }
     ]
   }

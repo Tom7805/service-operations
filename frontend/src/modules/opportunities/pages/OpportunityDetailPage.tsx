@@ -4,8 +4,12 @@ import {
   createOpportunityActivity,
   fetchOpportunities,
   fetchOpportunityActivities,
+  fetchOpportunities,
   OpportunityApiError,
 } from '../api/opportunitiesApi';
+import type { ContractRes } from '../../contracts/types/contractTypes';
+import CreateContractModal from '../components/CreateContractModal';
+import type { Opportunity } from '../types/opportunityTypes';
 import type {
   OpportunityActivity,
   OpportunityActivityCreatePayload,
@@ -86,6 +90,7 @@ export default function OpportunityDetailPage({
   const displayName = resolvedName ?? opportunityName;
 
   const [activities, setActivities] = useState<OpportunityActivity[]>([]);
+  const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [form, setForm] = useState<OpportunityActivityCreatePayload>({
@@ -133,6 +138,13 @@ export default function OpportunityDetailPage({
       try {
         const data = await fetchOpportunityActivities(opportunityId);
         if (!cancelled) setActivities(data);
+        // also try to fetch basic opportunity info from the list
+        try {
+          const list = await fetchOpportunities();
+          if (!cancelled) setOpportunity(list.find((o) => o.id === opportunityId) ?? null);
+        } catch {
+          // ignore
+        }
       } catch (err) {
         if (!cancelled) {
           const message =
@@ -152,7 +164,19 @@ export default function OpportunityDetailPage({
     return () => {
       cancelled = true;
     };
-  }, [opportunityId]);
+  }, [opportunityId, isSalesAllowed]);
+
+  const [isCreateContractOpen, setIsCreateContractOpen] = useState(false);
+
+  const handleContractCreated = (c: ContractRes) => {
+    // notify other parts of the app to refresh customer/contract views
+    try {
+      window.dispatchEvent(new CustomEvent('contractCreated', { detail: { contract: c } }));
+    } catch (e) {
+      void e;
+    }
+    setSubmitMessage('Tạo hợp đồng thành công.');
+  };
 
   const validationErrors = useMemo(() => {
     const next: OpportunityActivityFormErrors = {};
@@ -260,6 +284,16 @@ export default function OpportunityDetailPage({
             <span className="activity-status-pill__dot" />
             {isClosed ? 'Đã đóng' : 'Đang mở'}
           </span>
+          {opportunity && opportunity.stage === 'WON' && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ marginLeft: '12px' }}
+              onClick={() => setIsCreateContractOpen(true)}
+            >
+              {ICONS.document} Tạo hợp đồng
+            </button>
+          )}
         </div>
       </div>
 
@@ -409,6 +443,15 @@ export default function OpportunityDetailPage({
           </section>
         )}
       </div>
+      {opportunity && (
+        <CreateContractModal
+          opportunity={opportunity}
+          isOpen={isCreateContractOpen}
+          onClose={() => setIsCreateContractOpen(false)}
+          onCreated={handleContractCreated}
+          currentUserRoles={currentUserRoles}
+        />
+      )}
     </div>
   );
 }

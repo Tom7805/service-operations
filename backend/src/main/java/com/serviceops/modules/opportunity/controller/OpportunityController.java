@@ -1,6 +1,9 @@
 package com.serviceops.modules.opportunity.controller;
 
 import com.serviceops.common.api.BaseRes;
+import com.serviceops.modules.contract.dto.request.ContractCreateFromOpportunityReq;
+import com.serviceops.modules.contract.dto.response.ContractRes;
+import com.serviceops.modules.contract.service.ContractService;
 import com.serviceops.modules.opportunity.dto.request.OpportunityCloseReq;
 import com.serviceops.modules.opportunity.dto.request.OpportunityCreateReq;
 import com.serviceops.modules.opportunity.dto.request.ForecastQueryReq;
@@ -38,6 +41,7 @@ public class OpportunityController {
 	private final OpportunityService opportunityService;
 	private final OpportunityStageService opportunityStageService;
 	private final RevenueForecastService revenueForecastService;
+	private final ContractService contractService;
 
 	/**
 	 * Danh sach toan bo co hoi ban hang (pipeline QTN-06), moi nhat len truoc.
@@ -86,6 +90,22 @@ public class OpportunityController {
 			@Valid @RequestBody OpportunityCloseReq request) {
 		return BaseRes.ok("Ghi nhan ket qua co hoi thanh cong",
 				opportunityStageService.closeOpportunity(opportunityId, request));
+	}
+
+	/**
+	 * Tao hop dong tu co hoi da thang (NCL-04-CN-001, QTN-08, TC-01..04).
+	 * Chi Nhan vien kinh doanh (VT-04); co hoi phai o giai doan WON va co bao gia.
+	 * He thong dung san hop dong tu khach hang/bao gia cua co hoi, nguoi dung bo sung
+	 * thong tin qua request body. Ai khong co quyen bi tu choi (403) va duoc ghi nhat
+	 * ky boi {@code OpportunityAccessDeniedAspect}.
+	 */
+	@PostMapping("/{opportunityId}/contract")
+	@PreAuthorize("hasRole('VT-04')")
+	public BaseRes<ContractRes> createContract(
+			@PathVariable Long opportunityId,
+			@Valid @RequestBody ContractCreateFromOpportunityReq request) {
+		return BaseRes.ok("Tao hop dong tu co hoi thanh cong",
+				contractService.createFromOpportunity(opportunityId, request));
 	}
 
 	/** Du bao doanh thu theo xac suat giai doan (NCL-03-CN-004, TC-01/02/03). */

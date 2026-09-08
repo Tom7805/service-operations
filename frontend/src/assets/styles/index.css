@@ -1865,6 +1865,13 @@ body { background: var(--canvas); }
 .btn-add-contact { display: inline-flex; align-items: center; gap: 6px; }
 .btn-back { display: inline-flex; align-items: center; gap: 6px; }
 .contact-modal-card { }
+/* Styles for CreateContractModal */
+.contract-modal-card { width: min(100%, 720px); max-height: 90vh; }
+.contract-modal-card .modal-header { padding: 18px 24px; }
+.contract-modal-card .modal-body { padding: 18px 24px; }
+.contract-modal-card .modal-title { font-size: 20px; }
+.contract-modal-card .form-label { font-size: 14px; }
+.contract-modal-card .form-input, .contract-modal-card .form-select { padding: 10px 12px; }
 .contact-audit-card { margin-top: 24px; }
 .modal-subtitle-text { font-size: 14.5px; color: #5B5A57; margin: 4px 0 0; }
 .badge-star-icon, .star-icon, .user-icon, .tab-icon { font-size: 14.5px; line-height: 1; }
