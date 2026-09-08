@@ -44,6 +44,13 @@ export type ContractTypeLimitPayload = {
   limitValue?: number | null;
 };
 
+/** GET /contracts/{contractId} — nạp giá trị hiện tại trước khi khai báo loại/hạn mức. */
+export async function getContract(contractId: number): Promise<ContractRes> {
+  return requestBackend<ContractRes>(`${API_BASE_URL}/contracts/${contractId}`, {
+    method: 'GET',
+  });
+}
+
 /** PATCH /contracts/{contractId}/type-limit */
 export async function updateTypeAndLimit(contractId: number, payload: ContractTypeLimitPayload): Promise<ContractRes> {
   return requestBackend<ContractRes>(`${API_BASE_URL}/contracts/${contractId}/type-limit`, {
@@ -52,4 +59,4 @@ export async function updateTypeAndLimit(contractId: number, payload: ContractTy
   });
 }
 
-export default {} as unknown as { updateTypeAndLimit: typeof updateTypeAndLimit };
+export default {} as unknown as { getContract: typeof getContract; updateTypeAndLimit: typeof updateTypeAndLimit };

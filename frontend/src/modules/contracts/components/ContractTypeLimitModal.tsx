@@ -16,6 +16,7 @@ const CONTRACT_TYPE_OPTIONS = [
   { value: 'TIME_AND_MATERIAL', label: 'Time & Material' },
   { value: 'FIXED_PRICE', label: 'Fixed Price' },
   { value: 'MAINTENANCE', label: 'Maintenance' },
+  { value: 'MILESTONE', label: 'Milestone' },
 ] as const;
 
 export default function ContractTypeLimitModal({

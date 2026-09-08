@@ -29,6 +29,17 @@ public interface ContractService {
 	ContractRes createFromOpportunity(Long opportunityId, ContractCreateFromOpportunityReq request);
 
 	/**
+	 * Xem chi tiet mot hop dong (phuc vu man hinh khai bao loai/han muc can doc
+	 * gia tri hien tai truoc khi sua - NCL-04-CN-002).
+	 *
+	 * @param contractId id hop dong
+	 * @return hop dong tuong ung
+	 * @throws com.serviceops.common.exception.BusinessRuleException
+	 *         RESOURCE_NOT_FOUND neu khong ton tai hop dong
+	 */
+	ContractRes getById(Long contractId);
+
+	/**
 	 * Khai bao loai hop dong, gia tri va han muc tran (NCL-04-CN-002, QTN-19).
 	 *
 	 * <p>Ke toan (VT-05) chon loai hop dong (tron goi/theo gio/theo moc), co the

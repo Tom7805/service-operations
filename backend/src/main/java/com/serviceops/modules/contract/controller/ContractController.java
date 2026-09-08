@@ -66,6 +66,16 @@ public BaseRes<List<ContractAppendixRes>> listAppendices(@PathVariable Long cont
 }
 
 /**
+ * Xem chi tiet mot hop dong - phuc vu man hinh khai bao loai/han muc can nap
+ * san gia tri hien tai truoc khi sua (NCL-04-CN-002).
+ */
+@GetMapping("/{contractId}")
+@PreAuthorize("hasRole('VT-05')")
+public BaseRes<ContractRes> getContract(@PathVariable Long contractId) {
+	return BaseRes.ok(contractService.getById(contractId));
+}
+
+/**
  * Khai bao loai hop dong (tron goi/theo gio/theo moc), gia tri va han muc tran
  * (NCL-04-CN-002, TC-01/02/04, QTN-19). Dieu kien bat dau: hop dong da duoc tao.
  */

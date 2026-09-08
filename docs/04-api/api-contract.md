@@ -1766,6 +1766,13 @@ có" theo user story), không phải `0`. Khai báo thành công ghi một dòng
 — người thực hiện, nội dung (loại/giá trị/hạn mức cũ-mới), thời điểm (TC-04); Frontend không cần gọi thêm API
 nào để việc ghi log này xảy ra.
 
+#### `GET /contracts/{contractId}`
+
+Trả về chi tiết hợp đồng hiện tại — Frontend gọi API này trước khi mở màn hình khai báo để nạp
+sẵn `contractType`/`totalValue`/`limitValue` đang có, tránh gửi đè giá trị sai lên `PATCH` bên dưới.
+Cùng yêu cầu vai trò Kế toán (`VT-05`) và cùng cấu trúc `ContractRes` như response thành công của
+`PATCH` bên dưới.
+
 #### `PATCH /contracts/{contractId}/type-limit`
 
 ```json
@@ -1823,6 +1830,8 @@ Cùng cấu trúc `ContractRes` của `NCL-04-CN-001`, thêm `limitValue` (`numb
 **Lưu ý cho Frontend:**
 - Chỉ hiển thị màn hình này cho tài khoản Kế toán; các vai trò khác không nên thấy nút vào chức năng (dù backend
   đã tự chặn 403, ẩn ở giao diện giúp trải nghiệm rõ ràng hơn).
+- Gọi `GET /contracts/{contractId}` để nạp giá trị hiện tại trước khi mở form — không tự suy đoán/mặc định
+  `contractType` hay `limitValue`, vì gửi nhầm giá trị mặc định lên `PATCH` sẽ ghi đè dữ liệu thật đã khai báo.
 - Khi để trống ô hạn mức, gửi `limitValue: null` (hoặc bỏ trường) — không gửi `0`, vì `0` sẽ luôn bị từ chối
   (nhỏ hơn giá trị hợp đồng khác 0) trừ khi hợp đồng có giá trị bằng 0.
 - Lỗi `VALIDATION_ERROR` do vượt hạn mức nên hiển thị đúng `message` backend trả về (đã nêu rõ là do QTN-19) và

@@ -249,6 +249,33 @@ assertThat(detailCaptor.getValue()).contains("HD-").contains("tu co hoi id=1").c
 }
 
 	@Test
+	@DisplayName("getById: tra ve dung hop dong kem ten khach hang de man hinh khai bao nap san du lieu hien tai")
+	void getsContractById() {
+		Contract existing = contract(5L, "500000000");
+		when(contractRepository.findById(5L)).thenReturn(Optional.of(existing));
+		Customer customer = new Customer();
+		customer.setName("Cong ty TNHH ABC");
+		when(customerRepository.findById(existing.getCustomerId())).thenReturn(Optional.of(customer));
+
+		ContractRes res = service.getById(5L);
+
+		assertThat(res.id()).isEqualTo(5L);
+		assertThat(res.customerName()).isEqualTo("Cong ty TNHH ABC");
+		assertThat(res.totalValue()).isEqualByComparingTo("500000000");
+	}
+
+	@Test
+	@DisplayName("getById: bao RESOURCE_NOT_FOUND khi khong ton tai hop dong")
+	void rejectsGetByIdWhenContractMissing() {
+		when(contractRepository.findById(99L)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> service.getById(99L))
+				.isInstanceOf(BusinessRuleException.class)
+				.extracting(ex -> ((BusinessRuleException) ex).getErrorCode())
+				.isEqualTo(ErrorCode.RESOURCE_NOT_FOUND);
+	}
+
+	@Test
 	@DisplayName("TC-01: khai bao loai theo gio va han muc tran thanh cong, ghi nhat ky TYPE_LIMIT_UPDATE")
 	void updatesTypeAndLimit() {
 		Contract existing = contract(5L, "500000000");

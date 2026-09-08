@@ -119,6 +119,18 @@ public class ContractServiceImpl implements ContractService {
 	}
 
 	@Override
+	@Transactional(readOnly = true)
+	public ContractRes getById(Long contractId) {
+		Contract contract = contractRepository.findById(contractId)
+				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
+						"Khong tim thay hop dong voi id=" + contractId));
+		String customerName = customerRepository.findById(contract.getCustomerId())
+				.map(Customer::getName)
+				.orElse(null);
+		return contractMapper.toResponse(contract, customerName);
+	}
+
+	@Override
 	@Transactional
 	public ContractRes updateTypeAndLimit(Long contractId, ContractTypeLimitReq request) {
 		Contract contract = contractRepository.findById(contractId)

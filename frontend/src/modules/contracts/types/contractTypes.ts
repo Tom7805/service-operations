@@ -1,4 +1,4 @@
-export type ContractType = 'TIME_AND_MATERIAL' | 'FIXED_PRICE' | 'MAINTENANCE';
+export type ContractType = 'TIME_AND_MATERIAL' | 'FIXED_PRICE' | 'MAINTENANCE' | 'MILESTONE';
 
 export interface ContractCreateFromOpportunityReq {
   name?: string | null;
