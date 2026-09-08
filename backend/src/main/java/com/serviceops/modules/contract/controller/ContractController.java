@@ -4,11 +4,18 @@ import com.serviceops.common.api.BaseRes;
 import com.serviceops.modules.contract.dto.request.ContractAppendixCreateReq;
 import com.serviceops.modules.contract.dto.request.ContractTypeLimitReq;
 import com.serviceops.modules.contract.dto.request.ContractMilestoneReq;
+import com.serviceops.modules.contract.dto.request.RenewalCreateReq;
 import com.serviceops.modules.contract.dto.response.ContractAppendixRes;
+import com.serviceops.modules.contract.dto.response.ContractExpiryAlertRes;
 import com.serviceops.modules.contract.dto.response.ContractMilestoneRes;
 import com.serviceops.modules.contract.dto.response.ContractRes;
+import com.serviceops.modules.contract.dto.response.ContractUsageRes;
+import com.serviceops.modules.contract.dto.response.RenewalRes;
+import com.serviceops.modules.contract.service.ContractExpiryReminderService;
+import com.serviceops.modules.contract.service.ContractLimitService;
 import com.serviceops.modules.contract.service.ContractMilestoneService;
 import com.serviceops.modules.contract.service.ContractAppendixService;
+import com.serviceops.modules.contract.service.ContractRenewalService;
 import com.serviceops.modules.contract.service.ContractService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +27,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -37,6 +45,9 @@ public class ContractController {
 private final ContractService contractService;
 private final ContractMilestoneService contractMilestoneService;
 private final ContractAppendixService contractAppendixService;
+private final ContractLimitService contractLimitService;
+private final ContractExpiryReminderService contractExpiryReminderService;
+private final ContractRenewalService contractRenewalService;
 
 /** NCL-04-CN-004: lap phu luc dieu chinh hop dong. */
 @PostMapping("/{contractId}/appendices")
@@ -80,5 +91,42 @@ public BaseRes<List<ContractMilestoneRes>> replaceMilestones(@PathVariable Long 
 	@Valid @RequestBody List<@Valid ContractMilestoneReq> requests) {
 return BaseRes.ok("Khai bao moc thanh toan thanh cong",
 contractMilestoneService.replace(contractId, requests));
+}
+
+/**
+ * NCL-04-CN-005: muc do da su dung han muc tran cua hop dong, dung de Quan
+ * ly du an biet khi nao sap cham nguong canh bao (TC-01) hoac da vuot (TC-02).
+ */
+@GetMapping("/{contractId}/usage")
+@PreAuthorize("hasRole('VT-02') or hasRole('VT-05')")
+public BaseRes<ContractUsageRes> getUsage(@PathVariable Long contractId) {
+return BaseRes.ok(contractLimitService.getUsage(contractId));
+}
+
+/**
+ * NCL-04-CN-006: danh sach hop dong dang hieu luc sap het han trong vong
+ * {@code days} ngay (mac dinh 30), dung nhac Ke toan gia han truoc han.
+ */
+@GetMapping("/expiring")
+@PreAuthorize("hasRole('VT-05')")
+public BaseRes<List<ContractExpiryAlertRes>> listExpiringSoon(
+		@RequestParam(name = "days", defaultValue = "30") int days) {
+return BaseRes.ok(contractExpiryReminderService.findExpiringSoon(days));
+}
+
+/** NCL-04-CN-007: gia han hop dong dang hieu luc. */
+@PostMapping("/{contractId}/renewals")
+@PreAuthorize("hasRole('VT-04')")
+public BaseRes<RenewalRes> createRenewal(@PathVariable Long contractId,
+		@Valid @RequestBody RenewalCreateReq request) {
+return BaseRes.ok("Gia han hop dong thanh cong",
+contractRenewalService.create(contractId, request));
+}
+
+/** NCL-04-CN-007: xem lich su gia han cua hop dong. */
+@GetMapping("/{contractId}/renewals")
+@PreAuthorize("hasRole('VT-04')")
+public BaseRes<List<RenewalRes>> listRenewals(@PathVariable Long contractId) {
+return BaseRes.ok(contractRenewalService.list(contractId));
 }
 }

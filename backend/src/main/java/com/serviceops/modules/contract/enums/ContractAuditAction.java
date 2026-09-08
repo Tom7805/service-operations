@@ -17,6 +17,9 @@ MILESTONE_UPDATE,
 /** Lap phu luc dieu chinh gia tri/noi dung hop dong (NCL-04-CN-004). */
 APPENDIX_CREATE,
 
+/** Gia han hop dong, cap nhat ngay ket thuc va gia tri bo sung (NCL-04-CN-007). */
+RENEWAL_CREATE,
+
 /** Truy cap chuc nang hop dong bi tu choi vi khong co quyen (NCL-04-CN-002, TC-03). */
 DENIED_ACCESS
 }

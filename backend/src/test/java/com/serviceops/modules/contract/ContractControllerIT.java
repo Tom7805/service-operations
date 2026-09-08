@@ -12,6 +12,9 @@ import com.serviceops.modules.contract.logging.ContractAuditLogger;
 import com.serviceops.modules.contract.service.ContractService;
 import com.serviceops.modules.contract.service.ContractAppendixService;
 import com.serviceops.modules.contract.service.ContractMilestoneService;
+import com.serviceops.modules.contract.service.ContractLimitService;
+import com.serviceops.modules.contract.service.ContractExpiryReminderService;
+import com.serviceops.modules.contract.service.ContractRenewalService;
 import com.serviceops.security.CustomUserDetailsService;
 import com.serviceops.security.JwtAuthFilter;
 import com.serviceops.security.JwtAuthenticationEntryPoint;
@@ -62,6 +65,15 @@ private ContractMilestoneService contractMilestoneService;
 
 @MockBean
 private ContractAppendixService contractAppendixService;
+
+@MockBean
+private ContractLimitService contractLimitService;
+
+@MockBean
+private ContractExpiryReminderService contractExpiryReminderService;
+
+@MockBean
+private ContractRenewalService contractRenewalService;
 
 @MockBean
 private ContractAuditLogger contractAuditLogger;

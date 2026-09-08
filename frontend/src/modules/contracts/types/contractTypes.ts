@@ -9,16 +9,25 @@ export interface ContractCreateFromOpportunityReq {
   notes?: string | null;
 }
 
+export type ContractStatus = 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'TERMINATED';
+
+/** Khớp đúng field name của backend (OpportunityRes) — trước đây dùng `code`
+ *  trong khi API trả về `contractCode`, khiến mã hợp đồng luôn là undefined
+ *  ở phía Frontend dù server đã trả về đầy đủ. */
 export interface ContractRes {
   id: number;
-  code?: string;
+  contractCode: string;
   name: string;
+  opportunityId: number | null;
+  customerId: number;
+  customerName?: string | null;
+  quoteId: number | null;
   contractType: ContractType;
-  totalValue?: number | null;
+  totalValue: number;
   startDate?: string | null;
   endDate?: string | null;
-  customerId?: number;
-  customerName?: string;
+  status: ContractStatus;
+  notes?: string | null;
   createdBy?: string;
   createdAt?: string;
 }
