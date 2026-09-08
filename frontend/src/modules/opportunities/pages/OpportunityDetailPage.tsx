@@ -4,7 +4,6 @@ import {
   createOpportunityActivity,
   fetchOpportunities,
   fetchOpportunityActivities,
-  fetchOpportunities,
   OpportunityApiError,
 } from '../api/opportunitiesApi';
 import type { ContractRes } from '../../contracts/types/contractTypes';
