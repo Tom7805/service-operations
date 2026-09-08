@@ -1,4 +1,9 @@
-import type { ContractRes, ContractType } from '../types/contractTypes';
+import type {
+  ContractRes,
+  ContractType,
+  ContractMilestoneRes,
+  ContractMilestoneInput,
+} from '../types/contractTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -59,4 +64,31 @@ export async function updateTypeAndLimit(contractId: number, payload: ContractTy
   });
 }
 
-export default {} as unknown as { getContract: typeof getContract; updateTypeAndLimit: typeof updateTypeAndLimit };
+/** GET /contracts/{contractId}/milestones — danh sách mốc theo ngày dự kiến tăng dần (NCL-04-CN-003). */
+export async function fetchMilestones(contractId: number): Promise<ContractMilestoneRes[]> {
+  return requestBackend<ContractMilestoneRes[]>(`${API_BASE_URL}/contracts/${contractId}/milestones`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * PUT /contracts/{contractId}/milestones — thay thế TRỌN BỘ danh sách mốc trong
+ * một giao dịch (không có API tạo/sửa/xóa từng mốc riêng lẻ). Backend từ chối
+ * nếu tổng khác giá trị hợp đồng và không thay đổi dữ liệu cũ (NCL-04-CN-003, QTN-19).
+ */
+export async function replaceMilestones(
+  contractId: number,
+  milestones: ContractMilestoneInput[]
+): Promise<ContractMilestoneRes[]> {
+  return requestBackend<ContractMilestoneRes[]>(`${API_BASE_URL}/contracts/${contractId}/milestones`, {
+    method: 'PUT',
+    body: JSON.stringify(milestones),
+  });
+}
+
+export default {} as unknown as {
+  getContract: typeof getContract;
+  updateTypeAndLimit: typeof updateTypeAndLimit;
+  fetchMilestones: typeof fetchMilestones;
+  replaceMilestones: typeof replaceMilestones;
+};
