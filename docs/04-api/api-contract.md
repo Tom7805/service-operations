@@ -1920,3 +1920,290 @@ Trả về danh sách mốc thanh toán hiện tại của hợp đồng, cùng 
   dùng thấy lệch trước khi bấm lưu, thay vì chỉ dựa vào lỗi `400` trả về sau khi gửi.
 - Khi người dùng nhập theo tỷ lệ, có thể hiển thị số tiền quy đổi tạm thời ở FE để xem trước, nhưng số tiền
   chính thức luôn lấy từ `data[].amount` trong response trả về sau khi lưu thành công.
+
+---
+
+### `NCL-04-CN-004` — Lập phụ lục điều chỉnh hợp đồng
+
+Yêu cầu token của **Kế toán** (`VT-05`) — vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối vào
+`contract_audit_logs` (TC-03, dùng chung `ContractAccessDeniedAspect` với `NCL-04-CN-002`/`NCL-04-CN-003` vì cùng
+nằm trong gói controller của hợp đồng). Điều kiện bắt đầu: hợp đồng đã khai báo loại hình và giá trị (xem
+`NCL-04-CN-002`).
+
+Khác với mốc thanh toán (`NCL-04-CN-003`, mỗi lần `POST` **thay thế toàn bộ** danh sách), mỗi lần gọi `POST` ở
+đây là **thêm mới** một phụ lục (giữ lại lịch sử các phụ lục đã lập trước đó, không xoá/ghi đè). Phụ luc phải
+điều chỉnh **ít nhất một** trong hai nội dung — giá trị hợp đồng (`newTotalValue`) hoặc thời hạn (`newEndDate`)
+— thiếu cả hai bị từ chối `VALIDATION_ERROR` (TC-02). Bỏ trống một trường nghĩa là **không điều chỉnh** nội dung
+đó, hợp đồng giữ nguyên giá trị/thời hạn hiện tại cho nội dung đó.
+
+Áp dụng lại **QTN-19**: nếu hợp đồng đã có hạn mức trần (`limitValue`, xem `NCL-04-CN-002`), giá trị hợp đồng sau
+điều chỉnh không được vượt hạn mức đó — nếu không hệ thống từ chối lưu (`ContractLimitValidator`, dùng chung với
+`NCL-04-CN-002`). Nếu điều chỉnh thời hạn, `newEndDate` không được sớm hơn `startDate` hiện tại của hợp đồng.
+Lập phụ lục thành công ghi một dòng `AMENDMENT_CREATE` vào nhật ký hợp đồng — người thực hiện, nội dung (số phụ
+lục, giá trị/thời hạn cũ → mới), thời điểm (TC-04); Frontend không cần gọi thêm API nào để việc ghi log này xảy
+ra.
+
+#### `POST /contracts/{contractId}/amendments`
+
+```json
+{
+  "reason": "Bo sung khoi luong cong viec theo yeu cau khach hang",
+  "effectiveDate": "2026-06-01",
+  "newTotalValue": 1200000000,
+  "newEndDate": "2027-06-30",
+  "notes": "Phu luc 01"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `reason` | string | có | Lý do lập phụ lục, tối đa 500 ký tự |
+| `effectiveDate` | string (`yyyy-MM-dd`) | có | Ngày phụ lục có hiệu lực |
+| `newTotalValue` | number | không* | Giá trị hợp đồng mới sau điều chỉnh; bỏ trống = không điều chỉnh giá trị; không được âm |
+| `newEndDate` | string (`yyyy-MM-dd`) | không* | Ngày kết thúc mới; bỏ trống = không điều chỉnh thời hạn; không được sớm hơn `startDate` hiện tại của hợp đồng |
+| `notes` | string | không | Ghi chú thêm, tối đa 1000 ký tự |
+
+\* Phải có **ít nhất một** trong `newTotalValue` hoặc `newEndDate`; thiếu cả hai bị từ chối `VALIDATION_ERROR`.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Lap phu luc dieu chinh hop dong thanh cong",
+  "data": {
+    "id": 1,
+    "contractId": 5,
+    "amendmentNo": "PL-HD-4K7X2Q9-01",
+    "reason": "Bo sung khoi luong cong viec theo yeu cau khach hang",
+    "oldTotalValue": 1000000000,
+    "newTotalValue": 1200000000,
+    "oldEndDate": "2026-12-31",
+    "newEndDate": "2027-06-30",
+    "effectiveDate": "2026-06-01",
+    "notes": "Phu luc 01",
+    "createdBy": "ke_toan01",
+    "createdAt": "2026-09-07T10:15:00"
+  }
+}
+```
+
+`amendmentNo` sinh tự động theo mẫu `PL-<mã hợp đồng>-NN`, `NN` là số thứ tự phụ lục của hợp đồng (bắt đầu từ
+`01`). `oldTotalValue`/`oldEndDate` là giá trị/thời hạn của hợp đồng **trước** khi phụ lục này có hiệu lực — chỉ
+được ghi khi nội dung tương ứng thực sự được điều chỉnh (ví dụ: phụ lục chỉ đổi `newEndDate` thì `oldTotalValue`
+và `newTotalValue` đều `null`).
+
+#### `GET /contracts/{contractId}/amendments`
+
+Trả về lịch sử phụ lục của hợp đồng, cùng cấu trúc `data[]` như trên, phụ lục lập gần nhất hiển thị trước
+(`createdAt` giảm dần).
+
+**Response lỗi (cả hai API):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng với `{contractId}` |
+| 400 | `VALIDATION_ERROR` | Thiếu `reason`/`effectiveDate`; `newTotalValue` âm; thiếu cả `newTotalValue` và `newEndDate`; **hoặc** giá trị hợp đồng sau điều chỉnh vượt hạn mức trần đã khai báo (QTN-19) |
+| 400 | `INVALID_STATE` | `newEndDate` sớm hơn `startDate` hiện tại của hợp đồng |
+
+**Lưu ý cho Frontend:**
+- Gọi `GET` để hiển thị lịch sử phụ lục trên màn hình chi tiết hợp đồng — khác với mốc thanh toán, danh sách
+  này chỉ tăng dần theo thời gian, không có thao tác sửa/xoá phụ lục đã lập.
+- Sau khi lập phụ lục thành công, giá trị/thời hạn hiển thị trên màn hình hợp đồng (từ API `NCL-04-CN-001`) cần
+  được làm mới vì `totalValue`/`endDate` của hợp đồng đã được cập nhật theo phụ lục.
+- Khi chỉ muốn điều chỉnh một nội dung (ví dụ chỉ gia hạn), không gửi trường còn lại (hoặc gửi `null`) — không
+  gửi lại giá trị hiện tại vào `newTotalValue`, vì hệ thống vẫn coi đó là một lần điều chỉnh giá trị (ghi vào
+  lịch sử phụ lục dù số tiền không đổi).
+
+---
+
+### `NCL-04-CN-005` — Cảnh báo khi sắp vượt hạn mức hợp đồng
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`) hoặc **Kế toán** (`VT-05`) — vai trò khác nhận `403 FORBIDDEN` và bị
+ghi nhật ký lần từ chối vào `contract_audit_logs` (TC-03, dùng chung `ContractAccessDeniedAspect` với các API khác
+của hợp đồng). Điều kiện bắt đầu: hợp đồng đã khai báo hạn mức (xem `NCL-04-CN-002`) và dự án đã phát sinh giờ công.
+
+Hệ thống cộng dồn giá trị phát sinh vào `usedValue` — "giá trị đã dùng" của hợp đồng — mỗi khi có giờ công được
+duyệt hoặc hoá đơn được lập (`source` tương ứng `TIMESHEET_APPROVAL` hoặc `INVOICE`). Hai nguồn có cách xử lý khi
+sắp/đã chạm hạn mức khác nhau:
+- **`TIMESHEET_APPROVAL`**: luôn được ghi nhận, kể cả khi làm vượt hạn mức — chỉ trả về cờ cảnh báo
+  (`nearingLimit`/`overLimit`) để Frontend hiển thị, không chặn nghiệp vụ chấm công.
+- **`INVOICE`**: bị từ chối (`400 VALIDATION_ERROR`) nếu ghi nhận sẽ làm `usedValue` vượt quá `limitValue` — theo
+  đúng QTN-19, kế toán phải lập phụ lục điều chỉnh hạn mức (`NCL-04-CN-004`) trước khi xuất hoá đơn tiếp.
+
+`nearingLimit = true` khi tỷ lệ đã dùng đạt từ **80%** hạn mức trở lên (TC-01). Mỗi lần ghi nhận thành công (`POST`)
+đều ghi một dòng `LIMIT_USAGE_UPDATE` vào nhật ký hợp đồng — người thực hiện, nội dung (nguồn, giá trị phát sinh,
+giá trị đã dùng, có đang cảnh báo hay không), thời điểm (TC-04); Frontend không cần gọi thêm API nào để việc ghi
+log này xảy ra.
+
+#### `GET /contracts/{contractId}/usage`
+
+Trả về tình trạng hạn mức hiện tại của hợp đồng, không làm thay đổi dữ liệu.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Tinh trang han muc hop dong",
+  "data": {
+    "contractId": 5,
+    "totalValue": 1000000000,
+    "limitValue": 1000000000,
+    "usedValue": 300000000,
+    "remainingValue": 700000000,
+    "usageRatio": 30.00,
+    "nearingLimit": false,
+    "overLimit": false
+  }
+}
+```
+
+#### `POST /contracts/{contractId}/usage`
+
+```json
+{
+  "amount": 50000000,
+  "source": "TIMESHEET_APPROVAL"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `amount` | number | có | Giá trị phát sinh thêm; phải lớn hơn 0 |
+| `source` | string | có | `TIMESHEET_APPROVAL` (không chặn, chỉ cảnh báo) hoặc `INVOICE` (bị chặn nếu vượt hạn mức — QTN-19) |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Ghi nhan gia tri phat sinh thanh cong",
+  "data": {
+    "contractId": 5,
+    "totalValue": 1000000000,
+    "limitValue": 1000000000,
+    "usedValue": 850000000,
+    "remainingValue": 150000000,
+    "usageRatio": 85.00,
+    "nearingLimit": true,
+    "overLimit": false
+  }
+}
+```
+
+`limitValue`, `usageRatio`, `remainingValue` đều là `null` khi hợp đồng **không đặt hạn mức** — trường hợp này
+`nearingLimit`/`overLimit` luôn là `false` và mọi giá trị phát sinh (kể cả từ `INVOICE`) đều được ghi nhận không
+giới hạn.
+
+**Response lỗi (cả hai API):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Quản lý dự án (`VT-02`) hoặc Kế toán (`VT-05`) — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng với `{contractId}` |
+| 400 | `VALIDATION_ERROR` | Thiếu `amount`/`source`; `amount` không dương; **hoặc** ghi nhận từ `INVOICE` làm vượt hạn mức tran (TC-02, QTN-19) |
+
+**Lưu ý cho Frontend:**
+- Gọi `GET` khi mở màn hình chi tiết hợp đồng để hiển thị thanh tiến trình hạn mức; gọi `POST` từ các luồng
+  nghiệp vụ khác (duyệt bảng chấm công, lập hoá đơn) ngay sau khi thao tác đó thành công.
+- Khi `nearingLimit = true`, hiển thị cảnh báo màu vàng cho Quản lý dự án kèm `remainingValue` để họ kịp đàm phán
+  phụ lục; khi nhận lỗi `VALIDATION_ERROR` từ nguồn `INVOICE`, dẫn người dùng sang màn hình lập phụ lục điều chỉnh
+  hạn mức (`NCL-04-CN-004`) thay vì chỉ hiển thị lỗi chung chung.
+- `usageRatio` có thể vượt quá `100` khi `overLimit = true` (chỉ xảy ra với nguồn `TIMESHEET_APPROVAL`, vì nguồn
+  `INVOICE` đã bị chặn trước khi vượt) — không giả định giá trị này luôn nằm trong khoảng 0–100.
+
+---
+
+### `NCL-04-CN-006` — Nhắc hợp đồng sắp hết hiệu lực
+
+Yêu cầu token của **Kế toán** (`VT-05`) — vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối vào
+`contract_audit_logs` (TC-03, dùng chung `ContractAccessDeniedAspect` với các API khác của hợp đồng). Điều kiện bắt
+đầu: hợp đồng đã khai báo ngày kết thúc hiệu lực (`endDate`, xem `NCL-04-CN-001`).
+
+Hệ thống **tự chạy rà soát hằng ngày** (job nội bộ, mặc định 6h sáng) để tìm hợp đồng đang **`ACTIVE`** có
+`endDate` rơi trong vòng **30 ngày tới** và gửi nhắc (ghi nhật ký `EXPIRY_REMINDER`) cho từng hợp đồng — người
+thực hiện ghi trong nhật ký là hệ thống, nội dung nêu rõ mã hợp đồng, số ngày còn lại và người phụ trách
+(`createdBy` của hợp đồng, đóng vai trò nhân viên kinh doanh phụ trách). `POST /run` bên dưới kích hoạt **thủ
+công** đúng luồng xử lý này — dùng để kiểm tra hoặc chạy lại khi cần, không phải một API tách biệt.
+
+Theo **QTN-27**: một hợp đồng đã được nhắc trong ngày hôm nay thì các lần rà soát tiếp theo trong cùng ngày đó sẽ
+**bỏ qua**, không gửi nhắc trùng và không ghi thêm nhật ký. Hợp đồng ngoài cửa sổ 30 ngày (còn quá xa hoặc đã hết
+hạn) sẽ không xuất hiện trong kết quả `POST /run` — hợp đồng **đã hết hạn** được xử lý riêng ở `GET /overdue`
+(TC-02).
+
+#### `POST /contracts/expiry-reminders/run`
+
+Không có phần thân yêu cầu.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Da gui nhac hop dong sap het hieu luc",
+  "data": [
+    {
+      "contractId": 5,
+      "contractCode": "HD-4K7X2Q9",
+      "name": "Hop dong ERP",
+      "customerId": 1,
+      "endDate": "2026-10-02",
+      "daysRemaining": 25,
+      "status": "ACTIVE",
+      "createdBy": "sale01",
+      "alertType": "EXPIRING_SOON"
+    }
+  ]
+}
+```
+
+`data` chỉ chứa các hợp đồng **thực sự vừa được gửi nhắc** ở lần gọi này — hợp đồng đã được nhắc trước đó trong
+cùng ngày sẽ không xuất hiện lại (QTN-27), mảng rỗng nghĩa là không có hợp đồng nào cần nhắc hoặc tất cả đã được
+nhắc trong ngày.
+
+#### `GET /contracts/expiry-reminders/overdue`
+
+Trả về danh sách hợp đồng đã **hết hiệu lực** (`endDate` đã qua) nhưng **vẫn ở trạng thái `ACTIVE`** — tức là chưa
+được đóng (`NCL-05-CN-006`) hay gia hạn (`NCL-04-CN-007`), dấu hiệu công việc có thể đang chạy ngoài hợp đồng
+(TC-02). Cùng cấu trúc `data[]` như trên, nhưng `alertType` là `OVERDUE_ACTIVE` và `daysRemaining` là **số âm**
+(số ngày đã quá hạn).
+
+```json
+{
+  "success": true,
+  "message": "Hop dong da het hieu luc nhung van dang chay",
+  "data": [
+    {
+      "contractId": 9,
+      "contractCode": "HD-9F2K1A0",
+      "name": "Hop dong bao tri",
+      "customerId": 3,
+      "endDate": "2026-08-20",
+      "daysRemaining": -15,
+      "status": "ACTIVE",
+      "createdBy": "sale02",
+      "alertType": "OVERDUE_ACTIVE"
+    }
+  ]
+}
+```
+
+**Response lỗi (cả hai API):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) — hệ thống ghi nhật ký lần từ chối (TC-03) |
+
+**Lưu ý cho Frontend:**
+- Đây không phải API để FE tự chủ động gọi định kỳ — hệ thống đã tự rà soát hằng ngày. `POST /run` chỉ nên có
+  trong màn hình quản trị/kiểm tra thủ công dành cho Kế toán, không đặt trong luồng thao tác thường ngày.
+- `GET /overdue` nên đặt ở màn hình cảnh báo hợp đồng (dashboard) và gọi mỗi khi mở màn hình — đây là dữ liệu
+  "trạng thái hiện tại", không phải log một-lần như `POST /run`.
+- Vì `createdBy` là người tạo hợp đồng, nếu nhân viên kinh doanh phụ trách thực tế đã đổi (chuyển giao khách
+  hàng), giá trị này có thể không còn đúng người cần liên hệ — cân nhắc bổ sung trường "người phụ trách hiện tại"
+  ở story sau nếu nghiệp vụ yêu cầu.

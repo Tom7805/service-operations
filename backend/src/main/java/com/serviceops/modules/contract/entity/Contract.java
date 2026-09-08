@@ -67,6 +67,14 @@ public class Contract extends BaseEntity {
 	@Column(name = "limit_value", precision = 18, scale = 2)
 	private BigDecimal limitValue;
 
+	/**
+	 * Gia tri da dung cua hop dong (NCL-04-CN-005): cong don tu gio cong da duyet
+	 * va hoa don da lap, dung de so sanh voi limitValue va canh bao khi gan cham
+	 * han muc (TC-01, QTN-19). Mac dinh 0, khong lien quan gi den totalValue.
+	 */
+	@Column(name = "used_value", nullable = false, precision = 18, scale = 2)
+	private BigDecimal usedValue = BigDecimal.ZERO;
+
 	@Column(name = "start_date")
 	private LocalDate startDate;
 

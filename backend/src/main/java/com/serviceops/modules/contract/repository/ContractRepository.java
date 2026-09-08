@@ -1,8 +1,11 @@
 package com.serviceops.modules.contract.repository;
 
 import com.serviceops.modules.contract.entity.Contract;
+import com.serviceops.modules.contract.enums.ContractStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -18,4 +21,16 @@ public interface ContractRepository extends JpaRepository<Contract, Long> {
 
 	/** Kiem tra nhanh co hoi da co hop dong hay chua, chong tao trung. */
 	boolean existsByOpportunityId(Long opportunityId);
+
+	/**
+	 * Hop dong dang hieu luc co ngay ket thuc nam trong khoang [start, end]
+	 * (NCL-04-CN-006, TC-01) - phuc vu ra soat hop dong sap het hieu luc.
+	 */
+	List<Contract> findByStatusAndEndDateBetween(ContractStatus status, LocalDate start, LocalDate end);
+
+	/**
+	 * Hop dong van dang hieu luc (chua duoc dong/gia han) nhung ngay ket thuc
+	 * da qua (NCL-04-CN-006, TC-02) - dau hieu hop dong dang bi cham tre xu ly.
+	 */
+	List<Contract> findByStatusAndEndDateBefore(ContractStatus status, LocalDate date);
 }

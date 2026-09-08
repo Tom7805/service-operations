@@ -14,6 +14,15 @@ TYPE_LIMIT_UPDATE,
 /** Khai bao/sua danh sach moc thanh toan cua hop dong (NCL-04-CN-003, TC-04). */
 MILESTONE_UPDATE,
 
-/** Truy cap chuc nang hop dong bi tu choi vi khong co quyen (NCL-04-CN-002/003, TC-03). */
+/** Lap phu luc dieu chinh gia tri va/hoac thoi han hop dong (NCL-04-CN-004, TC-04). */
+AMENDMENT_CREATE,
+
+/** Ghi nhan gia tri da dung cua hop dong tu gio cong/hoa don (NCL-04-CN-005, TC-04). */
+LIMIT_USAGE_UPDATE,
+
+/** Gui nhac hop dong sap het hieu luc toi ke toan va nguoi phu trach (NCL-04-CN-006, TC-04). */
+EXPIRY_REMINDER,
+
+/** Truy cap chuc nang hop dong bi tu choi vi khong co quyen (NCL-04-CN-002/003/004/005/006, TC-03). */
 DENIED_ACCESS
 }
