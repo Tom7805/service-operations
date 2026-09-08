@@ -137,7 +137,7 @@ describe('CustomerFormModal Component (NCL-02-CN-001 & NCL-02-CN-002)', () => {
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /Phát hiện hồ sơ khách hàng tương tự trong hệ thống/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /Phát hiện \d+ hồ sơ tương tự/i })).toBeInTheDocument();
       expect(screen.getByText('KH-000009')).toBeInTheDocument();
     });
 
@@ -181,14 +181,14 @@ describe('CustomerFormModal Component (NCL-02-CN-001 & NCL-02-CN-002)', () => {
 
     // Đợi mở modal cảnh báo
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /Phát hiện hồ sơ khách hàng tương tự/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /Phát hiện \d+ hồ sơ tương tự/i })).toBeInTheDocument();
     });
 
     // Bấm nút Vẫn tạo mới
     fireEvent.click(screen.getByRole('button', { name: /Vẫn tạo mới \(Bỏ qua cảnh báo\)/i }));
 
     // Nhập lý do
-    const reasonInput = screen.getByLabelText(/Lý do xác nhận tạo mới/i);
+    const reasonInput = screen.getByLabelText(/Giải trình lý do/i);
     fireEvent.change(reasonInput, {
       target: { value: 'Hai chi nhánh hạch toán độc lập của Misa' },
     });
@@ -259,18 +259,18 @@ describe('CustomerFormModal Component (NCL-02-CN-001 & NCL-02-CN-002)', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole('heading', { name: /Phát hiện hồ sơ khách hàng tương tự/i })
+        screen.getByRole('heading', { name: /Phát hiện \d+ hồ sơ tương tự/i })
       ).toBeInTheDocument();
       // Ứng viên trùng với chính hồ sơ đang sửa (id: 5) phải bị tự loại — chỉ còn ứng viên khác (id: 9)
       expect(screen.getByText('KH-000009')).toBeInTheDocument();
     });
 
     // Copy phải phản ánh đúng ngữ cảnh "chỉnh sửa" — không gợi ý rằng thao tác này tạo hồ sơ mới
-    expect(screen.getByText(/Hồ sơ bạn đang chỉnh sửa:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Hồ sơ đang chỉnh sửa/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Vẫn lưu thay đổi \(Bỏ qua cảnh báo\)/i }));
 
-    fireEvent.change(screen.getByLabelText(/Lý do xác nhận lưu thay đổi/i), {
+    fireEvent.change(screen.getByLabelText(/Giải trình lý do/i), {
       target: { value: 'Hai chi nhánh hạch toán độc lập của Misa' },
     });
 

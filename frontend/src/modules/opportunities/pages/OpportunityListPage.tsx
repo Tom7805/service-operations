@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import type { CSSProperties } from 'react';
 import type { Opportunity, OpportunityStage, QuoteRes } from '../types/opportunityTypes';
 import { STAGE_CONFIGS, LOSS_REASON_OPTIONS } from '../types/opportunityTypes';
 import { fetchOpportunities, OpportunityApiError } from '../api/opportunitiesApi';
@@ -21,13 +22,21 @@ interface OpportunityListPageProps {
   /** Mở màn "Ghi nhận hoạt động chăm sóc cơ hội" cho đúng cơ hội đang chọn —
    *  trước đây màn đó chỉ vào được bằng cách tự gõ tay mã số cơ hội, không ai
    *  đoán được mã số nếu không tra database. */
-  onOpenActivities?: (opportunityId: number) => void;
+  onOpenActivities?: (opportunityId: number, opportunityName: string) => void;
+  /** ID cơ hội cần tự động mở lên khi trang vừa tải xong — dùng khi được điều
+   *  hướng từ nơi khác (ví dụ bấm một cơ hội "đọng lâu" ở Báo cáo đường ống). */
+  focusOpportunityId?: number | null;
+  /** Gọi lại sau khi đã xử lý xong focusOpportunityId, để App xoá state đi —
+   *  tránh việc quay lại tab này lần sau lại tự động cuộn/chọn lại lần nữa. */
+  onFocusConsumed?: () => void;
 }
 
 export default function OpportunityListPage({
   currentUserRoles = ['VT-04'],
   initialOpportunities = [],
   onOpenActivities,
+  focusOpportunityId = null,
+  onFocusConsumed,
 }: OpportunityListPageProps) {
   const isAllowed = currentUserRoles.includes('VT-04');
 
@@ -38,6 +47,17 @@ export default function OpportunityListPage({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [stageFilter, setStageFilter] = useState<string>('ALL');
+
+  /** Bảng nằm dưới thấp, panel "Tiến trình bán hàng" nằm tận trên đầu trang —
+   *  bấm chọn cơ hội từ bảng mà không cuộn lên thì người dùng không thấy gì
+   *  thay đổi. Chọn xong cuộn mượt lên panel để thao tác tiếp luôn. */
+  const stageControlRef = useRef<HTMLDivElement | null>(null);
+  const selectOpportunityFromRow = (opp: Opportunity) => {
+    setSelectedOpportunity((prev) => (prev?.id === opp.id ? prev : opp));
+    requestAnimationFrame(() => {
+      stageControlRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    });
+  };
 
   // Lập báo giá cho cơ hội (NCL-03-CN-003) — chưa có API GET nên lưu tạm theo phiên
   const [quoteTargetOpportunity, setQuoteTargetOpportunity] = useState<Opportunity | null>(null);
@@ -96,6 +116,21 @@ export default function OpportunityListPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Được điều hướng tới từ nơi khác kèm một ID cơ hội cụ thể (ví dụ từ Báo cáo
+  // đường ống, bấm vào một cơ hội đọng lâu) — chờ danh sách tải xong rồi tự mở
+  // đúng cơ hội đó lên, xoá bộ lọc đang áp dụng để chắc chắn hàng đó hiển thị.
+  useEffect(() => {
+    if (!focusOpportunityId || isLoading) return;
+    const target = opportunities.find((o) => o.id === focusOpportunityId);
+    if (target) {
+      setSearchTerm('');
+      setStageFilter('ALL');
+      selectOpportunityFromRow(target);
+    }
+    onFocusConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusOpportunityId, isLoading, opportunities]);
+
   const handleCreatedSuccess = (newOpportunity: Opportunity) => {
     setOpportunities((prev) => [newOpportunity, ...prev]);
     setSelectedOpportunity(newOpportunity);
@@ -117,7 +152,11 @@ export default function OpportunityListPage({
 
   const handleOpportunityClosed = (updated: Opportunity) => {
     setOpportunities((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
-    setSelectedOpportunity((prev) => (prev && prev.id === updated.id ? updated : prev));
+    // Ghi kết quả thắng/thua thường bấm thẳng từ hàng trong bảng, không cần chọn
+    // trước — nhưng lý do thua (nếu có) chỉ hiện ở panel phía trên, nên sau khi
+    // chốt xong phải TỰ mở panel đó lên để người dùng thấy ngay kết quả, không
+    // phải tự bấm chọn lại cơ hội vừa xử lý xong.
+    selectOpportunityFromRow(updated);
     const outcome = updated.stage === 'WON' ? 'Thắng' : 'Thua';
     showToast(`Đã ghi nhận kết quả ${outcome} cho "${updated.name}".`, 'success');
   };
@@ -156,6 +195,29 @@ export default function OpportunityListPage({
       style: 'currency',
       currency: 'VND',
     }).format(amount);
+  };
+
+  /** Nhãn tiêu đề bảng — cỡ chữ 11px cũ quá nhỏ khó đọc, và không có nowrap nên
+   *  các tiêu đề 2-3 từ ("Giá trị dự kiến", "Giai đoạn hiện tại") bị xuống dòng
+   *  lệch nhau trông rối mắt. Dùng chung một style để 5 cột luôn đồng nhất. */
+  const tableHeadStyle: CSSProperties = {
+    padding: '12px 16px',
+    fontFamily: 'var(--font-mono, monospace)',
+    fontSize: '12px',
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    letterSpacing: 'var(--track-caps)',
+    color: 'var(--ink-muted)',
+    whiteSpace: 'nowrap',
+  };
+
+  /** Mỗi hàng cao thấp khác nhau tuỳ có dòng phụ (lý do thua, ngày dự kiến...)
+   *  hay không — hàng đã đóng cao hơn hàng đang mở, khiến bảng nhìn lởm chởm.
+   *  Ép mọi ô neo lên đỉnh (thay vì canh giữa theo chiều dọc mặc định) để phần
+   *  đầu mỗi hàng luôn thẳng hàng bất kể ô đó có bao nhiêu dòng nội dung. */
+  const tableCellStyle: CSSProperties = {
+    padding: '14px 16px',
+    verticalAlign: 'top',
   };
 
   const formatDate = (dateStr?: string | null): string => {
@@ -289,6 +351,10 @@ export default function OpportunityListPage({
         </div>
       )}
 
+      {/* Điểm neo cuộn tới khi chọn cơ hội từ bảng phía dưới — luôn render (kể cả
+          khi chưa có cơ hội nào được chọn) để ref sẵn sàng ngay từ cú click đầu tiên. */}
+      <div ref={stageControlRef} />
+
       {/* Bộ điều khiển chuyển giai đoạn cho cơ hội đang chọn (NCL-03-CN-002) */}
       {selectedOpportunity && (
         <div>
@@ -312,7 +378,7 @@ export default function OpportunityListPage({
                   onClick={() => setQuoteTargetOpportunity(selectedOpportunity)}
                   style={{
                     padding: '2px 8px',
-                    fontSize: '12px',
+                    fontSize: '13px',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
@@ -330,10 +396,10 @@ export default function OpportunityListPage({
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  onClick={() => onOpenActivities(selectedOpportunity.id)}
+                  onClick={() => onOpenActivities(selectedOpportunity.id, selectedOpportunity.name)}
                   style={{
                     padding: '2px 8px',
-                    fontSize: '12px',
+                    fontSize: '13px',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
@@ -347,7 +413,7 @@ export default function OpportunityListPage({
                 type="button"
                 className="btn btn-secondary"
                 onClick={() => setSelectedOpportunity(null)}
-                style={{ padding: '2px 8px', fontSize: '12px' }}
+                style={{ padding: '2px 8px', fontSize: '13px' }}
               >
                 Thu gọn thanh tiến trình
               </button>
@@ -401,7 +467,7 @@ export default function OpportunityListPage({
           <div
             style={{
               fontFamily: 'var(--font-mono, monospace)',
-              fontSize: '11px',
+              fontSize: '11.5px',
               fontWeight: 500,
               textTransform: 'uppercase',
               letterSpacing: 'var(--track-caps)',
@@ -429,7 +495,7 @@ export default function OpportunityListPage({
           <div
             style={{
               fontFamily: 'var(--font-mono, monospace)',
-              fontSize: '11px',
+              fontSize: '11.5px',
               fontWeight: 500,
               textTransform: 'uppercase',
               letterSpacing: 'var(--track-caps)',
@@ -457,7 +523,7 @@ export default function OpportunityListPage({
           <div
             style={{
               fontFamily: 'var(--font-mono, monospace)',
-              fontSize: '11px',
+              fontSize: '11.5px',
               fontWeight: 500,
               textTransform: 'uppercase',
               letterSpacing: 'var(--track-caps)',
@@ -485,7 +551,7 @@ export default function OpportunityListPage({
           <div
             style={{
               fontFamily: 'var(--font-mono, monospace)',
-              fontSize: '11px',
+              fontSize: '11.5px',
               fontWeight: 500,
               textTransform: 'uppercase',
               letterSpacing: 'var(--track-caps)',
@@ -579,11 +645,24 @@ export default function OpportunityListPage({
           <table
             style={{
               width: '100%',
+              // table-layout auto trước đây khiến cột "Tên cơ hội" bị bóp hẹp
+              // bất cứ khi nào cột "Thao tác" có dòng lý do thua dài — cả bảng
+              // bị lệch, hàng có lý do dài kéo giãn hết các hàng khác theo.
+              // Cố định % mỗi cột qua colgroup để chiều rộng luôn nhất quán
+              // bất kể nội dung dài ngắn ra sao.
+              tableLayout: 'fixed',
               borderCollapse: 'collapse',
               textAlign: 'left',
-              fontSize: '14px',
+              fontSize: '15px',
             }}
           >
+            <colgroup>
+              <col style={{ width: '26%' }} />
+              <col style={{ width: '16%' }} />
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '18%' }} />
+              <col style={{ width: '26%' }} />
+            </colgroup>
             <thead>
               <tr
                 style={{
@@ -591,112 +670,23 @@ export default function OpportunityListPage({
                   borderBottom: '1px solid var(--line)',
                 }}
               >
-                <th
-                  style={{
-                    padding: '12px 16px',
-                    fontFamily: 'var(--font-mono, monospace)',
-                    fontSize: '11px',
-                    fontWeight: 500,
-                    textTransform: 'uppercase',
-                    letterSpacing: 'var(--track-caps)',
-                    color: 'var(--ink-muted)',
-                  }}
-                >
-                  Tên cơ hội
-                </th>
-                <th
-                  style={{
-                    padding: '12px 16px',
-                    fontFamily: 'var(--font-mono, monospace)',
-                    fontSize: '11px',
-                    fontWeight: 500,
-                    textTransform: 'uppercase',
-                    letterSpacing: 'var(--track-caps)',
-                    color: 'var(--ink-muted)',
-                  }}
-                >
-                  Khách hàng
-                </th>
-                <th
-                  style={{
-                    padding: '12px 16px',
-                    fontFamily: 'var(--font-mono, monospace)',
-                    fontSize: '11px',
-                    fontWeight: 500,
-                    textTransform: 'uppercase',
-                    letterSpacing: 'var(--track-caps)',
-                    color: 'var(--ink-muted)',
-                    textAlign: 'right',
-                  }}
-                >
-                  Giá trị dự kiến
-                </th>
-                <th
-                  style={{
-                    padding: '12px 16px',
-                    fontFamily: 'var(--font-mono, monospace)',
-                    fontSize: '11px',
-                    fontWeight: 500,
-                    textTransform: 'uppercase',
-                    letterSpacing: 'var(--track-caps)',
-                    color: 'var(--ink-muted)',
-                    textAlign: 'center',
-                  }}
-                >
-                  Xác suất
-                </th>
-                <th
-                  style={{
-                    padding: '12px 16px',
-                    fontFamily: 'var(--font-mono, monospace)',
-                    fontSize: '11px',
-                    fontWeight: 500,
-                    textTransform: 'uppercase',
-                    letterSpacing: 'var(--track-caps)',
-                    color: 'var(--ink-muted)',
-                  }}
-                >
-                  Giai đoạn hiện tại
-                </th>
-                <th
-                  style={{
-                    padding: '12px 16px',
-                    fontFamily: 'var(--font-mono, monospace)',
-                    fontSize: '11px',
-                    fontWeight: 500,
-                    textTransform: 'uppercase',
-                    letterSpacing: 'var(--track-caps)',
-                    color: 'var(--ink-muted)',
-                  }}
-                >
-                  Trạng thái
-                </th>
-                <th
-                  style={{
-                    padding: '12px 16px',
-                    fontFamily: 'var(--font-mono, monospace)',
-                    fontSize: '11px',
-                    fontWeight: 500,
-                    textTransform: 'uppercase',
-                    letterSpacing: 'var(--track-caps)',
-                    color: 'var(--ink-muted)',
-                    textAlign: 'right',
-                  }}
-                >
-                  Thao tác
-                </th>
+                <th style={tableHeadStyle}>Tên cơ hội</th>
+                <th style={tableHeadStyle}>Khách hàng</th>
+                <th style={{ ...tableHeadStyle, textAlign: 'right' }}>Giá trị dự kiến</th>
+                <th style={tableHeadStyle}>Giai đoạn hiện tại</th>
+                <th style={{ ...tableHeadStyle, textAlign: 'right' }}>Thao tác</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--ink-muted)' }}>
+                  <td colSpan={5} style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--ink-muted)' }}>
                     Đang tải danh sách cơ hội bán hàng…
                   </td>
                 </tr>
               ) : filteredOpportunities.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '48px 24px', textAlign: 'center' }}>
+                  <td colSpan={5} style={{ padding: '48px 24px', textAlign: 'center' }}>
                     <div style={{ maxWidth: '380px', margin: '0 auto', color: 'var(--ink-muted)' }}>
                       <div
                         style={{
@@ -752,18 +742,49 @@ export default function OpportunityListPage({
                         transition: 'background 0.15s ease',
                       }}
                     >
-                      <td style={{ padding: '12px 16px' }}>
-                        <div style={{ fontWeight: 600, color: 'var(--ink-strong)' }}>{opp.name}</div>
-                        <div style={{ fontSize: '12px', color: 'var(--ink-muted)', marginTop: '2px' }}>
-                          Dự kiến: {formatDate(opp.expectedCloseDate)}
-                        </div>
+                      <td style={tableCellStyle}>
+                        <button
+                          type="button"
+                          onClick={() => selectOpportunityFromRow(opp)}
+                          title="Xem tiến trình bán hàng của cơ hội này"
+                          style={{
+                            all: 'unset',
+                            cursor: 'pointer',
+                            display: 'block',
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontWeight: 600,
+                              color: 'var(--ink-strong)',
+                              textDecoration: 'none',
+                            }}
+                          >
+                            {opp.name}
+                          </div>
+                          <div style={{ fontSize: '12.5px', color: 'var(--ink-muted)', marginTop: '2px' }}>
+                            Dự kiến: {formatDate(opp.expectedCloseDate)}
+                          </div>
+                        </button>
                       </td>
-                      <td style={{ padding: '12px 16px', color: 'var(--ink)' }}>
-                        {opp.customerName || `Khách hàng #${opp.customerId}`}
+                      <td style={tableCellStyle}>
+                        <button
+                          type="button"
+                          onClick={() => selectOpportunityFromRow(opp)}
+                          title="Xem tiến trình bán hàng của cơ hội này"
+                          style={{
+                            all: 'unset',
+                            cursor: 'pointer',
+                            display: 'inline',
+                            color: 'var(--ink)',
+                          }}
+                        >
+                          {opp.customerName || `Khách hàng #${opp.customerId}`}
+                        </button>
                       </td>
                       <td
                         style={{
-                          padding: '12px 16px',
+                          ...tableCellStyle,
                           textAlign: 'right',
                           fontFamily: 'var(--font-mono, monospace)',
                           fontVariantNumeric: 'tabular-nums',
@@ -773,33 +794,19 @@ export default function OpportunityListPage({
                       >
                         {formatCurrency(opp.expectedValue)}
                       </td>
-                      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                      <td style={tableCellStyle}>
+                        {/* Xác suất luôn cố định theo giai đoạn (10/40/70/100/0%), không cần
+                            tách thành một cột riêng — gộp chung vào cùng một nhãn cho gọn. */}
                         <span
                           style={{
-                            fontFamily: 'var(--font-mono, monospace)',
-                            fontWeight: 600,
-                            fontSize: '13px',
-                            color:
-                              opp.stage === 'WON'
-                                ? 'var(--pale-green-fg)'
-                                : opp.stage === 'LOST'
-                                ? 'var(--pale-red-fg)'
-                                : 'var(--ink-strong)',
-                          }}
-                        >
-                          {opp.probability}%
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <span
-                          style={{
-                            padding: '3px 10px',
+                            padding: '4px 10px',
                             borderRadius: '999px',
-                            fontSize: '12px',
+                            fontSize: '12.5px',
                             fontWeight: 600,
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '5px',
+                            gap: '7px',
+                            whiteSpace: 'nowrap',
                             background:
                               opp.stage === 'WON'
                                 ? 'var(--pale-green-bg)'
@@ -821,57 +828,63 @@ export default function OpportunityListPage({
                               height: '6px',
                               borderRadius: '50%',
                               background: 'currentColor',
+                              flexShrink: 0,
                             }}
                           />
                           {stageConfig?.shortLabel ?? opp.stage}
+                          <span
+                            style={{
+                              fontFamily: 'var(--font-mono, monospace)',
+                              opacity: 0.7,
+                              paddingLeft: '2px',
+                              borderLeft: '1px solid currentColor',
+                              marginLeft: '1px',
+                            }}
+                          >
+                            &nbsp;{opp.probability}%
+                          </span>
                         </span>
+                        {/* "Còn bao nhiêu ngày ở giai đoạn" và "lý do thua" đã chuyển lên
+                            panel "Tiến trình bán hàng & Xác suất thành công" phía trên —
+                            chỉ hiện cho ĐÚNG MỘT cơ hội đang chọn, thay vì lặp lại ở mọi
+                            hàng của bảng gây rối mắt. Xem StageTransitionControl.tsx. */}
                       </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <span
-                          style={{
-                            fontSize: '12.5px',
-                            color: isClosed ? 'var(--ink-muted)' : 'var(--pale-blue-fg)',
-                            fontWeight: 500,
-                          }}
-                        >
-                          {isClosed ? 'Đã đóng' : 'Đang xử lý'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                      <td style={{ ...tableCellStyle, textAlign: 'right' }}>
                         <div
                           style={{
                             display: 'flex',
-                            gap: '8px',
+                            gap: '10px',
                             justifyContent: 'flex-end',
-                            alignItems: 'center',
-                            flexWrap: 'wrap',
+                            alignItems: 'flex-start',
+                            flexWrap: 'nowrap',
                           }}
                         >
                           {isClosed ? (
-                            <div style={{ textAlign: 'right' }}>
+                            // Lý do thua có thể rất dài (kèm tên đối thủ) — cắt gọn một
+                            // dòng bằng ellipsis thay vì ép cả bảng giãn rộng ra theo nó;
+                            // xem đầy đủ bằng cách di chuột vào (title tooltip).
+                            <div style={{ minWidth: 0, maxWidth: '100%', textAlign: 'right' }}>
+                              {/* Lý do thua chuyển lên panel "Tiến trình bán hàng & Xác suất
+                                  thành công" phía trên khi chọn đúng cơ hội này — không lặp
+                                  lại ở mọi hàng của bảng nữa (xem StageTransitionControl.tsx). */}
                               <span
                                 data-testid={`badge-closed-${opp.id}`}
+                                title={
+                                  opp.stage === 'LOST' && (opp.lossReason || opp.competitorName)
+                                    ? `${lossReasonLabel(opp.lossReason) ?? ''}${
+                                        opp.competitorName ? ` · Đối thủ: ${opp.competitorName}` : ''
+                                      }`
+                                    : undefined
+                                }
                                 style={{
-                                  fontSize: '12px',
+                                  fontSize: '12.5px',
                                   fontWeight: 600,
                                   color: 'var(--ink-muted)',
+                                  whiteSpace: 'nowrap',
                                 }}
                               >
                                 Đã hoàn tất
                               </span>
-                              {opp.stage === 'LOST' && (opp.lossReason || opp.competitorName) && (
-                                <div
-                                  data-testid={`loss-reason-info-${opp.id}`}
-                                  style={{
-                                    fontSize: '11.5px',
-                                    color: 'var(--pale-red-fg)',
-                                    marginTop: '2px',
-                                  }}
-                                >
-                                  {lossReasonLabel(opp.lossReason)}
-                                  {opp.competitorName ? ` · Đối thủ: ${opp.competitorName}` : ''}
-                                </div>
-                              )}
                             </div>
                           ) : (
                             isAllowed &&
@@ -881,7 +894,7 @@ export default function OpportunityListPage({
                                 className="btn btn-secondary"
                                 onClick={() => setCloseTargetOpportunity(opp)}
                                 data-testid={`btn-close-opportunity-${opp.id}`}
-                                style={{ fontSize: '12.5px', padding: '4px 10px' }}
+                                style={{ fontSize: '12.5px', padding: '4px 10px', whiteSpace: 'nowrap' }}
                               >
                                 Ghi nhận kết quả
                               </button>
@@ -892,7 +905,7 @@ export default function OpportunityListPage({
                                 disabled
                                 data-testid={`btn-disabled-close-${opp.id}`}
                                 title="Cơ hội phải ở giai đoạn Đàm phán mới ghi nhận được kết quả thắng/thua"
-                                style={{ fontSize: '12.5px', padding: '4px 10px', opacity: 0.55 }}
+                                style={{ fontSize: '12.5px', padding: '4px 10px', opacity: 0.55, whiteSpace: 'nowrap' }}
                               >
                                 Chưa thể chốt
                               </button>
@@ -902,7 +915,7 @@ export default function OpportunityListPage({
                             type="button"
                             className={`btn ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
                             onClick={() => setSelectedOpportunity(isSelected ? null : opp)}
-                            style={{ fontSize: '12.5px', padding: '4px 10px' }}
+                            style={{ fontSize: '12.5px', padding: '4px 10px', whiteSpace: 'nowrap' }}
                           >
                             {isSelected ? 'Đang chọn' : 'Chuyển giai đoạn'}
                           </button>

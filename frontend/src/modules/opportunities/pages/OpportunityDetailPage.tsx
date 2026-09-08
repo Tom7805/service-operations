@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import {
   createOpportunityActivity,
-  fetchOpportunityActivities,
   fetchOpportunities,
+  fetchOpportunityActivities,
   OpportunityApiError,
 } from '../api/opportunitiesApi';
 import type { ContractRes } from '../../contracts/types/contractTypes';
@@ -22,6 +22,8 @@ interface OpportunityDetailPageProps {
   opportunityStatus?: OpportunityStatus;
   currentUserRoles?: string[];
   currentUserName?: string;
+  onBack?: () => void;
+  backLabel?: string;
 }
 
 const ACTIVITY_OPTIONS = [
@@ -69,9 +71,22 @@ export default function OpportunityDetailPage({
   opportunityStatus = 'OPEN',
   currentUserRoles = ['VT-04'],
   currentUserName = 'Người dùng',
+  onBack,
+  backLabel = 'Quay lại',
 }: OpportunityDetailPageProps) {
   const isSalesAllowed = currentUserRoles.includes('VT-04');
-  const isClosed = opportunityStatus === 'CLOSED';
+
+  /** opportunityStatus truyền vào chỉ là giá trị mặc định lúc chưa biết gì —
+   *  không có API nào cấp trạng thái mới nhất qua props (danh sách "Cơ hội bán
+   *  hàng" có thể đã đổi trạng thái sau khi người dùng mở màn này). Trạng thái
+   *  hiển thị và dùng để khoá form PHẢI lấy trực tiếp từ backend, nếu không sẽ
+   *  có tình huống nhãn ghi "Đang mở" nhưng bấm lưu lại bị máy chủ từ chối vì
+   *  cơ hội thật sự đã đóng. */
+  const [resolvedStatus, setResolvedStatus] = useState<OpportunityStatus | null>(null);
+  const [resolvedName, setResolvedName] = useState<string | null>(null);
+  const [customerName, setCustomerName] = useState<string | null>(null);
+  const isClosed = (resolvedStatus ?? opportunityStatus) === 'CLOSED';
+  const displayName = resolvedName ?? opportunityName;
 
   const [activities, setActivities] = useState<OpportunityActivity[]>([]);
   const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
@@ -86,6 +101,31 @@ export default function OpportunityDetailPage({
   const [errors, setErrors] = useState<OpportunityActivityFormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isSalesAllowed) return;
+    let cancelled = false;
+
+    async function loadOpportunityStatus() {
+      try {
+        const all = await fetchOpportunities();
+        const found = all.find((o) => o.id === opportunityId);
+        if (!cancelled && found) {
+          setResolvedStatus(found.status as OpportunityStatus);
+          setResolvedName(found.name);
+          setCustomerName(found.customerName ?? null);
+        }
+      } catch {
+        // Trạng thái không tải được thì tạm dùng giá trị mặc định từ props;
+        // nếu người dùng cố lưu vào cơ hội thực đã đóng, backend vẫn chặn.
+      }
+    }
+
+    loadOpportunityStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, [opportunityId, isSalesAllowed]);
 
   useEffect(() => {
     if (!isSalesAllowed) return;
@@ -207,6 +247,11 @@ export default function OpportunityDetailPage({
           <p>
             Theo quy định, chỉ <strong>Nhân viên kinh doanh</strong> mới được thao tác với lịch sử chăm sóc cơ hội.
           </p>
+          {onBack && (
+            <button type="button" className="btn-secondary" onClick={onBack}>
+              {ICONS.arrowLeft} {backLabel}
+            </button>
+          )}
         </div>
       </div>
     );
@@ -214,6 +259,11 @@ export default function OpportunityDetailPage({
 
   return (
     <div className="opportunity-detail-page" data-testid="opportunity-detail-page">
+      {onBack && (
+        <button type="button" className="activity-back-link" onClick={onBack}>
+          {ICONS.arrowLeft} {backLabel}
+        </button>
+      )}
       <div className="page-header">
         <div>
           <div className="page-header__kicker">
@@ -221,7 +271,12 @@ export default function OpportunityDetailPage({
             <span className="page-header__dot" />
             <span className="page-header__meta">GHI NHẬN CHĂM SÓC</span>
           </div>
-          <h1>{opportunityName}</h1>
+          <h1>{displayName}</h1>
+          {customerName && (
+            <div className="activity-customer-line">
+              {ICONS.building} Khách hàng: <strong>{customerName}</strong>
+            </div>
+          )}
         </div>
         <div className="page-header__actions">
           <span className={`activity-status-pill${isClosed ? ' activity-status-pill--closed' : ''}`}>

@@ -7,6 +7,7 @@ import type {
 import {
   STAGE_CONFIGS,
   ACTIVE_STAGES_ORDER,
+  LOSS_REASON_OPTIONS,
 } from '../types/opportunityTypes';
 import {
   canTransitionStage,
@@ -23,6 +24,12 @@ interface StageTransitionControlProps {
   opportunity: Opportunity;
   onOpportunityUpdated?: (updated: Opportunity) => void;
   currentUserRoles?: string[];
+}
+
+/** NCL-03-CN-005 — nhãn tiếng Việt cho lý do thua đã lưu của cơ hội. */
+function lossReasonLabel(reason?: string | null): string | null {
+  if (!reason) return null;
+  return LOSS_REASON_OPTIONS.find((o) => o.value === reason)?.label ?? reason;
 }
 
 export default function StageTransitionControl({
@@ -181,6 +188,36 @@ export default function StageTransitionControl({
               {opportunity.probability}% xác suất
             </span>
           </div>
+
+          {/* Trước đây "còn bao nhiêu ngày ở giai đoạn" và "lý do thua" bị rải rác
+              trong bảng danh sách (mỗi hàng một dòng phụ), gây rối mắt và trùng lặp.
+              Gom cả hai về đúng MỘT nơi — ngay dưới nhãn giai đoạn/xác suất của cơ
+              hội đang được điều khiển — để xem đủ mà không làm rối bảng bên dưới. */}
+          {opportunity.status !== 'CLOSED' && opportunity.daysInCurrentStage != null && (() => {
+            const threshold = opportunity.stalledThresholdDays ?? 60;
+            const days = opportunity.daysInCurrentStage;
+            const ratio = days / threshold;
+            const color =
+              ratio >= 1 ? 'var(--pale-red-fg)' : ratio >= 0.75 ? 'var(--pale-yellow-fg)' : 'var(--ink-muted)';
+            const label = ratio >= 1 ? 'Đã quá hạn xử lý' : ratio >= 0.75 ? 'Sắp quá hạn xử lý' : 'Đã đứng ở giai đoạn này';
+            return (
+              <div
+                style={{
+                  marginTop: '6px', fontSize: '12.5px', fontWeight: ratio >= 0.75 ? 700 : 500,
+                  color, fontFamily: 'var(--font-mono, monospace)',
+                }}
+              >
+                {label}: {days}/{threshold} ngày
+              </div>
+            );
+          })()}
+
+          {opportunity.stage === 'LOST' && (opportunity.lossReason || opportunity.competitorName) && (
+            <div style={{ marginTop: '6px', fontSize: '12.5px', color: 'var(--pale-red-fg)' }}>
+              Lý do thua: {lossReasonLabel(opportunity.lossReason)}
+              {opportunity.competitorName ? ` · Đối thủ: ${opportunity.competitorName}` : ''}
+            </div>
+          )}
         </div>
 
         {/* Nút xem lịch sử chuyển đổi */}

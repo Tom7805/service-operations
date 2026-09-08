@@ -38,6 +38,12 @@ export interface Opportunity {
   competitorName?: string | null;
   /** NCL-03-CN-005 — thời điểm đóng cơ hội (WON/LOST), null khi còn mở */
   closedAt?: string | null;
+  /** NCL-03-CN-007 — số ngày cơ hội đã đứng ở giai đoạn hiện tại; cùng cách tính với
+   *  Báo cáo đường ống, để danh sách biết trước khi nào một cơ hội sắp "quá hạn xử lý"
+   *  thay vì chỉ thấy cảnh báo sau khi đã quá ngưỡng. Null nếu chưa tính. */
+  daysInCurrentStage?: number | null;
+  /** Ngưỡng (ngày) coi là quá hạn xử lý — cùng giá trị với báo cáo đường ống. */
+  stalledThresholdDays?: number | null;
 }
 
 export interface OpportunityCreatePayload {

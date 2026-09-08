@@ -98,7 +98,7 @@ class OpportunityControllerIT {
 		when(opportunityService.create(any())).thenReturn(new OpportunityRes(
 				1L, "Trien khai ERP", 10L, "Cong ty TNHH ABC", new BigDecimal("500000000"),
 				LocalDate.now().plusMonths(1), "APPROACH", "OPEN", new BigDecimal("10"),
-				42L, "sale01", LocalDateTime.now(), null, null, null, null));
+				42L, "sale01", LocalDateTime.now(), null, null, null, null, null, null));
 
 		mockMvc.perform(post("/opportunities")
 						.contentType("application/json")
@@ -168,7 +168,7 @@ class OpportunityControllerIT {
 		when(opportunityStageService.changeStage(any())).thenReturn(new OpportunityRes(
 				1L, "Trien khai ERP", 10L, null, new BigDecimal("500000000"), null,
 				"PROPOSAL", "OPEN", new BigDecimal("40"), 42L, "sale01", LocalDateTime.now(),
-				null, null, null, null));
+				null, null, null, null, null, null));
 
 		mockMvc.perform(patch("/opportunities/1/stage")
 						.contentType("application/json")
@@ -292,7 +292,7 @@ class OpportunityControllerIT {
 		when(opportunityStageService.closeOpportunity(eq(1L), any())).thenReturn(new OpportunityRes(
 				1L, "Trien khai ERP", 10L, null, new BigDecimal("500000000"), null,
 				"LOST", "CLOSED", BigDecimal.ZERO, 42L, "sale01", LocalDateTime.now(),
-				"PRICE_TOO_HIGH", "Gia cao hon doi thu 15%", "Doi thu ABC", LocalDateTime.now()));
+				"PRICE_TOO_HIGH", "Gia cao hon doi thu 15%", "Doi thu ABC", LocalDateTime.now(), null, null));
 
 		mockMvc.perform(post("/opportunities/1/close")
 						.contentType("application/json")
@@ -313,7 +313,7 @@ class OpportunityControllerIT {
 		when(opportunityStageService.closeOpportunity(eq(1L), any())).thenReturn(new OpportunityRes(
 				1L, "Trien khai ERP", 10L, null, new BigDecimal("500000000"), null,
 				"WON", "CLOSED", new BigDecimal("100"), 42L, "sale01", LocalDateTime.now(),
-				null, null, null, LocalDateTime.now()));
+				null, null, null, LocalDateTime.now(), null, null));
 
 		mockMvc.perform(post("/opportunities/1/close")
 						.contentType("application/json")

@@ -3,18 +3,15 @@ package com.serviceops.modules.opportunity.service.impl;
 import com.serviceops.modules.opportunity.dto.response.PipelineReportRes;
 import com.serviceops.modules.opportunity.dto.response.PipelineStageRes;
 import com.serviceops.modules.opportunity.entity.Opportunity;
-import com.serviceops.modules.opportunity.entity.OpportunityStageHistory;
 import com.serviceops.modules.opportunity.enums.OpportunityStage;
 import com.serviceops.modules.opportunity.enums.OpportunityStatus;
 import com.serviceops.modules.opportunity.logging.OpportunityAuditLogger;
 import com.serviceops.modules.opportunity.repository.OpportunityRepository;
-import com.serviceops.modules.opportunity.repository.OpportunityStageHistoryRepository;
 import com.serviceops.modules.opportunity.service.SalesPipelineReportService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -50,18 +47,18 @@ import java.util.Map;
 @Service
 public class SalesPipelineReportServiceImpl implements SalesPipelineReportService {
 
-	/** Nguong (ngay) coi mot co hoi con mo la "dong lau bat thuong" (NCL-03-CN-007, TC-02). */
-	static final int STALLED_THRESHOLD_DAYS = 60;
+	/** Nguong (ngay) coi mot co hoi con mo la "qua han xu ly" (NCL-03-CN-007, TC-02). */
+	static final int STALLED_THRESHOLD_DAYS = OpportunityStageDurationCalculator.STALLED_THRESHOLD_DAYS;
 
 	private final OpportunityRepository opportunityRepository;
-	private final OpportunityStageHistoryRepository stageHistoryRepository;
+	private final OpportunityStageDurationCalculator stageDurationCalculator;
 	private final OpportunityAuditLogger auditLogger;
 
 	public SalesPipelineReportServiceImpl(OpportunityRepository opportunityRepository,
-			OpportunityStageHistoryRepository stageHistoryRepository,
+			OpportunityStageDurationCalculator stageDurationCalculator,
 			OpportunityAuditLogger auditLogger) {
 		this.opportunityRepository = opportunityRepository;
-		this.stageHistoryRepository = stageHistoryRepository;
+		this.stageDurationCalculator = stageDurationCalculator;
 		this.auditLogger = auditLogger;
 	}
 
@@ -71,14 +68,8 @@ public class SalesPipelineReportServiceImpl implements SalesPipelineReportServic
 		final LocalDateTime now = LocalDateTime.now();
 		final List<Opportunity> opportunities = opportunityRepository.findAll();
 
-		// Mot truy van lay toan bo lich su (moi nhat truoc), gom theo co hoi trong bo nho
-		// de tranh N+1 khi tinh moc "chuyen vao giai doan hien tai" cho tung co hoi.
-		final Map<Long, List<OpportunityStageHistory>> historyByOpportunity = new java.util.HashMap<>();
-		for (OpportunityStageHistory history : stageHistoryRepository.findAllByOrderByChangedAtDesc()) {
-			historyByOpportunity
-					.computeIfAbsent(history.getOpportunityId(), ignored -> new ArrayList<>())
-					.add(history);
-		}
+		final Map<Long, Long> daysInStageByOpportunity =
+				stageDurationCalculator.daysInCurrentStageByOpportunity(opportunities, now);
 
 		final Map<OpportunityStage, StageAccumulator> byStage = new EnumMap<>(OpportunityStage.class);
 		for (OpportunityStage stage : OpportunityStage.values()) {
@@ -92,7 +83,7 @@ public class SalesPipelineReportServiceImpl implements SalesPipelineReportServic
 
 			BigDecimal expectedValue = opportunity.getExpectedValue() == null
 					? BigDecimal.ZERO : opportunity.getExpectedValue();
-			long daysInStage = daysInCurrentStage(opportunity, historyByOpportunity, now);
+			long daysInStage = daysInStageByOpportunity.getOrDefault(opportunity.getId(), 0L);
 
 			accumulator.count++;
 			accumulator.totalValue = accumulator.totalValue.add(expectedValue);
@@ -121,31 +112,10 @@ public class SalesPipelineReportServiceImpl implements SalesPipelineReportServic
 
 		long totalStalled = stageRows.stream().mapToLong(PipelineStageRes::stalledCount).sum();
 		auditLogger.recordReportView("Xem bao cao duong ong ban hang: " + opportunities.size()
-				+ " co hoi, " + totalStalled + " co hoi dong lau bat thuong (nguong "
+				+ " co hoi, " + totalStalled + " co hoi qua han xu ly (nguong "
 				+ STALLED_THRESHOLD_DAYS + " ngay)");
 
 		return new PipelineReportRes(opportunities.size(), grandTotalValue, STALLED_THRESHOLD_DAYS, now, stageRows);
-	}
-
-	/**
-	 * So ngay co hoi da nam o giai doan hien tai: tu ban ghi lich su moi nhat co
-	 * {@code toStage} = giai doan hien tai, hoac tu {@code createdAt} neu chua tung
-	 * chuyen giai doan. Khong bao gio am (moc tuong lai duoc lam tron ve 0).
-	 */
-	private long daysInCurrentStage(Opportunity opportunity,
-			Map<Long, List<OpportunityStageHistory>> historyByOpportunity, LocalDateTime now) {
-		LocalDateTime enteredAt = opportunity.getCreatedAt();
-		for (OpportunityStageHistory history : historyByOpportunity.getOrDefault(opportunity.getId(), List.of())) {
-			if (history.getToStage() == opportunity.getStage()) {
-				enteredAt = history.getChangedAt();
-				break; // danh sach da sap xep moi nhat truoc.
-			}
-		}
-		if (enteredAt == null) {
-			return 0L;
-		}
-		long days = Duration.between(enteredAt, now).toDays();
-		return Math.max(days, 0L);
 	}
 
 	/** Co hoi con mo o giai doan trung gian, da nam qua nguong (TC-02). */

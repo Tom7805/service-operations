@@ -9,6 +9,7 @@ import com.serviceops.modules.opportunity.enums.OpportunityStatus;
 import com.serviceops.modules.opportunity.logging.OpportunityAuditLogger;
 import com.serviceops.modules.opportunity.repository.OpportunityRepository;
 import com.serviceops.modules.opportunity.repository.OpportunityStageHistoryRepository;
+import com.serviceops.modules.opportunity.service.impl.OpportunityStageDurationCalculator;
 import com.serviceops.modules.opportunity.service.impl.SalesPipelineReportServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -56,7 +57,9 @@ class SalesPipelineReportServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		service = new SalesPipelineReportServiceImpl(opportunityRepository, stageHistoryRepository, auditLogger);
+		OpportunityStageDurationCalculator stageDurationCalculator =
+				new OpportunityStageDurationCalculator(stageHistoryRepository);
+		service = new SalesPipelineReportServiceImpl(opportunityRepository, stageDurationCalculator, auditLogger);
 		when(stageHistoryRepository.findAllByOrderByChangedAtDesc()).thenReturn(List.of());
 	}
 

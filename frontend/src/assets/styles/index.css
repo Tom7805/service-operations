@@ -362,9 +362,10 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
   display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
   margin-right: 7px;
 }
+/* svg trước đây to hơn hẳn khung chứa (22px trong hộp 18px) nên tràn ra ngoài
+   và lệch hẳn khỏi dòng chữ nhãn cạnh nó — ép khít lại đúng 100% khung chứa. */
 .stat-card__icon svg { width: 100%; height: 100%; }
 .stat-card > div:last-child { width: 100%; }
-.stat-card__icon svg { width: 22px; height: 22px; }
 .stat-card__icon--blue { background: #E1F3FE; color: #1F6C9F; }
 .stat-card__icon--green { background: #EDF3EC; color: #346538; }
 .stat-card__icon--red { background: #FDEBEC; color: #9F2F2D; }
@@ -378,7 +379,11 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
 .stat-card__label {
   font-family: var(--font-mono);
   font-size: 11.5px; color: #5B5A57; font-weight: 500; letter-spacing: var(--track-caps);
-  text-transform: uppercase; display: block; margin-bottom: 10px; line-height: 1.35;
+  text-transform: uppercase; margin-bottom: 10px; line-height: 1.35;
+  /* flex + align-items:center thay vì display:block — icon 18px canh giữa
+     chắc chắn theo trục dọc so với dòng chữ, không phụ thuộc baseline vốn hay
+     lệch khi icon là SVG. */
+  display: flex; align-items: center;
 }
 /* Con số ở cỡ macro, tracking âm — tương phản cực đại với nhãn 11px bên trên.
    Chính khoảng cách giữa hai cỡ này tạo ra nhịp thị giác của cả trang. */
@@ -2713,7 +2718,59 @@ body { background: var(--canvas); }
 .pipeline-flow__label { font-size: 12.5px; color: var(--ink-muted); }
 .pipeline-flow__number { font-family: var(--font-mono); font-size: 32px; font-weight: 700; line-height: 1.1; }
 .pipeline-flow__value { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-muted); }
-.pipeline-flow__flag { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; color: var(--pale-yellow-fg); margin-top: 2px; }
+/* Cảnh báo quá hạn của giai đoạn — đặt thành một dòng RIÊNG phía trên nhãn
+   giai đoạn (không đính vào góc con số lớn, dễ trông rối/thiếu chuyên nghiệp
+   khi hai thứ chồng lên nhau). Giữ nguyên icon cảnh báo tam giác + số đếm,
+   kích thước nhỏ, không lặp chữ "quá hạn" ở đây — tên đầy đủ nằm trong tooltip. */
+.pipeline-flow__badge {
+  display: inline-flex; align-items: center; gap: 4px; align-self: flex-start;
+  margin-bottom: 2px; padding: 1px 7px; border-radius: 999px;
+  background: var(--pale-yellow-bg); color: var(--pale-yellow-fg);
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  border: none; cursor: pointer;
+  transition: background var(--dur-fast, .15s) var(--ease-out, ease);
+}
+.pipeline-flow__badge svg { width: 11px; height: 11px; }
+.pipeline-flow__badge:hover { background: rgba(149, 100, 0, 0.22); }
+
+/* Thẻ "Cơ hội quá hạn xử lý" — dựng cùng khuôn với .user-table-card (viền
+   1px + bo góc trắng) thay vì đổ tràn nền vàng như .alert-box--warning mặc
+   định, để đồng bộ với các khối khác trên trang; màu vàng chỉ còn giữ lại ở
+   icon và số đếm — một điểm nhấn màu, không phủ cả khối. */
+.pipeline-stalled-card { padding: 20px 24px 22px; }
+.pipeline-stalled-card__head { display: flex; align-items: flex-start; gap: 14px; padding-bottom: 16px; margin-bottom: 4px; border-bottom: 1px solid var(--line); }
+.pipeline-stalled-card__icon {
+  flex-shrink: 0; width: 36px; height: 36px; border-radius: var(--radius-md);
+  background: var(--pale-yellow-bg); color: var(--pale-yellow-fg);
+  display: flex; align-items: center; justify-content: center;
+}
+.pipeline-stalled-card__icon svg { width: 18px; height: 18px; }
+.pipeline-stalled-card__heading { flex: 1; min-width: 0; }
+.pipeline-stalled-card__title { font-size: 15px; font-weight: 700; color: var(--ink-strong); margin: 0 0 3px; }
+.pipeline-stalled-card__subtitle { font-size: 12.5px; color: var(--ink-muted); margin: 0; line-height: 1.5; }
+.pipeline-stalled-card__count {
+  flex-shrink: 0; font-family: var(--font-mono); font-size: 20px; font-weight: 700;
+  color: var(--pale-yellow-fg); line-height: 1;
+}
+
+.pipeline-stalled-groups { margin-top: 14px; display: flex; flex-direction: column; gap: 16px; }
+.pipeline-stalled-group { border-radius: var(--radius-md); padding: 8px; margin: -8px; transition: background var(--dur-normal, .3s) var(--ease-out, ease); }
+.pipeline-stalled-group--flash { background: var(--pale-yellow-bg); }
+.pipeline-stalled-group__head { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink); margin-bottom: 8px; }
+.pipeline-stalled-group__count { font-family: var(--font-mono); font-size: 12px; color: var(--ink-muted); }
+.pipeline-stalled-chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Chip trung tính (viền xám, chữ đen) — không nhuộm vàng từng chip một, tránh
+   cả khối lại vàng chóe lần nữa; vàng chỉ còn ở icon/số đếm phía trên. */
+.pipeline-stalled-chip {
+  display: inline-flex; align-items: center; gap: 6px; font-family: inherit;
+  font-size: 13px; font-weight: 500; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius-md); padding: 6px 12px; cursor: pointer;
+  transition: background var(--dur-fast, .15s) var(--ease-out, ease), border-color var(--dur-fast, .15s) var(--ease-out, ease);
+}
+.pipeline-stalled-chip svg { width: 12px; height: 12px; color: var(--ink-faint); }
+.pipeline-stalled-chip:hover:not(:disabled) { background: var(--surface-alt); border-color: #DCDCDC; }
+.pipeline-stalled-chip:disabled { cursor: default; opacity: 0.85; }
 .pipeline-flow__arrow { display: inline-flex; align-items: center; color: var(--ink-faint); margin: 0 4px; flex-shrink: 0; }
 .pipeline-flow__arrow svg { width: 14px; height: 14px; }
 
@@ -2835,3 +2892,49 @@ body { background: var(--canvas); }
 .activity-form__select:hover, .activity-form__input:hover, .activity-form__textarea:hover { border-color: #DCDCDC; }
 .activity-form__input::placeholder, .activity-form__textarea::placeholder { color: var(--ink-faint); }
 .activity-form__actions { display: flex; justify-content: flex-end; padding-top: 4px; border-top: 1px solid var(--overlay-hairline); }
+.activity-back-link {
+  display: inline-flex; align-items: center; gap: 6px; margin-bottom: 14px;
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-size: 13.5px; font-weight: 600; color: var(--ink-muted);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+.activity-back-link svg { width: 14px; height: 14px; }
+.activity-back-link:hover { color: var(--ink-strong); }
+.access-denied-card .btn-secondary { margin-top: 4px; }
+
+/* Bộ chọn cơ hội theo tên/khách hàng thay cho ô nhập mã ID mù (không nơi nào
+   trong hệ thống hiển thị ID để tra cứu). */
+.opportunity-picker { display: flex; flex-direction: column; gap: 12px; }
+.opportunity-picker__search { position: relative; }
+.opportunity-picker__search-icon {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; color: var(--ink-faint); display: flex;
+}
+.opportunity-picker__search-icon svg { width: 100%; height: 100%; }
+.opportunity-picker__input {
+  width: 100%; height: 42px; padding: 0 14px 0 36px; border: 1px solid var(--line);
+  border-radius: var(--radius-md); font-size: 14.5px; color: var(--ink); background: var(--surface);
+  outline: none; transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+.opportunity-picker__input:focus { border-color: var(--ink-strong); box-shadow: var(--shadow-focus); }
+.opportunity-picker__input::placeholder { color: var(--ink-faint); }
+.opportunity-picker__hint { font-size: 13.5px; color: var(--ink-muted); padding: 8px 2px; }
+.opportunity-picker__hint--error { color: var(--pale-red-fg); }
+.opportunity-picker__list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: var(--radius-md); overflow: hidden; }
+.opportunity-picker__item {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 11px 14px; background: var(--surface); border: none; border-bottom: 1px solid var(--overlay-hairline);
+  cursor: pointer; text-align: left; font-size: 14px; color: var(--ink);
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.opportunity-picker__list li:last-child .opportunity-picker__item { border-bottom: none; }
+.opportunity-picker__item:hover { background: var(--surface-alt); }
+.opportunity-picker__item-name { font-weight: 600; color: var(--ink-strong); }
+.opportunity-picker__item-customer { font-size: 12.5px; color: var(--ink-muted); flex-shrink: 0; }
+.activity-customer-line {
+  display: flex; align-items: center; gap: 6px; margin-top: 6px;
+  font-size: 13.5px; color: var(--ink-muted);
+}
+.activity-customer-line svg { width: 14px; height: 14px; flex-shrink: 0; }
+.activity-customer-line strong { color: var(--ink-strong); font-weight: 600; }
+.pipeline-generated-at { font-size: 12.5px; color: var(--ink-faint); white-space: nowrap; }

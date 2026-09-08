@@ -13,6 +13,7 @@ import com.serviceops.modules.opportunity.logging.OpportunityAuditLogger;
 import com.serviceops.modules.opportunity.mapper.OpportunityMapper;
 import com.serviceops.modules.opportunity.repository.OpportunityRepository;
 import com.serviceops.modules.opportunity.service.impl.OpportunityServiceImpl;
+import com.serviceops.modules.opportunity.service.impl.OpportunityStageDurationCalculator;
 import com.serviceops.modules.opportunity.validator.StageTransitionValidator;
 import com.serviceops.security.scope.CurrentUserScopeProvider;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,6 +56,9 @@ class OpportunityServiceTest {
 	@Mock
 	private CurrentUserScopeProvider currentUserScopeProvider;
 
+	@Mock
+	private OpportunityStageDurationCalculator stageDurationCalculator;
+
 	private final OpportunityMapper opportunityMapper = new OpportunityMapper();
 
 	private final StageTransitionValidator stageTransitionValidator = new StageTransitionValidator();
@@ -64,7 +68,7 @@ class OpportunityServiceTest {
 	@BeforeEach
 	void setUp() {
 		service = new OpportunityServiceImpl(opportunityRepository, customerRepository, opportunityMapper,
-				auditLogger, stageTransitionValidator, currentUserScopeProvider);
+				auditLogger, stageTransitionValidator, currentUserScopeProvider, stageDurationCalculator);
 
 		lenient().when(opportunityRepository.save(any(Opportunity.class))).thenAnswer(inv -> {
 			Opportunity opportunity = inv.getArgument(0);
