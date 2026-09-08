@@ -1,7 +1,8 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import CreateContractModal from '../components/CreateContractModal';
 import type { Opportunity } from '../types/opportunityTypes';
+import type { ContractRes } from '../../contracts/types/contractTypes';
 import * as opportunitiesApi from '../api/opportunitiesApi';
 
 const mockOpportunity: Opportunity = {
@@ -19,10 +20,24 @@ vi.mock('../api/opportunitiesApi', () => ({
 }));
 
 describe('CreateContractModal', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('renders and submits form to create contract', async () => {
-    vi.mocked(opportunitiesApi.createContractFromOpportunity).mockResolvedValue({ id: 55, name: 'Cơ hội Demo' });
+    const createdContract: ContractRes = {
+      id: 55,
+      contractCode: 'HD-TEST01',
+      name: 'Cơ hội Demo',
+      opportunityId: 100,
+      customerId: 5,
+      quoteId: 30,
+      contractType: 'FIXED_PRICE',
+      totalValue: 2000000,
+      status: 'DRAFT',
+      createdBy: 'sale01',
+    };
+    vi.mocked(opportunitiesApi.createContractFromOpportunity).mockResolvedValue(createdContract);
 
     const onCreated = vi.fn();
     render(
