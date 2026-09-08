@@ -24,6 +24,7 @@ export interface ContractRes {
   quoteId: number | null;
   contractType: ContractType;
   totalValue: number;
+  limitValue?: number | null;
   startDate?: string | null;
   endDate?: string | null;
   status: ContractStatus;

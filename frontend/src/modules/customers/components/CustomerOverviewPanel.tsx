@@ -8,6 +8,8 @@ import type {
 } from '../types/customerTypes';
 import { roleLabels } from '../../../utils/roleLabel';
 import { ICONS } from '../../../components/common/icons';
+import ContractTypeLimitModal from '../../contracts/components/ContractTypeLimitModal';
+import { t } from '../../../i18n';
 
 interface CustomerOverviewPanelProps {
   customerId: number;
@@ -78,6 +80,9 @@ export default function CustomerOverviewPanel({
   // Giữ tham chiếu ổn định để callback của trang cha không làm effect chạy lại vô hạn.
   const onLoadedRef = useRef(onLoaded);
   onLoadedRef.current = onLoaded;
+
+  const [isTypeLimitOpen, setIsTypeLimitOpen] = useState(false);
+  const [selectedContract, setSelectedContract] = useState<null | { id: number; code: string | null; name: string | null; amount: number | null }>(null);
 
   const loadOverview = useCallback(async () => {
     setIsLoading(true);
@@ -182,6 +187,37 @@ export default function CustomerOverviewPanel({
             </p>
             <p className="cell-muted">Vai trò hiện tại: {roleLabels(currentUserRoles) || '(không xác định)'}</p>
           </div>
+
+      {selectedContract && (
+        <ContractTypeLimitModal
+          isOpen={isTypeLimitOpen}
+          onClose={() => setIsTypeLimitOpen(false)}
+          contract={{
+            id: selectedContract.id,
+            contractCode: selectedContract.code ?? '',
+            name: selectedContract.name ?? '',
+            opportunityId: null,
+            customerId,
+            customerName,
+            quoteId: null,
+            contractType: 'TIME_AND_MATERIAL',
+            totalValue: selectedContract.amount ?? 0,
+            limitValue: null,
+            startDate: null,
+            endDate: null,
+            status: 'DRAFT',
+            notes: null,
+            createdBy: undefined,
+            createdAt: undefined,
+          }}
+          currentUserRoles={currentUserRoles}
+          onSaved={() => {
+            setIsTypeLimitOpen(false);
+            setSelectedContract(null);
+            void loadOverview();
+          }}
+        />
+      )}
         </div>
       </div>
     );
@@ -332,15 +368,16 @@ export default function CustomerOverviewPanel({
                 ) : (
                   <div className="table-responsive">
                     <table className="user-data-table">
-                      <thead>
-                        <tr>
-                          <th style={{ width: '120px' }}>Ngày</th>
-                          <th style={{ width: '140px' }}>Mã</th>
-                          <th>Tên</th>
-                          <th style={{ width: '140px' }}>Trạng thái</th>
-                          <th style={{ width: '160px', textAlign: 'right' }}>Giá trị</th>
-                        </tr>
-                      </thead>
+                          <thead>
+                            <tr>
+                              <th style={{ width: '120px' }}>Ngày</th>
+                              <th style={{ width: '140px' }}>Mã</th>
+                              <th>Tên</th>
+                              <th style={{ width: '140px' }}>Trạng thái</th>
+                              <th style={{ width: '160px', textAlign: 'right' }}>Giá trị</th>
+                              <th style={{ width: '160px', textAlign: 'right' }}>Hành động</th>
+                            </tr>
+                          </thead>
                       <tbody>
                         {items.map((item) => (
                           <tr key={item.id}>
@@ -355,6 +392,22 @@ export default function CustomerOverviewPanel({
                               )}
                             </td>
                             <td style={{ textAlign: 'right' }}>{formatAmount(item.amount)}</td>
+                            <td style={{ textAlign: 'right' }}>
+                              {currentUserRoles.includes('VT-05') ? (
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  onClick={() => {
+                                    setSelectedContract({ id: item.id, code: item.code, name: item.name, amount: item.amount });
+                                    setIsTypeLimitOpen(true);
+                                  }}
+                                >
+                                  {t('contract.action.button')}
+                                </button>
+                              ) : (
+                                <span className="cell-muted">—</span>
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>

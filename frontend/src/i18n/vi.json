@@ -1,0 +1,11 @@
+{
+  "contract.modal.title": "Khai báo loại hợp đồng & hạn mức",
+  "contract.modal.hint": "Mã: {code} · {name}",
+  "contract.modal.roleForbidden": "Chức năng yêu cầu vai trò Kế toán (VT-05).",
+  "contract.modal.label.type": "Loại hợp đồng",
+  "contract.modal.label.totalValue": "Giá trị hợp đồng (VNĐ)",
+  "contract.modal.label.limitValue": "Hạn mức (VNĐ) — để trống = không đặt hạn mức",
+  "contract.modal.button.cancel": "Hủy",
+  "contract.modal.button.save": "Lưu",
+  "contract.action.button": "Khai báo loại & hạn mức"
+}
