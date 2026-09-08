@@ -1964,3 +1964,128 @@ Mỗi phần tử có cùng cấu trúc với `data` của API tạo phụ lục
 | 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng với `{contractId}`. |
 | 400 | `INVALID_STATE` | Hợp đồng chưa `ACTIVE`, hoặc ngày hiệu lực nằm ngoài thời hạn hợp đồng. |
 | 400 | `VALIDATION_ERROR` | Thiếu dữ liệu, nội dung quá dài, giá trị điều chỉnh bằng 0, tổng sau điều chỉnh âm hoặc vượt hạn mức. |
+
+### `NCL-04-CN-005` — Cảnh báo khi sắp vượt hạn mức hợp đồng
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`) hoặc **Kế toán** (`VT-05`). Vì hệ thống chưa có module hóa đơn
+riêng (Epic NCL-10 chưa xây), `usedValue` lấy tổng giá trị các mốc thanh toán đã chuyển trạng thái
+`INVOICED` — đại diện cho phần "đã xuất hóa đơn" của hợp đồng. Ngưỡng cảnh báo cố định **80%** hạn mức.
+
+#### `GET /contracts/{contractId}/usage`
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "data": {
+    "contractId": 5,
+    "totalValue": 500000000,
+    "limitValue": 500000000,
+    "usedValue": 420000000,
+    "remainingValue": 80000000,
+    "usedPercentage": 84,
+    "nearLimit": true,
+    "overLimit": false
+  }
+}
+```
+
+Khi hợp đồng không khai báo hạn mức (`limitValue = null`), `usedPercentage`, `nearLimit`, `overLimit` luôn
+trả về trung tính (`null`/`false`) — không có gì để cảnh báo.
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Quản lý dự án hoặc Kế toán. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng với `{contractId}`. |
+
+---
+
+### `NCL-04-CN-006` — Nhắc hợp đồng sắp hết hiệu lực
+
+Yêu cầu token của **Kế toán** (`VT-05`). Trả về các hợp đồng đang `ACTIVE` có `endDate` nằm trong vòng
+`days` ngày kể từ hôm nay (mặc định 30), sắp xếp theo ngày hết hạn gần nhất trước.
+
+#### `GET /contracts/expiring?days=30`
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "contractId": 5,
+      "contractCode": "HD-4K7X2Q9",
+      "name": "Hop dong ERP",
+      "customerId": 1,
+      "endDate": "2026-10-05",
+      "daysRemaining": 12
+    }
+  ]
+}
+```
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`). |
+| 400 | `VALIDATION_ERROR` | `days` là số âm. |
+
+---
+
+### `NCL-04-CN-007` — Gia hạn hợp đồng
+
+Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`). Chỉ gia hạn được hợp đồng đang `ACTIVE`; hợp đồng đã
+`COMPLETED`/`TERMINATED` ("đã đóng") bị từ chối và được đề nghị lập hợp đồng mới thay vì gia hạn (TC-02).
+Ngày kết thúc mới phải sau ngày kết thúc hiện tại. Giá trị bổ sung (nếu có) được cộng vào `totalValue` và
+vẫn phải tuân thủ hạn mức tràn (QTN-19) như phụ lục điều chỉnh.
+
+#### `POST /contracts/{contractId}/renewals`
+
+**Request:**
+```json
+{
+  "newEndDate": "2027-06-30",
+  "additionalValue": 100000000,
+  "notes": "Khach hang dong y tiep tuc them 6 thang"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `newEndDate` | date | có | Phải sau `endDate` hiện tại của hợp đồng. |
+| `additionalValue` | number | không | `null`/`0` = giữ nguyên giá trị hợp đồng. |
+| `notes` | string | không | Ghi chú lý do gia hạn. |
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Gia han hop dong thanh cong",
+  "data": {
+    "id": 12,
+    "contractId": 5,
+    "previousEndDate": "2026-12-31",
+    "newEndDate": "2027-06-30",
+    "additionalValue": 100000000,
+    "valueBefore": 500000000,
+    "valueAfter": 600000000,
+    "notes": "Khach hang dong y tiep tuc them 6 thang",
+    "createdBy": "sale01",
+    "createdAt": "2026-09-08T10:00:00"
+  }
+}
+```
+
+#### `GET /contracts/{contractId}/renewals`
+
+Trả về lịch sử gia hạn của hợp đồng, mới nhất trước; danh sách rỗng nếu chưa từng gia hạn. Mỗi phần tử có
+cùng cấu trúc với `data` của API gia hạn.
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh (`VT-04`). |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng với `{contractId}`. |
+| 400 | `INVALID_STATE` | Hợp đồng không ở trạng thái `ACTIVE`. |
+| 400 | `VALIDATION_ERROR` | Thiếu `newEndDate`, `newEndDate` không sau ngày kết thúc hiện tại, hoặc giá trị sau gia hạn vượt hạn mức. |
