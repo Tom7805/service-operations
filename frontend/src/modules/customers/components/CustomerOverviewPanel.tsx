@@ -10,6 +10,7 @@ import { roleLabels } from '../../../utils/roleLabel';
 import { ICONS } from '../../../components/common/icons';
 import ContractTypeLimitModal from '../../contracts/components/ContractTypeLimitModal';
 import ContractMilestonesModal from '../../contracts/components/ContractMilestonesModal';
+import ContractAppendixModal from '../../contracts/components/ContractAppendixModal';
 import { getContract, ContractsApiError } from '../../contracts/api/contractsApi';
 import type { ContractRes } from '../../contracts/types/contractTypes';
 import { t } from '../../../i18n';
@@ -86,20 +87,21 @@ export default function CustomerOverviewPanel({
 
   const [isTypeLimitOpen, setIsTypeLimitOpen] = useState(false);
   const [isMilestonesOpen, setIsMilestonesOpen] = useState(false);
+  const [isAppendixOpen, setIsAppendixOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<ContractRes | null>(null);
   const [isContractLoading, setIsContractLoading] = useState(false);
   const [contractLoadError, setContractLoadError] = useState<string | null>(null);
 
-  // NCL-04-CN-002/003: nạp đúng dữ liệu hiện tại của hợp đồng (loại, giá trị, hạn mức)
-  // trước khi mở modal khai báo/mốc thanh toán — dòng thời gian tổng hợp không mang đủ các trường này.
-  const openContractAction = useCallback(async (contractId: number, action: 'type-limit' | 'milestones') => {
+  // NCL-04-CN-002/003/004: nạp đúng dữ liệu hiện tại của hợp đồng trước khi mở modal sửa/điều chỉnh.
+  const openContractAction = useCallback(async (contractId: number, action: 'type-limit' | 'milestones' | 'appendix') => {
     setContractLoadError(null);
     setIsContractLoading(true);
     try {
       const contract = await getContract(contractId);
       setSelectedContract(contract);
       if (action === 'type-limit') setIsTypeLimitOpen(true);
-      else setIsMilestonesOpen(true);
+      else if (action === 'milestones') setIsMilestonesOpen(true);
+      else setIsAppendixOpen(true);
     } catch (err) {
       setContractLoadError(
         err instanceof ContractsApiError
@@ -389,24 +391,41 @@ export default function CustomerOverviewPanel({
                             </td>
                             <td style={{ textAlign: 'right' }}>{formatAmount(item.amount)}</td>
                             <td style={{ textAlign: 'right' }}>
-                              {section.key === 'contracts' && currentUserRoles.includes('VT-05') ? (
-                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                  <button
-                                    type="button"
-                                    className="btn btn-secondary"
-                                    onClick={() => void openContractAction(item.id, 'type-limit')}
-                                    disabled={isContractLoading}
-                                  >
-                                    {t('contract.action.button')}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="btn btn-secondary"
-                                    onClick={() => void openContractAction(item.id, 'milestones')}
-                                    disabled={isContractLoading}
-                                  >
-                                    Mốc thanh toán
-                                  </button>
+                              {section.key === 'contracts' ? (
+                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                                  {currentUserRoles.includes('VT-05') && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        onClick={() => void openContractAction(item.id, 'type-limit')}
+                                        disabled={isContractLoading}
+                                      >
+                                        {t('contract.action.button')}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        onClick={() => void openContractAction(item.id, 'milestones')}
+                                        disabled={isContractLoading}
+                                      >
+                                        Mốc thanh toán
+                                      </button>
+                                    </>
+                                  )}
+                                  {currentUserRoles.includes('VT-04') && (
+                                    <button
+                                      type="button"
+                                      className="btn btn-secondary"
+                                      onClick={() => void openContractAction(item.id, 'appendix')}
+                                      disabled={isContractLoading}
+                                    >
+                                      Phụ lục điều chỉnh
+                                    </button>
+                                  )}
+                                  {!currentUserRoles.includes('VT-05') && !currentUserRoles.includes('VT-04') && (
+                                    <span className="cell-muted">—</span>
+                                  )}
                                 </div>
                               ) : (
                                 <span className="cell-muted">—</span>
@@ -457,6 +476,23 @@ export default function CustomerOverviewPanel({
           currentUserRoles={currentUserRoles}
           onSaved={() => {
             setIsMilestonesOpen(false);
+            setSelectedContract(null);
+            void loadOverview();
+          }}
+        />
+      )}
+
+      {selectedContract && (
+        <ContractAppendixModal
+          isOpen={isAppendixOpen}
+          onClose={() => {
+            setIsAppendixOpen(false);
+            setSelectedContract(null);
+          }}
+          contract={selectedContract}
+          currentUserRoles={currentUserRoles}
+          onSaved={() => {
+            setIsAppendixOpen(false);
             setSelectedContract(null);
             void loadOverview();
           }}

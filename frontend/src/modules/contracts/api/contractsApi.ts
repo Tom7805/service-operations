@@ -49,9 +49,45 @@ export type ContractTypeLimitPayload = {
   limitValue?: number | null;
 };
 
+export type ContractAppendixCreatePayload = {
+  content: string;
+  adjustmentValue: number;
+  effectiveDate: string;
+};
+
+export type ContractAppendixRes = {
+  id: number;
+  contractId: number;
+  content: string;
+  adjustmentValue: number;
+  valueBefore: number;
+  valueAfter: number;
+  effectiveDate: string;
+  createdBy: string;
+  createdAt: string;
+};
+
 /** GET /contracts/{contractId} — nạp giá trị hiện tại trước khi khai báo loại/hạn mức. */
 export async function getContract(contractId: number): Promise<ContractRes> {
   return requestBackend<ContractRes>(`${API_BASE_URL}/contracts/${contractId}`, {
+    method: 'GET',
+  });
+}
+
+/** POST /contracts/{contractId}/appendices — lập phụ lục điều chỉnh hợp đồng (NCL-04-CN-004). */
+export async function createAppendix(
+  contractId: number,
+  payload: ContractAppendixCreatePayload
+): Promise<ContractAppendixRes> {
+  return requestBackend<ContractAppendixRes>(`${API_BASE_URL}/contracts/${contractId}/appendices`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/** GET /contracts/{contractId}/appendices — lịch sử phụ lục của hợp đồng. */
+export async function fetchAppendices(contractId: number): Promise<ContractAppendixRes[]> {
+  return requestBackend<ContractAppendixRes[]>(`${API_BASE_URL}/contracts/${contractId}/appendices`, {
     method: 'GET',
   });
 }
@@ -89,6 +125,8 @@ export async function replaceMilestones(
 export default {} as unknown as {
   getContract: typeof getContract;
   updateTypeAndLimit: typeof updateTypeAndLimit;
+  createAppendix: typeof createAppendix;
+  fetchAppendices: typeof fetchAppendices;
   fetchMilestones: typeof fetchMilestones;
   replaceMilestones: typeof replaceMilestones;
 };
