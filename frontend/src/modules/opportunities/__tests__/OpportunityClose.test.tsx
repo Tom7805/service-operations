@@ -161,13 +161,17 @@ describe('Ghi nhận kết quả thắng thua của cơ hội (NCL-03-CN-005)', 
       expect(screen.getByTestId('badge-closed-1')).toHaveTextContent(
         'Đã hoàn tất',
       );
-      expect(screen.getByTestId('loss-reason-info-1')).toHaveTextContent(
-        /Giá cao hơn kỳ vọng/i,
-      );
-      expect(screen.getByTestId('loss-reason-info-1')).toHaveTextContent(
-        'Đối thủ XYZ',
-      );
       expect(screen.queryByTestId('btn-close-opportunity-1')).toBeNull();
+
+      // Lý do thua không còn lặp lại trên từng hàng của bảng nữa — sau khi chốt
+      // xong, cơ hội tự được chọn và lý do hiện ra ở panel "Tiến trình bán hàng &
+      // Xác suất thành công" phía trên (StageTransitionControl).
+      await waitFor(() => {
+        expect(screen.getByText(/Lý do thua/i)).toHaveTextContent(
+          /Giá cao hơn kỳ vọng/i,
+        );
+      });
+      expect(screen.getByText(/Lý do thua/i)).toHaveTextContent('Đối thủ XYZ');
     });
   });
 
@@ -256,7 +260,7 @@ describe('Ghi nhận kết quả thắng thua của cơ hội (NCL-03-CN-005)', 
       expect(disabled).toHaveTextContent(/Chưa thể chốt/i);
     });
 
-    it('khóa thao tác với cơ hội đã đóng và hiển thị lý do thua + đối thủ', () => {
+    it('khóa thao tác với cơ hội đã đóng; lý do thua + đối thủ xem được qua tooltip trên hàng, đầy đủ hơn khi chọn cơ hội đó', () => {
       render(
         <OpportunityListPage
           currentUserRoles={['VT-04']}
@@ -264,13 +268,17 @@ describe('Ghi nhận kết quả thắng thua của cơ hội (NCL-03-CN-005)', 
         />,
       );
 
-      expect(screen.getByTestId('badge-closed-3')).toHaveTextContent(
-        'Đã hoàn tất',
-      );
-      expect(screen.getByTestId('loss-reason-info-3')).toHaveTextContent(
-        'Phần mềm XYZ',
-      );
+      const badge = screen.getByTestId('badge-closed-3');
+      expect(badge).toHaveTextContent('Đã hoàn tất');
+      // Trên hàng chỉ còn nhãn gọn "Đã hoàn tất" + tooltip — chi tiết lý do thua
+      // không lặp lại ở mọi hàng nữa, tránh rối bảng.
+      expect(badge.getAttribute('title')).toContain('Phần mềm XYZ');
       expect(screen.queryByTestId('btn-close-opportunity-3')).toBeNull();
+
+      // Bấm chọn đúng cơ hội đó thì lý do thua đầy đủ hiện ra ở panel "Tiến
+      // trình bán hàng & Xác suất thành công" phía trên.
+      fireEvent.click(screen.getByRole('button', { name: new RegExp(mockOpportunities[2].name) }));
+      expect(screen.getByText(/Lý do thua/i)).toHaveTextContent('Phần mềm XYZ');
     });
   });
 });

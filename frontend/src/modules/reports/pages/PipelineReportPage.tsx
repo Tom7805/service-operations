@@ -2,11 +2,16 @@ import { useCallback, useEffect, useState } from 'react';
 import { getPipelineReport, ReportsApiError } from '../api/reportsApi';
 import type { PipelineReportRes, PipelineStageRes } from '../types/pipelineReportTypes';
 import { STAGE_CONFIGS, type OpportunityStage } from '../../opportunities/types/opportunityTypes';
+import { fetchOpportunities } from '../../opportunities/api/opportunitiesApi';
 import { ICONS } from '../../../components/common/icons';
 
 interface PipelineReportPageProps {
   currentUserRoles?: string[];
   currentUserName?: string;
+  /** Mở cơ hội đọng lâu ngay tại "Cơ hội bán hàng" để xử lý (chuyển giai đoạn,
+   *  chốt kết quả...) — trước đây báo cáo chỉ in ra "ID: 2001, 2002" trần trụi,
+   *  không có cách nào bấm vào để thao tác tiếp. */
+  onViewOpportunity?: (opportunityId: number, opportunityName: string) => void;
 }
 
 const currencyFormatter = new Intl.NumberFormat('vi-VN', {
@@ -51,6 +56,7 @@ function stageTone(stage: string): { bg: string; fg: string; dot: string } {
 
 export default function PipelineReportPage({
   currentUserRoles = ['VT-01'],
+  onViewOpportunity,
 }: PipelineReportPageProps) {
   // NCL-03-CN-007-TC-03: chỉ Ban giám đốc (VT-01) hoặc Nhân viên kinh doanh (VT-04) được xem báo cáo
   const isAllowed = currentUserRoles.includes('VT-01') || currentUserRoles.includes('VT-04');
@@ -59,6 +65,11 @@ export default function PipelineReportPage({
   const [loading, setLoading] = useState(isAllowed);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /** Báo cáo đường ống chỉ trả về ID cơ hội đọng lâu, không có tên — tra thêm
+   *  một lần danh sách cơ hội để đổi ID thành tên thật, hiển thị được và bấm
+   *  thao tác được thay vì in ra một dãy số vô nghĩa với người dùng. */
+  const [opportunityNames, setOpportunityNames] = useState<Record<number, string>>({});
 
   const load = useCallback(
     async (isManualRefresh = false) => {
@@ -90,6 +101,41 @@ export default function PipelineReportPage({
     load();
   }, [load]);
 
+  useEffect(() => {
+    if (!isAllowed) return;
+    let cancelled = false;
+    fetchOpportunities()
+      .then((list) => {
+        if (cancelled) return;
+        const map: Record<number, string> = {};
+        list.forEach((o) => {
+          map[o.id] = o.name;
+        });
+        setOpportunityNames(map);
+      })
+      .catch(() => {
+        // Tra tên chỉ để hiển thị đẹp hơn — tra không được thì rơi về hiển thị "Cơ hội #id".
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAllowed]);
+
+  function opportunityLabel(id: number): string {
+    return opportunityNames[id] ?? `Cơ hội #${id}`;
+  }
+
+  /** Bấm cờ "X đọng lâu" ngay trên dải chỉ số thì cuộn xuống đúng nhóm cơ hội
+   *  tương ứng trong khối cảnh báo phía trên và nháy nền một nhịp để dễ nhận ra
+   *  — thay vì chỉ là một nhãn tĩnh không thao tác được gì thêm. */
+  const [flashedStage, setFlashedStage] = useState<string | null>(null);
+  function jumpToStalledGroup(stage: string) {
+    const el = document.getElementById(`stalled-group-${stage}`);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setFlashedStage(stage);
+    window.setTimeout(() => setFlashedStage((prev) => (prev === stage ? null : prev)), 1200);
+  }
+
   if (!isAllowed) {
     return (
       <div className="access-denied-container" data-testid="pipeline-report-access-denied">
@@ -107,23 +153,21 @@ export default function PipelineReportPage({
 
   const stages: PipelineStageRes[] = data?.stages ?? [];
   const stalledStages = stages.filter((s) => s.stalledCount > 0);
+  const totalStalledCount = stalledStages.reduce((sum, s) => sum + s.stalledCount, 0);
 
   return (
     <div className="user-management-page" data-testid="pipeline-report-page">
       <div className="page-header">
         <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.target} CƠ HỘI BÁN HÀNG</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">BÁO CÁO ĐƯỜNG ỐNG</span>
-          </div>
           <h1 className="page-title">Báo cáo đường ống bán hàng theo giai đoạn</h1>
-          <p className="page-subtitle">
-            Toàn bộ cơ hội đang mở, gom theo giai đoạn hiện tại, kèm số ngày trung bình đang đứng
-            ở mỗi giai đoạn và cảnh báo cơ hội đọng lâu bất thường.
-          </p>
+          <p className="page-subtitle">Số cơ hội và giá trị dự kiến theo từng giai đoạn, kèm cảnh báo quá hạn xử lý.</p>
         </div>
         <div className="page-header__actions">
+          {data && (
+            <span className="pipeline-generated-at">
+              Cập nhật lúc {new Date(data.generatedAt).toLocaleString('vi-VN')}
+            </span>
+          )}
           <button
             type="button"
             className="btn-primary"
@@ -174,36 +218,62 @@ export default function PipelineReportPage({
             <div className="stat-card">
               <span className="stat-card__label">
                 <span className="stat-card__icon stat-card__icon--amber">{ICONS.alertTriangle}</span>
-                Ngưỡng cảnh báo đọng lâu
+                Ngưỡng cảnh báo quá hạn
               </span>
               <span className="stat-card__value">{data.stalledThresholdDays} ngày</span>
             </div>
-            <div className="stat-card">
-              <span className="stat-card__label">
-                <span className="stat-card__icon stat-card__icon--purple">{ICONS.clock}</span>
-                Sinh báo cáo lúc
-              </span>
-              <span className="stat-card__value" style={{ fontSize: '18px' }}>
-                {new Date(data.generatedAt).toLocaleString('vi-VN')}
-              </span>
-            </div>
           </div>
 
-          {/* Cảnh báo tổng hợp cơ hội đọng lâu, nếu có */}
+          {/* Cơ hội quá hạn xử lý, nếu có — dựng thành thẻ trắng cùng ngôn ngữ thiết
+              kế với các khối khác trên trang (viền 1px + bo góc, không đổ màu vàng
+              tràn cả khối như alert-box mặc định) để đồng bộ toàn trang; màu vàng
+              chỉ còn dùng cho icon và số đếm — đúng tinh thần "một điểm nhấn màu,
+              dùng đúng lúc". Mỗi cơ hội là một chip bấm được (tên thật, không phải
+              ID kỹ thuật) để mở thẳng ra "Cơ hội bán hàng" và xử lý tiếp. */}
           {stalledStages.length > 0 && (
-            <div className="alert-box alert-box--warning" data-testid="pipeline-stalled-warning">
-              <span>{ICONS.alertTriangle}</span>
-              <div>
-                <strong>Có cơ hội đọng lâu bất thường</strong> (quá {data.stalledThresholdDays} ngày ở cùng
-                một giai đoạn):
-                <ul className="forecast-data-warning-list">
-                  {stalledStages.map((s) => (
-                    <li key={s.stage}>
-                      <strong>{stageLabel(s.stage)}</strong> — Có {s.stalledCount} cơ hội đọng lâu — ID:{' '}
-                      {s.stalledOpportunityIds.join(', ')}
-                    </li>
-                  ))}
-                </ul>
+            <div className="user-table-card pipeline-stalled-card" data-testid="pipeline-stalled-warning">
+              <div className="pipeline-stalled-card__head">
+                <span className="pipeline-stalled-card__icon">{ICONS.alertTriangle}</span>
+                <div className="pipeline-stalled-card__heading">
+                  <h2 className="pipeline-stalled-card__title">Cơ hội quá hạn xử lý</h2>
+                  <p className="pipeline-stalled-card__subtitle">
+                    Đứng quá {data.stalledThresholdDays} ngày ở cùng một giai đoạn — nên ưu tiên xử lý trước.
+                  </p>
+                </div>
+                <span className="pipeline-stalled-card__count">{totalStalledCount}</span>
+              </div>
+
+              <div className="pipeline-stalled-groups">
+                {stalledStages.map((s) => {
+                  const tone = stageTone(s.stage);
+                  return (
+                    <div
+                      key={s.stage}
+                      id={`stalled-group-${s.stage}`}
+                      className={`pipeline-stalled-group${flashedStage === s.stage ? ' pipeline-stalled-group--flash' : ''}`}
+                    >
+                      <div className="pipeline-stalled-group__head">
+                        <span className="pipeline-share-legend__dot" style={{ background: tone.dot }} />
+                        <strong>{stageLabel(s.stage)}</strong>
+                        <span className="pipeline-stalled-group__count">{s.stalledCount} quá hạn</span>
+                      </div>
+                      <div className="pipeline-stalled-chip-row">
+                        {s.stalledOpportunityIds.map((id) => (
+                          <button
+                            key={id}
+                            type="button"
+                            className="pipeline-stalled-chip"
+                            onClick={() => onViewOpportunity?.(id, opportunityLabel(id))}
+                            disabled={!onViewOpportunity}
+                          >
+                            {opportunityLabel(id)}
+                            {onViewOpportunity && <span aria-hidden="true">{ICONS.arrowRight}</span>}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -230,16 +300,21 @@ export default function PipelineReportPage({
                   return (
                     <div key={s.stage} className="pipeline-flow__item-wrap">
                       <div className="pipeline-flow__item" data-testid={`pipeline-stage-row-${s.stage}`}>
+                        {s.stalledCount > 0 && (
+                          <button
+                            type="button"
+                            className="pipeline-flow__badge"
+                            onClick={() => jumpToStalledGroup(s.stage)}
+                            title={`${s.stalledCount} cơ hội quá hạn xử lý ở giai đoạn này — bấm để xem`}
+                          >
+                            {ICONS.alertTriangle} Quá hạn {s.stalledCount}
+                          </button>
+                        )}
                         <span className="pipeline-flow__label">{stageLabel(s.stage)}</span>
                         <span className="pipeline-flow__number" style={{ color: tone.fg }}>
                           {s.opportunityCount}
                         </span>
                         <span className="pipeline-flow__value">{formatVND(s.totalExpectedValue)}</span>
-                        {s.stalledCount > 0 && (
-                          <span className="pipeline-flow__flag">
-                            {ICONS.alertTriangle} {s.stalledCount} đọng lâu
-                          </span>
-                        )}
                       </div>
                       {i < stages.length - 1 && (
                         <span className="pipeline-flow__arrow" aria-hidden="true">
@@ -325,9 +400,14 @@ export default function PipelineReportPage({
                           <td className="text-center mono-cell">{s.averageDaysInStage} ngày</td>
                           <td>
                             {s.stalledCount > 0 ? (
-                              <span style={{ color: 'var(--pale-red-fg)', fontWeight: 600, fontSize: '13px' }}>
-                                {s.stalledCount} đọng lâu — ID: {s.stalledOpportunityIds.join(', ')}
-                              </span>
+                              <button
+                                type="button"
+                                className="pipeline-stalled-chip"
+                                onClick={() => jumpToStalledGroup(s.stage)}
+                                title="Xem danh sách cơ hội quá hạn xử lý ở giai đoạn này"
+                              >
+                                {ICONS.alertTriangle} {s.stalledCount} quá hạn
+                              </button>
                             ) : (
                               <span style={{ color: 'var(--ink-faint)' }}>—</span>
                             )}

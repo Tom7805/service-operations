@@ -47,6 +47,7 @@ public class OpportunityServiceImpl implements OpportunityService {
 	private final OpportunityAuditLogger auditLogger;
 	private final StageTransitionValidator stageTransitionValidator;
 	private final CurrentUserScopeProvider currentUserScopeProvider;
+	private final OpportunityStageDurationCalculator stageDurationCalculator;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -66,8 +67,16 @@ public class OpportunityServiceImpl implements OpportunityService {
 				.stream()
 				.collect(Collectors.toMap(Customer::getId, Customer::getName, (a, b) -> a));
 
+		// So ngay o giai doan hien tai — de danh sach cho biet mot co hoi da "dung" bao
+		// lau va con bao xa la den nguong canh bao "qua han xu ly" cua Bao cao duong
+		// ong (truoc day chi thay canh bao SAU KHI da qua han, khong co cach nao xem
+		// truoc con so nay o dau ca).
+		Map<Long, Long> daysInStageById = stageDurationCalculator
+				.daysInCurrentStageByOpportunity(opportunities, LocalDateTime.now());
+
 		return opportunities.stream()
-				.map(o -> opportunityMapper.toResponse(o, customerNameById.get(o.getCustomerId())))
+				.map(o -> opportunityMapper.toResponse(
+						o, customerNameById.get(o.getCustomerId()), daysInStageById.get(o.getId())))
 				.toList();
 	}
 

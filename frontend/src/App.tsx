@@ -129,6 +129,10 @@ export default function App() {
    *  đúng chỗ: từ danh sách "Cơ hội bán hàng" thì về lại danh sách, còn tự tìm
    *  trực tiếp trong tab "Cơ hội" thì quay về ô tìm kiếm. */
   const [activityOrigin, setActivityOrigin] = useState<'LIST' | 'PICKER' | null>(null);
+  /** Từ báo cáo đường ống, bấm vào một cơ hội đọng lâu thì nhảy sang "Cơ hội
+   *  bán hàng" và tự mở đúng cơ hội đó lên để xử lý ngay (chuyển giai đoạn/
+   *  chốt kết quả), thay vì chỉ biết mỗi con số ID không thao tác được gì. */
+  const [focusOpportunityId, setFocusOpportunityId] = useState<number | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -422,6 +426,8 @@ export default function App() {
                 setActivityOrigin('LIST');
                 setActiveTab('OPPORTUNITY_DETAIL');
               }}
+              focusOpportunityId={focusOpportunityId}
+              onFocusConsumed={() => setFocusOpportunityId(null)}
             />
           ) : activeTab === 'REVENUE_FORECAST' ? (
             <RevenueForecastPage
@@ -464,7 +470,14 @@ export default function App() {
               </div>
             </div>
           ) : activeTab === 'PIPELINE_REPORT' ? (
-            <PipelineReportPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+            <PipelineReportPage
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+              onViewOpportunity={(id) => {
+                setFocusOpportunityId(id);
+                setActiveTab('OPPORTUNITIES');
+              }}
+            />
           ) : activeTab === 'CUSTOMER_MERGE' ? (
             <CustomerMergePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'DEPARTMENTS' ? (

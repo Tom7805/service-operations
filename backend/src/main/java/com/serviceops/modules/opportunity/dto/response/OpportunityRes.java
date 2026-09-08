@@ -12,6 +12,11 @@ import java.time.LocalDateTime;
  * @param closeReasonDetail Ghi chu chi tiet them cho ket qua dong co hoi, {@code null} neu chua dong hoac khong nhap.
  * @param competitorName Ten doi thu canh tranh neu co, {@code null} neu chua dong hoac khong nhap.
  * @param closedAt Thoi diem dong co hoi (ket qua WON/LOST), {@code null} neu co hoi con dang mo.
+ * @param daysInCurrentStage So ngay co hoi da nam o giai doan hien tai — cung mot cach tinh voi
+ *        Bao cao duong ong (NCL-03-CN-007), de nguoi dung biet mot co hoi da "dung" bao lau va con
+ *        bao nhieu ngay la den nguong canh bao qua han xu ly ({@code stalledThresholdDays}).
+ * @param stalledThresholdDays Nguong (ngay) coi la qua han xu ly — hang so nghiep vu, giong het gia
+ *        tri tra ve trong {@code PipelineReportRes}, lap lai o day de Frontend khong phai tu suy doan.
  */
 public record OpportunityRes(
 	Long id,
@@ -29,5 +34,7 @@ public record OpportunityRes(
 	String lossReason,
 	String closeReasonDetail,
 	String competitorName,
-	LocalDateTime closedAt
+	LocalDateTime closedAt,
+	Long daysInCurrentStage,
+	Integer stalledThresholdDays
 ) {}

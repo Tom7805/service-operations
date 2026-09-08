@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import PipelineReportPage from '../pages/PipelineReportPage';
 import * as reportsApi from '../api/reportsApi';
@@ -73,12 +73,16 @@ describe('PipelineReportPage Component (NCL-03-CN-007)', () => {
       });
     });
 
-    it('hiển thị cảnh báo cơ hội đọng lâu kèm mã cơ hội', async () => {
+    it('hiển thị cảnh báo cơ hội quá hạn xử lý kèm nút mở cơ hội cụ thể', async () => {
       render(<PipelineReportPage currentUserRoles={['VT-01']} />);
 
-      await waitFor(() => {
-        expect(screen.getByText(/Có 1 cơ hội đọng lâu — ID: 2007/)).toBeInTheDocument();
-      });
+      const warningCard = await screen.findByTestId('pipeline-stalled-warning');
+      expect(within(warningCard).getByText('Cơ hội quá hạn xử lý')).toBeInTheDocument();
+      expect(within(warningCard).getByText(/1 quá hạn/)).toBeInTheDocument();
+      // Không có API danh sách cơ hội được mock ở đây nên tên hiển thị rơi về
+      // dạng dự phòng "Cơ hội #<id>" — quan trọng là có một nút bấm được, chứ
+      // không phải một dòng chữ "ID: 2007" tĩnh không thao tác được gì.
+      expect(within(warningCard).getByRole('button', { name: /Cơ hội #2007/ })).toBeInTheDocument();
     });
 
     it('hiển thị thông báo lỗi khi API thất bại', async () => {
