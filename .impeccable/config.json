@@ -8,6 +8,24 @@
         "value": "cubic-bezier(.32, 1.12, .52, 1)",
         "createdAt": "2026-09-01T00:29:02.460Z",
         "reason": "Finish reviewer (impeccable, ngu canh sach) da xet va CHAP NHAN: brief duoc nguoi dung ghim la Apple Liquid Glass, ma chuyen dong chu ky cua no la spring nhe. Overshoot da ha tu 1.56 xuong ~12% o 300ms, chi dung cho scale khi bam. Craft-floor: brief da ghim thang mac dinh cua rule."
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "28px",
+        "files": [
+          "frontend/src/modules/opportunities/pages/OpportunityListPage.tsx"
+        ],
+        "createdAt": "2026-09-08T02:21:07.681Z",
+        "reason": "pre-existing stats-grid headline numbers (Tổng số cơ hội, Chốt thành công), not touched this session; large by design intent, not the too-small issue previously reported"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "22px",
+        "files": [
+          "frontend/src/modules/opportunities/pages/OpportunityListPage.tsx"
+        ],
+        "createdAt": "2026-09-08T02:21:07.755Z",
+        "reason": "pre-existing stats-grid headline numbers (Tổng giá trị dự kiến, Dự báo Weighted), not touched this session; large by design intent"
       }
     ]
   }

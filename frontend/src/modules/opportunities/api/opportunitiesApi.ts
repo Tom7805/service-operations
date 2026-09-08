@@ -11,6 +11,7 @@ import type {
   RevenueForecastData,
   ForecastQueryParams,
 } from '../types/opportunityTypes';
+import type { ContractCreateFromOpportunityReq, ContractRes } from '../../contracts/types/contractTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -276,6 +277,32 @@ export async function createOpportunityActivity(
         occurredAt: payload.occurredAt,
         participants: payload.participants?.trim() || undefined,
         content: payload.content.trim(),
+      }),
+    }
+  );
+
+  return res.data;
+}
+
+/**
+ * NCL-04-CN-001: Tạo hợp đồng từ cơ hội đã thắng (POST /opportunities/{opportunityId}/contract)
+ * Yêu cầu vai trò Nhân viên kinh doanh (VT-04) — payload tuân theo Backend DTO.
+ */
+export async function createContractFromOpportunity(
+  opportunityId: number,
+  payload: ContractCreateFromOpportunityReq
+): Promise<ContractRes> {
+  const res = await requestBackend<{ success: boolean; message?: string; data: ContractRes }>(
+    `${API_BASE_URL}/opportunities/${opportunityId}/contract`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        name: payload.name?.trim() || null,
+        contractType: payload.contractType,
+        totalValue: payload.totalValue ?? null,
+        startDate: payload.startDate || null,
+        endDate: payload.endDate || null,
+        notes: payload.notes?.trim() || null,
       }),
     }
   );

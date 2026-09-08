@@ -141,4 +141,32 @@ describe('opportunitiesApi (NCL-03-CN-001)', () => {
       await expect(fetchCustomersForSelect()).rejects.toBeInstanceOf(OpportunityApiError);
     });
   });
+
+  describe('createContractFromOpportunity', () => {
+    it('sends trimmed fields and returns contract', async () => {
+      const created = { id: 200, name: 'Hợp đồng ABC' };
+      const fetchMock = mockFetchOnce(200, { success: true, data: created });
+      vi.stubGlobal('fetch', fetchMock);
+
+      const payload = {
+        name: '  Hợp đồng ABC  ',
+        contractType: 'TIME_AND_MATERIAL',
+        totalValue: 5000000,
+        startDate: '2026-01-01',
+        endDate: '2026-12-31',
+        notes: '  Ghi chú  ',
+      };
+
+      const { createContractFromOpportunity } = await import('../api/opportunitiesApi');
+      const res = await createContractFromOpportunity(10, payload as unknown as import('../../contracts/types/contractTypes').ContractCreateFromOpportunityReq);
+      expect(res).toEqual(created);
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const [url, options] = fetchMock.mock.calls[0];
+      expect(String(url)).toContain('/opportunities/10/contract');
+      const body = JSON.parse(options.body);
+      expect(body.name).toBe('Hợp đồng ABC');
+      expect(body.notes).toBe('Ghi chú');
+    });
+  });
 });
