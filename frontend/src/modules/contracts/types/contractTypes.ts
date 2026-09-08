@@ -32,3 +32,31 @@ export interface ContractRes {
   createdBy?: string;
   createdAt?: string;
 }
+
+/** Khớp đúng ContractMilestoneStatus (backend enum) — READY_TO_INVOICE dành
+ *  cho các story nghiệm thu/hóa đơn tiếp theo, chưa có thao tác ở NCL-04-CN-003. */
+export type ContractMilestoneStatus = 'PENDING' | 'READY_TO_INVOICE' | 'INVOICED';
+
+/** Khớp ContractMilestoneRes (backend). */
+export interface ContractMilestoneRes {
+  id: number;
+  contractId: number;
+  name: string;
+  percentage?: number | null;
+  amount: number;
+  expectedDate?: string | null;
+  acceptanceCondition?: string | null;
+  status: ContractMilestoneStatus;
+  createdBy?: string | null;
+}
+
+/** Một dòng mốc thanh toán trong danh sách gửi lên `PUT /contracts/{id}/milestones`
+ *  — backend thay thế trọn bộ danh sách trong một giao dịch (NCL-04-CN-003),
+ *  không có API tạo/sửa/xóa từng mốc riêng lẻ. */
+export interface ContractMilestoneInput {
+  name: string;
+  percentage?: number | null;
+  amount: number;
+  expectedDate?: string | null;
+  acceptanceCondition?: string | null;
+}
