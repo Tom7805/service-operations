@@ -8,6 +8,10 @@ import type {
 } from '../types/customerTypes';
 import { roleLabels } from '../../../utils/roleLabel';
 import { ICONS } from '../../../components/common/icons';
+import ContractTypeLimitModal from '../../contracts/components/ContractTypeLimitModal';
+import { getContract, ContractsApiError } from '../../contracts/api/contractsApi';
+import type { ContractRes } from '../../contracts/types/contractTypes';
+import { t } from '../../../i18n';
 
 interface CustomerOverviewPanelProps {
   customerId: number;
@@ -78,6 +82,31 @@ export default function CustomerOverviewPanel({
   // Giữ tham chiếu ổn định để callback của trang cha không làm effect chạy lại vô hạn.
   const onLoadedRef = useRef(onLoaded);
   onLoadedRef.current = onLoaded;
+
+  const [isTypeLimitOpen, setIsTypeLimitOpen] = useState(false);
+  const [selectedContract, setSelectedContract] = useState<ContractRes | null>(null);
+  const [isContractLoading, setIsContractLoading] = useState(false);
+  const [contractLoadError, setContractLoadError] = useState<string | null>(null);
+
+  // NCL-04-CN-002: nạp đúng dữ liệu hiện tại của hợp đồng (loại, giá trị, hạn mức)
+  // trước khi mở modal khai báo — dòng thời gian tổng hợp không mang đủ các trường này.
+  const openTypeLimitModal = useCallback(async (contractId: number) => {
+    setContractLoadError(null);
+    setIsContractLoading(true);
+    try {
+      const contract = await getContract(contractId);
+      setSelectedContract(contract);
+      setIsTypeLimitOpen(true);
+    } catch (err) {
+      setContractLoadError(
+        err instanceof ContractsApiError
+          ? err.message
+          : 'Không thể tải thông tin hợp đồng. Vui lòng thử lại.'
+      );
+    } finally {
+      setIsContractLoading(false);
+    }
+  }, []);
 
   const loadOverview = useCallback(async () => {
     setIsLoading(true);
@@ -332,15 +361,16 @@ export default function CustomerOverviewPanel({
                 ) : (
                   <div className="table-responsive">
                     <table className="user-data-table">
-                      <thead>
-                        <tr>
-                          <th style={{ width: '120px' }}>Ngày</th>
-                          <th style={{ width: '140px' }}>Mã</th>
-                          <th>Tên</th>
-                          <th style={{ width: '140px' }}>Trạng thái</th>
-                          <th style={{ width: '160px', textAlign: 'right' }}>Giá trị</th>
-                        </tr>
-                      </thead>
+                          <thead>
+                            <tr>
+                              <th style={{ width: '120px' }}>Ngày</th>
+                              <th style={{ width: '140px' }}>Mã</th>
+                              <th>Tên</th>
+                              <th style={{ width: '140px' }}>Trạng thái</th>
+                              <th style={{ width: '160px', textAlign: 'right' }}>Giá trị</th>
+                              <th style={{ width: '160px', textAlign: 'right' }}>Hành động</th>
+                            </tr>
+                          </thead>
                       <tbody>
                         {items.map((item) => (
                           <tr key={item.id}>
@@ -355,6 +385,20 @@ export default function CustomerOverviewPanel({
                               )}
                             </td>
                             <td style={{ textAlign: 'right' }}>{formatAmount(item.amount)}</td>
+                            <td style={{ textAlign: 'right' }}>
+                              {section.key === 'contracts' && currentUserRoles.includes('VT-05') ? (
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  onClick={() => void openTypeLimitModal(item.id)}
+                                  disabled={isContractLoading}
+                                >
+                                  {t('contract.action.button')}
+                                </button>
+                              ) : (
+                                <span className="cell-muted">—</span>
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -371,6 +415,26 @@ export default function CustomerOverviewPanel({
         <span className="icon-xs">{ICONS.info}</span> Dữ liệu hiển thị nằm trong phạm vi truy cập của bạn theo vai trò và nhánh tổ chức được phân.
         Mỗi lần mở hồ sơ tổng hợp đều được hệ thống ghi vào nhật ký (người thực hiện · nội dung · thời điểm).
       </p>
+
+      {contractLoadError && (
+        <div className="alert-box alert-box--danger" role="alert" style={{ marginTop: '12px' }}>
+          {contractLoadError}
+        </div>
+      )}
+
+      {selectedContract && (
+        <ContractTypeLimitModal
+          isOpen={isTypeLimitOpen}
+          onClose={() => setIsTypeLimitOpen(false)}
+          contract={selectedContract}
+          currentUserRoles={currentUserRoles}
+          onSaved={() => {
+            setIsTypeLimitOpen(false);
+            setSelectedContract(null);
+            void loadOverview();
+          }}
+        />
+      )}
     </div>
   );
 }

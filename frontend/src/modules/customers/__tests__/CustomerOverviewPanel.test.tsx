@@ -2,7 +2,9 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import CustomerOverviewPanel from '../components/CustomerOverviewPanel';
 import * as customersApi from '../api/customersApi';
+import * as contractsApi from '../../contracts/api/contractsApi';
 import type { CustomerOverview } from '../types/customerTypes';
+import type { ContractRes } from '../../contracts/types/contractTypes';
 
 vi.mock('../api/customersApi', () => ({
   fetchCustomerOverview: vi.fn(),
@@ -10,6 +12,17 @@ vi.mock('../api/customersApi', () => ({
     constructor(public code: string, message: string, public statusCode?: number) {
       super(message);
       this.name = 'CustomerApiError';
+    }
+  },
+}));
+
+vi.mock('../../contracts/api/contractsApi', () => ({
+  getContract: vi.fn(),
+  updateTypeAndLimit: vi.fn(),
+  ContractsApiError: class extends Error {
+    constructor(public code: string, message: string, public statusCode?: number) {
+      super(message);
+      this.name = 'ContractsApiError';
     }
   },
 }));
@@ -161,5 +174,91 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
       expect(screen.getByTestId('customer-summary-panel')).toBeInTheDocument();
     });
     expect(customersApi.fetchCustomerOverview).toHaveBeenCalledTimes(2);
+  });
+
+  describe('NCL-04-CN-002: Khai báo loại hợp đồng và hạn mức (Kế toán VT-05)', () => {
+    const fullContract: ContractRes = {
+      id: 2,
+      contractCode: 'HD-001',
+      name: 'Hợp đồng triển khai ERP',
+      opportunityId: 1,
+      customerId: 10,
+      customerName: 'Công ty Cổ phần Alpha',
+      quoteId: 7,
+      contractType: 'MAINTENANCE',
+      totalValue: 480_000_000,
+      limitValue: 500_000_000,
+      startDate: '2026-03-01',
+      endDate: '2027-03-01',
+      status: 'ACTIVE',
+      notes: null,
+      createdBy: 'ketoan01',
+      createdAt: '2026-03-01T08:00:00',
+    };
+
+    it('nút khai báo chỉ hiện ở nhóm Hợp đồng, không hiện ở các nhóm khác', async () => {
+      vi.mocked(customersApi.fetchCustomerOverview).mockResolvedValue(fullOverview);
+
+      render(<CustomerOverviewPanel customerId={10} customerName="Công ty Cổ phần Alpha" currentUserRoles={['VT-05']} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('customer-summary-panel')).toBeInTheDocument();
+      });
+
+      expect(
+        within(screen.getByTestId('customer-summary-section-contracts')).getByRole('button', {
+          name: /Khai báo loại & hạn mức/i,
+        })
+      ).toBeInTheDocument();
+
+      for (const key of ['opportunities', 'projects', 'invoices', 'receivables']) {
+        expect(
+          within(screen.getByTestId(`customer-summary-section-${key}`)).queryByRole('button', {
+            name: /Khai báo loại & hạn mức/i,
+          })
+        ).toBeNull();
+      }
+    });
+
+    it('bấm nút thì nạp đúng dữ liệu hợp đồng hiện tại rồi mở modal khai báo (không dùng giá trị mặc định sai)', async () => {
+      vi.mocked(customersApi.fetchCustomerOverview).mockResolvedValue(fullOverview);
+      vi.mocked(contractsApi.getContract).mockResolvedValue(fullContract);
+
+      render(<CustomerOverviewPanel customerId={10} customerName="Công ty Cổ phần Alpha" currentUserRoles={['VT-05']} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('customer-summary-panel')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /Khai báo loại & hạn mức/i }));
+
+      expect(contractsApi.getContract).toHaveBeenCalledWith(2);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/Loại hợp đồng/i)).toHaveValue('MAINTENANCE');
+      });
+      expect(screen.getByLabelText(/Hạn mức/i)).toHaveValue(500_000_000);
+      expect(screen.getByLabelText(/Giá trị hợp đồng/i)).toHaveValue(480_000_000);
+    });
+
+    it('hiển thị lỗi khi tải chi tiết hợp đồng thất bại, không mở modal', async () => {
+      vi.mocked(customersApi.fetchCustomerOverview).mockResolvedValue(fullOverview);
+      vi.mocked(contractsApi.getContract).mockRejectedValue(
+        new contractsApi.ContractsApiError('RESOURCE_NOT_FOUND', 'Không tìm thấy hợp đồng.', 404)
+      );
+
+      render(<CustomerOverviewPanel customerId={10} customerName="Công ty Cổ phần Alpha" currentUserRoles={['VT-05']} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('customer-summary-panel')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /Khai báo loại & hạn mức/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText('Không tìm thấy hợp đồng.')).toBeInTheDocument();
+      });
+      expect(screen.queryByLabelText(/Loại hợp đồng/i)).toBeNull();
+    });
   });
 });
