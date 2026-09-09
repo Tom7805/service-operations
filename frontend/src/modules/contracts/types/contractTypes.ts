@@ -95,3 +95,23 @@ export interface ContractExpiryAlertRes {
   daysRemaining: number;
 }
 
+/** Request gia hạn hợp đồng (NCL-04-CN-007). */
+export interface RenewalCreateReq {
+  newEndDate: string; // YYYY-MM-DD
+  additionalValue?: number | null;
+  notes?: string | null;
+}
+
+/** Bản ghi gia hạn hợp đồng (NCL-04-CN-007). */
+export interface RenewalRes {
+  id: number;
+  contractId: number;
+  previousEndDate: string; // YYYY-MM-DD
+  newEndDate: string; // YYYY-MM-DD
+  additionalValue: number;
+  valueBefore: number;
+  valueAfter: number;
+  notes?: string | null;
+  createdBy: string;
+  createdAt: string;
+}
