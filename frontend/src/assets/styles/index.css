@@ -1889,6 +1889,22 @@ body { background: var(--canvas); }
 .contract-limit-metric-value--warning { color: #E65100; }
 .contract-limit-metric-value--safe { color: #2E7D32; }
 
+/* Styles for ContractExpiryReminderModal (NCL-04-CN-006) */
+.expiry-filter-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; background: #F7F6F3; padding: 10px 14px; border-radius: var(--radius-md); border: 1px solid var(--line); }
+.expiry-filter-pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.expiry-pill-btn { padding: 4px 12px; font-size: 13px; border-radius: var(--radius-full); border: 1px solid var(--line); background: #ffffff; color: #4B4946; cursor: pointer; transition: all 0.2s; }
+.expiry-pill-btn:hover { background: #EEEDEA; color: #111111; }
+.expiry-pill-btn--active { background: #111111; color: #ffffff; border-color: #111111; font-weight: 500; }
+.expiry-pill-btn--active:hover { background: #333333; color: #ffffff; }
+.expiry-days-input-wrap { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
+.expiry-days-input { width: 75px; padding: 5px 8px; font-size: 13.5px; border-radius: var(--radius-sm); border: 1px solid var(--line); text-align: center; }
+.expiry-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: var(--radius-full); font-size: 12.5px; font-weight: 500; white-space: nowrap; }
+.expiry-badge--urgent { background: #FDEBEC; color: #9F2F2D; border: 1px solid rgba(159,47,45,.25); }
+.expiry-badge--warning { background: #FEF7E6; color: #8F4700; border: 1px solid rgba(194,101,0,.25); }
+.expiry-badge--info { background: var(--pale-blue-bg); color: var(--pale-blue-fg); border: 1px solid rgba(31,108,159,.25); }
+.expiry-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 40px 20px; text-align: center; color: #5B5A57; }
+.expiry-empty-state__icon { font-size: 32px; color: #8C8B88; }
+
 .contact-audit-card { margin-top: 24px; }
 .modal-subtitle-text { font-size: 14.5px; color: #5B5A57; margin: 4px 0 0; }
 .badge-star-icon, .star-icon, .user-icon, .tab-icon { font-size: 14.5px; line-height: 1; }

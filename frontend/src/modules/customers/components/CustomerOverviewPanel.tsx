@@ -12,6 +12,7 @@ import ContractTypeLimitModal from '../../contracts/components/ContractTypeLimit
 import ContractMilestonesModal from '../../contracts/components/ContractMilestonesModal';
 import ContractAppendixModal from '../../contracts/components/ContractAppendixModal';
 import ContractLimitAlert, { type ContractLimitAlertTarget } from '../../contracts/components/ContractLimitAlert';
+import ContractExpiryReminderModal from '../../contracts/components/ContractExpiryReminderModal';
 import { getContract, ContractsApiError } from '../../contracts/api/contractsApi';
 import type { ContractRes } from '../../contracts/types/contractTypes';
 import { t } from '../../../i18n';
@@ -90,6 +91,7 @@ export default function CustomerOverviewPanel({
   const [isMilestonesOpen, setIsMilestonesOpen] = useState(false);
   const [isAppendixOpen, setIsAppendixOpen] = useState(false);
   const [isLimitAlertOpen, setIsLimitAlertOpen] = useState(false);
+  const [isExpiringReminderOpen, setIsExpiringReminderOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<ContractRes | null>(null);
   const [limitAlertTarget, setLimitAlertTarget] = useState<ContractLimitAlertTarget | null>(null);
   const [isContractLoading, setIsContractLoading] = useState(false);
@@ -377,8 +379,20 @@ export default function CustomerOverviewPanel({
                 className="customer-summary-section"
                 data-testid={`customer-summary-section-${section.key}`}
               >
-                <h4 className="customer-summary-section__title">
-                  <span className="icon-sm">{section.icon}</span> {section.label} <span className="cell-muted">({items.length})</span>
+                <h4 className="customer-summary-section__title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                  <span>
+                    <span className="icon-sm">{section.icon}</span> {section.label} <span className="cell-muted">({items.length})</span>
+                  </span>
+                  {section.key === 'contracts' && currentUserRoles.includes('VT-05') && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: '13px', padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                      onClick={() => setIsExpiringReminderOpen(true)}
+                    >
+                      <span className="icon-xs">{ICONS.clock}</span> Nhắc hợp đồng sắp hết hạn
+                    </button>
+                  )}
                 </h4>
                 {items.length === 0 ? (
                   <p className="customer-summary-section__empty cell-muted">{section.emptyHint}</p>
@@ -538,6 +552,12 @@ export default function CustomerOverviewPanel({
           currentUserRoles={currentUserRoles}
         />
       )}
+
+      <ContractExpiryReminderModal
+        isOpen={isExpiringReminderOpen}
+        onClose={() => setIsExpiringReminderOpen(false)}
+        currentUserRoles={currentUserRoles}
+      />
     </div>
   );
 }
