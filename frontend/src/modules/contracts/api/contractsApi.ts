@@ -3,6 +3,7 @@ import type {
   ContractType,
   ContractMilestoneRes,
   ContractMilestoneInput,
+  ContractUsageRes,
 } from '../types/contractTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
@@ -122,6 +123,19 @@ export async function replaceMilestones(
   });
 }
 
+/**
+ * GET /contracts/{contractId}/usage — thông tin mức độ sử dụng hạn mức và cảnh báo
+ * khi sắp vượt hạn mức (ngưỡng 80%) hoặc đã vượt (NCL-04-CN-005, QTN-19).
+ * Yêu cầu vai trò VT-02 (Quản lý dự án) hoặc VT-05 (Kế toán).
+ */
+export async function getContractUsage(contractId: number): Promise<ContractUsageRes> {
+  return requestBackend<ContractUsageRes>(`${API_BASE_URL}/contracts/${contractId}/usage`, {
+    method: 'GET',
+  });
+}
+
+export const fetchContractUsage = getContractUsage;
+
 export default {} as unknown as {
   getContract: typeof getContract;
   updateTypeAndLimit: typeof updateTypeAndLimit;
@@ -129,4 +143,6 @@ export default {} as unknown as {
   fetchAppendices: typeof fetchAppendices;
   fetchMilestones: typeof fetchMilestones;
   replaceMilestones: typeof replaceMilestones;
+  getContractUsage: typeof getContractUsage;
+  fetchContractUsage: typeof fetchContractUsage;
 };

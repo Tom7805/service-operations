@@ -19,6 +19,8 @@ vi.mock('../api/customersApi', () => ({
 vi.mock('../../contracts/api/contractsApi', () => ({
   getContract: vi.fn(),
   updateTypeAndLimit: vi.fn(),
+  getContractUsage: vi.fn(),
+  fetchContractUsage: vi.fn(),
   ContractsApiError: class extends Error {
     constructor(public code: string, message: string, public statusCode?: number) {
       super(message);
@@ -259,6 +261,40 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
         expect(screen.getByText('Không tìm thấy hợp đồng.')).toBeInTheDocument();
       });
       expect(screen.queryByLabelText(/Loại hợp đồng/i)).toBeNull();
+    });
+
+    it('NCL-04-CN-005: nút "Cảnh báo hạn mức" hiển thị cho VT-02 và VT-05, bấm nút nạp hợp đồng và mở modal', async () => {
+      vi.mocked(customersApi.fetchCustomerOverview).mockResolvedValue(fullOverview);
+      vi.mocked(contractsApi.getContract).mockResolvedValue(fullContract);
+      vi.mocked(contractsApi.getContractUsage).mockResolvedValue({
+        contractId: 2,
+        totalValue: 480_000_000,
+        limitValue: 500_000_000,
+        usedValue: 420_000_000,
+        remainingValue: 80_000_000,
+        usedPercentage: 84,
+        nearLimit: true,
+        overLimit: false,
+      });
+
+      render(<CustomerOverviewPanel customerId={10} customerName="Công ty Cổ phần Alpha" currentUserRoles={['VT-02']} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('customer-summary-panel')).toBeInTheDocument();
+      });
+
+      const alertBtn = within(screen.getByTestId('customer-summary-section-contracts')).getByRole('button', {
+        name: /Cảnh báo hạn mức/i,
+      });
+      expect(alertBtn).toBeInTheDocument();
+
+      fireEvent.click(alertBtn);
+
+      expect(contractsApi.getContract).toHaveBeenCalledWith(2);
+      await waitFor(() => {
+        expect(screen.getByText(/Tình trạng sử dụng hạn mức hợp đồng/i)).toBeInTheDocument();
+      });
+      expect(screen.getByTestId('limit-alert-near')).toBeInTheDocument();
     });
   });
 });
