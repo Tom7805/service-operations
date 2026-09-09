@@ -61,6 +61,19 @@ public class ProjectAuditLogger {
 		repository.save(audit);
 	}
 
+	public void recordClose(Long projectId, String projectCode) {
+		ProjectAuditLog audit = new ProjectAuditLog();
+		audit.setProjectId(projectId);
+		audit.setActionType(ProjectAuditAction.PROJECT_CLOSED);
+		audit.setDetail("Dong du an " + projectCode);
+		Long actorId = currentUserScopeProvider.currentUserId();
+		audit.setActorId(actorId == null ? 0L : actorId);
+		audit.setActorUsername(currentUsername());
+		audit.setActorRole(currentRole());
+		audit.setCreatedAt(LocalDateTime.now());
+		repository.save(audit);
+	}
+
 	private String formatHours(BigDecimal hours) {
 		return hours == null ? "chua dat" : hours.toPlainString();
 	}

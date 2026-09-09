@@ -6,6 +6,7 @@ import com.serviceops.modules.project.dto.request.TaskBudgetReq;
 import com.serviceops.modules.project.dto.response.TaskBudgetStatusRes;
 import com.serviceops.modules.project.entity.Project;
 import com.serviceops.modules.project.entity.Task;
+import com.serviceops.modules.project.enums.ProjectStatus;
 import com.serviceops.modules.project.logging.ProjectAuditLogger;
 import com.serviceops.modules.project.repository.ProjectRepository;
 import com.serviceops.modules.project.repository.TaskRepository;
@@ -79,6 +80,19 @@ class TaskHourBudgetServiceTest {
 
 		assertEquals(0, response.usageRatio().compareTo(new BigDecimal("0.85")));
 		assertTrue(response.overBudgetWarning());
+	}
+
+	@Test
+	void rejectsSettingBudgetOnAClosedProject() {
+		Project closedProject = new Project();
+		closedProject.setId(PROJECT_ID);
+		closedProject.setStatus(ProjectStatus.CLOSED);
+		when(projectRepository.findById(PROJECT_ID)).thenReturn(Optional.of(closedProject));
+
+		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
+				() -> service.setBudget(PROJECT_ID, TASK_ID, new TaskBudgetReq(new BigDecimal("40"))));
+
+		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
 	}
 
 	@Test
