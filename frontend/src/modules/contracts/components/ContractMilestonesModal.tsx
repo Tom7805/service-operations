@@ -14,7 +14,13 @@ interface Props {
 /** Dòng đang soạn thảo — giữ id gốc (nếu có) để hiển thị trạng thái và cho phép
  *  đổi trạng thái riêng (PATCH .../status), tách khỏi luồng "Lưu danh sách mốc"
  *  (PUT thay thế trọn bộ, không nhận id — NCL-04-CN-003). */
-type DraftRow = ContractMilestoneInput & { key: string; id?: number; status?: ContractMilestoneRes['status'] };
+type DraftRow = Omit<ContractMilestoneInput, 'amount'> & {
+  /** null = ô đang để trống (chưa nhập) — khác 0. Bắt buộc > 0 khi Lưu. */
+  amount: number | null;
+  key: string;
+  id?: number;
+  status?: ContractMilestoneRes['status'];
+};
 
 const STATUS_LABEL: Record<ContractMilestoneRes['status'], string> = {
   PENDING: 'Chờ nghiệm thu',
@@ -48,7 +54,7 @@ function newDraftRow(): DraftRow {
     key: `new-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     name: '',
     percentage: null,
-    amount: 0,
+    amount: null,
     expectedDate: null,
     acceptanceCondition: null,
   };
@@ -90,11 +96,25 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
 
   if (!isOpen) return null;
 
-  const total = rows.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+  const total = rows.reduce((sum, r) => sum + (r.amount ?? 0), 0);
   const totalMismatch = Math.abs(total - contract.totalValue) > 0.01;
 
   const updateRow = (key: string, patch: Partial<DraftRow>) => {
     setRows((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  };
+
+  /** Nhập tỷ lệ % thì tự suy ra số tiền theo giá trị hợp đồng (NCL-04-CN-003 TC-01);
+   *  người dùng vẫn sửa lại ô "Giá trị" thủ công được sau đó nếu cần. */
+  const handlePercentageChange = (key: string, raw: string) => {
+    if (raw === '') {
+      updateRow(key, { percentage: null });
+      return;
+    }
+    const pct = Number(raw);
+    updateRow(key, {
+      percentage: pct,
+      amount: Number.isFinite(pct) ? Math.round((pct / 100) * contract.totalValue) : null,
+    });
   };
 
   const removeRow = (key: string) => {
@@ -131,7 +151,7 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
       setSaveError('Danh sách mốc không được để trống.');
       return;
     }
-    if (rows.some((r) => !r.name.trim() || Number(r.amount) <= 0)) {
+    if (rows.some((r) => !r.name.trim() || (r.amount ?? 0) <= 0)) {
       setSaveError('Mỗi mốc phải có tên và giá trị lớn hơn 0.');
       return;
     }
@@ -146,7 +166,7 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
       const payload: ContractMilestoneInput[] = rows.map((r) => ({
         name: r.name.trim(),
         percentage: r.percentage ?? null,
-        amount: r.amount,
+        amount: r.amount ?? 0,
         expectedDate: r.expectedDate ?? null,
         acceptanceCondition: r.acceptanceCondition ?? null,
       }));
@@ -229,9 +249,7 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
                             type="number"
                             aria-label="Tỷ lệ phần trăm"
                             value={row.percentage ?? ''}
-                            onChange={(e) =>
-                              updateRow(row.key, { percentage: e.target.value === '' ? null : Number(e.target.value) })
-                            }
+                            onChange={(e) => handlePercentageChange(row.key, e.target.value)}
                             min={0}
                             max={100}
                           />
@@ -241,8 +259,12 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
                             className="form-input"
                             type="number"
                             aria-label="Giá trị mốc"
-                            value={row.amount}
-                            onChange={(e) => updateRow(row.key, { amount: Number(e.target.value) })}
+                            value={row.amount ?? ''}
+                            onChange={(e) =>
+                              updateRow(row.key, {
+                                amount: e.target.value === '' ? null : Number(e.target.value),
+                              })
+                            }
                             min={0}
                           />
                         </td>
