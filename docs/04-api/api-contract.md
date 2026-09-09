@@ -2157,3 +2157,80 @@ cùng cấu trúc với `data` của API gia hạn.
 | 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng với `{contractId}`. |
 | 400 | `INVALID_STATE` | Hợp đồng không ở trạng thái `ACTIVE`. |
 | 400 | `VALIDATION_ERROR` | Thiếu `newEndDate`, `newEndDate` không sau ngày kết thúc hiện tại, hoặc giá trị sau gia hạn vượt hạn mức. |
+
+## Epic `NCL-05` — Dự án và công việc
+
+### `NCL-05-CN-002` — Chia hạng mục và công việc của dự án
+
+Các endpoint yêu cầu token của Quản lý dự án (`VT-02`) khi tạo dữ liệu. Endpoint đọc cây cho phép
+Quản lý dự án, nhân viên chuyên môn (`VT-03`) và Ban giám đốc (`VT-01`). Mỗi hạng mục và công việc đều
+thuộc đúng một dự án; `parentId`/`parentTaskId` chỉ được trỏ tới phần tử cùng dự án (và cùng hạng mục với task).
+
+#### `POST /projects/{projectId}/work-packages`
+
+```json
+{
+  "parentId": null,
+  "name": "Phân tích nghiệp vụ",
+  "description": "Làm rõ yêu cầu",
+  "sortOrder": 1
+}
+```
+
+`parentId` bỏ trống để tạo hạng mục gốc. Response `200 OK` trả về một node `WorkBreakdownRes` với `tasks`
+và `children` rỗng.
+
+#### `POST /projects/{projectId}/work-packages/{workPackageId}/tasks`
+
+```json
+{
+  "parentTaskId": null,
+  "name": "Phỏng vấn người dùng",
+  "description": "Ghi nhận quy trình hiện tại",
+  "expectedStartDate": "2026-09-10",
+  "expectedEndDate": "2026-09-12"
+}
+```
+
+`parentTaskId` bỏ trống để tạo task cấp đầu tiên trong hạng mục; task con phải thuộc cùng hạng mục.
+Task mới có trạng thái `TODO`.
+
+#### `GET /projects/{projectId}/work-breakdown`
+
+Response `200 OK`:
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": 10,
+      "parentId": null,
+      "name": "Phân tích nghiệp vụ",
+      "description": "Làm rõ yêu cầu",
+      "tasks": [
+        {
+          "id": 20,
+          "projectId": 1,
+          "workPackageId": 10,
+          "parentTaskId": null,
+          "name": "Phỏng vấn người dùng",
+          "description": "Ghi nhận quy trình hiện tại",
+          "expectedStartDate": "2026-09-10",
+          "expectedEndDate": "2026-09-12",
+          "status": "TODO"
+        }
+      ],
+      "children": []
+    }
+  ]
+}
+```
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Tên hạng mục/công việc để trống. |
+| 400 | `INVALID_STATE` | Ngày kết thúc dự kiến sớm hơn ngày bắt đầu hoặc dự án đã đóng. |
+| 403 | `FORBIDDEN` | Người gọi không có vai trò được phép. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại dự án, hạng mục cha hoặc công việc cha trong cùng dự án. |
