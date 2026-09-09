@@ -223,8 +223,8 @@ export default function ContractAppendixModal({
                           <th style={{ width: '100px' }}>Người tạo</th>
                           <th>Nội dung</th>
                           <th style={{ width: '110px' }}>Ngày hiệu lực</th>
-                          <th style={{ textAlign: 'right' }}>Điều chỉnh</th>
-                          <th style={{ textAlign: 'right' }}>Giá trị trước ➔ sau</th>
+                          <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Điều chỉnh</th>
+                          <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Giá trị (trước → sau)</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -234,11 +234,12 @@ export default function ContractAppendixModal({
                             <td>{a.createdBy || '—'}</td>
                             <td>{a.content || '—'}</td>
                             <td>{formatDate(a.effectiveDate)}</td>
-                            <td style={{ textAlign: 'right' }}>
+                            <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                               {a.adjustmentValue > 0 ? `+${formatAmount(a.adjustmentValue)}` : formatAmount(a.adjustmentValue)}
                             </td>
-                            <td style={{ textAlign: 'right' }}>
-                              {formatAmount(a.valueBefore)} ➔ <strong>{formatAmount(a.valueAfter)}</strong>
+                            <td style={{ textAlign: 'right', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                              <div className="cell-muted" style={{ fontSize: '11.5px' }}>{formatAmount(a.valueBefore)}</div>
+                              <strong>{formatAmount(a.valueAfter)}</strong>
                             </td>
                           </tr>
                         ))}
