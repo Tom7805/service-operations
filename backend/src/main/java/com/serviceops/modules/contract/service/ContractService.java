@@ -55,4 +55,18 @@ public interface ContractService {
 	 *         han muc khong hop le (am hoac nho hon gia tri hop dong)
 	 */
 	ContractRes updateTypeAndLimit(Long contractId, ContractTypeLimitReq request);
+
+	/**
+	 * Kich hoat hop dong: chuyen tu DRAFT sang ACTIVE sau khi Ke toan da khai
+	 * bao xong loai hop dong va han muc (NCL-04-CN-002). Day la buoc bat buoc
+	 * truoc khi hop dong co the dung cac nghiep vu chi danh cho hop dong dang
+	 * hieu luc: lap phu luc dieu chinh (NCL-04-CN-004) va gia han (NCL-04-CN-007).
+	 *
+	 * @param contractId id hop dong dang DRAFT
+	 * @return hop dong sau khi kich hoat
+	 * @throws com.serviceops.common.exception.BusinessRuleException
+	 *         RESOURCE_NOT_FOUND neu khong ton tai hop dong; INVALID_STATE neu
+	 *         hop dong khong con o trang thai DRAFT (da kich hoat hoac da dong)
+	 */
+	ContractRes activate(Long contractId);
 }

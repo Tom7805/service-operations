@@ -169,6 +169,34 @@ public class ContractServiceImpl implements ContractService {
 		return contractMapper.toResponse(contract, customerName);
 	}
 
+	@Override
+	@Transactional
+	public ContractRes activate(Long contractId) {
+		Contract contract = contractRepository.findById(contractId)
+				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
+						"Khong tim thay hop dong voi id=" + contractId));
+
+		if (contract.getStatus() != ContractStatus.DRAFT) {
+			throw new BusinessRuleException(ErrorCode.INVALID_STATE,
+					"Chi kich hoat duoc hop dong dang o trang thai nhap (DRAFT); "
+							+ "hop dong nay dang o trang thai " + contract.getStatus());
+		}
+
+		contract.setStatus(ContractStatus.ACTIVE);
+		contract = contractRepository.save(contract);
+
+		contractAuditLogger.record(contractId, ContractAuditAction.CONTRACT_ACTIVATE,
+				"Kich hoat hop dong " + contract.getContractCode() + " tu DRAFT sang ACTIVE");
+
+		log.info("CONTRACT_ACTIVATED contractId={} code={} by={}",
+				contractId, contract.getContractCode(), currentUsername());
+
+		String customerName = customerRepository.findById(contract.getCustomerId())
+				.map(Customer::getName)
+				.orElse(null);
+		return contractMapper.toResponse(contract, customerName);
+	}
+
 	/** Ma hop dong duy nhat: HD- + thoi diem tao (ms) - du doc lap trong truong hop 2 nguoi tao cung luc. */
 	private String generateContractCode() {
 		return "HD-" + Long.toString(System.currentTimeMillis(), 36).toUpperCase();

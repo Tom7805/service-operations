@@ -33,8 +33,10 @@ export interface ContractRes {
   createdAt?: string;
 }
 
-/** Khớp đúng ContractMilestoneStatus (backend enum) — READY_TO_INVOICE dành
- *  cho các story nghiệm thu/hóa đơn tiếp theo, chưa có thao tác ở NCL-04-CN-003. */
+/** Khớp đúng ContractMilestoneStatus (backend enum). Chuyển tuần tự
+ *  PENDING → READY_TO_INVOICE → INVOICED qua `PATCH /contracts/{id}/milestones/{milestoneId}/status`
+ *  (NCL-04-CN-003) — không nhảy cóc, không lùi lại. `INVOICED` là dữ liệu đầu vào
+ *  cho cảnh báo hạn mức ở NCL-04-CN-005. */
 export type ContractMilestoneStatus = 'PENDING' | 'READY_TO_INVOICE' | 'INVOICED';
 
 /** Khớp ContractMilestoneRes (backend). */

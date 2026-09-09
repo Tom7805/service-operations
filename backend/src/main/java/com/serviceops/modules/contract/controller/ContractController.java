@@ -4,6 +4,7 @@ import com.serviceops.common.api.BaseRes;
 import com.serviceops.modules.contract.dto.request.ContractAppendixCreateReq;
 import com.serviceops.modules.contract.dto.request.ContractTypeLimitReq;
 import com.serviceops.modules.contract.dto.request.ContractMilestoneReq;
+import com.serviceops.modules.contract.dto.request.ContractMilestoneStatusReq;
 import com.serviceops.modules.contract.dto.request.RenewalCreateReq;
 import com.serviceops.modules.contract.dto.response.ContractAppendixRes;
 import com.serviceops.modules.contract.dto.response.ContractExpiryAlertRes;
@@ -101,6 +102,30 @@ public BaseRes<List<ContractMilestoneRes>> replaceMilestones(@PathVariable Long 
 	@Valid @RequestBody List<@Valid ContractMilestoneReq> requests) {
 return BaseRes.ok("Khai bao moc thanh toan thanh cong",
 contractMilestoneService.replace(contractId, requests));
+}
+
+/**
+ * NCL-04-CN-003: doi trang thai mot moc thanh toan (PENDING -> READY_TO_INVOICE
+ * -> INVOICED). Dung de danh dau moc da duoc xuat hoa don khi he thong chua co
+ * module hoa don rieng (Epic NCL-10) - so lieu nay la dau vao truc tiep cho
+ * canh bao han muc o NCL-04-CN-005.
+ */
+@PatchMapping("/{contractId}/milestones/{milestoneId}/status")
+@PreAuthorize("hasRole('VT-05')")
+public BaseRes<ContractMilestoneRes> updateMilestoneStatus(@PathVariable Long contractId,
+		@PathVariable Long milestoneId, @Valid @RequestBody ContractMilestoneStatusReq request) {
+	return BaseRes.ok("Cap nhat trang thai moc thanh toan thanh cong",
+			contractMilestoneService.updateStatus(contractId, milestoneId, request.status()));
+}
+
+/**
+ * NCL-04-CN-002: kich hoat hop dong tu DRAFT sang ACTIVE, dieu kien bat buoc
+ * truoc khi dung duoc phu luc dieu chinh (NCL-04-CN-004) va gia han (NCL-04-CN-007).
+ */
+@PostMapping("/{contractId}/activate")
+@PreAuthorize("hasRole('VT-05')")
+public BaseRes<ContractRes> activate(@PathVariable Long contractId) {
+	return BaseRes.ok("Kich hoat hop dong thanh cong", contractService.activate(contractId));
 }
 
 /**

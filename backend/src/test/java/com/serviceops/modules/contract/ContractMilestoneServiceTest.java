@@ -23,6 +23,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -93,6 +94,60 @@ class ContractMilestoneServiceTest {
 				request("Giai doan 2", "70", null))))
 				.isInstanceOf(BusinessRuleException.class)
 				.hasMessageContaining("So tien khong khop voi ty le");
+	}
+
+	@Test
+	void advancesMilestoneStatusOneStepForwardAndAuditsTheChange() {
+		Contract contract = contract(5L, "1000000000.00");
+		when(contractRepository.findById(5L)).thenReturn(Optional.of(contract));
+		ContractMilestone milestone = milestone(7L, 5L, "Tam ung");
+		when(milestoneRepository.findById(7L)).thenReturn(Optional.of(milestone));
+		when(milestoneRepository.save(any(ContractMilestone.class))).thenAnswer(inv -> inv.getArgument(0));
+
+		var res = service.updateStatus(5L, 7L,
+				com.serviceops.modules.contract.enums.ContractMilestoneStatus.READY_TO_INVOICE);
+
+		assertThat(res.status()).isEqualTo("READY_TO_INVOICE");
+		verify(auditLogger).record(eq(5L),
+				eq(com.serviceops.modules.contract.enums.ContractAuditAction.MILESTONE_STATUS_UPDATE), any());
+	}
+
+	@Test
+	void rejectsSkippingAheadInMilestoneStatus() {
+		Contract contract = contract(5L, "1000000000.00");
+		when(contractRepository.findById(5L)).thenReturn(Optional.of(contract));
+		ContractMilestone milestone = milestone(7L, 5L, "Tam ung");
+		when(milestoneRepository.findById(7L)).thenReturn(Optional.of(milestone));
+
+		assertThatThrownBy(() -> service.updateStatus(5L, 7L,
+				com.serviceops.modules.contract.enums.ContractMilestoneStatus.INVOICED))
+				.isInstanceOf(BusinessRuleException.class)
+				.hasMessageContaining("PENDING -> READY_TO_INVOICE -> INVOICED");
+
+		verify(milestoneRepository, never()).save(any());
+	}
+
+	@Test
+	void rejectsMilestoneStatusUpdateWhenMilestoneBelongsToAnotherContract() {
+		Contract contract = contract(5L, "1000000000.00");
+		when(contractRepository.findById(5L)).thenReturn(Optional.of(contract));
+		ContractMilestone milestone = milestone(7L, 9L, "Tam ung");
+		when(milestoneRepository.findById(7L)).thenReturn(Optional.of(milestone));
+
+		assertThatThrownBy(() -> service.updateStatus(5L, 7L,
+				com.serviceops.modules.contract.enums.ContractMilestoneStatus.READY_TO_INVOICE))
+				.isInstanceOf(BusinessRuleException.class)
+				.hasMessageContaining("khong thuoc hop dong");
+	}
+
+	private ContractMilestone milestone(Long id, Long contractId, String name) {
+		ContractMilestone milestone = new ContractMilestone();
+		milestone.setId(id);
+		milestone.setContractId(contractId);
+		milestone.setName(name);
+		milestone.setAmount(new BigDecimal("300000000.00"));
+		milestone.setStatus(com.serviceops.modules.contract.enums.ContractMilestoneStatus.PENDING);
+		return milestone;
 	}
 
 	private Contract contract(Long id, String totalValue) {

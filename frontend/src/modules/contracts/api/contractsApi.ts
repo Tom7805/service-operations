@@ -3,6 +3,7 @@ import type {
   ContractType,
   ContractMilestoneRes,
   ContractMilestoneInput,
+  ContractMilestoneStatus,
   ContractUsageRes,
   ContractExpiryAlertRes,
   RenewalCreateReq,
@@ -127,6 +128,36 @@ export async function replaceMilestones(
 }
 
 /**
+ * PATCH /contracts/{contractId}/milestones/{milestoneId}/status — đổi trạng thái một
+ * mốc thanh toán, chỉ đi tuần tự PENDING → READY_TO_INVOICE → INVOICED (NCL-04-CN-003).
+ * INVOICED là dữ liệu đầu vào của cảnh báo hạn mức (NCL-04-CN-005).
+ */
+export async function updateMilestoneStatus(
+  contractId: number,
+  milestoneId: number,
+  status: ContractMilestoneStatus
+): Promise<ContractMilestoneRes> {
+  return requestBackend<ContractMilestoneRes>(
+    `${API_BASE_URL}/contracts/${contractId}/milestones/${milestoneId}/status`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }
+  );
+}
+
+/**
+ * POST /contracts/{contractId}/activate — kích hoạt hợp đồng từ DRAFT sang ACTIVE
+ * (NCL-04-CN-002). Điều kiện bắt buộc trước khi dùng được phụ lục điều chỉnh
+ * (NCL-04-CN-004) và gia hạn (NCL-04-CN-007).
+ */
+export async function activateContract(contractId: number): Promise<ContractRes> {
+  return requestBackend<ContractRes>(`${API_BASE_URL}/contracts/${contractId}/activate`, {
+    method: 'POST',
+  });
+}
+
+/**
  * GET /contracts/{contractId}/usage — thông tin mức độ sử dụng hạn mức và cảnh báo
  * khi sắp vượt hạn mức (ngưỡng 80%) hoặc đã vượt (NCL-04-CN-005, QTN-19).
  * Yêu cầu vai trò VT-02 (Quản lý dự án) hoặc VT-05 (Kế toán).
@@ -180,6 +211,8 @@ export default {} as unknown as {
   fetchAppendices: typeof fetchAppendices;
   fetchMilestones: typeof fetchMilestones;
   replaceMilestones: typeof replaceMilestones;
+  updateMilestoneStatus: typeof updateMilestoneStatus;
+  activateContract: typeof activateContract;
   getContractUsage: typeof getContractUsage;
   fetchContractUsage: typeof fetchContractUsage;
   fetchExpiringContracts: typeof fetchExpiringContracts;

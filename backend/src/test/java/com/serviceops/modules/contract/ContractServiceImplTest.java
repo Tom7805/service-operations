@@ -328,6 +328,48 @@ assertThat(detailCaptor.getValue()).contains("HD-").contains("tu co hoi id=1").c
 				.isEqualTo(ErrorCode.RESOURCE_NOT_FOUND);
 	}
 
+	@Test
+	@DisplayName("activate: chuyen hop dong tu DRAFT sang ACTIVE, ghi nhat ky CONTRACT_ACTIVATE")
+	void activatesDraftContract() {
+		Contract existing = contract(5L, "500000000");
+		when(contractRepository.findById(5L)).thenReturn(Optional.of(existing));
+		when(contractRepository.save(any(Contract.class))).thenAnswer(inv -> inv.getArgument(0));
+
+		ContractRes res = service.activate(5L);
+
+		assertThat(res.status()).isEqualTo(ContractStatus.ACTIVE.name());
+		ArgumentCaptor<String> detailCaptor = ArgumentCaptor.forClass(String.class);
+		verify(contractAuditLogger).record(eq(5L), eq(ContractAuditAction.CONTRACT_ACTIVATE), detailCaptor.capture());
+		assertThat(detailCaptor.getValue()).contains("HD-TEST").contains("DRAFT").contains("ACTIVE");
+	}
+
+	@Test
+	@DisplayName("activate: hop dong khong con DRAFT (da ACTIVE) thi tu choi va khong luu")
+	void rejectsActivatingNonDraftContract() {
+		Contract active = contract(5L, "500000000");
+		active.setStatus(ContractStatus.ACTIVE);
+		when(contractRepository.findById(5L)).thenReturn(Optional.of(active));
+
+		assertThatThrownBy(() -> service.activate(5L))
+				.isInstanceOf(BusinessRuleException.class)
+				.extracting(ex -> ((BusinessRuleException) ex).getErrorCode())
+				.isEqualTo(ErrorCode.INVALID_STATE);
+
+		verify(contractRepository, never()).save(any());
+		verify(contractAuditLogger, never()).record(any(), any(), anyString());
+	}
+
+	@Test
+	@DisplayName("activate: bao RESOURCE_NOT_FOUND khi khong ton tai hop dong")
+	void rejectsActivatingMissingContract() {
+		when(contractRepository.findById(99L)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> service.activate(99L))
+				.isInstanceOf(BusinessRuleException.class)
+				.extracting(ex -> ((BusinessRuleException) ex).getErrorCode())
+				.isEqualTo(ErrorCode.RESOURCE_NOT_FOUND);
+	}
+
 	private Contract contract(long id, String totalValue) {
 		Contract contract = new Contract();
 		contract.setId(id);

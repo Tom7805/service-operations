@@ -14,7 +14,7 @@ import ContractAppendixModal from '../../contracts/components/ContractAppendixMo
 import ContractLimitAlert, { type ContractLimitAlertTarget } from '../../contracts/components/ContractLimitAlert';
 import ContractExpiryReminderModal from '../../contracts/components/ContractExpiryReminderModal';
 import RenewalModal from '../../contracts/components/RenewalModal';
-import { getContract, ContractsApiError } from '../../contracts/api/contractsApi';
+import { getContract, activateContract, ContractsApiError } from '../../contracts/api/contractsApi';
 import type { ContractRes } from '../../contracts/types/contractTypes';
 import { t } from '../../../i18n';
 
@@ -98,6 +98,7 @@ export default function CustomerOverviewPanel({
   const [limitAlertTarget, setLimitAlertTarget] = useState<ContractLimitAlertTarget | null>(null);
   const [isContractLoading, setIsContractLoading] = useState(false);
   const [contractLoadError, setContractLoadError] = useState<string | null>(null);
+  const [activatingContractId, setActivatingContractId] = useState<number | null>(null);
 
   // NCL-04-CN-002/003/004/007: nạp đúng dữ liệu hiện tại của hợp đồng trước khi mở modal sửa/điều chỉnh/gia hạn.
   // Cả các thao tác này (khai báo loại/hạn mức, mốc thanh toán, phụ lục, gia hạn) chỉ dành cho
@@ -135,6 +136,28 @@ export default function CustomerOverviewPanel({
       name: contractName ?? '(không có tên)',
     });
     setIsLimitAlertOpen(true);
+  }, []);
+
+  // NCL-04-CN-002: kích hoạt hợp đồng DRAFT → ACTIVE, điều kiện bắt buộc để dùng
+  // được phụ lục điều chỉnh (NCL-04-CN-004) và gia hạn (NCL-04-CN-007). Không cần
+  // nạp trước dữ liệu hợp đồng như các thao tác mở modal khác — đây là một hành
+  // động chuyển trạng thái tức thời, không phải một form.
+  const handleActivateContract = useCallback(async (contractId: number) => {
+    setContractLoadError(null);
+    setActivatingContractId(contractId);
+    try {
+      await activateContract(contractId);
+      await loadOverview();
+    } catch (err) {
+      setContractLoadError(
+        err instanceof ContractsApiError
+          ? err.message
+          : 'Không thể kích hoạt hợp đồng. Vui lòng thử lại.'
+      );
+    } finally {
+      setActivatingContractId(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadOverview = useCallback(async () => {
@@ -447,6 +470,16 @@ export default function CustomerOverviewPanel({
                                       >
                                         Mốc thanh toán
                                       </button>
+                                      {(item.status ?? '').toUpperCase() === 'DRAFT' && (
+                                        <button
+                                          type="button"
+                                          className="btn btn-secondary"
+                                          onClick={() => void handleActivateContract(item.id)}
+                                          disabled={activatingContractId === item.id}
+                                        >
+                                          {activatingContractId === item.id ? 'Đang kích hoạt…' : 'Kích hoạt hợp đồng'}
+                                        </button>
+                                      )}
                                     </>
                                   )}
                                   {(currentUserRoles.includes('VT-02') || currentUserRoles.includes('VT-05')) && (

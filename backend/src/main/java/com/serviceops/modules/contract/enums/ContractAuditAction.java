@@ -14,6 +14,12 @@ TYPE_LIMIT_UPDATE,
 /** Khai bao lai danh sach moc thanh toan cua hop dong (NCL-04-CN-003). */
 MILESTONE_UPDATE,
 
+/** Doi trang thai mot moc thanh toan (NCL-04-CN-003), vi du danh dau da xuat hoa don. */
+MILESTONE_STATUS_UPDATE,
+
+/** Kich hoat hop dong tu DRAFT sang ACTIVE (NCL-04-CN-002). */
+CONTRACT_ACTIVATE,
+
 /** Lap phu luc dieu chinh gia tri/noi dung hop dong (NCL-04-CN-004). */
 APPENDIX_CREATE,
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import type { ContractMilestoneInput, ContractMilestoneRes, ContractRes } from '../types/contractTypes';
-import { fetchMilestones, replaceMilestones, ContractsApiError } from '../api/contractsApi';
+import { fetchMilestones, replaceMilestones, updateMilestoneStatus, ContractsApiError } from '../api/contractsApi';
 
 interface Props {
   contract: ContractRes;
@@ -11,9 +11,10 @@ interface Props {
   currentUserRoles?: string[];
 }
 
-/** Dòng đang soạn thảo — giữ id gốc (nếu có) chỉ để hiển thị trạng thái, backend
- *  không nhận id khi thay thế trọn bộ danh sách (NCL-04-CN-003). */
-type DraftRow = ContractMilestoneInput & { key: string; status?: ContractMilestoneRes['status'] };
+/** Dòng đang soạn thảo — giữ id gốc (nếu có) để hiển thị trạng thái và cho phép
+ *  đổi trạng thái riêng (PATCH .../status), tách khỏi luồng "Lưu danh sách mốc"
+ *  (PUT thay thế trọn bộ, không nhận id — NCL-04-CN-003). */
+type DraftRow = ContractMilestoneInput & { key: string; id?: number; status?: ContractMilestoneRes['status'] };
 
 const STATUS_LABEL: Record<ContractMilestoneRes['status'], string> = {
   PENDING: 'Chờ nghiệm thu',
@@ -21,9 +22,18 @@ const STATUS_LABEL: Record<ContractMilestoneRes['status'], string> = {
   INVOICED: 'Đã xuất hóa đơn',
 };
 
+/** Trạng thái kế tiếp theo đúng trình tự PENDING → READY_TO_INVOICE → INVOICED
+ *  mà backend cho phép (NCL-04-CN-003) — null nếu đã ở bước cuối. */
+const NEXT_STATUS: Record<ContractMilestoneRes['status'], ContractMilestoneRes['status'] | null> = {
+  PENDING: 'READY_TO_INVOICE',
+  READY_TO_INVOICE: 'INVOICED',
+  INVOICED: null,
+};
+
 function toDraftRow(m: ContractMilestoneRes): DraftRow {
   return {
     key: `existing-${m.id}`,
+    id: m.id,
     name: m.name,
     percentage: m.percentage ?? null,
     amount: m.amount,
@@ -51,6 +61,8 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [statusUpdatingKey, setStatusUpdatingKey] = useState<string | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen || !isAllowed) return;
@@ -91,6 +103,26 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
 
   const addRow = () => {
     setRows((prev) => [...prev, newDraftRow()]);
+  };
+
+  const handleAdvanceStatus = async (row: DraftRow) => {
+    if (!row.id || !row.status) return;
+    const next = NEXT_STATUS[row.status];
+    if (!next) return;
+    setStatusError(null);
+    setStatusUpdatingKey(row.key);
+    try {
+      await updateMilestoneStatus(contract.id, row.id, next);
+      updateRow(row.key, { status: next });
+      const refreshed = await fetchMilestones(contract.id);
+      onSaved?.(refreshed);
+    } catch (err) {
+      setStatusError(
+        err instanceof ContractsApiError ? err.message : 'Không thể đổi trạng thái mốc thanh toán.'
+      );
+    } finally {
+      setStatusUpdatingKey(null);
+    }
   };
 
   const handleSave = async () => {
@@ -161,6 +193,7 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
 
           {isAllowed && loadError && <div className="alert-box alert-box--danger">{loadError}</div>}
           {isAllowed && saveError && <div className="alert-box alert-box--danger" role="alert">{saveError}</div>}
+          {isAllowed && statusError && <div className="alert-box alert-box--danger" role="alert">{statusError}</div>}
 
           {isAllowed && isLoading && <p>Đang tải danh sách mốc thanh toán…</p>}
 
@@ -232,7 +265,21 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
                         </td>
                         <td>
                           {row.status ? (
-                            <span className="status-pill">{STATUS_LABEL[row.status]}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                              <span className="status-pill">{STATUS_LABEL[row.status]}</span>
+                              {NEXT_STATUS[row.status] && (
+                                <button
+                                  type="button"
+                                  className="btn-icon-refresh"
+                                  title={`Chuyển sang "${STATUS_LABEL[NEXT_STATUS[row.status]!]}"`}
+                                  aria-label={`Chuyển mốc ${row.name} sang trạng thái ${STATUS_LABEL[NEXT_STATUS[row.status]!]}`}
+                                  onClick={() => void handleAdvanceStatus(row)}
+                                  disabled={statusUpdatingKey === row.key || submitting}
+                                >
+                                  {statusUpdatingKey === row.key ? '…' : ICONS.arrowRight}
+                                </button>
+                              )}
+                            </div>
                           ) : (
                             <span className="cell-muted">Mới</span>
                           )}
