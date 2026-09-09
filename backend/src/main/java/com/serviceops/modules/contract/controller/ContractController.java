@@ -67,6 +67,18 @@ public BaseRes<List<ContractAppendixRes>> listAppendices(@PathVariable Long cont
 }
 
 /**
+ * Danh sach hop dong cho man hinh "Hop dong" danh rieng cho Ke toan (VT-05) -
+ * loi vao de khai bao loai/han muc, moc thanh toan, kich hoat ma khong phai mo
+ * ho so tong hop khach hang (chi VT-04/VT-02 vao duoc). Chi Ke toan (VT-05);
+ * vai tro khac nhan 403 va bi ghi nhat ky tu choi boi {@code ContractAccessDeniedAspect}.
+ */
+@GetMapping
+@PreAuthorize("hasRole('VT-05')")
+public BaseRes<List<ContractRes>> listContracts() {
+	return BaseRes.ok(contractService.listAll());
+}
+
+/**
  * Xem chi tiet mot hop dong - phuc vu man hinh khai bao loai/han muc can nap
  * san gia tri hien tai truoc khi sua (NCL-04-CN-002).
  */

@@ -13,6 +13,7 @@ import ChangePasswordPage from './modules/auth/pages/ChangePasswordPage';
 import TwoFactorSetupPage from './modules/auth/pages/TwoFactorSetupPage';
 import CustomerListPage from './modules/customers/pages/CustomerListPage';
 import CustomerMergePage from './modules/customers/pages/CustomerMergePage';
+import ContractListPage from './modules/contracts/pages/ContractListPage';
 import OpportunityDetailPage from './modules/opportunities/pages/OpportunityDetailPage';
 import OpportunitySearchPicker from './modules/opportunities/components/OpportunitySearchPicker';
 import OpportunityListPage from './modules/opportunities/pages/OpportunityListPage';
@@ -27,6 +28,7 @@ import type { ReactNode } from 'react';
 
 type Tab =
   | 'CUSTOMERS'
+  | 'CONTRACTS'
   | 'OPPORTUNITIES'
   | 'REVENUE_FORECAST'
   | 'CUSTOMER_MERGE'
@@ -73,6 +75,13 @@ interface NavItem {
 /** Điều hướng chính — vận hành nghiệp vụ hàng ngày. */
 const NAV_ITEMS: NavItem[] = [
   { tab: 'CUSTOMERS', icon: ICONS.building, label: 'Khách hàng', requires: ['VT-04', 'VT-02'] },
+  {
+    tab: 'CONTRACTS', icon: ICONS.receipt, label: 'Hợp đồng', requires: ['VT-05'],
+    // Màn hình lấy hợp đồng làm trung tâm cho Kế toán (VT-05): khai báo loại &
+    // hạn mức, mốc thanh toán, kích hoạt, nhắc gia hạn. Các nghiệp vụ này chỉ
+    // VT-05 thao tác được nhưng Kế toán KHÔNG vào được hồ sơ khách hàng
+    // (chỉ VT-04/VT-02) — đây là lối vào thay thế.
+  },
   {
     tab: 'OPPORTUNITIES', icon: ICONS.target, label: 'Cơ hội bán hàng', requires: ['VT-01', 'VT-02', 'VT-04'],
     // OpportunityListPage cho MỌI vai trò xem đường ống bán hàng — chỉ chặn
@@ -413,6 +422,11 @@ export default function App() {
             <ChangePasswordPage onBack={() => setActiveTab('DEPARTMENTS')} onPasswordChanged={handleLogout} />
           ) : activeTab === 'CUSTOMERS' ? (
             <CustomerListPage
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+            />
+          ) : activeTab === 'CONTRACTS' ? (
+            <ContractListPage
               currentUserRoles={currentRoles}
               currentUserName={session.fullName}
             />

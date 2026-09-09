@@ -19,6 +19,14 @@ public interface ContractRepository extends JpaRepository<Contract, Long> {
 	/** Tim hop dong tao tu mot co hoi (NULL neu co hoi chua co hop dong). */
 	Optional<Contract> findByOpportunityId(Long opportunityId);
 
+	/**
+	 * Toan bo hop dong, moi tao truoc - phuc vu man hinh "Hop dong" danh rieng
+	 * cho Ke toan (VT-05) de tim va thao tac hop dong (khai bao loai/han muc,
+	 * moc thanh toan, kich hoat) ma khong phai di qua ho so tong hop khach hang
+	 * (NCL-04-CN-002). VT-05 co pham vi du lieu COMPANY nen thay tat ca.
+	 */
+	List<Contract> findAllByOrderByCreatedAtDesc();
+
 	/** Kiem tra nhanh co hoi da co hop dong hay chua, chong tao trung. */
 	boolean existsByOpportunityId(Long opportunityId);
 
