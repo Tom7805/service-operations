@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 import type { ContractExpiryAlertRes } from '../types/contractTypes';
 import { fetchExpiringContracts, ContractsApiError } from '../api/contractsApi';
 
@@ -93,8 +94,9 @@ export default function ContractExpiryReminderModal({
   };
 
   return (
-    <div
-      className="modal-backdrop"
+    <ModalPortal>
+      <div
+        className="modal-backdrop"
       role="dialog"
       aria-modal="true"
       onClick={(e) => {
@@ -321,6 +323,7 @@ export default function ContractExpiryReminderModal({
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </ModalPortal>
   );
 }

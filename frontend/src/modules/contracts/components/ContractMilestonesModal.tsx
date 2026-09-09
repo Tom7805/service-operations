@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 import type { ContractMilestoneInput, ContractMilestoneRes, ContractRes } from '../types/contractTypes';
 import { fetchMilestones, replaceMilestones, updateMilestoneStatus, ContractsApiError } from '../api/contractsApi';
 
@@ -182,8 +183,9 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
   };
 
   return (
-    <div
-      className="modal-backdrop"
+    <ModalPortal>
+      <div
+        className="modal-backdrop"
       onClick={(e) => {
         if (e.target === e.currentTarget && !submitting) onClose();
       }}
@@ -357,6 +359,7 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </ModalPortal>
   );
 }
