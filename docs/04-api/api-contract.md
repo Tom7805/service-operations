@@ -2544,3 +2544,86 @@ Không cần body.
   giờ trên giao diện dự án đó — các API tương ứng (`NCL-05-CN-002`/`003`/`004`/`005`) đã tự chặn ghi
   (`400 INVALID_STATE`) ở tầng backend khi dự án `CLOSED`, Frontend chỉ cần ẩn/vô hiệu hoá nút bấm để tránh gọi
   API rồi mới nhận lỗi.
+
+### `NCL-05-CN-008` — Quản lý mốc tiến độ của dự án
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`) trên toàn bộ endpoint. Vai trò khác nhận
+`403 FORBIDDEN` và bị ghi nhật ký lần từ chối (TC-03). Điều kiện bắt đầu: dự án phải đang
+chạy (`RUNNING`) và **đã có cây công việc** — nếu chưa có hạng mục nào, tạo mốc bị từ chối
+`400 INVALID_STATE`.
+
+Mỗi mốc gồm tên, ngày kế hoạch (`plannedDate`) và các **hạng mục phải hoàn thành** (danh sách
+id công việc trong cây công việc của dự án). Hệ thống **tự rà soát** khi trả danh sách mốc:
+so ngày hiện tại với ngày kế hoạch, không cần job nền.
+
+Trạng thái mốc (`status`) tính động:
+- `DONE` — đã ghi nhận ngày thực tế (`actualDate`).
+- `LATE` — đã qua ngày kế hoạch mà chưa hoàn thành; kèm `daysLate` = số ngày trễ (TC-02).
+- `ON_TRACK` — còn lại.
+
+#### `POST /projects/{projectId}/milestones` (TC-01)
+
+```json
+{
+  "name": "Bàn giao giai đoạn một",
+  "description": "Chữ ký nghiệm thu giai đoạn 1",
+  "plannedDate": "2026-10-01",
+  "taskIds": [11, 12]
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `name` | string | có | Tên mốc. |
+| `description` | string | không | Mô tả thêm. |
+| `plannedDate` | date | có | Ngày kế hoạch hoàn thành. |
+| `taskIds` | number[] | có | Ít nhất 1 id công việc thuộc cây công việc của dự án. |
+
+Response `200 OK` trả về `ProjectMilestoneRes`:
+
+```json
+{
+  "success": true,
+  "message": "Tao moc tien do thanh cong",
+  "data": {
+    "id": 21,
+    "projectId": 1,
+    "name": "Bàn giao giai đoạn một",
+    "description": null,
+    "plannedDate": "2026-10-01",
+    "actualDate": null,
+    "status": "ON_TRACK",
+    "daysLate": null,
+    "items": [{ "taskId": 11, "taskName": "Thiết lập môi trường", "taskStatus": "TODO" }]
+  }
+}
+```
+
+#### `GET /projects/{projectId}/milestones` (TC-02)
+
+Bảng theo dõi tiến độ: trả danh sách mốc sắp theo `plannedDate`, trạng thái và `daysLate`
+do hệ thống tính tại thời điểm gọi.
+
+#### `PUT /projects/{projectId}/milestones/{milestoneId}`
+
+Cập nhật tên, mô tả, ngày kế hoạch và thay toàn bộ danh sách `taskIds` — body giống `POST`.
+
+#### `POST /projects/{projectId}/milestones/{milestoneId}/complete`
+
+Ghi nhận ngày thực tế hoàn thành mốc: `{"actualDate": "2026-09-28"}`. Sau đó mốc có
+`status = DONE`. Ngày thực tế không được ở tương lai.
+
+#### `DELETE /projects/{projectId}/milestones/{milestoneId}`
+
+Xoá mốc và các hạng mục liên quan (không xoá công việc trong cây công việc).
+
+Mọi thao tác tạo/cập nhật/hoàn thành/xoá đều được ghi vào nhật ký dự án (TC-04) với
+action `MILESTONE_CREATED` / `MILESTONE_UPDATED` / `MILESTONE_DELETED`.
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Thiếu tên mốc, ngày kế hoạch hoặc `taskIds` rỗng. |
+| 400 | `INVALID_STATE` | Dự án chưa có cây công việc, dự án đã đóng, hoặc ngày thực tế ở tương lai. |
+| 403 | `FORBIDDEN` | Người dùng không phải Quản lý dự án (`VT-02`). |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy dự án/mốc, hoặc công việc không thuộc dự án. |
+
