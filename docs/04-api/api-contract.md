@@ -2289,3 +2289,59 @@ Cho phép Quản lý dự án (`VT-02`), Nhân viên chuyên môn (`VT-03`) và 
 | 400 | `INVALID_STATE` | Dự án đã đóng, nhân sự đã kết thúc hợp đồng, tài khoản không hoạt động hoặc ngày không hợp lệ. |
 | 403 | `FORBIDDEN` | Người gọi không có vai trò được phép. |
 | 404 | `RESOURCE_NOT_FOUND` | Không tồn tại dự án, công việc hoặc hồ sơ nhân sự tương ứng. |
+
+### `NCL-05-CN-004` — Cập nhật tiến độ công việc
+
+Yêu cầu token của **Nhân viên chuyên môn** (`VT-03`). Chỉ người **đang được giao** công việc đó (có bản ghi
+trong `project_task_assignments`) mới đổi được trạng thái — không phụ thuộc vào việc ai là người giao việc.
+Chấp nhận đổi tự do giữa bốn trạng thái `TODO` · `IN_PROGRESS` · `WAITING_APPROVAL` · `DONE` (câu chuyện này
+không áp thứ tự bắt buộc như luồng giai đoạn cơ hội). Đổi trạng thái thành công phản ánh ngay trên
+`GET /projects/{projectId}/work-breakdown` (`NCL-05-CN-002`, TC-01) và ghi một dòng `TASK_PROGRESS_UPDATED`
+vào `project_audit_logs` — người thực hiện, nội dung (trạng thái cũ → mới), thời điểm (TC-03).
+
+#### `PATCH /projects/{projectId}/tasks/{taskId}/progress`
+
+```json
+{ "status": "DONE" }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `status` | string | có | Một trong `TODO` · `IN_PROGRESS` · `WAITING_APPROVAL` · `DONE`. |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Cap nhat tien do cong viec thanh cong",
+  "data": {
+    "id": 20,
+    "projectId": 1,
+    "workPackageId": 10,
+    "parentTaskId": null,
+    "name": "Phỏng vấn người dùng",
+    "description": "Ghi nhận quy trình hiện tại",
+    "expectedStartDate": "2026-09-10",
+    "expectedEndDate": "2026-09-12",
+    "status": "DONE"
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Thiếu hoặc sai giá trị `status`. |
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-03`, **hoặc** là `VT-03` nhưng không nằm trong danh sách người được giao công việc này (TC-02) — cả hai trường hợp hệ thống đều ghi nhật ký lần từ chối. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại dự án hoặc công việc thuộc dự án đó. |
+
+**Lưu ý cho Frontend:**
+- Đây **không phải** lỗi phân quyền theo vai trò thông thường: một nhân viên chuyên môn hợp lệ vẫn nhận
+  `403 FORBIDDEN` nếu mở nhầm công việc của người khác — hiển thị thông báo "Bạn không phải người phụ trách
+  công việc này" thay vì thông báo "không đủ quyền" chung chung.
+- Sau khi đổi trạng thái thành công, làm mới lại cây `GET /projects/{projectId}/work-breakdown` (hoặc cập nhật
+  optimistic ngay trên bảng đang hiển thị) để phản ánh đúng bảng theo dõi dự án.
+- Không cần gọi thêm API nào để ghi lịch sử — mỗi lần đổi trạng thái backend tự ghi vào nhật ký dự án.
