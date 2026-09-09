@@ -3,6 +3,8 @@ import type {
   ContractType,
   ContractMilestoneRes,
   ContractMilestoneInput,
+  RenewalCreateReq,
+  RenewalRes,
 } from '../types/contractTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
@@ -122,6 +124,24 @@ export async function replaceMilestones(
   });
 }
 
+/** POST /contracts/{contractId}/renewals — Gia hạn hợp đồng đang hiệu lực (NCL-04-CN-007). */
+export async function createRenewal(
+  contractId: number,
+  payload: RenewalCreateReq
+): Promise<RenewalRes> {
+  return requestBackend<RenewalRes>(`${API_BASE_URL}/contracts/${contractId}/renewals`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/** GET /contracts/{contractId}/renewals — Xem lịch sử gia hạn của hợp đồng (NCL-04-CN-007). */
+export async function fetchRenewals(contractId: number): Promise<RenewalRes[]> {
+  return requestBackend<RenewalRes[]>(`${API_BASE_URL}/contracts/${contractId}/renewals`, {
+    method: 'GET',
+  });
+}
+
 export default {} as unknown as {
   getContract: typeof getContract;
   updateTypeAndLimit: typeof updateTypeAndLimit;
@@ -129,4 +149,6 @@ export default {} as unknown as {
   fetchAppendices: typeof fetchAppendices;
   fetchMilestones: typeof fetchMilestones;
   replaceMilestones: typeof replaceMilestones;
+  createRenewal: typeof createRenewal;
+  fetchRenewals: typeof fetchRenewals;
 };

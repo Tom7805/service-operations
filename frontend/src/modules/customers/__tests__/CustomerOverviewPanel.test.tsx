@@ -19,6 +19,8 @@ vi.mock('../api/customersApi', () => ({
 vi.mock('../../contracts/api/contractsApi', () => ({
   getContract: vi.fn(),
   updateTypeAndLimit: vi.fn(),
+  createRenewal: vi.fn(),
+  fetchRenewals: vi.fn(),
   ContractsApiError: class extends Error {
     constructor(public code: string, message: string, public statusCode?: number) {
       super(message);
@@ -64,6 +66,25 @@ const emptyOverview: CustomerOverview = {
   projects: [],
   invoices: [],
   receivables: [],
+};
+
+const fullContract: ContractRes = {
+  id: 2,
+  contractCode: 'HD-001',
+  name: 'Hợp đồng triển khai ERP',
+  opportunityId: 1,
+  customerId: 10,
+  customerName: 'Công ty Cổ phần Alpha',
+  quoteId: 7,
+  contractType: 'MAINTENANCE',
+  totalValue: 480_000_000,
+  limitValue: 500_000_000,
+  startDate: '2026-03-01',
+  endDate: '2027-03-01',
+  status: 'ACTIVE',
+  notes: null,
+  createdBy: 'ketoan01',
+  createdAt: '2026-03-01T08:00:00',
 };
 
 describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
@@ -177,25 +198,6 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
   });
 
   describe('NCL-04-CN-002: Khai báo loại hợp đồng và hạn mức (Kế toán VT-05)', () => {
-    const fullContract: ContractRes = {
-      id: 2,
-      contractCode: 'HD-001',
-      name: 'Hợp đồng triển khai ERP',
-      opportunityId: 1,
-      customerId: 10,
-      customerName: 'Công ty Cổ phần Alpha',
-      quoteId: 7,
-      contractType: 'MAINTENANCE',
-      totalValue: 480_000_000,
-      limitValue: 500_000_000,
-      startDate: '2026-03-01',
-      endDate: '2027-03-01',
-      status: 'ACTIVE',
-      notes: null,
-      createdBy: 'ketoan01',
-      createdAt: '2026-03-01T08:00:00',
-    };
-
     it('nút khai báo chỉ hiện ở nhóm Hợp đồng, không hiện ở các nhóm khác', async () => {
       vi.mocked(customersApi.fetchCustomerOverview).mockResolvedValue(fullOverview);
 
@@ -261,4 +263,60 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
       expect(screen.queryByLabelText(/Loại hợp đồng/i)).toBeNull();
     });
   });
+
+  describe('Gia hạn hợp đồng — NCL-04-CN-007', () => {
+    it('chỉ hiển thị nút "Gia hạn hợp đồng" cho Nhân viên kinh doanh (VT-04)', async () => {
+      vi.mocked(customersApi.fetchCustomerOverview).mockResolvedValue(fullOverview);
+
+      render(<CustomerOverviewPanel customerId={10} customerName="Công ty Cổ phần Alpha" currentUserRoles={['VT-04']} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('customer-summary-panel')).toBeInTheDocument();
+      });
+
+      expect(
+        within(screen.getByTestId('customer-summary-section-contracts')).getByRole('button', {
+          name: /Gia hạn hợp đồng/i,
+        })
+      ).toBeInTheDocument();
+    });
+
+    it('ẩn nút "Gia hạn hợp đồng" khi không có vai trò VT-04', async () => {
+      vi.mocked(customersApi.fetchCustomerOverview).mockResolvedValue(fullOverview);
+
+      render(<CustomerOverviewPanel customerId={10} customerName="Công ty Cổ phần Alpha" currentUserRoles={['VT-05']} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('customer-summary-panel')).toBeInTheDocument();
+      });
+
+      expect(
+        within(screen.getByTestId('customer-summary-section-contracts')).queryByRole('button', {
+          name: /Gia hạn hợp đồng/i,
+        })
+      ).toBeNull();
+    });
+
+    it('bấm nút "Gia hạn hợp đồng" thì gọi getContract và mở RenewalModal', async () => {
+      vi.mocked(customersApi.fetchCustomerOverview).mockResolvedValue(fullOverview);
+      vi.mocked(contractsApi.getContract).mockResolvedValue(fullContract);
+      vi.mocked(contractsApi.fetchRenewals).mockResolvedValue([]);
+
+      render(<CustomerOverviewPanel customerId={10} customerName="Công ty Cổ phần Alpha" currentUserRoles={['VT-04']} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('customer-summary-panel')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /Gia hạn hợp đồng/i }));
+
+      expect(contractsApi.getContract).toHaveBeenCalledWith(2);
+
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /Gia hạn hợp đồng/i })).toBeInTheDocument();
+      });
+    });
+  });
 });
+
