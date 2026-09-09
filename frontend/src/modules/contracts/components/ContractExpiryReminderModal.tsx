@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import type { ContractExpiryAlertRes } from '../types/contractTypes';
 import { fetchExpiringContracts, ContractsApiError } from '../api/contractsApi';
@@ -66,6 +66,11 @@ export default function ContractExpiryReminderModal({
       void loadContracts(days);
     }
   }, [isOpen, isAllowed, days, loadContracts]);
+
+  // TC-02: hợp đồng đã qua ngày kết thúc nhưng vẫn ACTIVE (daysRemaining < 0) — tách riêng
+  // để luôn nổi bật lên đầu, bất kể khung thời gian rà soát (TC-01) đang chọn là bao nhiêu.
+  const overdueContracts = useMemo(() => contracts.filter((c) => c.daysRemaining < 0), [contracts]);
+  const upcomingContracts = useMemo(() => contracts.filter((c) => c.daysRemaining >= 0), [contracts]);
 
   if (!isOpen) return null;
 
@@ -190,64 +195,121 @@ export default function ContractExpiryReminderModal({
                   <div className="spinner-sm" style={{ width: '24px', height: '24px', borderWidth: '3px' }} />
                   <p>Đang tải danh sách hợp đồng sắp hết hạn...</p>
                 </div>
-              ) : contracts.length === 0 ? (
-                /* TC-02: Trạng thái không có hợp đồng nào sắp hết hạn */
-                <div className="expiry-empty-state" data-testid="expiry-empty-state">
-                  <span className="expiry-empty-state__icon">{ICONS.checkCircle}</span>
-                  <p style={{ fontWeight: 600, color: '#2E7D32', margin: '4px 0' }}>
-                    Không có hợp đồng nào sắp hết hiệu lực trong vòng {days} ngày tới.
-                  </p>
-                  <p style={{ fontSize: '13px', color: '#6B6966', margin: 0 }}>
-                    Tất cả hợp đồng đang hiệu lực đều có thời hạn vượt quá mốc thời gian này.
-                  </p>
-                </div>
               ) : (
-                /* TC-01: Bảng danh sách hợp đồng sắp hết hạn */
-                <div className="table-responsive">
-                  <table className="user-data-table" data-testid="expiring-contracts-table">
-                    <thead>
-                      <tr>
-                        <th style={{ width: '50px', textAlign: 'center' }}>#</th>
-                        <th style={{ width: '130px' }}>Mã hợp đồng</th>
-                        <th>Tên hợp đồng</th>
-                        <th style={{ width: '120px' }}>Ngày hết hạn</th>
-                        <th style={{ width: '150px', textAlign: 'center' }}>Thời hạn còn lại</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {contracts.map((c, index) => {
-                        const isUrgent = c.daysRemaining <= 7;
-                        const isWarning = c.daysRemaining > 7 && c.daysRemaining <= 15;
-                        const badgeClass = isUrgent
-                          ? 'expiry-badge--urgent'
-                          : isWarning
-                          ? 'expiry-badge--warning'
-                          : 'expiry-badge--info';
+                <>
+                  {/* TC-02: hợp đồng đã quá ngày kết thúc nhưng chưa được đóng/gia hạn (vẫn ACTIVE)
+                      — khẩn cấp, luôn hiển thị bất kể khung thời gian rà soát đang chọn. */}
+                  {overdueContracts.length > 0 && (
+                    <div style={{ marginBottom: '16px' }}>
+                      <div className="alert-box alert-box--danger" role="alert" data-testid="expiry-overdue-alert">
+                        <span className="alert-box__icon">{ICONS.alertTriangle}</span>
+                        <div className="alert-box__content">
+                          <strong>
+                            CẢNH BÁO: {overdueContracts.length} hợp đồng đã hết hiệu lực nhưng chưa được đóng!
+                          </strong>
+                          <p>
+                            Các hợp đồng dưới đây đã qua ngày kết thúc nhưng vẫn ở trạng thái Đang hiệu lực —
+                            cần gia hạn hoặc đóng lại ngay, vì công việc phát sinh sau ngày này không còn căn
+                            cứ hợp đồng để xử lý.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="table-responsive">
+                        <table className="user-data-table" data-testid="expiring-contracts-overdue-table">
+                          <thead>
+                            <tr>
+                              <th style={{ width: '50px', textAlign: 'center' }}>#</th>
+                              <th style={{ width: '130px' }}>Mã hợp đồng</th>
+                              <th>Tên hợp đồng</th>
+                              <th style={{ width: '120px' }}>Ngày hết hạn</th>
+                              <th style={{ width: '170px', textAlign: 'center' }}>Tình trạng</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {overdueContracts.map((c, index) => (
+                              <tr key={c.contractId}>
+                                <td style={{ textAlign: 'center', color: '#6B6966' }}>{index + 1}</td>
+                                <td>
+                                  <span style={{ fontWeight: 500, fontFamily: 'monospace' }}>{c.contractCode}</span>
+                                </td>
+                                <td>
+                                  <span style={{ fontWeight: 500 }}>{c.name}</span>
+                                </td>
+                                <td>{formatDate(c.endDate)}</td>
+                                <td style={{ textAlign: 'center' }}>
+                                  <span className="expiry-badge expiry-badge--overdue">
+                                    <span className="icon-xs">{ICONS.alertTriangle}</span>
+                                    Đã hết hạn {Math.abs(c.daysRemaining)} ngày
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
 
-                        return (
-                          <tr key={c.contractId}>
-                            <td style={{ textAlign: 'center', color: '#6B6966' }}>{index + 1}</td>
-                            <td>
-                              <span style={{ fontWeight: 500, fontFamily: 'monospace' }}>
-                                {c.contractCode}
-                              </span>
-                            </td>
-                            <td>
-                              <span style={{ fontWeight: 500 }}>{c.name}</span>
-                            </td>
-                            <td>{formatDate(c.endDate)}</td>
-                            <td style={{ textAlign: 'center' }}>
-                              <span className={`expiry-badge ${badgeClass}`}>
-                                <span className="icon-xs">{isUrgent ? ICONS.alertTriangle : ICONS.clock}</span>
-                                {c.daysRemaining === 0 ? 'Hết hạn hôm nay' : `Còn ${c.daysRemaining} ngày`}
-                              </span>
-                            </td>
+                  {upcomingContracts.length === 0 ? (
+                    /* Trạng thái không có hợp đồng nào sắp hết hạn trong khung đã chọn */
+                    <div className="expiry-empty-state" data-testid="expiry-empty-state">
+                      <span className="expiry-empty-state__icon">{ICONS.checkCircle}</span>
+                      <p style={{ fontWeight: 600, color: '#2E7D32', margin: '4px 0' }}>
+                        Không có hợp đồng nào sắp hết hiệu lực trong vòng {days} ngày tới.
+                      </p>
+                      <p style={{ fontSize: '13px', color: '#6B6966', margin: 0 }}>
+                        Tất cả hợp đồng đang hiệu lực đều có thời hạn vượt quá mốc thời gian này.
+                      </p>
+                    </div>
+                  ) : (
+                    /* TC-01: Bảng danh sách hợp đồng sắp hết hạn */
+                    <div className="table-responsive">
+                      <table className="user-data-table" data-testid="expiring-contracts-table">
+                        <thead>
+                          <tr>
+                            <th style={{ width: '50px', textAlign: 'center' }}>#</th>
+                            <th style={{ width: '130px' }}>Mã hợp đồng</th>
+                            <th>Tên hợp đồng</th>
+                            <th style={{ width: '120px' }}>Ngày hết hạn</th>
+                            <th style={{ width: '150px', textAlign: 'center' }}>Thời hạn còn lại</th>
                           </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                        </thead>
+                        <tbody>
+                          {upcomingContracts.map((c, index) => {
+                            const isUrgent = c.daysRemaining <= 7;
+                            const isWarning = c.daysRemaining > 7 && c.daysRemaining <= 15;
+                            const badgeClass = isUrgent
+                              ? 'expiry-badge--urgent'
+                              : isWarning
+                              ? 'expiry-badge--warning'
+                              : 'expiry-badge--info';
+
+                            return (
+                              <tr key={c.contractId}>
+                                <td style={{ textAlign: 'center', color: '#6B6966' }}>{index + 1}</td>
+                                <td>
+                                  <span style={{ fontWeight: 500, fontFamily: 'monospace' }}>
+                                    {c.contractCode}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span style={{ fontWeight: 500 }}>{c.name}</span>
+                                </td>
+                                <td>{formatDate(c.endDate)}</td>
+                                <td style={{ textAlign: 'center' }}>
+                                  <span className={`expiry-badge ${badgeClass}`}>
+                                    <span className="icon-xs">{isUrgent ? ICONS.alertTriangle : ICONS.clock}</span>
+                                    {c.daysRemaining === 0 ? 'Hết hạn hôm nay' : `Còn ${c.daysRemaining} ngày`}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}

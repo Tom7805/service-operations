@@ -67,7 +67,43 @@ describe('ContractExpiryReminderModal (NCL-04-CN-006)', () => {
     expect(screen.getByText('Còn 19 ngày')).toBeInTheDocument();
   });
 
-  it('TC-02: hiển thị trạng thái rỗng khi không có hợp đồng nào sắp hết hạn', async () => {
+  it('TC-02: hợp đồng đã hết hiệu lực nhưng vẫn ACTIVE hiện ở banner khẩn cấp riêng, tách khỏi bảng sắp hết hạn', async () => {
+    vi.mocked(contractsApi.fetchExpiringContracts).mockResolvedValue([
+      {
+        contractId: 3,
+        contractCode: 'HD-0003',
+        name: 'Hợp đồng Tư vấn',
+        customerId: 10,
+        endDate: '2026-08-20',
+        daysRemaining: -10,
+      },
+      ...mockExpiringContracts,
+    ]);
+
+    render(
+      <ContractExpiryReminderModal
+        isOpen
+        onClose={vi.fn()}
+        currentUserRoles={['VT-05']}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('expiry-overdue-alert')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/1 hợp đồng đã hết hiệu lực nhưng chưa được đóng/i)).toBeInTheDocument();
+    const overdueTable = screen.getByTestId('expiring-contracts-overdue-table');
+    expect(overdueTable).toHaveTextContent('HD-0003');
+    expect(overdueTable).toHaveTextContent('Đã hết hạn 10 ngày');
+
+    // Hợp đồng sắp hết hạn (chưa quá hạn) vẫn hiển thị ở bảng riêng như cũ.
+    const upcomingTable = screen.getByTestId('expiring-contracts-table');
+    expect(upcomingTable).toHaveTextContent('HD-0001');
+    expect(upcomingTable).not.toHaveTextContent('HD-0003');
+  });
+
+  it('hiển thị trạng thái rỗng khi không có hợp đồng nào sắp hết hạn', async () => {
     vi.mocked(contractsApi.fetchExpiringContracts).mockResolvedValue([]);
 
     render(

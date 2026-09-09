@@ -59,6 +59,8 @@ class ContractExpiryReminderServiceTest {
 		LocalDate today = LocalDate.now();
 		Contract soonest = contract(1L, "HD-0001", today.plusDays(5));
 		Contract later = contract(2L, "HD-0002", today.plusDays(20));
+		when(contractRepository.findByStatusAndEndDateBefore(eq(ContractStatus.ACTIVE), eq(today)))
+				.thenReturn(List.of());
 		when(contractRepository.findByStatusAndEndDateBetween(
 				eq(ContractStatus.ACTIVE), eq(today), eq(today.plusDays(30))))
 				.thenReturn(List.of(later, soonest));
@@ -70,8 +72,29 @@ class ContractExpiryReminderServiceTest {
 	}
 
 	@Test
+	@DisplayName("TC-02: hop dong da qua ngay ket thuc nhung van ACTIVE thi khan cap - luon co mat bat ke withinDays")
+	void listsAlreadyExpiredContractsRegardlessOfWindow() {
+		LocalDate today = LocalDate.now();
+		Contract overdue = contract(3L, "HD-0003", today.minusDays(10));
+		Contract soon = contract(1L, "HD-0001", today.plusDays(5));
+		when(contractRepository.findByStatusAndEndDateBefore(eq(ContractStatus.ACTIVE), eq(today)))
+				.thenReturn(List.of(overdue));
+		when(contractRepository.findByStatusAndEndDateBetween(
+				eq(ContractStatus.ACTIVE), eq(today), eq(today.plusDays(30))))
+				.thenReturn(List.of(soon));
+
+		List<ContractExpiryAlertRes> result = service.findExpiringSoon(30);
+
+		// Hop dong qua han xep truoc vi ngay ket thuc som hon, va daysRemaining la so am.
+		assertThat(result).extracting(ContractExpiryAlertRes::contractId).containsExactly(3L, 1L);
+		assertThat(result.get(0).daysRemaining()).isEqualTo(-10);
+		assertThat(result.get(1).daysRemaining()).isEqualTo(5);
+	}
+
+	@Test
 	@DisplayName("Khong co hop dong nao sap het han thi tra ve danh sach rong")
 	void returnsEmptyWhenNoneExpiring() {
+		when(contractRepository.findByStatusAndEndDateBefore(any(), any())).thenReturn(List.of());
 		when(contractRepository.findByStatusAndEndDateBetween(any(), any(), any())).thenReturn(List.of());
 
 		assertThat(service.findExpiringSoon(30)).isEmpty();
