@@ -18,6 +18,7 @@ import com.serviceops.modules.project.service.TaskService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -57,6 +58,14 @@ public class WorkPackageController {
 			@Valid @RequestBody TaskCreateReq request) {
 		return BaseRes.ok("Tao cong viec thanh cong",
 				workPackageService.createTask(projectId, workPackageId, request));
+	}
+
+	/** NCL-05-CN-007 / TC-02: xoa hang muc khong con can; cay du an thay doi, mau goc giu nguyen. */
+	@DeleteMapping("/work-packages/{workPackageId}")
+	@PreAuthorize("hasRole('VT-02')")
+	public BaseRes<Void> deleteWorkPackage(@PathVariable Long projectId, @PathVariable Long workPackageId) {
+		workPackageService.deleteWorkPackage(projectId, workPackageId);
+		return BaseRes.ok("Xoa hang muc thanh cong", null);
 	}
 
 	@PutMapping("/tasks/{taskId}/assignments")

@@ -1718,6 +1718,77 @@ loại hợp đồng (`projectType`) và hạn mức (`limitValue`) tại thời
 | 400 | `INVALID_STATE` | Hợp đồng không `ACTIVE`, đã quá hạn, hoặc ngày kết thúc dự kiến sớm hơn ngày bắt đầu |
 | 400 | `VALIDATION_ERROR` | Thiếu tên, ngày bắt đầu, ngày kết thúc dự kiến hoặc người quản lý dự án |
 
+### `NCL-05-CN-007` — Tạo dự án từ mẫu công việc
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`) — vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối
+(TC-03). Người dùng chọn một **mẫu dự án** đang hoạt động (cây hạng mục + công việc có sẵn kèm ngân sách giờ
+gợi ý) để tạo dự án mới từ hợp đồng còn hiệu lực. Hệ thống **sao chép giá trị** (copy-value) từ mẫu sang cây
+công việc của dự án: sau khi tạo, sửa/xóa hạng mục trên dự án **không** ảnh hưởng đến mẫu gốc (TC-02). Dự án
+mới ở trạng thái `RUNNING`, kế thừa `customerId`, `projectType`, `limitValue` từ hợp đồng. Tạo thành công ghi
+một dòng `CREATE_FROM_TEMPLATE` vào `project_audit_logs` — người thực hiện, nội dung, thời điểm (TC-04);
+Frontend không cần gọi API nào thêm để ghi log này.
+
+#### `GET /contracts/{contractId}/projects/from-template`
+
+Trả về danh sách mẫu dự án đang hoạt động để người dùng chọn. Chỉ `VT-02`.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": 5,
+      "code": "MT-PHAN-MEM",
+      "name": "Mau trien khai phan mem",
+      "description": "Cay hang muc chuan cho du an trien khai phan mem",
+      "projectType": "FIXED_PRICE",
+      "active": true,
+      "createdBy": "admin",
+      "createdAt": "2026-09-01T08:00:00"
+    }
+  ]
+}
+```
+
+#### `POST /contracts/{contractId}/projects/from-template`
+
+```json
+{
+  "templateId": 5,
+  "name": "Du an ERP Cong ty TNHH ABC",
+  "startDate": "2027-01-01",
+  "expectedEndDate": "2027-12-31",
+  "projectManagerId": 7
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `templateId` | number | có | Id mẫu dự án đang hoạt động |
+| `name` | string | có | Tên dự án mới, không được rỗng |
+| `startDate` | string (`date`) | có | Ngày bắt đầu dự án; công việc trong cây nhận giá trị này làm ngày dự kiến |
+| `expectedEndDate` | string (`date`) | có | Không được sớm hơn `startDate` |
+| `projectManagerId` | number | có | Người dùng đang hoạt động được giao quản lý dự án |
+
+**Response thành công — `200 OK`:** giống `POST /contracts/{contractId}/projects` (`NCL-05-CN-001`) — object
+dự án vừa tạo trong `data`.
+
+**Xóa hạng mục của dự án (TC-02):** `DELETE /projects/{projectId}/work-packages/{workPackageId}` — chỉ
+`VT-02`. Chỉ xóa được hạng mục **không còn hạng mục con và không còn công việc**, khi dự án chưa đóng.
+Thành công trả `200 OK` với `message = "Xoa hang muc thanh cong"`; vi phạm trả `400 INVALID_STATE`.
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải `VT-02`; hệ thống ghi nhật ký lần từ chối |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng, mẫu dự án hoặc người quản lý |
+| 400 | `INVALID_STATE` | Hợp đồng không `ACTIVE`/đã quá hạn, mẫu không hoạt động, ngày kết thúc sớm hơn ngày bắt đầu, hoặc hạng mục không xóa được |
+| 400 | `VALIDATION_ERROR` | Thiếu trường bắt buộc |
+
+## Epic `NCL-04` — Quản lý hợp đồng
 ## Epic `NCL-04` — Quản lý hợp đồng
 
 ### `NCL-04-CN-001` — Tạo hợp đồng từ cơ hội đã thắng

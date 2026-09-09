@@ -34,6 +34,21 @@ public class ProjectAuditLogger {
 		repository.save(audit);
 	}
 
+	/** NCL-05-CN-007 / TC-04: ghi nhat ky khi tao du an tu mau (nguoi thuc hien, noi dung, thoi diem). */
+	public void recordCreateFromTemplate(Long projectId, Long contractId, String templateCode, String detail) {
+		ProjectAuditLog audit = new ProjectAuditLog();
+		audit.setProjectId(projectId);
+		audit.setContractId(contractId);
+		audit.setActionType(ProjectAuditAction.CREATE_FROM_TEMPLATE);
+		audit.setDetail(detail + " (mau: " + templateCode + ")");
+		Long actorId = currentUserScopeProvider.currentUserId();
+		audit.setActorId(actorId == null ? 0L : actorId);
+		audit.setActorUsername(currentUsername());
+		audit.setActorRole(currentRole());
+		audit.setCreatedAt(LocalDateTime.now());
+		repository.save(audit);
+	}
+
 	public void recordProgressUpdate(Long projectId, Long taskId, TaskStatus previousStatus, TaskStatus newStatus) {
 		ProjectAuditLog audit = new ProjectAuditLog();
 		audit.setProjectId(projectId);

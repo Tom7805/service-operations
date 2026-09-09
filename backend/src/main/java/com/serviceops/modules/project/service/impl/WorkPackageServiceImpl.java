@@ -82,6 +82,25 @@ public class WorkPackageServiceImpl implements WorkPackageService {
 	}
 
 	@Override
+	public void deleteWorkPackage(Long projectId, Long workPackageId) {
+		requireOpenProject(projectId);
+		WorkPackage item = workPackageRepository.findById(workPackageId)
+				.filter(pack -> pack.getProjectId().equals(projectId))
+				.orElseThrow(() -> notFound("Khong tim thay hang muc thuoc du an"));
+		if (!workPackageRepository.findByProjectIdOrderBySortOrderAscIdAsc(projectId).stream()
+				.filter(pack -> workPackageId.equals(pack.getParentId())).toList().isEmpty()) {
+			throw new BusinessRuleException(ErrorCode.INVALID_STATE,
+					"Khong the xoa hang muc dang chua hang muc con");
+		}
+		if (!taskRepository.findByProjectIdOrderByIdAsc(projectId).stream()
+				.filter(task -> workPackageId.equals(task.getWorkPackageId())).toList().isEmpty()) {
+			throw new BusinessRuleException(ErrorCode.INVALID_STATE,
+					"Khong the xoa hang muc dang chua cong viec");
+		}
+		workPackageRepository.delete(item);
+	}
+
+	@Override
 	@Transactional(readOnly = true)
 	public List<WorkBreakdownRes> getWorkBreakdown(Long projectId) {
 		requireProject(projectId);
