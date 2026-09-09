@@ -11,6 +11,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Service
@@ -44,6 +45,24 @@ public class ProjectAuditLogger {
 		audit.setActorRole(currentRole());
 		audit.setCreatedAt(LocalDateTime.now());
 		repository.save(audit);
+	}
+
+	public void recordBudgetUpdate(Long projectId, Long taskId, BigDecimal previousBudget, BigDecimal newBudget) {
+		ProjectAuditLog audit = new ProjectAuditLog();
+		audit.setProjectId(projectId);
+		audit.setActionType(ProjectAuditAction.TASK_BUDGET_UPDATED);
+		audit.setDetail("Cong viec #" + taskId + ": ngan sach gio " + formatHours(previousBudget) + " -> "
+				+ formatHours(newBudget));
+		Long actorId = currentUserScopeProvider.currentUserId();
+		audit.setActorId(actorId == null ? 0L : actorId);
+		audit.setActorUsername(currentUsername());
+		audit.setActorRole(currentRole());
+		audit.setCreatedAt(LocalDateTime.now());
+		repository.save(audit);
+	}
+
+	private String formatHours(BigDecimal hours) {
+		return hours == null ? "chua dat" : hours.toPlainString();
 	}
 
 	private String currentUsername() {

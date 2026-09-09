@@ -2345,3 +2345,74 @@ vào `project_audit_logs` — người thực hiện, nội dung (trạng thái 
 - Sau khi đổi trạng thái thành công, làm mới lại cây `GET /projects/{projectId}/work-breakdown` (hoặc cập nhật
   optimistic ngay trên bảng đang hiển thị) để phản ánh đúng bảng theo dõi dự án.
 - Không cần gọi thêm API nào để ghi lịch sử — mỗi lần đổi trạng thái backend tự ghi vào nhật ký dự án.
+
+---
+
+### `NCL-05-CN-005` — Đặt ngân sách giờ công cho công việc
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`). Gọi lại nhiều lần sẽ **ghi đè** ngân sách hiện tại (không cộng dồn).
+Ngoài `budgetHours` do người dùng nhập, mỗi công việc có `approvedHours` (giờ công đã duyệt, chưa có nguồn dữ liệu
+thật vì Epic `NCL-06` — Bảng chấm công — chưa triển khai; hiện luôn là `0` cho tới khi giờ công được duyệt).
+`usageRatio = approvedHours / budgetHours`; **`overBudgetWarning = true` khi `usageRatio >= 0.80`** (QTN-20).
+Mỗi lần đặt/đổi ngân sách ghi một dòng `TASK_BUDGET_UPDATED` vào `project_audit_logs` — người thực hiện, nội dung
+(ngân sách cũ → mới), thời điểm (TC-04).
+
+#### `PUT /projects/{projectId}/tasks/{taskId}/budget`
+
+```json
+{ "budgetHours": 40 }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `budgetHours` | number | có | Số giờ ngân sách, phải lớn hơn `0`. |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Dat ngan sach gio cong thanh cong",
+  "data": {
+    "taskId": 20,
+    "projectId": 1,
+    "budgetHours": 40,
+    "approvedHours": 0,
+    "usageRatio": 0,
+    "overBudgetWarning": false
+  }
+}
+```
+
+Ví dụ khi công việc đã có `34` giờ được duyệt trên ngân sách `40` giờ (TC-02):
+
+```json
+{
+  "success": true,
+  "message": "Dat ngan sach gio cong thanh cong",
+  "data": {
+    "taskId": 20,
+    "projectId": 1,
+    "budgetHours": 40,
+    "approvedHours": 34,
+    "usageRatio": 0.85,
+    "overBudgetWarning": true
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Thiếu `budgetHours` hoặc `budgetHours <= 0`. |
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-02` — hệ thống ghi nhật ký lần từ chối (TC-03). |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại dự án hoặc công việc thuộc dự án đó. |
+
+**Lưu ý cho Frontend:**
+- `usageRatio` là phân số `0.0`–`1.0+` (không phải phần trăm) — nhân `100` khi hiển thị (`85%`).
+- Khi `overBudgetWarning = true`, hiển thị cảnh báo nổi bật (ví dụ tô đỏ thanh tiến độ giờ công) ngay trên màn
+  hình chi tiết công việc — không cần đợi người dùng tải lại trang, vì cờ này luôn được trả trong response.
+- `approvedHours` hiện luôn `0` cho tới khi tính năng chấm công (`NCL-06`) đi vào hoạt động; Frontend vẫn nên
+  dựng sẵn UI hiển thị tỷ lệ ngay từ bây giờ vì hợp đồng response không đổi khi `approvedHours` bắt đầu có dữ liệu.

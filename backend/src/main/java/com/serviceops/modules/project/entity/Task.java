@@ -10,6 +10,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -35,6 +36,10 @@ public class Task extends BaseEntity {
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, columnDefinition = "VARCHAR(30)")
 	private TaskStatus status = TaskStatus.TODO;
+	@Column(name = "budget_hours", precision = 10, scale = 2)
+	private BigDecimal budgetHours;
+	@Column(name = "approved_hours", nullable = false, precision = 10, scale = 2)
+	private BigDecimal approvedHours = BigDecimal.ZERO;
 	@Column(name = "created_by", length = 100)
 	private String createdBy;
 	@Column(name = "created_at", nullable = false)
