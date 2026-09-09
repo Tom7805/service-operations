@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { CSSProperties } from 'react';
 import { ICONS } from './icons';
 
@@ -24,6 +25,7 @@ interface RowActionsMenuProps {
 const VIEWPORT_MARGIN = 8; // luôn chừa mép màn hình
 const ITEM_HEIGHT = 40; // ước lượng chiều cao một mục (padding + chữ)
 const PANEL_PADDING = 12; // đệm trên+dưới của panel
+const GAP = 4; // khoảng cách panel ↔ nút ⋮
 
 /**
  * Menu thao tác theo dòng (⋮) — mẫu CHUẨN cho mọi bảng dữ liệu trong hệ.
@@ -33,23 +35,24 @@ const PANEL_PADDING = 12; // đệm trên+dưới của panel
  * ngang — thứ khan hiếm nhất trong bảng dữ liệu — vừa buộc người dùng đoán
  * nghĩa từng icon; menu gộp cho phép hiện NHÃN CHỮ đầy đủ.
  *
- * Panel bung ra dùng `position: fixed` và toạ độ tính từ nút ⋮ lúc mở — nhờ vậy
- * KHÔNG bị `overflow: hidden` của thẻ bảng (dùng để bo góc) cắt cụt khi dòng nằm
- * ở cuối bảng/cuối trang. Panel tự chọn bung xuống hay lên trên tuỳ khoảng trống
- * thật của khung nhìn, và có `max-height` + cuộn trong nếu quá cao.
+ * Panel được render bằng React portal thẳng vào <body> và định vị `position: fixed`
+ * theo toạ độ nút ⋮ lúc mở. Nhờ vậy nó KHÔNG bị `overflow: hidden` của thẻ bảng
+ * (dùng để bo góc) cắt cụt, cũng không bị "kẹt" trong ngữ cảnh xếp chồng / containing
+ * block do animation/transform của khối cha tạo ra — đây là lý do trước đây panel
+ * mở ở dòng cuối bảng bị che mất gần hết. Panel tự chọn bung lên/xuống theo khoảng
+ * trống khung nhìn và có `max-height` + cuộn trong nếu quá cao.
  */
 export const RowActionsMenu: React.FC<RowActionsMenuProps> = ({ actions, ariaLabel = 'Thao tác' }) => {
   const [open, setOpen] = useState(false);
   const [openUpward, setOpenUpward] = useState(false);
-  const [panelStyle, setPanelStyle] = useState<CSSProperties>({});
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [panelStyle, setPanelStyle] = useState<CSSProperties>({ position: 'fixed', visibility: 'hidden' });
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const positionPanel = useCallback(() => {
     const btn = triggerRef.current;
     if (!btn) return;
     const rect = btn.getBoundingClientRect();
-    const gap = 4;
     const estimatedHeight = actions.length * ITEM_HEIGHT + PANEL_PADDING;
     const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_MARGIN;
     const spaceAbove = rect.top - VIEWPORT_MARGIN;
@@ -60,11 +63,11 @@ export const RowActionsMenu: React.FC<RowActionsMenuProps> = ({ actions, ariaLab
       position: 'fixed',
       // Neo mép phải panel theo mép phải nút ⋮ (menu vốn canh phải).
       right: Math.max(VIEWPORT_MARGIN, Math.round(window.innerWidth - rect.right)),
-      // Không bao giờ để panel co về 0 — nếu chật quá thì cho cuộn trong.
-      maxHeight: Math.max(140, (up ? spaceAbove : spaceBelow) - gap),
+      // Không để panel co về 0 — nếu chật quá thì cho cuộn trong.
+      maxHeight: Math.max(160, Math.round((up ? spaceAbove : spaceBelow) - GAP)),
     };
-    if (up) style.bottom = Math.round(window.innerHeight - rect.top + gap);
-    else style.top = Math.round(rect.bottom + gap);
+    if (up) style.bottom = Math.round(window.innerHeight - rect.top + GAP);
+    else style.top = Math.round(rect.bottom + GAP);
 
     setOpenUpward(up);
     setPanelStyle(style);
@@ -73,14 +76,15 @@ export const RowActionsMenu: React.FC<RowActionsMenuProps> = ({ actions, ariaLab
   // Đo & đặt vị trí ngay trước khi trình duyệt vẽ, tránh nhấp nháy ở góc cũ.
   useLayoutEffect(() => {
     if (open) positionPanel();
+    else setPanelStyle({ position: 'fixed', visibility: 'hidden' });
   }, [open, positionPanel]);
 
   useEffect(() => {
     if (!open) return;
+    const isInside = (node: Node) =>
+      !!triggerRef.current?.contains(node) || !!panelRef.current?.contains(node);
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
+      if (!isInside(event.target as Node)) setOpen(false);
     };
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setOpen(false);
@@ -99,8 +103,36 @@ export const RowActionsMenu: React.FC<RowActionsMenuProps> = ({ actions, ariaLab
     };
   }, [open, positionPanel]);
 
+  const panel = (
+    <div
+      ref={panelRef}
+      className={`row-menu__panel row-menu__panel--open ${openUpward ? 'row-menu__panel--up' : ''}`}
+      role="menu"
+      style={panelStyle}
+    >
+      {actions.map((action) => (
+        <button
+          key={action.key}
+          type="button"
+          role="menuitem"
+          data-testid={action.testId}
+          className={`row-menu__item ${action.tone === 'danger' ? 'row-menu__item--danger' : ''}`}
+          title={action.disabled ? action.disabledReason ?? action.label : action.label}
+          disabled={action.disabled}
+          onClick={() => {
+            setOpen(false);
+            action.onClick();
+          }}
+        >
+          <span className="row-menu__icon">{action.icon}</span>
+          {action.label}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
-    <div className="row-menu" ref={containerRef}>
+    <div className="row-menu">
       <button
         ref={triggerRef}
         type="button"
@@ -112,33 +144,9 @@ export const RowActionsMenu: React.FC<RowActionsMenuProps> = ({ actions, ariaLab
       >
         {ICONS.more}
       </button>
-      {/* Chỉ dựng nội dung menu KHI MỞ — bảng 25 dòng trước đây dựng sẵn 125 mục +
-          125 SVG ẩn, chiếm 72% tổng SVG của trang và gây tác vụ dài khi mở. */}
-      <div
-        className={`row-menu__panel ${open ? 'row-menu__panel--open' : ''} ${openUpward ? 'row-menu__panel--up' : ''}`}
-        role="menu"
-        style={open ? panelStyle : undefined}
-      >
-        {open &&
-          actions.map((action) => (
-            <button
-              key={action.key}
-              type="button"
-              role="menuitem"
-              data-testid={action.testId}
-              className={`row-menu__item ${action.tone === 'danger' ? 'row-menu__item--danger' : ''}`}
-              title={action.disabled ? action.disabledReason ?? action.label : action.label}
-              disabled={action.disabled}
-              onClick={() => {
-                setOpen(false);
-                action.onClick();
-              }}
-            >
-              <span className="row-menu__icon">{action.icon}</span>
-              {action.label}
-            </button>
-          ))}
-      </div>
+      {/* Chỉ dựng nội dung menu KHI MỞ, và render thẳng vào <body> để thoát mọi
+          overflow:hidden / containing-block của khối cha. */}
+      {open && typeof document !== 'undefined' && createPortal(panel, document.body)}
     </div>
   );
 };
