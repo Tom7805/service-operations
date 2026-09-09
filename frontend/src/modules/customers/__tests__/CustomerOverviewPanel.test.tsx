@@ -18,11 +18,10 @@ vi.mock('../api/customersApi', () => ({
 
 vi.mock('../../contracts/api/contractsApi', () => ({
   getContract: vi.fn(),
-  updateTypeAndLimit: vi.fn(),
   getContractUsage: vi.fn(),
   fetchContractUsage: vi.fn(),
-  fetchExpiringContracts: vi.fn(),
-  getExpiringContracts: vi.fn(),
+  createAppendix: vi.fn(),
+  fetchAppendices: vi.fn(),
   createRenewal: vi.fn(),
   fetchRenewals: vi.fn(),
   ContractsApiError: class extends Error {
@@ -201,73 +200,11 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
     expect(customersApi.fetchCustomerOverview).toHaveBeenCalledTimes(2);
   });
 
-  describe('NCL-04-CN-002: Khai báo loại hợp đồng và hạn mức (Kế toán VT-05)', () => {
-    it('nút khai báo chỉ hiện ở nhóm Hợp đồng, không hiện ở các nhóm khác', async () => {
-      vi.mocked(customersApi.fetchCustomerOverview).mockResolvedValue(fullOverview);
-
-      render(<CustomerOverviewPanel customerId={10} customerName="Công ty Cổ phần Alpha" currentUserRoles={['VT-05']} />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('customer-summary-panel')).toBeInTheDocument();
-      });
-
-      expect(
-        within(screen.getByTestId('customer-summary-section-contracts')).getByRole('button', {
-          name: /Khai báo loại & hạn mức/i,
-        })
-      ).toBeInTheDocument();
-
-      for (const key of ['opportunities', 'projects', 'invoices', 'receivables']) {
-        expect(
-          within(screen.getByTestId(`customer-summary-section-${key}`)).queryByRole('button', {
-            name: /Khai báo loại & hạn mức/i,
-          })
-        ).toBeNull();
-      }
-    });
-
-    it('bấm nút thì nạp đúng dữ liệu hợp đồng hiện tại rồi mở modal khai báo (không dùng giá trị mặc định sai)', async () => {
-      vi.mocked(customersApi.fetchCustomerOverview).mockResolvedValue(fullOverview);
-      vi.mocked(contractsApi.getContract).mockResolvedValue(fullContract);
-
-      render(<CustomerOverviewPanel customerId={10} customerName="Công ty Cổ phần Alpha" currentUserRoles={['VT-05']} />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('customer-summary-panel')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: /Khai báo loại & hạn mức/i }));
-
-      expect(contractsApi.getContract).toHaveBeenCalledWith(2);
-
-      await waitFor(() => {
-        expect(screen.getByLabelText(/Loại hợp đồng/i)).toHaveValue('MAINTENANCE');
-      });
-      expect(screen.getByLabelText(/Hạn mức/i)).toHaveValue(500_000_000);
-      expect(screen.getByLabelText(/Giá trị hợp đồng/i)).toHaveValue(480_000_000);
-    });
-
-    it('hiển thị lỗi khi tải chi tiết hợp đồng thất bại, không mở modal', async () => {
-      vi.mocked(customersApi.fetchCustomerOverview).mockResolvedValue(fullOverview);
-      vi.mocked(contractsApi.getContract).mockRejectedValue(
-        new contractsApi.ContractsApiError('RESOURCE_NOT_FOUND', 'Không tìm thấy hợp đồng.', 404)
-      );
-
-      render(<CustomerOverviewPanel customerId={10} customerName="Công ty Cổ phần Alpha" currentUserRoles={['VT-05']} />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('customer-summary-panel')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByRole('button', { name: /Khai báo loại & hạn mức/i }));
-
-      await waitFor(() => {
-        expect(screen.getByText('Không tìm thấy hợp đồng.')).toBeInTheDocument();
-      });
-      expect(screen.queryByLabelText(/Loại hợp đồng/i)).toBeNull();
-    });
-
-    it('NCL-04-CN-005: nút "Cảnh báo hạn mức" hiển thị cho VT-02 và VT-05, bấm nút mở modal ngay (không đòi quyền của GET /contracts/{id})', async () => {
+  describe('NCL-04-CN-005: Cảnh báo hạn mức từ hồ sơ khách hàng (Quản lý dự án VT-02)', () => {
+    // Khai báo loại/hạn mức, mốc thanh toán, kích hoạt và nhắc gia hạn (chỉ Kế toán VT-05)
+    // đã chuyển sang màn hình "Hợp đồng" riêng — Kế toán không vào được hồ sơ khách hàng.
+    // Xem ContractListPage.test.tsx.
+    it('nút "Cảnh báo hạn mức" hiển thị cho VT-02, bấm nút mở modal ngay (không đòi quyền của GET /contracts/{id})', async () => {
       vi.mocked(customersApi.fetchCustomerOverview).mockResolvedValue(fullOverview);
       vi.mocked(contractsApi.getContractUsage).mockResolvedValue({
         contractId: 2,
@@ -307,34 +244,18 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
       expect(screen.getByTestId('limit-alert-near')).toBeInTheDocument();
     });
 
-    it('NCL-04-CN-006: nút "Nhắc hợp đồng sắp hết hạn" hiển thị cho VT-05 và bấm nút mở modal nhắc hạn', async () => {
+    it('không hiển thị các nút chỉ dành cho Kế toán (VT-05) trong hồ sơ khách hàng', async () => {
       vi.mocked(customersApi.fetchCustomerOverview).mockResolvedValue(fullOverview);
-      vi.mocked(contractsApi.fetchExpiringContracts).mockResolvedValue([
-        {
-          contractId: 1,
-          contractCode: 'HD-0001',
-          name: 'Hợp đồng ERP',
-          customerId: 10,
-          endDate: '2026-09-15',
-          daysRemaining: 6,
-        },
-      ]);
 
-      render(<CustomerOverviewPanel customerId={10} customerName="Công ty Cổ phần Alpha" currentUserRoles={['VT-05']} />);
+      render(<CustomerOverviewPanel customerId={10} customerName="Công ty Cổ phần Alpha" currentUserRoles={['VT-02']} />);
 
       await waitFor(() => {
         expect(screen.getByTestId('customer-summary-panel')).toBeInTheDocument();
       });
 
-      const reminderBtn = screen.getByRole('button', { name: /Nhắc hợp đồng sắp hết hạn/i });
-      expect(reminderBtn).toBeInTheDocument();
-
-      fireEvent.click(reminderBtn);
-
-      await waitFor(() => {
-        expect(screen.getByText(/Nhắc hợp đồng sắp hết hiệu lực/i)).toBeInTheDocument();
-      });
-      expect(contractsApi.fetchExpiringContracts).toHaveBeenCalledWith(30);
+      expect(screen.queryByRole('button', { name: /Khai báo loại & hạn mức/i })).toBeNull();
+      expect(screen.queryByRole('button', { name: /Mốc thanh toán/i })).toBeNull();
+      expect(screen.queryByRole('button', { name: /Nhắc hợp đồng sắp hết hạn/i })).toBeNull();
     });
   });
 

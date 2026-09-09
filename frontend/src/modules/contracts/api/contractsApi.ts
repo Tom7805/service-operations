@@ -72,6 +72,18 @@ export type ContractAppendixRes = {
   createdAt: string;
 };
 
+/**
+ * GET /contracts — danh sách toàn bộ hợp đồng cho màn hình "Hợp đồng" dành riêng
+ * cho Kế toán (VT-05): lối vào để khai báo loại/hạn mức, mốc thanh toán, kích hoạt
+ * mà không phải đi qua hồ sơ tổng hợp khách hàng (chỉ VT-04/VT-02 mở được).
+ * Vai trò khác nhận 403 (NCL-04-CN-002).
+ */
+export async function fetchContracts(): Promise<ContractRes[]> {
+  return requestBackend<ContractRes[]>(`${API_BASE_URL}/contracts`, {
+    method: 'GET',
+  });
+}
+
 /** GET /contracts/{contractId} — nạp giá trị hiện tại trước khi khai báo loại/hạn mức. */
 export async function getContract(contractId: number): Promise<ContractRes> {
   return requestBackend<ContractRes>(`${API_BASE_URL}/contracts/${contractId}`, {
@@ -205,6 +217,7 @@ export async function fetchRenewals(contractId: number): Promise<RenewalRes[]> {
 }
 
 export default {} as unknown as {
+  fetchContracts: typeof fetchContracts;
   getContract: typeof getContract;
   updateTypeAndLimit: typeof updateTypeAndLimit;
   createAppendix: typeof createAppendix;

@@ -36,6 +36,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -175,6 +176,33 @@ void deniesAccountingRoleFromCreatingAppendix() throws Exception {
 	mockMvc.perform(post("/contracts/5/appendices")
 				.contentType("application/json")
 				.content("{\"content\":\"Dieu chinh\",\"adjustmentValue\":1000000,\"effectiveDate\":\"2026-10-01\"}"))
+			.andExpect(status().isForbidden())
+			.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+}
+
+@Test
+@DisplayName("NCL-04-CN-002: Ke toan (VT-05) xem duoc danh sach hop dong qua GET /contracts")
+@WithMockUser(authorities = "ROLE_VT-05")
+void allowsAccountingRoleToListContracts() throws Exception {
+	when(contractService.listAll()).thenReturn(java.util.List.of(new ContractRes(
+			5L, "HD-4K7X2Q9", "Hop dong ERP", 1L, 1L, "Cong ty TNHH ABC", 30L,
+			"TIME_AND_MATERIAL", new BigDecimal("500000000"), new BigDecimal("600000000"),
+			LocalDate.of(2026, 10, 1), LocalDate.of(2027, 9, 30), "DRAFT",
+			null, "ketoan01", LocalDateTime.now())));
+
+	mockMvc.perform(get("/contracts"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data[0].contractCode").value("HD-4K7X2Q9"))
+			.andExpect(jsonPath("$.data[0].customerName").value("Cong ty TNHH ABC"));
+
+	verify(contractService).listAll();
+}
+
+@Test
+@DisplayName("NCL-04-CN-002: vai tro khac Ke toan bi tu choi 403 khi goi GET /contracts")
+@WithMockUser(authorities = "ROLE_VT-04")
+void deniesNonAccountingRoleFromListingContracts() throws Exception {
+	mockMvc.perform(get("/contracts"))
 			.andExpect(status().isForbidden())
 			.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
 }

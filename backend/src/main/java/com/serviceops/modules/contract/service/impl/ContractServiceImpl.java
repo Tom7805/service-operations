@@ -30,6 +30,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Nghiep vu tao hop dong tu co hoi da thang (NCL-04-CN-001, QTN-08).
@@ -128,6 +133,24 @@ public class ContractServiceImpl implements ContractService {
 				.map(Customer::getName)
 				.orElse(null);
 		return contractMapper.toResponse(contract, customerName);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<ContractRes> listAll() {
+		List<Contract> contracts = contractRepository.findAllByOrderByCreatedAtDesc();
+
+		// Nap ten khach hang mot lan cho ca danh sach (tranh N+1 khi bang hop dong lon).
+		Set<Long> customerIds = contracts.stream()
+				.map(Contract::getCustomerId)
+				.filter(Objects::nonNull)
+				.collect(Collectors.toSet());
+		Map<Long, String> customerNames = customerRepository.findAllById(customerIds).stream()
+				.collect(Collectors.toMap(Customer::getId, Customer::getName));
+
+		return contracts.stream()
+				.map(c -> contractMapper.toResponse(c, customerNames.get(c.getCustomerId())))
+				.toList();
 	}
 
 	@Override

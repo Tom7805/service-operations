@@ -8,15 +8,11 @@ import type {
 } from '../types/customerTypes';
 import { roleLabels } from '../../../utils/roleLabel';
 import { ICONS } from '../../../components/common/icons';
-import ContractTypeLimitModal from '../../contracts/components/ContractTypeLimitModal';
-import ContractMilestonesModal from '../../contracts/components/ContractMilestonesModal';
 import ContractAppendixModal from '../../contracts/components/ContractAppendixModal';
 import ContractLimitAlert, { type ContractLimitAlertTarget } from '../../contracts/components/ContractLimitAlert';
-import ContractExpiryReminderModal from '../../contracts/components/ContractExpiryReminderModal';
 import RenewalModal from '../../contracts/components/RenewalModal';
-import { getContract, activateContract, ContractsApiError } from '../../contracts/api/contractsApi';
+import { getContract, ContractsApiError } from '../../contracts/api/contractsApi';
 import type { ContractRes } from '../../contracts/types/contractTypes';
-import { t } from '../../../i18n';
 
 interface CustomerOverviewPanelProps {
   customerId: number;
@@ -88,30 +84,25 @@ export default function CustomerOverviewPanel({
   const onLoadedRef = useRef(onLoaded);
   onLoadedRef.current = onLoaded;
 
-  const [isTypeLimitOpen, setIsTypeLimitOpen] = useState(false);
-  const [isMilestonesOpen, setIsMilestonesOpen] = useState(false);
   const [isAppendixOpen, setIsAppendixOpen] = useState(false);
   const [isLimitAlertOpen, setIsLimitAlertOpen] = useState(false);
-  const [isExpiringReminderOpen, setIsExpiringReminderOpen] = useState(false);
   const [isRenewalOpen, setIsRenewalOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<ContractRes | null>(null);
   const [limitAlertTarget, setLimitAlertTarget] = useState<ContractLimitAlertTarget | null>(null);
   const [isContractLoading, setIsContractLoading] = useState(false);
   const [contractLoadError, setContractLoadError] = useState<string | null>(null);
-  const [activatingContractId, setActivatingContractId] = useState<number | null>(null);
 
-  // NCL-04-CN-002/003/004/007: nạp đúng dữ liệu hiện tại của hợp đồng trước khi mở modal sửa/điều chỉnh/gia hạn.
-  // Cả các thao tác này (khai báo loại/hạn mức, mốc thanh toán, phụ lục, gia hạn) chỉ dành cho
-  // vai trò VT-05/VT-04 — trùng đúng phạm vi quyền của API `GET /contracts/{id}`.
-  const openContractAction = useCallback(async (contractId: number, action: 'type-limit' | 'milestones' | 'appendix' | 'renewal') => {
+  // NCL-04-CN-004/007: nạp đúng dữ liệu hiện tại của hợp đồng trước khi mở modal phụ lục/gia hạn.
+  // Hai thao tác này chỉ dành cho Nhân viên kinh doanh (VT-04) — trùng đúng phạm vi quyền của
+  // API `GET /contracts/{id}`. Khai báo loại/hạn mức, mốc thanh toán và kích hoạt (chỉ Kế toán VT-05)
+  // đã chuyển sang màn hình "Hợp đồng" riêng cho VT-05 (VT-05 không vào được hồ sơ khách hàng).
+  const openContractAction = useCallback(async (contractId: number, action: 'appendix' | 'renewal') => {
     setContractLoadError(null);
     setIsContractLoading(true);
     try {
       const contract = await getContract(contractId);
       setSelectedContract(contract);
-      if (action === 'type-limit') setIsTypeLimitOpen(true);
-      else if (action === 'milestones') setIsMilestonesOpen(true);
-      else if (action === 'appendix') setIsAppendixOpen(true);
+      if (action === 'appendix') setIsAppendixOpen(true);
       else if (action === 'renewal') setIsRenewalOpen(true);
     } catch (err) {
       setContractLoadError(
@@ -124,11 +115,11 @@ export default function CustomerOverviewPanel({
     }
   }, []);
 
-  // NCL-04-CN-005: mở màn hình cảnh báo hạn mức cho cả VT-02 lẫn VT-05. KHÔNG
-  // dùng chung `openContractAction` — hàm đó gọi `GET /contracts/{id}` vốn chỉ
-  // cấp quyền cho VT-05, nên nếu tái dùng thì Quản lý dự án (VT-02) bấm nút này
-  // sẽ luôn nhận lỗi 403 dù bản thân API `GET /contracts/{id}/usage` đã cho phép
-  // cả hai vai trò. Tên/mã hợp đồng để hiển thị tiêu đề đã có sẵn từ dòng tổng hợp.
+  // NCL-04-CN-005: từ hồ sơ khách hàng, nút này dành cho Quản lý dự án (VT-02) —
+  // Kế toán (VT-05) xem cảnh báo hạn mức ở màn hình "Hợp đồng" riêng. KHÔNG dùng
+  // chung `openContractAction` — hàm đó gọi `GET /contracts/{id}` vốn chỉ cấp quyền
+  // cho VT-05, nên VT-02 tái dùng sẽ luôn nhận 403 dù `GET /contracts/{id}/usage`
+  // đã cho phép cả hai vai trò. Tên/mã hợp đồng để hiển thị tiêu đề đã có sẵn từ dòng tổng hợp.
   const openLimitAlert = useCallback((contractId: number, contractCode: string | null, contractName: string | null) => {
     setLimitAlertTarget({
       id: contractId,
@@ -136,28 +127,6 @@ export default function CustomerOverviewPanel({
       name: contractName ?? '(không có tên)',
     });
     setIsLimitAlertOpen(true);
-  }, []);
-
-  // NCL-04-CN-002: kích hoạt hợp đồng DRAFT → ACTIVE, điều kiện bắt buộc để dùng
-  // được phụ lục điều chỉnh (NCL-04-CN-004) và gia hạn (NCL-04-CN-007). Không cần
-  // nạp trước dữ liệu hợp đồng như các thao tác mở modal khác — đây là một hành
-  // động chuyển trạng thái tức thời, không phải một form.
-  const handleActivateContract = useCallback(async (contractId: number) => {
-    setContractLoadError(null);
-    setActivatingContractId(contractId);
-    try {
-      await activateContract(contractId);
-      await loadOverview();
-    } catch (err) {
-      setContractLoadError(
-        err instanceof ContractsApiError
-          ? err.message
-          : 'Không thể kích hoạt hợp đồng. Vui lòng thử lại.'
-      );
-    } finally {
-      setActivatingContractId(null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadOverview = useCallback(async () => {
@@ -405,20 +374,8 @@ export default function CustomerOverviewPanel({
                 className="customer-summary-section"
                 data-testid={`customer-summary-section-${section.key}`}
               >
-                <h4 className="customer-summary-section__title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                  <span>
-                    <span className="icon-sm">{section.icon}</span> {section.label} <span className="cell-muted">({items.length})</span>
-                  </span>
-                  {section.key === 'contracts' && currentUserRoles.includes('VT-05') && (
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      style={{ fontSize: '13px', padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                      onClick={() => setIsExpiringReminderOpen(true)}
-                    >
-                      <span className="icon-xs">{ICONS.clock}</span> Nhắc hợp đồng sắp hết hạn
-                    </button>
-                  )}
+                <h4 className="customer-summary-section__title">
+                  <span className="icon-sm">{section.icon}</span> {section.label} <span className="cell-muted">({items.length})</span>
                 </h4>
                 {items.length === 0 ? (
                   <p className="customer-summary-section__empty cell-muted">{section.emptyHint}</p>
@@ -452,37 +409,7 @@ export default function CustomerOverviewPanel({
                             <td style={{ textAlign: 'right' }}>
                               {section.key === 'contracts' ? (
                                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                                  {currentUserRoles.includes('VT-05') && (
-                                    <>
-                                      <button
-                                        type="button"
-                                        className="btn btn-secondary"
-                                        onClick={() => void openContractAction(item.id, 'type-limit')}
-                                        disabled={isContractLoading}
-                                      >
-                                        {t('contract.action.button')}
-                                      </button>
-                                      <button
-                                        type="button"
-                                        className="btn btn-secondary"
-                                        onClick={() => void openContractAction(item.id, 'milestones')}
-                                        disabled={isContractLoading}
-                                      >
-                                        Mốc thanh toán
-                                      </button>
-                                      {(item.status ?? '').toUpperCase() === 'DRAFT' && (
-                                        <button
-                                          type="button"
-                                          className="btn btn-secondary"
-                                          onClick={() => void handleActivateContract(item.id)}
-                                          disabled={activatingContractId === item.id}
-                                        >
-                                          {activatingContractId === item.id ? 'Đang kích hoạt…' : 'Kích hoạt hợp đồng'}
-                                        </button>
-                                      )}
-                                    </>
-                                  )}
-                                  {(currentUserRoles.includes('VT-02') || currentUserRoles.includes('VT-05')) && (
+                                  {currentUserRoles.includes('VT-02') && (
                                     <button
                                       type="button"
                                       className="btn btn-secondary"
@@ -511,7 +438,7 @@ export default function CustomerOverviewPanel({
                                       </button>
                                     </>
                                   )}
-                                  {!currentUserRoles.includes('VT-05') && !currentUserRoles.includes('VT-02') && !currentUserRoles.includes('VT-04') && (
+                                  {!currentUserRoles.includes('VT-02') && !currentUserRoles.includes('VT-04') && (
                                     <span className="cell-muted">—</span>
                                   )}
                                 </div>
@@ -543,34 +470,6 @@ export default function CustomerOverviewPanel({
       )}
 
       {selectedContract && (
-        <ContractTypeLimitModal
-          isOpen={isTypeLimitOpen}
-          onClose={() => setIsTypeLimitOpen(false)}
-          contract={selectedContract}
-          currentUserRoles={currentUserRoles}
-          onSaved={() => {
-            setIsTypeLimitOpen(false);
-            setSelectedContract(null);
-            void loadOverview();
-          }}
-        />
-      )}
-
-      {selectedContract && (
-        <ContractMilestonesModal
-          isOpen={isMilestonesOpen}
-          onClose={() => setIsMilestonesOpen(false)}
-          contract={selectedContract}
-          currentUserRoles={currentUserRoles}
-          onSaved={() => {
-            setIsMilestonesOpen(false);
-            setSelectedContract(null);
-            void loadOverview();
-          }}
-        />
-      )}
-
-      {selectedContract && (
         <ContractAppendixModal
           isOpen={isAppendixOpen}
           onClose={() => {
@@ -598,12 +497,6 @@ export default function CustomerOverviewPanel({
           currentUserRoles={currentUserRoles}
         />
       )}
-
-      <ContractExpiryReminderModal
-        isOpen={isExpiringReminderOpen}
-        onClose={() => setIsExpiringReminderOpen(false)}
-        currentUserRoles={currentUserRoles}
-      />
 
       {selectedContract && (
         <RenewalModal

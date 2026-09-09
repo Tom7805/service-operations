@@ -4,6 +4,8 @@ import com.serviceops.modules.contract.dto.request.ContractCreateFromOpportunity
 import com.serviceops.modules.contract.dto.request.ContractTypeLimitReq;
 import com.serviceops.modules.contract.dto.response.ContractRes;
 
+import java.util.List;
+
 /**
  * Nghiep vu hop dong (NCL-04). Buoc dau tien phuc vu story tao hop dong tu
  * co hoi da thang (NCL-04-CN-001); cac nghiep vu khac (sua doi, giai doan
@@ -38,6 +40,16 @@ public interface ContractService {
 	 *         RESOURCE_NOT_FOUND neu khong ton tai hop dong
 	 */
 	ContractRes getById(Long contractId);
+
+	/**
+	 * Danh sach toan bo hop dong, moi tao truoc - phuc vu man hinh "Hop dong"
+	 * danh rieng cho Ke toan (VT-05): tim hop dong roi thao tac khai bao loai/
+	 * han muc, moc thanh toan, kich hoat ma khong phai di qua ho so tong hop
+	 * khach hang (NCL-04-CN-002). VT-05 co pham vi COMPANY nen thay tat ca.
+	 *
+	 * @return danh sach hop dong kem ten khach hang de hien thi
+	 */
+	List<ContractRes> listAll();
 
 	/**
 	 * Khai bao loai hop dong, gia tri va han muc tran (NCL-04-CN-002, QTN-19).

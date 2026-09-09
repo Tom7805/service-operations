@@ -1766,6 +1766,30 @@ có" theo user story), không phải `0`. Khai báo thành công ghi một dòng
 — người thực hiện, nội dung (loại/giá trị/hạn mức cũ-mới), thời điểm (TC-04); Frontend không cần gọi thêm API
 nào để việc ghi log này xảy ra.
 
+> **Lối vào cho Kế toán.** Kế toán (`VT-05`) **không** có quyền vào hồ sơ tổng hợp khách hàng
+> (`GET /customers/{id}/overview` chỉ cho `VT-04`/`VT-02`), nên không thể lấy hợp đồng từ màn hình khách hàng.
+> Frontend dựng một màn hình **"Hợp đồng"** riêng cho `VT-05`, lấy danh sách từ `GET /contracts` bên dưới rồi
+> mở các thao tác `NCL-04-CN-002/003/005/006` ngay trên từng dòng.
+
+#### `GET /contracts`
+
+Danh sách toàn bộ hợp đồng, hợp đồng tạo gần nhất đứng trước. Yêu cầu token của **Kế toán** (`VT-05`) — vai trò
+khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối (`ContractAccessDeniedAspect`). `VT-05` có phạm vi dữ
+liệu `COMPANY` nên thấy mọi hợp đồng của công ty.
+
+**Response thành công — `200 OK`:** `data` là mảng `ContractRes` (cùng cấu trúc từng phần tử như response của
+`GET /contracts/{contractId}` / `PATCH` bên dưới, gồm `limitValue: number | null` và `customerName` để hiển thị).
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) — hệ thống ghi nhật ký lần từ chối |
+
+**Lưu ý cho Frontend:**
+- Đây là nguồn dữ liệu cho màn hình "Hợp đồng" của Kế toán. Lọc theo trạng thái / từ khóa làm ở phía client.
+- Bấm một dòng để mở `PATCH /contracts/{id}/type-limit` (khai báo loại & hạn mức), `PUT /contracts/{id}/milestones`
+  (mốc thanh toán), `POST /contracts/{id}/activate` (kích hoạt), `GET /contracts/{id}/usage` (cảnh báo hạn mức).
+
 #### `GET /contracts/{contractId}`
 
 Trả về chi tiết hợp đồng hiện tại — Frontend gọi API này trước khi mở màn hình khai báo để nạp
