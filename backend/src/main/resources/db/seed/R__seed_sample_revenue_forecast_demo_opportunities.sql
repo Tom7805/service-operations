@@ -14,20 +14,22 @@
 --  để không tái diễn lỗi "probability NULL bị tính ngầm thành 0".
 --
 --  Chạy sau R__seed_sample_customers.sql và R__seed_sample_opportunities.sql
---  (thứ tự theo tên file — "revenue_forecast" xếp sau "sample_opportunities"
---  theo alphabet nên khong xung dot id).
+--  (thứ tự theo tên file — file này đổi tên thành "seed_sample_revenue_..."
+--  để xếp SAU "seed_sample_customers"/"seed_sample_opportunities" theo alphabet,
+--  vì tên cũ "seed_revenue_forecast..." xếp TRƯỚC "seed_sample_customers" nên
+--  chạy trước khi khách hàng ton tai, gay loi FK khi khoi dong ung dung).
 --
 --  Idempotent qua ON DUPLICATE KEY UPDATE theo id co dinh.
 -- ----------------------------------------------------------------------------
 INSERT INTO opportunities (id, name, customer_id, expected_value, expected_close_date, stage, status, probability, created_by, created_at)
 VALUES
-    (2101, 'Tư vấn chuyển đổi số cho Công ty CP VietTinBank',       4,    280000000, '2026-09-10', 'PROPOSAL',    'OPEN', 40, 'sale01',    '2026-08-01 09:00:00'),
-    (2102, 'Triển khai hệ thống quản lý kho cho BPex',              1011, 200000000, '2026-10-12', 'APPROACH',    'OPEN', 10, 'sale.lead', '2026-08-10 09:00:00'),
-    (2103, 'Mở rộng hạ tầng mạng cho Công ty TNHH SX',              1008, 320000000, '2026-11-05', 'NEGOTIATION', 'OPEN', 70, 'sale01',    '2026-07-15 09:00:00'),
-    (2104, 'Nâng cấp hệ thống ERP cho Công ty TNHH 1 thành viên',   1009, 260000000, '2026-12-01', 'PROPOSAL',    'OPEN', 40, 'sale.lead', '2026-08-15 09:00:00'),
-    (2105, 'Triển khai giải pháp bảo mật cho Beta',                 3,    180000000, '2027-01-15', 'APPROACH',    'OPEN', 10, 'sale01',    '2026-08-20 09:00:00'),
+    (2101, 'Tư vấn chuyển đổi số cho Công ty CP VietTinBank',       1004, 280000000, '2026-09-10', 'PROPOSAL',    'OPEN', 40, 'sale01',    '2026-08-01 09:00:00'),
+    (2102, 'Triển khai hệ thống quản lý kho cho BPex',              1002, 200000000, '2026-10-12', 'APPROACH',    'OPEN', 10, 'sale.lead', '2026-08-10 09:00:00'),
+    (2103, 'Mở rộng hạ tầng mạng cho Công ty TNHH SX',              1003, 320000000, '2026-11-05', 'NEGOTIATION', 'OPEN', 70, 'sale01',    '2026-07-15 09:00:00'),
+    (2104, 'Nâng cấp hệ thống ERP cho Công ty TNHH 1 thành viên',   1004, 260000000, '2026-12-01', 'PROPOSAL',    'OPEN', 40, 'sale.lead', '2026-08-15 09:00:00'),
+    (2105, 'Triển khai giải pháp bảo mật cho Beta',                 1006, 180000000, '2027-01-15', 'APPROACH',    'OPEN', 10, 'sale01',    '2026-08-20 09:00:00'),
     (2106, 'Tư vấn quy trình vận hành giai đoạn 2 cho An Phát',     1003, 300000000, '2027-01-25', 'NEGOTIATION', 'OPEN', 70, 'sale.lead', '2026-06-01 09:00:00'),
-    (2107, 'Xây dựng cổng thông tin khách hàng cho ACBank',         1007, 350000000, '2027-02-10', 'PROPOSAL',    'OPEN', 40, 'sale01',    '2026-08-25 09:00:00'),
+    (2107, 'Xây dựng cổng thông tin khách hàng cho ACBank',         1005, 350000000, '2027-02-10', 'PROPOSAL',    'OPEN', 40, 'sale01',    '2026-08-25 09:00:00'),
     (2108, 'Triển khai module báo cáo cho Tập Đoàn Sao Việt',       1004, 150000000, '2027-02-20', 'APPROACH',    'OPEN', 10, 'sale.lead', '2026-08-28 09:00:00')
 ON DUPLICATE KEY UPDATE
     name                = VALUES(name),
