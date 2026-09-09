@@ -76,3 +76,22 @@ export interface ContractUsageRes {
   overLimit: boolean;
 }
 
+/**
+ * Hợp đồng sắp hết hiệu lực, dùng nhắc Kế toán gia hạn trước hạn (NCL-04-CN-006).
+ * GET /contracts/expiring?days=30
+ *
+ * `daysRemaining` >= 0: còn hiệu lực, sắp hết hạn trong khoảng đã chọn (TC-01).
+ * `daysRemaining` < 0: đã QUÁ ngày kết thúc nhưng vẫn ở trạng thái ACTIVE (chưa được
+ * gia hạn hay đóng lại) — trường hợp khẩn cấp, backend luôn trả về bất kể khung
+ * thời gian rà soát đang chọn là bao nhiêu ngày (TC-02).
+ */
+export interface ContractExpiryAlertRes {
+  contractId: number;
+  contractCode: string;
+  name: string;
+  customerId: number;
+  customerName?: string | null;
+  endDate: string;
+  daysRemaining: number;
+}
+

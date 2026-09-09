@@ -27,4 +27,12 @@ public interface ContractRepository extends JpaRepository<Contract, Long> {
 	 * cho nhac han hop dong sap het hieu luc (NCL-04-CN-006, TC-01).
 	 */
 	List<Contract> findByStatusAndEndDateBetween(ContractStatus status, LocalDate from, LocalDate to);
+
+	/**
+	 * Hop dong van o trang thai dang hieu luc (ACTIVE) nhung ngay ket thuc da
+	 * qua {@code date} - tuc la da het han tren giay to ma chua duoc gia han
+	 * hay dong lai. Day la truong hop khan cap can xu ly gap vi cong viec phat
+	 * sinh sau moc nay khong con can cu hop dong (NCL-04-CN-006, TC-02).
+	 */
+	List<Contract> findByStatusAndEndDateBefore(ContractStatus status, LocalDate date);
 }
