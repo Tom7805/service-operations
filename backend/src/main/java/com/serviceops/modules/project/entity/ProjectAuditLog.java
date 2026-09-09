@@ -24,7 +24,7 @@ public class ProjectAuditLog extends BaseEntity {
 	private Long contractId;
 
 	@Enumerated(EnumType.STRING)
-	@Column(name = "action_type", nullable = false, length = 40)
+	@Column(name = "action_type", nullable = false, columnDefinition = "VARCHAR(40)")
 	private ProjectAuditAction actionType;
 
 	@Column(length = 1000)

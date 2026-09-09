@@ -33,7 +33,7 @@ public class Task extends BaseEntity {
 	@Column(name = "expected_end_date")
 	private LocalDate expectedEndDate;
 	@Enumerated(EnumType.STRING)
-	@Column(nullable = false, length = 30)
+	@Column(nullable = false, columnDefinition = "VARCHAR(30)")
 	private TaskStatus status = TaskStatus.TODO;
 	@Column(name = "created_by", length = 100)
 	private String createdBy;
