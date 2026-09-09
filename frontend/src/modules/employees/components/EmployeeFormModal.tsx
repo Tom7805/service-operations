@@ -6,6 +6,7 @@ import type { AssignableUser, Employee, EmployeeCreatePayload, EmployeeUpdatePay
 import { DEFAULT_STANDARD_HOURS_PER_WEEK } from '../types/employeeTypes';
 import { validateCreateEmployee, validateUpdateEmployee, type FormErrors } from '../validators/employeeValidators';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 import UserSelect from './UserSelect';
 
 interface EmployeeFormModalProps {
@@ -136,6 +137,7 @@ export default function EmployeeFormModal({
   };
 
   return (
+    <ModalPortal>
     <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="employee-modal-title">
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
@@ -307,5 +309,6 @@ export default function EmployeeFormModal({
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 }

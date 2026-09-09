@@ -3,6 +3,7 @@ import type { CreateUserPayload, UpdateUserPayload, User } from '../types/userTy
 import { SYSTEM_DEPARTMENTS, SYSTEM_ROLES } from '../types/userTypes';
 import { validateCreateUser, validateUpdateUser, FormErrors } from '../validators/userValidators';
 import { ICONS } from './icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 
 interface UserFormModalProps {
   isOpen: boolean;
@@ -121,6 +122,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   };
 
   return (
+    <ModalPortal>
     <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
@@ -300,6 +302,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 };
 

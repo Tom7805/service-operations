@@ -3,6 +3,7 @@ import type { DepartmentInfo, ScopeType, User } from '../types/userTypes';
 import { SYSTEM_ROLES } from '../types/userTypes';
 import { UserApiError } from '../api/usersApi';
 import { ICONS } from './icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 
 interface RoleScopeModalProps {
   isOpen: boolean;
@@ -108,6 +109,7 @@ export const RoleScopeModal: React.FC<RoleScopeModalProps> = ({
   };
 
   return (
+    <ModalPortal>
     <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
       <div className="modal-card modal-card--md" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
@@ -301,6 +303,7 @@ export const RoleScopeModal: React.FC<RoleScopeModalProps> = ({
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 };
 

@@ -14,6 +14,7 @@ import {
 } from '../api/customersApi';
 import DuplicateWarningModal from './DuplicateWarningModal';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 
 interface CustomerFormModalProps {
   isOpen: boolean;
@@ -226,8 +227,6 @@ export default function CustomerFormModal({
 
       setIsDuplicateModalOpen(false);
       onClose();
-    } catch (err) {
-      throw err;
     } finally {
       setIsOverriding(false);
     }
@@ -235,6 +234,7 @@ export default function CustomerFormModal({
 
   return (
     <>
+      <ModalPortal>
       <div
         className="modal-backdrop"
         onClick={(e) => {
@@ -521,6 +521,7 @@ export default function CustomerFormModal({
           </form>
         </div>
       </div>
+      </ModalPortal>
 
       {/* Modal cảnh báo chống trùng hồ sơ (NCL-02-CN-002) */}
       <DuplicateWarningModal

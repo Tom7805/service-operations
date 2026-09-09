@@ -14,6 +14,7 @@ import {
 } from '../validators/opportunityValidators';
 import { createOpportunityQuote, fetchCurrentBillRates, QuoteApiError, type BillRateOption } from '../api/quotesApi';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 
 /** Giá trị đặc biệt của ô chọn chức danh khi người dùng muốn tự gõ tay thay vì chọn từ danh mục có sẵn. */
 const MANUAL_ROLE_ENTRY = '__manual__';
@@ -160,6 +161,7 @@ export default function QuoteBuilder({
   };
 
   return (
+    <ModalPortal>
     <div
       className="modal-backdrop"
       onClick={(e) => {
@@ -763,5 +765,6 @@ export default function QuoteBuilder({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }

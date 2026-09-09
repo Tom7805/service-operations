@@ -5,6 +5,7 @@ import type {
   CustomerSegmentFormErrors,
 } from '../types/customerTypes';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 import { COMPANY_SIZE_OPTIONS, CUSTOMER_PRIORITY_OPTIONS } from '../types/customerTypes';
 import { validateCustomerSegment } from '../validators/customerValidators';
 
@@ -97,6 +98,7 @@ export default function CustomerSegmentModal({
   };
 
   return (
+    <ModalPortal>
     <div className="modal-backdrop" onClick={onClose} data-testid="customer-segment-modal">
       <div
         className="modal-card modal-card--md segment-modal-card"
@@ -234,5 +236,6 @@ export default function CustomerSegmentModal({
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 }

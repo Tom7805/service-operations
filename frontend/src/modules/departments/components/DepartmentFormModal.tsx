@@ -8,6 +8,7 @@ import type {
 } from '../types/departmentTypes';
 import { DepartmentApiError } from '../api/departmentsApi';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 import {
   DEPARTMENT_UNIT_TYPE_META,
   DEPARTMENT_UNIT_TYPE_OPTIONS,
@@ -153,6 +154,7 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
   };
 
   return (
+    <ModalPortal>
     <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
       <div className="modal-card modal-card--md" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
@@ -295,6 +297,7 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 };
 

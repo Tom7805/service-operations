@@ -18,6 +18,7 @@ import {
   OpportunityApiError,
 } from '../api/opportunitiesApi';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 
 interface OpportunityFormModalProps {
   isOpen: boolean;
@@ -207,6 +208,7 @@ export default function OpportunityFormModal({
   };
 
   return (
+    <ModalPortal>
     <div
       className="modal-backdrop"
       onClick={(e) => {
@@ -540,5 +542,6 @@ export default function OpportunityFormModal({
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 }

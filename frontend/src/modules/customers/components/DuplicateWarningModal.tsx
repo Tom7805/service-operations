@@ -5,6 +5,7 @@ import {
   validateDuplicateOverrideReason,
 } from '../validators/customerValidators';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 
 interface DuplicateWarningModalProps {
   isOpen: boolean;
@@ -99,6 +100,7 @@ export default function DuplicateWarningModal({
   const hasHighSimilarity = candidates.some((c) => c.similarity >= 0.9);
 
   return (
+    <ModalPortal>
     <div
       className="modal-backdrop duplicate-modal-backdrop"
       onClick={(e) => {
@@ -372,6 +374,7 @@ export default function DuplicateWarningModal({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 
