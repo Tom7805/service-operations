@@ -162,7 +162,9 @@ public class ProjectTemplateServiceImpl implements ProjectTemplateService {
 			String username, LocalDateTime now) {
 		List<ProjectTemplateItem> items = templateItemRepository.findByTemplateIdOrderByIdAsc(template.getId());
 		Map<Long, Long> createdItemIds = new HashMap<>();
-		Map<Long, Long> packageIdByItemId = new HashMap<>();
+		// item id trong mau -> id hang muc chu cua item do trong du an moi
+		// (hang muc chu cua cong viec con = hang muc chu cua cong viec cha).
+		Map<Long, Long> owningPackageByItem = new HashMap<>();
 
 		for (ProjectTemplateItem item : items) {
 			Long newParentId = item.getParentId() == null ? null : createdItemIds.get(item.getParentId());
@@ -177,12 +179,12 @@ public class ProjectTemplateServiceImpl implements ProjectTemplateService {
 				workPackage.setCreatedAt(now);
 				workPackage = workPackageRepository.save(workPackage);
 				createdItemIds.put(item.getId(), workPackage.getId());
-				packageIdByItemId.put(item.getId(), workPackage.getId());
+				owningPackageByItem.put(item.getId(), workPackage.getId());
 			} else {
 				Task task = new Task();
 				task.setProjectId(project.getId());
 				// Cong viec luon thuoc hang muc gan nhat ben tren nhanh cay cua no.
-				task.setWorkPackageId(requireOwningPackage(packageIdByItemId, item));
+				task.setWorkPackageId(requireOwningPackage(owningPackageByItem, item));
 				task.setParentTaskId(isTaskParent(item, items) ? newParentId : null);
 				task.setName(item.getName());
 				task.setDescription(item.getDescription());
@@ -196,12 +198,13 @@ public class ProjectTemplateServiceImpl implements ProjectTemplateService {
 					taskRepository.save(task);
 				}
 				createdItemIds.put(item.getId(), task.getId());
+				owningPackageByItem.put(item.getId(), owningPackageByItem.get(item.getParentId()));
 			}
 		}
 	}
 
-	private Long requireOwningPackage(Map<Long, Long> packageIdByItemId, ProjectTemplateItem item) {
-		Long packageId = packageIdByItemId.get(item.getParentId());
+	private Long requireOwningPackage(Map<Long, Long> owningPackageByItem, ProjectTemplateItem item) {
+		Long packageId = owningPackageByItem.get(item.getParentId());
 		if (packageId == null) {
 			throw new BusinessRuleException(ErrorCode.INVALID_STATE,
 					"Cay mau khong hop le: cong viec khong co hang muc cha");
