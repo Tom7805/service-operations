@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { ICONS } from '../../../components/common/icons';
+import RowActionsMenu, { type RowAction } from '../../../components/common/RowActionsMenu';
 import { roleLabels } from '../../../utils/roleLabel';
 import type { ContractRes, ContractStatus } from '../types/contractTypes';
 import {
@@ -170,6 +171,47 @@ export default function ContractListPage({
 
   const applySavedContract = (updated: ContractRes) => {
     setContracts((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+  };
+
+  // Gộp mọi thao tác theo dòng vào menu kebab (⋮) — mẫu chuẩn cho bảng dữ liệu
+  // (DESIGN.md § Components). Dãy 3-4 nút rời vừa tốn cột ngang vừa rối mắt.
+  const rowActions = (c: ContractRes, busy: boolean): RowAction[] => {
+    const actions: RowAction[] = [
+      {
+        key: 'type-limit',
+        label: 'Khai báo loại & hạn mức',
+        icon: ICONS.document,
+        onClick: () => void openModalFor(c.id, 'type-limit'),
+        disabled: busy,
+        testId: `contract-action-type-limit-${c.id}`,
+      },
+      {
+        key: 'milestones',
+        label: 'Mốc thanh toán',
+        icon: ICONS.money,
+        onClick: () => void openModalFor(c.id, 'milestones'),
+        disabled: busy,
+        testId: `contract-action-milestones-${c.id}`,
+      },
+      {
+        key: 'limit-alert',
+        label: 'Cảnh báo hạn mức',
+        icon: ICONS.alertTriangle,
+        onClick: () => setLimitAlertTarget({ id: c.id, contractCode: c.contractCode, name: c.name }),
+        testId: `contract-action-limit-alert-${c.id}`,
+      },
+    ];
+    if (c.status === 'DRAFT') {
+      actions.push({
+        key: 'activate',
+        label: busy ? 'Đang kích hoạt…' : 'Kích hoạt hợp đồng',
+        icon: ICONS.checkCircle,
+        onClick: () => void handleActivate(c.id),
+        disabled: busy,
+        testId: `contract-action-activate-${c.id}`,
+      });
+    }
+    return actions;
   };
 
   const filtered = useMemo(() => {
@@ -423,44 +465,11 @@ export default function ContractListPage({
                       <td>
                         <span className={`badge ${status.badge}`}>{status.label}</span>
                       </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                          <button
-                            type="button"
-                            className="btn btn-secondary btn-sm"
-                            onClick={() => void openModalFor(c.id, 'type-limit')}
-                            disabled={busy}
-                          >
-                            Khai báo loại &amp; hạn mức
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-secondary btn-sm"
-                            onClick={() => void openModalFor(c.id, 'milestones')}
-                            disabled={busy}
-                          >
-                            Mốc thanh toán
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-secondary btn-sm"
-                            onClick={() =>
-                              setLimitAlertTarget({ id: c.id, contractCode: c.contractCode, name: c.name })
-                            }
-                          >
-                            Cảnh báo hạn mức
-                          </button>
-                          {c.status === 'DRAFT' && (
-                            <button
-                              type="button"
-                              className="btn btn-secondary btn-sm"
-                              onClick={() => void handleActivate(c.id)}
-                              disabled={busy}
-                            >
-                              {busy ? 'Đang kích hoạt…' : 'Kích hoạt'}
-                            </button>
-                          )}
-                        </div>
+                      <td style={{ textAlign: 'right' }}>
+                        <RowActionsMenu
+                          ariaLabel={`Thao tác hợp đồng ${c.contractCode}`}
+                          actions={rowActions(c, busy)}
+                        />
                       </td>
                     </tr>
                   );
