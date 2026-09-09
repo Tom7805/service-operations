@@ -23,6 +23,13 @@ public interface ContractRepository extends JpaRepository<Contract, Long> {
 	boolean existsByOpportunityId(Long opportunityId);
 
 	/**
+	 * Toan bo hop dong cua mot khach hang, dung cho ho so tong hop khach hang
+	 * (NCL-02-CN-004) de nguoi dung tim duoc hop dong roi thao tac cac nghiep
+	 * vu NCL-04 (khai bao loai/han muc, moc thanh toan, phu luc, gia han...).
+	 */
+	List<Contract> findByCustomerId(Long customerId);
+
+	/**
 	 * Hop dong dang hieu luc co ngay ket thuc trong khoang [from, to] - dung
 	 * cho nhac han hop dong sap het hieu luc (NCL-04-CN-006, TC-01).
 	 */
