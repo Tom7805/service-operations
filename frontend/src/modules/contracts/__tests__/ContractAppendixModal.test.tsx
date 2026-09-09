@@ -37,6 +37,7 @@ const contract: ContractRes = {
 describe('ContractAppendixModal (NCL-04-CN-004)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(contractsApi.fetchAppendices).mockResolvedValue([]);
   });
 
   it('TC-03: từ chối khi không phải Nhân viên kinh doanh (VT-04)', () => {
@@ -49,18 +50,24 @@ describe('ContractAppendixModal (NCL-04-CN-004)', () => {
     expect(contractsApi.createAppendix).not.toHaveBeenCalled();
   });
 
-  it('TC-01: lưu thành công gửi đúng payload và khóa modal sau khi lưu', async () => {
-    vi.mocked(contractsApi.createAppendix).mockResolvedValue({
-      id: 101,
-      contractId: 5,
-      content: 'Mở rộng phạm vi giai đoạn 2',
-      adjustmentValue: 200_000_000,
-      valueBefore: 500_000_000,
-      valueAfter: 700_000_000,
-      effectiveDate: '2026-10-01',
-      createdBy: 'sale01',
-      createdAt: '2026-09-07T10:15:00',
-    });
+  const savedAppendix = {
+    id: 101,
+    contractId: 5,
+    content: 'Mở rộng phạm vi giai đoạn 2',
+    adjustmentValue: 200_000_000,
+    valueBefore: 500_000_000,
+    valueAfter: 700_000_000,
+    effectiveDate: '2026-10-01',
+    createdBy: 'sale01',
+    createdAt: '2026-09-07T10:15:00',
+  };
+
+  it('TC-01: lưu thành công gửi đúng payload, modal ở lại và làm mới lịch sử', async () => {
+    vi.mocked(contractsApi.createAppendix).mockResolvedValue(savedAppendix);
+    // Trước khi lưu chưa có phụ lục; sau khi lưu API trả về phụ lục vừa tạo.
+    vi.mocked(contractsApi.fetchAppendices)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([savedAppendix]);
     const onSaved = vi.fn();
     const onClose = vi.fn();
 
@@ -93,8 +100,29 @@ describe('ContractAppendixModal (NCL-04-CN-004)', () => {
         effectiveDate: '2026-10-01',
       });
       expect(onSaved).toHaveBeenCalled();
-      expect(onClose).toHaveBeenCalled();
     });
+
+    // TC-05: phụ lục vừa lập xuất hiện trong "Lịch sử phụ lục"; modal KHÔNG tự đóng.
+    await waitFor(() => {
+      expect(screen.getByTestId('appendix-history-table')).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Lịch sử phụ lục \(1\)/)).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('TC-05: mở modal nạp sẵn lịch sử phụ lục đã lập của hợp đồng', async () => {
+    vi.mocked(contractsApi.fetchAppendices).mockResolvedValue([savedAppendix]);
+
+    render(
+      <ContractAppendixModal contract={contract} isOpen onClose={vi.fn()} currentUserRoles={['VT-04']} />
+    );
+
+    expect(contractsApi.fetchAppendices).toHaveBeenCalledWith(5);
+    await waitFor(() => {
+      expect(screen.getByTestId('appendix-history-table')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Mở rộng phạm vi giai đoạn 2')).toBeInTheDocument();
+    expect(screen.getByText('sale01')).toBeInTheDocument();
   });
 
   it('TC-02: chặn khi giá trị điều chỉnh bằng 0', async () => {

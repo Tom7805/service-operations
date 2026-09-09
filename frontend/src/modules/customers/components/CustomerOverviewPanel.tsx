@@ -479,8 +479,8 @@ export default function CustomerOverviewPanel({
           contract={selectedContract}
           currentUserRoles={currentUserRoles}
           onSaved={() => {
-            setIsAppendixOpen(false);
-            setSelectedContract(null);
+            // Không đóng modal — để người dùng thấy phụ lục vừa lập trong
+            // "Lịch sử phụ lục" (NCL-04-CN-004 TC-05). Chỉ làm mới hồ sơ tổng hợp.
             void loadOverview();
           }}
         />
@@ -508,8 +508,7 @@ export default function CustomerOverviewPanel({
           contract={selectedContract}
           currentUserRoles={currentUserRoles}
           onSaved={() => {
-            setIsRenewalOpen(false);
-            setSelectedContract(null);
+            // Giữ modal mở để thấy "Lịch sử gia hạn" vừa cập nhật (NCL-04-CN-007 TC-04).
             void loadOverview();
           }}
         />
