@@ -60,3 +60,19 @@ export interface ContractMilestoneInput {
   expectedDate?: string | null;
   acceptanceCondition?: string | null;
 }
+
+/**
+ * Mức độ đã sử dụng hạn mức trần của hợp đồng (NCL-04-CN-005, QTN-19).
+ * GET /contracts/{contractId}/usage
+ */
+export interface ContractUsageRes {
+  contractId: number;
+  totalValue: number;
+  limitValue: number | null;
+  usedValue: number;
+  remainingValue: number | null;
+  usedPercentage: number | null;
+  nearLimit: boolean;
+  overLimit: boolean;
+}
+

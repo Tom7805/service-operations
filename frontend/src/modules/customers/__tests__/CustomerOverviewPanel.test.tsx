@@ -19,6 +19,8 @@ vi.mock('../api/customersApi', () => ({
 vi.mock('../../contracts/api/contractsApi', () => ({
   getContract: vi.fn(),
   updateTypeAndLimit: vi.fn(),
+  getContractUsage: vi.fn(),
+  fetchContractUsage: vi.fn(),
   ContractsApiError: class extends Error {
     constructor(public code: string, message: string, public statusCode?: number) {
       super(message);
@@ -259,6 +261,46 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
         expect(screen.getByText('Không tìm thấy hợp đồng.')).toBeInTheDocument();
       });
       expect(screen.queryByLabelText(/Loại hợp đồng/i)).toBeNull();
+    });
+
+    it('NCL-04-CN-005: nút "Cảnh báo hạn mức" hiển thị cho VT-02 và VT-05, bấm nút mở modal ngay (không đòi quyền của GET /contracts/{id})', async () => {
+      vi.mocked(customersApi.fetchCustomerOverview).mockResolvedValue(fullOverview);
+      vi.mocked(contractsApi.getContractUsage).mockResolvedValue({
+        contractId: 2,
+        totalValue: 480_000_000,
+        limitValue: 500_000_000,
+        usedValue: 420_000_000,
+        remainingValue: 80_000_000,
+        usedPercentage: 84,
+        nearLimit: true,
+        overLimit: false,
+      });
+
+      // VT-02 (Quản lý dự án) không có quyền gọi GET /contracts/{id} (chỉ VT-05) —
+      // nếu component còn tái dùng đường gọi đó thì test này sẽ lộ lỗi 403 ngay.
+      vi.mocked(contractsApi.getContract).mockRejectedValue(
+        new contractsApi.ContractsApiError('FORBIDDEN', 'Bạn không có quyền thực hiện thao tác này.', 403)
+      );
+
+      render(<CustomerOverviewPanel customerId={10} customerName="Công ty Cổ phần Alpha" currentUserRoles={['VT-02']} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('customer-summary-panel')).toBeInTheDocument();
+      });
+
+      const alertBtn = within(screen.getByTestId('customer-summary-section-contracts')).getByRole('button', {
+        name: /Cảnh báo hạn mức/i,
+      });
+      expect(alertBtn).toBeInTheDocument();
+
+      fireEvent.click(alertBtn);
+
+      expect(contractsApi.getContract).not.toHaveBeenCalled();
+      await waitFor(() => {
+        expect(screen.getByText(/Tình trạng sử dụng hạn mức hợp đồng/i)).toBeInTheDocument();
+      });
+      expect(contractsApi.getContractUsage).toHaveBeenCalledWith(2);
+      expect(screen.getByTestId('limit-alert-near')).toBeInTheDocument();
     });
   });
 });
