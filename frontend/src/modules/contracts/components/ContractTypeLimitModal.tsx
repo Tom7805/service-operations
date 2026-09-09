@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 import { t } from '../../../i18n';
 import type { ContractRes } from '../types/contractTypes';
 import { updateTypeAndLimit } from '../api/contractsApi';
@@ -70,8 +71,9 @@ export default function ContractTypeLimitModal({
   };
 
   return (
-    <div
-      className="modal-backdrop"
+    <ModalPortal>
+      <div
+        className="modal-backdrop"
       onClick={(e) => {
         if (e.target === e.currentTarget && !submitting) onClose();
       }}
@@ -152,6 +154,7 @@ export default function ContractTypeLimitModal({
           </form>
         </div>
       </div>
-    </div>
+      </div>
+    </ModalPortal>
   );
 }

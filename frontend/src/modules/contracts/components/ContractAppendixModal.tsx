@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 import type { ContractRes } from '../types/contractTypes';
 import { createAppendix, ContractsApiError } from '../api/contractsApi';
 
@@ -63,8 +64,9 @@ export default function ContractAppendixModal({
   };
 
   return (
-    <div
-      className="modal-backdrop"
+    <ModalPortal>
+      <div
+        className="modal-backdrop"
       onClick={(e) => {
         if (e.target === e.currentTarget && !submitting) onClose();
       }}
@@ -148,6 +150,7 @@ export default function ContractAppendixModal({
           </form>
         </div>
       </div>
-    </div>
+      </div>
+    </ModalPortal>
   );
 }

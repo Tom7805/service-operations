@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 import type { ContractRes, ContractUsageRes } from '../types/contractTypes';
 import { getContractUsage, ContractsApiError } from '../api/contractsApi';
 
@@ -282,16 +283,18 @@ export default function ContractLimitAlert({
 
   if (onClose) {
     return (
-      <div
-        className="modal-backdrop"
-        role="dialog"
-        aria-modal="true"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) onClose();
-        }}
-      >
-        {cardContent}
-      </div>
+      <ModalPortal>
+        <div
+          className="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) onClose();
+          }}
+        >
+          {cardContent}
+        </div>
+      </ModalPortal>
     );
   }
 
