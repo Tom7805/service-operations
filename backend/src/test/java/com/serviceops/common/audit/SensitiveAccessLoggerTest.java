@@ -24,10 +24,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * Unit test {@link SensitiveAccessLogger} — cover TC-04:
- * ghi lại đầy đủ người thực hiện, nội dung và thời điểm.
- */
 @ExtendWith(MockitoExtension.class)
 class SensitiveAccessLoggerTest {
 

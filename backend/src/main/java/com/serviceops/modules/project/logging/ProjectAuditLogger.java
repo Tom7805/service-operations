@@ -1,0 +1,48 @@
+package com.serviceops.modules.project.logging;
+
+import com.serviceops.modules.project.entity.ProjectAuditLog;
+import com.serviceops.modules.project.enums.ProjectAuditAction;
+import com.serviceops.modules.project.repository.ProjectAuditLogRepository;
+import com.serviceops.security.scope.CurrentUserScopeProvider;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+
+@Service
+@RequiredArgsConstructor
+public class ProjectAuditLogger {
+	private final ProjectAuditLogRepository repository;
+	private final CurrentUserScopeProvider currentUserScopeProvider;
+
+	public void recordCreate(Long projectId, Long contractId, String detail) {
+		ProjectAuditLog audit = new ProjectAuditLog();
+		audit.setProjectId(projectId);
+		audit.setContractId(contractId);
+		audit.setActionType(ProjectAuditAction.CREATE_FROM_CONTRACT);
+		audit.setDetail(detail);
+		Long actorId = currentUserScopeProvider.currentUserId();
+		audit.setActorId(actorId == null ? 0L : actorId);
+		audit.setActorUsername(currentUsername());
+		audit.setActorRole(currentRole());
+		audit.setCreatedAt(LocalDateTime.now());
+		repository.save(audit);
+	}
+
+	private String currentUsername() {
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		return auth == null ? null : auth.getName();
+	}
+
+	private String currentRole() {
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		if (auth == null) {
+			return null;
+		}
+		return auth.getAuthorities().stream().map(GrantedAuthority::getAuthority)
+				.filter(role -> role.startsWith("ROLE_")).map(role -> role.substring(5)).findFirst().orElse(null);
+	}
+}

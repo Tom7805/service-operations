@@ -9,24 +9,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-/**
- * Bo dem "cua so co dinh" dung chung cho cac bo gioi han tan suat.
- *
- * <p>Truoc day thuat toan nay nam thang trong {@code TwoFactorRateLimiter}. Khi
- * can gioi han them cho {@code /auth/forgot-password}, tach ra day de hai noi
- * dung chung mot cai da duoc kiem chung, thay vi chep lai lan thu hai.</p>
- *
- * <p>Han muc duoc truyen vao TUNG LAN GOI chu khong nam trong lop nay: moi bo
- * gioi han giu cau hinh cua rieng no (2FA chat hon, khoi phuc mat khau long hon),
- * va nho vay cac test hien co van dat gia tri qua chinh lop goi.</p>
- *
- * <p><b>Chong phinh bo nho.</b> Ban cu de map lon vo han. Voi mot diem cuoi
- * CONG KHAI khong can dang nhap, ke tan cong chi viec gui hang trieu dia chi IP
- * hoac email khac nhau la map phinh cho toi khi het bo nho — tuc chinh bo gioi
- * han lai tro thanh duong tan cong. O day map bi chan tran, va khi cham tran thi
- * don cac cua so da het han truoc; neu don xong van day thi xoa sach de he thong
- * chon "tam thoi noi long" thay vi "chet vi het bo nho".</p>
- */
+
 public final class FixedWindowRateLimiter {
 
     /** Tran so cua so giu dong thoi. 50k ban ghi nho, du cho mot may chu don. */
@@ -34,10 +17,6 @@ public final class FixedWindowRateLimiter {
 
     private final ConcurrentMap<String, Window> windows = new ConcurrentHashMap<>();
 
-    /**
-     * Ghi nhan mot lan thu cho {@code key}. Nem {@link BusinessRuleException}
-     * mang {@link ErrorCode#TOO_MANY_REQUESTS} khi vuot han muc trong cua so.
-     */
     public void check(String key, int maxAttempts, long windowSeconds) {
         if (windows.size() >= MAX_TRACKED_KEYS) {
             evict(windowSeconds);

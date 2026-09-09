@@ -6,15 +6,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Locale;
 
-/**
- * Xác thực hai bước kiểu Google Authenticator/Authy — TOTP theo RFC 6238
- * (dựa trên HOTP, RFC 4226), thuật toán HMAC-SHA1, chu kỳ 30 giây, 6 chữ số.
- *
- * <p>Không cần gửi mã qua email/SMS: máy chủ và ứng dụng Authenticator cùng
- * giữ một khóa bí mật ({@code secret}, mã hóa Base32 để dễ nhập tay/hiển thị
- * QR) và cùng tính mã theo giờ hệ thống — không tốn kênh gửi tin, không có độ
- * trễ mạng, hoạt động cả khi điện thoại offline.</p>
- */
 public final class TotpUtil {
 
 	private static final int SECRET_BYTES = 20; // 160-bit, khuyến nghị RFC 4226
@@ -27,19 +18,12 @@ public final class TotpUtil {
 	private TotpUtil() {
 	}
 
-	/** Sinh khóa bí mật ngẫu nhiên mới, mã hóa Base32 (RFC 4648) — không có dấu '='. */
 	public static String generateSecret() {
 		byte[] bytes = new byte[SECRET_BYTES];
 		SECURE_RANDOM.nextBytes(bytes);
 		return base32Encode(bytes);
 	}
 
-	/**
-	 * Chuỗi {@code otpauth://} chuẩn để ứng dụng Authenticator vẽ mã QR / nhập tay.
-	 * @param secret     khóa bí mật Base32 (chưa mã hóa URL)
-	 * @param accountName tên hiển thị trong app (VD: username)
-	 * @param issuer     tên hệ thống hiển thị trong app (VD: "Van Hanh Dich Vu")
-	 */
 	public static String buildOtpAuthUri(String secret, String accountName, String issuer) {
 		String label = urlEncode(issuer) + ":" + urlEncode(accountName);
 		return "otpauth://totp/" + label
@@ -48,11 +32,6 @@ public final class TotpUtil {
 				+ "&algorithm=SHA1&digits=" + CODE_DIGITS + "&period=" + TIME_STEP_SECONDS;
 	}
 
-	/**
-	 * Kiểm mã 6 số người dùng nhập so với mã hệ thống tính ra tại đúng thời điểm
-	 * hiện tại, cho phép lệch {@code driftSteps} chu kỳ 30 giây mỗi hướng để bù
-	 * đồng hồ điện thoại/máy chủ không khớp tuyệt đối (thực hành chuẩn của TOTP).
-	 */
 	public static boolean verifyCode(String secretBase32, String code, int driftSteps) {
 		if (secretBase32 == null || code == null || !code.matches("\\d{" + CODE_DIGITS + "}")) {
 			return false;
@@ -130,7 +109,6 @@ public final class TotpUtil {
 		return value.replace(" ", "%20").replace(":", "%3A");
 	}
 
-	/** Chèn khoảng trắng mỗi 4 ký tự để hiển thị khóa bí mật dễ đọc/gõ tay (fallback khi không quét được QR). */
 	public static String formatForDisplay(String secret) {
 		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < secret.length(); i += 4) {

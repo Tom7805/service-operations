@@ -1659,6 +1659,65 @@ Không có tham số. Báo cáo là ảnh chụp **hiện tại** của toàn b�
 
 ---
 
+## Epic `NCL-05` — Quản lý dự án
+
+### `NCL-05-CN-001` — Tạo dự án từ hợp đồng
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`). Hệ thống chỉ cho phép tạo dự án từ hợp đồng đang còn hiệu lực
+(`status = ACTIVE` và chưa quá `endDate`). Dự án mới luôn ở trạng thái `RUNNING`, tự kế thừa `customerId`,
+loại hợp đồng (`projectType`) và hạn mức (`limitValue`) tại thời điểm tạo. Thao tác thành công ghi một dòng
+`CREATE_FROM_CONTRACT` vào `project_audit_logs`; trường hợp bị từ chối quyền được ghi vào nhật ký hệ thống.
+
+#### `POST /contracts/{contractId}/projects`
+
+```json
+{
+  "name": "Trien khai ERP Cong ty TNHH ABC",
+  "startDate": "2027-01-01",
+  "expectedEndDate": "2027-12-31",
+  "projectManagerId": 7
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `name` | string | có | Tên dự án, không được rỗng |
+| `startDate` | string (`date`) | có | Ngày bắt đầu dự án |
+| `expectedEndDate` | string (`date`) | có | Không được sớm hơn `startDate` |
+| `projectManagerId` | number | có | Người dùng đang hoạt động được giao quản lý dự án |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Tao du an tu hop dong thanh cong",
+  "data": {
+    "id": 20,
+    "projectCode": "DA-4K7X2Q9",
+    "name": "Trien khai ERP Cong ty TNHH ABC",
+    "contractId": 5,
+    "customerId": 1,
+    "projectType": "FIXED_PRICE",
+    "limitValue": 600000000,
+    "startDate": "2027-01-01",
+    "expectedEndDate": "2027-12-31",
+    "projectManagerId": 7,
+    "status": "RUNNING",
+    "createdBy": "pm01",
+    "createdAt": "2026-09-09T10:00:00"
+  }
+}
+```
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải `VT-02`; hệ thống ghi nhật ký lần từ chối |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng hoặc người quản lý dự án |
+| 400 | `INVALID_STATE` | Hợp đồng không `ACTIVE`, đã quá hạn, hoặc ngày kết thúc dự kiến sớm hơn ngày bắt đầu |
+| 400 | `VALIDATION_ERROR` | Thiếu tên, ngày bắt đầu, ngày kết thúc dự kiến hoặc người quản lý dự án |
+
 ## Epic `NCL-04` — Quản lý hợp đồng
 
 ### `NCL-04-CN-001` — Tạo hợp đồng từ cơ hội đã thắng
