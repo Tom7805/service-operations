@@ -2013,11 +2013,11 @@ body { background: var(--canvas); }
 .row-menu__trigger[aria-expanded="true"] { background: var(--surface-sunken); color: var(--ink-strong); border-color: var(--line); }
 /* Bán kính trong = bán kính ngoài − đệm: panel r=12, đệm 5 → item r=7. */
 .row-menu__panel {
-  /* position/top/right/bottom/max-height do RowActionsMenu tính lúc mở và đặt
-     inline (position: fixed) — nhờ vậy không bị overflow:hidden của thẻ bảng cắt
-     khi dòng ở cuối bảng/cuối trang. Các giá trị dưới đây chỉ là mặc định khi
-     chưa kịp đo. */
-  position: fixed; z-index: 200;
+  /* Panel được render qua portal thẳng vào <body>; RowActionsMenu tính
+     position:fixed + top/right/bottom/max-height inline lúc mở. Nhờ portal +
+     fixed, panel không bị overflow:hidden của thẻ bảng hay containing-block do
+     animation/transform của khối cha cắt/che (lỗi cũ ở dòng cuối bảng). */
+  position: fixed; z-index: 1000;
   min-width: 216px; padding: 5px;
   border: 1px solid var(--line); background: var(--surface);
   border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
