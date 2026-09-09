@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
 import type { ContractRes } from '../types/contractTypes';
-import { createAppendix, ContractsApiError } from '../api/contractsApi';
+import { createAppendix, fetchAppendices, ContractsApiError, type ContractAppendixRes } from '../api/contractsApi';
 
 interface Props {
   contract: ContractRes;
@@ -10,6 +10,18 @@ interface Props {
   onClose: () => void;
   onSaved?: () => void;
   currentUserRoles?: string[];
+}
+
+function formatDate(d?: string | null): string {
+  if (!d) return '—';
+  const date = new Date(d);
+  if (Number.isNaN(date.getTime())) return d;
+  return date.toLocaleDateString('vi-VN');
+}
+
+function formatAmount(amount?: number | null): string {
+  if (amount === null || amount === undefined) return '—';
+  return `${amount.toLocaleString('vi-VN')} đ`;
 }
 
 export default function ContractAppendixModal({
@@ -26,6 +38,36 @@ export default function ContractAppendixModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // NCL-04-CN-004 TC-05: lịch sử các phụ lục đã lập của hợp đồng.
+  const [appendices, setAppendices] = useState<ContractAppendixRes[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+
+  const loadHistory = useCallback(async () => {
+    if (!contract.id || !isAllowed) return;
+    setIsLoadingHistory(true);
+    setHistoryError(null);
+    try {
+      setAppendices((await fetchAppendices(contract.id)) ?? []);
+    } catch (err) {
+      setHistoryError(
+        err instanceof ContractsApiError ? err.message : 'Không thể tải lịch sử phụ lục.'
+      );
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, [contract.id, isAllowed]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setContent('');
+    setAdjustmentValue('');
+    setEffectiveDate('');
+    setErrors({});
+    setServerError(null);
+    void loadHistory();
+  }, [isOpen, loadHistory]);
 
   if (!isOpen) return null;
 
@@ -54,8 +96,14 @@ export default function ContractAppendixModal({
         adjustmentValue: Number(adjustmentValue),
         effectiveDate,
       });
+      // Ở lại trong modal để người dùng thấy ngay phụ lục vừa lập trong "Lịch sử
+      // phụ lục" (TC-05); dọn form và nạp lại lịch sử.
+      setContent('');
+      setAdjustmentValue('');
+      setEffectiveDate('');
+      setErrors({});
+      await loadHistory();
       onSaved?.();
-      onClose();
     } catch (err) {
       setServerError(err instanceof ContractsApiError ? err.message : 'Không thể lưu phụ lục điều chỉnh hợp đồng.');
     } finally {
@@ -67,89 +115,141 @@ export default function ContractAppendixModal({
     <ModalPortal>
       <div
         className="modal-backdrop"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !submitting) onClose();
-      }}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="appendix-modal-title"
-    >
-      <div className="modal-card contract-modal-card">
-        <div className="modal-header">
-          <div className="modal-header__title-wrap">
-            <h3 id="appendix-modal-title" className="modal-title">
-              <span className="modal-title__icon">{ICONS.document}</span>
-              Lập phụ lục điều chỉnh hợp đồng
-            </h3>
-            <p className="field-hint">
-              {contract.contractCode} · {contract.name} · Giá trị hiện tại: {contract.totalValue.toLocaleString('vi-VN')}
-            </p>
-          </div>
-          <button type="button" className="modal-close" onClick={onClose} disabled={submitting} aria-label="Đóng">
-            {ICONS.close}
-          </button>
-        </div>
-
-        <div className="modal-body">
-          {!isAllowed && (
-            <div className="alert-box alert-box--danger">Yêu cầu vai trò Nhân viên kinh doanh (VT-04).</div>
-          )}
-
-          {serverError && <div className="alert-box alert-box--danger">{serverError}</div>}
-
-          <form onSubmit={handleSubmit} noValidate>
-            <label className="form-label" htmlFor="appendix-content">
-              Nội dung điều chỉnh
-            </label>
-            <textarea
-              id="appendix-content"
-              className={`form-input ${errors.content ? 'form-input--error' : ''}`}
-              aria-label="Nội dung điều chỉnh"
-              rows={4}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Mô tả thay đổi theo phụ lục, phạm vi, đơn giá hoặc mốc hiệu lực mới..."
-            />
-            {errors.content && <small className="field-error">{errors.content}</small>}
-
-            <label className="form-label" htmlFor="appendix-adjustment" style={{ marginTop: '12px' }}>
-              Giá trị điều chỉnh (VNĐ)
-            </label>
-            <input
-              id="appendix-adjustment"
-              className={`form-input ${errors.adjustmentValue ? 'form-input--error' : ''}`}
-              aria-label="Giá trị điều chỉnh"
-              type="number"
-              value={adjustmentValue}
-              onChange={(e) => setAdjustmentValue(e.target.value)}
-              placeholder="200000000"
-            />
-            {errors.adjustmentValue && <small className="field-error">{errors.adjustmentValue}</small>}
-
-            <label className="form-label" htmlFor="appendix-effective-date" style={{ marginTop: '12px' }}>
-              Ngày hiệu lực
-            </label>
-            <input
-              id="appendix-effective-date"
-              className={`form-input ${errors.effectiveDate ? 'form-input--error' : ''}`}
-              aria-label="Ngày hiệu lực"
-              type="date"
-              value={effectiveDate}
-              onChange={(e) => setEffectiveDate(e.target.value)}
-            />
-            {errors.effectiveDate && <small className="field-error">{errors.effectiveDate}</small>}
-
-            <div style={{ marginTop: '16px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              <button type="button" className="btn" onClick={onClose} disabled={submitting}>
-                Hủy
-              </button>
-              <button type="submit" className="btn-primary" disabled={submitting || !isAllowed}>
-                {submitting ? 'Đang lưu…' : 'Lưu phụ lục'}
-              </button>
+        onClick={(e) => {
+          if (e.target === e.currentTarget && !submitting) onClose();
+        }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="appendix-modal-title"
+      >
+        <div className="modal-card contract-modal-card">
+          <div className="modal-header">
+            <div className="modal-header__title-wrap">
+              <h3 id="appendix-modal-title" className="modal-title">
+                <span className="modal-title__icon">{ICONS.document}</span>
+                Lập phụ lục điều chỉnh hợp đồng
+              </h3>
+              <p className="field-hint">
+                {contract.contractCode} · {contract.name} · Giá trị hiện tại: {contract.totalValue.toLocaleString('vi-VN')}
+              </p>
             </div>
-          </form>
+            <button type="button" className="modal-close" onClick={onClose} disabled={submitting} aria-label="Đóng">
+              {ICONS.close}
+            </button>
+          </div>
+
+          <div className="modal-body">
+            {!isAllowed && (
+              <div className="alert-box alert-box--danger">Yêu cầu vai trò Nhân viên kinh doanh (VT-04).</div>
+            )}
+
+            {serverError && <div className="alert-box alert-box--danger">{serverError}</div>}
+
+            <form onSubmit={handleSubmit} noValidate>
+              <label className="form-label" htmlFor="appendix-content">
+                Nội dung điều chỉnh
+              </label>
+              <textarea
+                id="appendix-content"
+                className={`form-input ${errors.content ? 'form-input--error' : ''}`}
+                aria-label="Nội dung điều chỉnh"
+                rows={4}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Mô tả thay đổi theo phụ lục, phạm vi, đơn giá hoặc mốc hiệu lực mới..."
+              />
+              {errors.content && <small className="field-error">{errors.content}</small>}
+
+              <label className="form-label" htmlFor="appendix-adjustment" style={{ marginTop: '12px' }}>
+                Giá trị điều chỉnh (VNĐ)
+              </label>
+              <input
+                id="appendix-adjustment"
+                className={`form-input ${errors.adjustmentValue ? 'form-input--error' : ''}`}
+                aria-label="Giá trị điều chỉnh"
+                type="number"
+                value={adjustmentValue}
+                onChange={(e) => setAdjustmentValue(e.target.value)}
+                placeholder="200000000"
+              />
+              {errors.adjustmentValue && <small className="field-error">{errors.adjustmentValue}</small>}
+
+              <label className="form-label" htmlFor="appendix-effective-date" style={{ marginTop: '12px' }}>
+                Ngày hiệu lực
+              </label>
+              <input
+                id="appendix-effective-date"
+                className={`form-input ${errors.effectiveDate ? 'form-input--error' : ''}`}
+                aria-label="Ngày hiệu lực"
+                type="date"
+                value={effectiveDate}
+                onChange={(e) => setEffectiveDate(e.target.value)}
+              />
+              {errors.effectiveDate && <small className="field-error">{errors.effectiveDate}</small>}
+
+              <div style={{ marginTop: '16px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button type="button" className="btn" onClick={onClose} disabled={submitting}>
+                  Đóng
+                </button>
+                <button type="submit" className="btn-primary" disabled={submitting || !isAllowed}>
+                  {submitting ? 'Đang lưu…' : 'Lưu phụ lục'}
+                </button>
+              </div>
+            </form>
+
+            {/* NCL-04-CN-004 TC-05: lịch sử các phụ lục đã lập */}
+            {isAllowed && (
+              <div className="renewal-history-wrap">
+                <h4 className="renewal-history-title">
+                  <span className="icon-sm">{ICONS.history}</span>
+                  Lịch sử phụ lục ({appendices.length})
+                </h4>
+
+                {isLoadingHistory && <p className="cell-muted">Đang tải lịch sử phụ lục...</p>}
+                {historyError && <p className="field-error">{historyError}</p>}
+
+                {!isLoadingHistory && !historyError && appendices.length === 0 && (
+                  <p className="cell-muted" style={{ fontStyle: 'italic', fontSize: '13.5px' }}>
+                    Chưa có phụ lục nào cho hợp đồng này.
+                  </p>
+                )}
+
+                {!isLoadingHistory && appendices.length > 0 && (
+                  <div className="table-responsive">
+                    <table className="user-data-table" style={{ fontSize: '13px' }} data-testid="appendix-history-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: '130px' }}>Thời điểm</th>
+                          <th style={{ width: '100px' }}>Người tạo</th>
+                          <th>Nội dung</th>
+                          <th style={{ width: '110px' }}>Ngày hiệu lực</th>
+                          <th style={{ textAlign: 'right' }}>Điều chỉnh</th>
+                          <th style={{ textAlign: 'right' }}>Giá trị trước ➔ sau</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {appendices.map((a) => (
+                          <tr key={a.id}>
+                            <td>{a.createdAt ? new Date(a.createdAt).toLocaleString('vi-VN') : '—'}</td>
+                            <td>{a.createdBy || '—'}</td>
+                            <td>{a.content || '—'}</td>
+                            <td>{formatDate(a.effectiveDate)}</td>
+                            <td style={{ textAlign: 'right' }}>
+                              {a.adjustmentValue > 0 ? `+${formatAmount(a.adjustmentValue)}` : formatAmount(a.adjustmentValue)}
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              {formatAmount(a.valueBefore)} ➔ <strong>{formatAmount(a.valueAfter)}</strong>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
       </div>
     </ModalPortal>
   );
