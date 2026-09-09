@@ -67,7 +67,7 @@ describe('ContractListPage (NCL-04-CN-002 — lối vào cho Kế toán)', () =>
     expect(contractsApi.fetchContracts).not.toHaveBeenCalled();
   });
 
-  it('TC-01: Kế toán (VT-05) xem được danh sách hợp đồng và thao tác trên từng dòng', async () => {
+  it('TC-01: Kế toán (VT-05) xem được danh sách và thao tác gộp trong menu ⋮ của từng dòng', async () => {
     vi.mocked(contractsApi.fetchContracts).mockResolvedValue(contracts);
 
     render(<ContractListPage currentUserRoles={['VT-05']} currentUserName="Hoàng Văn Nam" />);
@@ -80,10 +80,23 @@ describe('ContractListPage (NCL-04-CN-002 — lối vào cho Kế toán)', () =>
 
     expect(screen.getByText('HD-0001')).toBeInTheDocument();
     expect(screen.getByText('Công ty TNHH ABC')).toBeInTheDocument();
-    // Mỗi dòng có nút khai báo loại & hạn mức + mốc thanh toán.
-    expect(screen.getAllByRole('button', { name: /Khai báo loại & hạn mức/i })).toHaveLength(2);
-    // Chỉ hợp đồng DRAFT mới có nút Kích hoạt.
-    expect(screen.getAllByRole('button', { name: /^Kích hoạt$/i })).toHaveLength(1);
+
+    // Không có nút thao tác rời — chỉ một nút ⋮ mỗi dòng.
+    expect(screen.queryByRole('button', { name: /Khai báo loại & hạn mức/i })).toBeNull();
+    const triggers = screen.getAllByRole('button', { name: /Thao tác hợp đồng/i });
+    expect(triggers).toHaveLength(2);
+
+    // Dòng HD-0001 (DRAFT): mở menu → đủ 4 mục kể cả "Kích hoạt".
+    fireEvent.click(screen.getByRole('button', { name: 'Thao tác hợp đồng HD-0001' }));
+    expect(screen.getByTestId('contract-action-type-limit-1')).toBeInTheDocument();
+    expect(screen.getByTestId('contract-action-milestones-1')).toBeInTheDocument();
+    expect(screen.getByTestId('contract-action-limit-alert-1')).toBeInTheDocument();
+    expect(screen.getByTestId('contract-action-activate-1')).toBeInTheDocument();
+
+    // Dòng HD-0002 (ACTIVE): mở menu → không có "Kích hoạt".
+    fireEvent.click(screen.getByRole('button', { name: 'Thao tác hợp đồng HD-0002' }));
+    expect(screen.getByTestId('contract-action-type-limit-2')).toBeInTheDocument();
+    expect(screen.queryByTestId('contract-action-activate-2')).toBeNull();
   });
 
   it('lọc theo trạng thái ACTIVE chỉ còn hợp đồng đang hiệu lực', async () => {
@@ -99,7 +112,7 @@ describe('ContractListPage (NCL-04-CN-002 — lối vào cho Kế toán)', () =>
     expect(screen.getByText('HD-0002')).toBeInTheDocument();
   });
 
-  it('bấm "Khai báo loại & hạn mức" nạp chi tiết hợp đồng qua GET /contracts/{id} rồi mở modal', async () => {
+  it('chọn "Khai báo loại & hạn mức" trong menu ⋮ nạp chi tiết hợp đồng qua GET /contracts/{id} rồi mở modal', async () => {
     vi.mocked(contractsApi.fetchContracts).mockResolvedValue(contracts);
     vi.mocked(contractsApi.getContract).mockResolvedValue(contracts[0]);
 
@@ -107,7 +120,8 @@ describe('ContractListPage (NCL-04-CN-002 — lối vào cho Kế toán)', () =>
 
     await waitFor(() => expect(screen.getByTestId('contract-table')).toBeInTheDocument());
 
-    fireEvent.click(screen.getAllByRole('button', { name: /Khai báo loại & hạn mức/i })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Thao tác hợp đồng HD-0001' }));
+    fireEvent.click(screen.getByTestId('contract-action-type-limit-1'));
 
     await waitFor(() => {
       expect(contractsApi.getContract).toHaveBeenCalledWith(1);

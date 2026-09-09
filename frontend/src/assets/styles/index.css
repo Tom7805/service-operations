@@ -2013,23 +2013,26 @@ body { background: var(--canvas); }
 .row-menu__trigger[aria-expanded="true"] { background: var(--surface-sunken); color: var(--ink-strong); border-color: var(--line); }
 /* Bán kính trong = bán kính ngoài − đệm: panel r=12, đệm 5 → item r=7. */
 .row-menu__panel {
-  position: absolute; right: 0; top: calc(100% + 4px); z-index: 20;
+  /* position/top/right/bottom/max-height do RowActionsMenu tính lúc mở và đặt
+     inline (position: fixed) — nhờ vậy không bị overflow:hidden của thẻ bảng cắt
+     khi dòng ở cuối bảng/cuối trang. Các giá trị dưới đây chỉ là mặc định khi
+     chưa kịp đo. */
+  position: fixed; z-index: 200;
   min-width: 216px; padding: 5px;
   border: 1px solid var(--line); background: var(--surface);
   border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
   display: none; flex-direction: column; gap: 1px;
+  overflow-y: auto; overscroll-behavior: contain;
 }
 .row-menu__panel--open { display: flex; animation: row-menu-in var(--dur-base) var(--ease-out); transform-origin: top right; }
 @keyframes row-menu-in {
   from { opacity: 0; transform: scale(0.97) translateY(-4px); }
   to   { opacity: 1; transform: none; }
 }
-/* Dòng cuối cùng của bảng: card cha (.user-table-card) có overflow: hidden để bo
-   góc, panel mở xuống bị cắt cụt ngay rìa dưới card thay vì chờ tới mép màn
-   hình. RowActionsMenu đo trước khoảng trống lúc mở và gắn lớp này — panel bật
-   NGƯỢC LÊN TRÊN nút bấm, nằm gọn trong phần thân bảng đã hiện sẵn nên không
-   còn gì để cắt. */
-.row-menu__panel--up { top: auto; bottom: calc(100% + 4px); transform-origin: bottom right; }
+/* Khi khung nhìn phía dưới nút ⋮ không đủ chỗ, RowActionsMenu gắn lớp này để
+   panel bung NGƯỢC LÊN (toạ độ `bottom` đặt inline). Vì panel là position:fixed
+   nên không còn bị thẻ bảng overflow:hidden cắt như trước. */
+.row-menu__panel--up { transform-origin: bottom right; }
 .row-menu__panel--up.row-menu__panel--open { animation: row-menu-in-up var(--dur-base) var(--ease-out); }
 @keyframes row-menu-in-up {
   from { opacity: 0; transform: scale(0.97) translateY(4px); }
