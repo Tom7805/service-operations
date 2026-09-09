@@ -6,6 +6,11 @@ public enum ProjectAuditAction {
 	/** Tao du an tu mau co san cay cong viec (NCL-05-CN-007). */
 	CREATE_FROM_TEMPLATE,
 
+	/** Quan ly moc tien do cua du an (NCL-05-CN-008 / TC-04). */
+	MILESTONE_CREATED,
+	MILESTONE_UPDATED,
+	MILESTONE_DELETED,
+
 	TASK_PROGRESS_UPDATED,
 	TASK_BUDGET_UPDATED,
 	PROJECT_CLOSED
