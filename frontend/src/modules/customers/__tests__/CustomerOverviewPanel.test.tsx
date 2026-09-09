@@ -19,6 +19,8 @@ vi.mock('../api/customersApi', () => ({
 vi.mock('../../contracts/api/contractsApi', () => ({
   getContract: vi.fn(),
   updateTypeAndLimit: vi.fn(),
+  fetchExpiringContracts: vi.fn(),
+  getExpiringContracts: vi.fn(),
   ContractsApiError: class extends Error {
     constructor(public code: string, message: string, public statusCode?: number) {
       super(message);
@@ -259,6 +261,36 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
         expect(screen.getByText('Không tìm thấy hợp đồng.')).toBeInTheDocument();
       });
       expect(screen.queryByLabelText(/Loại hợp đồng/i)).toBeNull();
+    });
+
+    it('NCL-04-CN-006: nút "Nhắc hợp đồng sắp hết hạn" hiển thị cho VT-05 và bấm nút mở modal nhắc hạn', async () => {
+      vi.mocked(customersApi.fetchCustomerOverview).mockResolvedValue(fullOverview);
+      vi.mocked(contractsApi.fetchExpiringContracts).mockResolvedValue([
+        {
+          contractId: 1,
+          contractCode: 'HD-0001',
+          name: 'Hợp đồng ERP',
+          customerId: 10,
+          endDate: '2026-09-15',
+          daysRemaining: 6,
+        },
+      ]);
+
+      render(<CustomerOverviewPanel customerId={10} customerName="Công ty Cổ phần Alpha" currentUserRoles={['VT-05']} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('customer-summary-panel')).toBeInTheDocument();
+      });
+
+      const reminderBtn = screen.getByRole('button', { name: /Nhắc hợp đồng sắp hết hạn/i });
+      expect(reminderBtn).toBeInTheDocument();
+
+      fireEvent.click(reminderBtn);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Nhắc hợp đồng sắp hết hiệu lực/i)).toBeInTheDocument();
+      });
+      expect(contractsApi.fetchExpiringContracts).toHaveBeenCalledWith(30);
     });
   });
 });

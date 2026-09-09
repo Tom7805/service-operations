@@ -3,6 +3,7 @@ import type {
   ContractType,
   ContractMilestoneRes,
   ContractMilestoneInput,
+  ContractExpiryAlertRes,
 } from '../types/contractTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
@@ -122,6 +123,22 @@ export async function replaceMilestones(
   });
 }
 
+/**
+ * GET /contracts/expiring?days=30 — danh sách hợp đồng đang hiệu lực sắp hết hạn
+ * trong vòng `days` ngày (mặc định 30), sắp xếp theo ngày hết hạn gần nhất trước.
+ * Yêu cầu vai trò Kế toán (VT-05) (NCL-04-CN-006).
+ */
+export async function fetchExpiringContracts(days: number = 30): Promise<ContractExpiryAlertRes[]> {
+  if (days < 0) {
+    throw new ContractsApiError('VALIDATION_ERROR', 'Số ngày rà soát không được âm.', 400);
+  }
+  return requestBackend<ContractExpiryAlertRes[]>(`${API_BASE_URL}/contracts/expiring?days=${days}`, {
+    method: 'GET',
+  });
+}
+
+export const getExpiringContracts = fetchExpiringContracts;
+
 export default {} as unknown as {
   getContract: typeof getContract;
   updateTypeAndLimit: typeof updateTypeAndLimit;
@@ -129,4 +146,6 @@ export default {} as unknown as {
   fetchAppendices: typeof fetchAppendices;
   fetchMilestones: typeof fetchMilestones;
   replaceMilestones: typeof replaceMilestones;
+  fetchExpiringContracts: typeof fetchExpiringContracts;
+  getExpiringContracts: typeof getExpiringContracts;
 };

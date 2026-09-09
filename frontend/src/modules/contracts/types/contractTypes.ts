@@ -60,3 +60,18 @@ export interface ContractMilestoneInput {
   expectedDate?: string | null;
   acceptanceCondition?: string | null;
 }
+
+/**
+ * Hợp đồng sắp hết hiệu lực, dùng nhắc Kế toán gia hạn trước hạn (NCL-04-CN-006).
+ * GET /contracts/expiring?days=30
+ */
+export interface ContractExpiryAlertRes {
+  contractId: number;
+  contractCode: string;
+  name: string;
+  customerId: number;
+  customerName?: string | null;
+  endDate: string;
+  daysRemaining: number;
+}
+
