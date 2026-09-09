@@ -11,7 +11,7 @@ import { ICONS } from '../../../components/common/icons';
 import ContractTypeLimitModal from '../../contracts/components/ContractTypeLimitModal';
 import ContractMilestonesModal from '../../contracts/components/ContractMilestonesModal';
 import ContractAppendixModal from '../../contracts/components/ContractAppendixModal';
-import ContractLimitAlert from '../../contracts/components/ContractLimitAlert';
+import ContractLimitAlert, { type ContractLimitAlertTarget } from '../../contracts/components/ContractLimitAlert';
 import { getContract, ContractsApiError } from '../../contracts/api/contractsApi';
 import type { ContractRes } from '../../contracts/types/contractTypes';
 import { t } from '../../../i18n';
@@ -91,11 +91,14 @@ export default function CustomerOverviewPanel({
   const [isAppendixOpen, setIsAppendixOpen] = useState(false);
   const [isLimitAlertOpen, setIsLimitAlertOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<ContractRes | null>(null);
+  const [limitAlertTarget, setLimitAlertTarget] = useState<ContractLimitAlertTarget | null>(null);
   const [isContractLoading, setIsContractLoading] = useState(false);
   const [contractLoadError, setContractLoadError] = useState<string | null>(null);
 
-  // NCL-04-CN-002/003/004/005: nạp đúng dữ liệu hiện tại của hợp đồng trước khi mở modal xem/sửa/điều chỉnh.
-  const openContractAction = useCallback(async (contractId: number, action: 'type-limit' | 'milestones' | 'appendix' | 'limit-alert') => {
+  // NCL-04-CN-002/003/004: nạp đúng dữ liệu hiện tại của hợp đồng trước khi mở modal sửa/điều chỉnh.
+  // Cả ba thao tác này (khai báo loại/hạn mức, mốc thanh toán, phụ lục) chỉ dành cho
+  // vai trò VT-05/VT-04 — trùng đúng phạm vi quyền của API `GET /contracts/{id}`.
+  const openContractAction = useCallback(async (contractId: number, action: 'type-limit' | 'milestones' | 'appendix') => {
     setContractLoadError(null);
     setIsContractLoading(true);
     try {
@@ -103,8 +106,7 @@ export default function CustomerOverviewPanel({
       setSelectedContract(contract);
       if (action === 'type-limit') setIsTypeLimitOpen(true);
       else if (action === 'milestones') setIsMilestonesOpen(true);
-      else if (action === 'appendix') setIsAppendixOpen(true);
-      else setIsLimitAlertOpen(true);
+      else setIsAppendixOpen(true);
     } catch (err) {
       setContractLoadError(
         err instanceof ContractsApiError
@@ -114,6 +116,20 @@ export default function CustomerOverviewPanel({
     } finally {
       setIsContractLoading(false);
     }
+  }, []);
+
+  // NCL-04-CN-005: mở màn hình cảnh báo hạn mức cho cả VT-02 lẫn VT-05. KHÔNG
+  // dùng chung `openContractAction` — hàm đó gọi `GET /contracts/{id}` vốn chỉ
+  // cấp quyền cho VT-05, nên nếu tái dùng thì Quản lý dự án (VT-02) bấm nút này
+  // sẽ luôn nhận lỗi 403 dù bản thân API `GET /contracts/{id}/usage` đã cho phép
+  // cả hai vai trò. Tên/mã hợp đồng để hiển thị tiêu đề đã có sẵn từ dòng tổng hợp.
+  const openLimitAlert = useCallback((contractId: number, contractCode: string | null, contractName: string | null) => {
+    setLimitAlertTarget({
+      id: contractId,
+      contractCode: contractCode ?? '—',
+      name: contractName ?? '(không có tên)',
+    });
+    setIsLimitAlertOpen(true);
   }, []);
 
   const loadOverview = useCallback(async () => {
@@ -420,8 +436,7 @@ export default function CustomerOverviewPanel({
                                     <button
                                       type="button"
                                       className="btn btn-secondary"
-                                      onClick={() => void openContractAction(item.id, 'limit-alert')}
-                                      disabled={isContractLoading}
+                                      onClick={() => openLimitAlert(item.id, item.code, item.name)}
                                     >
                                       Cảnh báo hạn mức
                                     </button>
@@ -512,14 +527,14 @@ export default function CustomerOverviewPanel({
         />
       )}
 
-      {selectedContract && (
+      {limitAlertTarget && (
         <ContractLimitAlert
           isOpen={isLimitAlertOpen}
           onClose={() => {
             setIsLimitAlertOpen(false);
-            setSelectedContract(null);
+            setLimitAlertTarget(null);
           }}
-          contract={selectedContract}
+          contract={limitAlertTarget}
           currentUserRoles={currentUserRoles}
         />
       )}

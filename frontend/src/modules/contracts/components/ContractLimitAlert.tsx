@@ -3,8 +3,17 @@ import { ICONS } from '../../../components/common/icons';
 import type { ContractRes, ContractUsageRes } from '../types/contractTypes';
 import { getContractUsage, ContractsApiError } from '../api/contractsApi';
 
+/**
+ * Chỉ cần đủ để hiển thị tiêu đề — KHÔNG dùng `ContractRes` đầy đủ vì màn hình
+ * này phải mở được cho cả VT-02 (Quản lý dự án), trong khi API `GET
+ * /contracts/{id}` (nguồn của `ContractRes` đầy đủ) chỉ cấp quyền cho VT-05.
+ * Giữ prop hẹp lại giúp trang gọi component không bị buộc phải gọi API bị
+ * chặn quyền chỉ để lấy tên/mã hợp đồng hiển thị ở tiêu đề.
+ */
+export type ContractLimitAlertTarget = Pick<ContractRes, 'id' | 'contractCode' | 'name'>;
+
 export interface ContractLimitAlertProps {
-  contract: ContractRes;
+  contract: ContractLimitAlertTarget;
   isOpen?: boolean;
   onClose?: () => void;
   currentUserRoles?: string[];
