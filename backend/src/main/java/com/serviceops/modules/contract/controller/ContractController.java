@@ -79,11 +79,16 @@ public BaseRes<List<ContractRes>> listContracts() {
 }
 
 /**
- * Xem chi tiet mot hop dong - phuc vu man hinh khai bao loai/han muc can nap
- * san gia tri hien tai truoc khi sua (NCL-04-CN-002).
+ * Xem chi tiet mot hop dong - Frontend nap san gia tri hien tai truoc khi mo cac
+ * man hinh thao tac:
+ *  - Ke toan (VT-05): khai bao loai/han muc, moc thanh toan (NCL-04-CN-002/003);
+ *  - Nhan vien kinh doanh (VT-04): phu luc dieu chinh, gia han (NCL-04-CN-004/007);
+ *  - Quan ly du an (VT-02): tu ho so tong hop khach hang.
+ * Day chi la doc chi tiet mot hop dong ma cac vai tro nay deu da thay tom tat o
+ * ho so khach hang / man hinh Hop dong, nen cho ca ba; vai tro khac nhan 403.
  */
 @GetMapping("/{contractId}")
-@PreAuthorize("hasRole('VT-05')")
+@PreAuthorize("hasRole('VT-05') or hasRole('VT-04') or hasRole('VT-02')")
 public BaseRes<ContractRes> getContract(@PathVariable Long contractId) {
 	return BaseRes.ok(contractService.getById(contractId));
 }

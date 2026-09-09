@@ -1794,8 +1794,13 @@ liệu `COMPANY` nên thấy mọi hợp đồng của công ty.
 
 Trả về chi tiết hợp đồng hiện tại — Frontend gọi API này trước khi mở màn hình khai báo để nạp
 sẵn `contractType`/`totalValue`/`limitValue` đang có, tránh gửi đè giá trị sai lên `PATCH` bên dưới.
-Cùng yêu cầu vai trò Kế toán (`VT-05`) và cùng cấu trúc `ContractRes` như response thành công của
-`PATCH` bên dưới.
+Cùng cấu trúc `ContractRes` như response thành công của `PATCH` bên dưới.
+
+**Xác thực:** token của **Kế toán** (`VT-05`), **Nhân viên kinh doanh** (`VT-04`) hoặc **Quản lý dự án**
+(`VT-02`). VT-04 cần API này để nạp hợp đồng trước khi lập **phụ lục điều chỉnh** (`NCL-04-CN-004`) hoặc
+**gia hạn** (`NCL-04-CN-007`) từ hồ sơ tổng hợp khách hàng; VT-02 khi thao tác từ cùng màn hình đó. Đây
+chỉ là đọc chi tiết một hợp đồng mà các vai trò này đều đã thấy tóm tắt (ở hồ sơ khách hàng hoặc màn
+hình "Hợp đồng"). Vai trò khác nhận `403 FORBIDDEN`.
 
 #### `PATCH /contracts/{contractId}/type-limit`
 

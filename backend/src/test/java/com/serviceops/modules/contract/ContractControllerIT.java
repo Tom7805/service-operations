@@ -206,4 +206,31 @@ void deniesNonAccountingRoleFromListingContracts() throws Exception {
 			.andExpect(status().isForbidden())
 			.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
 }
+
+@Test
+@DisplayName("NCL-04-CN-004/007: NV kinh doanh (VT-04) xem duoc chi tiet 1 hop dong qua GET /contracts/{id}")
+@WithMockUser(authorities = "ROLE_VT-04")
+void allowsSalesRoleToGetOneContract() throws Exception {
+	when(contractService.getById(5L)).thenReturn(new ContractRes(
+			5L, "HD-4K7X2Q9", "Hop dong ERP", 1L, 1L, "Cong ty TNHH ABC", 30L,
+			"FIXED_PRICE", new BigDecimal("500000000"), null,
+			LocalDate.of(2026, 10, 1), LocalDate.of(2027, 9, 30), "ACTIVE",
+			null, "sale01", LocalDateTime.now()));
+
+	mockMvc.perform(get("/contracts/5"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.contractCode").value("HD-4K7X2Q9"))
+			.andExpect(jsonPath("$.data.status").value("ACTIVE"));
+
+	verify(contractService).getById(5L);
+}
+
+@Test
+@DisplayName("GET /contracts/{id}: vai tro ngoai VT-04/05/02 bi tu choi 403")
+@WithMockUser(authorities = "ROLE_VT-03")
+void deniesOtherRolesFromGetOneContract() throws Exception {
+	mockMvc.perform(get("/contracts/5"))
+			.andExpect(status().isForbidden())
+			.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+}
 }

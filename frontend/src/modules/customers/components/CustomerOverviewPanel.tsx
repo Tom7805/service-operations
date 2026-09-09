@@ -93,9 +93,9 @@ export default function CustomerOverviewPanel({
   const [contractLoadError, setContractLoadError] = useState<string | null>(null);
 
   // NCL-04-CN-004/007: nạp đúng dữ liệu hiện tại của hợp đồng trước khi mở modal phụ lục/gia hạn.
-  // Hai thao tác này chỉ dành cho Nhân viên kinh doanh (VT-04) — trùng đúng phạm vi quyền của
-  // API `GET /contracts/{id}`. Khai báo loại/hạn mức, mốc thanh toán và kích hoạt (chỉ Kế toán VT-05)
-  // đã chuyển sang màn hình "Hợp đồng" riêng cho VT-05 (VT-05 không vào được hồ sơ khách hàng).
+  // Hai thao tác này chỉ dành cho Nhân viên kinh doanh (VT-04). `GET /contracts/{id}` cho phép
+  // VT-04/VT-02/VT-05 (đọc chi tiết một hợp đồng đã thấy tóm tắt ở đây). Khai báo loại/hạn mức,
+  // mốc thanh toán và kích hoạt (chỉ Kế toán VT-05) đã chuyển sang màn hình "Hợp đồng" riêng.
   const openContractAction = useCallback(async (contractId: number, action: 'appendix' | 'renewal') => {
     setContractLoadError(null);
     setIsContractLoading(true);
