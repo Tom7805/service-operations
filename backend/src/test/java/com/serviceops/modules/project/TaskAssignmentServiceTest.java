@@ -11,10 +11,12 @@ import com.serviceops.modules.project.entity.Project;
 import com.serviceops.modules.project.entity.Task;
 import com.serviceops.modules.project.entity.TaskAssignment;
 import com.serviceops.modules.project.enums.ProjectStatus;
+import com.serviceops.modules.project.logging.ProjectAuditLogger;
 import com.serviceops.modules.project.repository.ProjectRepository;
 import com.serviceops.modules.project.repository.TaskAssignmentRepository;
 import com.serviceops.modules.project.repository.TaskRepository;
 import com.serviceops.modules.project.service.impl.TaskServiceImpl;
+import com.serviceops.security.scope.CurrentUserScopeProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,12 +43,17 @@ class TaskAssignmentServiceTest {
 	private TaskAssignmentRepository assignmentRepository;
 	@Mock
 	private EmployeeRepository employeeRepository;
+	@Mock
+	private CurrentUserScopeProvider currentUserScopeProvider;
+	@Mock
+	private ProjectAuditLogger auditLogger;
 
 	private TaskServiceImpl service;
 
 	@BeforeEach
 	void setUp() {
-		service = new TaskServiceImpl(projectRepository, taskRepository, assignmentRepository, employeeRepository);
+		service = new TaskServiceImpl(projectRepository, taskRepository, assignmentRepository, employeeRepository,
+				currentUserScopeProvider, auditLogger);
 		Project project = new Project();
 		project.setId(1L);
 		project.setStatus(ProjectStatus.RUNNING);

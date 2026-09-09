@@ -48,7 +48,7 @@ public class Project extends BaseEntity {
 	private Long projectManagerId;
 
 	@Enumerated(EnumType.STRING)
-	@Column(nullable = false, length = 30)
+	@Column(nullable = false, columnDefinition = "VARCHAR(30)")
 	private ProjectStatus status = ProjectStatus.RUNNING;
 
 	@Column(name = "created_by", length = 100)

@@ -2,6 +2,7 @@ package com.serviceops.modules.project.logging;
 
 import com.serviceops.modules.project.entity.ProjectAuditLog;
 import com.serviceops.modules.project.enums.ProjectAuditAction;
+import com.serviceops.modules.project.enums.TaskStatus;
 import com.serviceops.modules.project.repository.ProjectAuditLogRepository;
 import com.serviceops.security.scope.CurrentUserScopeProvider;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,19 @@ public class ProjectAuditLogger {
 		audit.setContractId(contractId);
 		audit.setActionType(ProjectAuditAction.CREATE_FROM_CONTRACT);
 		audit.setDetail(detail);
+		Long actorId = currentUserScopeProvider.currentUserId();
+		audit.setActorId(actorId == null ? 0L : actorId);
+		audit.setActorUsername(currentUsername());
+		audit.setActorRole(currentRole());
+		audit.setCreatedAt(LocalDateTime.now());
+		repository.save(audit);
+	}
+
+	public void recordProgressUpdate(Long projectId, Long taskId, TaskStatus previousStatus, TaskStatus newStatus) {
+		ProjectAuditLog audit = new ProjectAuditLog();
+		audit.setProjectId(projectId);
+		audit.setActionType(ProjectAuditAction.TASK_PROGRESS_UPDATED);
+		audit.setDetail("Cong viec #" + taskId + ": " + previousStatus + " -> " + newStatus);
 		Long actorId = currentUserScopeProvider.currentUserId();
 		audit.setActorId(actorId == null ? 0L : actorId);
 		audit.setActorUsername(currentUsername());

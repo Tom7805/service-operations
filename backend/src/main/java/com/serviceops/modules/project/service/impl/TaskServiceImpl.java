@@ -7,16 +7,22 @@ import com.serviceops.modules.identity.employee.repository.EmployeeRepository;
 import com.serviceops.modules.identity.user.enums.UserStatus;
 import com.serviceops.modules.identity.user.entity.User;
 import com.serviceops.modules.project.dto.request.TaskAssignmentReq;
+import com.serviceops.modules.project.dto.request.TaskProgressReq;
 import com.serviceops.modules.project.dto.response.TaskAssignmentRes;
+import com.serviceops.modules.project.dto.response.TaskRes;
 import com.serviceops.modules.project.entity.Project;
 import com.serviceops.modules.project.entity.Task;
 import com.serviceops.modules.project.entity.TaskAssignment;
 import com.serviceops.modules.project.enums.ProjectStatus;
+import com.serviceops.modules.project.enums.TaskStatus;
+import com.serviceops.modules.project.logging.ProjectAuditLogger;
 import com.serviceops.modules.project.repository.ProjectRepository;
 import com.serviceops.modules.project.repository.TaskAssignmentRepository;
 import com.serviceops.modules.project.repository.TaskRepository;
 import com.serviceops.modules.project.service.TaskService;
+import com.serviceops.security.scope.CurrentUserScopeProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -35,6 +41,8 @@ public class TaskServiceImpl implements TaskService {
 	private final TaskRepository taskRepository;
 	private final TaskAssignmentRepository assignmentRepository;
 	private final EmployeeRepository employeeRepository;
+	private final CurrentUserScopeProvider currentUserScopeProvider;
+	private final ProjectAuditLogger auditLogger;
 
 	@Override
 	public List<TaskAssignmentRes> assign(Long projectId, Long taskId, TaskAssignmentReq request) {
@@ -81,6 +89,33 @@ public class TaskServiceImpl implements TaskService {
 				.filter(item -> item.getProjectId().equals(projectId))
 				.orElseThrow(() -> notFound("Khong tim thay cong viec thuoc du an"));
 		return assignmentRepository.findByTaskIdOrderByIdAsc(taskId).stream().map(this::toResponse).toList();
+	}
+
+	@Override
+	public TaskRes updateProgress(Long projectId, Long taskId, TaskProgressReq request) {
+		projectRepository.findById(projectId).orElseThrow(() -> notFound("Khong tim thay du an"));
+		Task task = taskRepository.findById(taskId)
+				.filter(item -> item.getProjectId().equals(projectId))
+				.orElseThrow(() -> notFound("Khong tim thay cong viec thuoc du an"));
+
+		Long currentUserId = currentUserScopeProvider.currentUserId();
+		if (currentUserId == null || !assignmentRepository.existsByTaskIdAndUserId(task.getId(), currentUserId)) {
+			throw new AccessDeniedException("Ban khong phai nguoi duoc giao cong viec nay");
+		}
+
+		TaskStatus previousStatus = task.getStatus();
+		task.setStatus(request.status());
+		Task saved = taskRepository.save(task);
+
+		auditLogger.recordProgressUpdate(projectId, saved.getId(), previousStatus, saved.getStatus());
+
+		return toResponse(saved);
+	}
+
+	private TaskRes toResponse(Task task) {
+		return new TaskRes(task.getId(), task.getProjectId(), task.getWorkPackageId(), task.getParentTaskId(),
+				task.getName(), task.getDescription(), task.getExpectedStartDate(), task.getExpectedEndDate(),
+				task.getStatus());
 	}
 
 	private User requireAssignableUser(Long userId) {

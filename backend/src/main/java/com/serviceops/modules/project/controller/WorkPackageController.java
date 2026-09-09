@@ -3,6 +3,7 @@ package com.serviceops.modules.project.controller;
 import com.serviceops.common.api.BaseRes;
 import com.serviceops.modules.project.dto.request.TaskAssignmentReq;
 import com.serviceops.modules.project.dto.request.TaskCreateReq;
+import com.serviceops.modules.project.dto.request.TaskProgressReq;
 import com.serviceops.modules.project.dto.request.WorkPackageReq;
 import com.serviceops.modules.project.dto.response.TaskRes;
 import com.serviceops.modules.project.dto.response.TaskAssignmentRes;
@@ -13,6 +14,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -62,5 +64,13 @@ public class WorkPackageController {
 	public BaseRes<List<TaskAssignmentRes>> findTaskAssignments(@PathVariable Long projectId,
 			@PathVariable Long taskId) {
 		return BaseRes.ok(taskService.findAssignments(projectId, taskId));
+	}
+
+	@PatchMapping("/tasks/{taskId}/progress")
+	@PreAuthorize("hasRole('VT-03')")
+	public BaseRes<TaskRes> updateTaskProgress(@PathVariable Long projectId, @PathVariable Long taskId,
+			@Valid @RequestBody TaskProgressReq request) {
+		return BaseRes.ok("Cap nhat tien do cong viec thanh cong",
+				taskService.updateProgress(projectId, taskId, request));
 	}
 }
