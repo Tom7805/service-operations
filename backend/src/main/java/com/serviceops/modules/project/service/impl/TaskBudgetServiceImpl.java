@@ -4,7 +4,9 @@ import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.project.dto.request.TaskBudgetReq;
 import com.serviceops.modules.project.dto.response.TaskBudgetStatusRes;
+import com.serviceops.modules.project.entity.Project;
 import com.serviceops.modules.project.entity.Task;
+import com.serviceops.modules.project.enums.ProjectStatus;
 import com.serviceops.modules.project.logging.ProjectAuditLogger;
 import com.serviceops.modules.project.repository.ProjectRepository;
 import com.serviceops.modules.project.repository.TaskRepository;
@@ -30,7 +32,11 @@ public class TaskBudgetServiceImpl implements TaskBudgetService {
 
 	@Override
 	public TaskBudgetStatusRes setBudget(Long projectId, Long taskId, TaskBudgetReq request) {
-		projectRepository.findById(projectId).orElseThrow(() -> notFound("Khong tim thay du an"));
+		Project project = projectRepository.findById(projectId).orElseThrow(() -> notFound("Khong tim thay du an"));
+		if (project.getStatus() != ProjectStatus.RUNNING) {
+			throw new BusinessRuleException(ErrorCode.INVALID_STATE,
+					"Khong the dat ngan sach gio cong cho du an da dong");
+		}
 		Task task = taskRepository.findById(taskId)
 				.filter(item -> item.getProjectId().equals(projectId))
 				.orElseThrow(() -> notFound("Khong tim thay cong viec thuoc du an"));

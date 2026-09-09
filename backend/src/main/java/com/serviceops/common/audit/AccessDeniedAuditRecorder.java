@@ -45,6 +45,7 @@ public class AccessDeniedAuditRecorder {
         FEATURES.put("/tasks", new Feature(AuditTargetType.GENERAL, "Cập nhật tiến độ công việc dự án"));
         FEATURES.put("/contracts", new Feature(AuditTargetType.GENERAL, "Tạo dự án từ hợp đồng"));
         FEATURES.put("/opportunities", new Feature(AuditTargetType.GENERAL, "Cơ hội bán hàng"));
+        FEATURES.put("/close", new Feature(AuditTargetType.GENERAL, "Đóng dự án"));
         FEATURES.put("/audit-logs", new Feature(AuditTargetType.GENERAL, "Nhật ký hệ thống"));
         FEATURES.put("/sensitive-access-logs", new Feature(AuditTargetType.MASKING, "Nhật ký truy cập dữ liệu nhạy cảm"));
         FEATURES.put("/masking-rules", new Feature(AuditTargetType.MASKING, "Cấu hình che dữ liệu nhạy cảm"));

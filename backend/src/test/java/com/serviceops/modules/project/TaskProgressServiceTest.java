@@ -99,6 +99,20 @@ class TaskProgressServiceTest {
 	}
 
 	@Test
+	void rejectsUpdatingProgressOnAClosedProject() {
+		Project closedProject = new Project();
+		closedProject.setId(PROJECT_ID);
+		closedProject.setStatus(ProjectStatus.CLOSED);
+		when(projectRepository.findById(PROJECT_ID)).thenReturn(Optional.of(closedProject));
+
+		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
+				() -> service.updateProgress(PROJECT_ID, TASK_ID, new TaskProgressReq(TaskStatus.DONE)));
+
+		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
+		verify(taskRepository, never()).findById(any());
+	}
+
+	@Test
 	void rejectsTaskThatDoesNotBelongToProject() {
 		Task task = taskInProgress();
 		task.setProjectId(2L);

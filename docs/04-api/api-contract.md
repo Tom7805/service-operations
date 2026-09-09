@@ -2337,6 +2337,7 @@ vào `project_audit_logs` — người thực hiện, nội dung (trạng thái 
 | 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
 | 403 | `FORBIDDEN` | Không phải `VT-03`, **hoặc** là `VT-03` nhưng không nằm trong danh sách người được giao công việc này (TC-02) — cả hai trường hợp hệ thống đều ghi nhật ký lần từ chối. |
 | 404 | `RESOURCE_NOT_FOUND` | Không tồn tại dự án hoặc công việc thuộc dự án đó. |
+| 400 | `INVALID_STATE` | Dự án đã đóng (`CLOSED` — xem `NCL-05-CN-006`). |
 
 **Lưu ý cho Frontend:**
 - Đây **không phải** lỗi phân quyền theo vai trò thông thường: một nhân viên chuyên môn hợp lệ vẫn nhận
@@ -2409,6 +2410,7 @@ Ví dụ khi công việc đã có `34` giờ được duyệt trên ngân sách
 | 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
 | 403 | `FORBIDDEN` | Không phải `VT-02` — hệ thống ghi nhật ký lần từ chối (TC-03). |
 | 404 | `RESOURCE_NOT_FOUND` | Không tồn tại dự án hoặc công việc thuộc dự án đó. |
+| 400 | `INVALID_STATE` | Dự án đã đóng (`CLOSED` — xem `NCL-05-CN-006`). |
 
 **Lưu ý cho Frontend:**
 - `usageRatio` là phân số `0.0`–`1.0+` (không phải phần trăm) — nhân `100` khi hiển thị (`85%`).
@@ -2416,3 +2418,58 @@ Ví dụ khi công việc đã có `34` giờ được duyệt trên ngân sách
   hình chi tiết công việc — không cần đợi người dùng tải lại trang, vì cờ này luôn được trả trong response.
 - `approvedHours` hiện luôn `0` cho tới khi tính năng chấm công (`NCL-06`) đi vào hoạt động; Frontend vẫn nên
   dựng sẵn UI hiển thị tỷ lệ ngay từ bây giờ vì hợp đồng response không đổi khi `approvedHours` bắt đầu có dữ liệu.
+
+---
+
+### `NCL-05-CN-006` — Đóng dự án
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`). Chỉ đóng được dự án đang `RUNNING` (gọi lại trên dự án đã
+`CLOSED` nhận `400 INVALID_STATE`, tránh đóng hai lần). Hệ thống chặn đóng nếu dự án còn công việc ở trạng thái
+`WAITING_APPROVAL` (`NCL-05-CN-004`) — đại diện cho phần việc/bảng chấm công còn treo chưa được duyệt (QTN-13);
+Epic `NCL-06` (Bảng chấm công) chưa triển khai nên hiện tại đây là nguồn dữ liệu "còn treo" duy nhất đã có.
+Đóng thành công ghi một dòng `PROJECT_CLOSED` vào `project_audit_logs` — người thực hiện, nội dung, thời điểm (TC-04).
+
+#### `POST /projects/{projectId}/close`
+
+Không cần body.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Dong du an thanh cong",
+  "data": {
+    "id": 20,
+    "projectCode": "DA-4K7X2Q9",
+    "name": "Trien khai ERP Cong ty TNHH ABC",
+    "contractId": 5,
+    "customerId": 1,
+    "projectType": "FIXED_PRICE",
+    "limitValue": 600000000,
+    "startDate": "2027-01-01",
+    "expectedEndDate": "2027-12-31",
+    "projectManagerId": 7,
+    "status": "CLOSED",
+    "createdBy": "pm01",
+    "createdAt": "2026-09-09T10:00:00"
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-02` — hệ thống ghi nhật ký lần từ chối (TC-03). |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại dự án với `{projectId}`. |
+| 400 | `INVALID_STATE` | Dự án không ở trạng thái `RUNNING` (đã đóng); **hoặc** còn công việc `WAITING_APPROVAL` — `message` liệt kê đầy đủ các công việc còn treo dạng `#20 Ten cong viec, #21 Ten cong viec khac` (TC-02). |
+
+**Lưu ý cho Frontend:**
+- Khi nhận `400 INVALID_STATE` kèm danh sách công việc còn treo, hiển thị nguyên `message` cho người dùng (hoặc
+  parse theo dấu phẩy nếu muốn liệt kê từng dòng) và đề nghị duyệt/hoàn tất các công việc đó trước khi đóng lại.
+- Sau khi đóng thành công, khoá toàn bộ nút chỉnh sửa cây công việc, giao việc, cập nhật tiến độ và ngân sách
+  giờ trên giao diện dự án đó — các API tương ứng (`NCL-05-CN-002`/`003`/`004`/`005`) đã tự chặn ghi
+  (`400 INVALID_STATE`) ở tầng backend khi dự án `CLOSED`, Frontend chỉ cần ẩn/vô hiệu hoá nút bấm để tránh gọi
+  API rồi mới nhận lỗi.

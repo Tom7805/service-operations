@@ -9,8 +9,10 @@ import com.serviceops.modules.project.dto.request.WorkPackageReq;
 import com.serviceops.modules.project.dto.response.TaskRes;
 import com.serviceops.modules.project.dto.response.TaskAssignmentRes;
 import com.serviceops.modules.project.dto.response.TaskBudgetStatusRes;
+import com.serviceops.modules.project.dto.response.ProjectRes;
 import com.serviceops.modules.project.dto.response.WorkBreakdownRes;
 import com.serviceops.modules.project.service.WorkPackageService;
+import com.serviceops.modules.project.service.ProjectClosureService;
 import com.serviceops.modules.project.service.TaskBudgetService;
 import com.serviceops.modules.project.service.TaskService;
 import jakarta.validation.Valid;
@@ -34,6 +36,7 @@ public class WorkPackageController {
 	private final WorkPackageService workPackageService;
 	private final TaskService taskService;
 	private final TaskBudgetService taskBudgetService;
+	private final ProjectClosureService projectClosureService;
 
 	@GetMapping("/work-breakdown")
 	@PreAuthorize("hasRole('VT-02') or hasRole('VT-03') or hasRole('VT-01')")
@@ -84,5 +87,11 @@ public class WorkPackageController {
 			@Valid @RequestBody TaskBudgetReq request) {
 		return BaseRes.ok("Dat ngan sach gio cong thanh cong",
 				taskBudgetService.setBudget(projectId, taskId, request));
+	}
+
+	@PostMapping("/close")
+	@PreAuthorize("hasRole('VT-02')")
+	public BaseRes<ProjectRes> closeProject(@PathVariable Long projectId) {
+		return BaseRes.ok("Dong du an thanh cong", projectClosureService.closeProject(projectId));
 	}
 }

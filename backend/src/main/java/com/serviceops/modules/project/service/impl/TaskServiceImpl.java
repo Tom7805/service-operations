@@ -93,7 +93,11 @@ public class TaskServiceImpl implements TaskService {
 
 	@Override
 	public TaskRes updateProgress(Long projectId, Long taskId, TaskProgressReq request) {
-		projectRepository.findById(projectId).orElseThrow(() -> notFound("Khong tim thay du an"));
+		Project project = projectRepository.findById(projectId).orElseThrow(() -> notFound("Khong tim thay du an"));
+		if (project.getStatus() != ProjectStatus.RUNNING) {
+			throw new BusinessRuleException(ErrorCode.INVALID_STATE,
+					"Khong the cap nhat tien do cong viec cua du an da dong");
+		}
 		Task task = taskRepository.findById(taskId)
 				.filter(item -> item.getProjectId().equals(projectId))
 				.orElseThrow(() -> notFound("Khong tim thay cong viec thuoc du an"));
