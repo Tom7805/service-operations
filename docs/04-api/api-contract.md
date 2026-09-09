@@ -2234,3 +2234,58 @@ Response `200 OK`:
 | 400 | `INVALID_STATE` | Ngày kết thúc dự kiến sớm hơn ngày bắt đầu hoặc dự án đã đóng. |
 | 403 | `FORBIDDEN` | Người gọi không có vai trò được phép. |
 | 404 | `RESOURCE_NOT_FOUND` | Không tồn tại dự án, hạng mục cha hoặc công việc cha trong cùng dự án. |
+
+### `NCL-05-CN-003` — Giao việc cho nhân sự
+
+Các endpoint thay đổi assignment yêu cầu token của Quản lý dự án (`VT-02`). Nhân sự được giao phải có hồ sơ
+nhân sự, tài khoản đang hoạt động và chưa có ngày kết thúc hợp đồng lao động. Một request có thể giao cùng một
+công việc cho nhiều người; gọi lại endpoint sẽ thay thế toàn bộ danh sách người được giao hiện tại.
+
+#### `PUT /projects/{projectId}/tasks/{taskId}/assignments`
+
+```json
+{
+  "userIds": [101, 102],
+  "expectedStartDate": "2026-09-10",
+  "expectedEndDate": "2026-09-12"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `userIds` | number[] | có | Ít nhất một user ID, không được trùng. |
+| `expectedStartDate` | date | không | Ngày bắt đầu mong muốn. |
+| `expectedEndDate` | date | không | Không được sớm hơn `expectedStartDate`. |
+
+Response `200 OK` trả về danh sách assignment:
+
+```json
+{
+  "success": true,
+  "message": "Giao viec cho nhan su thanh cong",
+  "data": [
+    {
+      "id": 201,
+      "taskId": 20,
+      "userId": 101,
+      "username": "dev01",
+      "fullName": "Dev One",
+      "expectedStartDate": "2026-09-10",
+      "expectedEndDate": "2026-09-12"
+    }
+  ]
+}
+```
+
+#### `GET /projects/{projectId}/tasks/{taskId}/assignments`
+
+Cho phép Quản lý dự án (`VT-02`), Nhân viên chuyên môn (`VT-03`) và Ban giám đốc (`VT-01`) xem danh sách người
+được giao của công việc.
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | `userIds` rỗng. |
+| 400 | `DUPLICATE_DATA` | `userIds` chứa ID trùng nhau. |
+| 400 | `INVALID_STATE` | Dự án đã đóng, nhân sự đã kết thúc hợp đồng, tài khoản không hoạt động hoặc ngày không hợp lệ. |
+| 403 | `FORBIDDEN` | Người gọi không có vai trò được phép. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại dự án, công việc hoặc hồ sơ nhân sự tương ứng. |
