@@ -9,5 +9,12 @@ import java.util.List;
 public interface WorkPackageService {
 	WorkBreakdownRes createWorkPackage(Long projectId, WorkPackageReq request);
 	TaskRes createTask(Long projectId, Long workPackageId, TaskCreateReq request);
+
+	/**
+	 * NCL-05-CN-007 / TC-02: xoa mot hang muc khong con can cua du an.
+	 * Chi xoa hang muc la (khong co hang muc con va cong viec) va du an con dang chay.
+	 */
+	void deleteWorkPackage(Long projectId, Long workPackageId);
+
 	List<WorkBreakdownRes> getWorkBreakdown(Long projectId);
 }
