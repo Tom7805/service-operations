@@ -154,6 +154,30 @@ describe('ContractMilestonesModal (NCL-04-CN-003)', () => {
     });
   });
 
+  it('ô "Giá trị" của mốc mới để trống được (không kẹt số 0) và tự điền theo tỷ lệ %', async () => {
+    vi.mocked(contractsApi.fetchMilestones).mockResolvedValue([]);
+
+    render(
+      <ContractMilestonesModal contract={contract} isOpen onClose={vi.fn()} currentUserRoles={['VT-05']} />
+    );
+
+    // Danh sách rỗng → sẵn một dòng mới, ô "Giá trị" trống hẳn (không hiển thị "0").
+    const amountInput = await screen.findByLabelText('Giá trị mốc');
+    expect(amountInput).toHaveValue(null);
+
+    // Nhập tỷ lệ 30% → ô "Giá trị" tự điền 30% × giá trị hợp đồng.
+    fireEvent.change(screen.getByLabelText('Tỷ lệ phần trăm'), { target: { value: '30' } });
+    expect(amountInput).toHaveValue(300_000_000);
+
+    // Xoá trắng ô "Giá trị" → về trống, không bị ép lại thành 0.
+    fireEvent.change(amountInput, { target: { value: '' } });
+    expect(amountInput).toHaveValue(null);
+
+    // Gõ số mới → nhận đúng số đó (không còn số 0 dính ở đầu).
+    fireEvent.change(amountInput, { target: { value: '250000000' } });
+    expect(amountInput).toHaveValue(250_000_000);
+  });
+
   it('hiển thị lỗi khi tải danh sách mốc thất bại', async () => {
     vi.mocked(contractsApi.fetchMilestones).mockRejectedValue(
       new contractsApi.ContractsApiError('RESOURCE_NOT_FOUND', 'Không tìm thấy hợp đồng.', 404)
