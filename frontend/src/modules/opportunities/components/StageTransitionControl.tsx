@@ -24,6 +24,11 @@ interface StageTransitionControlProps {
   opportunity: Opportunity;
   onOpportunityUpdated?: (updated: Opportunity) => void;
   currentUserRoles?: string[];
+  /** NCL-03-CN-005: chốt Thắng/Thua luôn phải đi qua màn "Ghi nhận kết quả"
+   *  (bắt buộc nhập lý do khi Thua — QTN-06) thay vì tự đổi giai đoạn ở đây,
+   *  nên khi bấm "Đóng Thất bại"/"Chốt Thành công" chỉ báo lên trang cha để
+   *  mở đúng modal đó, không tự gọi API đổi giai đoạn nữa. */
+  onRequestClose?: (result: 'WON' | 'LOST') => void;
 }
 
 /** NCL-03-CN-005 — nhãn tiếng Việt cho lý do thua đã lưu của cơ hội. */
@@ -36,6 +41,7 @@ export default function StageTransitionControl({
   opportunity,
   onOpportunityUpdated,
   currentUserRoles = ['VT-04'],
+  onRequestClose,
 }: StageTransitionControlProps) {
   const isAllowedRole = currentUserRoles.includes('VT-04');
   const isClosed = opportunity.status === 'CLOSED' || opportunity.stage === 'WON' || opportunity.stage === 'LOST';
@@ -43,9 +49,6 @@ export default function StageTransitionControl({
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
-
-  // Trạng thái mở modal xác nhận chốt kết quả (WON / LOST)
-  const [confirmTerminalStage, setConfirmTerminalStage] = useState<OpportunityStage | null>(null);
 
   // Lịch sử chuyển giai đoạn (TC-05)
   const [showHistory, setShowHistory] = useState(false);
@@ -104,7 +107,6 @@ export default function StageTransitionControl({
       }
     } finally {
       setLoading(false);
-      setConfirmTerminalStage(null);
     }
   };
 
@@ -516,7 +518,7 @@ export default function StageTransitionControl({
                   type="button"
                   className="btn btn-secondary"
                   disabled={loading}
-                  onClick={() => setConfirmTerminalStage('LOST')}
+                  onClick={() => onRequestClose?.('LOST')}
                   style={{
                     color: 'var(--pale-red-fg)',
                     borderColor: 'rgba(159, 47, 45, 0.3)',
@@ -533,7 +535,7 @@ export default function StageTransitionControl({
                   type="button"
                   className="btn btn-primary"
                   disabled={loading}
-                  onClick={() => setConfirmTerminalStage('WON')}
+                  onClick={() => onRequestClose?.('WON')}
                   style={{
                     background: '#1F6C9F',
                     borderColor: '#1F6C9F',
@@ -550,75 +552,6 @@ export default function StageTransitionControl({
           </div>
         )}
       </div>
-
-      {/* Hộp thoại xác nhận khi chốt WON / LOST */}
-      {confirmTerminalStage && (
-        <div
-          className="modal-backdrop"
-          onClick={(e) => {
-            if (e.target === e.currentTarget && !loading) {
-              setConfirmTerminalStage(null);
-            }
-          }}
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="modal-card modal-card--sm">
-            <div className="modal-header">
-              <h3 className="modal-title">
-                {confirmTerminalStage === 'WON' ? 'Xác nhận chốt Thành công (Won)' : 'Xác nhận đóng Thất bại (Lost)'}
-              </h3>
-              <button
-                type="button"
-                className="modal-close"
-                onClick={() => setConfirmTerminalStage(null)}
-                disabled={loading}
-                aria-label="Đóng"
-              >
-                {ICONS.close}
-              </button>
-            </div>
-            <div className="modal-body">
-              <p style={{ fontSize: '14px', lineHeight: '1.5', margin: 0, color: 'var(--ink)' }}>
-                {confirmTerminalStage === 'WON' ? (
-                  <>
-                    Bạn có chắc chắn muốn chốt cơ hội <strong>{opportunity.name}</strong> với kết quả{' '}
-                    <strong>Thành công (Won - 100% xác suất)</strong>? Sau khi chốt, cơ hội sẽ tự động chuyển sang
-                    trạng thái <strong>ĐÃ ĐÓNG</strong> và không thể chuyển giai đoạn tiếp theo.
-                  </>
-                ) : (
-                  <>
-                    Bạn có chắc chắn muốn đóng cơ hội <strong>{opportunity.name}</strong> với kết quả{' '}
-                    <strong>Thất bại (Lost - 0% xác suất)</strong>? Sau khi đóng, hồ sơ cơ hội sẽ khóa vĩnh viễn.
-                  </>
-                )}
-              </p>
-            </div>
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => setConfirmTerminalStage(null)}
-                disabled={loading}
-              >
-                Hủy bỏ
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                disabled={loading}
-                onClick={() => handleTransition(confirmTerminalStage)}
-                style={{
-                  background: confirmTerminalStage === 'WON' ? '#1F6C9F' : '#9F2F2D',
-                  borderColor: confirmTerminalStage === 'WON' ? '#1F6C9F' : '#9F2F2D',
-                }}
-              >
-                {loading ? <span className="spinner-sm" /> : 'Xác nhận chốt'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Panel lịch sử chuyển giai đoạn (TC-05) */}
       {showHistory && (

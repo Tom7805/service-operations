@@ -33,10 +33,12 @@ import java.util.List;
 /**
  * NCL-03-CN-002: Chuyen giai doan co hoi. NCL-03-CN-005: Ghi nhan ket qua thang/thua.
  *
- * <p>Kiem soat chuyen giai doan: (TC-01) cap nhat xac suat tuong ung giai doan moi;
- * (TC-02) chuyen theo dung thu tu (QTN-06), tu choi neu nhay coc va neu giai doan
- * hop le ke tiep; (TC-03) khong cho mo lai co hoi da dong (CLOSED); (TC-05) ghi lich
- * su moi lan chuyen.</p>
+ * <p>Kiem soat chuyen giai doan ({@link #changeStage}): (TC-01) cap nhat xac suat tuong
+ * ung giai doan moi; (TC-02) chuyen theo dung thu tu (QTN-06), tu choi neu nhay coc va
+ * neu giai doan hop le ke tiep; (TC-03) khong cho mo lai co hoi da dong (CLOSED); (TC-05)
+ * ghi lich su moi lan chuyen. Tu choi thang gia tri dich WON/LOST — chot ket qua thang/thua
+ * chi duoc phep qua {@link #closeOpportunity}, de khong the bo qua buoc bat buoc ly do khi
+ * thua (QTN-06).</p>
  *
  * <p>Kiem soat dong co hoi voi ket qua thang/thua ({@link #closeOpportunity}): dung
  * chung co che thu tu giai doan noi tren (chi tu NEGOTIATION moi duoc chot sang
@@ -71,6 +73,16 @@ public class OpportunityStageServiceImpl implements OpportunityStageService {
 					"Co hoi da dong (thang hoac thua) - khong the mo lai");
 		}
 
+		// Chot ket qua thang/thua phai di qua closeOpportunity() - day la API duy nhat
+		// bat buoc ly do khi LOST (QTN-06, NCL-03-CN-005 TC-02) va ghi nhat ky rieng
+		// CLOSE_WON/CLOSE_LOST (TC-04). Cho phep WON/LOST o day se lam mat hoan toan
+		// buoc bat buoc ly do, nen tu choi thang tai day thay vi de lot qua im lang.
+		if (target == OpportunityStage.WON || target == OpportunityStage.LOST) {
+			throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR,
+					"Khong the chot ket qua Thang/Thua qua chuc nang chuyen giai doan."
+							+ " Dung chuc nang Ghi nhan ket qua (POST /opportunities/{id}/close) de bat buoc nhap ly do khi Thua.");
+		}
+
 		OpportunityStage current = opportunity.getStage();
 
 		// TC-02: chuyen theo dung thu tu (QTN-06), tu choi neu nhay coc / lui / khong hop le.
@@ -85,10 +97,6 @@ public class OpportunityStageServiceImpl implements OpportunityStageService {
 		// TC-01: cap nhat xac suat tuong ung.
 		opportunity.setStage(target);
 		opportunity.setProbability(probabilityFor(target));
-		// TC-03: dat WON/LOST la giai doan chot - dong co hoi de khong the mo lai.
-		if (target == OpportunityStage.WON || target == OpportunityStage.LOST) {
-			opportunity.setStatus(OpportunityStatus.CLOSED);
-		}
 		opportunityRepository.save(opportunity);
 
 		// TC-05: ghi lich su chuyen giai doan.

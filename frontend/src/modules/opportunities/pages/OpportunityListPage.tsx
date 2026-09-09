@@ -65,6 +65,14 @@ export default function OpportunityListPage({
 
   // Ghi nhận kết quả thắng/thua của cơ hội (NCL-03-CN-005)
   const [closeTargetOpportunity, setCloseTargetOpportunity] = useState<Opportunity | null>(null);
+  // Kết quả chọn sẵn khi mở modal ghi nhận kết quả — panel tiến trình bấm "Đóng
+  // Thất bại" / "Chốt Thành công" thì mở thẳng đúng lựa chọn đó thay vì luôn mặc định Thua.
+  const [closeInitialResult, setCloseInitialResult] = useState<'WON' | 'LOST'>('LOST');
+
+  const openCloseModal = (opp: Opportunity, initialResult: 'WON' | 'LOST' = 'LOST') => {
+    setCloseInitialResult(initialResult);
+    setCloseTargetOpportunity(opp);
+  };
 
   const [toastMessage, setToastMessage] = useState<{
     text: string;
@@ -423,6 +431,7 @@ export default function OpportunityListPage({
             opportunity={selectedOpportunity}
             onOpportunityUpdated={handleOpportunityUpdated}
             currentUserRoles={currentUserRoles}
+            onRequestClose={(result) => openCloseModal(selectedOpportunity, result)}
           />
         </div>
       )}
@@ -892,7 +901,7 @@ export default function OpportunityListPage({
                               <button
                                 type="button"
                                 className="btn btn-secondary"
-                                onClick={() => setCloseTargetOpportunity(opp)}
+                                onClick={() => openCloseModal(opp)}
                                 data-testid={`btn-close-opportunity-${opp.id}`}
                                 style={{ fontSize: '12.5px', padding: '4px 10px', whiteSpace: 'nowrap' }}
                               >
@@ -942,6 +951,7 @@ export default function OpportunityListPage({
         isOpen={Boolean(closeTargetOpportunity)}
         opportunity={closeTargetOpportunity}
         currentUserRoles={currentUserRoles}
+        initialResult={closeInitialResult}
         onClose={() => setCloseTargetOpportunity(null)}
         onSuccess={handleOpportunityClosed}
       />

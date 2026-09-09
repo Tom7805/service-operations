@@ -107,36 +107,31 @@ describe('StageTransitionControl Component (NCL-03-CN-002 & FE-QA CV-05)', () =>
     });
   });
 
-  it('TC-02: khi ở giai đoạn NEGOTIATION, hiển thị lựa chọn chốt WON hoặc LOST', async () => {
+  it('TC-02: khi ở giai đoạn NEGOTIATION, hiển thị lựa chọn chốt WON hoặc LOST — báo lên trang cha để mở màn Ghi nhận kết quả (NCL-03-CN-005) thay vì tự đổi giai đoạn', () => {
     const handleUpdated = vi.fn();
-    const wonOpp: Opportunity = {
-      ...mockNegotiationOpportunity,
-      stage: 'WON',
-      status: 'CLOSED',
-      probability: 100,
-    };
-    vi.mocked(opportunitiesApi.changeOpportunityStage).mockResolvedValue(wonOpp);
+    const handleRequestClose = vi.fn();
 
     render(
       <StageTransitionControl
         opportunity={mockNegotiationOpportunity}
         onOpportunityUpdated={handleUpdated}
+        onRequestClose={handleRequestClose}
       />
     );
 
     expect(screen.getByRole('button', { name: /Chốt Thành công \(Won\)/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Đóng Thất bại \(Lost\)/i })).toBeInTheDocument();
 
-    // Bấm chốt WON -> mở modal xác nhận
     fireEvent.click(screen.getByRole('button', { name: /Chốt Thành công \(Won\)/i }));
+    expect(handleRequestClose).toHaveBeenCalledWith('WON');
 
-    const confirmBtn = await screen.findByRole('button', { name: /Xác nhận chốt/i });
-    fireEvent.click(confirmBtn);
+    fireEvent.click(screen.getByRole('button', { name: /Đóng Thất bại \(Lost\)/i }));
+    expect(handleRequestClose).toHaveBeenCalledWith('LOST');
 
-    await waitFor(() => {
-      expect(opportunitiesApi.changeOpportunityStage).toHaveBeenCalledWith(1, 'WON');
-      expect(handleUpdated).toHaveBeenCalledWith(wonOpp);
-    });
+    // Không tự gọi API đổi giai đoạn nữa — bắt buộc đi qua màn Ghi nhận kết quả
+    // để đảm bảo lý do thất bại được nhập (QTN-06).
+    expect(opportunitiesApi.changeOpportunityStage).not.toHaveBeenCalled();
+    expect(handleUpdated).not.toHaveBeenCalled();
   });
 
   it('TC-03: khóa hoàn toàn chức năng chuyển giai đoạn khi cơ hội đã đóng (status = CLOSED)', () => {

@@ -12,6 +12,9 @@ interface OpportunityCloseModalProps {
   isOpen: boolean;
   opportunity: Opportunity | null;
   currentUserRoles?: string[];
+  /** Kết quả chọn sẵn khi mở modal — ví dụ bấm "Chốt Thành công (Won)" ở panel
+   *  tiến trình thì mở thẳng vào WON thay vì luôn mặc định LOST. */
+  initialResult?: 'WON' | 'LOST';
   onClose: () => void;
   onSuccess: (updated: Opportunity) => void;
 }
@@ -26,12 +29,13 @@ export default function OpportunityCloseModal({
   isOpen,
   opportunity,
   currentUserRoles = ["VT-04"],
+  initialResult,
   onClose,
   onSuccess,
 }: OpportunityCloseModalProps) {
   const isSales = currentUserRoles.includes("VT-04");
 
-  const [result, setResult] = useState<"WON" | "LOST">("LOST");
+  const [result, setResult] = useState<"WON" | "LOST">(initialResult ?? "LOST");
   const [lossReason, setLossReason] = useState<LossReason | "">("");
   const [competitorName, setCompetitorName] = useState("");
   const [reasonDetail, setReasonDetail] = useState("");
@@ -45,7 +49,7 @@ export default function OpportunityCloseModal({
   // Reset form khi mở modal
   useEffect(() => {
     if (isOpen) {
-      setResult("LOST");
+      setResult(initialResult ?? "LOST");
       setLossReason("");
       setCompetitorName("");
       setReasonDetail("");
@@ -53,7 +57,7 @@ export default function OpportunityCloseModal({
       setServerError(null);
       setSubmitting(false);
     }
-  }, [isOpen]);
+  }, [isOpen, initialResult]);
 
   if (!isOpen || !opportunity) return null;
 

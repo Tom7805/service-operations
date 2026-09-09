@@ -96,15 +96,22 @@ class OpportunityStageServiceTest {
 	}
 
 	@Test
-	@DisplayName("TC-01: chot giai doan WON thi xac suat 100, chot LOST thi xac suat 0")
-	void setsTerminalProbabilities() {
+	@DisplayName("Chuyen giai doan sang WON/LOST bi tu choi - phai dong qua closeOpportunity() de bat buoc ly do (QTN-06)")
+	void rejectsTerminalStageViaChangeStage() {
 		when(opportunityRepository.findById(1L)).thenReturn(Optional.of(openOpportunity(1L, OpportunityStage.NEGOTIATION)));
-		OpportunityRes won = service.changeStage(new StageChangeReq(1L, OpportunityStage.WON));
-		assertThat(won.probability()).isEqualByComparingTo("100");
+		assertThatThrownBy(() -> service.changeStage(new StageChangeReq(1L, OpportunityStage.WON)))
+				.isInstanceOf(BusinessRuleException.class)
+				.extracting(ex -> ((BusinessRuleException) ex).getErrorCode())
+				.isEqualTo(ErrorCode.VALIDATION_ERROR);
 
 		when(opportunityRepository.findById(2L)).thenReturn(Optional.of(openOpportunity(2L, OpportunityStage.NEGOTIATION)));
-		OpportunityRes lost = service.changeStage(new StageChangeReq(2L, OpportunityStage.LOST));
-		assertThat(lost.probability()).isEqualByComparingTo("0");
+		assertThatThrownBy(() -> service.changeStage(new StageChangeReq(2L, OpportunityStage.LOST)))
+				.isInstanceOf(BusinessRuleException.class)
+				.extracting(ex -> ((BusinessRuleException) ex).getErrorCode())
+				.isEqualTo(ErrorCode.VALIDATION_ERROR);
+
+		verify(opportunityRepository, never()).save(any());
+		verify(stageHistoryRepository, never()).save(any());
 	}
 
 	@Test
@@ -142,18 +149,6 @@ class OpportunityStageServiceTest {
 				.isEqualTo(ErrorCode.INVALID_STATE);
 
 		verify(opportunityRepository, never()).save(any());
-	}
-
-	@Test
-	@DisplayName("TC-03: chot giai doan WON/LOST thi dong co hoi (status = CLOSED)")
-	void closesOpportunityWhenReachingTerminalStage() {
-		when(opportunityRepository.findById(1L)).thenReturn(Optional.of(openOpportunity(1L, OpportunityStage.NEGOTIATION)));
-
-		service.changeStage(new StageChangeReq(1L, OpportunityStage.WON));
-
-		ArgumentCaptor<Opportunity> captor = ArgumentCaptor.forClass(Opportunity.class);
-		verify(opportunityRepository).save(captor.capture());
-		assertThat(captor.getValue().getStatus()).isEqualTo(OpportunityStatus.CLOSED);
 	}
 
 	@Test
