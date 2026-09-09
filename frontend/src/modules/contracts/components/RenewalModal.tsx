@@ -304,9 +304,9 @@ export default function RenewalModal({
                       <tr>
                         <th style={{ width: '130px' }}>Thời điểm</th>
                         <th style={{ width: '110px' }}>Người tạo</th>
-                        <th>Ngày kết thúc</th>
-                        <th style={{ textAlign: 'right' }}>Giá trị cộng thêm</th>
-                        <th style={{ textAlign: 'right' }}>Giá trị hợp đồng</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>Ngày kết thúc (cũ → mới)</th>
+                        <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Cộng thêm</th>
+                        <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Giá trị HĐ (trước → sau)</th>
                         <th>Ghi chú</th>
                       </tr>
                     </thead>
@@ -315,16 +315,18 @@ export default function RenewalModal({
                         <tr key={r.id}>
                           <td>{r.createdAt ? new Date(r.createdAt).toLocaleString('vi-VN') : '—'}</td>
                           <td>{r.createdBy || '—'}</td>
-                          <td>
-                            {formatDate(r.previousEndDate)} ➔ <strong>{formatDate(r.newEndDate)}</strong>
+                          <td style={{ whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                            <div className="cell-muted" style={{ fontSize: '11.5px' }}>{formatDate(r.previousEndDate)}</div>
+                            <strong>{formatDate(r.newEndDate)}</strong>
                           </td>
-                          <td style={{ textAlign: 'right' }}>
+                          <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                             {r.additionalValue && r.additionalValue > 0
                               ? `+${formatAmount(r.additionalValue)}`
                               : '0 đ'}
                           </td>
-                          <td style={{ textAlign: 'right' }}>
-                            {formatAmount(r.valueBefore)} ➔ <strong>{formatAmount(r.valueAfter)}</strong>
+                          <td style={{ textAlign: 'right', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                            <div className="cell-muted" style={{ fontSize: '11.5px' }}>{formatAmount(r.valueBefore)}</div>
+                            <strong>{formatAmount(r.valueAfter)}</strong>
                           </td>
                           <td>{r.notes || '—'}</td>
                         </tr>
