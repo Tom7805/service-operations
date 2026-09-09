@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { AuthApiError, getTwoFactorConfigs, updateTwoFactorConfig } from '../api/authApi';
 import type { TwoFactorRoleConfig } from '../types/authTypes';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 
 interface TwoFactorSetupPageProps {
   currentUserRoles?: string[];
@@ -187,6 +188,7 @@ export default function TwoFactorSetupPage({
       </div>
 
       {confirmTarget && (
+        <ModalPortal>
         <div className="modal-backdrop" onClick={() => setConfirmTarget(null)} role="dialog">
           <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -219,6 +221,7 @@ export default function TwoFactorSetupPage({
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {toastMessage && (

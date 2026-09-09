@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { CustomerContactPayload, CustomerContactFormErrors } from '../types/customerTypes';
 import { validateCustomerContact } from '../validators/customerValidators';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 
 interface ContactFormModalProps {
   isOpen: boolean;
@@ -82,6 +83,7 @@ export default function ContactFormModal({
   };
 
   return (
+    <ModalPortal>
     <div className="modal-backdrop" onClick={onClose} data-testid="contact-form-modal">
       <div
         className="modal-card modal-card--md contact-modal-card"
@@ -264,6 +266,7 @@ export default function ContactFormModal({
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 

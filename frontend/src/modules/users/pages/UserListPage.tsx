@@ -4,6 +4,7 @@ import RoleAssignModal from '../components/RoleAssignModal';
 import UserFormModal from '../components/UserFormModal';
 import UserTable from '../components/UserTable';
 import { ICONS } from '../components/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 import type { CreateUserPayload, ScopeType, UpdateUserPayload, User } from '../types/userTypes';
 
 interface UserListPageProps {
@@ -278,6 +279,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
 
       {/* Status Toggle Confirmation Dialog (TC-03, TC-05) */}
       {confirmStatusUser && (
+        <ModalPortal>
         <div className="modal-backdrop" onClick={() => setConfirmStatusUser(null)} role="dialog">
           <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -311,10 +313,12 @@ export const UserListPage: React.FC<UserListPageProps> = ({
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* NCL-01-CN-009: xác nhận đặt lại xác thực hai bước (mất/đổi điện thoại) */}
       {confirmResetTwoFactorUser && (
+        <ModalPortal>
         <div className="modal-backdrop" onClick={() => setConfirmResetTwoFactorUser(null)} role="dialog">
           <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -348,6 +352,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
     </div>
   );

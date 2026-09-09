@@ -3,6 +3,7 @@ import type { Department, MoveDepartmentPayload } from '../types/departmentTypes
 import { DepartmentApiError } from '../api/departmentsApi';
 import { getUnitTypeRank } from '../constants/departmentUnitTypes';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 
 interface DepartmentMoveModalProps {
   isOpen: boolean;
@@ -92,6 +93,7 @@ export const DepartmentMoveModal: React.FC<DepartmentMoveModalProps> = ({
   const currentParentName = departmentsList.find((d) => d.id === department.parentId)?.name || 'Ban Giám Đốc (Cấp gốc)';
 
   return (
+    <ModalPortal>
     <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
       <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
@@ -159,6 +161,7 @@ export const DepartmentMoveModal: React.FC<DepartmentMoveModalProps> = ({
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 };
 

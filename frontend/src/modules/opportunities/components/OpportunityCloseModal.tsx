@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
 import { ICONS } from "../../../components/common/icons";
+import ModalPortal from '../../../components/common/ModalPortal';
 import { closeOpportunity, OpportunityApiError } from "../api/opportunitiesApi";
 import {
   LOSS_REASON_OPTIONS,
@@ -119,6 +120,7 @@ export default function OpportunityCloseModal({
   };
 
   return (
+    <ModalPortal>
     <div
       className="modal-backdrop"
       data-testid="opportunity-close-modal"
@@ -450,5 +452,6 @@ export default function OpportunityCloseModal({
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 }

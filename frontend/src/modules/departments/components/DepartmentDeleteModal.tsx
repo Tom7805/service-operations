@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Department } from '../types/departmentTypes';
 import { DepartmentApiError } from '../api/departmentsApi';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 
 interface DepartmentDeleteModalProps {
   isOpen: boolean;
@@ -57,6 +58,7 @@ export const DepartmentDeleteModal: React.FC<DepartmentDeleteModalProps> = ({
   };
 
   return (
+    <ModalPortal>
     <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
       <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
@@ -101,6 +103,7 @@ export const DepartmentDeleteModal: React.FC<DepartmentDeleteModalProps> = ({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 };
 

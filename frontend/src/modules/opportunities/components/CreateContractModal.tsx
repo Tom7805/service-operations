@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 import type { Opportunity } from '../types/opportunityTypes';
 import type { ContractCreateFromOpportunityReq, ContractRes } from '../../contracts/types/contractTypes';
 import { createContractFromOpportunity } from '../api/opportunitiesApi';
@@ -78,6 +79,7 @@ export default function CreateContractModal({
   };
 
   return (
+    <ModalPortal>
     <div
       className="modal-backdrop"
       onClick={(e) => {
@@ -199,5 +201,6 @@ export default function CreateContractModal({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
