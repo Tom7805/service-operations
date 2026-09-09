@@ -103,11 +103,12 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
     setRows((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)));
   };
 
-  /** Nhập tỷ lệ % thì tự suy ra số tiền theo giá trị hợp đồng (NCL-04-CN-003 TC-01);
-   *  người dùng vẫn sửa lại ô "Giá trị" thủ công được sau đó nếu cần. */
+  /** Một mốc khai theo tỷ lệ % HOẶC theo số tiền (NCL-04-CN-003). Khi đã nhập %,
+   *  "Giá trị" = % × giá trị hợp đồng và ô đó khoá lại (chỉ đọc) để khỏi nhập chay;
+   *  xoá trắng ô % thì trả "Giá trị" về trống để nhập tay số tiền tuỳ ý. */
   const handlePercentageChange = (key: string, raw: string) => {
     if (raw === '') {
-      updateRow(key, { percentage: null });
+      updateRow(key, { percentage: null, amount: null });
       return;
     }
     const pct = Number(raw);
@@ -266,6 +267,13 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
                               })
                             }
                             min={0}
+                            readOnly={row.percentage != null}
+                            title={
+                              row.percentage != null
+                                ? 'Tự tính theo tỷ lệ % — xoá ô "Tỷ lệ (%)" nếu muốn nhập số tiền tuỳ ý'
+                                : undefined
+                            }
+                            style={row.percentage != null ? { background: 'var(--surface-alt)', cursor: 'not-allowed' } : undefined}
                           />
                         </td>
                         <td>

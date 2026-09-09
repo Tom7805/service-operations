@@ -101,7 +101,10 @@ describe('ContractMilestonesModal (NCL-04-CN-003)', () => {
       expect(screen.getByDisplayValue('Nghiệm thu giai đoạn 1')).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByDisplayValue('300000000'), { target: { value: '100000000' } });
+    // Đổi tỷ lệ mốc 1 từ 30% xuống 10% → "Giá trị" tự tính lại còn 100.000.000,
+    // tổng 2 mốc thành 800.000.000 ≠ giá trị hợp đồng.
+    const firstPercent = screen.getAllByLabelText('Tỷ lệ phần trăm')[0];
+    fireEvent.change(firstPercent, { target: { value: '10' } });
     fireEvent.click(screen.getByRole('button', { name: /Lưu danh sách mốc/i }));
 
     await waitFor(() => {
@@ -154,26 +157,33 @@ describe('ContractMilestonesModal (NCL-04-CN-003)', () => {
     });
   });
 
-  it('ô "Giá trị" của mốc mới để trống được (không kẹt số 0) và tự điền theo tỷ lệ %', async () => {
+  it('nhập tỷ lệ % thì "Giá trị" tự tính và khoá lại; xoá % thì mở lại để nhập số tiền tay', async () => {
     vi.mocked(contractsApi.fetchMilestones).mockResolvedValue([]);
 
     render(
       <ContractMilestonesModal contract={contract} isOpen onClose={vi.fn()} currentUserRoles={['VT-05']} />
     );
 
-    // Danh sách rỗng → sẵn một dòng mới, ô "Giá trị" trống hẳn (không hiển thị "0").
+    // Danh sách rỗng → sẵn một dòng mới, ô "Giá trị" trống hẳn (không kẹt "0"), nhập tay được.
     const amountInput = await screen.findByLabelText('Giá trị mốc');
     expect(amountInput).toHaveValue(null);
+    expect(amountInput).not.toHaveAttribute('readonly');
 
-    // Nhập tỷ lệ 30% → ô "Giá trị" tự điền 30% × giá trị hợp đồng.
+    // Nhập tỷ lệ 30% → "Giá trị" = 30% × giá trị hợp đồng và bị khoá (chỉ đọc).
     fireEvent.change(screen.getByLabelText('Tỷ lệ phần trăm'), { target: { value: '30' } });
     expect(amountInput).toHaveValue(300_000_000);
+    expect(amountInput).toHaveAttribute('readonly');
 
-    // Xoá trắng ô "Giá trị" → về trống, không bị ép lại thành 0.
-    fireEvent.change(amountInput, { target: { value: '' } });
+    // Đổi % → "Giá trị" tính lại theo số mới.
+    fireEvent.change(screen.getByLabelText('Tỷ lệ phần trăm'), { target: { value: '5' } });
+    expect(amountInput).toHaveValue(50_000_000);
+
+    // Xoá trắng ô "Tỷ lệ (%)" → "Giá trị" về trống và mở khoá để nhập tay.
+    fireEvent.change(screen.getByLabelText('Tỷ lệ phần trăm'), { target: { value: '' } });
     expect(amountInput).toHaveValue(null);
+    expect(amountInput).not.toHaveAttribute('readonly');
 
-    // Gõ số mới → nhận đúng số đó (không còn số 0 dính ở đầu).
+    // Nhập số tiền tuỳ ý → nhận đúng số đó.
     fireEvent.change(amountInput, { target: { value: '250000000' } });
     expect(amountInput).toHaveValue(250_000_000);
   });
