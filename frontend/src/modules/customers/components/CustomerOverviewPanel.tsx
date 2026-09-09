@@ -13,6 +13,7 @@ import ContractMilestonesModal from '../../contracts/components/ContractMileston
 import ContractAppendixModal from '../../contracts/components/ContractAppendixModal';
 import ContractLimitAlert, { type ContractLimitAlertTarget } from '../../contracts/components/ContractLimitAlert';
 import ContractExpiryReminderModal from '../../contracts/components/ContractExpiryReminderModal';
+import RenewalModal from '../../contracts/components/RenewalModal';
 import { getContract, ContractsApiError } from '../../contracts/api/contractsApi';
 import type { ContractRes } from '../../contracts/types/contractTypes';
 import { t } from '../../../i18n';
@@ -92,15 +93,16 @@ export default function CustomerOverviewPanel({
   const [isAppendixOpen, setIsAppendixOpen] = useState(false);
   const [isLimitAlertOpen, setIsLimitAlertOpen] = useState(false);
   const [isExpiringReminderOpen, setIsExpiringReminderOpen] = useState(false);
+  const [isRenewalOpen, setIsRenewalOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<ContractRes | null>(null);
   const [limitAlertTarget, setLimitAlertTarget] = useState<ContractLimitAlertTarget | null>(null);
   const [isContractLoading, setIsContractLoading] = useState(false);
   const [contractLoadError, setContractLoadError] = useState<string | null>(null);
 
-  // NCL-04-CN-002/003/004: nạp đúng dữ liệu hiện tại của hợp đồng trước khi mở modal sửa/điều chỉnh.
-  // Cả ba thao tác này (khai báo loại/hạn mức, mốc thanh toán, phụ lục) chỉ dành cho
+  // NCL-04-CN-002/003/004/007: nạp đúng dữ liệu hiện tại của hợp đồng trước khi mở modal sửa/điều chỉnh/gia hạn.
+  // Cả các thao tác này (khai báo loại/hạn mức, mốc thanh toán, phụ lục, gia hạn) chỉ dành cho
   // vai trò VT-05/VT-04 — trùng đúng phạm vi quyền của API `GET /contracts/{id}`.
-  const openContractAction = useCallback(async (contractId: number, action: 'type-limit' | 'milestones' | 'appendix') => {
+  const openContractAction = useCallback(async (contractId: number, action: 'type-limit' | 'milestones' | 'appendix' | 'renewal') => {
     setContractLoadError(null);
     setIsContractLoading(true);
     try {
@@ -108,7 +110,8 @@ export default function CustomerOverviewPanel({
       setSelectedContract(contract);
       if (action === 'type-limit') setIsTypeLimitOpen(true);
       else if (action === 'milestones') setIsMilestonesOpen(true);
-      else setIsAppendixOpen(true);
+      else if (action === 'appendix') setIsAppendixOpen(true);
+      else if (action === 'renewal') setIsRenewalOpen(true);
     } catch (err) {
       setContractLoadError(
         err instanceof ContractsApiError
@@ -456,14 +459,24 @@ export default function CustomerOverviewPanel({
                                     </button>
                                   )}
                                   {currentUserRoles.includes('VT-04') && (
-                                    <button
-                                      type="button"
-                                      className="btn btn-secondary"
-                                      onClick={() => void openContractAction(item.id, 'appendix')}
-                                      disabled={isContractLoading}
-                                    >
-                                      Phụ lục điều chỉnh
-                                    </button>
+                                    <>
+                                      <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        onClick={() => void openContractAction(item.id, 'appendix')}
+                                        disabled={isContractLoading}
+                                      >
+                                        Phụ lục điều chỉnh
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        onClick={() => void openContractAction(item.id, 'renewal')}
+                                        disabled={isContractLoading}
+                                      >
+                                        Gia hạn hợp đồng
+                                      </button>
+                                    </>
                                   )}
                                   {!currentUserRoles.includes('VT-05') && !currentUserRoles.includes('VT-02') && !currentUserRoles.includes('VT-04') && (
                                     <span className="cell-muted">—</span>
@@ -558,6 +571,23 @@ export default function CustomerOverviewPanel({
         onClose={() => setIsExpiringReminderOpen(false)}
         currentUserRoles={currentUserRoles}
       />
+
+      {selectedContract && (
+        <RenewalModal
+          isOpen={isRenewalOpen}
+          onClose={() => {
+            setIsRenewalOpen(false);
+            setSelectedContract(null);
+          }}
+          contract={selectedContract}
+          currentUserRoles={currentUserRoles}
+          onSaved={() => {
+            setIsRenewalOpen(false);
+            setSelectedContract(null);
+            void loadOverview();
+          }}
+        />
+      )}
     </div>
   );
 }
