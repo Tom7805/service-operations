@@ -63,6 +63,20 @@ public class ProjectAuditLogger {
 		repository.save(audit);
 	}
 
+	/** NCL-05-CN-009 / TC-04: ghi nhat ky thay doi rui ro (nguoi thuc hien, noi dung, thoi diem). */
+	public void recordRiskChange(Long projectId, ProjectAuditAction action, String detail) {
+		ProjectAuditLog audit = new ProjectAuditLog();
+		audit.setProjectId(projectId);
+		audit.setActionType(action);
+		audit.setDetail(detail);
+		Long actorId = currentUserScopeProvider.currentUserId();
+		audit.setActorId(actorId == null ? 0L : actorId);
+		audit.setActorUsername(currentUsername());
+		audit.setActorRole(currentRole());
+		audit.setCreatedAt(LocalDateTime.now());
+		repository.save(audit);
+	}
+
 	public void recordProgressUpdate(Long projectId, Long taskId, TaskStatus previousStatus, TaskStatus newStatus) {
 		ProjectAuditLog audit = new ProjectAuditLog();
 		audit.setProjectId(projectId);

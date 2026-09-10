@@ -2627,3 +2627,91 @@ action `MILESTONE_CREATED` / `MILESTONE_UPDATED` / `MILESTONE_DELETED`.
 | 403 | `FORBIDDEN` | Người dùng không phải Quản lý dự án (`VT-02`). |
 | 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy dự án/mốc, hoặc công việc không thuộc dự án. |
 
+### `NCL-05-CN-009` — Quản lý rủi ro của dự án
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`) trên toàn bộ endpoint. Vai trò khác nhận
+`403 FORBIDDEN` và bị ghi nhật ký lần từ chối (TC-03). Mọi thao tác ghi chỉ thực hiện được
+khi dự án đang chạy (`RUNNING`) — dự án đã đóng nhận `400 INVALID_STATE`.
+
+Mỗi rủi ro gồm: mô tả (`description`), **mức tác động** (`impact`) và **khả năng xảy ra**
+(`likelihood`) — cùng thang `LOW` / `MEDIUM` / `HIGH`; biện pháp giảm thiểu (`mitigation`,
+tuỳ chọn) và **người theo dõi** (`watcherId` — tài khoản đang hoạt động).
+
+Hệ thống **tự tính** khi trả dữ liệu (không lưu DB, không job nền):
+- `score` = trọng số `impact` × trọng số `likelihood` (mỗi mức 1/2/3 → điểm `1..9`).
+- `severity`: `score ≥ 6` → `HIGH`; `score ≥ 3` → `MEDIUM`; còn lại → `LOW`.
+
+`status` (lưu DB, mặc định `OPEN` khi tạo): `OPEN` → `MITIGATING` → `CLOSED`.
+
+#### `POST /projects/{projectId}/risks` (TC-01)
+
+```json
+{
+  "description": "Nhà thầu phụ có nguy cơ chậm tiến độ tích hợp",
+  "impact": "HIGH",
+  "likelihood": "MEDIUM",
+  "mitigation": "Chuẩn bị nhà thầu dự phòng, chốt mốc kiểm tra hằng tuần",
+  "watcherId": 7
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `description` | string | có | Mô tả rủi ro. |
+| `impact` | enum | có | `LOW` / `MEDIUM` / `HIGH`. |
+| `likelihood` | enum | có | `LOW` / `MEDIUM` / `HIGH`. |
+| `mitigation` | string | không | Biện pháp giảm thiểu. |
+| `watcherId` | number | có | `id` tài khoản người theo dõi (đang hoạt động). |
+
+Response `200 OK` trả về `ProjectRiskRes`:
+
+```json
+{
+  "success": true,
+  "message": "Ghi nhan rui ro thanh cong",
+  "data": {
+    "id": 31,
+    "projectId": 1,
+    "description": "Nhà thầu phụ có nguy cơ chậm tiến độ tích hợp",
+    "impact": "HIGH",
+    "likelihood": "MEDIUM",
+    "score": 6,
+    "severity": "HIGH",
+    "status": "OPEN",
+    "mitigation": "Chuẩn bị nhà thầu dự phòng, chốt mốc kiểm tra hằng tuần",
+    "watcherId": 7,
+    "watcherName": "Nguyễn Văn A",
+    "createdBy": "pm01",
+    "createdAt": "2026-09-10T10:00:00",
+    "updatedAt": "2026-09-10T10:00:00"
+  }
+}
+```
+
+#### `GET /projects/{projectId}/risks` (TC-02)
+
+Bảng theo dõi rủi ro: trả danh sách **sắp theo `score` giảm dần** (cùng điểm thì theo `id`),
+kèm `score` và `severity` do hệ thống tính tại thời điểm gọi.
+
+#### `PUT /projects/{projectId}/risks/{riskId}`
+
+Cập nhật `description`, `impact`, `likelihood`, `mitigation`, `watcherId` — body giống `POST`.
+
+#### `PUT /projects/{projectId}/risks/{riskId}/status`
+
+Cập nhật trạng thái xử lý: `{"status": "MITIGATING"}` (hoặc `OPEN` / `CLOSED`).
+
+#### `DELETE /projects/{projectId}/risks/{riskId}`
+
+Xoá rủi ro khỏi dự án.
+
+Mọi thao tác tạo/cập nhật/đổi trạng thái/xoá đều được ghi vào nhật ký dự án (TC-04) với
+action `RISK_CREATED` / `RISK_UPDATED` / `RISK_DELETED`.
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Thiếu `description`, `impact`, `likelihood` hoặc `watcherId`; enum sai giá trị. |
+| 400 | `INVALID_STATE` | Dự án đã đóng, hoặc người theo dõi không còn hoạt động. |
+| 403 | `FORBIDDEN` | Người dùng không phải Quản lý dự án (`VT-02`). |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy dự án/rủi ro, hoặc người theo dõi không tồn tại. |
+

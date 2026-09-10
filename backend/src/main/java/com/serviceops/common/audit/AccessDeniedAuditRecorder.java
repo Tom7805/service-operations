@@ -37,6 +37,7 @@ public class AccessDeniedAuditRecorder {
 
     static {
         FEATURES.put("/milestones", new Feature(AuditTargetType.GENERAL, "Quản lý mốc tiến độ dự án"));
+        FEATURES.put("/risks", new Feature(AuditTargetType.GENERAL, "Quản lý rủi ro dự án"));
         FEATURES.put("/projects/from-template", new Feature(AuditTargetType.GENERAL, "Tạo dự án từ mẫu"));
         FEATURES.put("/customers/merge", new Feature(AuditTargetType.CUSTOMER, "Gộp hồ sơ khách hàng trùng"));
         FEATURES.put("/contacts", new Feature(AuditTargetType.CUSTOMER, "Người liên hệ của khách hàng"));
