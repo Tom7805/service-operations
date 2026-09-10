@@ -2,7 +2,7 @@ export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'WAITING_APPROVAL' | 'DONE';
 
 /**
  * Thông tin chi tiết một công việc (Task).
- * Khớp TaskRes từ backend (NCL-05-CN-002).
+ * Khớp TaskRes từ backend (NCL-05-CN-002, NCL-05-CN-007).
  */
 export interface TaskRes {
   id: number;
@@ -14,6 +14,8 @@ export interface TaskRes {
   expectedStartDate: string | null;
   expectedEndDate: string | null;
   status: TaskStatus;
+  /** Ngân sách giờ công của task, dùng khi tạo dự án từ mẫu (NCL-05-CN-007). */
+  budgetHours?: number | null;
 }
 
 /**

@@ -104,6 +104,12 @@ export default function WorkBreakdownTree({
             </span>
           )}
 
+          {task.budgetHours != null && (
+            <span className="wbs-task-budget" style={{ color: '#2563EB', fontWeight: 500 }}>
+              Ngân sách: {task.budgetHours} giờ
+            </span>
+          )}
+
           <span className={`wbs-badge ${badge.className}`}>{badge.label}</span>
 
           {canEdit && isProjectOpen && (

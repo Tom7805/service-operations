@@ -3012,8 +3012,10 @@ body { background: var(--canvas); }
 .activity-customer-line strong { color: var(--ink-strong); font-weight: 600; }
 .pipeline-generated-at { font-size: 12.5px; color: var(--ink-faint); white-space: nowrap; }
 
-/* Styles for CreateProjectModal (NCL-05-CN-001) */
-.project-modal-card { width: min(100%, 680px); max-height: 90vh; }
+/* ==========================================================================
+   Project & Template Creation (NCL-05-CN-001, NCL-05-CN-007)
+   ========================================================================== */
+.project-modal-card { width: min(100%, 780px); max-height: 90vh; }
 .project-preview-card {
   background: var(--surface-alt, #F8FAFC);
   border: 1px solid var(--line, #E2E8F0);
@@ -3203,6 +3205,10 @@ body { background: var(--canvas); }
   transition: transform var(--dur-fast, 0.15s) ease;
 }
 
+.wbs-chevron--collapsed {
+  transform: rotate(-90deg);
+}
+
 .wbs-package-name {
   font-size: 15px;
   font-weight: 600;
@@ -3234,11 +3240,13 @@ body { background: var(--canvas); }
   flex-shrink: 0;
 }
 
-.wbs-package-content {
+.wbs-package-content,
+.wbs-package-body {
   padding: 12px 16px;
 }
 
-.wbs-tasks-list {
+.wbs-tasks-list,
+.wbs-task-container {
   display: flex;
   flex-direction: column;
   gap: 8px;

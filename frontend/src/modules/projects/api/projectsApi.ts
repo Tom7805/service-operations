@@ -1,6 +1,8 @@
 import type {
   ProjectCreateFromContractReq,
+  ProjectCreateFromTemplateReq,
   ProjectRes,
+  ProjectTemplateRes,
   TaskCreateReq,
   TaskRes,
   WorkBreakdownRes,
@@ -118,6 +120,37 @@ export async function createTask(
 ): Promise<TaskRes> {
   return requestBackend<TaskRes>(
     `${API_BASE_URL}/projects/${projectId}/work-packages/${workPackageId}/tasks`,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+/**
+ * NCL-05-CN-007: Lấy danh sách mẫu dự án đang hoạt động để chọn khi tạo dự án.
+ * GET /contracts/{contractId}/projects/from-template
+ */
+export async function fetchProjectTemplates(contractId: number): Promise<ProjectTemplateRes[]> {
+  return requestBackend<ProjectTemplateRes[]>(
+    `${API_BASE_URL}/contracts/${contractId}/projects/from-template`,
+    {
+      method: 'GET',
+    }
+  );
+}
+
+/**
+ * NCL-05-CN-007: Tạo dự án từ mẫu có sẵn cây công việc và ngân sách giờ.
+ * Yêu cầu vai trò Quản lý dự án (VT-02).
+ * POST /contracts/{contractId}/projects/from-template
+ */
+export async function createProjectFromTemplate(
+  contractId: number,
+  payload: ProjectCreateFromTemplateReq
+): Promise<ProjectRes> {
+  return requestBackend<ProjectRes>(
+    `${API_BASE_URL}/contracts/${contractId}/projects/from-template`,
     {
       method: 'POST',
       body: JSON.stringify(payload),

@@ -13,7 +13,34 @@ export interface ProjectCreateFromContractReq {
 }
 
 /**
- * Thông tin dự án trả về từ backend (NCL-05-CN-001).
+ * Thông tin một mẫu dự án trả về từ backend (NCL-05-CN-007).
+ * Khớp ProjectTemplateRes.
+ */
+export interface ProjectTemplateRes {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+  projectType: string;
+  active: boolean;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+/**
+ * Payload tạo dự án từ mẫu có sẵn (NCL-05-CN-007).
+ * POST /contracts/{contractId}/projects/from-template
+ */
+export interface ProjectCreateFromTemplateReq {
+  templateId: number;
+  name: string;
+  startDate: string; // YYYY-MM-DD
+  expectedEndDate: string; // YYYY-MM-DD
+  projectManagerId: number;
+}
+
+/**
+ * Thông tin dự án trả về từ backend (NCL-05-CN-001, NCL-05-CN-007).
  */
 export interface ProjectRes {
   id: number;
