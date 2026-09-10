@@ -135,3 +135,16 @@ export async function deleteWorkPackage(projectId: number, workPackageId: number
     method: 'DELETE',
   });
 }
+
+/**
+ * NCL-05-CN-006: Đóng dự án. Chỉ đóng được khi dự án đang RUNNING và không còn công việc
+ * ở trạng thái WAITING_APPROVAL (đại diện phần việc/bảng chấm công còn treo chưa duyệt) —
+ * nếu còn, backend trả 400 INVALID_STATE kèm danh sách công việc còn treo trong `message`.
+ * Yêu cầu vai trò Quản lý dự án (VT-02).
+ * POST /projects/{projectId}/close
+ */
+export async function closeProject(projectId: number): Promise<ProjectRes> {
+  return requestBackend<ProjectRes>(`${API_BASE_URL}/projects/${projectId}/close`, {
+    method: 'POST',
+  });
+}

@@ -1,4 +1,5 @@
-export type ProjectStatus = 'RUNNING' | 'COMPLETED' | 'SUSPENDED' | 'CANCELLED';
+/** Khớp enum ProjectStatus phía backend — dự án chỉ có hai trạng thái. */
+export type ProjectStatus = 'RUNNING' | 'CLOSED';
 
 /**
  * Payload tạo dự án từ hợp đồng (NCL-05-CN-001).

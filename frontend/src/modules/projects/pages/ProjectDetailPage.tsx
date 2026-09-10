@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import type { ProjectRes, TaskRes, WorkBreakdownRes } from '../types/projectTypes';
 import {
+  closeProject,
   deleteWorkPackage,
   getProject,
   getWorkBreakdown,
@@ -77,9 +78,14 @@ export default function ProjectDetailPage({
   // Thông báo toast
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
+  // Trạng thái đang gọi API đóng dự án (NCL-05-CN-006)
+  const [closing, setClosing] = useState(false);
+
   const isProjectOpen = project?.status === 'RUNNING';
   // Quyền tạo / sửa / xóa: chỉ Quản lý dự án (VT-02) và dự án phải đang mở (RUNNING)
   const canEdit = currentUserRoles.includes('VT-02') && isProjectOpen;
+  // Quyền đóng dự án (NCL-05-CN-006): chỉ Quản lý dự án và dự án phải đang RUNNING
+  const canClose = currentUserRoles.includes('VT-02') && isProjectOpen;
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -150,6 +156,29 @@ export default function ProjectDetailPage({
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Không thể xóa hạng mục.';
       showToast(msg, 'error');
+    }
+  };
+
+  // Đóng dự án (NCL-05-CN-006): TC-01 luồng thành công, TC-02 chặn khi còn công việc chờ duyệt
+  const handleCloseProject = async () => {
+    if (!project) return;
+    if (
+      !window.confirm(
+        `Bạn có chắc chắn muốn đóng dự án "${project.name}"? Sau khi đóng sẽ không thể chỉnh sửa cơ cấu công việc, giao việc, tiến độ hay ngân sách giờ công của dự án này nữa.`
+      )
+    ) {
+      return;
+    }
+    setClosing(true);
+    try {
+      const updated = await closeProject(projectId);
+      setProject(updated);
+      showToast('Đã đóng dự án thành công');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Không thể đóng dự án.';
+      showToast(msg, 'error');
+    } finally {
+      setClosing(false);
     }
   };
 
@@ -225,6 +254,17 @@ export default function ProjectDetailPage({
               data-testid="btn-add-root-package"
             >
               + Thêm hạng mục gốc
+            </button>
+          )}
+          {canClose && (
+            <button
+              type="button"
+              className="btn btn-danger btn-sm"
+              onClick={handleCloseProject}
+              disabled={closing}
+              data-testid="btn-close-project"
+            >
+              {closing ? 'Đang đóng…' : 'Đóng dự án'}
             </button>
           )}
         </div>

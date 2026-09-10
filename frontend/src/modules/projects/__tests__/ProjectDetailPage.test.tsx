@@ -22,6 +22,7 @@ vi.mock('../api/projectsApi', () => {
     createWorkPackage: vi.fn(),
     createTask: vi.fn(),
     deleteWorkPackage: vi.fn(),
+    closeProject: vi.fn(),
     ProjectsApiError: MockProjectsApiError,
   };
 });
@@ -43,7 +44,7 @@ const mockProjectRunning: ProjectRes = {
 
 const mockProjectClosed: ProjectRes = {
   ...mockProjectRunning,
-  status: 'COMPLETED',
+  status: 'CLOSED',
 };
 
 const mockWbs: WorkBreakdownRes[] = [
@@ -119,6 +120,97 @@ describe('ProjectDetailPage Component (NCL-05-CN-002)', () => {
 
     // + Thêm hạng mục gốc button should not be present
     expect(screen.queryByRole('button', { name: /\+ Thêm hạng mục gốc/i })).not.toBeInTheDocument();
+    // Đóng dự án button should not be present either (already closed)
+    expect(screen.queryByTestId('btn-close-project')).not.toBeInTheDocument();
+  });
+
+  describe('Đóng dự án (NCL-05-CN-006)', () => {
+    it('hides the "Đóng dự án" button for roles other than VT-02 (e.g. VT-03)', async () => {
+      vi.mocked(projectsApi.getProject).mockResolvedValue(mockProjectRunning);
+      vi.mocked(projectsApi.getWorkBreakdown).mockResolvedValue(mockWbs);
+
+      render(<ProjectDetailPage projectId={1} currentUserRoles={['VT-03']} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('PRJ-2026-001')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByTestId('btn-close-project')).not.toBeInTheDocument();
+    });
+
+    it('TC-01: closes a running project and reflects the new status after confirming', async () => {
+      vi.mocked(projectsApi.getProject).mockResolvedValue(mockProjectRunning);
+      vi.mocked(projectsApi.getWorkBreakdown).mockResolvedValue(mockWbs);
+      vi.mocked(projectsApi.closeProject).mockResolvedValue(mockProjectClosed);
+      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+      render(<ProjectDetailPage projectId={1} currentUserRoles={['VT-02']} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('PRJ-2026-001')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTestId('btn-close-project'));
+
+      await waitFor(() => {
+        expect(projectsApi.closeProject).toHaveBeenCalledWith(1);
+      });
+
+      expect(confirmSpy).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(screen.getByTestId('project-toast')).toHaveTextContent(/Đã đóng dự án thành công/i);
+      });
+      expect(screen.getByTestId('project-closed-alert')).toBeInTheDocument();
+      expect(screen.queryByTestId('btn-close-project')).not.toBeInTheDocument();
+
+      confirmSpy.mockRestore();
+    });
+
+    it('does nothing when the confirmation dialog is dismissed', async () => {
+      vi.mocked(projectsApi.getProject).mockResolvedValue(mockProjectRunning);
+      vi.mocked(projectsApi.getWorkBreakdown).mockResolvedValue(mockWbs);
+      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+      render(<ProjectDetailPage projectId={1} currentUserRoles={['VT-02']} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('PRJ-2026-001')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTestId('btn-close-project'));
+
+      expect(projectsApi.closeProject).not.toHaveBeenCalled();
+      confirmSpy.mockRestore();
+    });
+
+    it('TC-02: shows the pending-tasks message returned by the backend when closing is blocked', async () => {
+      vi.mocked(projectsApi.getProject).mockResolvedValue(mockProjectRunning);
+      vi.mocked(projectsApi.getWorkBreakdown).mockResolvedValue(mockWbs);
+      vi.mocked(projectsApi.closeProject).mockRejectedValue(
+        new projectsApi.ProjectsApiError(
+          'INVALID_STATE',
+          'Con cong viec dang cho duyet, chua the dong du an: #20 Kiem thu module A',
+          400
+        )
+      );
+      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+      render(<ProjectDetailPage projectId={1} currentUserRoles={['VT-02']} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('PRJ-2026-001')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTestId('btn-close-project'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('project-toast')).toHaveTextContent(/con cong viec dang cho duyet/i);
+      });
+      // Project stays open — the close button is still available for a retry.
+      expect(screen.getByTestId('btn-close-project')).toBeInTheDocument();
+
+      confirmSpy.mockRestore();
+    });
   });
 
   it('opens WorkPackageModal when clicking + Thêm hạng mục gốc', async () => {
