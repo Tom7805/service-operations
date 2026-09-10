@@ -98,7 +98,7 @@ Không cần token (endpoint công khai).
   |---|---|---|---|---|
   | `admin` | `VT-07` Quản trị viên | Phòng Công Nghệ & Giải Pháp | COMPANY | Tài khoản hệ thống, không có hồ sơ nhân sự |
   | `giamdoc` | `VT-01` Ban giám đốc | Ban Giám Đốc | COMPANY | |
-  | `pm.lead` | `VT-02` Quản lý dự án | PMO | DEPARTMENT → PMO | Trưởng phòng |
+  | `pm.lead` | `VT-02` Quản lý dự án | PMO | COMPANY | Trưởng phòng (giám sát dự án/HĐ toàn công ty) |
   | `pm01` | `VT-02` Quản lý dự án | PMO | SELF | |
   | `sale.lead` | `VT-04` Kinh doanh | Kinh Doanh | DEPARTMENT → Kinh Doanh | Trưởng phòng |
   | `sale01` | `VT-04` Kinh doanh | Kinh Doanh | SELF | |

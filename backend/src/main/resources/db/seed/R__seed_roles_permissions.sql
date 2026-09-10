@@ -36,7 +36,7 @@
 --  --------------------|----------------------|-------|---------|------------------
 --  admin               | Quản trị viên hệ thống| 6 TCN | VT-07   | COMPANY
 --  giamdoc             | Lê Minh Quân         | 1 BGD | VT-01   | COMPANY
---  pm.lead             | Trần Thu Hà          | 2 PMO | VT-02   | DEPARTMENT → 2 (PMO)
+--  pm.lead             | Trần Thu Hà          | 2 PMO | VT-02   | COMPANY  (Trưởng phòng QLDA — giám sát dự án/hợp đồng toàn công ty)
 --  pm01                | Nguyễn Văn Dũng      | 2 PMO | VT-02   | SELF
 --  sale.lead           | Phạm Quốc Bảo        | 3 KDH | VT-04   | DEPARTMENT → 3 (KDH)
 --  sale01              | Đỗ Thị Mai           | 3 KDH | VT-04   | SELF
@@ -94,7 +94,10 @@ SELECT u.id, r.id, s.scope_type, s.scope_department_id
 FROM (
               SELECT 'admin'       AS username, 'VT-07' AS role_code, 'COMPANY'    AS scope_type, CAST(NULL AS SIGNED) AS scope_department_id
     UNION ALL SELECT 'giamdoc',      'VT-01', 'COMPANY',    NULL
-    UNION ALL SELECT 'pm.lead',      'VT-02', 'DEPARTMENT', 2
+    -- Trưởng phòng Quản lý dự án nhìn xuyên công ty: PM điều phối dự án/hợp đồng
+    -- của mọi phòng, và cần mở được cảnh báo hạn mức của hợp đồng do phòng Kinh
+    -- Doanh dựng (NCL-04-CN-005). pm01 vẫn giữ SELF để đối chứng phạm vi.
+    UNION ALL SELECT 'pm.lead',      'VT-02', 'COMPANY',    NULL
     UNION ALL SELECT 'pm01',         'VT-02', 'SELF',       NULL
     UNION ALL SELECT 'sale.lead',    'VT-04', 'DEPARTMENT', 3
     UNION ALL SELECT 'sale01',       'VT-04', 'SELF',       NULL
