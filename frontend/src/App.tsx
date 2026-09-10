@@ -18,6 +18,7 @@ import OpportunitySearchPicker from './modules/opportunities/components/Opportun
 import OpportunityListPage from './modules/opportunities/pages/OpportunityListPage';
 import RevenueForecastPage from './modules/opportunities/pages/RevenueForecastPage';
 import PipelineReportPage from './modules/reports/pages/PipelineReportPage';
+import ProjectDetailPage from './modules/projects/pages/ProjectDetailPage';
 import { ICONS } from './components/common/icons';
 import CommandPalette from './components/common/CommandPalette';
 import useScrollReveal from './hooks/useScrollReveal';
@@ -31,6 +32,7 @@ type Tab =
   | 'REVENUE_FORECAST'
   | 'CUSTOMER_MERGE'
   | 'DEPARTMENTS'
+  | 'PROJECTS'
   | 'PERMISSIONS'
   | 'USERS'
   | 'DETAIL'
@@ -73,6 +75,7 @@ interface NavItem {
 /** Điều hướng chính — vận hành nghiệp vụ hàng ngày. */
 const NAV_ITEMS: NavItem[] = [
   { tab: 'CUSTOMERS', icon: ICONS.building, label: 'Khách hàng', requires: ['VT-04', 'VT-02'] },
+  { tab: 'PROJECTS', icon: ICONS.briefcase, label: 'Dự án', requires: ['VT-02'] },
   {
     tab: 'OPPORTUNITIES', icon: ICONS.target, label: 'Cơ hội bán hàng', requires: ['VT-01', 'VT-02', 'VT-04'],
     // OpportunityListPage cho MỌI vai trò xem đường ống bán hàng — chỉ chặn
@@ -431,6 +434,12 @@ export default function App() {
             />
           ) : activeTab === 'REVENUE_FORECAST' ? (
             <RevenueForecastPage
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+            />
+          ) : activeTab === 'PROJECTS' ? (
+            <ProjectDetailPage
+              projectId={1}
               currentUserRoles={currentRoles}
               currentUserName={session.fullName}
             />
