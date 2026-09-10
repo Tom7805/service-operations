@@ -16,6 +16,7 @@ import ContractExpiryReminderModal from '../../contracts/components/ContractExpi
 import RenewalModal from '../../contracts/components/RenewalModal';
 import CreateProjectModal from '../../contracts/components/CreateProjectModal';
 import type { ContractTargetForProject } from '../../contracts/components/CreateProjectModal';
+import ProjectWbsModal from '../../projects/components/ProjectWbsModal';
 import { getContract, activateContract, ContractsApiError } from '../../contracts/api/contractsApi';
 import type { ContractRes } from '../../contracts/types/contractTypes';
 import { t } from '../../../i18n';
@@ -98,11 +99,22 @@ export default function CustomerOverviewPanel({
   const [isRenewalOpen, setIsRenewalOpen] = useState(false);
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [createProjectTarget, setCreateProjectTarget] = useState<ContractTargetForProject | null>(null);
+  const [isProjectWbsOpen, setIsProjectWbsOpen] = useState(false);
+  const [selectedProjectWbsTarget, setSelectedProjectWbsTarget] = useState<{ id: number; code: string; name: string } | null>(null);
   const [selectedContract, setSelectedContract] = useState<ContractRes | null>(null);
   const [limitAlertTarget, setLimitAlertTarget] = useState<ContractLimitAlertTarget | null>(null);
   const [isContractLoading, setIsContractLoading] = useState(false);
   const [contractLoadError, setContractLoadError] = useState<string | null>(null);
   const [activatingContractId, setActivatingContractId] = useState<number | null>(null);
+
+  const openProjectWbs = (item: CustomerOverviewItem) => {
+    setSelectedProjectWbsTarget({
+      id: item.id,
+      code: item.code ?? '',
+      name: item.name ?? '',
+    });
+    setIsProjectWbsOpen(true);
+  };
 
   // NCL-04-CN-002/003/004/007: nạp đúng dữ liệu hiện tại của hợp đồng trước khi mở modal sửa/điều chỉnh/gia hạn.
   // Cả các thao tác này (khai báo loại/hạn mức, mốc thanh toán, phụ lục, gia hạn) chỉ dành cho
@@ -545,6 +557,20 @@ export default function CustomerOverviewPanel({
                                     <span className="cell-muted">—</span>
                                   )}
                                 </div>
+                              ) : section.key === 'projects' ? (
+                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                                  {(currentUserRoles.includes('VT-01') || currentUserRoles.includes('VT-02') || currentUserRoles.includes('VT-03')) ? (
+                                    <button
+                                      type="button"
+                                      className="btn btn-secondary"
+                                      onClick={() => openProjectWbs(item)}
+                                    >
+                                      Xem công việc
+                                    </button>
+                                  ) : (
+                                    <span className="cell-muted">—</span>
+                                  )}
+                                </div>
                               ) : (
                                 <span className="cell-muted">—</span>
                               )}
@@ -664,6 +690,23 @@ export default function CustomerOverviewPanel({
           onSaved={() => {
             setIsCreateProjectOpen(false);
             setCreateProjectTarget(null);
+            void loadOverview();
+          }}
+        />
+      )}
+
+      {selectedProjectWbsTarget && (
+        <ProjectWbsModal
+          isOpen={isProjectWbsOpen}
+          onClose={() => {
+            setIsProjectWbsOpen(false);
+            setSelectedProjectWbsTarget(null);
+          }}
+          projectId={selectedProjectWbsTarget.id}
+          projectCode={selectedProjectWbsTarget.code}
+          projectName={selectedProjectWbsTarget.name}
+          currentUserRoles={currentUserRoles}
+          onUpdated={() => {
             void loadOverview();
           }}
         />

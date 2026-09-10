@@ -44,3 +44,62 @@ export function validateProjectCreateForm(
     errors,
   };
 }
+
+export interface WorkPackageValidationResult {
+  isValid: boolean;
+  errors: Record<string, string>;
+}
+
+/**
+ * Kiểm tra hợp lệ biểu mẫu tạo hạng mục công việc (NCL-05-CN-002).
+ */
+export function validateWorkPackageForm(
+  payload: { name?: string; description?: string | null; sortOrder?: number | null }
+): WorkPackageValidationResult {
+  const errors: Record<string, string> = {};
+
+  const name = payload.name?.trim() ?? '';
+  if (!name) {
+    errors.name = 'Tên hạng mục không được để trống';
+  } else if (name.length > 255) {
+    errors.name = 'Tên hạng mục không được vượt quá 255 ký tự';
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+}
+
+export interface TaskCreateValidationResult {
+  isValid: boolean;
+  errors: Record<string, string>;
+}
+
+/**
+ * Kiểm tra hợp lệ biểu mẫu tạo công việc (NCL-05-CN-002).
+ */
+export function validateTaskCreateForm(
+  payload: { name?: string; expectedStartDate?: string | null; expectedEndDate?: string | null }
+): TaskCreateValidationResult {
+  const errors: Record<string, string> = {};
+
+  const name = payload.name?.trim() ?? '';
+  if (!name) {
+    errors.name = 'Tên công việc không được để trống';
+  } else if (name.length > 255) {
+    errors.name = 'Tên công việc không được vượt quá 255 ký tự';
+  }
+
+  const startDate = payload.expectedStartDate?.trim() ?? '';
+  const endDate = payload.expectedEndDate?.trim() ?? '';
+
+  if (startDate && endDate && endDate < startDate) {
+    errors.expectedEndDate = 'Ngày kết thúc dự kiến không được sớm hơn ngày bắt đầu';
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+}
