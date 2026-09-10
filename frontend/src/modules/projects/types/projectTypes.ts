@@ -46,3 +46,11 @@ export interface ContractTargetForProject {
   startDate?: string | null;
   endDate?: string | null;
 }
+
+export type {
+  TaskStatus,
+  TaskRes,
+  TaskCreateReq,
+  WorkPackageReq,
+  WorkBreakdownRes,
+} from './taskTypes';

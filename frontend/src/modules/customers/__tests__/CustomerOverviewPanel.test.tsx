@@ -40,6 +40,28 @@ vi.mock('../../contracts/api/contractsApi', () => ({
   },
 }));
 
+vi.mock('../../projects/api/projectsApi', () => ({
+  getProject: vi.fn().mockResolvedValue({
+    id: 3,
+    contractId: 2,
+    code: 'DA-001',
+    name: 'Dự án ERP giai đoạn 1',
+    status: 'RUNNING',
+    startDate: '2026-03-15',
+    endDate: null,
+  }),
+  getWorkBreakdown: vi.fn().mockResolvedValue([]),
+  createWorkPackage: vi.fn(),
+  createTask: vi.fn(),
+  deleteWorkPackage: vi.fn(),
+  ProjectsApiError: class extends Error {
+    constructor(public statusCode: number, message: string, public errorCode?: string) {
+      super(message);
+      this.name = 'ProjectsApiError';
+    }
+  },
+}));
+
 const baseCustomer = {
   id: 10,
   code: 'KH-000010',
@@ -463,6 +485,83 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
         expect(screen.getByRole('heading', { name: /Tạo dự án từ hợp đồng/i })).toBeInTheDocument();
       });
       expect(within(screen.getByRole('dialog')).getByText(/Hợp đồng triển khai ERP/i)).toBeInTheDocument();
+    });
+
+    it('NCL-05-CN-002: nút "Xem công việc" hiển thị cho VT-01, VT-02, VT-03 và ẩn với vai trò khác (như VT-05)', async () => {
+      vi.mocked(customersApi.fetchCustomerOverview).mockResolvedValue(fullOverview);
+
+      const { rerender } = render(
+        <CustomerOverviewPanel
+          customerId={10}
+          customerName="Công ty Cổ phần Alpha"
+          currentUserRoles={['VT-02']}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('customer-summary-panel')).toBeInTheDocument();
+      });
+
+      // VT-02 nhìn thấy nút "Xem công việc" trong bảng Dự án
+      expect(
+        within(screen.getByTestId('customer-summary-section-projects')).getByRole('button', {
+          name: /Xem công việc/i,
+        })
+      ).toBeInTheDocument();
+
+      // VT-03 (Nhân viên chuyên môn) cũng nhìn thấy
+      rerender(
+        <CustomerOverviewPanel
+          customerId={10}
+          customerName="Công ty Cổ phần Alpha"
+          currentUserRoles={['VT-03']}
+        />
+      );
+      expect(
+        within(screen.getByTestId('customer-summary-section-projects')).getByRole('button', {
+          name: /Xem công việc/i,
+        })
+      ).toBeInTheDocument();
+
+      // VT-05 (Kế toán) không nhìn thấy nút "Xem công việc"
+      rerender(
+        <CustomerOverviewPanel
+          customerId={10}
+          customerName="Công ty Cổ phần Alpha"
+          currentUserRoles={['VT-05']}
+        />
+      );
+      expect(
+        within(screen.getByTestId('customer-summary-section-projects')).queryByRole('button', {
+          name: /Xem công việc/i,
+        })
+      ).toBeNull();
+    });
+
+    it('NCL-05-CN-002: bấm nút "Xem công việc" mở modal ProjectWbsModal', async () => {
+      vi.mocked(customersApi.fetchCustomerOverview).mockResolvedValue(fullOverview);
+
+      render(
+        <CustomerOverviewPanel
+          customerId={10}
+          customerName="Công ty Cổ phần Alpha"
+          currentUserRoles={['VT-02']}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('customer-summary-panel')).toBeInTheDocument();
+      });
+
+      const viewWbsBtn = within(screen.getByTestId('customer-summary-section-projects')).getByRole('button', {
+        name: /Xem công việc/i,
+      });
+      fireEvent.click(viewWbsBtn);
+
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+        expect(screen.getByText(/Cơ cấu hạng mục & công việc \(WBS\)/i)).toBeInTheDocument();
+      });
     });
   });
 });
