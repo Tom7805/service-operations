@@ -7,6 +7,7 @@ import type { ContractRes, ContractMilestoneRes } from '../types/contractTypes';
 vi.mock('../api/contractsApi', () => ({
   fetchMilestones: vi.fn(),
   replaceMilestones: vi.fn(),
+  updateMilestoneStatus: vi.fn(),
   ContractsApiError: class extends Error {
     constructor(public code: string, message: string, public statusCode?: number) {
       super(message);
@@ -157,35 +158,69 @@ describe('ContractMilestonesModal (NCL-04-CN-003)', () => {
     });
   });
 
-  it('nhập tỷ lệ % thì "Giá trị" tự tính và khoá lại; xoá % thì mở lại để nhập số tiền tay', async () => {
+  it('nhập tỷ lệ % thì "Giá trị" hiện số tự tính (chỉ đọc); xoá % thì mở lại ô nhập số tiền tay', async () => {
     vi.mocked(contractsApi.fetchMilestones).mockResolvedValue([]);
 
     render(
       <ContractMilestonesModal contract={contract} isOpen onClose={vi.fn()} currentUserRoles={['VT-05']} />
     );
 
-    // Danh sách rỗng → sẵn một dòng mới, ô "Giá trị" trống hẳn (không kẹt "0"), nhập tay được.
+    // Danh sách rỗng → sẵn một dòng mới, ô "Giá trị" là input trống hẳn (không kẹt "0"), nhập tay được.
     const amountInput = await screen.findByLabelText('Giá trị mốc');
     expect(amountInput).toHaveValue(null);
-    expect(amountInput).not.toHaveAttribute('readonly');
 
-    // Nhập tỷ lệ 30% → "Giá trị" = 30% × giá trị hợp đồng và bị khoá (chỉ đọc).
+    // Nhập tỷ lệ 30% → ô nhập số tiền biến mất, thay bằng số tự tính hiển thị dạng chữ.
     fireEvent.change(screen.getByLabelText('Tỷ lệ phần trăm'), { target: { value: '30' } });
-    expect(amountInput).toHaveValue(300_000_000);
-    expect(amountInput).toHaveAttribute('readonly');
+    expect(screen.queryByLabelText('Giá trị mốc')).not.toBeInTheDocument();
+    expect(screen.getByText('300.000.000 đ')).toBeInTheDocument();
 
-    // Đổi % → "Giá trị" tính lại theo số mới.
+    // Đổi % → số tự tính đổi theo.
     fireEvent.change(screen.getByLabelText('Tỷ lệ phần trăm'), { target: { value: '5' } });
-    expect(amountInput).toHaveValue(50_000_000);
+    expect(screen.getByText('50.000.000 đ')).toBeInTheDocument();
 
-    // Xoá trắng ô "Tỷ lệ (%)" → "Giá trị" về trống và mở khoá để nhập tay.
+    // Xoá trắng ô "Tỷ lệ (%)" → ô nhập số tiền tay quay lại, trống.
     fireEvent.change(screen.getByLabelText('Tỷ lệ phần trăm'), { target: { value: '' } });
-    expect(amountInput).toHaveValue(null);
-    expect(amountInput).not.toHaveAttribute('readonly');
+    const amountInputAgain = screen.getByLabelText('Giá trị mốc');
+    expect(amountInputAgain).toHaveValue(null);
 
     // Nhập số tiền tuỳ ý → nhận đúng số đó.
-    fireEvent.change(amountInput, { target: { value: '250000000' } });
-    expect(amountInput).toHaveValue(250_000_000);
+    fireEvent.change(amountInputAgain, { target: { value: '250000000' } });
+    expect(amountInputAgain).toHaveValue(250_000_000);
+  });
+
+  it('bấm mũi tên đổi trạng thái mốc: cập nhật tại chỗ, KHÔNG đóng modal (không gọi onSaved)', async () => {
+    vi.mocked(contractsApi.fetchMilestones).mockResolvedValue(existingMilestones);
+    vi.mocked(contractsApi.updateMilestoneStatus).mockResolvedValue({
+      ...existingMilestones[0],
+      status: 'READY_TO_INVOICE',
+    });
+    const onSaved = vi.fn();
+    const onClose = vi.fn();
+
+    render(
+      <ContractMilestonesModal
+        contract={contract}
+        isOpen
+        onClose={onClose}
+        onSaved={onSaved}
+        currentUserRoles={['VT-05']}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Nghiệm thu giai đoạn 1')).toBeInTheDocument();
+    });
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /Chuyển mốc Nghiệm thu giai đoạn 1 sang trạng thái/i })
+    );
+
+    await waitFor(() => {
+      expect(contractsApi.updateMilestoneStatus).toHaveBeenCalledWith(5, 101, 'READY_TO_INVOICE');
+    });
+    expect(screen.getByText('Sẵn sàng xuất hóa đơn')).toBeInTheDocument();
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it('hiển thị lỗi khi tải danh sách mốc thất bại', async () => {
