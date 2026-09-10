@@ -50,6 +50,11 @@ function toDraftRow(m: ContractMilestoneRes): DraftRow {
   };
 }
 
+function formatVnd(v: number | null | undefined): string {
+  if (v == null) return '—';
+  return `${v.toLocaleString('vi-VN')} đ`;
+}
+
 function newDraftRow(): DraftRow {
   return {
     key: `new-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -135,9 +140,10 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
     setStatusUpdatingKey(row.key);
     try {
       await updateMilestoneStatus(contract.id, row.id, next);
+      // Chỉ cập nhật tại chỗ dòng vừa đổi — KHÔNG gọi onSaved (onSaved là tín hiệu
+      // "đã lưu xong danh sách mốc" khiến màn cha đóng modal). Trình tự trạng thái
+      // PENDING → READY_TO_INVOICE → INVOICED là tuyến tính nên cập nhật lạc quan là đủ.
       updateRow(row.key, { status: next });
-      const refreshed = await fetchMilestones(contract.id);
-      onSaved?.(refreshed);
     } catch (err) {
       setStatusError(
         err instanceof ContractsApiError ? err.message : 'Không thể đổi trạng thái mốc thanh toán.'
@@ -227,8 +233,8 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
                   <thead>
                     <tr>
                       <th>Tên mốc</th>
-                      <th style={{ width: '110px' }}>Tỷ lệ (%)</th>
-                      <th style={{ width: '160px' }}>Giá trị</th>
+                      <th style={{ width: '90px' }}>Tỷ lệ (%)</th>
+                      <th style={{ width: '170px', textAlign: 'right' }}>Giá trị</th>
                       <th style={{ width: '150px' }}>Ngày dự kiến</th>
                       <th>Điều kiện nghiệm thu</th>
                       <th style={{ width: '150px' }}>Trạng thái</th>
@@ -257,26 +263,29 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
                             max={100}
                           />
                         </td>
-                        <td>
-                          <input
-                            className="form-input"
-                            type="number"
-                            aria-label="Giá trị mốc"
-                            value={row.amount ?? ''}
-                            onChange={(e) =>
-                              updateRow(row.key, {
-                                amount: e.target.value === '' ? null : Number(e.target.value),
-                              })
-                            }
-                            min={0}
-                            readOnly={row.percentage != null}
-                            title={
-                              row.percentage != null
-                                ? 'Tự tính theo tỷ lệ % — xoá ô "Tỷ lệ (%)" nếu muốn nhập số tiền tuỳ ý'
-                                : undefined
-                            }
-                            style={row.percentage != null ? { background: 'var(--surface-alt)', cursor: 'not-allowed' } : undefined}
-                          />
+                        <td style={{ textAlign: 'right' }}>
+                          {row.percentage != null ? (
+                            <span
+                              className="cell-muted"
+                              style={{ whiteSpace: 'nowrap' }}
+                              title={'Tự tính theo tỷ lệ % — xoá ô "Tỷ lệ (%)" nếu muốn nhập số tiền tuỳ ý'}
+                            >
+                              {formatVnd(row.amount)}
+                            </span>
+                          ) : (
+                            <input
+                              className="form-input"
+                              type="number"
+                              aria-label="Giá trị mốc"
+                              value={row.amount ?? ''}
+                              onChange={(e) =>
+                                updateRow(row.key, {
+                                  amount: e.target.value === '' ? null : Number(e.target.value),
+                                })
+                              }
+                              min={0}
+                            />
+                          )}
                         </td>
                         <td>
                           <input
