@@ -204,6 +204,11 @@ export async function fetchRenewals(contractId: number): Promise<RenewalRes[]> {
   });
 }
 
+export {
+  createProjectFromContract,
+  ProjectsApiError,
+} from '../../projects/api/projectsApi';
+
 export default {} as unknown as {
   getContract: typeof getContract;
   updateTypeAndLimit: typeof updateTypeAndLimit;

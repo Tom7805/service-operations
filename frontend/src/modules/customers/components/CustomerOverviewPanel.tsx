@@ -14,6 +14,8 @@ import ContractAppendixModal from '../../contracts/components/ContractAppendixMo
 import ContractLimitAlert, { type ContractLimitAlertTarget } from '../../contracts/components/ContractLimitAlert';
 import ContractExpiryReminderModal from '../../contracts/components/ContractExpiryReminderModal';
 import RenewalModal from '../../contracts/components/RenewalModal';
+import CreateProjectModal from '../../contracts/components/CreateProjectModal';
+import type { ContractTargetForProject } from '../../contracts/components/CreateProjectModal';
 import { getContract, activateContract, ContractsApiError } from '../../contracts/api/contractsApi';
 import type { ContractRes } from '../../contracts/types/contractTypes';
 import { t } from '../../../i18n';
@@ -94,6 +96,8 @@ export default function CustomerOverviewPanel({
   const [isLimitAlertOpen, setIsLimitAlertOpen] = useState(false);
   const [isExpiringReminderOpen, setIsExpiringReminderOpen] = useState(false);
   const [isRenewalOpen, setIsRenewalOpen] = useState(false);
+  const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
+  const [createProjectTarget, setCreateProjectTarget] = useState<ContractTargetForProject | null>(null);
   const [selectedContract, setSelectedContract] = useState<ContractRes | null>(null);
   const [limitAlertTarget, setLimitAlertTarget] = useState<ContractLimitAlertTarget | null>(null);
   const [isContractLoading, setIsContractLoading] = useState(false);
@@ -137,6 +141,23 @@ export default function CustomerOverviewPanel({
     });
     setIsLimitAlertOpen(true);
   }, []);
+
+  // NCL-05-CN-001: Quản lý dự án (VT-02) tạo dự án từ hợp đồng.
+  // Không gọi getContract(contractId) vì endpoint đó chỉ cấp quyền cho VT-05.
+  // Dữ liệu hợp đồng (mã, tên, trạng thái, giá trị, ngày bắt đầu) đã có sẵn từ dòng tổng hợp.
+  const openCreateProject = useCallback((item: CustomerOverviewItem) => {
+    setCreateProjectTarget({
+      id: item.id,
+      contractCode: item.code ?? '—',
+      name: item.name ?? '(không có tên)',
+      status: item.status ?? '',
+      customerId: customerId,
+      customerName: customerName,
+      totalValue: item.amount,
+      startDate: item.date,
+    });
+    setIsCreateProjectOpen(true);
+  }, [customerId, customerName]);
 
   // NCL-04-CN-002: kích hoạt hợp đồng DRAFT → ACTIVE, điều kiện bắt buộc để dùng
   // được phụ lục điều chỉnh (NCL-04-CN-004) và gia hạn (NCL-04-CN-007). Không cần
@@ -491,6 +512,15 @@ export default function CustomerOverviewPanel({
                                       Cảnh báo hạn mức
                                     </button>
                                   )}
+                                  {currentUserRoles.includes('VT-02') && (
+                                    <button
+                                      type="button"
+                                      className="btn btn-secondary"
+                                      onClick={() => openCreateProject(item)}
+                                    >
+                                      Tạo dự án
+                                    </button>
+                                  )}
                                   {currentUserRoles.includes('VT-04') && (
                                     <>
                                       <button
@@ -617,6 +647,23 @@ export default function CustomerOverviewPanel({
           onSaved={() => {
             setIsRenewalOpen(false);
             setSelectedContract(null);
+            void loadOverview();
+          }}
+        />
+      )}
+
+      {createProjectTarget && (
+        <CreateProjectModal
+          isOpen={isCreateProjectOpen}
+          onClose={() => {
+            setIsCreateProjectOpen(false);
+            setCreateProjectTarget(null);
+          }}
+          contract={createProjectTarget}
+          currentUserRoles={currentUserRoles}
+          onSaved={() => {
+            setIsCreateProjectOpen(false);
+            setCreateProjectTarget(null);
             void loadOverview();
           }}
         />
