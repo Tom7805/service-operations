@@ -122,6 +122,53 @@ class ProjectServiceImplTest {
 		verify(projectRepository, never()).save(any());
 	}
 
+	@Test
+	@DisplayName("Doc du an theo id, tra ve trang thai de FE khoa/mo nut chinh sua")
+	void getsProjectById() {
+		Project project = new Project();
+		project.setId(20L);
+		project.setProjectCode("DA-1");
+		project.setName("Du an ERP");
+		project.setContractId(1L);
+		project.setCustomerId(9L);
+		project.setProjectType("FIXED_PRICE");
+		project.setStartDate(LocalDate.of(2027, 1, 1));
+		project.setExpectedEndDate(LocalDate.of(2027, 12, 31));
+		project.setProjectManagerId(7L);
+		project.setStatus(com.serviceops.modules.project.enums.ProjectStatus.CLOSED);
+		when(projectRepository.findById(20L)).thenReturn(Optional.of(project));
+
+		ProjectRes res = service.getProject(20L);
+
+		assertThat(res.id()).isEqualTo(20L);
+		assertThat(res.status()).isEqualTo("CLOSED");
+	}
+
+	@Test
+	@DisplayName("Doc du an khong ton tai -> RESOURCE_NOT_FOUND")
+	void getProjectNotFound() {
+		when(projectRepository.findById(404L)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> service.getProject(404L))
+				.isInstanceOf(BusinessRuleException.class)
+				.extracting(exception -> ((BusinessRuleException) exception).getErrorCode())
+				.isEqualTo(ErrorCode.RESOURCE_NOT_FOUND);
+	}
+
+	@Test
+	@DisplayName("Liet ke du an theo hop dong, moi nhat truoc")
+	void listsProjectsByContract() {
+		Project older = new Project();
+		older.setId(10L);
+		older.setStatus(com.serviceops.modules.project.enums.ProjectStatus.RUNNING);
+		Project newer = new Project();
+		newer.setId(20L);
+		newer.setStatus(com.serviceops.modules.project.enums.ProjectStatus.RUNNING);
+		when(projectRepository.findByContractIdOrderByIdDesc(1L)).thenReturn(java.util.List.of(newer, older));
+
+		assertThat(service.listByContract(1L)).extracting(ProjectRes::id).containsExactly(20L, 10L);
+	}
+
 	private ProjectCreateFromContractReq request() {
 		return new ProjectCreateFromContractReq("Du an ERP", LocalDate.of(2027, 1, 1),
 				LocalDate.of(2027, 12, 31), 7L);

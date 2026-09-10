@@ -1718,6 +1718,27 @@ loại hợp đồng (`projectType`) và hạn mức (`limitValue`) tại thời
 | 400 | `INVALID_STATE` | Hợp đồng không `ACTIVE`, đã quá hạn, hoặc ngày kết thúc dự kiến sớm hơn ngày bắt đầu |
 | 400 | `VALIDATION_ERROR` | Thiếu tên, ngày bắt đầu, ngày kết thúc dự kiến hoặc người quản lý dự án |
 
+#### Đọc dự án (bổ trợ cho Frontend)
+
+Các màn hình con của Epic `NCL-05` (cây công việc, mốc tiến độ, rủi ro, đóng dự án) đều nằm dưới
+`/projects/{projectId}` và cần tối thiểu `status` của dự án để khoá/mở nút chỉnh sửa. Hai endpoint đọc:
+
+##### `GET /projects/{projectId}`
+
+Cho phép **Ban giám đốc** (`VT-01`), **Quản lý dự án** (`VT-02`), **Nhân viên chuyên môn** (`VT-03`).
+Trả về một `ProjectRes` (cùng khuôn dạng `data` như response của `POST /contracts/{contractId}/projects`).
+
+##### `GET /contracts/{contractId}/projects`
+
+Cùng tập vai trò như trên. Trả về `List<ProjectRes>` các dự án của hợp đồng, **mới nhất trước**
+(mảng rỗng nếu hợp đồng chưa có dự án).
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Người gọi không thuộc `VT-01` / `VT-02` / `VT-03`. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại dự án với `{projectId}` (chỉ với `GET /projects/{projectId}`). |
+
 ### `NCL-05-CN-007` — Tạo dự án từ mẫu công việc
 
 Yêu cầu token của **Quản lý dự án** (`VT-02`) — vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối
@@ -2715,3 +2736,53 @@ action `RISK_CREATED` / `RISK_UPDATED` / `RISK_DELETED`.
 | 403 | `FORBIDDEN` | Người dùng không phải Quản lý dự án (`VT-02`). |
 | 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy dự án/rủi ro, hoặc người theo dõi không tồn tại. |
 
+
+---
+
+## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)
+
+Tổng hợp cho đội Frontend khi dựng các màn hình Epic `NCL-05`. Không thay đổi hợp đồng API — chỉ gom
+những điểm hay gây lỗi tích hợp.
+
+### Bản đồ endpoint theo Story
+
+| Story | Method & path | Vai trò |
+|---|---|---|
+| CN-001 tạo dự án | `POST /contracts/{contractId}/projects` | `VT-02` |
+| CN-001 đọc dự án | `GET /projects/{projectId}` · `GET /contracts/{contractId}/projects` | `VT-01/02/03` |
+| CN-002 cây công việc | `POST /projects/{id}/work-packages` · `POST …/work-packages/{wpId}/tasks` · `GET /projects/{id}/work-breakdown` · `DELETE …/work-packages/{wpId}` | ghi: `VT-02`; đọc cây: `VT-01/02/03` |
+| CN-003 giao việc | `PUT /projects/{id}/tasks/{taskId}/assignments` · `GET …/assignments` | ghi: `VT-02`; đọc: `VT-01/02/03` |
+| CN-004 tiến độ | `PATCH /projects/{id}/tasks/{taskId}/progress` | `VT-03` **và** là người được giao |
+| CN-005 ngân sách giờ | `PUT /projects/{id}/tasks/{taskId}/budget` | `VT-02` |
+| CN-006 đóng dự án | `POST /projects/{id}/close` | `VT-02` |
+| CN-007 tạo từ mẫu | `GET /contracts/{contractId}/projects/from-template` · `POST …/from-template` | `VT-02` |
+| CN-008 mốc tiến độ | `GET/POST /projects/{id}/milestones` · `PUT …/{mId}` · `POST …/{mId}/complete` · `DELETE …/{mId}` | `VT-02` |
+| CN-009 rủi ro | `GET/POST /projects/{id}/risks` · `PUT …/{rId}` · `PUT …/{rId}/status` · `DELETE …/{rId}` | `VT-02` |
+
+### Tập giá trị enum (khớp backend)
+
+| Enum | Giá trị | Dùng ở |
+|---|---|---|
+| `ProjectStatus` | `RUNNING` · `CLOSED` | `ProjectRes.status` |
+| `TaskStatus` | `TODO` · `IN_PROGRESS` · `WAITING_APPROVAL` · `DONE` | công việc, mốc |
+| `MilestoneProgressStatus` (chỉ đọc, backend tự tính) | `ON_TRACK` · `LATE` · `DONE` | `ProjectMilestoneRes.status` |
+| `RiskLevel` | `LOW` · `MEDIUM` · `HIGH` | rủi ro: `impact`, `likelihood`, `severity` |
+| `RiskStatus` | `OPEN` · `MITIGATING` · `CLOSED` | `ProjectRiskRes.status` |
+| `projectType` (kế thừa từ loại hợp đồng `ContractType`, kiểu chuỗi) | `TIME_AND_MATERIAL` · `FIXED_PRICE` · `MAINTENANCE` · `MILESTONE` | `ProjectRes.projectType` |
+
+### Khoá thao tác khi dự án đã đóng
+
+Khi `ProjectStatus = CLOSED`, backend **tự chặn** mọi endpoint ghi của CN-002…CN-005, CN-008, CN-009
+bằng `400 INVALID_STATE`. Frontend nên gọi `GET /projects/{projectId}` một lần khi vào màn hình dự án và
+ẩn/vô hiệu hoá toàn bộ nút tạo/sửa/xoá nếu `status === "CLOSED"` để người dùng không bấm rồi mới nhận lỗi.
+
+### Các điểm hay gây lỗi
+
+- **`daysLate` / `score` / `severity` là read-only** — backend tính động mỗi lần đọc, đừng gửi lên khi tạo/sửa.
+- **CN-004 `403` không phải lỗi vai trò**: một `VT-03` hợp lệ vẫn bị từ chối nếu không nằm trong danh sách
+  người được giao — hiển thị thông báo riêng "Bạn không phải người phụ trách công việc này".
+- **CN-003 / CN-008 `PUT` là thay thế toàn bộ**: danh sách `userIds` (giao việc) và `taskIds` (hạng mục của
+  mốc) ghi đè hoàn toàn danh sách cũ, không phải thêm dồn.
+- **`usageRatio` (CN-005) là phân số** `0.0`–`1.0+`, nhân `100` khi hiển thị; `overBudgetWarning` bật khi `≥ 0.80`.
+- **Watcher của rủi ro** phải là `userId` của tài khoản đang `ACTIVE`; backend trả kèm `watcherName` để hiển thị.
+- Mọi thao tác ghi của Epic đều đã tự ghi `project_audit_logs` — Frontend không cần gọi thêm API lịch sử.

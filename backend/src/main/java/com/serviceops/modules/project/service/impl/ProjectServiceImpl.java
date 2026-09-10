@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -75,6 +76,21 @@ public class ProjectServiceImpl implements ProjectService {
 		auditLogger.recordCreate(project.getId(), contractId,
 				"Tao du an " + project.getProjectCode() + " tu hop dong " + contract.getContractCode());
 		return toResponse(project);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public ProjectRes getProject(Long projectId) {
+		return projectRepository.findById(projectId).map(this::toResponse)
+				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
+						"Khong tim thay du an voi id=" + projectId));
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<ProjectRes> listByContract(Long contractId) {
+		return projectRepository.findByContractIdOrderByIdDesc(contractId).stream()
+				.map(this::toResponse).toList();
 	}
 
 	private ProjectRes toResponse(Project project) {
