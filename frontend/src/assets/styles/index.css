@@ -3011,3 +3011,27 @@ body { background: var(--canvas); }
 .activity-customer-line svg { width: 14px; height: 14px; flex-shrink: 0; }
 .activity-customer-line strong { color: var(--ink-strong); font-weight: 600; }
 .pipeline-generated-at { font-size: 12.5px; color: var(--ink-faint); white-space: nowrap; }
+
+/* Styles for CreateProjectModal (NCL-05-CN-001) */
+.project-modal-card { width: min(100%, 680px); max-height: 90vh; }
+.project-preview-card {
+  background: var(--surface-alt, #F8FAFC);
+  border: 1px solid var(--line, #E2E8F0);
+  border-radius: var(--radius-md, 8px);
+  padding: 14px 16px;
+}
+.project-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px 16px;
+}
+.project-preview-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13.5px;
+}
+.project-preview-item .field-hint {
+  font-size: 12px;
+  color: var(--ink-muted, #64748B);
+}

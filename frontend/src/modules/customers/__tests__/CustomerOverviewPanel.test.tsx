@@ -25,6 +25,13 @@ vi.mock('../../contracts/api/contractsApi', () => ({
   getExpiringContracts: vi.fn(),
   createRenewal: vi.fn(),
   fetchRenewals: vi.fn(),
+  createProjectFromContract: vi.fn(),
+  ProjectsApiError: class extends Error {
+    constructor(public code: string, message: string, public statusCode?: number) {
+      super(message);
+      this.name = 'ProjectsApiError';
+    }
+  },
   ContractsApiError: class extends Error {
     constructor(public code: string, message: string, public statusCode?: number) {
       super(message);
@@ -390,6 +397,72 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
         expect(screen.getByRole('dialog')).toBeInTheDocument();
         expect(screen.getByRole('heading', { name: /Gia hạn hợp đồng/i })).toBeInTheDocument();
       });
+    });
+
+    it('NCL-05-CN-001: nút "Tạo dự án" hiển thị cho VT-02 và ẩn với vai trò khác (như VT-05)', async () => {
+      vi.mocked(customersApi.fetchCustomerOverview).mockResolvedValue(fullOverview);
+
+      const { rerender } = render(
+        <CustomerOverviewPanel
+          customerId={10}
+          customerName="Công ty Cổ phần Alpha"
+          currentUserRoles={['VT-02']}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('customer-summary-panel')).toBeInTheDocument();
+      });
+
+      // VT-02 nhìn thấy nút "Tạo dự án"
+      expect(
+        within(screen.getByTestId('customer-summary-section-contracts')).getByRole('button', {
+          name: /Tạo dự án/i,
+        })
+      ).toBeInTheDocument();
+
+      // Rerender với vai trò VT-05 (Kế toán) -> không nhìn thấy nút "Tạo dự án"
+      rerender(
+        <CustomerOverviewPanel
+          customerId={10}
+          customerName="Công ty Cổ phần Alpha"
+          currentUserRoles={['VT-05']}
+        />
+      );
+
+      expect(
+        within(screen.getByTestId('customer-summary-section-contracts')).queryByRole('button', {
+          name: /Tạo dự án/i,
+        })
+      ).toBeNull();
+    });
+
+    it('NCL-05-CN-001: bấm nút "Tạo dự án" mở CreateProjectModal trực tiếp mà không cần gọi GET /contracts/{id}', async () => {
+      vi.mocked(customersApi.fetchCustomerOverview).mockResolvedValue(fullOverview);
+
+      render(
+        <CustomerOverviewPanel
+          customerId={10}
+          customerName="Công ty Cổ phần Alpha"
+          currentUserRoles={['VT-02']}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('customer-summary-panel')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /Tạo dự án/i }));
+
+      // Không gọi getContract(contractId) vì endpoint đó chỉ cấp quyền cho VT-05
+      expect(contractsApi.getContract).not.toHaveBeenCalled();
+
+      // Modal tạo dự án mở ra
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /Tạo dự án từ hợp đồng/i })).toBeInTheDocument();
+      });
+      expect(within(screen.getByRole('dialog')).getByText(/Hợp đồng triển khai ERP/i)).toBeInTheDocument();
     });
   });
 });
