@@ -1912,6 +1912,27 @@ body { background: var(--canvas); }
 .contract-modal-card .modal-title { font-size: 20px; }
 .contract-modal-card .form-label { font-size: 14px; }
 .contract-modal-card .form-input, .contract-modal-card .form-select { padding: 10px 12px; }
+
+/* Trình soạn mốc thanh toán (ContractMilestonesModal · NCL-04-CN-003) — mỗi mốc
+   là một thẻ đứng, các trường xếp theo lưới thay vì nhồi 7 cột vào một hàng chật. */
+.milestone-editor { display: flex; flex-direction: column; gap: 14px; }
+.milestone-card { border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-alt); padding: 16px; }
+.milestone-card__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.milestone-card__index { font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: var(--track-caps); color: var(--ink-muted); }
+.milestone-card__actions { display: flex; align-items: center; gap: 8px; }
+.milestone-field { display: flex; flex-direction: column; }
+.milestone-field .form-label { margin-bottom: 6px; }
+.milestone-field + .milestone-field { margin-top: 12px; }
+.milestone-grid { display: grid; grid-template-columns: 120px 1fr 160px; gap: 12px; margin-top: 12px; }
+.milestone-grid .milestone-field + .milestone-field { margin-top: 0; }
+@media (max-width: 600px) { .milestone-grid { grid-template-columns: 1fr; gap: 12px; } }
+.milestone-amount-computed { display: flex; align-items: center; height: 40px; padding: 0 12px; border: 1px dashed var(--line); border-radius: var(--radius-md); background: var(--surface); color: var(--ink-muted); font-weight: 600; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.milestone-editor__footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--overlay-hairline); font-size: 14px; }
+.status-pill--milestone-pending { background: var(--pale-gray-bg); color: var(--pale-gray-fg); }
+.status-pill--milestone-ready_to_invoice { background: var(--pale-yellow-bg); color: var(--pale-yellow-fg); }
+.status-pill--milestone-invoiced { background: var(--pale-green-bg); color: var(--pale-green-fg); }
+.status-pill--milestone-new { background: var(--pale-blue-bg); color: var(--pale-blue-fg); }
+
 /* Styles for ContractLimitAlert (NCL-04-CN-005) */
 .contract-limit-progress-wrap { margin: 16px 0 20px; }
 .contract-limit-progress-header { display: flex; justify-content: space-between; font-size: 13.5px; font-weight: 500; color: #4B4946; margin-bottom: 6px; }

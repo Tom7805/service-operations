@@ -199,7 +199,7 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
       aria-modal="true"
       aria-labelledby="milestones-modal-title"
     >
-      <div className="modal-card contract-modal-card" style={{ width: 'min(100%, 880px)' }}>
+      <div className="modal-card contract-modal-card" style={{ width: 'min(100%, 680px)' }}>
         <div className="modal-header">
           <div className="modal-header__title-wrap">
             <h3 id="milestones-modal-title" className="modal-title">
@@ -228,104 +228,35 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
 
           {isAllowed && !isLoading && !loadError && (
             <>
-              <div className="table-responsive">
-                <table className="user-data-table">
-                  <thead>
-                    <tr>
-                      <th>Tên mốc</th>
-                      <th style={{ width: '90px' }}>Tỷ lệ (%)</th>
-                      <th style={{ width: '170px', textAlign: 'right' }}>Giá trị</th>
-                      <th style={{ width: '150px' }}>Ngày dự kiến</th>
-                      <th>Điều kiện nghiệm thu</th>
-                      <th style={{ width: '150px' }}>Trạng thái</th>
-                      <th style={{ width: '48px' }}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((row) => (
-                      <tr key={row.key}>
-                        <td>
-                          <input
-                            className="form-input"
-                            aria-label="Tên mốc"
-                            value={row.name}
-                            onChange={(e) => updateRow(row.key, { name: e.target.value })}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            className="form-input"
-                            type="number"
-                            aria-label="Tỷ lệ phần trăm"
-                            value={row.percentage ?? ''}
-                            onChange={(e) => handlePercentageChange(row.key, e.target.value)}
-                            min={0}
-                            max={100}
-                          />
-                        </td>
-                        <td style={{ textAlign: 'right' }}>
-                          {row.percentage != null ? (
-                            <span
-                              className="cell-muted"
-                              style={{ whiteSpace: 'nowrap' }}
-                              title={'Tự tính theo tỷ lệ % — xoá ô "Tỷ lệ (%)" nếu muốn nhập số tiền tuỳ ý'}
-                            >
-                              {formatVnd(row.amount)}
-                            </span>
-                          ) : (
-                            <input
-                              className="form-input"
-                              type="number"
-                              aria-label="Giá trị mốc"
-                              value={row.amount ?? ''}
-                              onChange={(e) =>
-                                updateRow(row.key, {
-                                  amount: e.target.value === '' ? null : Number(e.target.value),
-                                })
-                              }
-                              min={0}
-                            />
-                          )}
-                        </td>
-                        <td>
-                          <input
-                            className="form-input"
-                            type="date"
-                            aria-label="Ngày dự kiến"
-                            value={row.expectedDate ?? ''}
-                            onChange={(e) => updateRow(row.key, { expectedDate: e.target.value || null })}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            className="form-input"
-                            aria-label="Điều kiện nghiệm thu"
-                            value={row.acceptanceCondition ?? ''}
-                            onChange={(e) => updateRow(row.key, { acceptanceCondition: e.target.value })}
-                          />
-                        </td>
-                        <td>
+              <div className="milestone-editor">
+                {rows.map((row, idx) => {
+                  const nextStatus = row.status ? NEXT_STATUS[row.status] : null;
+                  return (
+                    <div className="milestone-card" key={row.key}>
+                      <div className="milestone-card__head">
+                        <span className="milestone-card__index">Mốc {idx + 1}</span>
+                        <div className="milestone-card__actions">
                           {row.status ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                              <span className="status-pill">{STATUS_LABEL[row.status]}</span>
-                              {NEXT_STATUS[row.status] && (
+                            <>
+                              <span className={`status-pill status-pill--milestone-${row.status.toLowerCase()}`}>
+                                {STATUS_LABEL[row.status]}
+                              </span>
+                              {nextStatus && (
                                 <button
                                   type="button"
                                   className="btn-icon-refresh"
-                                  title={`Chuyển sang "${STATUS_LABEL[NEXT_STATUS[row.status]!]}"`}
-                                  aria-label={`Chuyển mốc ${row.name} sang trạng thái ${STATUS_LABEL[NEXT_STATUS[row.status]!]}`}
+                                  title={`Chuyển sang "${STATUS_LABEL[nextStatus]}"`}
+                                  aria-label={`Chuyển mốc ${row.name} sang trạng thái ${STATUS_LABEL[nextStatus]}`}
                                   onClick={() => void handleAdvanceStatus(row)}
                                   disabled={statusUpdatingKey === row.key || submitting}
                                 >
                                   {statusUpdatingKey === row.key ? '…' : ICONS.arrowRight}
                                 </button>
                               )}
-                            </div>
+                            </>
                           ) : (
-                            <span className="cell-muted">Mới</span>
+                            <span className="status-pill status-pill--milestone-new">Mốc mới</span>
                           )}
-                        </td>
-                        <td style={{ textAlign: 'right' }}>
                           <button
                             type="button"
                             className="btn-icon-refresh"
@@ -335,14 +266,92 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
                           >
                             {ICONS.trash}
                           </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </div>
+                      </div>
+
+                      <div className="milestone-field">
+                        <label className="form-label" htmlFor={`ms-name-${row.key}`}>Tên mốc</label>
+                        <input
+                          id={`ms-name-${row.key}`}
+                          className="form-input"
+                          aria-label="Tên mốc"
+                          placeholder="VD: Tạm ứng khởi động · Nghiệm thu giai đoạn 1 · Bàn giao và quyết toán"
+                          value={row.name}
+                          onChange={(e) => updateRow(row.key, { name: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="milestone-grid">
+                        <div className="milestone-field">
+                          <label className="form-label" htmlFor={`ms-pct-${row.key}`}>Tỷ lệ (%)</label>
+                          <input
+                            id={`ms-pct-${row.key}`}
+                            className="form-input"
+                            type="number"
+                            aria-label="Tỷ lệ phần trăm"
+                            placeholder="—"
+                            value={row.percentage ?? ''}
+                            onChange={(e) => handlePercentageChange(row.key, e.target.value)}
+                            min={0}
+                            max={100}
+                          />
+                        </div>
+                        <div className="milestone-field">
+                          <label className="form-label" htmlFor={`ms-amount-${row.key}`}>Giá trị (VNĐ)</label>
+                          {row.percentage != null ? (
+                            <div
+                              className="milestone-amount-computed"
+                              title={'Tự tính theo tỷ lệ % — xoá ô "Tỷ lệ (%)" nếu muốn nhập số tiền tuỳ ý'}
+                            >
+                              {formatVnd(row.amount)}
+                            </div>
+                          ) : (
+                            <input
+                              id={`ms-amount-${row.key}`}
+                              className="form-input"
+                              type="number"
+                              aria-label="Giá trị mốc"
+                              placeholder="Nhập số tiền"
+                              value={row.amount ?? ''}
+                              onChange={(e) =>
+                                updateRow(row.key, {
+                                  amount: e.target.value === '' ? null : Number(e.target.value),
+                                })
+                              }
+                              min={0}
+                            />
+                          )}
+                        </div>
+                        <div className="milestone-field">
+                          <label className="form-label" htmlFor={`ms-date-${row.key}`}>Ngày dự kiến</label>
+                          <input
+                            id={`ms-date-${row.key}`}
+                            className="form-input"
+                            type="date"
+                            aria-label="Ngày dự kiến"
+                            value={row.expectedDate ?? ''}
+                            onChange={(e) => updateRow(row.key, { expectedDate: e.target.value || null })}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="milestone-field">
+                        <label className="form-label" htmlFor={`ms-cond-${row.key}`}>Điều kiện nghiệm thu</label>
+                        <input
+                          id={`ms-cond-${row.key}`}
+                          className="form-input"
+                          aria-label="Điều kiện nghiệm thu"
+                          placeholder="VD: Khách hàng ký biên bản nghiệm thu giai đoạn"
+                          value={row.acceptanceCondition ?? ''}
+                          onChange={(e) => updateRow(row.key, { acceptanceCondition: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
-              <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="milestone-editor__footer">
                 <button type="button" className="btn btn-secondary" onClick={addRow} disabled={submitting}>
                   <span className="icon-sm">{ICONS.plus}</span> Thêm mốc
                 </button>
