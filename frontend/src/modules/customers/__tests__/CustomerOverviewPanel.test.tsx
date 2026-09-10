@@ -33,6 +33,30 @@ vi.mock('../../contracts/api/contractsApi', () => ({
   },
 }));
 
+vi.mock('../../projects/api/projectsApi', () => ({
+  fetchProjectTemplates: vi.fn().mockResolvedValue([
+    {
+      id: 5,
+      code: 'MT-PHAN-MEM',
+      name: 'Mẫu triển khai phần mềm',
+      description: 'Cây mẫu',
+      projectType: 'FIXED_PRICE',
+      active: true,
+      createdBy: 'admin',
+      createdAt: '2026-09-01T08:00:00',
+    },
+  ]),
+  createProjectFromTemplate: vi.fn(),
+  getWorkBreakdown: vi.fn().mockResolvedValue([]),
+  deleteWorkPackage: vi.fn(),
+  ProjectsApiError: class extends Error {
+    constructor(public code: string, message: string, public statusCode?: number) {
+      super(message);
+      this.name = 'ProjectsApiError';
+    }
+  },
+}));
+
 const baseCustomer = {
   id: 10,
   code: 'KH-000010',
@@ -389,6 +413,70 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
       await waitFor(() => {
         expect(screen.getByRole('dialog')).toBeInTheDocument();
         expect(screen.getByRole('heading', { name: /Gia hạn hợp đồng/i })).toBeInTheDocument();
+      });
+    });
+
+    it('NCL-05-CN-007: nút "Tạo từ mẫu" hiển thị cho Quản lý dự án (VT-02) và ẩn với vai trò khác (như VT-05)', async () => {
+      vi.mocked(customersApi.fetchCustomerOverview).mockResolvedValue(fullOverview);
+
+      const { rerender } = render(
+        <CustomerOverviewPanel
+          customerId={10}
+          customerName="Công ty Cổ phần Alpha"
+          currentUserRoles={['VT-02']}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('customer-summary-panel')).toBeInTheDocument();
+      });
+
+      // VT-02 nhìn thấy nút "Tạo từ mẫu" ở bảng Hợp đồng
+      expect(
+        within(screen.getByTestId('customer-summary-section-contracts')).getByRole('button', {
+          name: /Tạo từ mẫu/i,
+        })
+      ).toBeInTheDocument();
+
+      // VT-05 không nhìn thấy nút "Tạo từ mẫu"
+      rerender(
+        <CustomerOverviewPanel
+          customerId={10}
+          customerName="Công ty Cổ phần Alpha"
+          currentUserRoles={['VT-05']}
+        />
+      );
+
+      expect(
+        within(screen.getByTestId('customer-summary-section-contracts')).queryByRole('button', {
+          name: /Tạo từ mẫu/i,
+        })
+      ).toBeNull();
+    });
+
+    it('NCL-05-CN-007: bấm nút "Tạo từ mẫu" mở modal CreateProjectFromTemplateModal', async () => {
+      vi.mocked(customersApi.fetchCustomerOverview).mockResolvedValue(fullOverview);
+
+      render(
+        <CustomerOverviewPanel
+          customerId={10}
+          customerName="Công ty Cổ phần Alpha"
+          currentUserRoles={['VT-02']}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('customer-summary-panel')).toBeInTheDocument();
+      });
+
+      const btn = within(screen.getByTestId('customer-summary-section-contracts')).getByRole('button', {
+        name: /Tạo từ mẫu/i,
+      });
+      fireEvent.click(btn);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('create-project-from-template-modal')).toBeInTheDocument();
+        expect(screen.getByText(/Tạo dự án từ mẫu công việc/i)).toBeInTheDocument();
       });
     });
   });

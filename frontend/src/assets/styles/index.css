@@ -3011,3 +3011,254 @@ body { background: var(--canvas); }
 .activity-customer-line svg { width: 14px; height: 14px; flex-shrink: 0; }
 .activity-customer-line strong { color: var(--ink-strong); font-weight: 600; }
 .pipeline-generated-at { font-size: 12.5px; color: var(--ink-faint); white-space: nowrap; }
+
+/* ==========================================================================
+   Project & Template Creation (NCL-05-CN-007)
+   ========================================================================== */
+.project-modal-card { width: min(100%, 780px); max-height: 90vh; }
+.project-preview-card {
+  background: var(--surface-alt, #F8FAFC);
+  border: 1px solid var(--line, #E2E8F0);
+  border-radius: var(--radius-md, 8px);
+  padding: 14px 16px;
+}
+.project-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px 16px;
+}
+.project-preview-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13.5px;
+}
+.project-preview-item .field-hint {
+  font-size: 12px;
+  color: var(--ink-muted, #64748B);
+}
+
+/* WBS Tree Hierarchical Components */
+.wbs-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.wbs-package-node {
+  border: 1px solid var(--line, #E2E8F0);
+  border-radius: var(--radius-md, 8px);
+  background: var(--surface, #FFFFFF);
+  overflow: hidden;
+  transition: border-color var(--dur-fast, 0.15s) ease;
+}
+
+.wbs-package-node:hover {
+  border-color: #CBD5E1;
+}
+
+.wbs-package-node--nested {
+  margin-top: 10px;
+  background: var(--surface-alt, #F8FAFC);
+  border-left: 3px solid var(--ink-strong, #0F172A);
+}
+
+.wbs-package-header {
+  padding: 12px 16px;
+  background: var(--surface-alt, #F8FAFC);
+  border-bottom: 1px solid var(--line, #E2E8F0);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.wbs-package-node--nested .wbs-package-header {
+  background: #F1F5F9;
+}
+
+.wbs-package-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 240px;
+}
+
+.wbs-toggle-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--ink-muted, #64748B);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm, 4px);
+  transition: background var(--dur-fast, 0.15s) ease;
+}
+
+.wbs-toggle-btn:hover {
+  background: var(--line, #E2E8F0);
+  color: var(--ink-strong, #0F172A);
+}
+
+.wbs-chevron {
+  display: inline-flex;
+  transition: transform var(--dur-fast, 0.15s) ease;
+}
+
+.wbs-chevron--collapsed {
+  transform: rotate(-90deg);
+}
+
+.wbs-package-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-strong, #0F172A);
+}
+
+.wbs-task-count-pill {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-muted, #64748B);
+  background: var(--surface, #FFFFFF);
+  border: 1px solid var(--line, #E2E8F0);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.wbs-package-desc {
+  padding: 8px 16px;
+  font-size: 13px;
+  color: var(--ink-muted, #64748B);
+  border-bottom: 1px solid var(--line, #E2E8F0);
+  background: #FCFDFF;
+}
+
+.wbs-package-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.wbs-package-body {
+  padding: 12px 16px;
+}
+
+.wbs-task-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wbs-task-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border: 1px solid var(--line, #E2E8F0);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--surface, #FFFFFF);
+  gap: 12px;
+  transition: background var(--dur-fast, 0.15s) ease;
+}
+
+.wbs-task-row:hover {
+  background: var(--surface-alt, #F8FAFC);
+}
+
+.wbs-task-row--nested {
+  margin-left: 24px;
+  background: #F8FAFC;
+  border-left: 2px solid #94A3B8;
+}
+
+.wbs-task-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.wbs-task-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-strong, #0F172A);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wbs-task-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12.5px;
+  color: var(--ink-muted, #64748B);
+  flex-wrap: wrap;
+}
+
+.wbs-task-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* Badges for Task Status */
+.wbs-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: var(--track-caps, 0.05em);
+  text-transform: uppercase;
+}
+
+.wbs-badge--todo {
+  background: #F1F5F9;
+  color: #475569;
+  border: 1px solid #CBD5E1;
+}
+
+.wbs-badge--progress {
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+}
+
+.wbs-badge--review {
+  background: #FFFBEB;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+
+.wbs-badge--done {
+  background: #F0FDF4;
+  color: #15803D;
+  border: 1px solid #BBF7D0;
+}
+
+.wbs-empty-hint {
+  padding: 12px 16px;
+  font-size: 13.5px;
+  color: var(--ink-muted, #64748B);
+  font-style: italic;
+  text-align: center;
+}
+
+.wbs-subpackages {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+

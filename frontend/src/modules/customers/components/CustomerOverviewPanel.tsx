@@ -14,6 +14,8 @@ import ContractAppendixModal from '../../contracts/components/ContractAppendixMo
 import ContractLimitAlert, { type ContractLimitAlertTarget } from '../../contracts/components/ContractLimitAlert';
 import ContractExpiryReminderModal from '../../contracts/components/ContractExpiryReminderModal';
 import RenewalModal from '../../contracts/components/RenewalModal';
+import CreateProjectFromTemplateModal from '../../projects/components/CreateProjectFromTemplateModal';
+import type { ContractTargetForProject } from '../../projects/types/projectTypes';
 import { getContract, activateContract, ContractsApiError } from '../../contracts/api/contractsApi';
 import type { ContractRes } from '../../contracts/types/contractTypes';
 import { t } from '../../../i18n';
@@ -94,11 +96,27 @@ export default function CustomerOverviewPanel({
   const [isLimitAlertOpen, setIsLimitAlertOpen] = useState(false);
   const [isExpiringReminderOpen, setIsExpiringReminderOpen] = useState(false);
   const [isRenewalOpen, setIsRenewalOpen] = useState(false);
+  const [isCreateFromTemplateOpen, setIsCreateFromTemplateOpen] = useState(false);
+  const [createFromTemplateTarget, setCreateFromTemplateTarget] = useState<ContractTargetForProject | null>(null);
   const [selectedContract, setSelectedContract] = useState<ContractRes | null>(null);
   const [limitAlertTarget, setLimitAlertTarget] = useState<ContractLimitAlertTarget | null>(null);
   const [isContractLoading, setIsContractLoading] = useState(false);
   const [contractLoadError, setContractLoadError] = useState<string | null>(null);
   const [activatingContractId, setActivatingContractId] = useState<number | null>(null);
+
+  const openCreateFromTemplate = (item: CustomerOverviewItem) => {
+    setCreateFromTemplateTarget({
+      id: item.id,
+      contractCode: item.code ?? '',
+      name: item.name ?? '',
+      customerId,
+      customerName,
+      contractType: 'FIXED_PRICE',
+      limitValue: item.amount,
+      status: item.status ?? 'ACTIVE',
+    });
+    setIsCreateFromTemplateOpen(true);
+  };
 
   // NCL-04-CN-002/003/004/007: nạp đúng dữ liệu hiện tại của hợp đồng trước khi mở modal sửa/điều chỉnh/gia hạn.
   // Cả các thao tác này (khai báo loại/hạn mức, mốc thanh toán, phụ lục, gia hạn) chỉ dành cho
@@ -491,6 +509,16 @@ export default function CustomerOverviewPanel({
                                       Cảnh báo hạn mức
                                     </button>
                                   )}
+                                  {currentUserRoles.includes('VT-02') && (
+                                    <button
+                                      type="button"
+                                      className="btn btn-secondary"
+                                      onClick={() => openCreateFromTemplate(item)}
+                                      data-testid={`btn-create-from-template-${item.id}`}
+                                    >
+                                      Tạo từ mẫu
+                                    </button>
+                                  )}
                                   {currentUserRoles.includes('VT-04') && (
                                     <>
                                       <button
@@ -617,6 +645,23 @@ export default function CustomerOverviewPanel({
           onSaved={() => {
             setIsRenewalOpen(false);
             setSelectedContract(null);
+            void loadOverview();
+          }}
+        />
+      )}
+
+      {createFromTemplateTarget && (
+        <CreateProjectFromTemplateModal
+          isOpen={isCreateFromTemplateOpen}
+          onClose={() => {
+            setIsCreateFromTemplateOpen(false);
+            setCreateFromTemplateTarget(null);
+          }}
+          contract={createFromTemplateTarget}
+          currentUserRoles={currentUserRoles}
+          onCreated={() => {
+            setIsCreateFromTemplateOpen(false);
+            setCreateFromTemplateTarget(null);
             void loadOverview();
           }}
         />
