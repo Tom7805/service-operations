@@ -565,7 +565,7 @@ export default function CustomerOverviewPanel({
                                       className="btn btn-secondary"
                                       onClick={() => openProjectWbs(item)}
                                     >
-                                      Xem công việc
+                                      Quản lý dự án
                                     </button>
                                   ) : (
                                     <span className="cell-muted">—</span>

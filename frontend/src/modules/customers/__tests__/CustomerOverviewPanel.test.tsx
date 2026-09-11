@@ -487,7 +487,7 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
       expect(within(screen.getByRole('dialog')).getByText(/Hợp đồng triển khai ERP/i)).toBeInTheDocument();
     });
 
-    it('NCL-05-CN-002: nút "Xem công việc" hiển thị cho VT-01, VT-02, VT-03 và ẩn với vai trò khác (như VT-05)', async () => {
+    it('NCL-05-CN-002: nút "Quản lý dự án" hiển thị cho VT-01, VT-02, VT-03 và ẩn với vai trò khác (như VT-05)', async () => {
       vi.mocked(customersApi.fetchCustomerOverview).mockResolvedValue(fullOverview);
 
       const { rerender } = render(
@@ -502,10 +502,10 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
         expect(screen.getByTestId('customer-summary-panel')).toBeInTheDocument();
       });
 
-      // VT-02 nhìn thấy nút "Xem công việc" trong bảng Dự án
+      // VT-02 nhìn thấy nút "Quản lý dự án" trong bảng Dự án
       expect(
         within(screen.getByTestId('customer-summary-section-projects')).getByRole('button', {
-          name: /Xem công việc/i,
+          name: /Quản lý dự án/i,
         })
       ).toBeInTheDocument();
 
@@ -519,11 +519,11 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
       );
       expect(
         within(screen.getByTestId('customer-summary-section-projects')).getByRole('button', {
-          name: /Xem công việc/i,
+          name: /Quản lý dự án/i,
         })
       ).toBeInTheDocument();
 
-      // VT-05 (Kế toán) không nhìn thấy nút "Xem công việc"
+      // VT-05 (Kế toán) không nhìn thấy nút "Quản lý dự án"
       rerender(
         <CustomerOverviewPanel
           customerId={10}
@@ -533,12 +533,12 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
       );
       expect(
         within(screen.getByTestId('customer-summary-section-projects')).queryByRole('button', {
-          name: /Xem công việc/i,
+          name: /Quản lý dự án/i,
         })
       ).toBeNull();
     });
 
-    it('NCL-05-CN-002: bấm nút "Xem công việc" mở modal ProjectWbsModal', async () => {
+    it('NCL-05-CN-002: bấm nút "Quản lý dự án" mở modal ProjectWbsModal', async () => {
       vi.mocked(customersApi.fetchCustomerOverview).mockResolvedValue(fullOverview);
 
       render(
@@ -554,13 +554,13 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
       });
 
       const viewWbsBtn = within(screen.getByTestId('customer-summary-section-projects')).getByRole('button', {
-        name: /Xem công việc/i,
+        name: /Quản lý dự án/i,
       });
       fireEvent.click(viewWbsBtn);
 
       await waitFor(() => {
         expect(screen.getByRole('dialog')).toBeInTheDocument();
-        expect(screen.getByText(/Cơ cấu hạng mục & công việc \(WBS\)/i)).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /Quản lý dự án/i })).toBeInTheDocument();
       });
     });
   });

@@ -12,6 +12,10 @@ import WorkBreakdownTree from './WorkBreakdownTree';
 import WorkPackageModal from './WorkPackageModal';
 import TaskFormModal from './TaskFormModal';
 import TaskBudgetModal from './TaskBudgetModal';
+import ProjectMilestoneTimeline from './ProjectMilestoneTimeline';
+import ProjectRiskPage from '../pages/ProjectRiskPage';
+
+type WbsSection = 'WBS' | 'MILESTONES' | 'RISKS';
 
 export interface ProjectWbsModalProps {
   isOpen: boolean;
@@ -73,6 +77,9 @@ export default function ProjectWbsModal({
   // Trạng thái đang gọi API đóng dự án (NCL-05-CN-006)
   const [closing, setClosing] = useState(false);
 
+  // Tab đang xem: Công việc (WBS, NCL-05-CN-002…005) / Mốc tiến độ (NCL-05-CN-008) / Rủi ro (NCL-05-CN-009)
+  const [activeSection, setActiveSection] = useState<WbsSection>('WBS');
+
   const isProjectOpen = project?.status === 'RUNNING';
   const canEdit = currentUserRoles.includes('VT-02') && isProjectOpen;
   // Quyền đóng dự án (NCL-05-CN-006): chỉ Quản lý dự án và dự án phải đang RUNNING
@@ -109,6 +116,7 @@ export default function ProjectWbsModal({
 
   useEffect(() => {
     if (isOpen) {
+      setActiveSection('WBS');
       void loadData();
     }
   }, [isOpen, loadData]);
@@ -197,12 +205,12 @@ export default function ProjectWbsModal({
       aria-modal="true"
       aria-labelledby="wbs-modal-title"
     >
-      <div className="modal-card project-modal-card" style={{ width: 'min(100%, 820px)' }}>
+      <div className="modal-card project-modal-card" style={{ width: 'min(100%, 960px)' }}>
         <div className="modal-header">
           <div className="modal-header__title-wrap">
             <h3 id="wbs-modal-title" className="modal-title">
               <span className="modal-title__icon">{ICONS.tree}</span>
-              Cơ cấu hạng mục & công việc (WBS)
+              Quản lý dự án
             </h3>
             <p className="field-hint">
               {projectCode || project?.projectCode || `Mã: ${projectId}`} · {projectName || project?.name}
@@ -248,50 +256,107 @@ export default function ProjectWbsModal({
 
           {isAllowedToView && (
             <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '8px', flexWrap: 'wrap' }}>
-                <span className="field-hint" style={{ fontWeight: 600, color: '#1E293B' }}>
-                  Danh sách hạng mục ({wbs.length})
-                </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {canEdit && (
-                    <button
-                      type="button"
-                      className="btn btn-primary btn-xs"
-                      onClick={handleOpenAddRootPackage}
-                      data-testid="modal-btn-add-root-wp"
-                    >
-                      + Thêm hạng mục gốc
-                    </button>
-                  )}
-                  {canClose && (
-                    <button
-                      type="button"
-                      className="btn btn-danger btn-xs"
-                      onClick={handleCloseProject}
-                      disabled={closing}
-                      data-testid="modal-btn-close-project"
-                    >
-                      {closing ? 'Đang đóng…' : 'Đóng dự án'}
-                    </button>
-                  )}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '14px',
+                  gap: '10px',
+                  flexWrap: 'wrap',
+                  borderBottom: '1px solid #E2E8F0',
+                  paddingBottom: '10px',
+                }}
+              >
+                <div className="modal-tabs" role="tablist" aria-label="Các phần quản lý dự án" style={{ display: 'flex', gap: '4px' }}>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeSection === 'WBS'}
+                    className={`btn btn-xs ${activeSection === 'WBS' ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => setActiveSection('WBS')}
+                    data-testid="wbs-tab-wbs"
+                  >
+                    {ICONS.tree} Công việc ({wbs.length})
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeSection === 'MILESTONES'}
+                    className={`btn btn-xs ${activeSection === 'MILESTONES' ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => setActiveSection('MILESTONES')}
+                    data-testid="wbs-tab-milestones"
+                  >
+                    {ICONS.calendar} Mốc tiến độ
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeSection === 'RISKS'}
+                    className={`btn btn-xs ${activeSection === 'RISKS' ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => setActiveSection('RISKS')}
+                    data-testid="wbs-tab-risks"
+                  >
+                    {ICONS.alertTriangle} Rủi ro
+                  </button>
                 </div>
+
+                {canClose && (
+                  <button
+                    type="button"
+                    className="btn btn-danger btn-xs"
+                    onClick={handleCloseProject}
+                    disabled={closing}
+                    data-testid="modal-btn-close-project"
+                  >
+                    {closing ? 'Đang đóng…' : 'Đóng dự án'}
+                  </button>
+                )}
               </div>
 
               {loading ? (
                 <div className="table-loading-state" data-testid="wbs-modal-loading">
                   <span className="spinner-lg" />
-                  <p style={{ marginTop: '10px' }}>Đang nạp dữ liệu công việc...</p>
+                  <p style={{ marginTop: '10px' }}>Đang nạp dữ liệu dự án...</p>
                 </div>
-              ) : (
-                <WorkBreakdownTree
+              ) : activeSection === 'WBS' ? (
+                <>
+                  {canEdit && (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-xs"
+                        onClick={handleOpenAddRootPackage}
+                        data-testid="modal-btn-add-root-wp"
+                      >
+                        + Thêm hạng mục gốc
+                      </button>
+                    </div>
+                  )}
+                  <WorkBreakdownTree
+                    projectId={projectId}
+                    items={wbs}
+                    isProjectOpen={isProjectOpen}
+                    canEdit={canEdit}
+                    onAddSubPackage={handleOpenAddSubPackage}
+                    onAddTask={handleOpenAddTask}
+                    onDeletePackage={handleDeletePackage}
+                    onSetBudget={handleOpenSetBudget}
+                  />
+                </>
+              ) : activeSection === 'MILESTONES' ? (
+                <ProjectMilestoneTimeline
                   projectId={projectId}
-                  items={wbs}
-                  isProjectOpen={isProjectOpen}
+                  wbs={wbs}
                   canEdit={canEdit}
-                  onAddSubPackage={handleOpenAddSubPackage}
-                  onAddTask={handleOpenAddTask}
-                  onDeletePackage={handleDeletePackage}
-                  onSetBudget={handleOpenSetBudget}
+                  isProjectOpen={isProjectOpen}
+                  onNotify={showToast}
+                />
+              ) : (
+                <ProjectRiskPage
+                  projectId={projectId}
+                  currentUserRoles={currentUserRoles}
+                  initialProject={project ?? undefined}
                 />
               )}
             </>

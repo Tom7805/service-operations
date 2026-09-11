@@ -70,7 +70,7 @@ describe('ProjectWbsModal Component — Đóng dự án (NCL-05-CN-006)', () => 
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Danh sách hạng mục/i)).toBeInTheDocument();
+      expect(screen.getByTestId('wbs-tab-wbs')).toBeInTheDocument();
     });
 
     expect(screen.queryByTestId('modal-btn-close-project')).not.toBeInTheDocument();
