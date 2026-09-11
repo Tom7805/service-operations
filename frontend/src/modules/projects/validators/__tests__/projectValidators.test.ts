@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   validateProjectCreateForm,
   validateProjectCreateFromTemplateForm,
+  validateMilestoneForm,
+  validateMilestoneCompleteForm,
 } from '../projectValidators';
 
 
@@ -213,5 +215,74 @@ describe('projectValidators - NCL-05-CN-007 (Tạo dự án từ mẫu)', () => 
     });
     expect(res.isValid).toBe(true);
     expect(Object.keys(res.errors)).toHaveLength(0);
+  });
+});
+
+describe('validateMilestoneForm (NCL-05-CN-008 — Quản lý mốc tiến độ của dự án)', () => {
+  it('TC-01: chấp nhận dữ liệu hợp lệ đầy đủ', () => {
+    const result = validateMilestoneForm({
+      name: 'Bàn giao giai đoạn một',
+      description: 'Chữ ký nghiệm thu giai đoạn 1',
+      plannedDate: '2027-10-01',
+      taskIds: [11, 12],
+    });
+    expect(result.isValid).toBe(true);
+    expect(result.errors).toEqual({});
+  });
+
+  it('từ chối tên mốc để trống hoặc chỉ có khoảng trắng', () => {
+    const emptyResult = validateMilestoneForm({ name: '', plannedDate: '2027-10-01', taskIds: [1] });
+    expect(emptyResult.isValid).toBe(false);
+    expect(emptyResult.errors.name).toBe('Tên mốc tiến độ không được để trống');
+
+    const whitespaceResult = validateMilestoneForm({ name: '   ', plannedDate: '2027-10-01', taskIds: [1] });
+    expect(whitespaceResult.isValid).toBe(false);
+    expect(whitespaceResult.errors.name).toBe('Tên mốc tiến độ không được để trống');
+  });
+
+  it('từ chối tên mốc vượt quá 255 ký tự', () => {
+    const result = validateMilestoneForm({
+      name: 'a'.repeat(256),
+      plannedDate: '2027-10-01',
+      taskIds: [1],
+    });
+    expect(result.isValid).toBe(false);
+    expect(result.errors.name).toBe('Tên mốc tiến độ không được vượt quá 255 ký tự');
+  });
+
+  it('từ chối khi thiếu ngày kế hoạch', () => {
+    const result = validateMilestoneForm({ name: 'Mốc 1', plannedDate: '', taskIds: [1] });
+    expect(result.isValid).toBe(false);
+    expect(result.errors.plannedDate).toBe('Ngày kế hoạch không được để trống');
+  });
+
+  it('từ chối khi chưa chọn hạng mục phải hoàn thành nào', () => {
+    const result = validateMilestoneForm({ name: 'Mốc 1', plannedDate: '2027-10-01', taskIds: [] });
+    expect(result.isValid).toBe(false);
+    expect(result.errors.taskIds).toBe('Phải chọn ít nhất một hạng mục phải hoàn thành');
+
+    const undefinedResult = validateMilestoneForm({ name: 'Mốc 1', plannedDate: '2027-10-01' });
+    expect(undefinedResult.isValid).toBe(false);
+    expect(undefinedResult.errors.taskIds).toBe('Phải chọn ít nhất một hạng mục phải hoàn thành');
+  });
+});
+
+describe('validateMilestoneCompleteForm (NCL-05-CN-008)', () => {
+  it('chấp nhận ngày thực tế hợp lệ (không ở tương lai)', () => {
+    const result = validateMilestoneCompleteForm({ actualDate: '2027-09-01' }, '2027-09-28');
+    expect(result.isValid).toBe(true);
+    expect(result.errors).toEqual({});
+  });
+
+  it('từ chối khi để trống ngày thực tế', () => {
+    const result = validateMilestoneCompleteForm({ actualDate: '' }, '2027-09-28');
+    expect(result.isValid).toBe(false);
+    expect(result.errors.actualDate).toBe('Ngày thực tế không được để trống');
+  });
+
+  it('từ chối khi ngày thực tế ở tương lai (khớp INVALID_STATE của backend)', () => {
+    const result = validateMilestoneCompleteForm({ actualDate: '2027-10-05' }, '2027-09-28');
+    expect(result.isValid).toBe(false);
+    expect(result.errors.actualDate).toBe('Ngày thực tế không được ở tương lai');
   });
 });

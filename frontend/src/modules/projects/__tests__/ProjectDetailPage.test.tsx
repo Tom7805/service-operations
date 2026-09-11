@@ -23,6 +23,11 @@ vi.mock('../api/projectsApi', () => {
     createTask: vi.fn(),
     deleteWorkPackage: vi.fn(),
     closeProject: vi.fn(),
+    getMilestones: vi.fn(),
+    createMilestone: vi.fn(),
+    updateMilestone: vi.fn(),
+    completeMilestone: vi.fn(),
+    deleteMilestone: vi.fn(),
     ProjectsApiError: MockProjectsApiError,
   };
 });
@@ -61,6 +66,9 @@ const mockWbs: WorkBreakdownRes[] = [
 describe('ProjectDetailPage Component (NCL-05-CN-002)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mốc tiến độ (NCL-05-CN-008) được nạp cùng trang chi tiết — mặc định rỗng,
+    // các test dưới đây không kiểm tra khối này nên không cần override riêng.
+    vi.mocked(projectsApi.getMilestones).mockResolvedValue([]);
   });
 
   it('renders Access Denied message for unauthorized roles (e.g. VT-04, VT-05)', () => {

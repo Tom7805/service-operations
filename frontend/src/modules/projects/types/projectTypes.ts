@@ -1,3 +1,5 @@
+import type { TaskStatus } from './taskTypes';
+
 /** Khớp enum ProjectStatus phía backend — dự án chỉ có hai trạng thái. */
 export type ProjectStatus = 'RUNNING' | 'CLOSED';
 
@@ -73,6 +75,51 @@ export interface ContractTargetForProject {
   totalValue?: number | null;
   startDate?: string | null;
   endDate?: string | null;
+}
+
+/** Khớp enum MilestoneProgressStatus phía backend — tính động khi đọc, không lưu DB (NCL-05-CN-008). */
+export type MilestoneProgressStatus = 'DONE' | 'ON_TRACK' | 'LATE';
+
+/** Hạng mục phải hoàn thành của một mốc — liên kết tới công việc (Task) trong cây công việc. */
+export interface ProjectMilestoneItemRes {
+  taskId: number;
+  taskName: string | null;
+  taskStatus: TaskStatus | null;
+}
+
+/**
+ * Mốc tiến độ dự án trả về từ backend (NCL-05-CN-008).
+ * Khớp ProjectMilestoneRes — `status`/`daysLate` do backend tính động tại thời điểm gọi.
+ */
+export interface ProjectMilestoneRes {
+  id: number;
+  projectId: number;
+  name: string;
+  description: string | null;
+  plannedDate: string; // YYYY-MM-DD
+  actualDate: string | null;
+  status: MilestoneProgressStatus;
+  daysLate: number | null;
+  items: ProjectMilestoneItemRes[];
+}
+
+/**
+ * Payload tạo/cập nhật mốc tiến độ (NCL-05-CN-008).
+ * POST/PUT /projects/{projectId}/milestones[/{milestoneId}]
+ */
+export interface ProjectMilestoneReq {
+  name: string;
+  description?: string | null;
+  plannedDate: string; // YYYY-MM-DD
+  taskIds: number[];
+}
+
+/**
+ * Payload ghi nhận ngày thực tế hoàn thành mốc (NCL-05-CN-008).
+ * POST /projects/{projectId}/milestones/{milestoneId}/complete
+ */
+export interface ProjectMilestoneCompleteReq {
+  actualDate: string; // YYYY-MM-DD
 }
 
 export type {
