@@ -6,6 +6,8 @@ import type {
   ProjectMilestoneRes,
   ProjectRes,
   ProjectTemplateRes,
+  TaskBudgetReq,
+  TaskBudgetStatusRes,
   TaskCreateReq,
   TaskRes,
   WorkBreakdownRes,
@@ -125,6 +127,25 @@ export async function createTask(
     `${API_BASE_URL}/projects/${projectId}/work-packages/${workPackageId}/tasks`,
     {
       method: 'POST',
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+/**
+ * NCL-05-CN-005: Đặt (hoặc đổi — ghi đè, không cộng dồn) ngân sách giờ công cho một công việc.
+ * Yêu cầu vai trò Quản lý dự án (VT-02); dự án phải đang RUNNING.
+ * PUT /projects/{projectId}/tasks/{taskId}/budget
+ */
+export async function setTaskBudget(
+  projectId: number,
+  taskId: number,
+  payload: TaskBudgetReq
+): Promise<TaskBudgetStatusRes> {
+  return requestBackend<TaskBudgetStatusRes>(
+    `${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/budget`,
+    {
+      method: 'PUT',
       body: JSON.stringify(payload),
     }
   );

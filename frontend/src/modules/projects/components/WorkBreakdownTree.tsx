@@ -10,6 +10,8 @@ export interface WorkBreakdownTreeProps {
   onAddSubPackage?: (parent: WorkBreakdownRes) => void;
   onAddTask?: (wp: WorkBreakdownRes, parentTask?: TaskRes | null) => void;
   onDeletePackage?: (wp: WorkBreakdownRes) => void;
+  /** NCL-05-CN-005: mở form đặt/đổi ngân sách giờ công cho một công việc. */
+  onSetBudget?: (task: TaskRes) => void;
 }
 
 const statusBadgeConfig: Record<TaskStatus, { label: string; className: string }> = {
@@ -57,6 +59,7 @@ export default function WorkBreakdownTree({
   onAddSubPackage,
   onAddTask,
   onDeletePackage,
+  onSetBudget,
 }: WorkBreakdownTreeProps) {
   // Trạng thái thu gọn/mở rộng từng hạng mục (mặc định mở tất cả)
   const [collapsed, setCollapsed] = useState<Record<number, boolean>>({});
@@ -113,15 +116,26 @@ export default function WorkBreakdownTree({
           <span className={`wbs-badge ${badge.className}`}>{badge.label}</span>
 
           {canEdit && isProjectOpen && (
-            <button
-              type="button"
-              className="btn btn-secondary btn-xs"
-              onClick={() => onAddTask?.(wp, task)}
-              title="Thêm công việc con"
-              data-testid={`add-subtask-btn-${task.id}`}
-            >
-              + Việc con
-            </button>
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary btn-xs"
+                onClick={() => onSetBudget?.(task)}
+                title="Đặt ngân sách giờ công"
+                data-testid={`set-budget-btn-${task.id}`}
+              >
+                {task.budgetHours != null ? 'Đổi ngân sách' : '+ Ngân sách'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-xs"
+                onClick={() => onAddTask?.(wp, task)}
+                title="Thêm công việc con"
+                data-testid={`add-subtask-btn-${task.id}`}
+              >
+                + Việc con
+              </button>
+            </>
           )}
         </div>
 
