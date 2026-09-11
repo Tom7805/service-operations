@@ -17,6 +17,7 @@ import RenewalModal from '../../contracts/components/RenewalModal';
 import CreateProjectModal from '../../contracts/components/CreateProjectModal';
 import type { ContractTargetForProject } from '../../contracts/components/CreateProjectModal';
 import ProjectWbsModal from '../../projects/components/ProjectWbsModal';
+import CreateProjectFromTemplateModal from '../../projects/components/CreateProjectFromTemplateModal';
 import { getContract, activateContract, ContractsApiError } from '../../contracts/api/contractsApi';
 import type { ContractRes } from '../../contracts/types/contractTypes';
 import { t } from '../../../i18n';
@@ -99,6 +100,9 @@ export default function CustomerOverviewPanel({
   const [isRenewalOpen, setIsRenewalOpen] = useState(false);
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [createProjectTarget, setCreateProjectTarget] = useState<ContractTargetForProject | null>(null);
+  // NCL-05-CN-007: tạo dự án từ mẫu công việc có sẵn — dùng chung dữ liệu hợp đồng
+  // với "Tạo dự án" (openCreateProject), chỉ khác modal hiển thị.
+  const [isCreateFromTemplateOpen, setIsCreateFromTemplateOpen] = useState(false);
   const [isProjectWbsOpen, setIsProjectWbsOpen] = useState(false);
   const [selectedProjectWbsTarget, setSelectedProjectWbsTarget] = useState<{ id: number; code: string; name: string } | null>(null);
   const [selectedContract, setSelectedContract] = useState<ContractRes | null>(null);
@@ -169,6 +173,23 @@ export default function CustomerOverviewPanel({
       startDate: item.date,
     });
     setIsCreateProjectOpen(true);
+  }, [customerId, customerName]);
+
+  // NCL-05-CN-007: giống openCreateProject ở trên nhưng mở modal "Tạo dự án từ mẫu"
+  // thay vì modal tạo dự án trống — không dùng chung setIsCreateProjectOpen(true) để
+  // tránh mở đè hai modal cùng lúc.
+  const openCreateProjectFromTemplate = useCallback((item: CustomerOverviewItem) => {
+    setCreateProjectTarget({
+      id: item.id,
+      contractCode: item.code ?? '—',
+      name: item.name ?? '(không có tên)',
+      status: item.status ?? '',
+      customerId: customerId,
+      customerName: customerName,
+      totalValue: item.amount,
+      startDate: item.date,
+    });
+    setIsCreateFromTemplateOpen(true);
   }, [customerId, customerName]);
 
   // NCL-04-CN-002: kích hoạt hợp đồng DRAFT → ACTIVE, điều kiện bắt buộc để dùng
@@ -525,13 +546,22 @@ export default function CustomerOverviewPanel({
                                     </button>
                                   )}
                                   {currentUserRoles.includes('VT-02') && (
-                                    <button
-                                      type="button"
-                                      className="btn btn-secondary"
-                                      onClick={() => openCreateProject(item)}
-                                    >
-                                      Tạo dự án
-                                    </button>
+                                    <>
+                                      <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        onClick={() => openCreateProject(item)}
+                                      >
+                                        Tạo dự án
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        onClick={() => openCreateProjectFromTemplate(item)}
+                                      >
+                                        Tạo dự án từ mẫu
+                                      </button>
+                                    </>
                                   )}
                                   {currentUserRoles.includes('VT-04') && (
                                     <>
@@ -689,6 +719,23 @@ export default function CustomerOverviewPanel({
           currentUserRoles={currentUserRoles}
           onSaved={() => {
             setIsCreateProjectOpen(false);
+            setCreateProjectTarget(null);
+            void loadOverview();
+          }}
+        />
+      )}
+
+      {createProjectTarget && (
+        <CreateProjectFromTemplateModal
+          isOpen={isCreateFromTemplateOpen}
+          onClose={() => {
+            setIsCreateFromTemplateOpen(false);
+            setCreateProjectTarget(null);
+          }}
+          contract={createProjectTarget}
+          currentUserRoles={currentUserRoles}
+          onCreated={() => {
+            setIsCreateFromTemplateOpen(false);
             setCreateProjectTarget(null);
             void loadOverview();
           }}

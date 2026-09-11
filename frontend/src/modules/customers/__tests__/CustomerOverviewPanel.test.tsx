@@ -439,7 +439,7 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
       // VT-02 nhìn thấy nút "Tạo dự án"
       expect(
         within(screen.getByTestId('customer-summary-section-contracts')).getByRole('button', {
-          name: /Tạo dự án/i,
+          name: /^Tạo dự án$/i,
         })
       ).toBeInTheDocument();
 
@@ -454,7 +454,7 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
 
       expect(
         within(screen.getByTestId('customer-summary-section-contracts')).queryByRole('button', {
-          name: /Tạo dự án/i,
+          name: /^Tạo dự án$/i,
         })
       ).toBeNull();
     });
@@ -474,7 +474,7 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
         expect(screen.getByTestId('customer-summary-panel')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByRole('button', { name: /Tạo dự án/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^Tạo dự án$/i }));
 
       // Không gọi getContract(contractId) vì endpoint đó chỉ cấp quyền cho VT-05
       expect(contractsApi.getContract).not.toHaveBeenCalled();
