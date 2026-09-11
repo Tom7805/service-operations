@@ -104,6 +104,20 @@ public class ProjectAuditLogger {
 		repository.save(audit);
 	}
 
+	/** NCL-06-CN-001 / TC-04: ghi nhat ky khi ghi/sua/xoa gio cong theo cong viec. */
+	public void recordTimeEntryChange(Long projectId, Long taskId, String detail) {
+		ProjectAuditLog audit = new ProjectAuditLog();
+		audit.setProjectId(projectId);
+		audit.setActionType(ProjectAuditAction.TIME_ENTRY_UPDATED);
+		audit.setDetail("Cong viec #" + taskId + ": " + detail);
+		Long actorId = currentUserScopeProvider.currentUserId();
+		audit.setActorId(actorId == null ? 0L : actorId);
+		audit.setActorUsername(currentUsername());
+		audit.setActorRole(currentRole());
+		audit.setCreatedAt(LocalDateTime.now());
+		repository.save(audit);
+	}
+
 	public void recordClose(Long projectId, String projectCode) {
 		ProjectAuditLog audit = new ProjectAuditLog();
 		audit.setProjectId(projectId);
