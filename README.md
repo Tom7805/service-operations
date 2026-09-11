@@ -184,7 +184,22 @@ docker compose --profile full-stack up -d --build
 | `docker compose down` | Tắt các container |
 | `docker compose down -v` | Tắt container **và xóa volume DB** (mất dữ liệu local) |
 
-Các script tiện ích hơn trong thư mục [scripts/](scripts/) (dev-up, db-reset, seed-demo-data...).
+### Đồng bộ dữ liệu nền (seed data)
+
+Các file `R__seed_*.sql` trong `backend/src/main/resources/db/seed/` là dữ liệu nền dùng chung
+cho cả team (tài khoản demo, khách hàng/cơ hội mẫu...) — Flyway tự chạy các file này mỗi khi
+backend khởi động và tự cập nhật nếu file thay đổi, **không đụng tới dữ liệu bạn tự nhập khi
+test** (mọi seed đều dùng `ON DUPLICATE KEY UPDATE` / `WHERE NOT EXISTS`, an toàn khi chạy lại).
+
+| Script | Khi nào dùng |
+|---|---|
+| `./scripts/seed-demo-data.sh` | Muốn chắc chắn dữ liệu nền khớp với `develop` ngay lập tức mà không khởi động lại backend (ví dụ vừa `git pull` thấy file seed đổi). Yêu cầu schema đã tồn tại (đã chạy backend ít nhất 1 lần). |
+| `./scripts/db-reset.sh` | Muốn xóa sạch và tạo lại database (kể cả schema) từ đầu — dùng khi DB local bị lệch/hỏng. **Xóa toàn bộ dữ liệu hiện có**, nhớ `db-backup.sh` trước nếu cần giữ lại gì. |
+| `./scripts/db-backup.sh [tên-file]` | Sao lưu toàn bộ database hiện tại ra `backups/*.sql.gz` (đã gitignore) trước khi làm gì rủi ro. |
+| `./scripts/db-restore.sh [file]` | Khôi phục database từ 1 file do `db-backup.sh` tạo ra (không truyền `file` thì tự lấy bản mới nhất trong `backups/`). |
+
+Tất cả đọc cấu hình kết nối DB từ `backend/.env` (ưu tiên) hoặc `.env` ở gốc dự án, mặc định
+khớp XAMPP (`root` / không mật khẩu / `localhost:3306`).
 
 ## 8. Quy ước làm việc chung
 
