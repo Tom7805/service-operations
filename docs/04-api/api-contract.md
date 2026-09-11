@@ -2473,8 +2473,9 @@ vào `project_audit_logs` — người thực hiện, nội dung (trạng thái 
 ### `NCL-05-CN-005` — Đặt ngân sách giờ công cho công việc
 
 Yêu cầu token của **Quản lý dự án** (`VT-02`). Gọi lại nhiều lần sẽ **ghi đè** ngân sách hiện tại (không cộng dồn).
-Ngoài `budgetHours` do người dùng nhập, mỗi công việc có `approvedHours` (giờ công đã duyệt, chưa có nguồn dữ liệu
-thật vì Epic `NCL-06` — Bảng chấm công — chưa triển khai; hiện luôn là `0` cho tới khi giờ công được duyệt).
+Ngoài `budgetHours` do người dùng nhập, mỗi công việc có `approvedHours` (giờ công đã duyệt — giờ công nhân
+viên ghi qua `NCL-06-CN-001` ở trạng thái `DRAFT` chưa tính vào đây; hiện vẫn là `0` cho tới khi bảng chấm
+công được duyệt bởi các câu chuyện sau của Epic `NCL-06`).
 `usageRatio = approvedHours / budgetHours`; **`overBudgetWarning = true` khi `usageRatio >= 0.80`** (QTN-20).
 Mỗi lần đặt/đổi ngân sách ghi một dòng `TASK_BUDGET_UPDATED` vào `project_audit_logs` — người thực hiện, nội dung
 (ngân sách cũ → mới), thời điểm (TC-04).
@@ -2537,7 +2538,8 @@ Ví dụ khi công việc đã có `34` giờ được duyệt trên ngân sách
 - `usageRatio` là phân số `0.0`–`1.0+` (không phải phần trăm) — nhân `100` khi hiển thị (`85%`).
 - Khi `overBudgetWarning = true`, hiển thị cảnh báo nổi bật (ví dụ tô đỏ thanh tiến độ giờ công) ngay trên màn
   hình chi tiết công việc — không cần đợi người dùng tải lại trang, vì cờ này luôn được trả trong response.
-- `approvedHours` hiện luôn `0` cho tới khi tính năng chấm công (`NCL-06`) đi vào hoạt động; Frontend vẫn nên
+- Giờ công do nhân viên ghi qua `NCL-06-CN-001` ở trạng thái `DRAFT` và **chưa** tính vào `approvedHours` —
+  cột này chỉ tăng khi bảng chấm công được duyệt (các câu chuyện sau của Epic `NCL-06`); Frontend vẫn nên
   dựng sẵn UI hiển thị tỷ lệ ngay từ bây giờ vì hợp đồng response không đổi khi `approvedHours` bắt đầu có dữ liệu.
 
 ---
@@ -2547,7 +2549,8 @@ Ví dụ khi công việc đã có `34` giờ được duyệt trên ngân sách
 Yêu cầu token của **Quản lý dự án** (`VT-02`). Chỉ đóng được dự án đang `RUNNING` (gọi lại trên dự án đã
 `CLOSED` nhận `400 INVALID_STATE`, tránh đóng hai lần). Hệ thống chặn đóng nếu dự án còn công việc ở trạng thái
 `WAITING_APPROVAL` (`NCL-05-CN-004`) — đại diện cho phần việc/bảng chấm công còn treo chưa được duyệt (QTN-13);
-Epic `NCL-06` (Bảng chấm công) chưa triển khai nên hiện tại đây là nguồn dữ liệu "còn treo" duy nhất đã có.
+Epic `NCL-06` mới triển khai phần ghi giờ công (`NCL-06-CN-001`, bản ghi `DRAFT` chưa tạo trạng thái treo)
+nên hiện tại đây vẫn là nguồn dữ liệu "còn treo" duy nhất đã có.
 Đóng thành công ghi một dòng `PROJECT_CLOSED` vào `project_audit_logs` — người thực hiện, nội dung, thời điểm (TC-04).
 
 #### `POST /projects/{projectId}/close`
@@ -2766,9 +2769,153 @@ action `RISK_CREATED` / `RISK_UPDATED` / `RISK_DELETED`.
 | 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy dự án/rủi ro, hoặc người theo dõi không tồn tại. |
 
 
+## Epic `NCL-06` — Bảng chấm công
+
+### `NCL-06-CN-001` — Ghi giờ công theo công việc
+
+Yêu cầu token của **Nhân viên chuyên môn** (`VT-03`). Mỗi bản ghi giờ công là số giờ một nhân sự làm trên
+một công việc trong một ngày (bảng `timesheet_entries`); bản ghi mới luôn ở trạng thái `DRAFT`. Giờ công
+chỉ cộng vào `approvedHours` của công việc sau khi được duyệt ở luồng nộp/duyệt bảng chấm công tuần
+(các câu chuyện sau của Epic `NCL-06`).
+
+Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại):
+
+- **Chỉ người đang được giao** công việc mới ghi được giờ (TC-02, giống `NCL-05-CN-004`) — `VT-03` hợp lệ
+  nhưng mở nhầm công việc của người khác vẫn nhận `403 FORBIDDEN` với thông báo "Bạn không phải người
+  được giao công việc này".
+- Dự án phải đang `RUNNING` — dự án đã đóng nhận `400 INVALID_STATE` (thay thế nguồn dữ liệu "còn treo"
+  mà `NCL-05-CN-006` từng dẫn chiếu, tương ứng câu chuyện chặn ghi giờ vào dự án đã đóng `VHDV-76`).
+- Ngày làm việc (`workDate`) không được ở tương lai; tổng giờ công của một nhân sự trong một ngày trên
+  mọi công việc không vượt `24` giờ.
+- Mỗi cặp **(công việc, ngày)** chỉ có **một** bản ghi của một nhân sự — ghi trùng nhận `409 DUPLICATE_DATA`
+  kèm gợi ý sửa bản ghi có sẵn bằng `PUT`.
+- Bản ghi chỉ sửa/xoá được khi còn `DRAFT`; sau khi nộp/duyệt phải đi qua luồng điều chỉnh bằng bút toán
+  đảo (câu chuyện `VHDV-80`).
+- Mỗi lần ghi/sửa/xoá ghi một dòng `TIME_ENTRY_UPDATED` vào `project_audit_logs` — người thực hiện, nội dung
+  (số giờ, ngày, thao tác), thời điểm (TC-04).
+
+#### `POST /projects/{projectId}/tasks/{taskId}/time-entries`
+
+```json
+{
+  "workDate": "2026-09-10",
+  "hours": 3.5,
+  "note": "Phân tích quy trình hiện tại"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `workDate` | date | có | Ngày làm việc, không được ở tương lai. |
+| `hours` | number | có | Lớn hơn 0 (giới hạn kiểm tra `@DecimalMin("0.01")`). |
+| `note` | string | không | Tối đa 1000 ký tự. |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Ghi gio cong thanh cong",
+  "data": {
+    "id": 30,
+    "taskId": 20,
+    "userId": 7,
+    "workDate": "2026-09-10",
+    "hours": 3.5,
+    "status": "DRAFT",
+    "note": "Phân tích quy trình hiện tại",
+    "createdAt": "2026-09-10T15:20:00"
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Thiếu `workDate`/`hours`, `hours <= 0`, `note` vượt 1000 ký tự. |
+| 400 | `INVALID_STATE` | Dự án đã đóng (`CLOSED`), ngày làm việc ở tương lai, hoặc tổng giờ trong ngày vượt 24. |
+| 409 | `DUPLICATE_DATA` | Đã có bản ghi giờ công của chính mình trên công việc này trong cùng ngày. |
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-03` — hệ thống ghi nhật ký lần từ chối (TC-03); **hoặc** là `VT-03` nhưng không nằm trong danh sách người được giao công việc này (TC-02). |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại dự án, hoặc công việc không thuộc dự án đó. |
+
+#### `PUT /projects/{projectId}/tasks/{taskId}/time-entries/{entryId}`
+
+```json
+{ "hours": 4, "note": "Đã chỉnh sửa sau khi soát lại" }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `hours` | number | có | Lớn hơn 0 — ghi đè số giờ cũ. |
+| `note` | string | không | Ghi đè ghi chú cũ. |
+
+Chỉ sửa được bản ghi **DRAFT của chính mình trên đúng công việc** trong path; `workDate` và công việc không
+đổi — muốn đổi ngày thì xoá bản ghi cũ rồi ghi bản ghi mới. Kèm kiểm tra lại trần 24 giờ/ngày sau khi thay
+đổi số giờ.
+
+**Response lỗi:** giống `POST`, thêm:
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 404 | `RESOURCE_NOT_FOUND` | Bản ghi không tồn tại, hoặc không phải bản ghi của chính mình trên công việc này. |
+| 400 | `INVALID_STATE` | Bản ghi đã `SUBMITTED`/`APPROVED`/`REJECTED` — không sửa trực tiếp được. |
+
+#### `DELETE /projects/{projectId}/tasks/{taskId}/time-entries/{entryId}`
+
+Xoá bản ghi giờ công **DRAFT của chính mình**. Không cần body. Thành công trả
+`{ "success": true, "message": "Xoa ban ghi gio cong thanh cong", "data": null }`.
+Response lỗi giống `PUT` (`404` khi không phải bản ghi của mình, `400 INVALID_STATE` khi bản ghi không còn DRAFT).
+
+#### `GET /me/time-entries?weekFrom=2026-09-07&weekTo=2026-09-13`
+
+Trả lưới giờ công **của chính mình** trong khoảng ngày (một tuần chấm công), nhóm theo công việc — mỗi
+phần tử là một `TimesheetSummaryRes`:
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "taskId": 20,
+      "taskName": "Phỏng vấn người dùng",
+      "weekFrom": "2026-09-07",
+      "weekTo": "2026-09-13",
+      "entries": [
+        { "id": 30, "taskId": 20, "userId": 7, "workDate": "2026-09-09", "hours": 5,
+          "status": "DRAFT", "note": null, "createdAt": "2026-09-09T17:00:00" }
+      ],
+      "totalHours": 8,
+      "budgetHours": 8,
+      "approvedHours": 0,
+      "usageRatio": 1.0000,
+      "overBudgetWarning": true
+    }
+  ]
+}
+```
+
+- `totalHours` — tổng giờ của công việc trong khoảng ngày.
+- `usageRatio` là phân số `0.0`–`1.0+` (nhân `100` khi hiển thị); `overBudgetWarning = true` khi
+  `usageRatio >= 0.80` (QTN-20); cả hai là `null`/`false` khi công việc chưa đặt ngân sách.
+- `400 VALIDATION_ERROR` khi `weekTo` sớm hơn `weekFrom`.
+
+**Lưu ý cho Frontend:**
+
+- `status` của bản ghi dùng enum `TimeEntryStatus`: `DRAFT` (đang ghi, sửa/xoá được) · `SUBMITTED` (đã nộp
+  trong bảng tuần) · `APPROVED` (đã duyệt) · `REJECTED` (bị từ chối). Ở story này mọi bản ghi mới là `DRAFT`.
+- Ghi trùng ngày nhận `409 DUPLICATE_DATA` — hiển thị thông báo "Đã có bản ghi giờ công cho công việc này
+  trong ngày …" và chuyển người dùng sang chế độ sửa bản ghi có sẵn thay vì tạo mới.
+- `approvedHours` trong lưới tuần hiện vẫn `0` vì luồng duyệt chưa triển khai; giữ sẵn UI hiển thị tỷ lệ
+  `usageRatio` vì hợp đồng không đổi khi dữ liệu duyệt bắt đầu có.
+- Các endpoint `POST/PUT/DELETE` trả `400 INVALID_STATE` khi dự án đã đóng — sau khi `NCL-05-CN-006` đóng dự
+  án, ẩn/vô hiệu hoá form ghi giờ công để tránh gọi rồi mới nhận lỗi.
+
 ---
 
 ## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)
+
 
 Tổng hợp cho đội Frontend khi dựng các màn hình Epic `NCL-05`. Không thay đổi hợp đồng API — chỉ gom
 những điểm hay gây lỗi tích hợp.
