@@ -88,6 +88,17 @@ public class QuoteServiceImpl implements QuoteService {
 		return toResponse(saved, missingRates);
 	}
 
+	@Override
+	public List<QuoteRes> getHistory(Long opportunityId) {
+		if (!opportunityRepository.existsById(opportunityId)) {
+			throw new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
+					"Khong tim thay co hoi voi id=" + opportunityId);
+		}
+		return quoteRepository.findAllByOpportunityIdOrderByVersionDesc(opportunityId).stream()
+				.map(quote -> toResponse(quote, List.of()))
+				.toList();
+	}
+
 	private QuoteRes toResponse(Quote quote, List<String> missingRates) {
 		List<QuoteItemRes> items = quote.getItems().stream()
 				.map(item -> new QuoteItemRes(item.getProfessionalRole(), item.getWorkDays(), item.getUnitRate(),
