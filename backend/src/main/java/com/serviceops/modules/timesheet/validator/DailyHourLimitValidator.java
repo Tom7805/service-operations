@@ -34,7 +34,8 @@ public class DailyHourLimitValidator {
 	 * @throws BusinessRuleException INVALID_STATE neu vuot tran 24 gio/ngay.
 	 */
 	public void validate(Long userId, LocalDate workDate, BigDecimal hours, BigDecimal existingHours) {
-		BigDecimal alreadyLogged = timeEntryRepository.sumHoursByUserIdAndWorkDate(userId, workDate)
+		BigDecimal alreadyLogged = timeEntryRepository.sumHoursByUserIdAndWorkDate(userId, workDate);
+		alreadyLogged = (alreadyLogged == null ? BigDecimal.ZERO : alreadyLogged)
 				.subtract(existingHours == null ? BigDecimal.ZERO : existingHours);
 		if (alreadyLogged.add(hours).compareTo(MAX_HOURS_PER_DAY) > 0) {
 			throw new BusinessRuleException(ErrorCode.INVALID_STATE,
