@@ -127,3 +127,15 @@ export async function createOpportunityQuote(
 
   return res.data;
 }
+
+/**
+ * Lấy lịch sử các phiên bản báo giá đã lập cho cơ hội (GET /opportunities/{opportunityId}/quotes)
+ * Trả về danh sách sắp xếp theo phiên bản giảm dần (mới nhất trước).
+ */
+export async function fetchOpportunityQuoteHistory(opportunityId: number): Promise<QuoteRes[]> {
+  const res = await requestBackend<{ success: boolean; data: QuoteRes[] }>(
+    `${API_BASE_URL}/opportunities/${opportunityId}/quotes`
+  );
+
+  return res.data ?? [];
+}
