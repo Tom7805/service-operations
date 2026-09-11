@@ -36,12 +36,19 @@ public class AccessDeniedAuditRecorder {
     private static final Map<String, Feature> FEATURES = new LinkedHashMap<>();
 
     static {
+        FEATURES.put("/milestones", new Feature(AuditTargetType.GENERAL, "Quản lý mốc tiến độ dự án"));
+        FEATURES.put("/risks", new Feature(AuditTargetType.GENERAL, "Quản lý rủi ro dự án"));
+        FEATURES.put("/projects/from-template", new Feature(AuditTargetType.GENERAL, "Tạo dự án từ mẫu"));
         FEATURES.put("/customers/merge", new Feature(AuditTargetType.CUSTOMER, "Gộp hồ sơ khách hàng trùng"));
         FEATURES.put("/contacts", new Feature(AuditTargetType.CUSTOMER, "Người liên hệ của khách hàng"));
         FEATURES.put("/customers", new Feature(AuditTargetType.CUSTOMER, "Hồ sơ khách hàng"));
         FEATURES.put("/activities", new Feature(AuditTargetType.GENERAL, "Hoạt động chăm sóc cơ hội"));
         FEATURES.put("/quotes", new Feature(AuditTargetType.GENERAL, "Báo giá cơ hội"));
+        FEATURES.put("/budget", new Feature(AuditTargetType.GENERAL, "Đặt ngân sách giờ công cho công việc"));
+        FEATURES.put("/tasks", new Feature(AuditTargetType.GENERAL, "Cập nhật tiến độ công việc dự án"));
+        FEATURES.put("/contracts", new Feature(AuditTargetType.GENERAL, "Tạo dự án từ hợp đồng"));
         FEATURES.put("/opportunities", new Feature(AuditTargetType.GENERAL, "Cơ hội bán hàng"));
+        FEATURES.put("/close", new Feature(AuditTargetType.GENERAL, "Đóng dự án"));
         FEATURES.put("/audit-logs", new Feature(AuditTargetType.GENERAL, "Nhật ký hệ thống"));
         FEATURES.put("/sensitive-access-logs", new Feature(AuditTargetType.MASKING, "Nhật ký truy cập dữ liệu nhạy cảm"));
         FEATURES.put("/masking-rules", new Feature(AuditTargetType.MASKING, "Cấu hình che dữ liệu nhạy cảm"));

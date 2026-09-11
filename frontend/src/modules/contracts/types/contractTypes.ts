@@ -117,3 +117,10 @@ export interface RenewalRes {
   createdBy: string;
   createdAt: string;
 }
+
+export type {
+  ProjectCreateFromContractReq,
+  ProjectRes,
+  ProjectStatus,
+  ContractTargetForProject,
+} from '../../projects/types/projectTypes';

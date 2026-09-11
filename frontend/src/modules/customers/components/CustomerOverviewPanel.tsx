@@ -11,6 +11,10 @@ import { ICONS } from '../../../components/common/icons';
 import ContractAppendixModal from '../../contracts/components/ContractAppendixModal';
 import ContractLimitAlert, { type ContractLimitAlertTarget } from '../../contracts/components/ContractLimitAlert';
 import RenewalModal from '../../contracts/components/RenewalModal';
+import CreateProjectModal from '../../contracts/components/CreateProjectModal';
+import type { ContractTargetForProject } from '../../contracts/components/CreateProjectModal';
+import ProjectWbsModal from '../../projects/components/ProjectWbsModal';
+import CreateProjectFromTemplateModal from '../../projects/components/CreateProjectFromTemplateModal';
 import { getContract, ContractsApiError } from '../../contracts/api/contractsApi';
 import type { ContractRes } from '../../contracts/types/contractTypes';
 
@@ -87,10 +91,26 @@ export default function CustomerOverviewPanel({
   const [isAppendixOpen, setIsAppendixOpen] = useState(false);
   const [isLimitAlertOpen, setIsLimitAlertOpen] = useState(false);
   const [isRenewalOpen, setIsRenewalOpen] = useState(false);
+  const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
+  const [createProjectTarget, setCreateProjectTarget] = useState<ContractTargetForProject | null>(null);
+  // NCL-05-CN-007: tạo dự án từ mẫu công việc có sẵn — dùng chung dữ liệu hợp đồng
+  // với "Tạo dự án" (openCreateProject), chỉ khác modal hiển thị.
+  const [isCreateFromTemplateOpen, setIsCreateFromTemplateOpen] = useState(false);
+  const [isProjectWbsOpen, setIsProjectWbsOpen] = useState(false);
+  const [selectedProjectWbsTarget, setSelectedProjectWbsTarget] = useState<{ id: number; code: string; name: string } | null>(null);
   const [selectedContract, setSelectedContract] = useState<ContractRes | null>(null);
   const [limitAlertTarget, setLimitAlertTarget] = useState<ContractLimitAlertTarget | null>(null);
   const [isContractLoading, setIsContractLoading] = useState(false);
   const [contractLoadError, setContractLoadError] = useState<string | null>(null);
+
+  const openProjectWbs = (item: CustomerOverviewItem) => {
+    setSelectedProjectWbsTarget({
+      id: item.id,
+      code: item.code ?? '',
+      name: item.name ?? '',
+    });
+    setIsProjectWbsOpen(true);
+  };
 
   // NCL-04-CN-004/007: nạp đúng dữ liệu hiện tại của hợp đồng trước khi mở modal phụ lục/gia hạn.
   // Hai thao tác này chỉ dành cho Nhân viên kinh doanh (VT-04). `GET /contracts/{id}` cho phép
@@ -128,6 +148,40 @@ export default function CustomerOverviewPanel({
     });
     setIsLimitAlertOpen(true);
   }, []);
+
+  // NCL-05-CN-001: Quản lý dự án (VT-02) tạo dự án từ hợp đồng.
+  // Không gọi getContract(contractId) vì endpoint đó chỉ cấp quyền cho VT-05.
+  // Dữ liệu hợp đồng (mã, tên, trạng thái, giá trị, ngày bắt đầu) đã có sẵn từ dòng tổng hợp.
+  const openCreateProject = useCallback((item: CustomerOverviewItem) => {
+    setCreateProjectTarget({
+      id: item.id,
+      contractCode: item.code ?? '—',
+      name: item.name ?? '(không có tên)',
+      status: item.status ?? '',
+      customerId: customerId,
+      customerName: customerName,
+      totalValue: item.amount,
+      startDate: item.date,
+    });
+    setIsCreateProjectOpen(true);
+  }, [customerId, customerName]);
+
+  // NCL-05-CN-007: giống openCreateProject ở trên nhưng mở modal "Tạo dự án từ mẫu"
+  // thay vì modal tạo dự án trống — không dùng chung setIsCreateProjectOpen(true) để
+  // tránh mở đè hai modal cùng lúc.
+  const openCreateProjectFromTemplate = useCallback((item: CustomerOverviewItem) => {
+    setCreateProjectTarget({
+      id: item.id,
+      contractCode: item.code ?? '—',
+      name: item.name ?? '(không có tên)',
+      status: item.status ?? '',
+      customerId: customerId,
+      customerName: customerName,
+      totalValue: item.amount,
+      startDate: item.date,
+    });
+    setIsCreateFromTemplateOpen(true);
+  }, [customerId, customerName]);
 
   const loadOverview = useCallback(async () => {
     setIsLoading(true);
@@ -418,6 +472,24 @@ export default function CustomerOverviewPanel({
                                       Cảnh báo hạn mức
                                     </button>
                                   )}
+                                  {currentUserRoles.includes('VT-02') && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        onClick={() => openCreateProject(item)}
+                                      >
+                                        Tạo dự án
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        onClick={() => openCreateProjectFromTemplate(item)}
+                                      >
+                                        Tạo dự án từ mẫu
+                                      </button>
+                                    </>
+                                  )}
                                   {currentUserRoles.includes('VT-04') && (
                                     <>
                                       <button
@@ -439,6 +511,20 @@ export default function CustomerOverviewPanel({
                                     </>
                                   )}
                                   {!currentUserRoles.includes('VT-02') && !currentUserRoles.includes('VT-04') && (
+                                    <span className="cell-muted">—</span>
+                                  )}
+                                </div>
+                              ) : section.key === 'projects' ? (
+                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                                  {(currentUserRoles.includes('VT-01') || currentUserRoles.includes('VT-02') || currentUserRoles.includes('VT-03')) ? (
+                                    <button
+                                      type="button"
+                                      className="btn btn-secondary"
+                                      onClick={() => openProjectWbs(item)}
+                                    >
+                                      Quản lý dự án
+                                    </button>
+                                  ) : (
                                     <span className="cell-muted">—</span>
                                   )}
                                 </div>
@@ -509,6 +595,57 @@ export default function CustomerOverviewPanel({
           currentUserRoles={currentUserRoles}
           onSaved={() => {
             // Giữ modal mở để thấy "Lịch sử gia hạn" vừa cập nhật (NCL-04-CN-007 TC-04).
+            void loadOverview();
+          }}
+        />
+      )}
+
+      {createProjectTarget && (
+        <CreateProjectModal
+          isOpen={isCreateProjectOpen}
+          onClose={() => {
+            setIsCreateProjectOpen(false);
+            setCreateProjectTarget(null);
+          }}
+          contract={createProjectTarget}
+          currentUserRoles={currentUserRoles}
+          onSaved={() => {
+            setIsCreateProjectOpen(false);
+            setCreateProjectTarget(null);
+            void loadOverview();
+          }}
+        />
+      )}
+
+      {createProjectTarget && (
+        <CreateProjectFromTemplateModal
+          isOpen={isCreateFromTemplateOpen}
+          onClose={() => {
+            setIsCreateFromTemplateOpen(false);
+            setCreateProjectTarget(null);
+          }}
+          contract={createProjectTarget}
+          currentUserRoles={currentUserRoles}
+          onCreated={() => {
+            setIsCreateFromTemplateOpen(false);
+            setCreateProjectTarget(null);
+            void loadOverview();
+          }}
+        />
+      )}
+
+      {selectedProjectWbsTarget && (
+        <ProjectWbsModal
+          isOpen={isProjectWbsOpen}
+          onClose={() => {
+            setIsProjectWbsOpen(false);
+            setSelectedProjectWbsTarget(null);
+          }}
+          projectId={selectedProjectWbsTarget.id}
+          projectCode={selectedProjectWbsTarget.code}
+          projectName={selectedProjectWbsTarget.name}
+          currentUserRoles={currentUserRoles}
+          onUpdated={() => {
             void loadOverview();
           }}
         />

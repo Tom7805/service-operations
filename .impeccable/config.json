@@ -26,6 +26,16 @@
         ],
         "createdAt": "2026-09-08T02:21:07.755Z",
         "reason": "pre-existing stats-grid headline numbers (Tổng giá trị dự kiến, Dự báo Weighted), not touched this session; large by design intent"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#15803d",
+        "createdAt": "2026-09-11T06:43:14.320Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#64748b",
+        "createdAt": "2026-09-11T06:43:14.402Z"
       }
     ]
   }

@@ -12,7 +12,13 @@ import {
   validateQuoteCreate,
   convertVNDToWords,
 } from '../validators/opportunityValidators';
-import { createOpportunityQuote, fetchCurrentBillRates, QuoteApiError, type BillRateOption } from '../api/quotesApi';
+import {
+  createOpportunityQuote,
+  fetchCurrentBillRates,
+  fetchOpportunityQuoteHistory,
+  QuoteApiError,
+  type BillRateOption,
+} from '../api/quotesApi';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
 import { useBackdropClick } from '../../../hooks/useBackdropClick';
@@ -73,6 +79,28 @@ export default function QuoteBuilder({
   const [isEditingNewVersion, setIsEditingNewVersion] = useState(false);
 
   const backdrop = useBackdropClick(onClose, submitting);
+
+  // Lịch sử các phiên bản báo giá đã lập cho cơ hội (GET /opportunities/{id}/quotes)
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historyQuotes, setHistoryQuotes] = useState<QuoteRes[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+
+  const handleOpenHistory = async () => {
+    setIsHistoryOpen(true);
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const history = await fetchOpportunityQuoteHistory(opportunity.id);
+      setHistoryQuotes(history);
+    } catch (err) {
+      setHistoryError(
+        err instanceof QuoteApiError ? err.message : 'Không thể tải lịch sử báo giá. Vui lòng thử lại sau.'
+      );
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -708,17 +736,30 @@ export default function QuoteBuilder({
               </div>
 
               {/* Nút thêm dòng */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={handleAddItem}
-                  disabled={submitting || !isProposalStage || !isAllowedRole}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
-                >
-                  <span className="icon-sm">{ICONS.plus}</span>
-                  <span>Thêm dòng báo giá</span>
-                </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={handleAddItem}
+                    disabled={submitting || !isProposalStage || !isAllowedRole}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+                  >
+                    <span className="icon-sm">{ICONS.plus}</span>
+                    <span>Thêm dòng báo giá</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={handleOpenHistory}
+                    disabled={submitting}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+                  >
+                    <span className="icon-sm">{ICONS.history}</span>
+                    <span>Lịch sử báo giá</span>
+                  </button>
+                </div>
 
                 {latestQuote && isEditingNewVersion && (
                   <button
@@ -764,6 +805,116 @@ export default function QuoteBuilder({
           )}
         </div>
       </div>
+
+      {/* Modal lịch sử các phiên bản báo giá đã lập cho cơ hội */}
+      {isHistoryOpen && (
+        <div
+          className="modal-backdrop"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsHistoryOpen(false);
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="quote-history-title"
+        >
+          <div className="modal-card" style={{ maxWidth: '640px', maxHeight: '80vh' }}>
+            <div className="modal-header">
+              <h3 id="quote-history-title" className="modal-title">
+                <span className="modal-title__icon" aria-hidden="true">
+                  {ICONS.history}
+                </span>
+                Lịch sử báo giá
+              </h3>
+              <button
+                type="button"
+                className="modal-close"
+                onClick={() => setIsHistoryOpen(false)}
+                aria-label="Đóng cửa sổ"
+              >
+                {ICONS.close}
+              </button>
+            </div>
+
+            <div className="modal-body">
+              {historyLoading && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', color: 'var(--ink-muted)' }}>
+                  <span className="spinner-sm" aria-hidden="true" />
+                  <span>Đang tải lịch sử báo giá...</span>
+                </div>
+              )}
+
+              {!historyLoading && historyError && (
+                <div
+                  className="alert-box alert-box--danger"
+                  role="alert"
+                  style={{
+                    padding: '10px 14px',
+                    background: 'var(--pale-red-bg)',
+                    color: 'var(--pale-red-fg)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid rgba(159, 47, 45, 0.2)',
+                    fontSize: '13.5px',
+                  }}
+                >
+                  {historyError}
+                </div>
+              )}
+
+              {!historyLoading && !historyError && historyQuotes.length === 0 && (
+                <div style={{ fontSize: '13.5px', color: 'var(--ink-muted)' }}>
+                  Cơ hội này chưa có phiên bản báo giá nào được lập.
+                </div>
+              )}
+
+              {!historyLoading && !historyError && historyQuotes.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {historyQuotes.map((quote) => (
+                    <div
+                      key={quote.id}
+                      style={{
+                        border: '1px solid var(--line)',
+                        borderRadius: 'var(--radius-md)',
+                        padding: '12px 14px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '12px',
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 600, color: 'var(--ink-strong)', fontSize: '13.5px' }}>
+                          Phiên bản #{quote.version}
+                        </div>
+                        <div style={{ fontSize: '12.5px', color: 'var(--ink-muted)' }}>
+                          Lập bởi @{quote.createdBy || 'sale01'}
+                          {quote.createdAt && ` — ${new Date(quote.createdAt).toLocaleString('vi-VN')}`}
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: 'var(--font-mono, monospace)',
+                          fontWeight: 700,
+                          fontSize: '15px',
+                          color: 'var(--ink-strong)',
+                        }}
+                      >
+                        {formatCurrency(quote.totalAmount)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              <button type="button" className="btn btn-secondary" onClick={() => setIsHistoryOpen(false)}>
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     </ModalPortal>
   );

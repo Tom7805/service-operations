@@ -5,11 +5,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
-/**
- * Doc pham vi du lieu (UserScope) cua tai khoan dang dang nhap tu SecurityContext hien tai.
- * UserScope duoc CustomUserDetailsService tinh lai tu DB o moi request (khong luu trong JWT),
- * nen day luon la pham vi moi nhat tai thoi diem goi (QTN-01-TC-03).
- */
 @Component
 public class CurrentUserScopeProvider {
 

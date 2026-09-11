@@ -1659,6 +1659,157 @@ Không có tham số. Báo cáo là ảnh chụp **hiện tại** của toàn b�
 
 ---
 
+## Epic `NCL-05` — Quản lý dự án
+
+### `NCL-05-CN-001` — Tạo dự án từ hợp đồng
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`). Hệ thống chỉ cho phép tạo dự án từ hợp đồng đang còn hiệu lực
+(`status = ACTIVE` và chưa quá `endDate`). Dự án mới luôn ở trạng thái `RUNNING`, tự kế thừa `customerId`,
+loại hợp đồng (`projectType`) và hạn mức (`limitValue`) tại thời điểm tạo. Thao tác thành công ghi một dòng
+`CREATE_FROM_CONTRACT` vào `project_audit_logs`; trường hợp bị từ chối quyền được ghi vào nhật ký hệ thống.
+
+#### `POST /contracts/{contractId}/projects`
+
+```json
+{
+  "name": "Trien khai ERP Cong ty TNHH ABC",
+  "startDate": "2027-01-01",
+  "expectedEndDate": "2027-12-31",
+  "projectManagerId": 7
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `name` | string | có | Tên dự án, không được rỗng |
+| `startDate` | string (`date`) | có | Ngày bắt đầu dự án |
+| `expectedEndDate` | string (`date`) | có | Không được sớm hơn `startDate` |
+| `projectManagerId` | number | có | Người dùng đang hoạt động được giao quản lý dự án |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Tao du an tu hop dong thanh cong",
+  "data": {
+    "id": 20,
+    "projectCode": "DA-4K7X2Q9",
+    "name": "Trien khai ERP Cong ty TNHH ABC",
+    "contractId": 5,
+    "customerId": 1,
+    "projectType": "FIXED_PRICE",
+    "limitValue": 600000000,
+    "startDate": "2027-01-01",
+    "expectedEndDate": "2027-12-31",
+    "projectManagerId": 7,
+    "status": "RUNNING",
+    "createdBy": "pm01",
+    "createdAt": "2026-09-09T10:00:00"
+  }
+}
+```
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải `VT-02`; hệ thống ghi nhật ký lần từ chối |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng hoặc người quản lý dự án |
+| 400 | `INVALID_STATE` | Hợp đồng không `ACTIVE`, đã quá hạn, hoặc ngày kết thúc dự kiến sớm hơn ngày bắt đầu |
+| 400 | `VALIDATION_ERROR` | Thiếu tên, ngày bắt đầu, ngày kết thúc dự kiến hoặc người quản lý dự án |
+
+#### Đọc dự án (bổ trợ cho Frontend)
+
+Các màn hình con của Epic `NCL-05` (cây công việc, mốc tiến độ, rủi ro, đóng dự án) đều nằm dưới
+`/projects/{projectId}` và cần tối thiểu `status` của dự án để khoá/mở nút chỉnh sửa. Hai endpoint đọc:
+
+##### `GET /projects/{projectId}`
+
+Cho phép **Ban giám đốc** (`VT-01`), **Quản lý dự án** (`VT-02`), **Nhân viên chuyên môn** (`VT-03`).
+Trả về một `ProjectRes` (cùng khuôn dạng `data` như response của `POST /contracts/{contractId}/projects`).
+
+##### `GET /contracts/{contractId}/projects`
+
+Cùng tập vai trò như trên. Trả về `List<ProjectRes>` các dự án của hợp đồng, **mới nhất trước**
+(mảng rỗng nếu hợp đồng chưa có dự án).
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Người gọi không thuộc `VT-01` / `VT-02` / `VT-03`. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại dự án với `{projectId}` (chỉ với `GET /projects/{projectId}`). |
+
+### `NCL-05-CN-007` — Tạo dự án từ mẫu công việc
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`) — vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối
+(TC-03). Người dùng chọn một **mẫu dự án** đang hoạt động (cây hạng mục + công việc có sẵn kèm ngân sách giờ
+gợi ý) để tạo dự án mới từ hợp đồng còn hiệu lực. Hệ thống **sao chép giá trị** (copy-value) từ mẫu sang cây
+công việc của dự án: sau khi tạo, sửa/xóa hạng mục trên dự án **không** ảnh hưởng đến mẫu gốc (TC-02). Dự án
+mới ở trạng thái `RUNNING`, kế thừa `customerId`, `projectType`, `limitValue` từ hợp đồng. Tạo thành công ghi
+một dòng `CREATE_FROM_TEMPLATE` vào `project_audit_logs` — người thực hiện, nội dung, thời điểm (TC-04);
+Frontend không cần gọi API nào thêm để ghi log này.
+
+#### `GET /contracts/{contractId}/projects/from-template`
+
+Trả về danh sách mẫu dự án đang hoạt động để người dùng chọn. Chỉ `VT-02`.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": 5,
+      "code": "MT-PHAN-MEM",
+      "name": "Mau trien khai phan mem",
+      "description": "Cay hang muc chuan cho du an trien khai phan mem",
+      "projectType": "FIXED_PRICE",
+      "active": true,
+      "createdBy": "admin",
+      "createdAt": "2026-09-01T08:00:00"
+    }
+  ]
+}
+```
+
+#### `POST /contracts/{contractId}/projects/from-template`
+
+```json
+{
+  "templateId": 5,
+  "name": "Du an ERP Cong ty TNHH ABC",
+  "startDate": "2027-01-01",
+  "expectedEndDate": "2027-12-31",
+  "projectManagerId": 7
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `templateId` | number | có | Id mẫu dự án đang hoạt động |
+| `name` | string | có | Tên dự án mới, không được rỗng |
+| `startDate` | string (`date`) | có | Ngày bắt đầu dự án; công việc trong cây nhận giá trị này làm ngày dự kiến |
+| `expectedEndDate` | string (`date`) | có | Không được sớm hơn `startDate` |
+| `projectManagerId` | number | có | Người dùng đang hoạt động được giao quản lý dự án |
+
+**Response thành công — `200 OK`:** giống `POST /contracts/{contractId}/projects` (`NCL-05-CN-001`) — object
+dự án vừa tạo trong `data`.
+
+**Xóa hạng mục của dự án (TC-02):** `DELETE /projects/{projectId}/work-packages/{workPackageId}` — chỉ
+`VT-02`. Chỉ xóa được hạng mục **không còn hạng mục con và không còn công việc**, khi dự án chưa đóng.
+Thành công trả `200 OK` với `message = "Xoa hang muc thanh cong"`; vi phạm trả `400 INVALID_STATE`.
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải `VT-02`; hệ thống ghi nhật ký lần từ chối |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng, mẫu dự án hoặc người quản lý |
+| 400 | `INVALID_STATE` | Hợp đồng không `ACTIVE`/đã quá hạn, mẫu không hoạt động, ngày kết thúc sớm hơn ngày bắt đầu, hoặc hạng mục không xóa được |
+| 400 | `VALIDATION_ERROR` | Thiếu trường bắt buộc |
+
+## Epic `NCL-04` — Quản lý hợp đồng
 ## Epic `NCL-04` — Quản lý hợp đồng
 
 ### `NCL-04-CN-001` — Tạo hợp đồng từ cơ hội đã thắng
@@ -2127,3 +2278,540 @@ cùng cấu trúc với `data` của API gia hạn.
 | 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng với `{contractId}`. |
 | 400 | `INVALID_STATE` | Hợp đồng không ở trạng thái `ACTIVE`. |
 | 400 | `VALIDATION_ERROR` | Thiếu `newEndDate`, `newEndDate` không sau ngày kết thúc hiện tại, hoặc giá trị sau gia hạn vượt hạn mức. |
+
+## Epic `NCL-05` — Dự án và công việc
+
+### `NCL-05-CN-002` — Chia hạng mục và công việc của dự án
+
+Các endpoint yêu cầu token của Quản lý dự án (`VT-02`) khi tạo dữ liệu. Endpoint đọc cây cho phép
+Quản lý dự án, nhân viên chuyên môn (`VT-03`) và Ban giám đốc (`VT-01`). Mỗi hạng mục và công việc đều
+thuộc đúng một dự án; `parentId`/`parentTaskId` chỉ được trỏ tới phần tử cùng dự án (và cùng hạng mục với task).
+
+#### `POST /projects/{projectId}/work-packages`
+
+```json
+{
+  "parentId": null,
+  "name": "Phân tích nghiệp vụ",
+  "description": "Làm rõ yêu cầu",
+  "sortOrder": 1
+}
+```
+
+`parentId` bỏ trống để tạo hạng mục gốc. Response `200 OK` trả về một node `WorkBreakdownRes` với `tasks`
+và `children` rỗng.
+
+#### `POST /projects/{projectId}/work-packages/{workPackageId}/tasks`
+
+```json
+{
+  "parentTaskId": null,
+  "name": "Phỏng vấn người dùng",
+  "description": "Ghi nhận quy trình hiện tại",
+  "expectedStartDate": "2026-09-10",
+  "expectedEndDate": "2026-09-12"
+}
+```
+
+`parentTaskId` bỏ trống để tạo task cấp đầu tiên trong hạng mục; task con phải thuộc cùng hạng mục.
+Task mới có trạng thái `TODO`.
+
+#### `GET /projects/{projectId}/work-breakdown`
+
+Response `200 OK`:
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": 10,
+      "parentId": null,
+      "name": "Phân tích nghiệp vụ",
+      "description": "Làm rõ yêu cầu",
+      "tasks": [
+        {
+          "id": 20,
+          "projectId": 1,
+          "workPackageId": 10,
+          "parentTaskId": null,
+          "name": "Phỏng vấn người dùng",
+          "description": "Ghi nhận quy trình hiện tại",
+          "expectedStartDate": "2026-09-10",
+          "expectedEndDate": "2026-09-12",
+          "status": "TODO"
+        }
+      ],
+      "children": []
+    }
+  ]
+}
+```
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Tên hạng mục/công việc để trống. |
+| 400 | `INVALID_STATE` | Ngày kết thúc dự kiến sớm hơn ngày bắt đầu hoặc dự án đã đóng. |
+| 403 | `FORBIDDEN` | Người gọi không có vai trò được phép. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại dự án, hạng mục cha hoặc công việc cha trong cùng dự án. |
+
+### `NCL-05-CN-003` — Giao việc cho nhân sự
+
+Các endpoint thay đổi assignment yêu cầu token của Quản lý dự án (`VT-02`). Nhân sự được giao phải có hồ sơ
+nhân sự, tài khoản đang hoạt động và chưa có ngày kết thúc hợp đồng lao động. Một request có thể giao cùng một
+công việc cho nhiều người; gọi lại endpoint sẽ thay thế toàn bộ danh sách người được giao hiện tại.
+
+#### `PUT /projects/{projectId}/tasks/{taskId}/assignments`
+
+```json
+{
+  "userIds": [101, 102],
+  "expectedStartDate": "2026-09-10",
+  "expectedEndDate": "2026-09-12"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `userIds` | number[] | có | Ít nhất một user ID, không được trùng. |
+| `expectedStartDate` | date | không | Ngày bắt đầu mong muốn. |
+| `expectedEndDate` | date | không | Không được sớm hơn `expectedStartDate`. |
+
+Response `200 OK` trả về danh sách assignment:
+
+```json
+{
+  "success": true,
+  "message": "Giao viec cho nhan su thanh cong",
+  "data": [
+    {
+      "id": 201,
+      "taskId": 20,
+      "userId": 101,
+      "username": "dev01",
+      "fullName": "Dev One",
+      "expectedStartDate": "2026-09-10",
+      "expectedEndDate": "2026-09-12"
+    }
+  ]
+}
+```
+
+#### `GET /projects/{projectId}/tasks/{taskId}/assignments`
+
+Cho phép Quản lý dự án (`VT-02`), Nhân viên chuyên môn (`VT-03`) và Ban giám đốc (`VT-01`) xem danh sách người
+được giao của công việc.
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | `userIds` rỗng. |
+| 400 | `DUPLICATE_DATA` | `userIds` chứa ID trùng nhau. |
+| 400 | `INVALID_STATE` | Dự án đã đóng, nhân sự đã kết thúc hợp đồng, tài khoản không hoạt động hoặc ngày không hợp lệ. |
+| 403 | `FORBIDDEN` | Người gọi không có vai trò được phép. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại dự án, công việc hoặc hồ sơ nhân sự tương ứng. |
+
+### `NCL-05-CN-004` — Cập nhật tiến độ công việc
+
+Yêu cầu token của **Nhân viên chuyên môn** (`VT-03`). Chỉ người **đang được giao** công việc đó (có bản ghi
+trong `project_task_assignments`) mới đổi được trạng thái — không phụ thuộc vào việc ai là người giao việc.
+Chấp nhận đổi tự do giữa bốn trạng thái `TODO` · `IN_PROGRESS` · `WAITING_APPROVAL` · `DONE` (câu chuyện này
+không áp thứ tự bắt buộc như luồng giai đoạn cơ hội). Đổi trạng thái thành công phản ánh ngay trên
+`GET /projects/{projectId}/work-breakdown` (`NCL-05-CN-002`, TC-01) và ghi một dòng `TASK_PROGRESS_UPDATED`
+vào `project_audit_logs` — người thực hiện, nội dung (trạng thái cũ → mới), thời điểm (TC-03).
+
+#### `PATCH /projects/{projectId}/tasks/{taskId}/progress`
+
+```json
+{ "status": "DONE" }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `status` | string | có | Một trong `TODO` · `IN_PROGRESS` · `WAITING_APPROVAL` · `DONE`. |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Cap nhat tien do cong viec thanh cong",
+  "data": {
+    "id": 20,
+    "projectId": 1,
+    "workPackageId": 10,
+    "parentTaskId": null,
+    "name": "Phỏng vấn người dùng",
+    "description": "Ghi nhận quy trình hiện tại",
+    "expectedStartDate": "2026-09-10",
+    "expectedEndDate": "2026-09-12",
+    "status": "DONE"
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Thiếu hoặc sai giá trị `status`. |
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-03`, **hoặc** là `VT-03` nhưng không nằm trong danh sách người được giao công việc này (TC-02) — cả hai trường hợp hệ thống đều ghi nhật ký lần từ chối. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại dự án hoặc công việc thuộc dự án đó. |
+| 400 | `INVALID_STATE` | Dự án đã đóng (`CLOSED` — xem `NCL-05-CN-006`). |
+
+**Lưu ý cho Frontend:**
+- Đây **không phải** lỗi phân quyền theo vai trò thông thường: một nhân viên chuyên môn hợp lệ vẫn nhận
+  `403 FORBIDDEN` nếu mở nhầm công việc của người khác — hiển thị thông báo "Bạn không phải người phụ trách
+  công việc này" thay vì thông báo "không đủ quyền" chung chung.
+- Sau khi đổi trạng thái thành công, làm mới lại cây `GET /projects/{projectId}/work-breakdown` (hoặc cập nhật
+  optimistic ngay trên bảng đang hiển thị) để phản ánh đúng bảng theo dõi dự án.
+- Không cần gọi thêm API nào để ghi lịch sử — mỗi lần đổi trạng thái backend tự ghi vào nhật ký dự án.
+
+---
+
+### `NCL-05-CN-005` — Đặt ngân sách giờ công cho công việc
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`). Gọi lại nhiều lần sẽ **ghi đè** ngân sách hiện tại (không cộng dồn).
+Ngoài `budgetHours` do người dùng nhập, mỗi công việc có `approvedHours` (giờ công đã duyệt, chưa có nguồn dữ liệu
+thật vì Epic `NCL-06` — Bảng chấm công — chưa triển khai; hiện luôn là `0` cho tới khi giờ công được duyệt).
+`usageRatio = approvedHours / budgetHours`; **`overBudgetWarning = true` khi `usageRatio >= 0.80`** (QTN-20).
+Mỗi lần đặt/đổi ngân sách ghi một dòng `TASK_BUDGET_UPDATED` vào `project_audit_logs` — người thực hiện, nội dung
+(ngân sách cũ → mới), thời điểm (TC-04).
+
+#### `PUT /projects/{projectId}/tasks/{taskId}/budget`
+
+```json
+{ "budgetHours": 40 }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `budgetHours` | number | có | Số giờ ngân sách, phải lớn hơn `0`. |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Dat ngan sach gio cong thanh cong",
+  "data": {
+    "taskId": 20,
+    "projectId": 1,
+    "budgetHours": 40,
+    "approvedHours": 0,
+    "usageRatio": 0,
+    "overBudgetWarning": false
+  }
+}
+```
+
+Ví dụ khi công việc đã có `34` giờ được duyệt trên ngân sách `40` giờ (TC-02):
+
+```json
+{
+  "success": true,
+  "message": "Dat ngan sach gio cong thanh cong",
+  "data": {
+    "taskId": 20,
+    "projectId": 1,
+    "budgetHours": 40,
+    "approvedHours": 34,
+    "usageRatio": 0.85,
+    "overBudgetWarning": true
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Thiếu `budgetHours` hoặc `budgetHours <= 0`. |
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-02` — hệ thống ghi nhật ký lần từ chối (TC-03). |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại dự án hoặc công việc thuộc dự án đó. |
+| 400 | `INVALID_STATE` | Dự án đã đóng (`CLOSED` — xem `NCL-05-CN-006`). |
+
+**Lưu ý cho Frontend:**
+- `usageRatio` là phân số `0.0`–`1.0+` (không phải phần trăm) — nhân `100` khi hiển thị (`85%`).
+- Khi `overBudgetWarning = true`, hiển thị cảnh báo nổi bật (ví dụ tô đỏ thanh tiến độ giờ công) ngay trên màn
+  hình chi tiết công việc — không cần đợi người dùng tải lại trang, vì cờ này luôn được trả trong response.
+- `approvedHours` hiện luôn `0` cho tới khi tính năng chấm công (`NCL-06`) đi vào hoạt động; Frontend vẫn nên
+  dựng sẵn UI hiển thị tỷ lệ ngay từ bây giờ vì hợp đồng response không đổi khi `approvedHours` bắt đầu có dữ liệu.
+
+---
+
+### `NCL-05-CN-006` — Đóng dự án
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`). Chỉ đóng được dự án đang `RUNNING` (gọi lại trên dự án đã
+`CLOSED` nhận `400 INVALID_STATE`, tránh đóng hai lần). Hệ thống chặn đóng nếu dự án còn công việc ở trạng thái
+`WAITING_APPROVAL` (`NCL-05-CN-004`) — đại diện cho phần việc/bảng chấm công còn treo chưa được duyệt (QTN-13);
+Epic `NCL-06` (Bảng chấm công) chưa triển khai nên hiện tại đây là nguồn dữ liệu "còn treo" duy nhất đã có.
+Đóng thành công ghi một dòng `PROJECT_CLOSED` vào `project_audit_logs` — người thực hiện, nội dung, thời điểm (TC-04).
+
+#### `POST /projects/{projectId}/close`
+
+Không cần body.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Dong du an thanh cong",
+  "data": {
+    "id": 20,
+    "projectCode": "DA-4K7X2Q9",
+    "name": "Trien khai ERP Cong ty TNHH ABC",
+    "contractId": 5,
+    "customerId": 1,
+    "projectType": "FIXED_PRICE",
+    "limitValue": 600000000,
+    "startDate": "2027-01-01",
+    "expectedEndDate": "2027-12-31",
+    "projectManagerId": 7,
+    "status": "CLOSED",
+    "createdBy": "pm01",
+    "createdAt": "2026-09-09T10:00:00"
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-02` — hệ thống ghi nhật ký lần từ chối (TC-03). |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại dự án với `{projectId}`. |
+| 400 | `INVALID_STATE` | Dự án không ở trạng thái `RUNNING` (đã đóng); **hoặc** còn công việc `WAITING_APPROVAL` — `message` liệt kê đầy đủ các công việc còn treo dạng `#20 Ten cong viec, #21 Ten cong viec khac` (TC-02). |
+
+**Lưu ý cho Frontend:**
+- Khi nhận `400 INVALID_STATE` kèm danh sách công việc còn treo, hiển thị nguyên `message` cho người dùng (hoặc
+  parse theo dấu phẩy nếu muốn liệt kê từng dòng) và đề nghị duyệt/hoàn tất các công việc đó trước khi đóng lại.
+- Sau khi đóng thành công, khoá toàn bộ nút chỉnh sửa cây công việc, giao việc, cập nhật tiến độ và ngân sách
+  giờ trên giao diện dự án đó — các API tương ứng (`NCL-05-CN-002`/`003`/`004`/`005`) đã tự chặn ghi
+  (`400 INVALID_STATE`) ở tầng backend khi dự án `CLOSED`, Frontend chỉ cần ẩn/vô hiệu hoá nút bấm để tránh gọi
+  API rồi mới nhận lỗi.
+
+### `NCL-05-CN-008` — Quản lý mốc tiến độ của dự án
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`) trên toàn bộ endpoint. Vai trò khác nhận
+`403 FORBIDDEN` và bị ghi nhật ký lần từ chối (TC-03). Điều kiện bắt đầu: dự án phải đang
+chạy (`RUNNING`) và **đã có cây công việc** — nếu chưa có hạng mục nào, tạo mốc bị từ chối
+`400 INVALID_STATE`.
+
+Mỗi mốc gồm tên, ngày kế hoạch (`plannedDate`) và các **hạng mục phải hoàn thành** (danh sách
+id công việc trong cây công việc của dự án). Hệ thống **tự rà soát** khi trả danh sách mốc:
+so ngày hiện tại với ngày kế hoạch, không cần job nền.
+
+Trạng thái mốc (`status`) tính động:
+- `DONE` — đã ghi nhận ngày thực tế (`actualDate`).
+- `LATE` — đã qua ngày kế hoạch mà chưa hoàn thành; kèm `daysLate` = số ngày trễ (TC-02).
+- `ON_TRACK` — còn lại.
+
+#### `POST /projects/{projectId}/milestones` (TC-01)
+
+```json
+{
+  "name": "Bàn giao giai đoạn một",
+  "description": "Chữ ký nghiệm thu giai đoạn 1",
+  "plannedDate": "2026-10-01",
+  "taskIds": [11, 12]
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `name` | string | có | Tên mốc. |
+| `description` | string | không | Mô tả thêm. |
+| `plannedDate` | date | có | Ngày kế hoạch hoàn thành. |
+| `taskIds` | number[] | có | Ít nhất 1 id công việc thuộc cây công việc của dự án. |
+
+Response `200 OK` trả về `ProjectMilestoneRes`:
+
+```json
+{
+  "success": true,
+  "message": "Tao moc tien do thanh cong",
+  "data": {
+    "id": 21,
+    "projectId": 1,
+    "name": "Bàn giao giai đoạn một",
+    "description": null,
+    "plannedDate": "2026-10-01",
+    "actualDate": null,
+    "status": "ON_TRACK",
+    "daysLate": null,
+    "items": [{ "taskId": 11, "taskName": "Thiết lập môi trường", "taskStatus": "TODO" }]
+  }
+}
+```
+
+#### `GET /projects/{projectId}/milestones` (TC-02)
+
+Bảng theo dõi tiến độ: trả danh sách mốc sắp theo `plannedDate`, trạng thái và `daysLate`
+do hệ thống tính tại thời điểm gọi.
+
+#### `PUT /projects/{projectId}/milestones/{milestoneId}`
+
+Cập nhật tên, mô tả, ngày kế hoạch và thay toàn bộ danh sách `taskIds` — body giống `POST`.
+
+#### `POST /projects/{projectId}/milestones/{milestoneId}/complete`
+
+Ghi nhận ngày thực tế hoàn thành mốc: `{"actualDate": "2026-09-28"}`. Sau đó mốc có
+`status = DONE`. Ngày thực tế không được ở tương lai.
+
+#### `DELETE /projects/{projectId}/milestones/{milestoneId}`
+
+Xoá mốc và các hạng mục liên quan (không xoá công việc trong cây công việc).
+
+Mọi thao tác tạo/cập nhật/hoàn thành/xoá đều được ghi vào nhật ký dự án (TC-04) với
+action `MILESTONE_CREATED` / `MILESTONE_UPDATED` / `MILESTONE_DELETED`.
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Thiếu tên mốc, ngày kế hoạch hoặc `taskIds` rỗng. |
+| 400 | `INVALID_STATE` | Dự án chưa có cây công việc, dự án đã đóng, hoặc ngày thực tế ở tương lai. |
+| 403 | `FORBIDDEN` | Người dùng không phải Quản lý dự án (`VT-02`). |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy dự án/mốc, hoặc công việc không thuộc dự án. |
+
+### `NCL-05-CN-009` — Quản lý rủi ro của dự án
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`) trên toàn bộ endpoint. Vai trò khác nhận
+`403 FORBIDDEN` và bị ghi nhật ký lần từ chối (TC-03). Mọi thao tác ghi chỉ thực hiện được
+khi dự án đang chạy (`RUNNING`) — dự án đã đóng nhận `400 INVALID_STATE`.
+
+Mỗi rủi ro gồm: mô tả (`description`), **mức tác động** (`impact`) và **khả năng xảy ra**
+(`likelihood`) — cùng thang `LOW` / `MEDIUM` / `HIGH`; biện pháp giảm thiểu (`mitigation`,
+tuỳ chọn) và **người theo dõi** (`watcherId` — tài khoản đang hoạt động).
+
+Hệ thống **tự tính** khi trả dữ liệu (không lưu DB, không job nền):
+- `score` = trọng số `impact` × trọng số `likelihood` (mỗi mức 1/2/3 → điểm `1..9`).
+- `severity`: `score ≥ 6` → `HIGH`; `score ≥ 3` → `MEDIUM`; còn lại → `LOW`.
+
+`status` (lưu DB, mặc định `OPEN` khi tạo): `OPEN` → `MITIGATING` → `CLOSED`.
+
+#### `POST /projects/{projectId}/risks` (TC-01)
+
+```json
+{
+  "description": "Nhà thầu phụ có nguy cơ chậm tiến độ tích hợp",
+  "impact": "HIGH",
+  "likelihood": "MEDIUM",
+  "mitigation": "Chuẩn bị nhà thầu dự phòng, chốt mốc kiểm tra hằng tuần",
+  "watcherId": 7
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `description` | string | có | Mô tả rủi ro. |
+| `impact` | enum | có | `LOW` / `MEDIUM` / `HIGH`. |
+| `likelihood` | enum | có | `LOW` / `MEDIUM` / `HIGH`. |
+| `mitigation` | string | không | Biện pháp giảm thiểu. |
+| `watcherId` | number | có | `id` tài khoản người theo dõi (đang hoạt động). |
+
+Response `200 OK` trả về `ProjectRiskRes`:
+
+```json
+{
+  "success": true,
+  "message": "Ghi nhan rui ro thanh cong",
+  "data": {
+    "id": 31,
+    "projectId": 1,
+    "description": "Nhà thầu phụ có nguy cơ chậm tiến độ tích hợp",
+    "impact": "HIGH",
+    "likelihood": "MEDIUM",
+    "score": 6,
+    "severity": "HIGH",
+    "status": "OPEN",
+    "mitigation": "Chuẩn bị nhà thầu dự phòng, chốt mốc kiểm tra hằng tuần",
+    "watcherId": 7,
+    "watcherName": "Nguyễn Văn A",
+    "createdBy": "pm01",
+    "createdAt": "2026-09-10T10:00:00",
+    "updatedAt": "2026-09-10T10:00:00"
+  }
+}
+```
+
+#### `GET /projects/{projectId}/risks` (TC-02)
+
+Bảng theo dõi rủi ro: trả danh sách **sắp theo `score` giảm dần** (cùng điểm thì theo `id`),
+kèm `score` và `severity` do hệ thống tính tại thời điểm gọi.
+
+#### `PUT /projects/{projectId}/risks/{riskId}`
+
+Cập nhật `description`, `impact`, `likelihood`, `mitigation`, `watcherId` — body giống `POST`.
+
+#### `PUT /projects/{projectId}/risks/{riskId}/status`
+
+Cập nhật trạng thái xử lý: `{"status": "MITIGATING"}` (hoặc `OPEN` / `CLOSED`).
+
+#### `DELETE /projects/{projectId}/risks/{riskId}`
+
+Xoá rủi ro khỏi dự án.
+
+Mọi thao tác tạo/cập nhật/đổi trạng thái/xoá đều được ghi vào nhật ký dự án (TC-04) với
+action `RISK_CREATED` / `RISK_UPDATED` / `RISK_DELETED`.
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Thiếu `description`, `impact`, `likelihood` hoặc `watcherId`; enum sai giá trị. |
+| 400 | `INVALID_STATE` | Dự án đã đóng, hoặc người theo dõi không còn hoạt động. |
+| 403 | `FORBIDDEN` | Người dùng không phải Quản lý dự án (`VT-02`). |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy dự án/rủi ro, hoặc người theo dõi không tồn tại. |
+
+
+---
+
+## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)
+
+Tổng hợp cho đội Frontend khi dựng các màn hình Epic `NCL-05`. Không thay đổi hợp đồng API — chỉ gom
+những điểm hay gây lỗi tích hợp.
+
+### Bản đồ endpoint theo Story
+
+| Story | Method & path | Vai trò |
+|---|---|---|
+| CN-001 tạo dự án | `POST /contracts/{contractId}/projects` | `VT-02` |
+| CN-001 đọc dự án | `GET /projects/{projectId}` · `GET /contracts/{contractId}/projects` | `VT-01/02/03` |
+| CN-002 cây công việc | `POST /projects/{id}/work-packages` · `POST …/work-packages/{wpId}/tasks` · `GET /projects/{id}/work-breakdown` · `DELETE …/work-packages/{wpId}` | ghi: `VT-02`; đọc cây: `VT-01/02/03` |
+| CN-003 giao việc | `PUT /projects/{id}/tasks/{taskId}/assignments` · `GET …/assignments` | ghi: `VT-02`; đọc: `VT-01/02/03` |
+| CN-004 tiến độ | `PATCH /projects/{id}/tasks/{taskId}/progress` | `VT-03` **và** là người được giao |
+| CN-005 ngân sách giờ | `PUT /projects/{id}/tasks/{taskId}/budget` | `VT-02` |
+| CN-006 đóng dự án | `POST /projects/{id}/close` | `VT-02` |
+| CN-007 tạo từ mẫu | `GET /contracts/{contractId}/projects/from-template` · `POST …/from-template` | `VT-02` |
+| CN-008 mốc tiến độ | `GET/POST /projects/{id}/milestones` · `PUT …/{mId}` · `POST …/{mId}/complete` · `DELETE …/{mId}` | `VT-02` |
+| CN-009 rủi ro | `GET/POST /projects/{id}/risks` · `PUT …/{rId}` · `PUT …/{rId}/status` · `DELETE …/{rId}` | `VT-02` |
+
+### Tập giá trị enum (khớp backend)
+
+| Enum | Giá trị | Dùng ở |
+|---|---|---|
+| `ProjectStatus` | `RUNNING` · `CLOSED` | `ProjectRes.status` |
+| `TaskStatus` | `TODO` · `IN_PROGRESS` · `WAITING_APPROVAL` · `DONE` | công việc, mốc |
+| `MilestoneProgressStatus` (chỉ đọc, backend tự tính) | `ON_TRACK` · `LATE` · `DONE` | `ProjectMilestoneRes.status` |
+| `RiskLevel` | `LOW` · `MEDIUM` · `HIGH` | rủi ro: `impact`, `likelihood`, `severity` |
+| `RiskStatus` | `OPEN` · `MITIGATING` · `CLOSED` | `ProjectRiskRes.status` |
+| `projectType` (kế thừa từ loại hợp đồng `ContractType`, kiểu chuỗi) | `TIME_AND_MATERIAL` · `FIXED_PRICE` · `MAINTENANCE` · `MILESTONE` | `ProjectRes.projectType` |
+
+### Khoá thao tác khi dự án đã đóng
+
+Khi `ProjectStatus = CLOSED`, backend **tự chặn** mọi endpoint ghi của CN-002…CN-005, CN-008, CN-009
+bằng `400 INVALID_STATE`. Frontend nên gọi `GET /projects/{projectId}` một lần khi vào màn hình dự án và
+ẩn/vô hiệu hoá toàn bộ nút tạo/sửa/xoá nếu `status === "CLOSED"` để người dùng không bấm rồi mới nhận lỗi.
+
+### Các điểm hay gây lỗi
+
+- **`daysLate` / `score` / `severity` là read-only** — backend tính động mỗi lần đọc, đừng gửi lên khi tạo/sửa.
+- **CN-004 `403` không phải lỗi vai trò**: một `VT-03` hợp lệ vẫn bị từ chối nếu không nằm trong danh sách
+  người được giao — hiển thị thông báo riêng "Bạn không phải người phụ trách công việc này".
+- **CN-003 / CN-008 `PUT` là thay thế toàn bộ**: danh sách `userIds` (giao việc) và `taskIds` (hạng mục của
+  mốc) ghi đè hoàn toàn danh sách cũ, không phải thêm dồn.
+- **`usageRatio` (CN-005) là phân số** `0.0`–`1.0+`, nhân `100` khi hiển thị; `overBudgetWarning` bật khi `≥ 0.80`.
+- **Watcher của rủi ro** phải là `userId` của tài khoản đang `ACTIVE`; backend trả kèm `watcherName` để hiển thị.
+- Mọi thao tác ghi của Epic đều đã tự ghi `project_audit_logs` — Frontend không cần gọi thêm API lịch sử.

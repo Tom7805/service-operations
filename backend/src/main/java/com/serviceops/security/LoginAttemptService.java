@@ -1,5 +1,4 @@
 package com.serviceops.security;
-
 import com.serviceops.modules.identity.auth.entity.LoginAttempt;
 import com.serviceops.modules.identity.auth.repository.LoginAttemptRepository;
 import com.serviceops.modules.identity.user.entity.User;
@@ -8,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
@@ -34,10 +32,6 @@ public class LoginAttemptService {
         return Math.max(1, seconds);
     }
 
-    /**
-     * REQUIRES_NEW: nhat ky dang nhap va bo dem khoa tam phai duoc luu lai
-     * ke ca khi luong goi (AuthServiceImpl.login) sau do nem loi va rollback.
-     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordSuccess(User user, String ipAddress) {
         user.setFailedLoginAttempts(0);
@@ -46,7 +40,6 @@ public class LoginAttemptService {
         saveAttempt(user, user.getUsername(), true, ipAddress);
     }
 
-    /** Ghi nhat ky khi mot lan thu dang nhap bi tu choi vi tai khoan dang tam khoa (AC-04), khong tang them bo dem. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordRejectedWhileLocked(User user, String ipAddress) {
         saveAttempt(user, user.getUsername(), false, ipAddress);
