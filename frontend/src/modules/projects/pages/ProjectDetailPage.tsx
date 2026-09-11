@@ -18,6 +18,8 @@ export interface ProjectDetailPageProps {
   currentUserRoles?: string[];
   currentUserName?: string;
   onBack?: () => void;
+  /** NCL-05-CN-009: điều hướng sang trang rủi ro dự án (ProjectRiskPage) — do màn cha quyết định. */
+  onOpenRisks?: (projectId: number) => void;
   initialProject?: ProjectRes;
   initialWbs?: WorkBreakdownRes[];
 }
@@ -44,6 +46,7 @@ export default function ProjectDetailPage({
   projectId,
   currentUserRoles = ['VT-02'],
   onBack,
+  onOpenRisks,
   initialProject,
   initialWbs,
 }: ProjectDetailPageProps) {
@@ -255,6 +258,16 @@ export default function ProjectDetailPage({
               data-testid="btn-add-root-package"
             >
               + Thêm hạng mục gốc
+            </button>
+          )}
+          {onOpenRisks && currentUserRoles.includes('VT-02') && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => onOpenRisks(projectId)}
+              data-testid="btn-open-risks"
+            >
+              {ICONS.alertTriangle} Rủi ro dự án
             </button>
           )}
           {canClose && (
