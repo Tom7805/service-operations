@@ -95,6 +95,8 @@ docs/03-database/*.sql.bak
 
 ### === Claude Code (công cụ/skill cá nhân, không dùng chung cả team) === ###
 .claude/
+.agents/
+skills-lock.json
 # Ket qua chup man hinh / comp cua impeccable la san pham trung gian, khong commit.
 # Rieng .impeccable/config.json la cau hinh CHUNG cua nhom (ignoreValues detector) nen van commit.
 .impeccable/review/
