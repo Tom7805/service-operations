@@ -2067,6 +2067,13 @@ body { background: var(--canvas); }
 .row-menu__item:hover { background: #F1F0EE; }
 .row-menu__item--danger { color: #9F2F2D; }
 .row-menu__item--danger:hover { background: #FDEBEC; }
+/* Mục bị vô hiệu hoá (VD hồ sơ đã gộp) vẫn hiện trong menu kèm lý do ở `title`,
+   nhưng trước đây không có kiểu riêng nên trông giống hệt mục bấm được — người
+   dùng bấm không thấy phản hồi gì và tưởng nút bị hỏng. Làm mờ + đổi con trỏ để
+   rõ ràng ngay từ cái nhìn đầu, không cần rê chuột chờ tooltip mới biết. */
+.row-menu__item:disabled { color: var(--ink-faint); cursor: not-allowed; }
+.row-menu__item:disabled:hover { background: transparent; }
+.row-menu__item:disabled .row-menu__icon { opacity: 0.45; }
 .row-menu__icon { display: flex; flex: none; width: 18px; height: 18px; color: inherit; opacity: 0.85; }
 .row-menu__icon svg { width: 100%; height: 100%; }
 
