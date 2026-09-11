@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
-import type { ProjectRes, TaskRes, WorkBreakdownRes } from '../types/projectTypes';
+import type { ProjectRes, TaskBudgetStatusRes, TaskRes, WorkBreakdownRes } from '../types/projectTypes';
 import {
   closeProject,
   deleteWorkPackage,
@@ -11,6 +11,7 @@ import {
 import WorkBreakdownTree from './WorkBreakdownTree';
 import WorkPackageModal from './WorkPackageModal';
 import TaskFormModal from './TaskFormModal';
+import TaskBudgetModal from './TaskBudgetModal';
 
 export interface ProjectWbsModalProps {
   isOpen: boolean;
@@ -57,6 +58,14 @@ export default function ProjectWbsModal({
   const [taskParent, setTaskParent] = useState<{ id: number | null; name: string | null }>({
     id: null,
     name: null,
+  });
+
+  // Modal đặt ngân sách giờ công (NCL-05-CN-005)
+  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
+  const [budgetTarget, setBudgetTarget] = useState<{ id: number; name: string; budgetHours: number | null }>({
+    id: 0,
+    name: '',
+    budgetHours: null,
   });
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -123,6 +132,22 @@ export default function ProjectWbsModal({
       name: parentTask ? parentTask.name : null,
     });
     setIsTaskModalOpen(true);
+  };
+
+  const handleOpenSetBudget = (task: TaskRes) => {
+    setBudgetTarget({ id: task.id, name: task.name, budgetHours: task.budgetHours ?? null });
+    setIsBudgetModalOpen(true);
+  };
+
+  const handleBudgetSaved = (status: TaskBudgetStatusRes) => {
+    showToast(
+      status.overBudgetWarning
+        ? `Đã đặt ngân sách ${status.budgetHours} giờ — đã dùng ${(status.usageRatio * 100).toFixed(0)}%, gần/đã vượt ngân sách!`
+        : `Đã đặt ngân sách ${status.budgetHours} giờ công thành công`,
+      status.overBudgetWarning ? 'error' : 'success'
+    );
+    onUpdated?.();
+    void loadData();
   };
 
   const handleDeletePackage = async (wp: WorkBreakdownRes) => {
@@ -266,6 +291,7 @@ export default function ProjectWbsModal({
                   onAddSubPackage={handleOpenAddSubPackage}
                   onAddTask={handleOpenAddTask}
                   onDeletePackage={handleDeletePackage}
+                  onSetBudget={handleOpenSetBudget}
                 />
               )}
             </>
@@ -306,6 +332,16 @@ export default function ProjectWbsModal({
           onUpdated?.();
           void loadData();
         }}
+      />
+
+      <TaskBudgetModal
+        isOpen={isBudgetModalOpen}
+        onClose={() => setIsBudgetModalOpen(false)}
+        projectId={projectId}
+        taskId={budgetTarget.id}
+        taskName={budgetTarget.name}
+        currentBudgetHours={budgetTarget.budgetHours}
+        onSaved={handleBudgetSaved}
       />
     </div>
   );

@@ -19,6 +19,28 @@ export interface TaskRes {
 }
 
 /**
+ * Payload đặt ngân sách giờ công cho công việc (NCL-05-CN-005).
+ * PUT /projects/{projectId}/tasks/{taskId}/budget
+ */
+export interface TaskBudgetReq {
+  budgetHours: number;
+}
+
+/**
+ * Kết quả sau khi đặt ngân sách giờ công (NCL-05-CN-005).
+ * approvedHours luôn là 0 cho tới khi Epic NCL-06 (Bảng chấm công) triển khai xong.
+ * overBudgetWarning = true khi usageRatio >= 0.80 (QTN-20).
+ */
+export interface TaskBudgetStatusRes {
+  taskId: number;
+  projectId: number;
+  budgetHours: number;
+  approvedHours: number;
+  usageRatio: number;
+  overBudgetWarning: boolean;
+}
+
+/**
  * Payload tạo công việc mới (NCL-05-CN-002).
  * POST /projects/{projectId}/work-packages/{workPackageId}/tasks
  */

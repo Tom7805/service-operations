@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
-import type { ProjectRes, TaskRes, WorkBreakdownRes } from '../types/projectTypes';
+import type { ProjectRes, TaskBudgetStatusRes, TaskRes, WorkBreakdownRes } from '../types/projectTypes';
 import {
   closeProject,
   deleteWorkPackage,
@@ -11,6 +11,7 @@ import {
 import WorkBreakdownTree from '../components/WorkBreakdownTree';
 import WorkPackageModal from '../components/WorkPackageModal';
 import TaskFormModal from '../components/TaskFormModal';
+import TaskBudgetModal from '../components/TaskBudgetModal';
 import ProjectMilestoneTimeline from '../components/ProjectMilestoneTimeline';
 
 export interface ProjectDetailPageProps {
@@ -77,6 +78,14 @@ export default function ProjectDetailPage({
   const [taskParent, setTaskParent] = useState<{ id: number | null; name: string | null }>({
     id: null,
     name: null,
+  });
+
+  // Trạng thái modal đặt ngân sách giờ công (NCL-05-CN-005)
+  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
+  const [budgetTarget, setBudgetTarget] = useState<{ id: number; name: string; budgetHours: number | null }>({
+    id: 0,
+    name: '',
+    budgetHours: null,
   });
 
   // Thông báo toast
@@ -146,6 +155,22 @@ export default function ProjectDetailPage({
       name: parentTask ? parentTask.name : null,
     });
     setIsTaskModalOpen(true);
+  };
+
+  // Mở modal đặt/đổi ngân sách giờ công
+  const handleOpenSetBudget = (task: TaskRes) => {
+    setBudgetTarget({ id: task.id, name: task.name, budgetHours: task.budgetHours ?? null });
+    setIsBudgetModalOpen(true);
+  };
+
+  const handleBudgetSaved = (status: TaskBudgetStatusRes) => {
+    showToast(
+      status.overBudgetWarning
+        ? `Đã đặt ngân sách ${status.budgetHours} giờ — đã dùng ${(status.usageRatio * 100).toFixed(0)}%, gần/đã vượt ngân sách!`
+        : `Đã đặt ngân sách ${status.budgetHours} giờ công thành công`,
+      status.overBudgetWarning ? 'error' : 'success'
+    );
+    void loadData();
   };
 
   // Xóa hạng mục
@@ -357,6 +382,7 @@ export default function ProjectDetailPage({
             onAddSubPackage={handleOpenAddSubPackage}
             onAddTask={handleOpenAddTask}
             onDeletePackage={handleDeletePackage}
+            onSetBudget={handleOpenSetBudget}
           />
         )}
       </div>
@@ -398,6 +424,17 @@ export default function ProjectDetailPage({
           showToast(`Đã thêm công việc "${newTask.name}" thành công`);
           void loadData();
         }}
+      />
+
+      {/* Modal đặt ngân sách giờ công (NCL-05-CN-005) */}
+      <TaskBudgetModal
+        isOpen={isBudgetModalOpen}
+        onClose={() => setIsBudgetModalOpen(false)}
+        projectId={projectId}
+        taskId={budgetTarget.id}
+        taskName={budgetTarget.name}
+        currentBudgetHours={budgetTarget.budgetHours}
+        onSaved={handleBudgetSaved}
       />
     </div>
   );

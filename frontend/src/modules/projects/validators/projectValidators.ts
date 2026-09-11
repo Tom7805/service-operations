@@ -3,6 +3,7 @@ import type {
   ProjectCreateFromTemplateReq,
   ProjectMilestoneReq,
   ProjectRiskReq,
+  TaskBudgetReq,
 } from '../types/projectTypes';
 
 export interface ProjectCreateValidationResult {
@@ -214,6 +215,33 @@ export function validateMilestoneCompleteForm(
     errors.actualDate = 'Ngày thực tế không được để trống';
   } else if (actualDate > today) {
     errors.actualDate = 'Ngày thực tế không được ở tương lai';
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+}
+
+export interface TaskBudgetValidationResult {
+  isValid: boolean;
+  errors: Record<string, string>;
+}
+
+/**
+ * Kiểm tra hợp lệ ngân sách giờ công (NCL-05-CN-005): bắt buộc và phải lớn hơn 0
+ * (khớp @DecimalMin("0.01") của TaskBudgetReq backend).
+ */
+export function validateTaskBudgetForm(
+  payload: Partial<TaskBudgetReq>
+): TaskBudgetValidationResult {
+  const errors: Record<string, string> = {};
+
+  const budgetHours = payload.budgetHours;
+  if (budgetHours == null || Number.isNaN(budgetHours)) {
+    errors.budgetHours = 'Ngân sách giờ công không được để trống';
+  } else if (budgetHours <= 0) {
+    errors.budgetHours = 'Ngân sách giờ công phải lớn hơn 0';
   }
 
   return {

@@ -4,6 +4,7 @@ export {
   createWorkPackage,
   createTask,
   deleteWorkPackage,
+  setTaskBudget,
   fetchProjectTemplates,
   createProjectFromTemplate,
   ProjectsApiError,
