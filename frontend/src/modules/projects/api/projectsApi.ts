@@ -5,6 +5,9 @@ import type {
   ProjectMilestoneReq,
   ProjectMilestoneRes,
   ProjectRes,
+  ProjectRiskReq,
+  ProjectRiskRes,
+  ProjectRiskStatusReq,
   ProjectTemplateRes,
   TaskCreateReq,
   TaskRes,
@@ -257,6 +260,73 @@ export async function completeMilestone(
  */
 export async function deleteMilestone(projectId: number, milestoneId: number): Promise<void> {
   await requestBackend<null>(`${API_BASE_URL}/projects/${projectId}/milestones/${milestoneId}`, {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * NCL-05-CN-009 / TC-02: bảng theo dõi rủi ro — danh sách sắp theo điểm rủi ro (`score`)
+ * giảm dần, kèm `score`/`severity` do backend tính động tại thời điểm gọi.
+ * Cho phép Quản lý dự án (VT-02).
+ * GET /projects/{projectId}/risks
+ */
+export async function getRisks(projectId: number): Promise<ProjectRiskRes[]> {
+  return requestBackend<ProjectRiskRes[]>(`${API_BASE_URL}/projects/${projectId}/risks`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * NCL-05-CN-009 / TC-01: ghi nhận rủi ro (mô tả, tác động, khả năng xảy ra, biện pháp,
+ * người theo dõi). Yêu cầu vai trò Quản lý dự án (VT-02); dự án phải đang RUNNING.
+ * POST /projects/{projectId}/risks
+ */
+export async function createRisk(projectId: number, payload: ProjectRiskReq): Promise<ProjectRiskRes> {
+  return requestBackend<ProjectRiskRes>(`${API_BASE_URL}/projects/${projectId}/risks`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * NCL-05-CN-009: cập nhật nội dung rủi ro.
+ * Yêu cầu vai trò Quản lý dự án (VT-02).
+ * PUT /projects/{projectId}/risks/{riskId}
+ */
+export async function updateRisk(
+  projectId: number,
+  riskId: number,
+  payload: ProjectRiskReq
+): Promise<ProjectRiskRes> {
+  return requestBackend<ProjectRiskRes>(`${API_BASE_URL}/projects/${projectId}/risks/${riskId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * NCL-05-CN-009: cập nhật trạng thái xử lý rủi ro (OPEN/MITIGATING/CLOSED).
+ * Yêu cầu vai trò Quản lý dự án (VT-02).
+ * PUT /projects/{projectId}/risks/{riskId}/status
+ */
+export async function changeRiskStatus(
+  projectId: number,
+  riskId: number,
+  payload: ProjectRiskStatusReq
+): Promise<ProjectRiskRes> {
+  return requestBackend<ProjectRiskRes>(`${API_BASE_URL}/projects/${projectId}/risks/${riskId}/status`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * NCL-05-CN-009: xóa rủi ro khỏi dự án.
+ * Yêu cầu vai trò Quản lý dự án (VT-02).
+ * DELETE /projects/{projectId}/risks/{riskId}
+ */
+export async function deleteRisk(projectId: number, riskId: number): Promise<void> {
+  await requestBackend<null>(`${API_BASE_URL}/projects/${projectId}/risks/${riskId}`, {
     method: 'DELETE',
   });
 }
