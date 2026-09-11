@@ -6,6 +6,7 @@ import {
 } from '../validators/customerValidators';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 
 interface DuplicateWarningModalProps {
   isOpen: boolean;
@@ -65,6 +66,8 @@ export default function DuplicateWarningModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, isLoading, onBackToEdit]);
 
+  const backdrop = useBackdropClick(onBackToEdit, isLoading);
+
   if (!isOpen) return null;
 
   const handleReasonChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
@@ -103,11 +106,8 @@ export default function DuplicateWarningModal({
     <ModalPortal>
     <div
       className="modal-backdrop duplicate-modal-backdrop"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !isLoading) {
-          onBackToEdit();
-        }
-      }}
+      onMouseDown={backdrop.onMouseDown}
+      onClick={backdrop.onClick}
       role="dialog"
       aria-modal="true"
       aria-labelledby="duplicate-modal-title"

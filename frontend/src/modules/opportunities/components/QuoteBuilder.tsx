@@ -15,6 +15,7 @@ import {
 import { createOpportunityQuote, fetchCurrentBillRates, QuoteApiError, type BillRateOption } from '../api/quotesApi';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 
 /** Giá trị đặc biệt của ô chọn chức danh khi người dùng muốn tự gõ tay thay vì chọn từ danh mục có sẵn. */
 const MANUAL_ROLE_ENTRY = '__manual__';
@@ -70,6 +71,8 @@ export default function QuoteBuilder({
   // Kết quả báo giá vừa tạo hoặc truyền sẵn
   const [latestQuote, setLatestQuote] = useState<QuoteRes | null>(initialQuote);
   const [isEditingNewVersion, setIsEditingNewVersion] = useState(false);
+
+  const backdrop = useBackdropClick(onClose, submitting);
 
   if (!isOpen) return null;
 
@@ -164,11 +167,8 @@ export default function QuoteBuilder({
     <ModalPortal>
     <div
       className="modal-backdrop"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !submitting) {
-          onClose();
-        }
-      }}
+      onMouseDown={backdrop.onMouseDown}
+      onClick={backdrop.onClick}
       role="dialog"
       aria-modal="true"
       aria-labelledby="quote-builder-title"

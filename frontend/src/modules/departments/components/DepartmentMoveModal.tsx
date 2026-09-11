@@ -4,6 +4,7 @@ import { DepartmentApiError } from '../api/departmentsApi';
 import { getUnitTypeRank } from '../constants/departmentUnitTypes';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 
 interface DepartmentMoveModalProps {
   isOpen: boolean;
@@ -31,6 +32,8 @@ export const DepartmentMoveModal: React.FC<DepartmentMoveModalProps> = ({
       setSubmitting(false);
     }
   }, [isOpen, department]);
+
+  const backdrop = useBackdropClick(onClose);
 
   if (!isOpen || !department) return null;
 
@@ -94,7 +97,7 @@ export const DepartmentMoveModal: React.FC<DepartmentMoveModalProps> = ({
 
   return (
     <ModalPortal>
-    <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
+    <div className="modal-backdrop" onMouseDown={backdrop.onMouseDown} onClick={backdrop.onClick} role="dialog" aria-modal="true">
       <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>

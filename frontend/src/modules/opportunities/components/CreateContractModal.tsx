@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import type { Opportunity } from '../types/opportunityTypes';
 import type { ContractCreateFromOpportunityReq, ContractRes } from '../../contracts/types/contractTypes';
 import { createContractFromOpportunity } from '../api/opportunitiesApi';
@@ -40,6 +41,8 @@ export default function CreateContractModal({
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const backdrop = useBackdropClick(onClose, submitting);
 
   if (!isOpen) return null;
 
@@ -82,9 +85,8 @@ export default function CreateContractModal({
     <ModalPortal>
     <div
       className="modal-backdrop"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !submitting) onClose();
-      }}
+      onMouseDown={backdrop.onMouseDown}
+      onClick={backdrop.onClick}
       role="dialog"
       aria-modal="true"
     >

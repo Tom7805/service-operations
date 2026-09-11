@@ -9,6 +9,7 @@ import type {
 import { DepartmentApiError } from '../api/departmentsApi';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import {
   DEPARTMENT_UNIT_TYPE_META,
   DEPARTMENT_UNIT_TYPE_OPTIONS,
@@ -63,6 +64,8 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
       setSubmitting(false);
     }
   }, [isOpen, editingDepartment, defaultParentId, managersList]);
+
+  const backdrop = useBackdropClick(onClose);
 
   if (!isOpen) return null;
 
@@ -155,7 +158,7 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
 
   return (
     <ModalPortal>
-    <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
+    <div className="modal-backdrop" onMouseDown={backdrop.onMouseDown} onClick={backdrop.onClick} role="dialog" aria-modal="true">
       <div className="modal-card modal-card--md" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>

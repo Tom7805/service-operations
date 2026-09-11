@@ -265,6 +265,46 @@ describe('Phân nhóm khách hàng theo ngành và quy mô (NCL-02-CN-005)', () 
     });
   });
 
+  describe('Đóng modal khi bấm vào nền mờ (không đóng nhầm khi kéo-thả chuột)', () => {
+    it('vẫn đóng modal khi mousedown và click đều nổ ra trực tiếp trên nền mờ', () => {
+      render(<CustomerSegmentPanel customer={mockCustomer} currentUserRoles={['VT-04']} />);
+
+      fireEvent.click(screen.getByTestId('btn-open-segment-modal'));
+      const backdrop = screen.getByTestId('customer-segment-modal');
+
+      fireEvent.mouseDown(backdrop);
+      fireEvent.click(backdrop);
+
+      expect(screen.queryByTestId('customer-segment-modal')).not.toBeInTheDocument();
+    });
+
+    it('không đóng modal khi mousedown bắt đầu trong form rồi thả chuột (click) trên nền mờ', () => {
+      render(<CustomerSegmentPanel customer={mockCustomer} currentUserRoles={['VT-04']} />);
+
+      fireEvent.click(screen.getByTestId('btn-open-segment-modal'));
+      const backdrop = screen.getByTestId('customer-segment-modal');
+      const industryInput = screen.getByLabelText(/Ngành nghề/i);
+
+      // Mô phỏng người dùng bôi đen văn bản trong ô nhập rồi lỡ thả chuột ra
+      // ngoài modal: mousedown nổ ra trong form, nhưng click (do trình duyệt
+      // tính theo điểm thả chuột) lại nổ ra trên chính nền mờ.
+      fireEvent.mouseDown(industryInput);
+      fireEvent.click(backdrop);
+
+      expect(screen.getByTestId('customer-segment-modal')).toBeInTheDocument();
+    });
+
+    it('vẫn đóng modal khi bấm nút Hủy bỏ hoặc nút đóng (x)', () => {
+      render(<CustomerSegmentPanel customer={mockCustomer} currentUserRoles={['VT-04']} />);
+
+      fireEvent.click(screen.getByTestId('btn-open-segment-modal'));
+      expect(screen.getByTestId('customer-segment-modal')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText('Hủy bỏ'));
+      expect(screen.queryByTestId('customer-segment-modal')).not.toBeInTheDocument();
+    });
+  });
+
   describe('Tích hợp trang CustomerListPage', () => {
     it('bấm nút "Phân nhóm" trên bảng danh sách -> mở trang chi tiết ngay tại tab Phân nhóm', () => {
       const initialCustomers: Customer[] = [mockCustomer];

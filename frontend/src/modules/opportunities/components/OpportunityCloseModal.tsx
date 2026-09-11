@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
 import { ICONS } from "../../../components/common/icons";
 import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import { closeOpportunity, OpportunityApiError } from "../api/opportunitiesApi";
 import {
   LOSS_REASON_OPTIONS,
@@ -59,6 +60,8 @@ export default function OpportunityCloseModal({
       setSubmitting(false);
     }
   }, [isOpen, initialResult]);
+
+  const backdrop = useBackdropClick(onClose, submitting);
 
   if (!isOpen || !opportunity) return null;
 
@@ -127,9 +130,8 @@ export default function OpportunityCloseModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="opportunity-close-title"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !submitting) onClose();
-      }}
+      onMouseDown={backdrop.onMouseDown}
+      onClick={backdrop.onClick}
     >
       <div className="modal-card" style={{ maxWidth: "560px" }}>
         {/* Modal Header */}

@@ -3,6 +3,7 @@ import type { ScopeType, User } from '../types/userTypes';
 import { SYSTEM_ROLES } from '../types/userTypes';
 import { ICONS } from './icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 
 interface RoleAssignModalProps {
   isOpen: boolean;
@@ -29,6 +30,8 @@ export const RoleAssignModal: React.FC<RoleAssignModalProps> = ({
       setError(null);
     }
   }, [user, isOpen]);
+
+  const backdrop = useBackdropClick(onClose);
 
   if (!isOpen || !user) return null;
 
@@ -65,7 +68,7 @@ export const RoleAssignModal: React.FC<RoleAssignModalProps> = ({
 
   return (
     <ModalPortal>
-    <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
+    <div className="modal-backdrop" onMouseDown={backdrop.onMouseDown} onClick={backdrop.onClick} role="dialog" aria-modal="true">
       <div className="modal-card modal-card--md" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>

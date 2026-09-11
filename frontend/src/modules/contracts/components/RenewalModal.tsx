@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import type { ContractRes, RenewalRes } from '../types/contractTypes';
 import { createRenewal, fetchRenewals, ContractsApiError } from '../api/contractsApi';
 import { validateRenewalForm } from '../validators/contractValidators';
@@ -74,6 +75,8 @@ export default function RenewalModal({
     }
   }, [isOpen, loadHistory]);
 
+  const backdrop = useBackdropClick(onClose, submitting);
+
   if (!isOpen) return null;
 
   // Tính toán giá trị xem trước
@@ -128,9 +131,8 @@ export default function RenewalModal({
     <ModalPortal>
       <div
         className="modal-backdrop"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !submitting) onClose();
-      }}
+      onMouseDown={backdrop.onMouseDown}
+      onClick={backdrop.onClick}
       role="dialog"
       aria-modal="true"
       aria-labelledby="renewal-modal-title"

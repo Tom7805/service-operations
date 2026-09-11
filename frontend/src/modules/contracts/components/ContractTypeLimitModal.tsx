@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import { t } from '../../../i18n';
 import type { ContractRes } from '../types/contractTypes';
 import { updateTypeAndLimit } from '../api/contractsApi';
@@ -34,6 +35,8 @@ export default function ContractTypeLimitModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const backdrop = useBackdropClick(onClose, submitting);
 
   if (!isOpen) return null;
 
@@ -74,9 +77,8 @@ export default function ContractTypeLimitModal({
     <ModalPortal>
       <div
         className="modal-backdrop"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !submitting) onClose();
-      }}
+      onMouseDown={backdrop.onMouseDown}
+      onClick={backdrop.onClick}
       role="dialog"
       aria-modal="true"
     >

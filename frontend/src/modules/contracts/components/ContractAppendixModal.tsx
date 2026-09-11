@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import type { ContractRes } from '../types/contractTypes';
 import { createAppendix, fetchAppendices, ContractsApiError, type ContractAppendixRes } from '../api/contractsApi';
 
@@ -69,6 +70,8 @@ export default function ContractAppendixModal({
     void loadHistory();
   }, [isOpen, loadHistory]);
 
+  const backdrop = useBackdropClick(onClose, submitting);
+
   if (!isOpen) return null;
 
   const validate = () => {
@@ -115,9 +118,8 @@ export default function ContractAppendixModal({
     <ModalPortal>
       <div
         className="modal-backdrop"
-        onClick={(e) => {
-          if (e.target === e.currentTarget && !submitting) onClose();
-        }}
+        onMouseDown={backdrop.onMouseDown}
+        onClick={backdrop.onClick}
         role="dialog"
         aria-modal="true"
         aria-labelledby="appendix-modal-title"

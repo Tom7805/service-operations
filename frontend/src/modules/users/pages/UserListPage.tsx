@@ -5,6 +5,7 @@ import UserFormModal from '../components/UserFormModal';
 import UserTable from '../components/UserTable';
 import { ICONS } from '../components/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import type { CreateUserPayload, ScopeType, UpdateUserPayload, User } from '../types/userTypes';
 
 interface UserListPageProps {
@@ -41,6 +42,9 @@ export const UserListPage: React.FC<UserListPageProps> = ({
   // NCL-01-CN-009: xác nhận trước khi đặt lại 2FA — thao tác bắt buộc người dùng liên kết lại app mới.
   const [confirmResetTwoFactorUser, setConfirmResetTwoFactorUser] = useState<User | null>(null);
   const [resettingTwoFactor, setResettingTwoFactor] = useState(false);
+
+  const statusConfirmBackdrop = useBackdropClick(() => setConfirmStatusUser(null));
+  const resetTwoFactorConfirmBackdrop = useBackdropClick(() => setConfirmResetTwoFactorUser(null));
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setToastMessage({ text, type });
@@ -280,7 +284,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
       {/* Status Toggle Confirmation Dialog (TC-03, TC-05) */}
       {confirmStatusUser && (
         <ModalPortal>
-        <div className="modal-backdrop" onClick={() => setConfirmStatusUser(null)} role="dialog">
+        <div className="modal-backdrop" onMouseDown={statusConfirmBackdrop.onMouseDown} onClick={statusConfirmBackdrop.onClick} role="dialog">
           <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title text-warning">
@@ -319,7 +323,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
       {/* NCL-01-CN-009: xác nhận đặt lại xác thực hai bước (mất/đổi điện thoại) */}
       {confirmResetTwoFactorUser && (
         <ModalPortal>
-        <div className="modal-backdrop" onClick={() => setConfirmResetTwoFactorUser(null)} role="dialog">
+        <div className="modal-backdrop" onMouseDown={resetTwoFactorConfirmBackdrop.onMouseDown} onClick={resetTwoFactorConfirmBackdrop.onClick} role="dialog">
           <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title text-warning">

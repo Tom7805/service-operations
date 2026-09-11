@@ -19,6 +19,7 @@ import {
 } from '../api/opportunitiesApi';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 
 interface OpportunityFormModalProps {
   isOpen: boolean;
@@ -119,6 +120,8 @@ export default function OpportunityFormModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, submitting, onClose]);
 
+  const backdrop = useBackdropClick(onClose, submitting);
+
   if (!isOpen) return null;
 
   const rawExpectedValue = parseVNDInput(formattedValue);
@@ -211,11 +214,8 @@ export default function OpportunityFormModal({
     <ModalPortal>
     <div
       className="modal-backdrop"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !submitting) {
-          onClose();
-        }
-      }}
+      onMouseDown={backdrop.onMouseDown}
+      onClick={backdrop.onClick}
       role="dialog"
       aria-modal="true"
       aria-labelledby="opportunity-modal-title"

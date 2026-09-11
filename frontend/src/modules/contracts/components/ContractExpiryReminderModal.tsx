@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import type { ContractExpiryAlertRes } from '../types/contractTypes';
 import { fetchExpiringContracts, ContractsApiError } from '../api/contractsApi';
 
@@ -73,6 +74,8 @@ export default function ContractExpiryReminderModal({
   const overdueContracts = useMemo(() => contracts.filter((c) => c.daysRemaining < 0), [contracts]);
   const upcomingContracts = useMemo(() => contracts.filter((c) => c.daysRemaining >= 0), [contracts]);
 
+  const backdrop = useBackdropClick(onClose);
+
   if (!isOpen) return null;
 
   const handleSelectPreset = (preset: number) => {
@@ -99,9 +102,8 @@ export default function ContractExpiryReminderModal({
         className="modal-backdrop"
       role="dialog"
       aria-modal="true"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      onMouseDown={backdrop.onMouseDown}
+      onClick={backdrop.onClick}
     >
       <div className="modal-card contract-modal-card" style={{ width: 'min(100%, 780px)' }}>
         <div className="modal-header">

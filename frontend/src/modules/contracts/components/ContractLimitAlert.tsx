@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import type { ContractRes, ContractUsageRes } from '../types/contractTypes';
 import { getContractUsage, ContractsApiError } from '../api/contractsApi';
 
@@ -75,6 +76,10 @@ export default function ContractLimitAlert({
       cancelled = true;
     };
   }, [contract.id, isOpen, isAllowed, initialUsage]);
+
+  // onClose là optional (component này còn dùng ở chế độ nhúng, không có nút đóng) —
+  // truyền no-op khi không có, nhánh nền mờ bên dưới cũng chỉ render khi có onClose.
+  const backdrop = useBackdropClick(onClose ?? (() => {}));
 
   if (!isOpen) return null;
 
@@ -288,9 +293,8 @@ export default function ContractLimitAlert({
           className="modal-backdrop"
           role="dialog"
           aria-modal="true"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) onClose();
-          }}
+          onMouseDown={backdrop.onMouseDown}
+          onClick={backdrop.onClick}
         >
           {cardContent}
         </div>

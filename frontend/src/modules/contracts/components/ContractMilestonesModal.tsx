@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import type { ContractMilestoneInput, ContractMilestoneRes, ContractRes } from '../types/contractTypes';
 import { fetchMilestones, replaceMilestones, updateMilestoneStatus, ContractsApiError } from '../api/contractsApi';
 
@@ -100,6 +101,8 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
     };
   }, [isOpen, isAllowed, contract.id]);
 
+  const backdrop = useBackdropClick(onClose, submitting);
+
   if (!isOpen) return null;
 
   const total = rows.reduce((sum, r) => sum + (r.amount ?? 0), 0);
@@ -192,9 +195,8 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
     <ModalPortal>
       <div
         className="modal-backdrop"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !submitting) onClose();
-      }}
+      onMouseDown={backdrop.onMouseDown}
+      onClick={backdrop.onClick}
       role="dialog"
       aria-modal="true"
       aria-labelledby="milestones-modal-title"

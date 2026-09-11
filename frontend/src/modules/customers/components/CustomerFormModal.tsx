@@ -15,6 +15,7 @@ import {
 import DuplicateWarningModal from './DuplicateWarningModal';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 
 interface CustomerFormModalProps {
   isOpen: boolean;
@@ -85,6 +86,8 @@ export default function CustomerFormModal({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, isDuplicateModalOpen, submitting, onClose]);
+
+  const backdrop = useBackdropClick(onClose, submitting || isDuplicateModalOpen);
 
   if (!isOpen) return null;
 
@@ -237,11 +240,8 @@ export default function CustomerFormModal({
       <ModalPortal>
       <div
         className="modal-backdrop"
-        onClick={(e) => {
-          if (e.target === e.currentTarget && !submitting && !isDuplicateModalOpen) {
-            onClose();
-          }
-        }}
+        onMouseDown={backdrop.onMouseDown}
+        onClick={backdrop.onClick}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"

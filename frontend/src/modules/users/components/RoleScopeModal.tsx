@@ -4,6 +4,7 @@ import { SYSTEM_ROLES } from '../types/userTypes';
 import { UserApiError } from '../api/usersApi';
 import { ICONS } from './icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 
 interface RoleScopeModalProps {
   isOpen: boolean;
@@ -43,6 +44,8 @@ export const RoleScopeModal: React.FC<RoleScopeModalProps> = ({
       setSubmitting(false);
     }
   }, [user, isOpen, departmentsList]);
+
+  const backdrop = useBackdropClick(onClose);
 
   if (!isOpen || !user) return null;
 
@@ -110,7 +113,7 @@ export const RoleScopeModal: React.FC<RoleScopeModalProps> = ({
 
   return (
     <ModalPortal>
-    <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
+    <div className="modal-backdrop" onMouseDown={backdrop.onMouseDown} onClick={backdrop.onClick} role="dialog" aria-modal="true">
       <div className="modal-card modal-card--md" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
