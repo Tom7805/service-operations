@@ -93,17 +93,22 @@ require_mysqldump_bin() {
   fi
 }
 
+# QUAN TRONG: luon ep --default-character-set=utf8mb4. Neu khong, mysql client
+# tu doi charset ket noi theo locale cua terminal (vi du cp1252 tren Windows)
+# va se GHI SAI cac ten co dau (vd "Do Thi Mai" -> chu la mojibake) ngay ca khi
+# file .sql va cot DB deu la utf8mb4 dung.
+
 # Chay 1 cau lenh SQL (khong phai file) tren server (khong chon san database --
 # dung cho DROP/CREATE DATABASE).
 mysql_exec() {
   require_mysql_bin
-  "$MYSQL_BIN" -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" ${DB_PASSWORD:+-p"$DB_PASSWORD"} -e "$1"
+  "$MYSQL_BIN" --default-character-set=utf8mb4 -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" ${DB_PASSWORD:+-p"$DB_PASSWORD"} -e "$1"
 }
 
 # Chay 1 file .sql vao dung database cua du an.
 mysql_source_file() {
   require_mysql_bin
-  "$MYSQL_BIN" -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" ${DB_PASSWORD:+-p"$DB_PASSWORD"} "$DB_NAME" < "$1"
+  "$MYSQL_BIN" --default-character-set=utf8mb4 -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" ${DB_PASSWORD:+-p"$DB_PASSWORD"} "$DB_NAME" < "$1"
 }
 
 echo_conn_summary() {
