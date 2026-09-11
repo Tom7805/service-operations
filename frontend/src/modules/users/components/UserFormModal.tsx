@@ -4,6 +4,7 @@ import { SYSTEM_DEPARTMENTS, SYSTEM_ROLES } from '../types/userTypes';
 import { validateCreateUser, validateUpdateUser, FormErrors } from '../validators/userValidators';
 import { ICONS } from './icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 
 interface UserFormModalProps {
   isOpen: boolean;
@@ -53,6 +54,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     setErrors({});
     setServerError(null);
   }, [editingUser, isOpen]);
+
+  const backdrop = useBackdropClick(onClose);
 
   if (!isOpen) return null;
 
@@ -123,7 +126,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
   return (
     <ModalPortal>
-    <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div className="modal-backdrop" onMouseDown={backdrop.onMouseDown} onClick={backdrop.onClick} role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>

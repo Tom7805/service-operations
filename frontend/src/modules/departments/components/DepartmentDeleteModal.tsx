@@ -3,6 +3,7 @@ import type { Department } from '../types/departmentTypes';
 import { DepartmentApiError } from '../api/departmentsApi';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 
 interface DepartmentDeleteModalProps {
   isOpen: boolean;
@@ -21,6 +22,8 @@ export const DepartmentDeleteModal: React.FC<DepartmentDeleteModalProps> = ({
 }) => {
   const [serverError, setServerError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const backdrop = useBackdropClick(onClose);
 
   if (!isOpen || !department) return null;
 
@@ -59,7 +62,7 @@ export const DepartmentDeleteModal: React.FC<DepartmentDeleteModalProps> = ({
 
   return (
     <ModalPortal>
-    <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
+    <div className="modal-backdrop" onMouseDown={backdrop.onMouseDown} onClick={backdrop.onClick} role="dialog" aria-modal="true">
       <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3 className="modal-title text-danger"><span className="modal-title__icon">{ICONS.trash}</span> Xác nhận xóa bộ phận</h3>

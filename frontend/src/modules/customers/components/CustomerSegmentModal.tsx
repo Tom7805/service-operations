@@ -8,6 +8,7 @@ import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
 import { COMPANY_SIZE_OPTIONS, CUSTOMER_PRIORITY_OPTIONS } from '../types/customerTypes';
 import { validateCustomerSegment } from '../validators/customerValidators';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 
 interface CustomerSegmentModalProps {
   isOpen: boolean;
@@ -44,6 +45,7 @@ export default function CustomerSegmentModal({
   const [errors, setErrors] = useState<CustomerSegmentFormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const backdrop = useBackdropClick(onClose);
 
   useEffect(() => {
     if (isOpen) {
@@ -99,7 +101,12 @@ export default function CustomerSegmentModal({
 
   return (
     <ModalPortal>
-    <div className="modal-backdrop" onClick={onClose} data-testid="customer-segment-modal">
+    <div
+      className="modal-backdrop"
+      onMouseDown={backdrop.onMouseDown}
+      onClick={backdrop.onClick}
+      data-testid="customer-segment-modal"
+    >
       <div
         className="modal-card modal-card--md segment-modal-card"
         onClick={(e) => e.stopPropagation()}

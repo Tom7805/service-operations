@@ -3,6 +3,7 @@ import { AuthApiError, getTwoFactorConfigs, updateTwoFactorConfig } from '../api
 import type { TwoFactorRoleConfig } from '../types/authTypes';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 
 interface TwoFactorSetupPageProps {
   currentUserRoles?: string[];
@@ -35,6 +36,8 @@ export default function TwoFactorSetupPage({
   const [savingRoleId, setSavingRoleId] = useState<number | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<TwoFactorRoleConfig | null>(null);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const confirmModalBackdrop = useBackdropClick(() => setConfirmTarget(null));
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setToastMessage({ text, type });
@@ -189,7 +192,7 @@ export default function TwoFactorSetupPage({
 
       {confirmTarget && (
         <ModalPortal>
-        <div className="modal-backdrop" onClick={() => setConfirmTarget(null)} role="dialog">
+        <div className="modal-backdrop" onMouseDown={confirmModalBackdrop.onMouseDown} onClick={confirmModalBackdrop.onClick} role="dialog">
           <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>

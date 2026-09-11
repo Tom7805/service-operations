@@ -3,6 +3,7 @@ import type { CustomerContactPayload, CustomerContactFormErrors } from '../types
 import { validateCustomerContact } from '../validators/customerValidators';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 
 interface ContactFormModalProps {
   isOpen: boolean;
@@ -44,6 +45,8 @@ export default function ContactFormModal({
     }
   }, [isOpen]);
 
+  const backdrop = useBackdropClick(onClose);
+
   if (!isOpen) return null;
 
   const handleChange = (
@@ -84,7 +87,7 @@ export default function ContactFormModal({
 
   return (
     <ModalPortal>
-    <div className="modal-backdrop" onClick={onClose} data-testid="contact-form-modal">
+    <div className="modal-backdrop" onMouseDown={backdrop.onMouseDown} onClick={backdrop.onClick} data-testid="contact-form-modal">
       <div
         className="modal-card modal-card--md contact-modal-card"
         onClick={(e) => e.stopPropagation()}
