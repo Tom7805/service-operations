@@ -120,6 +120,10 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 	@Override
 	@Transactional(readOnly = true)
 	public List<TimesheetSummaryRes> findMyWeek(LocalDate weekFrom, LocalDate weekTo) {
+		if (weekTo.isBefore(weekFrom)) {
+			throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR,
+					"Ngay ket thuc tuan cham cong khong duoc som hon ngay bat dau");
+		}
 		Long currentUserId = currentUserScopeProvider.currentUserId();
 		if (currentUserId == null) {
 			throw new AccessDeniedException("Chua xac thuc nguoi dung");
