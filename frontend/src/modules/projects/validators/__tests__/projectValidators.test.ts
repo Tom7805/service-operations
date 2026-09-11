@@ -4,6 +4,7 @@ import {
   validateProjectCreateFromTemplateForm,
   validateMilestoneForm,
   validateMilestoneCompleteForm,
+  validateRiskForm,
 } from '../projectValidators';
 
 
@@ -284,5 +285,61 @@ describe('validateMilestoneCompleteForm (NCL-05-CN-008)', () => {
     const result = validateMilestoneCompleteForm({ actualDate: '2027-10-05' }, '2027-09-28');
     expect(result.isValid).toBe(false);
     expect(result.errors.actualDate).toBe('Ngày thực tế không được ở tương lai');
+  });
+});
+
+describe('validateRiskForm (NCL-05-CN-009 — Quản lý rủi ro dự án)', () => {
+  it('TC-01: chấp nhận dữ liệu hợp lệ đầy đủ', () => {
+    const result = validateRiskForm({
+      description: 'Nhà thầu phụ có nguy cơ chậm tiến độ tích hợp',
+      impact: 'HIGH',
+      likelihood: 'MEDIUM',
+      mitigation: 'Chuẩn bị nhà thầu dự phòng',
+      watcherId: 7,
+    });
+    expect(result.isValid).toBe(true);
+    expect(result.errors).toEqual({});
+  });
+
+  it('chấp nhận khi không có biện pháp giảm thiểu (tùy chọn)', () => {
+    const result = validateRiskForm({
+      description: 'Rủi ro thiếu nhân sự',
+      impact: 'LOW',
+      likelihood: 'LOW',
+      watcherId: 1,
+    });
+    expect(result.isValid).toBe(true);
+  });
+
+  it('từ chối mô tả rủi ro để trống hoặc chỉ có khoảng trắng', () => {
+    const emptyResult = validateRiskForm({ description: '', impact: 'LOW', likelihood: 'LOW', watcherId: 1 });
+    expect(emptyResult.isValid).toBe(false);
+    expect(emptyResult.errors.description).toBe('Mô tả rủi ro không được để trống');
+
+    const whitespaceResult = validateRiskForm({
+      description: '   ',
+      impact: 'LOW',
+      likelihood: 'LOW',
+      watcherId: 1,
+    });
+    expect(whitespaceResult.isValid).toBe(false);
+    expect(whitespaceResult.errors.description).toBe('Mô tả rủi ro không được để trống');
+  });
+
+  it('từ chối khi thiếu mức tác động hoặc khả năng xảy ra', () => {
+    const result = validateRiskForm({ description: 'Mô tả', watcherId: 1 });
+    expect(result.isValid).toBe(false);
+    expect(result.errors.impact).toBe('Mức tác động không được để trống');
+    expect(result.errors.likelihood).toBe('Khả năng xảy ra không được để trống');
+  });
+
+  it('từ chối khi thiếu người theo dõi hoặc id <= 0', () => {
+    const res1 = validateRiskForm({ description: 'Mô tả', impact: 'LOW', likelihood: 'LOW' });
+    expect(res1.isValid).toBe(false);
+    expect(res1.errors.watcherId).toBe('Người theo dõi không được để trống');
+
+    const res2 = validateRiskForm({ description: 'Mô tả', impact: 'LOW', likelihood: 'LOW', watcherId: 0 });
+    expect(res2.isValid).toBe(false);
+    expect(res2.errors.watcherId).toBe('Người theo dõi không được để trống');
   });
 });

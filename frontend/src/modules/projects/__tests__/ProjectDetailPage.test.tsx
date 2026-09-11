@@ -264,4 +264,34 @@ describe('ProjectDetailPage Component (NCL-05-CN-002)', () => {
 
     expect(screen.getByText(/Không tìm thấy dự án/i)).toBeInTheDocument();
   });
+
+  describe('Liên kết sang Rủi ro dự án (NCL-05-CN-009)', () => {
+    it('hiển thị nút "Rủi ro dự án" cho VT-02 khi có onOpenRisks và gọi callback đúng projectId', async () => {
+      vi.mocked(projectsApi.getProject).mockResolvedValue(mockProjectRunning);
+      vi.mocked(projectsApi.getWorkBreakdown).mockResolvedValue(mockWbs);
+      const onOpenRisks = vi.fn();
+
+      render(<ProjectDetailPage projectId={1} currentUserRoles={['VT-02']} onOpenRisks={onOpenRisks} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('PRJ-2026-001')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTestId('btn-open-risks'));
+      expect(onOpenRisks).toHaveBeenCalledWith(1);
+    });
+
+    it('ẩn nút "Rủi ro dự án" khi không truyền onOpenRisks hoặc vai trò không phải VT-02', async () => {
+      vi.mocked(projectsApi.getProject).mockResolvedValue(mockProjectRunning);
+      vi.mocked(projectsApi.getWorkBreakdown).mockResolvedValue(mockWbs);
+
+      const { rerender } = render(<ProjectDetailPage projectId={1} currentUserRoles={['VT-02']} />);
+      await waitFor(() => expect(screen.getByText('PRJ-2026-001')).toBeInTheDocument());
+      expect(screen.queryByTestId('btn-open-risks')).not.toBeInTheDocument();
+
+      rerender(<ProjectDetailPage projectId={1} currentUserRoles={['VT-03']} onOpenRisks={vi.fn()} />);
+      await waitFor(() => expect(screen.getByText('PRJ-2026-001')).toBeInTheDocument());
+      expect(screen.queryByTestId('btn-open-risks')).not.toBeInTheDocument();
+    });
+  });
 });

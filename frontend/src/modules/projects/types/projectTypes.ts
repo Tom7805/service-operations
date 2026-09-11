@@ -122,6 +122,57 @@ export interface ProjectMilestoneCompleteReq {
   actualDate: string; // YYYY-MM-DD
 }
 
+/**
+ * Khớp enum RiskLevel phía backend — dùng chung cho mức tác động (impact), khả năng
+ * xảy ra (likelihood) và mức độ rủi ro suy ra (severity) (NCL-05-CN-009).
+ */
+export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+
+/** Khớp enum RiskStatus phía backend — vòng đời xử lý rủi ro, lưu DB (NCL-05-CN-009). */
+export type RiskStatus = 'OPEN' | 'MITIGATING' | 'CLOSED';
+
+/**
+ * Rủi ro dự án trả về từ backend (NCL-05-CN-009).
+ * Khớp ProjectRiskRes — `score`/`severity` do backend tính động từ impact x likelihood
+ * tại thời điểm đọc, không lưu DB.
+ */
+export interface ProjectRiskRes {
+  id: number;
+  projectId: number;
+  description: string;
+  impact: RiskLevel;
+  likelihood: RiskLevel;
+  score: number;
+  severity: RiskLevel;
+  status: RiskStatus;
+  mitigation: string | null;
+  watcherId: number;
+  watcherName: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Payload tạo/cập nhật rủi ro (NCL-05-CN-009).
+ * POST/PUT /projects/{projectId}/risks[/{riskId}]
+ */
+export interface ProjectRiskReq {
+  description: string;
+  impact: RiskLevel;
+  likelihood: RiskLevel;
+  mitigation?: string | null;
+  watcherId: number;
+}
+
+/**
+ * Payload cập nhật trạng thái xử lý rủi ro (NCL-05-CN-009).
+ * PUT /projects/{projectId}/risks/{riskId}/status
+ */
+export interface ProjectRiskStatusReq {
+  status: RiskStatus;
+}
+
 export type {
   TaskStatus,
   TaskRes,

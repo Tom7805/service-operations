@@ -2,6 +2,7 @@ import type {
   ProjectCreateFromContractReq,
   ProjectCreateFromTemplateReq,
   ProjectMilestoneReq,
+  ProjectRiskReq,
   TaskBudgetReq,
 } from '../types/projectTypes';
 
@@ -241,6 +242,43 @@ export function validateTaskBudgetForm(
     errors.budgetHours = 'Ngân sách giờ công không được để trống';
   } else if (budgetHours <= 0) {
     errors.budgetHours = 'Ngân sách giờ công phải lớn hơn 0';
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+}
+
+export interface RiskValidationResult {
+  isValid: boolean;
+  errors: Record<string, string>;
+}
+
+/**
+ * Kiểm tra hợp lệ biểu mẫu ghi nhận/cập nhật rủi ro (NCL-05-CN-009 / TC-01).
+ * Khớp ràng buộc backend: mô tả, mức tác động, khả năng xảy ra và người theo dõi
+ * không được để trống — biện pháp giảm thiểu là tùy chọn.
+ */
+export function validateRiskForm(payload: Partial<ProjectRiskReq>): RiskValidationResult {
+  const errors: Record<string, string> = {};
+
+  const description = payload.description?.trim() ?? '';
+  if (!description) {
+    errors.description = 'Mô tả rủi ro không được để trống';
+  }
+
+  if (!payload.impact) {
+    errors.impact = 'Mức tác động không được để trống';
+  }
+
+  if (!payload.likelihood) {
+    errors.likelihood = 'Khả năng xảy ra không được để trống';
+  }
+
+  const watcherId = payload.watcherId;
+  if (watcherId == null || Number.isNaN(watcherId) || watcherId <= 0) {
+    errors.watcherId = 'Người theo dõi không được để trống';
   }
 
   return {
