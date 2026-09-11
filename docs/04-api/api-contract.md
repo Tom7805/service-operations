@@ -2786,7 +2786,7 @@ Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại
 - Dự án phải đang `RUNNING` — dự án đã đóng nhận `400 INVALID_STATE` (thay thế nguồn dữ liệu "còn treo"
   mà `NCL-05-CN-006` từng dẫn chiếu, tương ứng câu chuyện chặn ghi giờ vào dự án đã đóng `VHDV-76`).
 - Ngày làm việc (`workDate`) không được ở tương lai; tổng giờ công của một nhân sự trong một ngày trên
-  mọi công việc không vượt `24` giờ.
+  mọi công việc không vượt `12` giờ (QTN-14 — giới hạn giờ công trong ngày).
 - Mỗi cặp **(công việc, ngày)** chỉ có **một** bản ghi của một nhân sự — ghi trùng nhận `409 DUPLICATE_DATA`
   kèm gợi ý sửa bản ghi có sẵn bằng `PUT`.
 - Bản ghi chỉ sửa/xoá được khi còn `DRAFT`; sau khi nộp/duyệt phải đi qua luồng điều chỉnh bằng bút toán
@@ -2834,7 +2834,7 @@ Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại
 | HTTP | `errorCode` | Khi nào xảy ra |
 |---|---|---|
 | 400 | `VALIDATION_ERROR` | Thiếu `workDate`/`hours`, `hours <= 0`, `note` vượt 1000 ký tự. |
-| 400 | `INVALID_STATE` | Dự án đã đóng (`CLOSED`), ngày làm việc ở tương lai, hoặc tổng giờ trong ngày vượt 24. |
+| 400 | `INVALID_STATE` | Dự án đã đóng (`CLOSED`), ngày làm việc ở tương lai, hoặc tổng giờ trong ngày vượt 12 (QTN-14). |
 | 409 | `DUPLICATE_DATA` | Đã có bản ghi giờ công của chính mình trên công việc này trong cùng ngày. |
 | 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
 | 403 | `FORBIDDEN` | Không phải `VT-03` — hệ thống ghi nhật ký lần từ chối (TC-03); **hoặc** là `VT-03` nhưng không nằm trong danh sách người được giao công việc này (TC-02). |

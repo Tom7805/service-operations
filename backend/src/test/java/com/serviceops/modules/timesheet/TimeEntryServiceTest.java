@@ -174,7 +174,7 @@ class TimeEntryServiceTest {
 	@Test
 	void rejectsLoggingMoreThanDailyHourLimit() {
 		stubAssigneeTask();
-		when(timeEntryRepository.sumHoursByUserIdAndWorkDate(7L, TODAY)).thenReturn(new BigDecimal("23.5"));
+		when(timeEntryRepository.sumHoursByUserIdAndWorkDate(7L, TODAY)).thenReturn(new BigDecimal("11.5"));
 
 		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
 				() -> service.create(1L, 20L, new TimeEntryCreateReq(TODAY, new BigDecimal("1"), null)));
