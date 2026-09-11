@@ -11,6 +11,7 @@ import {
 import WorkBreakdownTree from '../components/WorkBreakdownTree';
 import WorkPackageModal from '../components/WorkPackageModal';
 import TaskFormModal from '../components/TaskFormModal';
+import ProjectMilestoneTimeline from '../components/ProjectMilestoneTimeline';
 
 export interface ProjectDetailPageProps {
   projectId: number;
@@ -346,6 +347,17 @@ export default function ProjectDetailPage({
           />
         )}
       </div>
+
+      {/* Mốc tiến độ dự án (NCL-05-CN-008) */}
+      {!loading && (
+        <ProjectMilestoneTimeline
+          projectId={projectId}
+          wbs={wbs}
+          canEdit={canEdit}
+          isProjectOpen={isProjectOpen}
+          onNotify={showToast}
+        />
+      )}
 
       {/* Modal thêm hạng mục */}
       <WorkPackageModal

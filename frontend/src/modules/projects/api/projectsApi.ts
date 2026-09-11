@@ -1,6 +1,9 @@
 import type {
   ProjectCreateFromContractReq,
   ProjectCreateFromTemplateReq,
+  ProjectMilestoneCompleteReq,
+  ProjectMilestoneReq,
+  ProjectMilestoneRes,
   ProjectRes,
   ProjectTemplateRes,
   TaskCreateReq,
@@ -179,5 +182,81 @@ export async function deleteWorkPackage(projectId: number, workPackageId: number
 export async function closeProject(projectId: number): Promise<ProjectRes> {
   return requestBackend<ProjectRes>(`${API_BASE_URL}/projects/${projectId}/close`, {
     method: 'POST',
+  });
+}
+
+/**
+ * NCL-05-CN-008 / TC-02: bảng theo dõi tiến độ — danh sách mốc sắp theo ngày kế hoạch,
+ * kèm trạng thái (DONE/ON_TRACK/LATE) và số ngày trễ do backend tính động tại thời điểm gọi.
+ * Cho phép Quản lý dự án (VT-02).
+ * GET /projects/{projectId}/milestones
+ */
+export async function getMilestones(projectId: number): Promise<ProjectMilestoneRes[]> {
+  return requestBackend<ProjectMilestoneRes[]>(`${API_BASE_URL}/projects/${projectId}/milestones`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * NCL-05-CN-008 / TC-01: tạo mốc tiến độ (tên, ngày kế hoạch, hạng mục phải hoàn thành).
+ * Yêu cầu vai trò Quản lý dự án (VT-02); dự án phải đang RUNNING và đã có cây công việc.
+ * POST /projects/{projectId}/milestones
+ */
+export async function createMilestone(
+  projectId: number,
+  payload: ProjectMilestoneReq
+): Promise<ProjectMilestoneRes> {
+  return requestBackend<ProjectMilestoneRes>(`${API_BASE_URL}/projects/${projectId}/milestones`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * NCL-05-CN-008: cập nhật tên, mô tả, ngày kế hoạch và danh sách hạng mục của mốc.
+ * Yêu cầu vai trò Quản lý dự án (VT-02).
+ * PUT /projects/{projectId}/milestones/{milestoneId}
+ */
+export async function updateMilestone(
+  projectId: number,
+  milestoneId: number,
+  payload: ProjectMilestoneReq
+): Promise<ProjectMilestoneRes> {
+  return requestBackend<ProjectMilestoneRes>(
+    `${API_BASE_URL}/projects/${projectId}/milestones/${milestoneId}`,
+    {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+/**
+ * NCL-05-CN-008: ghi nhận ngày thực tế hoàn thành của mốc (không được ở tương lai).
+ * Yêu cầu vai trò Quản lý dự án (VT-02).
+ * POST /projects/{projectId}/milestones/{milestoneId}/complete
+ */
+export async function completeMilestone(
+  projectId: number,
+  milestoneId: number,
+  payload: ProjectMilestoneCompleteReq
+): Promise<ProjectMilestoneRes> {
+  return requestBackend<ProjectMilestoneRes>(
+    `${API_BASE_URL}/projects/${projectId}/milestones/${milestoneId}/complete`,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+/**
+ * NCL-05-CN-008: xóa mốc tiến độ (không xóa công việc trong cây công việc).
+ * Yêu cầu vai trò Quản lý dự án (VT-02).
+ * DELETE /projects/{projectId}/milestones/{milestoneId}
+ */
+export async function deleteMilestone(projectId: number, milestoneId: number): Promise<void> {
+  await requestBackend<null>(`${API_BASE_URL}/projects/${projectId}/milestones/${milestoneId}`, {
+    method: 'DELETE',
   });
 }
