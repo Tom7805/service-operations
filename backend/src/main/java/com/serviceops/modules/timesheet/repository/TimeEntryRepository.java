@@ -47,4 +47,12 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
 			""")
 	BigDecimal sumHoursByTaskIdAndStatusIn(@Param("taskId") Long taskId,
 			@Param("statuses") List<TimeEntryStatus> statuses);
+
+	/** Tong gio cong da ghi cua mot nhan su trong mot ngay (tran gio/ngay). */
+	@Query("""
+			SELECT COALESCE(SUM(e.hours), 0)
+			FROM TimeEntry e
+			WHERE e.userId = :userId AND e.workDate = :workDate
+			""")
+	BigDecimal sumHoursByUserIdAndWorkDate(@Param("userId") Long userId, @Param("workDate") LocalDate workDate);
 }
