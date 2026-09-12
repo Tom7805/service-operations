@@ -1,7 +1,9 @@
 package com.serviceops.modules.timesheet.mapper;
 
 import com.serviceops.modules.timesheet.dto.response.TimeEntryRes;
+import com.serviceops.modules.timesheet.dto.response.TimesheetRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetSummaryRes;
+import com.serviceops.modules.timesheet.entity.Timesheet;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -43,5 +45,21 @@ public class TimesheetMapper {
 
 		return new TimesheetSummaryRes(taskId, taskName, weekFrom, weekTo, entries, totalHours,
 				budgetHours, approvedHours, usageRatio, overBudgetWarning);
+	}
+
+	/**
+	 * Anh xa bang cham cong tuan sang ban ghi tra ve FE (NCL-06-CN-002).
+	 */
+	public TimesheetRes toResponse(Timesheet timesheet) {
+		return new TimesheetRes(
+				timesheet.getId(),
+				timesheet.getUserId(),
+				timesheet.getWeekStartDate(),
+				timesheet.getWeekEndDate(),
+				timesheet.getStatus(),
+				timesheet.getTotalHours(),
+				timesheet.getSubmittedBy(),
+				timesheet.getSubmittedAt()
+		);
 	}
 }
