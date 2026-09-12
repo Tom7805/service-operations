@@ -52,6 +52,13 @@ public class Timesheet extends BaseEntity {
 	@Column(name = "submitted_at")
 	private LocalDateTime submittedAt;
 
+	/** PM duyet cuoi cung — du bang duoc duyet day du (NCL-06-CN-003, TC-04). */
+	@Column(name = "approved_by", length = 100)
+	private String approvedBy;
+
+	@Column(name = "approved_at")
+	private LocalDateTime approvedAt;
+
 	@Column(name = "created_at", nullable = false)
 	private LocalDateTime createdAt;
 
