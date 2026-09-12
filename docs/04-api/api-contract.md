@@ -2912,6 +2912,73 @@ phần tử là một `TimesheetSummaryRes`:
 - Các endpoint `POST/PUT/DELETE` trả `400 INVALID_STATE` khi dự án đã đóng — sau khi `NCL-05-CN-006` đóng dự
   án, ẩn/vô hiệu hoá form ghi giờ công để tránh gọi rồi mới nhận lỗi.
 
+### `NCL-06-CN-002` — Nộp bảng chấm công theo tuần
+
+Yêu cầu token của **Nhân viên chuyên môn** (`VT-03`), chỉ nộp bảng chấm công **của chính mình**. Khi nộp,
+hệ thống chuyển toàn bộ dòng giờ công `DRAFT` trong tuần sang `SUBMITTED` và tạo/cập nhật bảng tuần
+(bảng `timesheets`) ở trạng thái `PENDING_APPROVAL` cho PM duyệt — kể từ đó người dùng không sửa được
+các dòng giờ công của tuần (TC-03).
+
+Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại):
+
+- **Điều kiện bắt đầu**: tuần phải có **ít nhất một dòng `DRAFT`** — tuần trống hoặc toàn dòng đã nộp
+  nhận `400 INVALID_STATE`.
+- **QTN-14 — giới hạn 12 giờ/ngày**: nếu tồn tại ngày có tổng giờ công vượt `12`, nộp bị chặn
+  `400 INVALID_STATE` kèm `message` **liệt kê từng ngày vi phạm và tổng giờ** dạng
+  `... tai ngay: 2026-09-10 (14 gio), 2026-09-11 (13.5 gio)` (TC-02) — không dòng nào bị chuyển trạng thái.
+- **Không nộp lại** khi bảng tuần đang `PENDING_APPROVAL` hoặc đã `APPROVED` (TC-03); bảng bị
+  `REJECTED` cho phép nộp lại — hệ thống cập nhật lại đúng bản ghi bảng tuần cũ (unique người dùng + tuần).
+- **Lưu lịch sử (TC-05)**: mỗi lần nộp ghi một dòng nhật ký hệ thống `Nop bang cham cong tuan` — người
+  thực hiện (tự điền từ phiên đăng nhập), nội dung (tuần, tổng giờ, số dòng chuyển duyệt), thời điểm.
+- **Thông báo người duyệt (TC-01)**: hiện tại người duyệt nhìn thấy bảng qua hàng đợi chờ duyệt
+  (`Timesheet` trạng thái `PENDING_APPROVAL`); thông báo in-app cho PM sẽ được gửi thêm khi module
+  notification đi vào hoạt động.
+
+#### `POST /me/timesheets/{weekStartDate}/submit`
+
+Không cần body (gửi `{}` nếu client yêu cầu). `{weekStartDate}` là **ngày đầu tuần** — hệ thống tự lấy
+khoảng 7 ngày liên kếp (`weekStartDate` → `weekStartDate + 6`), trùng khớp với `weekFrom`/`weekTo` trên
+lưới `GET /me/time-entries`.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Nop bang cham cong tuan thanh cong",
+  "data": {
+    "id": 50,
+    "userId": 7,
+    "weekStartDate": "2026-09-07",
+    "weekEndDate": "2026-09-13",
+    "status": "PENDING_APPROVAL",
+    "totalHours": 8,
+    "submittedBy": "nv01",
+    "submittedAt": "2026-09-13T10:00:00"
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Khoảng tuần không hợp lệ (qua endpoint này tuần luôn 7 ngày nên hiếm gặp). |
+| 400 | `INVALID_STATE` | Tuần chưa có dòng `DRAFT` nào; tồn tại ngày vượt 12 giờ (QTN-14, `message` liệt kê ngày); hoặc bảng tuần đã nộp (`PENDING_APPROVAL`/`APPROVED`). |
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-03` — hệ thống ghi nhật ký lần từ chối (TC-04); gọi được thì luôn nộp bảng của chính mình. |
+
+**Lưu ý cho Frontend:**
+
+- Chỉ bật nút "Nộp bảng" khi lưới tuần có ít nhất một dòng `DRAFT` (trạng thái khác ẩn nút để tránh gọi
+  rồi mới nhận `400`).
+- Nhận `400 INVALID_STATE` kèm danh sách ngày vượt ngưỡng → hiển thị nguyên `message` cho người dùng
+  (dạng "Vượt 12 giờ/ngày tại ngày: …") và **không** làm thay đổi lưới — hệ thống không chuyển dòng nào.
+- Sau khi nộp thành công (`data.status = "PENDING_APPROVAL"`): chuyển toàn bộ dòng của tuần sang chế độ
+  chỉ đọc — mọi lời gọi `PUT/DELETE time-entries` với dòng đã `SUBMITTED` sẽ nhận `400 INVALID_STATE`.
+- Dùng `weekStartDate` của lưới tuần đang hiển thị làm `{weekStartDate}` trên path — khớp tự nhiên với
+  dữ liệu `GET /me/time-entries`.
+
 ---
 
 ## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)
