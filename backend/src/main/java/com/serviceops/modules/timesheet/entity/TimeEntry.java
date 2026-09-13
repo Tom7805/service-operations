@@ -56,6 +56,9 @@ public class TimeEntry extends BaseEntity {
 	@Column(name = "created_by", length = 100)
 	private String createdBy;
 
+	@Column(name = "billable", nullable = false)
+	private Boolean billable = true;
+
 	@Column(name = "created_at", nullable = false)
 	private LocalDateTime createdAt;
 

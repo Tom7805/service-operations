@@ -74,6 +74,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 		entry.setWorkDate(request.workDate());
 		entry.setHours(request.hours());
 		entry.setNote(request.note());
+		entry.setBillable(request.billable() != null ? request.billable() : true);
 		entry.setCreatedBy(currentUsername());
 		LocalDateTime now = LocalDateTime.now();
 		entry.setCreatedAt(now);
@@ -96,6 +97,9 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 		BigDecimal previousHours = entry.getHours();
 		entry.setHours(request.hours());
 		entry.setNote(request.note());
+		if (request.billable() != null) {
+			entry.setBillable(request.billable());
+		}
 		entry.setUpdatedAt(LocalDateTime.now());
 		TimeEntry saved = timeEntryRepository.save(entry);
 
