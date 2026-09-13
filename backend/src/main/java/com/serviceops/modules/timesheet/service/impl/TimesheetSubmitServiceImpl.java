@@ -14,6 +14,12 @@ import com.serviceops.modules.timesheet.repository.TimeEntryRepository;
 import com.serviceops.modules.timesheet.repository.TimesheetRepository;
 import com.serviceops.modules.timesheet.service.TimesheetSubmitService;
 import com.serviceops.modules.timesheet.validator.DailyHourLimitValidator;
+import com.serviceops.modules.notification.enums.NotificationType;
+import com.serviceops.modules.notification.service.NotificationService;
+import com.serviceops.modules.project.entity.Project;
+import com.serviceops.modules.project.entity.Task;
+import com.serviceops.modules.project.repository.ProjectRepository;
+import com.serviceops.modules.project.repository.TaskRepository;
 import com.serviceops.security.scope.CurrentUserScopeProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -27,6 +33,9 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -42,6 +51,9 @@ public class TimesheetSubmitServiceImpl implements TimesheetSubmitService {
 	private final AuditLogService auditLogService;
 	private final TimesheetMapper timesheetMapper;
 	private final Clock clock;
+	private final NotificationService notificationService;
+	private final ProjectRepository projectRepository;
+	private final TaskRepository taskRepository;
 
 	@Override
 	public TimesheetRes submit(LocalDate weekFrom, LocalDate weekTo) {
@@ -110,11 +122,34 @@ public class TimesheetSubmitServiceImpl implements TimesheetSubmitService {
 				TIMESHEET_LABEL, "Tuan " + weekFrom + " - " + weekTo + ": " + saved.getTotalHours()
 						+ " gio, " + draftEntries.size() + " dong chuyen cho duyet");
 
-		// Hook thong bao nguoi duyet (TC-01): thong bao in-app cho PM cua cac du an trong tuan se duoc
-		// gui tai day khi module notification di vao hoat dong (NotificationType TIMESHEET_SUBMITTED).
-		// Hien tai nguoi duyet nhin thay bang qua hang cho duyet (Timesheet PENDING_APPROVAL).
+		// TC-01: thong bao den PM cua cac du an trong tuan
+		notifyProjectManagers(userId, weekFrom, weekTo, saved.getTotalHours(), draftEntries.size());
 
 		return timesheetMapper.toResponse(saved);
+	}
+
+	private void notifyProjectManagers(Long userId, LocalDate weekFrom, LocalDate weekTo,
+			BigDecimal totalHours, int entryCount) {
+		// Lay danh sach PM unique cua cac du an co entry trong tuan nay
+		List<Task> tasks = taskRepository.findByTimeEntriesUserIdAndWorkDateBetween(userId, weekFrom, weekTo);
+		Set<Long> pmIds = tasks.stream()
+				.map(Task::getProjectId)
+				.distinct()
+				.map(projectRepository::findById)
+				.filter(Optional::isPresent)
+				.map(Optional::get)
+				.map(Project::getProjectManagerId)
+				.filter(Objects::nonNull)
+				.collect(Collectors.toSet());
+
+		String title = "Bang cham cong moi can duyet";
+		String content = String.format("Nhan su #%d da nop bang cham cong tuan %s - %s (%s gio, %d dong)",
+				userId, weekFrom, weekTo, totalHours.toPlainString(), entryCount);
+
+		for (Long pmId : pmIds) {
+			notificationService.sendInAppNotification(pmId, NotificationType.TIMESHEET_SUBMITTED,
+					title, content, null, "Timesheet");
+		}
 	}
 
 	private void validateWeekRange(LocalDate weekFrom, LocalDate weekTo) {

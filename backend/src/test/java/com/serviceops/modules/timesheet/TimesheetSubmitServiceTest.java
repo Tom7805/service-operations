@@ -4,6 +4,12 @@ import com.serviceops.common.audit.AuditTargetType;
 import com.serviceops.common.audit.service.AuditLogService;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
+import com.serviceops.modules.notification.enums.NotificationType;
+import com.serviceops.modules.notification.service.NotificationService;
+import com.serviceops.modules.project.entity.Project;
+import com.serviceops.modules.project.entity.Task;
+import com.serviceops.modules.project.repository.ProjectRepository;
+import com.serviceops.modules.project.repository.TaskRepository;
 import com.serviceops.modules.timesheet.dto.response.TimesheetRes;
 import com.serviceops.modules.timesheet.entity.TimeEntry;
 import com.serviceops.modules.timesheet.entity.Timesheet;
@@ -37,6 +43,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -59,6 +66,12 @@ class TimesheetSubmitServiceTest {
 	private CurrentUserScopeProvider currentUserScopeProvider;
 	@Mock
 	private AuditLogService auditLogService;
+	@Mock
+	private NotificationService notificationService;
+	@Mock
+	private ProjectRepository projectRepository;
+	@Mock
+	private TaskRepository taskRepository;
 
 	private TimesheetSubmitServiceImpl service;
 
@@ -66,7 +79,8 @@ class TimesheetSubmitServiceTest {
 	void setUp() {
 		Clock clock = Clock.fixed(Instant.parse("2026-09-13T10:00:00Z"), ZoneId.of("UTC"));
 		service = new TimesheetSubmitServiceImpl(timeEntryRepository, timesheetRepository,
-				currentUserScopeProvider, auditLogService, new TimesheetMapper(), clock);
+				currentUserScopeProvider, auditLogService, new TimesheetMapper(), clock,
+				notificationService, projectRepository, taskRepository);
 	}
 
 	private TimeEntry draftEntry(Long id, Long taskId, LocalDate workDate, BigDecimal hours) {
@@ -93,6 +107,8 @@ class TimesheetSubmitServiceTest {
 			saved.setId(50L);
 			return saved;
 		});
+		// Stub for notification - no PMs to notify
+		when(taskRepository.findByTimeEntriesUserIdAndWorkDateBetween(any(), any(), any())).thenReturn(List.of());
 	}
 
 	@Test
@@ -195,5 +211,30 @@ class TimesheetSubmitServiceTest {
 	void rejectsWeekRangeWhereEndPrecedesStart() {
 		assertThrows(BusinessRuleException.class,
 				() -> service.submit(WEEK_TO, WEEK_FROM));
+	}
+
+	@Test
+	void notifiesProjectManagersOnSubmit() {
+		stubWeekEntries(List.of(draftEntry(30L, 20L, WEEK_FROM, new BigDecimal("8"))));
+		stubPersistence();
+		when(timesheetRepository.findByUserIdAndWeekStartDate(7L, WEEK_FROM)).thenReturn(Optional.empty());
+		when(timesheetRepository.sumHoursPerDayBetween(7L, WEEK_FROM, WEEK_TO))
+				.thenReturn(List.<Object[]>of(new Object[] { WEEK_FROM, new BigDecimal("8") }));
+		Task task = new Task();
+		task.setId(20L);
+		task.setProjectId(1L);
+		when(taskRepository.findByTimeEntriesUserIdAndWorkDateBetween(7L, WEEK_FROM, WEEK_TO))
+				.thenReturn(List.of(task));
+		Project project = new Project();
+		project.setId(1L);
+		project.setProjectManagerId(2L);
+		when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
+
+		service.submit(WEEK_FROM, WEEK_TO);
+
+		verify(notificationService).sendInAppNotification(eq(2L), eq(NotificationType.TIMESHEET_SUBMITTED),
+				any(), contains("2026-09-07"), any(), any());
+		// Phan da duyet roi khong gui them — chi mot thong bao cho PM duy nhat.
+		verify(notificationService, times(1)).sendInAppNotification(any(), any(), any(), any(), any(), any());
 	}
 }

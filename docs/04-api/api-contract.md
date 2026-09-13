@@ -2930,9 +2930,10 @@ Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại
   `REJECTED` cho phép nộp lại — hệ thống cập nhật lại đúng bản ghi bảng tuần cũ (unique người dùng + tuần).
 - **Lưu lịch sử (TC-05)**: mỗi lần nộp ghi một dòng nhật ký hệ thống `Nop bang cham cong tuan` — người
   thực hiện (tự điền từ phiên đăng nhập), nội dung (tuần, tổng giờ, số dòng chuyển duyệt), thời điểm.
-- **Thông báo người duyệt (TC-01)**: hiện tại người duyệt nhìn thấy bảng qua hàng đợi chờ duyệt
-  (`Timesheet` trạng thái `PENDING_APPROVAL`); thông báo in-app cho PM sẽ được gửi thêm khi module
-  notification đi vào hoạt động.
+- **Thông báo người duyệt (TC-01)**: sau khi nộp thành công, hệ thống gửi **thông báo in-app** cho
+  **từng Quản lý dự án** của các dự án có dòng giờ công trong tuần (`NotificationType.TIMESHEET_SUBMITTED`,
+  nội dung gồm tuần nộp, tổng giờ, số dòng chuyển duyệt). PM vẫn nhìn thấy bảng qua hàng đợi chờ duyệt
+  (`GET /timesheets/pending`, bảng ở trạng thái `PENDING_APPROVAL`).
 
 #### `POST /me/timesheets/{weekStartDate}/submit`
 
@@ -2978,6 +2979,64 @@ lưới `GET /me/time-entries`.
   chỉ đọc — mọi lời gọi `PUT/DELETE time-entries` với dòng đã `SUBMITTED` sẽ nhận `400 INVALID_STATE`.
 - Dùng `weekStartDate` của lưới tuần đang hiển thị làm `{weekStartDate}` trên path — khớp tự nhiên với
   dữ liệu `GET /me/time-entries`.
+
+### `NCL-06-CN-002` — Notification API (Thông báo in-app)
+
+Khi nhân viên nộp bảng chấm công (CN-002), hệ thống gửi **thông báo in-app** cho từng PM của các dự án có dòng giờ công trong tuần (`NotificationType.TIMESHEET_SUBMITTED`). PM có thể lấy danh sách thông báo qua:
+
+#### `GET /notifications?unreadOnly=false&page=0&size=20`
+
+Trả về danh sách thông báo của người dùng hiện tại, phân trang.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 100,
+      "recipientId": 2,
+      "type": "TIMESHEET_SUBMITTED",
+      "title": "Bang cham cong moi can duyet",
+      "content": "Nhan su #7 da nop bang cham cong tuan 2026-09-07 - 2026-09-13 (8 gio, 2 dong)",
+      "channel": "IN_APP",
+      "referenceId": null,
+      "referenceType": "Timesheet",
+      "isRead": false,
+      "readAt": null,
+      "sentAt": "2026-09-13T10:05:00"
+    }
+  ]
+}
+```
+
+#### `GET /notifications/unread-count`
+
+Trả về số lượng thông báo chưa đọc.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": 3
+}
+```
+
+#### `POST /notifications/read`
+
+Đánh dấu thông báo đã đọc.
+
+```json
+{ "notificationIds": [100, 101] }
+```
+
+**Response thành công — `200 OK`:**
+
+```json
+{ "success": true, "message": "Da danh dau da doc" }
+```
 
 ---
 
