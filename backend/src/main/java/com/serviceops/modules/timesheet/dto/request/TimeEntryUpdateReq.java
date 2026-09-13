@@ -19,5 +19,7 @@ public record TimeEntryUpdateReq(
 		BigDecimal hours,
 
 		@Size(max = 1000, message = "Ghi chu khong duoc vuot 1000 ky tu")
-		String note) {
+		String note,
+
+		Boolean billable) {
 }

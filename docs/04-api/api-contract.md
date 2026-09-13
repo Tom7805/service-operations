@@ -2800,7 +2800,8 @@ Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại
 {
   "workDate": "2026-09-10",
   "hours": 3.5,
-  "note": "Phân tích quy trình hiện tại"
+  "note": "Phân tích quy trình hiện tại",
+  "billable": true
 }
 ```
 
@@ -2808,7 +2809,8 @@ Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại
 |---|---|---|---|
 | `workDate` | date | có | Ngày làm việc, không được ở tương lai. |
 | `hours` | number | có | Lớn hơn 0 (giới hạn kiểm tra `@DecimalMin("0.01")`). |
-| `note` | string | không | Tối đa 1000 ký tự. |
+| `note` | string | có | Tối đa 1000 ký tự, không được để trống. |
+| `billable` | boolean | không | Có tính phí hay không — mặc định `true`. |
 
 **Response thành công — `200 OK`:**
 
@@ -2824,6 +2826,7 @@ Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại
     "hours": 3.5,
     "status": "DRAFT",
     "note": "Phân tích quy trình hiện tại",
+    "billable": true,
     "createdAt": "2026-09-10T15:20:00"
   }
 }
@@ -2833,7 +2836,7 @@ Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại
 
 | HTTP | `errorCode` | Khi nào xảy ra |
 |---|---|---|
-| 400 | `VALIDATION_ERROR` | Thiếu `workDate`/`hours`, `hours <= 0`, `note` vượt 1000 ký tự. |
+| 400 | `VALIDATION_ERROR` | Thiếu `workDate`/`hours`/`note`, `hours <= 0`, `note` rỗng/vượt 1000 ký tự. |
 | 400 | `INVALID_STATE` | Dự án đã đóng (`CLOSED`), ngày làm việc ở tương lai, hoặc tổng giờ trong ngày vượt 12 (QTN-14). |
 | 409 | `DUPLICATE_DATA` | Đã có bản ghi giờ công của chính mình trên công việc này trong cùng ngày. |
 | 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
@@ -2843,16 +2846,17 @@ Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại
 #### `PUT /projects/{projectId}/tasks/{taskId}/time-entries/{entryId}`
 
 ```json
-{ "hours": 4, "note": "Đã chỉnh sửa sau khi soát lại" }
+{ "hours": 4, "note": "Đã chỉnh sửa sau khi soát lại", "billable": true }
 ```
 
 | Trường | Kiểu | Bắt buộc | Ghi chú |
 |---|---|---|---|
 | `hours` | number | có | Lớn hơn 0 — ghi đè số giờ cũ. |
 | `note` | string | không | Ghi đè ghi chú cũ. |
+| `billable` | boolean | không | Có tính phí hay không — không truyền thì giữ nguyên giá trị cũ. |
 
 Chỉ sửa được bản ghi **DRAFT của chính mình trên đúng công việc** trong path; `workDate` và công việc không
-đổi — muốn đổi ngày thì xoá bản ghi cũ rồi ghi bản ghi mới. Kèm kiểm tra lại trần 24 giờ/ngày sau khi thay
+đổi — muốn đổi ngày thì xoá bản ghi cũ rồi ghi bản ghi mới. Kèm kiểm tra lại trần 12 giờ/ngày (QTN-14) sau khi thay
 đổi số giờ.
 
 **Response lỗi:** giống `POST`, thêm:
@@ -2884,7 +2888,7 @@ phần tử là một `TimesheetSummaryRes`:
       "weekTo": "2026-09-13",
       "entries": [
         { "id": 30, "taskId": 20, "userId": 7, "workDate": "2026-09-09", "hours": 5,
-          "status": "DRAFT", "note": null, "createdAt": "2026-09-09T17:00:00" }
+          "status": "DRAFT", "note": null, "billable": true, "createdAt": "2026-09-09T17:00:00" }
       ],
       "totalHours": 8,
       "budgetHours": 8,

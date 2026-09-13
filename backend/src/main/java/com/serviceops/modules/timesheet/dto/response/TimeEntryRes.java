@@ -16,8 +16,9 @@ import java.time.LocalDateTime;
  * @param hours     so gio cong.
  * @param status    trang thai ban ghi (DRAFT/SUBMITTED/APPROVED/REJECTED).
  * @param note      ghi chu nguoi ghi.
+ * @param billable  co tinh phi khong (mac dinh true).
  * @param createdAt thoi diem tao ban ghi.
  */
 public record TimeEntryRes(Long id, Long taskId, Long userId, LocalDate workDate, BigDecimal hours,
-		TimeEntryStatus status, String note, LocalDateTime createdAt) {
+		TimeEntryStatus status, String note, Boolean billable, LocalDateTime createdAt) {
 }
