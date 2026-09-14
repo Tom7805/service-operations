@@ -60,12 +60,11 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 		Long currentUserId = requireAssignee(task.getId());
 		openPeriodValidator.validate(request.workDate());
 
-		timeEntryRepository.findByUserIdAndTaskIdAndWorkDate(currentUserId, task.getId(), request.workDate())
-				.ifPresent(existing -> {
-					throw new BusinessRuleException(ErrorCode.DUPLICATE_DATA,
-							"Da co ban ghi gio cong cho cong viec nay trong ngay "
-									+ request.workDate() + " — hay sua ban ghi da co thay vi tao moi");
-				});
+		if (timeEntryRepository.existsByUserIdAndTaskIdAndWorkDate(currentUserId, task.getId(), request.workDate())) {
+			throw new BusinessRuleException(ErrorCode.DUPLICATE_DATA,
+					"Da co ban ghi gio cong cho cong viec nay trong ngay "
+							+ request.workDate() + " — hay sua ban ghi da co thay vi tao moi");
+		}
 		dailyHourLimitValidator.validate(currentUserId, request.workDate(), request.hours(), BigDecimal.ZERO);
 
 		TimeEntry entry = new TimeEntry();

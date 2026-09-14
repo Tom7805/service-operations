@@ -161,10 +161,8 @@ class TimeEntryServiceTest {
 	@Test
 	void rejectsDuplicateEntryOnSameTaskSameDay() {
 		stubAssigneeTask();
-		TimeEntry existing = new TimeEntry();
-		existing.setId(30L);
-		when(timeEntryRepository.findByUserIdAndTaskIdAndWorkDate(7L, 20L, TODAY))
-				.thenReturn(Optional.of(existing));
+		when(timeEntryRepository.existsByUserIdAndTaskIdAndWorkDate(7L, 20L, TODAY))
+				.thenReturn(true);
 
 		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
 				() -> service.create(1L, 20L, new TimeEntryCreateReq(TODAY, new BigDecimal("2"), "note", true)));

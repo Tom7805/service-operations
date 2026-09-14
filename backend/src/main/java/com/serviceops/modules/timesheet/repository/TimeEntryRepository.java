@@ -36,6 +36,16 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
 	Optional<TimeEntry> findByUserIdAndTaskIdAndWorkDate(Long userId, Long taskId, LocalDate workDate);
 
 	/**
+	 * Da co ban ghi (bat ky trang thai/vai tro nao) cho cap user/task/ngay nay chua.
+	 *
+	 * <p>Thay {@link #findByUserIdAndTaskIdAndWorkDate} lam dieu kien chan tao trung o
+	 * {@code TimeEntryServiceImpl#create} — sau khi bo rang buoc duy nhat DB (NCL-06-CN-005,
+	 * migration V60) mot cap co the co nhieu hon mot dong (goc + dao + sua), khien phuong thuc
+	 * tra {@code Optional} nem loi khi co nhieu hon mot ket qua.</p>
+	 */
+	boolean existsByUserIdAndTaskIdAndWorkDate(Long userId, Long taskId, LocalDate workDate);
+
+	/**
 	 * Tong gio cong da ghi cua mot cong viec, loc theo trang thai
 	 * (VD: chi tinh DRAFT + SUBMITTED de canh bao gan vuot ngan sach QTN-20;
 	 * chi tinh APPROVED khi cap nhat approved_hours sau khi duyet).
