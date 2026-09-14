@@ -3,6 +3,7 @@ package com.serviceops.modules.timesheet.service;
 import com.serviceops.modules.timesheet.dto.request.TimeEntryCreateReq;
 import com.serviceops.modules.timesheet.dto.request.TimeEntryUpdateReq;
 import com.serviceops.modules.timesheet.dto.response.TimeEntryRes;
+import com.serviceops.modules.timesheet.dto.response.TimeEntryTaskRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetSummaryRes;
 
 import java.time.LocalDate;
@@ -25,6 +26,9 @@ public interface TimeEntryService {
 
 	/** Xoa ban ghi gio cong DRAFT cua chinh minh. */
 	void delete(Long projectId, Long taskId, Long entryId);
+
+	/** Danh sach cong viec duoc giao trong cac du an dang chay de ghi gio. */
+	List<TimeEntryTaskRes> findMyRunningTasks();
 
 	/** Luoi gio cong tuan cua chinh minh, group theo cong viec, kem canh bao ngan sach (QTN-20). */
 	List<TimesheetSummaryRes> findMyWeek(LocalDate weekFrom, LocalDate weekTo);

@@ -4,6 +4,7 @@ import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.project.entity.Project;
 import com.serviceops.modules.project.entity.Task;
+import com.serviceops.modules.project.entity.TaskAssignment;
 import com.serviceops.modules.project.logging.ProjectAuditLogger;
 import com.serviceops.modules.project.repository.ProjectRepository;
 import com.serviceops.modules.project.repository.TaskAssignmentRepository;
@@ -11,6 +12,7 @@ import com.serviceops.modules.project.repository.TaskRepository;
 import com.serviceops.modules.timesheet.dto.request.TimeEntryCreateReq;
 import com.serviceops.modules.timesheet.dto.request.TimeEntryUpdateReq;
 import com.serviceops.modules.timesheet.dto.response.TimeEntryRes;
+import com.serviceops.modules.timesheet.dto.response.TimeEntryTaskRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetSummaryRes;
 import com.serviceops.modules.timesheet.entity.TimeEntry;
 import com.serviceops.modules.timesheet.enums.TimeEntryStatus;
@@ -145,6 +147,41 @@ class TimeEntryServiceTest {
 				() -> service.create(1L, 20L, new TimeEntryCreateReq(TODAY, new BigDecimal("2"), "note", true)));
 
 		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
+	}
+
+	@Test
+	void listsOnlyAssignedTasksFromRunningProjects() {
+		when(currentUserScopeProvider.currentUserId()).thenReturn(7L);
+		TaskAssignment runningAssignment = new TaskAssignment();
+		runningAssignment.setTaskId(20L);
+		runningAssignment.setUserId(7L);
+		TaskAssignment closedAssignment = new TaskAssignment();
+		closedAssignment.setTaskId(21L);
+		closedAssignment.setUserId(7L);
+
+		Project closedProject = new Project();
+		closedProject.setId(2L);
+		closedProject.setName("Du an da dong");
+		closedProject.setStatus(com.serviceops.modules.project.enums.ProjectStatus.CLOSED);
+		Task closedTask = new Task();
+		closedTask.setId(21L);
+		closedTask.setProjectId(2L);
+		closedTask.setName("Cong viec cu");
+		task.setName("Cong viec dang chay");
+		project.setName("Du an dang chay");
+
+		when(assignmentRepository.findByUserIdOrderByIdAsc(7L))
+				.thenReturn(List.of(runningAssignment, closedAssignment));
+		when(taskRepository.findById(20L)).thenReturn(Optional.of(task));
+		when(taskRepository.findById(21L)).thenReturn(Optional.of(closedTask));
+		when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
+		when(projectRepository.findById(2L)).thenReturn(Optional.of(closedProject));
+
+		List<TimeEntryTaskRes> response = service.findMyRunningTasks();
+
+		assertEquals(1, response.size());
+		assertEquals(1L, response.get(0).projectId());
+		assertEquals(20L, response.get(0).taskId());
 	}
 
 	@Test

@@ -4,6 +4,7 @@ import com.serviceops.common.api.BaseRes;
 import com.serviceops.modules.timesheet.dto.request.TimeEntryCreateReq;
 import com.serviceops.modules.timesheet.dto.request.TimeEntryUpdateReq;
 import com.serviceops.modules.timesheet.dto.response.TimeEntryRes;
+import com.serviceops.modules.timesheet.dto.response.TimeEntryTaskRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetSummaryRes;
 import com.serviceops.modules.timesheet.service.TimeEntryService;
 import jakarta.validation.Valid;
@@ -60,6 +61,12 @@ public class TimeEntryController {
 			@PathVariable Long entryId) {
 		timeEntryService.delete(projectId, taskId, entryId);
 		return BaseRes.ok("Xoa ban ghi gio cong thanh cong", null);
+	}
+
+	@GetMapping("/me/time-entry-tasks")
+	@PreAuthorize("hasRole('VT-03')")
+	public BaseRes<List<TimeEntryTaskRes>> findMyRunningTasks() {
+		return BaseRes.ok(timeEntryService.findMyRunningTasks());
 	}
 
 	/** Luoi gio cong tuan cua chinh minh, group theo cong viec, kem canh bao ngan sach (QTN-20). */
