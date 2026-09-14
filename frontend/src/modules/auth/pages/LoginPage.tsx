@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { AuthSession } from '../types/authTypes';
+import { ICONS } from '../../../components/common/icons';
+import type { AuthSession, TwoFactorChallenge } from '../types/authTypes';
 import LoginForm from '../components/LoginForm';
 import ForgotPasswordForm from '../components/ForgotPasswordForm';
 import ResetPasswordForm from '../components/ResetPasswordForm';
@@ -36,7 +37,7 @@ function Highlights() {
         </button>)}
       </div>
       <div className="highlight-detail" role="tabpanel" aria-live="polite">
-        <div key={active.number} className="highlight-detail__content"><span>✦</span><p>{active.detail}</p></div>
+        <div key={active.number} className="highlight-detail__content"><span className="icon-sm">{ICONS.spark}</span><p>{active.detail}</p></div>
       </div>
     </div>
   );
@@ -46,24 +47,17 @@ type AuthView = 'LOGIN' | 'FORGOT' | 'RESET' | 'TWO_FACTOR';
 
 export default function LoginPage({ onAuthenticated }: LoginPageProps) {
   const [view, setView] = useState<AuthView>('LOGIN');
-  const [resetToken, setResetToken] = useState<string | null>(null);
-  // NCL-01-CN-009: bước 1 (mật khẩu đúng) trả về challengeToken khi vai trò đang bật 2FA.
-  const [twoFactorChallenge, setTwoFactorChallenge] = useState<{ token: string; username: string } | null>(null);
+  /** Email đang khôi phục — mã được tra cứu theo người dùng nên phải mang theo. */
+  const [resetEmail, setResetEmail] = useState<string | null>(null);
+  // NCL-01-CN-009: bước 1 (mật khẩu đúng) trả về challenge khi vai trò đang bật 2FA.
+  const [twoFactorChallenge, setTwoFactorChallenge] = useState<TwoFactorChallenge | null>(null);
 
-  // Liên kết khôi phục mật khẩu (mô phỏng qua log backend — QTN-04) đưa người dùng thẳng
-  // vào đây kèm ?token=..., không cần đăng nhập trước.
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
-    if (token) {
-      setResetToken(token);
-      setView('RESET');
-    }
-  }, []);
-
+  // Không còn đọc `?token=` từ URL. Mã khôi phục giờ là 6 chữ số gõ tay, và cố ý
+  // KHÔNG đặt vào URL: địa chỉ URL bị ghi vào lịch sử trình duyệt, log của máy chủ
+  // proxy, và header Referer khi trang gọi sang bên thứ ba — ba nơi mà một bí mật
+  // dùng để đổi mật khẩu không nên xuất hiện.
   const handleResetDone = () => {
-    window.history.replaceState({}, '', window.location.pathname);
-    setResetToken(null);
+    setResetEmail(null);
     setView('LOGIN');
   };
 
@@ -77,7 +71,6 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
           <span>Vận hành <b>dịch vụ</b></span>
         </a>
         <div className="brand-copy">
-          <p className="eyebrow">Nền tảng vận hành thông minh</p>
           <h1>Mọi quyết định đều<br /><em>có điểm tựa.</em></h1>
           <p className="brand-copy__description">Kết nối con người, dự án và dòng tiền trong một nhịp vận hành rõ ràng.</p>
           <div className="brand-signals" aria-label="Giá trị vận hành">
@@ -93,18 +86,35 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
           <LoginForm
             onAuthenticated={onAuthenticated}
             onForgotPassword={() => setView('FORGOT')}
-            onTwoFactorRequired={(token, username) => {
-              setTwoFactorChallenge({ token, username });
+            onTwoFactorRequired={(challenge) => {
+              setTwoFactorChallenge(challenge);
               setView('TWO_FACTOR');
             }}
           />
         )}
-        {view === 'FORGOT' && <ForgotPasswordForm onBackToLogin={() => setView('LOGIN')} />}
-        {view === 'RESET' && resetToken && <ResetPasswordForm token={resetToken} onDone={handleResetDone} />}
+        {view === 'FORGOT' && (
+          <ForgotPasswordForm
+            onBackToLogin={() => setView('LOGIN')}
+            onCodeSent={(email) => {
+              setResetEmail(email);
+              setView('RESET');
+            }}
+          />
+        )}
+        {view === 'RESET' && resetEmail && (
+          <ResetPasswordForm
+            email={resetEmail}
+            onDone={handleResetDone}
+            onRequestNewCode={() => setView('FORGOT')}
+          />
+        )}
         {view === 'TWO_FACTOR' && twoFactorChallenge && (
           <TwoFactorVerifyForm
-            challengeToken={twoFactorChallenge.token}
+            challengeToken={twoFactorChallenge.challengeToken}
             username={twoFactorChallenge.username}
+            totpEnrollment={twoFactorChallenge.totpEnrollment}
+            otpauthUri={twoFactorChallenge.otpauthUri}
+            totpSecretForDisplay={twoFactorChallenge.totpSecretForDisplay}
             onVerified={onAuthenticated}
             onBackToLogin={() => {
               setTwoFactorChallenge(null);

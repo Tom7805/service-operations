@@ -5,9 +5,12 @@ import com.serviceops.config.SecurityConfig;
 import com.serviceops.modules.customer.controller.CustomerController;
 import com.serviceops.modules.customer.dto.request.CustomerCreateReq;
 import com.serviceops.modules.customer.dto.request.CustomerCreateWithOverrideReq;
+import com.serviceops.modules.customer.dto.request.CustomerSegmentReq;
 import com.serviceops.modules.customer.dto.request.DuplicateOverrideReq;
 import com.serviceops.modules.customer.dto.response.CustomerRes;
+import com.serviceops.modules.customer.dto.response.CustomerOverviewRes;
 import com.serviceops.modules.customer.dto.response.DuplicateCandidateRes;
+import com.serviceops.modules.customer.service.CustomerOverviewService;
 import com.serviceops.modules.customer.service.CustomerService;
 import com.serviceops.security.CustomUserDetailsService;
 import com.serviceops.security.JwtAuthFilter;
@@ -27,6 +30,8 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -48,6 +53,9 @@ class CustomerControllerIT {
 
 	@MockBean
 	private CustomerService customerService;
+
+	@MockBean
+	private CustomerOverviewService customerOverviewService;
 
 	@MockBean
 	private JwtProvider jwtProvider;
@@ -168,5 +176,123 @@ class CustomerControllerIT {
 						.content(objectMapper.writeValueAsString(req)))
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+	}
+
+	@Test
+	@DisplayName("NCL-02-CN-004 TC-01: PM xem duoc ho so tong hop khach hang")
+	@WithMockUser(authorities = "ROLE_VT-02")
+	void projectManagerCanViewCustomerOverview() throws Exception {
+		CustomerRes customer = new CustomerRes(1L, "KH-000001", "Cong ty TNHH ABC", null, null, null, null, null);
+		when(customerOverviewService.getOverview(1L)).thenReturn(
+				new CustomerOverviewRes(customer, List.of(), List.of(), List.of(), List.of(), List.of()));
+
+		mockMvc.perform(get("/customers/1/overview"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.data.customer.code").value("KH-000001"))
+				.andExpect(jsonPath("$.data.opportunities").isArray());
+	}
+
+	@Test
+	@DisplayName("NCL-02-CN-004 TC-03: vai tro khong phu hop khong xem duoc ho so tong hop")
+	@WithMockUser(authorities = "ROLE_VT-05")
+	void overviewDeniesOtherRoles() throws Exception {
+		mockMvc.perform(get("/customers/1/overview"))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+	}
+
+	@Test
+	@DisplayName("NCL-02-CN-001 (buoc D): Sales (VT-04) lay duoc danh sach ho so khach hang")
+	@WithMockUser(authorities = "ROLE_VT-04")
+	void listReturnsCustomersForSales() throws Exception {
+		when(customerService.findAll(any())).thenReturn(List.of(
+				new CustomerRes(2L, "KH-000002", "Cong ty CP XYZ", null, null, null, null, null),
+				new CustomerRes(1L, "KH-000001", "Cong ty TNHH ABC", "0101234567", "0987654321", "Cong nghe", "Ha Noi", null)));
+
+		mockMvc.perform(get("/customers"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.data").isArray())
+				.andExpect(jsonPath("$.data.length()").value(2))
+				.andExpect(jsonPath("$.data[0].code").value("KH-000002"));
+	}
+
+	@Test
+	@DisplayName("NCL-02-CN-001: PM (VT-02) cung lay duoc danh sach (co the rong)")
+	@WithMockUser(authorities = "ROLE_VT-02")
+	void listReturnsEmptyArrayForProjectManager() throws Exception {
+		when(customerService.findAll(any())).thenReturn(List.of());
+
+		mockMvc.perform(get("/customers"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data").isArray())
+				.andExpect(jsonPath("$.data.length()").value(0));
+	}
+
+	@Test
+	@DisplayName("NCL-02-CN-001 / QTN-01: vai tro khong phu hop bi tu choi xem danh sach")
+	@WithMockUser(authorities = "ROLE_VT-05")
+	void listDeniesOtherRoles() throws Exception {
+		mockMvc.perform(get("/customers"))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+	}
+
+	@Test
+	@DisplayName("NCL-02-CN-005 TC-01: Sales cap nhat phan nhom khach hang")
+	@WithMockUser(authorities = "ROLE_VT-04")
+	void salesCanUpdateCustomerSegment() throws Exception {
+		when(customerService.updateSegment(any(Long.class), any(CustomerSegmentReq.class))).thenReturn(
+				new CustomerRes(1L, "KH-000001", "Cong ty ABC", null, null,
+						"Cong nghe", null, null, "Vua", "Uu tien"));
+
+		mockMvc.perform(patch("/customers/1/segment")
+					.contentType("application/json")
+					.content(objectMapper.writeValueAsString(
+							new CustomerSegmentReq("Cong nghe", "Vua", "Uu tien"))))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.industry").value("Cong nghe"))
+				.andExpect(jsonPath("$.data.companySize").value("Vua"))
+				.andExpect(jsonPath("$.data.priority").value("Uu tien"));
+	}
+
+	@Test
+	@DisplayName("NCL-02-CN-005: Quan ly du an (VT-02) cung duoc cap nhat phan nhom")
+	@WithMockUser(authorities = "ROLE_VT-02")
+	void projectManagerCanUpdateCustomerSegment() throws Exception {
+		when(customerService.updateSegment(any(Long.class), any(CustomerSegmentReq.class))).thenReturn(
+				new CustomerRes(1L, "KH-000001", "Cong ty ABC", null, null,
+						"Tai chinh", null, null, "Lon", "Cao"));
+
+		mockMvc.perform(patch("/customers/1/segment")
+					.contentType("application/json")
+					.content(objectMapper.writeValueAsString(
+							new CustomerSegmentReq("Tai chinh", "Lon", "Cao"))))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.companySize").value("Lon"))
+				.andExpect(jsonPath("$.data.priority").value("Cao"));
+	}
+
+	@Test
+	@DisplayName("NCL-02-CN-005 TC-03: vai tro khac Sales/PM bi tu choi cap nhat phan nhom")
+	@WithMockUser(authorities = "ROLE_VT-05")
+	void segmentUpdateDeniesOtherRoles() throws Exception {
+		mockMvc.perform(patch("/customers/1/segment")
+					.contentType("application/json")
+					.content(objectMapper.writeValueAsString(
+							new CustomerSegmentReq("Cong nghe", "Vua", "Uu tien"))))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+	}
+
+	@Test
+	@DisplayName("NCL-02-CN-005: thieu nhan phan nhom bi tu choi")
+	@WithMockUser(authorities = "ROLE_VT-04")
+	void segmentUpdateRejectsMissingLabel() throws Exception {
+		mockMvc.perform(patch("/customers/1/segment")
+					.contentType("application/json")
+					.content("{\"industry\":\"\",\"companySize\":\"Vua\",\"priority\":\"Uu tien\"}"))
+				.andExpect(status().isBadRequest());
 	}
 }

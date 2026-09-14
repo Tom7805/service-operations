@@ -55,7 +55,7 @@ describe('SensitiveAccessLogPage — Acceptance Criteria Tests (NCL-01-CN-006)',
   it('TC-03: Non-admin users (VT-02) receive Access Denied screen and never call the API', () => {
     render(<SensitiveAccessLogPage currentUserRoles={['VT-02']} currentUserName="Nhân viên kinh doanh" />);
 
-    expect(screen.getByText('Từ chối truy cập (Access Denied)')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Bạn không có thẩm quyền/i })).toBeInTheDocument();
     expect(screen.getByText(/chỉ dành riêng cho vai trò/i)).toBeInTheDocument();
     expect(mockSearchLogs).not.toHaveBeenCalled();
   });

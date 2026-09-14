@@ -7,6 +7,9 @@ import {
   type SensitiveAccessLogEntry,
   type SensitiveDataTypeCode,
 } from '../types/auditLogTypes';
+import { roleLabels } from '../../../utils/roleLabel';
+import { ICONS } from '../../../components/common/icons';
+import TableSkeleton from '../../../components/common/TableSkeleton';
 
 interface SensitiveAccessLogPageProps {
   currentUserRoles?: string[];
@@ -114,18 +117,17 @@ export default function SensitiveAccessLogPage({
     return (
       <div className="access-denied-container">
         <div className="access-denied-card">
-          <div className="access-denied-icon">🕵️</div>
-          <span className="eyebrow text-danger">Từ chối truy cập (Access Denied)</span>
+          <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
             Chức năng tra cứu nhật ký truy cập dữ liệu nhạy cảm chỉ dành riêng cho vai trò{' '}
-            <strong>Quản trị viên</strong>. Hệ thống đã ghi nhận lần truy cập trái phép này vào
+            <strong>Quản trị viên</strong>. Nếu bạn cần quyền này, hãy liên hệ quản trị viên hệ thống vào
             nhật ký bảo mật phía máy chủ.
           </p>
           <div className="security-log-badge">
-            <span>🛡️ Lần thử truy cập: {new Date().toLocaleString('vi-VN')}</span>
-            <span>Tài khoản: {currentUserName}</span>
-            <span>Vai trò hiện tại: {currentUserRoles.join(', ')}</span>
+            <span className="security-log-badge__item">{ICONS.shield} Thời điểm: {new Date().toLocaleString('vi-VN')}</span>
+            <span className="security-log-badge__item">Tài khoản: {currentUserName}</span>
+            <span className="security-log-badge__item">Vai trò hiện tại: {roleLabels(currentUserRoles)}</span>
           </div>
         </div>
       </div>
@@ -140,10 +142,6 @@ export default function SensitiveAccessLogPage({
       {/* Page Header */}
       <div className="page-header">
         <div>
-          <div className="breadcrumb">
-            <span>Hệ thống</span> / <span>Bảo mật dữ liệu</span> /{' '}
-            <span className="active">Nhật ký truy cập dữ liệu nhạy cảm</span>
-          </div>
           <h1 className="page-title">Nhật ký truy cập dữ liệu nhạy cảm</h1>
           <p className="page-subtitle">
             Tra cứu toàn bộ lượt xem, xuất và các lần bị từ chối truy cập dữ liệu lương, chi phí, giá vốn
@@ -155,29 +153,30 @@ export default function SensitiveAccessLogPage({
           className="btn-icon-refresh"
           onClick={() => fetchLogs(page)}
           title="Làm mới dữ liệu"
+          aria-label="Làm mới dữ liệu"
         >
-          🔄
+          {ICONS.refresh}
         </button>
       </div>
 
       {/* KPI Stats */}
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--blue">📋</div>
+          <div className="stat-card__icon stat-card__icon--blue">{ICONS.clipboardList}</div>
           <div>
             <span className="stat-card__label">Tổng số bản ghi thỏa bộ lọc</span>
             <strong className="stat-card__value">{totalElements}</strong>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--purple">📤</div>
+          <div className="stat-card__icon stat-card__icon--purple">{ICONS.download}</div>
           <div>
             <span className="stat-card__label">Lượt xuất dữ liệu (trang này)</span>
             <strong className="stat-card__value">{exportCount}</strong>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--red">🚫</div>
+          <div className="stat-card__icon stat-card__icon--red">{ICONS.shieldOff}</div>
           <div>
             <span className="stat-card__label">Lượt bị từ chối (trang này)</span>
             <strong className="stat-card__value text-danger">{deniedCount}</strong>
@@ -187,7 +186,8 @@ export default function SensitiveAccessLogPage({
 
       {error && (
         <div className="alert alert--error" role="alert">
-          <span>⚠️ {error}</span>
+          <span className="alert__icon">{ICONS.alertTriangle}</span>
+          <span>{error}</span>
           <button type="button" className="btn-secondary text-dark ml-auto" onClick={() => fetchLogs(page)}>
             Thử lại
           </button>
@@ -243,7 +243,7 @@ export default function SensitiveAccessLogPage({
               />
             </div>
             <button type="submit" className="btn-primary">
-              🔍 Tìm kiếm
+              <span className="icon-sm">{ICONS.search}</span> Tìm kiếm
             </button>
             <button type="button" className="btn-secondary" onClick={handleResetFilters}>
               Đặt lại bộ lọc
@@ -267,19 +267,11 @@ export default function SensitiveAccessLogPage({
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
-                    <div
-                      className="loader"
-                      style={{ margin: '0 auto 10px', borderColor: '#10b981', borderTopColor: 'transparent' }}
-                    />
-                    Đang tải nhật ký truy cập...
-                  </td>
-                </tr>
+                <TableSkeleton columns={7} />
               ) : entries.length === 0 ? (
                 <tr>
                   {/* TC-02: không có bản ghi nào thỏa bộ lọc */}
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#5B5A57' }}>
                     Không tìm thấy nhật ký truy cập nào thỏa bộ lọc đã chọn.
                   </td>
                 </tr>
@@ -320,7 +312,7 @@ export default function SensitiveAccessLogPage({
               disabled={page <= 0 || loading}
               onClick={() => fetchLogs(page - 1)}
             >
-              ← Trang trước
+              <span className="icon-sm">{ICONS.arrowLeft}</span> Trang trước
             </button>
             <button
               type="button"
@@ -328,7 +320,7 @@ export default function SensitiveAccessLogPage({
               disabled={page + 1 >= totalPages || loading}
               onClick={() => fetchLogs(page + 1)}
             >
-              Trang sau →
+              Trang sau <span className="icon-sm">{ICONS.arrowRight}</span>
             </button>
           </div>
         </div>

@@ -10,6 +10,7 @@ const mockUpdateEmployee = vi.fn();
 
 vi.mock('../api/employeesApi', () => ({
   getEmployees: (...args: unknown[]) => mockGetEmployees(...args),
+  getAssignableUsers: vi.fn(() => Promise.resolve([])),
   createEmployee: (...args: unknown[]) => mockCreateEmployee(...args),
   updateEmployee: (...args: unknown[]) => mockUpdateEmployee(...args),
   EmployeeApiError: class EmployeeApiError extends Error {
@@ -64,7 +65,7 @@ describe('EmployeeListPage — Acceptance Criteria Tests (NCL-01-CN-007)', () =>
   it('TC-04: Vai trò khác VT-06/VT-07 nhận màn hình Access Denied và không gọi API', () => {
     render(<EmployeeListPage currentUserRoles={['VT-03']} currentUserName="Nhân viên chuyên môn" />);
 
-    expect(screen.getByText('Từ chối truy cập (Access Denied)')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Bạn không có thẩm quyền/i })).toBeInTheDocument();
     expect(mockGetEmployees).not.toHaveBeenCalled();
   });
 

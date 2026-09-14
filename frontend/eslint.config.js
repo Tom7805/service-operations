@@ -10,6 +10,15 @@ export default [
     files: ['src/**/*.{ts,tsx}'],
     languageOptions: { parser: tsParser, parserOptions: { ecmaVersion: 'latest', sourceType: 'module' } },
     plugins: { '@typescript-eslint': tseslint, 'react-hooks': reactHooks },
-    rules: { ...tseslint.configs.recommended.rules, ...reactHooks.configs.recommended.rules, 'no-undef': 'off' },
+    rules: {
+      ...tseslint.configs.recommended.rules,
+      ...reactHooks.configs.recommended.rules,
+      'no-undef': 'off',
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
+    },
   },
 ];

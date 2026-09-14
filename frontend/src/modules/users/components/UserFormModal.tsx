@@ -2,6 +2,9 @@ import React, { FormEvent, useEffect, useState } from 'react';
 import type { CreateUserPayload, UpdateUserPayload, User } from '../types/userTypes';
 import { SYSTEM_DEPARTMENTS, SYSTEM_ROLES } from '../types/userTypes';
 import { validateCreateUser, validateUpdateUser, FormErrors } from '../validators/userValidators';
+import { ICONS } from './icons';
+import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 
 interface UserFormModalProps {
   isOpen: boolean;
@@ -51,6 +54,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     setErrors({});
     setServerError(null);
   }, [editingUser, isOpen]);
+
+  const backdrop = useBackdropClick(onClose);
 
   if (!isOpen) return null;
 
@@ -120,17 +125,17 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <ModalPortal>
+    <div className="modal-backdrop" onMouseDown={backdrop.onMouseDown} onClick={backdrop.onClick} role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
-            <span className="modal-eyebrow">{isEdit ? 'Cập nhật tài khoản' : 'Khởi tạo tài khoản'}</span>
             <h2 id="modal-title" className="modal-title">
               {isEdit ? `Chỉnh sửa: @${editingUser?.username}` : 'Thêm tài khoản người dùng mới'}
             </h2>
           </div>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Đóng dialog">
-            ✕
+            <span className="icon-sm">{ICONS.close}</span>
           </button>
         </div>
 
@@ -138,7 +143,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           <div className="modal-body">
             {serverError && (
               <div className="alert alert--error" role="alert">
-                <span className="alert__icon">⚠️</span>
+                <span className="alert__icon">{ICONS.alertTriangle}</span>
                 <div className="alert__content">
                   <strong>Thao tác thất bại</strong>
                   <p>{serverError}</p>
@@ -249,7 +254,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                     onClick={() => setShowPassword(!showPassword)}
                     tabIndex={-1}
                   >
-                    {showPassword ? '🙈' : '👁️'}
+                    {showPassword ? ICONS.eyeOff : ICONS.eye}
                   </button>
                 </div>
                 {errors.password && <span className="field-error">{errors.password}</span>}
@@ -300,6 +305,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 };
 

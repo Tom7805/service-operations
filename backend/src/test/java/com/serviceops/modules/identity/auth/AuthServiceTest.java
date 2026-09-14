@@ -2,6 +2,7 @@ package com.serviceops.modules.identity.auth;
 
 import com.serviceops.modules.identity.auth.dto.request.LoginReq;
 import com.serviceops.modules.identity.auth.dto.response.LoginRes;
+import com.serviceops.modules.identity.auth.dto.response.TwoFactorChallengeRes;
 import com.serviceops.modules.identity.auth.service.TwoFactorService;
 import com.serviceops.modules.identity.auth.service.impl.AuthServiceImpl;
 import com.serviceops.modules.identity.user.entity.User;
@@ -73,7 +74,8 @@ class AuthServiceTest {
 		when(passwordEncoder.matches("Password@123", "hashed-password")).thenReturn(true);
 		when(userRoleScopeRepository.findRoleCodesByUserId(1L)).thenReturn(List.of("VT-01"));
 		when(twoFactorService.requiresTwoFactor(List.of("VT-01"))).thenReturn(true);
-		when(twoFactorService.createChallenge(user)).thenReturn("challenge-token");
+		when(twoFactorService.createChallenge(user))
+				.thenReturn(new TwoFactorChallengeRes("challenge-token", false, null, null));
 
 		LoginRes result = authService.login(request, "127.0.0.1");
 

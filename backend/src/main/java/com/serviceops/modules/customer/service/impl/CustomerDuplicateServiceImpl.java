@@ -62,7 +62,9 @@ public class CustomerDuplicateServiceImpl implements CustomerDuplicateService {
             map.put(c.getId(), c);
         }
         if (!isEmpty(normalizedTax)) {
-            customerRepository.findByTaxCode(normalizedTax).ifPresent(c -> map.put(c.getId(), c));
+            for (Customer c : customerRepository.findByTaxCode(normalizedTax)) {
+                map.put(c.getId(), c);
+            }
         }
         return new ArrayList<>(map.values());
     }

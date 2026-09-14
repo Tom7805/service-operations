@@ -113,6 +113,17 @@ export async function updateUserStatus(id: number, status: UserStatus): Promise<
   });
 }
 
+/**
+ * NCL-01-CN-009: dùng khi người dùng mất/đổi điện thoại và không còn app Authenticator
+ * nào tạo được mã cho tài khoản này nữa. Xoá khóa TOTP đã liên kết — lần đăng nhập kế
+ * tiếp của tài khoản đó sẽ hiện lại màn hình quét QR để liên kết app mới. Chỉ VT-07 gọi được.
+ */
+export async function resetUserTwoFactor(userId: number): Promise<void> {
+  await requestBackend<null>(`${API_BASE_URL}/auth/two-factor/users/${userId}/reset`, {
+    method: 'POST',
+  });
+}
+
 export async function getRoles(): Promise<RoleItem[]> {
   return requestBackend<RoleItem[]>(`${API_BASE_URL}/roles`, { method: 'GET' });
 }

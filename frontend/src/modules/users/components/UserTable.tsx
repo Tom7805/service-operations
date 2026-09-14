@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { User, UserStatus } from '../types/userTypes';
 import { SYSTEM_DEPARTMENTS, SYSTEM_ROLES } from '../types/userTypes';
+import { ICONS } from './icons';
+import RowActionsMenu from '../../../components/common/RowActionsMenu';
+import TableSkeleton from '../../../components/common/TableSkeleton';
 
 interface UserTableProps {
   users: User[];
@@ -10,6 +13,8 @@ interface UserTableProps {
   onAssignRoles: (user: User) => void;
   onViewDetail: (user: User) => void;
   onRefresh: () => void;
+  /** NCL-01-CN-009: mất/đổi điện thoại — đặt lại thiết lập TOTP để bắt buộc liên kết app mới. */
+  onResetTwoFactor?: (user: User) => void;
 }
 
 export const UserTable: React.FC<UserTableProps> = ({
@@ -20,6 +25,7 @@ export const UserTable: React.FC<UserTableProps> = ({
   onAssignRoles,
   onViewDetail,
   onRefresh,
+  onResetTwoFactor,
 }) => {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
@@ -50,7 +56,7 @@ export const UserTable: React.FC<UserTableProps> = ({
     const role = SYSTEM_ROLES.find((r) => r.code === code);
     const name = role ? role.name : code;
     return (
-      <span key={code} className={`user-tag ${role?.badgeClass || 'badge--gray'}`} title={role?.description || name}>
+      <span key={code} className="role-chip" title={role?.description || name}>
         {name}
       </span>
     );
@@ -87,7 +93,7 @@ export const UserTable: React.FC<UserTableProps> = ({
           />
           {search && (
             <button type="button" className="search-box__clear" onClick={() => setSearch('')} aria-label="Xóa tìm kiếm">
-              ✕
+              <span className="icon-sm">{ICONS.close}</span>
             </button>
           )}
         </div>
@@ -154,33 +160,23 @@ export const UserTable: React.FC<UserTableProps> = ({
         <table className="user-data-table">
           <thead>
             <tr>
-              <th scope="col" style={{ width: '60px' }}>STT</th>
+              <th scope="col" style={{ width: '46px' }}>STT</th>
               <th scope="col">Tài khoản & Họ tên</th>
               <th scope="col">Email</th>
               <th scope="col">Bộ phận</th>
               <th scope="col">Vai trò hệ thống</th>
-              <th scope="col">Trạng thái</th>
-              <th scope="col" style={{ width: '150px', textAlign: 'right' }}>Thao tác</th>
+              <th scope="col" style={{ width: '132px' }}>Trạng thái</th>
+              <th scope="col" style={{ width: '84px', textAlign: 'right' }}>Thao tác</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              Array.from({ length: 4 }).map((_, idx) => (
-                <tr key={idx} className="skeleton-row">
-                  <td><div className="skeleton skeleton-text" style={{ width: '20px' }} /></td>
-                  <td><div className="skeleton skeleton-text" style={{ width: '140px' }} /></td>
-                  <td><div className="skeleton skeleton-text" style={{ width: '160px' }} /></td>
-                  <td><div className="skeleton skeleton-text" style={{ width: '120px' }} /></td>
-                  <td><div className="skeleton skeleton-text" style={{ width: '150px' }} /></td>
-                  <td><div className="skeleton skeleton-pill" style={{ width: '90px' }} /></td>
-                  <td><div className="skeleton skeleton-text" style={{ width: '80px', marginLeft: 'auto' }} /></td>
-                </tr>
-              ))
+              <TableSkeleton columns={7} />
             ) : filteredUsers.length === 0 ? (
               <tr>
                 <td colSpan={7}>
                   <div className="table-empty-state">
-                    <div className="empty-icon">👤</div>
+                    <div className="empty-icon">{ICONS.user}</div>
                     <h3>Không tìm thấy tài khoản người dùng nào</h3>
                     <p>Thử điều chỉnh từ khóa tìm kiếm hoặc bộ lọc vai trò, trạng thái.</p>
                     {(search || roleFilter !== 'ALL' || statusFilter !== 'ALL') && (
@@ -209,16 +205,16 @@ export const UserTable: React.FC<UserTableProps> = ({
                         {user.fullName.charAt(0).toUpperCase()}
                       </div>
                       <div className="user-profile-meta">
-                        <span className="user-profile-fullname">{user.fullName}</span>
-                        <span className="user-profile-username">@{user.username}</span>
+                        <span className="user-profile-fullname" title={user.fullName}>{user.fullName}</span>
+                        <span className="user-profile-username" title={`@${user.username}`}>@{user.username}</span>
                       </div>
                     </div>
                   </td>
                   <td>
-                    <span className="cell-email">{user.email || '—'}</span>
+                    <span className="cell-email" title={user.email || undefined}>{user.email || '—'}</span>
                   </td>
                   <td>
-                    <span className="cell-dept">{getDepartmentName(user.departmentId)}</span>
+                    <span className="cell-dept" title={getDepartmentName(user.departmentId)}>{getDepartmentName(user.departmentId)}</span>
                   </td>
                   <td>
                     <div className="user-tags-wrap">
@@ -229,40 +225,28 @@ export const UserTable: React.FC<UserTableProps> = ({
                   </td>
                   <td>{getStatusBadge(user.status)}</td>
                   <td style={{ textAlign: 'right' }}>
-                    <div className="table-actions">
-                      <button
-                        type="button"
-                        className="action-btn action-btn--edit"
-                        title="Chỉnh sửa thông tin"
-                        onClick={() => onEdit(user)}
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        type="button"
-                        className="action-btn action-btn--role"
-                        title="Phân quyền & vai trò"
-                        onClick={() => onAssignRoles(user)}
-                      >
-                        🔑
-                      </button>
-                      <button
-                        type="button"
-                        className={`action-btn ${user.status === 'LOCKED' ? 'action-btn--unlock' : 'action-btn--lock'}`}
-                        title={user.status === 'LOCKED' ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
-                        onClick={() => onToggleStatus(user)}
-                      >
-                        {user.status === 'LOCKED' ? '🔓' : '🔒'}
-                      </button>
-                      <button
-                        type="button"
-                        className="action-btn action-btn--detail"
-                        title="Xem chi tiết"
-                        onClick={() => onViewDetail(user)}
-                      >
-                        👁️
-                      </button>
-                    </div>
+                    <RowActionsMenu
+                      actions={[
+                        { key: 'edit', label: 'Chỉnh sửa thông tin', icon: ICONS.edit, onClick: () => onEdit(user) },
+                        { key: 'role', label: 'Phân quyền & vai trò', icon: ICONS.role, onClick: () => onAssignRoles(user) },
+                        { key: 'detail', label: 'Xem chi tiết', icon: ICONS.eye, onClick: () => onViewDetail(user) },
+                        ...(onResetTwoFactor
+                          ? [{
+                              key: 'reset-2fa',
+                              label: 'Đặt lại xác thực hai bước',
+                              icon: ICONS.resetTwoFactor,
+                              onClick: () => onResetTwoFactor(user),
+                            }]
+                          : []),
+                        {
+                          key: 'toggle-status',
+                          label: user.status === 'LOCKED' ? 'Mở khóa tài khoản' : 'Khóa tài khoản',
+                          icon: user.status === 'LOCKED' ? ICONS.unlock : ICONS.lock,
+                          onClick: () => onToggleStatus(user),
+                          tone: user.status === 'LOCKED' ? 'default' : 'danger',
+                        },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))

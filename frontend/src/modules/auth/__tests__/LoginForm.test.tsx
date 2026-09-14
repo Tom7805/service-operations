@@ -46,8 +46,16 @@ describe('LoginForm (NCL-01-CN-001, NCL-01-CN-008)', () => {
     expect(mockLogin).not.toHaveBeenCalled();
   });
 
-  it('NCL-01-CN-009-TC-01: gọi onTwoFactorRequired thay vì onAuthenticated khi backend yêu cầu OTP', async () => {
-    mockLogin.mockResolvedValue({ requiresTwoFactor: true, challengeToken: 'challenge-abc', username: 'finance-user' });
+  it('NCL-01-CN-009-TC-01: gọi onTwoFactorRequired thay vì onAuthenticated khi backend yêu cầu mã TOTP', async () => {
+    const challenge = {
+      requiresTwoFactor: true,
+      challengeToken: 'challenge-abc',
+      username: 'finance-user',
+      totpEnrollment: false,
+      otpauthUri: null,
+      totpSecretForDisplay: null,
+    };
+    mockLogin.mockResolvedValue(challenge);
     const onAuthenticated = vi.fn();
     const onTwoFactorRequired = vi.fn();
 
@@ -57,7 +65,7 @@ describe('LoginForm (NCL-01-CN-001, NCL-01-CN-008)', () => {
     fireEvent.change(screen.getByPlaceholderText('Nhập mật khẩu'), { target: { value: 'Password@123' } });
     fireEvent.click(screen.getByRole('button', { name: /Đăng nhập/i }));
 
-    await waitFor(() => expect(onTwoFactorRequired).toHaveBeenCalledWith('challenge-abc', 'finance-user'));
+    await waitFor(() => expect(onTwoFactorRequired).toHaveBeenCalledWith(challenge));
     expect(onAuthenticated).not.toHaveBeenCalled();
   });
 

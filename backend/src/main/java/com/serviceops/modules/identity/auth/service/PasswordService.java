@@ -21,7 +21,14 @@ public interface PasswordService {
     void forgotPassword(ForgotPasswordReq request);
 
     /** NCL-01-CN-008-TC-02: kiểm tra liên kết khôi phục còn hiệu lực trước khi hiển thị form. */
-    boolean isResetTokenValid(String token);
+    /**
+     * Ma khoi phuc con dung duoc khong? Can CA email lan ma: ma duoc tra cuu theo
+     * nguoi dung roi moi so khop, khong tra cuu bang ma tran.
+     *
+     * <p>Luu y: goi ham nay KHONG lam tang so lan nhap sai — no chi de giao dien
+     * kiem tra truoc, khong phai mot lan thu that.</p>
+     */
+    boolean isResetCodeValid(String email, String code);
 
     /** Đặt mật khẩu mới từ liên kết khôi phục còn hiệu lực. */
     void resetPassword(ResetPasswordReq request);

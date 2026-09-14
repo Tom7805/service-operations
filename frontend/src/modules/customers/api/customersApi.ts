@@ -2,8 +2,17 @@ import type {
   Customer,
   CustomerCreatePayload,
   CustomerCreateWithOverridePayload,
+  CustomerOverview,
   DuplicateCandidate,
+  CustomerContact,
+  CustomerContactPayload,
+  CustomerSegmentPayload,
+  CustomerMergePayload,
+  CustomerMergePreview,
+  CustomerUpdatePayload,
+  CustomerUpdateWithOverridePayload,
 } from '../types/customerTypes';
+import { normalizePhone } from '../validators/customerValidators';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -49,11 +58,11 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
 
     if (!message) {
       if (response.status === 403) {
-        message = 'Bạn không có quyền thực hiện thao tác này. Chức năng yêu cầu vai trò Nhân viên kinh doanh (VT-04) hoặc Quản lý dự án (VT-02).';
+        message = 'Bạn không có quyền thực hiện thao tác này. Chức năng yêu cầu vai trò Nhân viên kinh doanh hoặc Quản lý dự án.';
       } else if (response.status === 401) {
         message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
       } else if (response.status === 409) {
-        message = 'Hệ thống phát hiện hồ sơ khách hàng đã có độ trùng lặp cao (NCL-02-CN-002). Vui lòng xác nhận tạo mới kèm lý do.';
+        message = 'Hệ thống phát hiện hồ sơ khách hàng đã có độ trùng lặp cao. Vui lòng xác nhận tạo mới kèm lý do.';
       } else if (response.status === 400) {
         message = 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại các trường thông tin.';
       } else {
@@ -76,10 +85,23 @@ function cleanCustomerPayload(payload: CustomerCreatePayload): CustomerCreatePay
   return {
     name: payload.name.trim(),
     taxCode: payload.taxCode?.trim() || undefined,
-    phone: payload.phone?.trim() || undefined,
+    phone: payload.phone ? normalizePhone(payload.phone) || undefined : undefined,
     industry: payload.industry?.trim() || undefined,
     address: payload.address?.trim() || undefined,
   };
+}
+
+/**
+ * NCL-02-CN-001 (bước D/P): Lấy danh sách hồ sơ khách hàng hiện có trong hệ thống (GET /customers).
+ * Hỗ trợ tìm theo tên, mã KH (KH-xxxxxx), MST hoặc SĐT qua tham số `keyword` (lọc phía máy chủ).
+ * Bắt buộc vai trò VT-04 hoặc VT-02.
+ */
+export async function fetchCustomers(keyword?: string): Promise<Customer[]> {
+  const url = new URL(`${API_BASE_URL}/customers`);
+  if (keyword && keyword.trim()) {
+    url.searchParams.append('keyword', keyword.trim());
+  }
+  return requestBackend<Customer[]>(url.toString(), { method: 'GET' });
 }
 
 /**
@@ -90,6 +112,40 @@ export async function createCustomer(payload: CustomerCreatePayload): Promise<Cu
   const cleanPayload = cleanCustomerPayload(payload);
 
   return requestBackend<Customer>(`${API_BASE_URL}/customers`, {
+    method: 'POST',
+    body: JSON.stringify(cleanPayload),
+  });
+}
+
+/**
+ * Chỉnh sửa hồ sơ khách hàng đã tạo (PUT /customers/{id}) — Tên, MST, SĐT, Ngành, Địa chỉ.
+ * Bắt buộc vai trò VT-04 hoặc VT-02. Backend chạy lại kiểm tra trùng (tự loại chính hồ sơ này),
+ * chặn khi hồ sơ đã bị gộp (MERGED), ghi Audit Log `UPDATE`.
+ */
+export async function updateCustomer(
+  customerId: number,
+  payload: CustomerUpdatePayload
+): Promise<Customer> {
+  return requestBackend<Customer>(`${API_BASE_URL}/customers/${customerId}`, {
+    method: 'PUT',
+    body: JSON.stringify(cleanCustomerPayload(payload)),
+  });
+}
+
+/**
+ * Xác nhận chỉnh sửa hồ sơ khách hàng bỏ qua cảnh báo trùng
+ * (POST /customers/{id}/update-with-override) — bắt buộc truyền kèm lý do.
+ */
+export async function updateCustomerWithOverride(
+  customerId: number,
+  payload: CustomerUpdateWithOverridePayload
+): Promise<Customer> {
+  const cleanPayload: CustomerUpdateWithOverridePayload = {
+    customer: cleanCustomerPayload(payload.customer),
+    override: { reason: payload.override.reason.trim() },
+  };
+
+  return requestBackend<Customer>(`${API_BASE_URL}/customers/${customerId}/update-with-override`, {
     method: 'POST',
     body: JSON.stringify(cleanPayload),
   });
@@ -130,3 +186,119 @@ export async function createCustomerWithOverride(
   });
 }
 
+/**
+ * NCL-02-CN-004 (TC-01): Lấy hồ sơ tổng hợp của một khách hàng (GET /customers/{id}/overview).
+ * Trả về khách hàng + cơ hội, hợp đồng, dự án, hóa đơn, công nợ — mỗi nhóm đã sắp theo thứ tự thời gian.
+ * Bắt buộc vai trò VT-04 hoặc VT-02; mỗi lần gọi Backend ghi Audit Log (TC-03).
+ * 403 → không đủ quyền · 404 → không tìm thấy hồ sơ khách hàng.
+ */
+export async function fetchCustomerOverview(customerId: number): Promise<CustomerOverview> {
+  return requestBackend<CustomerOverview>(`${API_BASE_URL}/customers/${customerId}/overview`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * NCL-02-CN-003 (TC-01, TC-03): Lấy danh sách người liên hệ của khách hàng
+ * Backend tự động đưa đầu mối chính lên đầu danh sách.
+ * Bắt buộc vai trò VT-04.
+ */
+export async function fetchCustomerContacts(customerId: number): Promise<CustomerContact[]> {
+  return requestBackend<CustomerContact[]>(`${API_BASE_URL}/customers/${customerId}/contacts`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * NCL-02-CN-003 (TC-01, TC-03): Thêm người liên hệ cho khách hàng
+ * Bắt buộc vai trò VT-04.
+ */
+export async function addCustomerContact(
+  customerId: number,
+  payload: CustomerContactPayload
+): Promise<CustomerContact> {
+  const cleanPayload = {
+    fullName: payload.fullName.trim(),
+    title: payload.title?.trim() || undefined,
+    email: payload.email?.trim() || undefined,
+    phone: payload.phone ? normalizePhone(payload.phone) || undefined : undefined,
+    isPrimary: Boolean(payload.isPrimary),
+  };
+
+  return requestBackend<CustomerContact>(`${API_BASE_URL}/customers/${customerId}/contacts`, {
+    method: 'POST',
+    body: JSON.stringify(cleanPayload),
+  });
+}
+
+/**
+ * NCL-02-CN-003 (TC-02, TC-03): Đặt người liên hệ làm đầu mối chính
+ * Backend tự động chuyển đầu mối cũ thành đầu mối phụ và chỉ giữ 1 đầu mối chính.
+ * Bắt buộc vai trò VT-04.
+ */
+export async function setPrimaryCustomerContact(
+  customerId: number,
+  contactId: number
+): Promise<CustomerContact> {
+  return requestBackend<CustomerContact>(
+    `${API_BASE_URL}/customers/${customerId}/contacts/${contactId}/primary`,
+    {
+      method: 'PATCH',
+    }
+  );
+}
+
+/**
+ * NCL-02-CN-005 (TC-01): Gán ngành nghề, quy mô và mức độ ưu tiên cho khách hàng
+ * (PATCH /customers/{id}/segment). Bắt buộc vai trò VT-04 hoặc VT-02.
+ * Backend ghi Audit Log hành động `SEGMENT_UPDATE` (TC-04).
+ */
+export async function updateCustomerSegment(
+  customerId: number,
+  payload: CustomerSegmentPayload
+): Promise<Customer> {
+  const cleanPayload: CustomerSegmentPayload = {
+    industry: payload.industry.trim(),
+    companySize: payload.companySize.trim(),
+    priority: payload.priority.trim(),
+  };
+
+  return requestBackend<Customer>(`${API_BASE_URL}/customers/${customerId}/segment`, {
+    method: 'PATCH',
+    body: JSON.stringify(cleanPayload),
+  });
+}
+
+/**
+ * NCL-02-CN-006 (TC-03): Kiểm tra quyền truy cập màn hình Gộp KH trùng qua chính backend
+ * (GET /customers/merge/access-check) thay vì chỉ kiểm tra vai trò ở phía frontend — nếu chỉ chặn
+ * ở frontend, không có request thật nào gửi lên server nên hành vi từ chối sẽ KHÔNG được ghi vào
+ * Nhật ký hệ thống dù giao diện có thông báo "đã ghi nhật ký". Gọi endpoint này khi vào trang để
+ * lần từ chối (403) được backend ghi log thật (CustomerDuplicateAccessDeniedAspect).
+ */
+export async function checkCustomerMergeAccess(): Promise<void> {
+  await requestBackend<void>(`${API_BASE_URL}/customers/merge/access-check`, { method: 'GET' });
+}
+
+/**
+ * NCL-02-CN-006 (TC-01): Xem trước ảnh hưởng trước khi gộp hai hồ sơ khách hàng trùng
+ * (POST /customers/merge/preview) — chỉ đọc, không làm thay đổi dữ liệu. Bắt buộc vai trò VT-07.
+ */
+export async function previewCustomerMerge(payload: CustomerMergePayload): Promise<CustomerMergePreview> {
+  return requestBackend<CustomerMergePreview>(`${API_BASE_URL}/customers/merge/preview`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * NCL-02-CN-006 (TC-01, TC-02): Gộp hai hồ sơ khách hàng trùng (POST /customers/merge).
+ * Luôn thực hiện gộp, không chặn theo dữ liệu liên quan của hồ sơ bị gộp. Bắt buộc vai trò VT-07.
+ * Backend ghi Audit Log hành động `MERGE` (TC-04).
+ */
+export async function mergeCustomers(payload: CustomerMergePayload): Promise<Customer> {
+  return requestBackend<Customer>(`${API_BASE_URL}/customers/merge`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}

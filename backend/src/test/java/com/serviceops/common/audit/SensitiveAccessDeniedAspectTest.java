@@ -15,10 +15,6 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * Unit test {@link SensitiveAccessDeniedAspect} — cover TC-03:
- * khi truy cập bị từ chối thì ghi nhật ký lần từ chối.
- */
 @ExtendWith(MockitoExtension.class)
 class SensitiveAccessDeniedAspectTest {
 

@@ -68,7 +68,13 @@ cp .env.example .env
 cp frontend/.env.example frontend/.env
 ```
 
-Chi tiết từng biến môi trường: xem [docs/07-operations/environment-variables.md](docs/07-operations/environment-variables.md).
+> **Nếu bạn chạy backend trực tiếp bằng Maven ở Bước 4** (đa số thành viên làm vậy để có hot reload
+> nhanh), file `.env` ở gốc **không** ảnh hưởng gì tới backend — nó chỉ dùng cho Docker Compose.
+> Cần thêm một bước: `cp backend/.env.example backend/.env`. Chi tiết vì sao có hai file khác vị trí:
+> xem [docs/07-operations/environment-variables.md](docs/07-operations/environment-variables.md).
+
+File `backend/.env.example` cũng chứa hướng dẫn cấu hình gửi mã khôi phục mật khẩu qua email thật
+(tùy chọn, không bắt buộc để chạy dự án — mặc định mã hiện ra ngay trong console).
 
 ### 2.1. Cách thay thế — set biến môi trường thủ công trong máy (nếu không dùng `.env`)
 
@@ -138,6 +144,16 @@ cd backend
 Mặc định backend chạy tại `http://localhost:8080/api/v1`, Swagger UI tại `http://localhost:8080/api/v1/swagger-ui.html`.
 Flyway sẽ tự động tạo/cập nhật schema DB khi khởi động (profile `dev`).
 
+> Chạy kiểu này đọc cấu hình từ `backend/.env` (xem lưu ý ở Bước 2), không phải `.env` ở gốc dự án.
+
+### Quên mật khẩu / khôi phục mật khẩu
+
+Mặc định (không cần cấu hình gì), mã khôi phục 6 chữ số hiện thẳng trong cửa sổ console đang chạy
+backend — tìm dòng có `AUDIT_MOCK_EMAIL`. Đủ dùng để code và kiểm thử hằng ngày.
+
+Muốn thử gửi qua email thật trên máy bạn: mỗi người tự dùng **Gmail của chính mình**, không dùng
+chung tài khoản với thành viên khác trong team. Các bước cụ thể nằm trong `backend/.env.example`.
+
 ## 5. Chạy Frontend (local, hot reload)
 
 ```bash
@@ -168,7 +184,22 @@ docker compose --profile full-stack up -d --build
 | `docker compose down` | Tắt các container |
 | `docker compose down -v` | Tắt container **và xóa volume DB** (mất dữ liệu local) |
 
-Các script tiện ích hơn trong thư mục [scripts/](scripts/) (dev-up, db-reset, seed-demo-data...).
+### Đồng bộ dữ liệu nền (seed data)
+
+Các file `R__seed_*.sql` trong `backend/src/main/resources/db/seed/` là dữ liệu nền dùng chung
+cho cả team (tài khoản demo, khách hàng/cơ hội mẫu...) — Flyway tự chạy các file này mỗi khi
+backend khởi động và tự cập nhật nếu file thay đổi, **không đụng tới dữ liệu bạn tự nhập khi
+test** (mọi seed đều dùng `ON DUPLICATE KEY UPDATE` / `WHERE NOT EXISTS`, an toàn khi chạy lại).
+
+| Script | Khi nào dùng |
+|---|---|
+| `./scripts/seed-demo-data.sh` | Muốn chắc chắn dữ liệu nền khớp với `develop` ngay lập tức mà không khởi động lại backend (ví dụ vừa `git pull` thấy file seed đổi). Yêu cầu schema đã tồn tại (đã chạy backend ít nhất 1 lần). |
+| `./scripts/db-reset.sh` | Muốn xóa sạch và tạo lại database (kể cả schema) từ đầu — dùng khi DB local bị lệch/hỏng. **Xóa toàn bộ dữ liệu hiện có**, nhớ `db-backup.sh` trước nếu cần giữ lại gì. |
+| `./scripts/db-backup.sh [tên-file]` | Sao lưu toàn bộ database hiện tại ra `backups/*.sql.gz` (đã gitignore) trước khi làm gì rủi ro. |
+| `./scripts/db-restore.sh [file]` | Khôi phục database từ 1 file do `db-backup.sh` tạo ra (không truyền `file` thì tự lấy bản mới nhất trong `backups/`). |
+
+Tất cả đọc cấu hình kết nối DB từ `backend/.env` (ưu tiên) hoặc `.env` ở gốc dự án, mặc định
+khớp XAMPP (`root` / không mật khẩu / `localhost:3306`).
 
 ## 8. Quy ước làm việc chung
 

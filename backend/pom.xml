@@ -36,6 +36,15 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!-- Thu dien tu: gui lien ket khoi phuc mat khau o moi truong that.
+             Truoc day khong co thu vien nao, nen chuc nang "quen mat khau" chi
+             ghi token ra log — vua khong dung duoc voi nguoi dung that, vua la
+             lo hong chiem tai khoan qua quyen doc log. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
         <!-- Persistence -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

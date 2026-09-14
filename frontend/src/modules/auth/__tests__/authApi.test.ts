@@ -4,13 +4,15 @@ import {
   LoginRequestError,
   changePassword,
   forgotPassword,
-  validateResetToken,
+  validateResetCode,
   resetPassword,
   verifyTwoFactor,
   getTwoFactorConfigs,
   updateTwoFactorConfig,
   isTwoFactorChallenge,
   AuthApiError,
+  fetchCurrentUser,
+  SessionSyncError,
 } from '../api/authApi';
 
 function mockFetchOnce(status: number, body: unknown) {
@@ -80,18 +82,20 @@ describe('authApi (NCL-01-CN-001, NCL-01-CN-008)', () => {
     await expect(forgotPassword({ email: 'khongton@example.com' })).resolves.toBeUndefined();
   });
 
-  it('validateResetToken: trả về false khi liên kết hết hạn/không tồn tại', async () => {
+  it('validateResetCode: trả về false khi mã hết hạn/không đúng', async () => {
     vi.stubGlobal('fetch', mockFetchOnce(200, { success: true, data: false }));
-    await expect(validateResetToken('het-han')).resolves.toBe(false);
+    await expect(validateResetCode('ai.do@congty.vn', '000000')).resolves.toBe(false);
   });
 
-  it('resetPassword: ném AuthApiError với mã RESET_TOKEN_INVALID khi liên kết không hợp lệ', async () => {
+  it('resetPassword: ném AuthApiError với mã RESET_TOKEN_INVALID khi mã không hợp lệ', async () => {
     vi.stubGlobal(
       'fetch',
       mockFetchOnce(400, { success: false, errorCode: 'RESET_TOKEN_INVALID', message: 'Lien ket khong hop le' })
     );
 
-    await expect(resetPassword({ token: 'het-han', newPassword: 'MatKhauMoi2' })).rejects.toBeInstanceOf(AuthApiError);
+    await expect(
+      resetPassword({ email: 'ai.do@congty.vn', code: '000000', newPassword: 'MatKhauMoi2' })
+    ).rejects.toBeInstanceOf(AuthApiError);
   });
 
   // NCL-01-CN-009
@@ -109,13 +113,53 @@ describe('authApi (NCL-01-CN-001, NCL-01-CN-008)', () => {
           roles: ['VT-05'],
           requiresTwoFactor: true,
           challengeToken: 'challenge-abc',
+          totpEnrollment: false,
+          otpauthUri: null,
+          totpSecretForDisplay: null,
         },
       })
     );
 
     const result = await login('finance-user', 'Password@123');
-    expect(result).toEqual({ requiresTwoFactor: true, challengeToken: 'challenge-abc', username: 'finance-user' });
+    expect(result).toEqual({
+      requiresTwoFactor: true,
+      challengeToken: 'challenge-abc',
+      username: 'finance-user',
+      totpEnrollment: false,
+      otpauthUri: null,
+      totpSecretForDisplay: null,
+    });
     expect(isTwoFactorChallenge(result)).toBe(true);
+  });
+
+  it('login: lần đầu bật 2FA trả kèm otpauthUri để vẽ QR (thiết lập app Authenticator)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetchOnce(200, {
+        success: true,
+        data: {
+          accessToken: null,
+          tokenType: null,
+          userId: 5,
+          username: 'finance-user',
+          fullName: 'Finance User',
+          roles: ['VT-05'],
+          requiresTwoFactor: true,
+          challengeToken: 'challenge-abc',
+          totpEnrollment: true,
+          otpauthUri: 'otpauth://totp/Van%20Hanh%20Dich%20Vu:finance-user?secret=ABCD&issuer=Van%20Hanh%20Dich%20Vu',
+          totpSecretForDisplay: 'ABCD 1234',
+        },
+      })
+    );
+
+    const result = await login('finance-user', 'Password@123');
+    expect(isTwoFactorChallenge(result)).toBe(true);
+    if (isTwoFactorChallenge(result)) {
+      expect(result.totpEnrollment).toBe(true);
+      expect(result.otpauthUri).toContain('otpauth://totp/');
+      expect(result.totpSecretForDisplay).toBe('ABCD 1234');
+    }
   });
 
   it('verifyTwoFactor: trả về AuthSession sau khi OTP đúng', async () => {
@@ -180,5 +224,33 @@ describe('authApi (NCL-01-CN-001, NCL-01-CN-008)', () => {
     );
 
     await expect(getTwoFactorConfigs()).rejects.toMatchObject({ code: 'FORBIDDEN' });
+  });
+
+  describe('fetchCurrentUser (NCL-01-CN-004 TC-03)', () => {
+    it('gọi GET /auth/me kèm Bearer token và map roles + fullName hiện tại', async () => {
+      const fetchMock = mockFetchOnce(200, {
+        success: true,
+        data: { userId: 7, username: 'sale01', fullName: 'Đỗ Thị Mai', roles: ['VT-04', 'VT-02'], scopeType: 'COMPANY' },
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      await expect(fetchCurrentUser('tok-123')).resolves.toEqual({
+        userId: 7,
+        username: 'sale01',
+        fullName: 'Đỗ Thị Mai',
+        roles: ['VT-04', 'VT-02'],
+      });
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('/auth/me'),
+        expect.objectContaining({ method: 'GET', headers: { Authorization: 'Bearer tok-123' } })
+      );
+    });
+
+    it('ném SessionSyncError với status 401 khi token đã bị vô hiệu', async () => {
+      vi.stubGlobal('fetch', mockFetchOnce(401, { success: false, message: 'Phiên đã hết hạn' }));
+
+      await expect(fetchCurrentUser('tok-cu')).rejects.toBeInstanceOf(SessionSyncError);
+      await expect(fetchCurrentUser('tok-cu')).rejects.toMatchObject({ status: 401 });
+    });
   });
 });

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { getUserById } from '../api/usersApi';
 import type { User } from '../types/userTypes';
 import { SYSTEM_DEPARTMENTS, SYSTEM_ROLES } from '../types/userTypes';
+import { ICONS } from '../components/icons';
 
 interface UserDetailPageProps {
   userId: number;
@@ -41,10 +42,11 @@ export const UserDetailPage: React.FC<UserDetailPageProps> = ({ userId, onBack }
     return (
       <div className="user-detail-page p-6">
         <button type="button" className="btn-secondary mb-4" onClick={onBack}>
-          ← Quay lại danh sách
+          <span className="icon-sm">{ICONS.arrowLeft}</span> Quay lại danh sách
         </button>
         <div className="alert alert--error">
-          <span>⚠️ {error || 'Không tìm thấy người dùng'}</span>
+          <span className="alert__icon">{ICONS.alertTriangle}</span>
+          <span>{error || 'Không tìm thấy người dùng'}</span>
         </div>
       </div>
     );
@@ -56,7 +58,7 @@ export const UserDetailPage: React.FC<UserDetailPageProps> = ({ userId, onBack }
     <div className="user-detail-page">
       <div className="mb-4">
         <button type="button" className="btn-secondary" onClick={onBack}>
-          ← Quay lại danh sách tài khoản
+          <span className="icon-sm">{ICONS.arrowLeft}</span> Quay lại danh sách tài khoản
         </button>
       </div>
 

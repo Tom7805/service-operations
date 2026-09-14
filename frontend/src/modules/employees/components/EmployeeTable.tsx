@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import type { Employee } from '../types/employeeTypes';
 import { DEFAULT_STANDARD_HOURS_PER_WEEK } from '../types/employeeTypes';
+import { ICONS } from '../../../components/common/icons';
+import TableSkeleton from '../../../components/common/TableSkeleton';
+import RowActionsMenu from '../../../components/common/RowActionsMenu';
 
 interface EmployeeTableProps {
   employees: Employee[];
@@ -40,13 +43,13 @@ export default function EmployeeTable({ employees, loading, onEdit, onViewDetail
           />
           {search && (
             <button type="button" className="search-box__clear" onClick={() => setSearch('')} aria-label="Xóa tìm kiếm">
-              ✕
+              {ICONS.close}
             </button>
           )}
         </div>
 
-        <button type="button" className="btn-icon-refresh" onClick={onRefresh} title="Tải lại danh sách">
-          🔄
+        <button type="button" className="btn-icon-refresh" onClick={onRefresh} title="Tải lại danh sách" aria-label="Tải lại danh sách">
+          {ICONS.refresh}
         </button>
       </div>
 
@@ -65,15 +68,10 @@ export default function EmployeeTable({ employees, loading, onEdit, onViewDetail
           </thead>
           <tbody>
             {loading ? (
-              <tr>
-                <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
-                  <div className="loader" style={{ margin: '0 auto 10px', borderColor: '#10b981', borderTopColor: 'transparent' }} />
-                  Đang tải danh sách hồ sơ nhân sự...
-                </td>
-              </tr>
+              <TableSkeleton columns={7} />
             ) : filteredEmployees.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#5B5A57' }}>
                   Không tìm thấy hồ sơ nhân sự nào.
                 </td>
               </tr>
@@ -104,24 +102,12 @@ export default function EmployeeTable({ employees, loading, onEdit, onViewDetail
                   <td>{emp.hireDate}</td>
                   <td>{emp.endDate || '—'}</td>
                   <td style={{ textAlign: 'right' }}>
-                    <div className="table-actions">
-                      <button
-                        type="button"
-                        className="action-btn"
-                        title="Chỉnh sửa hồ sơ"
-                        onClick={() => onEdit(emp)}
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        type="button"
-                        className="action-btn"
-                        title="Xem chi tiết & hợp đồng lao động"
-                        onClick={() => onViewDetail(emp)}
-                      >
-                        👁️
-                      </button>
-                    </div>
+                    <RowActionsMenu
+                      actions={[
+                        { key: 'edit', label: 'Chỉnh sửa hồ sơ', icon: ICONS.edit, onClick: () => onEdit(emp) },
+                        { key: 'detail', label: 'Xem chi tiết & hợp đồng', icon: ICONS.eye, onClick: () => onViewDetail(emp) },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))

@@ -8,6 +8,8 @@ import com.serviceops.modules.identity.employee.dto.request.EmployeeCreateReq;
 import com.serviceops.modules.identity.employee.dto.request.EmployeeSearchReq;
 import com.serviceops.modules.identity.employee.dto.request.EmployeeUpdateReq;
 import com.serviceops.modules.identity.employee.dto.request.EmploymentContractCreateReq;
+import com.serviceops.modules.identity.employee.dto.response.AssignableEmployeeRes;
+import com.serviceops.modules.identity.employee.dto.response.AssignableUserRes;
 import com.serviceops.modules.identity.employee.dto.response.EmployeeDetailRes;
 import com.serviceops.modules.identity.employee.dto.response.EmployeeRes;
 import com.serviceops.modules.identity.employee.dto.response.EmploymentContractRes;
@@ -65,6 +67,26 @@ public class EmployeeServiceImpl implements EmployeeService {
                         || employee.getUser().getUsername().toLowerCase().contains(keyword)
                         || employee.getUser().getFullName().toLowerCase().contains(keyword))
                 .map(employeeMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AssignableEmployeeRes> findAssignableEmployeesForTask() {
+        return employeeRepository.findAssignableEmployees(java.time.LocalDate.now()).stream()
+                .map(e -> new AssignableEmployeeRes(e.getUser().getId(), e.getUser().getUsername(),
+                        e.getUser().getFullName(), e.getProfessionalRole()))
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AssignableUserRes> findAssignableUsers() {
+        java.util.Set<Long> assigned = new java.util.HashSet<>(employeeRepository.findAssignedUserIds());
+        return userRepository.findAll().stream()
+                .sorted(java.util.Comparator.comparing(User::getUsername, String.CASE_INSENSITIVE_ORDER))
+                .map(user -> new AssignableUserRes(user.getId(), user.getUsername(), user.getFullName(),
+                        assigned.contains(user.getId())))
                 .toList();
     }
 

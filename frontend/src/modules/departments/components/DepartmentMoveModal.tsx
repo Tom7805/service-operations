@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import type { Department, MoveDepartmentPayload } from '../types/departmentTypes';
 import { DepartmentApiError } from '../api/departmentsApi';
 import { getUnitTypeRank } from '../constants/departmentUnitTypes';
+import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 
 interface DepartmentMoveModalProps {
   isOpen: boolean;
@@ -29,6 +32,8 @@ export const DepartmentMoveModal: React.FC<DepartmentMoveModalProps> = ({
       setSubmitting(false);
     }
   }, [isOpen, department]);
+
+  const backdrop = useBackdropClick(onClose);
 
   if (!isOpen || !department) return null;
 
@@ -91,15 +96,15 @@ export const DepartmentMoveModal: React.FC<DepartmentMoveModalProps> = ({
   const currentParentName = departmentsList.find((d) => d.id === department.parentId)?.name || 'Ban Giám Đốc (Cấp gốc)';
 
   return (
-    <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
+    <ModalPortal>
+    <div className="modal-backdrop" onMouseDown={backdrop.onMouseDown} onClick={backdrop.onClick} role="dialog" aria-modal="true">
       <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
-            <span className="modal-eyebrow text-warning">Di chuyển vị trí</span>
             <h3 className="modal-title">Thay đổi vị trí bộ phận</h3>
           </div>
           <button type="button" className="modal-close" onClick={onClose}>
-            ✕
+            <span className="icon-sm">{ICONS.close}</span>
           </button>
         </div>
 
@@ -107,7 +112,8 @@ export const DepartmentMoveModal: React.FC<DepartmentMoveModalProps> = ({
           <div className="modal-body">
             {serverError && (
               <div className="alert alert--error mb-4" role="alert">
-                <span>⚠️ {serverError}</span>
+                <span className="alert__icon">{ICONS.alertTriangle}</span>
+                <span>{serverError}</span>
               </div>
             )}
 
@@ -120,7 +126,7 @@ export const DepartmentMoveModal: React.FC<DepartmentMoveModalProps> = ({
                 <span className="location-label">Vị trí hiện tại:</span>
                 <strong className="location-value">{currentParentName}</strong>
               </div>
-              <div className="arrow-down">⬇️</div>
+              <div className="arrow-down">{ICONS.arrowDown}</div>
               <div className="location-box location-box--active">
                 <span className="location-label">Vị trí mới mong muốn:</span>
                 <select
@@ -142,7 +148,8 @@ export const DepartmentMoveModal: React.FC<DepartmentMoveModalProps> = ({
             </div>
 
             <div className="confirm-note-box">
-              <span>ℹ️ Việc di chuyển bộ phận sẽ kéo theo toàn bộ các bộ phận con trực thuộc sang nhánh quản lý mới.</span>
+              <span className="confirm-note-box__icon">{ICONS.info}</span>
+              <span>Việc di chuyển bộ phận sẽ kéo theo toàn bộ các bộ phận con trực thuộc sang nhánh quản lý mới.</span>
             </div>
           </div>
 
@@ -157,6 +164,7 @@ export const DepartmentMoveModal: React.FC<DepartmentMoveModalProps> = ({
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 };
 

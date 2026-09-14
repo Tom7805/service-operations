@@ -79,12 +79,32 @@ class DepartmentHierarchyValidatorTest {
 	}
 
 	@Test
-	@DisplayName("Trung Tam va Ban cung cap goc (rank 0) nen co the lam con lan nhau")
-	void treatsTrungTamAndBanAsSameTopRank() {
+	@DisplayName("Cho phep Ban truc thuoc Trung Tam (dung 4 tang: Trung tam > Ban > Phong > To/Nhom)")
+	void allowsBanUnderTrungTam() {
 		validator = new DepartmentHierarchyValidator(departmentRepository);
 		Department trungTam = departmentOfType(6L, DepartmentType.TRUNG_TAM);
 		when(departmentRepository.findById(6L)).thenReturn(Optional.of(trungTam));
 
 		assertThatCode(() -> validator.validate(DepartmentType.BAN, 6L)).doesNotThrowAnyException();
+	}
+
+	/**
+	 * Bug that da xay ra khi TRUNG_TAM va BAN con cung rank (0): mot don vi
+	 * ten "Trung Tam..." bi dat lam con cua mot "Ban", hien thi SAI thu bac
+	 * tren cay (phat hien qua anh chup man hinh thuc te). Tach rieng rank cho
+	 * tung cap (TRUNG_TAM=0 < BAN=1) de rang buoc nay chan duoc dung truong
+	 * hop nay, khong chi dua vao ten goi khi nhap lieu.
+	 */
+	@Test
+	@DisplayName("Khong cho Trung Tam truc thuoc Ban (cap cao hon khong duoc lam con cua cap thap hon)")
+	void blocksTrungTamUnderBan() {
+		validator = new DepartmentHierarchyValidator(departmentRepository);
+		Department ban = departmentOfType(1L, DepartmentType.BAN);
+		when(departmentRepository.findById(1L)).thenReturn(Optional.of(ban));
+
+		assertThatThrownBy(() -> validator.validate(DepartmentType.TRUNG_TAM, 1L))
+				.isInstanceOf(BusinessRuleException.class)
+				.extracting(ex -> ((BusinessRuleException) ex).getErrorCode())
+				.isEqualTo(ErrorCode.HIERARCHY_VIOLATION);
 	}
 }

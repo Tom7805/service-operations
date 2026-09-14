@@ -7,6 +7,9 @@ import type {
   UpdateDepartmentPayload,
 } from '../types/departmentTypes';
 import { DepartmentApiError } from '../api/departmentsApi';
+import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import {
   DEPARTMENT_UNIT_TYPE_META,
   DEPARTMENT_UNIT_TYPE_OPTIONS,
@@ -61,6 +64,8 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
       setSubmitting(false);
     }
   }, [isOpen, editingDepartment, defaultParentId, managersList]);
+
+  const backdrop = useBackdropClick(onClose);
 
   if (!isOpen) return null;
 
@@ -152,19 +157,17 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
+    <ModalPortal>
+    <div className="modal-backdrop" onMouseDown={backdrop.onMouseDown} onClick={backdrop.onClick} role="dialog" aria-modal="true">
       <div className="modal-card modal-card--md" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
-            <span className="modal-eyebrow">
-              {editingDepartment ? 'Chỉnh sửa khai báo' : 'Khai báo mới'}
-            </span>
             <h3 className="modal-title">
               {editingDepartment ? `Cập nhật: ${editingDepartment.name}` : 'Thêm bộ phận / Đơn vị mới'}
             </h3>
           </div>
           <button type="button" className="modal-close" onClick={onClose} title="Đóng modal">
-            ✕
+            {ICONS.close}
           </button>
         </div>
 
@@ -172,7 +175,8 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
           <div className="modal-body">
             {serverError && (
               <div className="alert alert--error" role="alert">
-                <span>⚠️ {serverError}</span>
+                <span className="alert__icon">{ICONS.alertTriangle}</span>
+                <span>{serverError}</span>
               </div>
             )}
 
@@ -267,7 +271,7 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
                   <option value="" disabled>-- Chọn nhân sự quản lý --</option>
                   {managersList.map((mgr) => (
                     <option key={mgr.id} value={mgr.id}>
-                      👤 {mgr.fullName} (@{mgr.username})
+                      {mgr.fullName} (@{mgr.username})
                     </option>
                   ))}
                 </select>
@@ -296,6 +300,7 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 };
 

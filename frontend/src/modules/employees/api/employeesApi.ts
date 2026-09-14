@@ -1,4 +1,5 @@
 import type {
+  AssignableUser,
   Employee,
   EmployeeCreatePayload,
   EmployeeDetail,
@@ -66,6 +67,11 @@ export async function getEmployees(keyword?: string, departmentId?: number): Pro
     url.searchParams.append('departmentId', String(departmentId));
   }
   return requestBackend<Employee[]>(url.toString(), { method: 'GET' });
+}
+
+/** Toàn bộ tài khoản trong hệ thống (kèm cờ hasEmployeeProfile) — VT-06 dùng được, không cần quyền /users. */
+export async function getAssignableUsers(): Promise<AssignableUser[]> {
+  return requestBackend<AssignableUser[]>(`${API_BASE_URL}/employees/assignable-users`, { method: 'GET' });
 }
 
 export async function getEmployeeById(id: number): Promise<EmployeeDetail> {

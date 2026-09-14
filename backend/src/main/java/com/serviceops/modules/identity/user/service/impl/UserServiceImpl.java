@@ -1,10 +1,13 @@
 package com.serviceops.modules.identity.user.service.impl;
 
+import com.serviceops.common.audit.AuditTargetType;
+import com.serviceops.common.audit.service.AuditLogService;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.identity.user.dto.request.CreateUserReq;
 import com.serviceops.modules.identity.user.dto.request.UpdateUserReq;
 import com.serviceops.modules.identity.user.dto.request.UserStatusReq;
+import com.serviceops.modules.identity.user.dto.response.AssignableProjectManagerRes;
 import com.serviceops.modules.identity.user.dto.response.UserRes;
 import com.serviceops.modules.identity.user.entity.Role;
 import com.serviceops.modules.identity.user.entity.User;
@@ -34,6 +37,7 @@ public class UserServiceImpl implements UserService {
     private final RoleRepository roleRepository;
     private final DepartmentRepository departmentRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuditLogService auditLogService;
 
     @Override
     @Transactional(readOnly = true)
@@ -65,6 +69,8 @@ public class UserServiceImpl implements UserService {
         user = userRepository.save(user);
         replaceRoles(user, request.roleCodes(), request.scopeType(), request.scopeDepartmentId());
         log.info("USER_CREATED userId={} username={}", user.getId(), user.getUsername());
+        auditLogService.record("Tạo tài khoản", AuditTargetType.USER, user.getId(), user.getUsername(),
+            "Tạo tài khoản cho " + user.getFullName());
         return toResponse(user);
     }
 
@@ -77,11 +83,20 @@ public class UserServiceImpl implements UserService {
         if (request.password() != null && !request.password().isBlank()) {
             user.setPasswordHash(passwordEncoder.encode(request.password()));
         }
-        if (request.roleCodes() != null && !request.roleCodes().isEmpty()) {
+        boolean roleScopeChanged = request.roleCodes() != null && !request.roleCodes().isEmpty();
+        if (roleScopeChanged) {
             replaceRoles(user, request.roleCodes(), request.scopeType(), request.scopeDepartmentId());
         }
         log.info("USER_UPDATED userId={} username={}", user.getId(), user.getUsername());
-        return toResponse(userRepository.save(user));
+        UserRes result = toResponse(userRepository.save(user));
+        if (roleScopeChanged) {
+            auditLogService.record("Cấu hình phân quyền", AuditTargetType.ROLE_SCOPE, user.getId(), user.getUsername(),
+                "Gán vai trò [" + roleNames(request.roleCodes()) + "] với phạm vi " + request.scopeType());
+        } else {
+            auditLogService.record("Cập nhật tài khoản", AuditTargetType.USER, user.getId(), user.getUsername(),
+                "Cập nhật thông tin tài khoản " + user.getFullName());
+        }
+        return result;
     }
 
     @Override
@@ -90,13 +105,26 @@ public class UserServiceImpl implements UserService {
         if (user.getStatus() == request.status()) {
             throw new BusinessRuleException(ErrorCode.INVALID_STATE, "Tai khoan da o trang thai nay");
         }
+        UserStatus previousStatus = user.getStatus();
         user.setStatus(request.status());
         if (request.status() == UserStatus.ACTIVE) {
             user.setFailedLoginAttempts(0);
             user.setLockedUntil(null);
         }
         log.info("USER_STATUS_CHANGED userId={} username={} status={}", user.getId(), user.getUsername(), request.status());
+        auditLogService.record(
+            request.status() == UserStatus.LOCKED ? "Khóa tài khoản" : "Mở khóa tài khoản",
+            AuditTargetType.USER, user.getId(), user.getUsername(),
+            "Đổi trạng thái tài khoản từ " + previousStatus + " sang " + request.status());
         return toResponse(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AssignableProjectManagerRes> findAssignableProjectManagers() {
+        return userRepository.findByStatusOrderByFullNameAsc(UserStatus.ACTIVE).stream()
+                .map(user -> new AssignableProjectManagerRes(user.getId(), user.getUsername(), user.getFullName()))
+                .toList();
     }
 
     private void replaceRoles(User user, List<String> roleCodes, String scopeType, Long scopeDepartmentId) {
@@ -133,6 +161,18 @@ public class UserServiceImpl implements UserService {
         }
         log.info("USER_ROLE_SCOPE_CHANGED userId={} roles={} scopeType={} scopeDepartmentId={}",
                 user.getId(), roleCodes, type.name(), resolvedScopeDepartmentId);
+    }
+
+    /** Đổi danh sách mã vai trò sang tên tiếng Việt để ghi vào nhật ký (không hiển thị mã cho người dùng). */
+    private String roleNames(List<String> roleCodes) {
+        if (roleCodes == null || roleCodes.isEmpty()) {
+            return "";
+        }
+        return roleCodes.stream()
+                .map(code -> roleRepository.findByCode(code.trim())
+                        .map(Role::getName)
+                        .orElse(code))
+                .collect(java.util.stream.Collectors.joining(", "));
     }
 
     private User getUser(Long id) {

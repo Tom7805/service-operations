@@ -1,0 +1,311 @@
+import type {
+  Opportunity,
+  OpportunityActivity,
+  OpportunityActivityCreatePayload,
+  OpportunityClosePayload,
+  OpportunityCreatePayload,
+  OpportunityCreateResponse,
+  OpportunityStage,
+  StageHistoryItem,
+  CustomerOption,
+  RevenueForecastData,
+  ForecastQueryParams,
+} from '../types/opportunityTypes';
+import type { ContractCreateFromOpportunityReq, ContractRes } from '../../contracts/types/contractTypes';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
+
+export class OpportunityApiError extends Error {
+  constructor(
+    public readonly code: string,
+    message: string,
+    public readonly statusCode?: number,
+    public readonly fieldErrors?: Array<{ field: string; message: string }>
+  ) {
+    super(message);
+    this.name = 'OpportunityApiError';
+  }
+}
+
+async function requestBackend<T>(url: string, options: RequestInit = {}): Promise<T> {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...((options.headers as Record<string, string>) || {}),
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(url, { ...options, headers });
+  } catch {
+    throw new OpportunityApiError(
+      'NETWORK_ERROR',
+      'Không thể kết nối đến máy chủ backend. Vui lòng kiểm tra lại dịch vụ máy chủ.',
+      503
+    );
+  }
+
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok || payload.success === false) {
+    const code =
+      payload.errorCode ||
+      payload.code ||
+      (response.status === 403
+        ? 'FORBIDDEN'
+        : response.status === 404
+        ? 'RESOURCE_NOT_FOUND'
+        : response.status === 401
+        ? 'UNAUTHORIZED'
+        : response.status === 400
+        ? 'INVALID_STATE'
+        : 'UNKNOWN_ERROR');
+
+    let message = payload.message;
+
+    if (!message) {
+      if (response.status === 403) {
+        message =
+          'Bạn không có quyền thực hiện thao tác này. Chức năng quản lý cơ hội bán hàng yêu cầu vai trò Nhân viên kinh doanh.';
+      } else if (response.status === 404) {
+        message = 'Không tìm thấy dữ liệu tương ứng trên hệ thống (khách hàng hoặc cơ hội bán hàng).';
+      } else if (response.status === 401) {
+        message = 'Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.';
+      } else if (response.status === 400) {
+        message = 'Yêu cầu không hợp lệ theo quy tắc nghiệp vụ.';
+      } else {
+        message = 'Đã xảy ra lỗi khi gửi yêu cầu đến máy chủ.';
+      }
+    }
+
+    const fieldErrors = Array.isArray(payload.fieldErrors)
+      ? payload.fieldErrors
+      : Array.isArray(payload.errors)
+      ? payload.errors
+      : undefined;
+
+    throw new OpportunityApiError(code, message, response.status, fieldErrors);
+  }
+
+  return payload as T;
+}
+
+/**
+ * NCL-03-CN-001: Lấy danh sách toàn bộ cơ hội bán hàng (GET /opportunities),
+ * mới nhất lên trước. Dùng để trang "Quản lý cơ hội bán hàng" tải lại dữ liệu
+ * từ máy chủ mỗi lần mở, tránh mất cơ hội vừa tạo khi chuyển trang.
+ */
+export async function fetchOpportunities(): Promise<Opportunity[]> {
+  const res = await requestBackend<{ success: boolean; data: Opportunity[] }>(
+    `${API_BASE_URL}/opportunities`
+  );
+
+  return Array.isArray(res.data) ? res.data : [];
+}
+
+/**
+ * NCL-03-CN-001: Tạo cơ hội bán hàng mới
+ * Yêu cầu vai trò Nhân viên kinh doanh (VT-04).
+ */
+export async function createOpportunity(payload: OpportunityCreatePayload): Promise<Opportunity> {
+  const res = await requestBackend<OpportunityCreateResponse>(`${API_BASE_URL}/opportunities`, {
+    method: 'POST',
+    body: JSON.stringify({
+      name: payload.name.trim(),
+      customerId: payload.customerId,
+      expectedValue: payload.expectedValue,
+      expectedCloseDate: payload.expectedCloseDate ? payload.expectedCloseDate.trim() : null,
+      ownerId: payload.ownerId ?? null,
+    }),
+  });
+
+  return res.data;
+}
+
+/**
+ * NCL-03-CN-002: Chuyển giai đoạn cơ hội bán hàng (PATCH /opportunities/{opportunityId}/stage)
+ * Tuân thủ quy tắc QTN-06 (TC-01, TC-02, TC-03)
+ */
+export async function changeOpportunityStage(
+  opportunityId: number,
+  targetStage: OpportunityStage
+): Promise<Opportunity> {
+  const res = await requestBackend<{ success: boolean; message?: string; data: Opportunity }>(
+    `${API_BASE_URL}/opportunities/${opportunityId}/stage`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ targetStage }),
+    }
+  );
+
+  return res.data;
+}
+
+/**
+ * NCL-03-CN-005 (TC-01, TC-02, TC-03): Ghi nhận kết quả thắng/thua khi đóng cơ hội
+ * (POST /opportunities/{opportunityId}/close). Yêu cầu vai trò Nhân viên kinh doanh (VT-04).
+ * Điều kiện: cơ hội phải đang ở giai đoạn đàm phán (NEGOTIATION) và chưa đóng.
+ */
+export async function closeOpportunity(
+  opportunityId: number,
+  payload: OpportunityClosePayload
+): Promise<Opportunity> {
+  const res = await requestBackend<{ success: boolean; message?: string; data: Opportunity }>(
+    `${API_BASE_URL}/opportunities/${opportunityId}/close`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        result: payload.result,
+        lossReason: payload.result === 'LOST' ? payload.lossReason : null,
+        reasonDetail: payload.reasonDetail?.trim() || null,
+        competitorName: payload.competitorName?.trim() || null,
+      }),
+    }
+  );
+
+  return res.data;
+}
+
+/**
+ * NCL-03-CN-002 (TC-05): Lấy lịch sử chuyển giai đoạn (GET /opportunities/{opportunityId}/stage-history)
+ */
+export async function fetchOpportunityStageHistory(
+  opportunityId: number
+): Promise<StageHistoryItem[]> {
+  const res = await requestBackend<{ success: boolean; data: StageHistoryItem[] }>(
+    `${API_BASE_URL}/opportunities/${opportunityId}/stage-history`
+  );
+
+  return res.data ?? [];
+}
+
+/**
+ * Tải danh sách khách hàng đã có hồ sơ để người dùng lựa chọn trên giao diện
+ * Tránh việc phải nhập mã ID thủ công (NCL-03-CN-001 lưu ý cho Frontend).
+ *
+ * Lưu ý: hàm này KHÔNG nuốt lỗi — nếu backend trả 401/403/5xx thì ném
+ * `OpportunityApiError` để giao diện phân biệt được "không có khách hàng nào"
+ * với "tải danh sách thất bại". Chỉ trả mảng rỗng khi backend thực sự trả `data: []`.
+ */
+export async function fetchCustomersForSelect(): Promise<CustomerOption[]> {
+  const res = await requestBackend<{ success: boolean; data: CustomerOption[] }>(
+    `${API_BASE_URL}/customers`
+  );
+  if (!res.data || !Array.isArray(res.data)) {
+    return [];
+  }
+  // Chỉ lấy các khách hàng chưa bị gộp (MERGED) nếu có trạng thái
+  return res.data
+    .filter((c) => c.status !== 'MERGED')
+    .map((c) => ({
+      id: c.id,
+      code: c.code,
+      name: c.name,
+      status: c.status,
+    }));
+}
+
+/**
+ * Chuẩn hóa tham số ngày về YYYY-MM-DD cho Spring Boot LocalDate.
+ * Nếu người dùng truyền 'YYYY-MM' thì bổ sung ngày đầu tháng (from) hoặc ngày cuối tháng (to).
+ */
+function normalizeDateParam(val: string | undefined, isEnd = false): string | undefined {
+  const trimmed = val?.trim();
+  if (!trimmed) return undefined;
+  if (/^\d{4}-\d{2}$/.test(trimmed)) {
+    if (!isEnd) return `${trimmed}-01`;
+    const [year, month] = trimmed.split('-').map(Number);
+    const lastDay = new Date(year, month, 0).getDate();
+    return `${trimmed}-${String(lastDay).padStart(2, '0')}`;
+  }
+  return trimmed;
+}
+
+/**
+ * NCL-03-CN-004 (TC-01, TC-02, TC-03): Lấy báo cáo dự báo doanh thu theo xác suất giai đoạn
+ * (GET /opportunities/revenue-forecast). Yêu cầu vai trò Ban giám đốc (VT-01) hoặc
+ * Nhân viên kinh doanh (VT-04). Backend loại các cơ hội đã đóng theo quy tắc QTN-07.
+ */
+export async function fetchRevenueForecast(
+  params?: ForecastQueryParams
+): Promise<RevenueForecastData> {
+  const url = new URL(`${API_BASE_URL}/opportunities/revenue-forecast`);
+  const from = normalizeDateParam(params?.from, false);
+  const to = normalizeDateParam(params?.to, true);
+  if (from) url.searchParams.set('from', from);
+  if (to) url.searchParams.set('to', to);
+
+  const res = await requestBackend<{ success: boolean; data: RevenueForecastData }>(
+    url.toString()
+  );
+
+  return res.data;
+}
+
+/**
+ * NCL-03-CN-006 (TC-01, TC-02): Lấy lịch sử hoạt động chăm sóc cơ hội
+ * (GET /opportunities/{opportunityId}/activities). Xem được ngay cả khi cơ hội đã đóng.
+ */
+export async function fetchOpportunityActivities(
+  opportunityId: number
+): Promise<OpportunityActivity[]> {
+  const res = await requestBackend<{ success: boolean; data: OpportunityActivity[] }>(
+    `${API_BASE_URL}/opportunities/${opportunityId}/activities`
+  );
+
+  return res.data ?? [];
+}
+
+/**
+ * NCL-03-CN-006 (TC-01, TC-03): Ghi nhận hoạt động chăm sóc mới cho cơ hội
+ * (POST /opportunities/{opportunityId}/activities). Yêu cầu vai trò Nhân viên kinh doanh (VT-04).
+ */
+export async function createOpportunityActivity(
+  opportunityId: number,
+  payload: OpportunityActivityCreatePayload
+): Promise<OpportunityActivity> {
+  const res = await requestBackend<{ success: boolean; message?: string; data: OpportunityActivity }>(
+    `${API_BASE_URL}/opportunities/${opportunityId}/activities`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        activityType: payload.activityType,
+        occurredAt: payload.occurredAt,
+        participants: payload.participants?.trim() || undefined,
+        content: payload.content.trim(),
+      }),
+    }
+  );
+
+  return res.data;
+}
+
+/**
+ * NCL-04-CN-001: Tạo hợp đồng từ cơ hội đã thắng (POST /opportunities/{opportunityId}/contract)
+ * Yêu cầu vai trò Nhân viên kinh doanh (VT-04) — payload tuân theo Backend DTO.
+ */
+export async function createContractFromOpportunity(
+  opportunityId: number,
+  payload: ContractCreateFromOpportunityReq
+): Promise<ContractRes> {
+  const res = await requestBackend<{ success: boolean; message?: string; data: ContractRes }>(
+    `${API_BASE_URL}/opportunities/${opportunityId}/contract`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        name: payload.name?.trim() || null,
+        contractType: payload.contractType,
+        totalValue: payload.totalValue ?? null,
+        startDate: payload.startDate || null,
+        endDate: payload.endDate || null,
+        notes: payload.notes?.trim() || null,
+      }),
+    }
+  );
+
+  return res.data;
+}

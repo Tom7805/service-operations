@@ -1,0 +1,23 @@
+-- Sua kieu cot `token_hash` tu CHAR(64) sang VARCHAR(64).
+--
+-- V31 dat CHAR(64) vi ban bam SHA-256 luon dai dung 64 ky tu — ve mat CSDL thi
+-- do la lua chon hop ly. Nhung thuc the JPA khai bao `@Column(length = 64)` tren
+-- mot `String`, va Hibernate anh xa mac dinh sang VARCHAR. Voi `ddl-auto: validate`
+-- (dang bat o ca dev lan prod), lech kieu nay lam ung dung KHONG KHOI DONG DUOC:
+--
+--   Schema-validation: wrong column type encountered in column [token_hash]
+--   in table [password_reset_tokens]; found [char], but expecting [varchar(64)]
+--
+-- Vi sao phai them V32 thay vi sua V31: V31 DA CHAY THANH CONG tren CSDL truoc khi
+-- loi lo ra o buoc kiem tra luoc do sau do. Flyway da ghi lai checksum cua V31; sua
+-- noi dung file da chay se gay loi "checksum mismatch" o lan khoi dong ke tiep, va
+-- con nang hon loi ban dau. Migration da chay thi chi duoc sua bang mot migration moi.
+--
+-- Chon doi CSDL cho khop thuc the, chu khong ep thuc the theo CSDL bang
+-- `columnDefinition = "CHAR(64)"`: viet kieu cot thang vao ma Java lam thuc the
+-- gan chat voi mot loai CSDL cu the.
+--
+-- Loi nay chi lo ra khi CHAY THAT. Toan bo 140 test van xanh vi chung dung mock
+-- repository, khong cham toi luoc do that.
+ALTER TABLE password_reset_tokens
+    MODIFY COLUMN token_hash VARCHAR(64) NOT NULL;

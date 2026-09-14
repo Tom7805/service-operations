@@ -21,6 +21,3 @@ logging:
     com.serviceops: DEBUG
     org.hibernate.SQL: DEBUG
 
-app:
-  two-factor:
-    mock-otp-logging: true

@@ -5,10 +5,12 @@ import com.serviceops.modules.identity.auth.dto.request.ChangePasswordReq;
 import com.serviceops.modules.identity.auth.dto.request.ForgotPasswordReq;
 import com.serviceops.modules.identity.auth.dto.request.LoginReq;
 import com.serviceops.modules.identity.auth.dto.request.ResetPasswordReq;
+import com.serviceops.modules.identity.auth.dto.response.CurrentUserRes;
 import com.serviceops.modules.identity.auth.dto.response.LoginRes;
 import com.serviceops.modules.identity.auth.service.AuthService;
 import com.serviceops.modules.identity.auth.service.PasswordService;
 import com.serviceops.security.CustomUserDetails;
+import com.serviceops.security.PasswordResetRateLimiter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final PasswordService passwordService;
+    private final PasswordResetRateLimiter passwordResetRateLimiter;
 
     @PostMapping("/login")
     public BaseRes<LoginRes> login(@Valid @RequestBody LoginReq request, HttpServletRequest httpRequest) {
@@ -43,17 +46,36 @@ public class AuthController {
         return BaseRes.ok(null);
     }
 
-    /** Khoi tao yeu cau khoi phuc mat khau qua email (mo phong). */
+    /**
+     * Khoi tao yeu cau khoi phuc mat khau: sinh token, gui lien ket qua email.
+     *
+     * <p>Co gioi han tan suat theo CA dia chi IP lan dia chi email. Diem cuoi nay
+     * cong khai, khong doi dang nhap, va moi lan goi vua tao mot dong trong CSDL
+     * vua gui mot la thu that — khong chan thi ke tan cong doi bom duoc hom thu
+     * cua nan nhan va lam ten mien gui thu cua cong ty bi danh dau spam.</p>
+     */
     @PostMapping("/forgot-password")
-    public BaseRes<Void> forgotPassword(@Valid @RequestBody ForgotPasswordReq request) {
+    public BaseRes<Void> forgotPassword(@Valid @RequestBody ForgotPasswordReq request,
+                                        HttpServletRequest httpRequest) {
+        passwordResetRateLimiter.check(extractIp(httpRequest), request.getEmail());
         passwordService.forgotPassword(request);
         return BaseRes.ok(null);
     }
 
-    /** NCL-01-CN-008-TC-02: kiem tra lien ket khoi phuc con hieu luc truoc khi hien thi form dat lai. */
+    /**
+     * NCL-01-CN-008-TC-02: kiem tra ma khoi phuc con hieu luc.
+     *
+     * <p>Can CA email lan ma vi may chu tra cuu ma theo nguoi dung. Diem cuoi nay
+     * KHONG lam tang so lan nhap sai — no chi de giao dien kiem tra truoc, khong
+     * phai mot lan thu that. Nhung no van di qua bo gioi han tan suat, neu khong
+     * chinh no se thanh duong do ma khong bi dem.</p>
+     */
     @GetMapping("/reset-password/validate")
-    public BaseRes<Boolean> validateResetToken(@RequestParam String token) {
-        return BaseRes.ok(passwordService.isResetTokenValid(token));
+    public BaseRes<Boolean> validateResetCode(@RequestParam String email,
+                                              @RequestParam String code,
+                                              HttpServletRequest httpRequest) {
+        passwordResetRateLimiter.check(extractIp(httpRequest), email);
+        return BaseRes.ok(passwordService.isResetCodeValid(email, code));
     }
 
     @PostMapping("/reset-password")
@@ -62,10 +84,26 @@ public class AuthController {
         return BaseRes.ok(null);
     }
 
-    private Long currentUserId() {
+    /**
+     * NCL-01-CN-004 TC-03: FE goi dinh ky / khi focus lai de lam moi vai tro & pham vi
+     * ma khong bat dang nhap lai. Principal da duoc {@code JwtAuthFilter} nap moi tu DB
+     * o moi request nen roles/scope o day luon la moi nhat.
+     */
+    @GetMapping("/me")
+    public BaseRes<CurrentUserRes> me() {
+        CustomUserDetails principal = currentPrincipal();
+        return BaseRes.ok(new CurrentUserRes(principal.getId(), principal.getUsername(),
+                principal.getFullName(), principal.getRoleCodes(),
+                principal.getScope().type().name()));
+    }
+
+    private CustomUserDetails currentPrincipal() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        CustomUserDetails principal = (CustomUserDetails) authentication.getPrincipal();
-        return principal.getId();
+        return (CustomUserDetails) authentication.getPrincipal();
+    }
+
+    private Long currentUserId() {
+        return currentPrincipal().getId();
     }
 
     private String extractIp(HttpServletRequest request) {

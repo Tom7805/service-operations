@@ -106,25 +106,54 @@ describe('User Management Module — Acceptance Criteria Tests (NCL-01-CN-002)',
       />
     );
 
-    const lockBtn = screen.getByTitle('Khóa tài khoản');
-    fireEvent.click(lockBtn);
+    // Menu thao tác chỉ dựng nội dung KHI MỞ (tối ưu hiệu năng: trước đây mỗi dòng
+    // dựng sẵn 5 nút + 5 icon SVG dù menu đang đóng). Nên phải mở menu trước.
+    fireEvent.click(screen.getAllByLabelText('Thao tác')[0]);
+    fireEvent.click(screen.getByTitle('Khóa tài khoản'));
 
     expect(handleToggleStatus).toHaveBeenCalledWith(mockUsersList[0]);
+  });
+
+  it('TC-06: Menu thao tác (⋮) gọn từng dòng — mở ra mới thấy hành động, bấm ra ngoài thì đóng lại', () => {
+    const handleResetTwoFactor = vi.fn();
+    render(
+      <UserTable
+        users={mockUsersList}
+        loading={false}
+        onEdit={vi.fn()}
+        onToggleStatus={vi.fn()}
+        onAssignRoles={vi.fn()}
+        onViewDetail={vi.fn()}
+        onRefresh={vi.fn()}
+        onResetTwoFactor={handleResetTwoFactor}
+      />
+    );
+
+    const triggers = screen.getAllByLabelText('Thao tác');
+    expect(triggers).toHaveLength(2);
+
+    fireEvent.click(triggers[0]);
+    const resetItem = screen.getAllByText('Đặt lại xác thực hai bước')[0];
+    fireEvent.click(resetItem);
+
+    expect(handleResetTwoFactor).toHaveBeenCalledWith(mockUsersList[0]);
   });
 
   it('TC-04: Non-admin users (VT-03) get Access Denied screen', () => {
     render(<UserListPage currentUserRoles={['VT-03']} currentUserName="Nhân viên IT" />);
 
-    expect(screen.getByText('Từ chối truy cập (Access Denied)')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Bạn không có thẩm quyền/i })).toBeInTheDocument();
     expect(screen.getByText(/Bạn không có thẩm quyền truy cập màn hình này/i)).toBeInTheDocument();
     expect(screen.getByText(/Chức năng Quản lý tài khoản người dùng chỉ dành riêng cho vai trò/i)).toBeInTheDocument();
   });
 
-  it('TC-05: Admin users (VT-07) view stats, audit log stream, and table', () => {
-    render(<UserListPage currentUserRoles={['VT-07']} currentUserName="Quản trị viên" />);
+  it('TC-05: Admin users (VT-07) view stats, table, and link to the full audit log', () => {
+    render(
+      <UserListPage currentUserRoles={['VT-07']} currentUserName="Quản trị viên" onViewAuditLog={() => {}} />
+    );
 
     expect(screen.getByText('Quản lý tài khoản người dùng')).toBeInTheDocument();
     expect(screen.getByText('Tổng tài khoản')).toBeInTheDocument();
-    expect(screen.getByText(/Nhật ký thao tác tài khoản gần đây/i)).toBeInTheDocument();
+    expect(screen.getByText(/Xem nhật ký thao tác đầy đủ/i)).toBeInTheDocument();
   });
 });

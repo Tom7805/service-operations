@@ -52,6 +52,9 @@ class CustomerContactServiceTest {
 	@Mock
 	private CustomerAuditLogRepository auditLogRepository;
 
+	@Mock
+	private com.serviceops.common.audit.service.AuditLogService systemAuditLogService;
+
 	private final CustomerContactMapper customerContactMapper = new CustomerContactMapper();
 
 	private CustomerContactServiceImpl service;
@@ -59,7 +62,7 @@ class CustomerContactServiceTest {
 	@BeforeEach
 	void setUp() {
 		service = new CustomerContactServiceImpl(customerRepository, customerContactRepository,
-				customerContactMapper, auditLogRepository);
+				customerContactMapper, auditLogRepository, systemAuditLogService);
 
 		lenient().when(customerRepository.existsById(anyLong())).thenReturn(true);
 		lenient().when(customerContactRepository.save(any(CustomerContact.class))).thenAnswer(inv -> {

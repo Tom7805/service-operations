@@ -35,10 +35,12 @@ class LoginAttemptServiceTest {
 
     @Test
     void lockForTwoFactor_setsLockTimeAndSavesUser() {
+        // Doi vi tu phut sang giay (khop LoginAttemptService.lockForTwoFactor
+        // moi) — cho phep dat gia tri nho khi test ma khong can doi kieu du lieu.
         User user = new User();
-        LocalDateTime before = LocalDateTime.now().plusMinutes(15);
+        LocalDateTime before = LocalDateTime.now().plusSeconds(900);
 
-        loginAttemptService.lockForTwoFactor(user, 15);
+        loginAttemptService.lockForTwoFactor(user, 900);
 
         assertThat(user.getLockedUntil()).isAfterOrEqualTo(before);
         verify(userRepository).save(user);

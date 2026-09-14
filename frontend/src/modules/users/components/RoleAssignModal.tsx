@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import type { ScopeType, User } from '../types/userTypes';
 import { SYSTEM_ROLES } from '../types/userTypes';
+import { ICONS } from './icons';
+import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 
 interface RoleAssignModalProps {
   isOpen: boolean;
@@ -27,6 +30,8 @@ export const RoleAssignModal: React.FC<RoleAssignModalProps> = ({
       setError(null);
     }
   }, [user, isOpen]);
+
+  const backdrop = useBackdropClick(onClose);
 
   if (!isOpen || !user) return null;
 
@@ -62,15 +67,15 @@ export const RoleAssignModal: React.FC<RoleAssignModalProps> = ({
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
+    <ModalPortal>
+    <div className="modal-backdrop" onMouseDown={backdrop.onMouseDown} onClick={backdrop.onClick} role="dialog" aria-modal="true">
       <div className="modal-card modal-card--md" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
-            <span className="modal-eyebrow">Phân quyền & Vai trò</span>
-            <h2 className="modal-title">Cấu hình tài khoản: {user.fullName}</h2>
+            <h2 className="modal-title">Phân quyền cho {user.fullName}</h2>
           </div>
           <button type="button" className="modal-close" onClick={onClose}>
-            ✕
+            <span className="icon-sm">{ICONS.close}</span>
           </button>
         </div>
 
@@ -78,7 +83,7 @@ export const RoleAssignModal: React.FC<RoleAssignModalProps> = ({
           <div className="modal-body">
             {error && (
               <div className="alert alert--error" role="alert">
-                <span className="alert__icon">⚠️</span>
+                <span className="alert__icon">{ICONS.alertTriangle}</span>
                 <p>{error}</p>
               </div>
             )}
@@ -174,6 +179,7 @@ export const RoleAssignModal: React.FC<RoleAssignModalProps> = ({
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 };
 
