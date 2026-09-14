@@ -2901,6 +2901,59 @@ Xoá bản ghi giờ công **DRAFT của chính mình**. Không cần body. Thà
 `{ "success": true, "message": "Xoa ban ghi gio cong thanh cong", "data": null }`.
 Response lỗi giống `PUT` (`404` khi không phải bản ghi của mình, `400 INVALID_STATE` khi bản ghi không còn DRAFT).
 
+### `NCL-06-CN-008` — Ghi giờ công bằng đồng hồ bấm giờ
+
+Các endpoint dưới đây yêu cầu token của **Nhân viên chuyên môn** (`VT-03`). Mỗi nhân sự chỉ có một phiên
+đồng hồ đang chạy. Phiên được lưu riêng trong `timesheet_timers`; khi dừng, hệ thống tính số giờ từ
+`startedAt` đến thời điểm dừng, làm tròn 2 chữ số thập phân (tối thiểu `0.01` giờ), rồi tạo một bản ghi
+`timesheet_entries` trạng thái `DRAFT`. Các quy tắc dự án đang chạy, kỳ chấm công mở, người được giao và
+giới hạn 12 giờ/ngày vẫn được kiểm tra như API ghi giờ thủ công.
+
+#### `POST /projects/{projectId}/tasks/{taskId}/time-entry-timer`
+
+```json
+{ "note": "Phân tích quy trình hiện tại", "billable": true }
+```
+
+`note` bắt buộc, tối đa 1000 ký tự; `billable` không bắt buộc và mặc định là `true`.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Bat dong ho bam gio thanh cong",
+  "data": {
+    "timerId": 40,
+    "projectId": 1,
+    "taskId": 20,
+    "userId": 7,
+    "startedAt": "2026-09-10T15:20:00",
+    "elapsedHours": 0.00,
+    "note": "Phân tích quy trình hiện tại",
+    "billable": true
+  }
+}
+```
+
+#### `GET /me/time-entry-timer`
+
+Trả phiên đang chạy theo cùng cấu trúc `data` của endpoint start; `data: null` nếu không có phiên.
+
+#### `POST /me/time-entry-timer/stop`
+
+Không cần body. Thành công trả về `TimeEntryRes` của bản ghi DRAFT vừa tạo, theo cùng cấu trúc response
+của `POST /projects/{projectId}/tasks/{taskId}/time-entries`.
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Thiếu `note` hoặc `note` vượt 1000 ký tự khi bắt đầu. |
+| 400 | `INVALID_STATE` | Dự án đã đóng, kỳ đã khóa, vượt 12 giờ/ngày, đã có timer đang chạy, hoặc dừng khi không có timer. |
+| 409 | `DUPLICATE_DATA` | Khi dừng, ngày/công việc đã có bản ghi giờ công gốc của chính mình. |
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Người gọi không phải `VT-03`, hoặc không được giao công việc. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại dự án/công việc của timer. |
+
 #### `GET /me/time-entries?weekFrom=2026-09-07&weekTo=2026-09-13`
 
 Trả lưới giờ công **của chính mình** trong khoảng ngày (một tuần chấm công), nhóm theo công việc — mỗi
@@ -2964,9 +3017,10 @@ Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại
   `REJECTED` cho phép nộp lại — hệ thống cập nhật lại đúng bản ghi bảng tuần cũ (unique người dùng + tuần).
 - **Lưu lịch sử (TC-05)**: mỗi lần nộp ghi một dòng nhật ký hệ thống `Nop bang cham cong tuan` — người
   thực hiện (tự điền từ phiên đăng nhập), nội dung (tuần, tổng giờ, số dòng chuyển duyệt), thời điểm.
-- **Thông báo người duyệt (TC-01)**: hiện tại người duyệt nhìn thấy bảng qua hàng đợi chờ duyệt
-  (`Timesheet` trạng thái `PENDING_APPROVAL`); thông báo in-app cho PM sẽ được gửi thêm khi module
-  notification đi vào hoạt động.
+- **Thông báo người duyệt (TC-01)**: sau khi nộp thành công, hệ thống gửi **thông báo in-app** cho
+  **từng Quản lý dự án** của các dự án có dòng giờ công trong tuần (`NotificationType.TIMESHEET_SUBMITTED`,
+  nội dung gồm tuần nộp, tổng giờ, số dòng chuyển duyệt). PM vẫn nhìn thấy bảng qua hàng đợi chờ duyệt
+  (`GET /timesheets/pending`, bảng ở trạng thái `PENDING_APPROVAL`).
 
 #### `POST /me/timesheets/{weekStartDate}/submit`
 
@@ -3012,6 +3066,384 @@ lưới `GET /me/time-entries`.
   chỉ đọc — mọi lời gọi `PUT/DELETE time-entries` với dòng đã `SUBMITTED` sẽ nhận `400 INVALID_STATE`.
 - Dùng `weekStartDate` của lưới tuần đang hiển thị làm `{weekStartDate}` trên path — khớp tự nhiên với
   dữ liệu `GET /me/time-entries`.
+
+### `NCL-06-CN-002` — Notification API (Thông báo in-app)
+
+Khi nhân viên nộp bảng chấm công (CN-002), hệ thống gửi **thông báo in-app** cho từng PM của các dự án có dòng giờ công trong tuần (`NotificationType.TIMESHEET_SUBMITTED`). PM có thể lấy danh sách thông báo qua:
+
+#### `GET /notifications?unreadOnly=false&page=0&size=20`
+
+Trả về danh sách thông báo của người dùng hiện tại, phân trang.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 100,
+      "recipientId": 2,
+      "type": "TIMESHEET_SUBMITTED",
+      "title": "Bang cham cong moi can duyet",
+      "content": "Nhan su #7 da nop bang cham cong tuan 2026-09-07 - 2026-09-13 (8 gio, 2 dong)",
+      "channel": "IN_APP",
+      "referenceId": null,
+      "referenceType": "Timesheet",
+      "isRead": false,
+      "readAt": null,
+      "sentAt": "2026-09-13T10:05:00"
+    }
+  ]
+}
+```
+
+#### `GET /notifications/unread-count`
+
+Trả về số lượng thông báo chưa đọc.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": 3
+}
+```
+
+#### `POST /notifications/read`
+
+Đánh dấu thông báo đã đọc.
+
+```json
+{ "notificationIds": [100, 101] }
+```
+
+**Response thành công — `200 OK`:**
+
+```json
+{ "success": true, "message": "Da danh dau da doc" }
+```
+
+---
+
+### `NCL-06-CN-003` — Duyệt bảng chấm công
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`). PM duyệt các dòng giờ công `SUBMITTED` thuộc **dự án mình
+quản lý** (TC-02) — duyệt được cả nguyên bảng lẫn từng dòng; dòng đã duyệt chuyển `APPROVED` và **không
+sửa/xoá trực tiếp được** (QTN-10). Tổng giờ đã duyệt được cộng vào `approvedHours` của từng công việc —
+nguồn cho `usageRatio` của `NCL-05-CN-005` và tính lợi nhuận dự án (TC-01).
+
+Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại):
+
+- **TC-02 — phạm vi PM**: chỉ entry thuộc dự án có `projectManagerId` trùng với người gọi mới được duyệt.
+  Khi **duyệt nguyên bảng**, các dòng thuộc dự án của PM khác được **giữ nguyên** `SUBMITTED` cho PM đó
+  xử lý; bảng chỉ chuyển `APPROVED` khi **không còn** dòng `SUBMITTED` nào trong tuần (phần cuối cùng của
+  PM cuối). Khi **duyệt từng dòng** (`entryIds`), dòng thuộc dự án người khác nhận `403 FORBIDDEN`.
+- **TC-01**: sau khi duyệt, `approvedHours` của công việc được tính lại bằng tổng giờ `APPROVED`; khi tuần
+  được duyệt hết, bảng nhận `status = APPROVED` cùng `approvedBy`/`approvedAt`.
+- **TC-03 — vượt ngân sách vẫn duyệt được**: nếu một công việc sau duyệt đạt từ **80%** ngân sách giờ công
+  trở lên (QTN-20), hệ thống **vẫn duyệt** và trả `overBudgetWarnings` — danh sách cảnh báo từng công việc
+  (`data.overBudgetWarnings`) kèm dòng chữ cảnh báo trong `message`.
+- **TC-04**: mỗi lần duyệt ghi một dòng nhật ký hệ thống `Duyet bang cham cong` — người duyệt, nội dung
+  (tuần, số dòng, số giờ), thời điểm.
+- Bảng phải đang `PENDING_APPROVAL` — đã duyệt/từ chối nhận `400 INVALID_STATE`.
+
+#### `GET /timesheets/pending`
+
+Hàng đợi của PM hiện tại: các bảng `PENDING_APPROVAL` có **ít nhất một** dòng `SUBMITTED` thuộc dự án
+mình quản lý, kèm `pendingEntries`/`pendingHours` (phần con của chính PM này):
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "timesheetId": 50,
+      "userId": 7,
+      "weekStartDate": "2026-09-07",
+      "weekEndDate": "2026-09-13",
+      "totalHours": 10,
+      "pendingEntries": 1,
+      "pendingHours": 5,
+      "submittedAt": "2026-09-13T10:00:00"
+    }
+  ]
+}
+```
+
+#### `POST /timesheets/{timesheetId}/approve`
+
+```json
+{ "entryIds": [30], "note": "Duyet cho dot nay" }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `entryIds` | number[] | không | Bỏ qua/null/rỗng = **duyệt nguyên bảng** (tất cả dòng `SUBMITTED` thuộc dự án của PM); truyền id = duyệt từng dòng. |
+| `note` | string | không | Ghi chú của PM, tối đa 1000 ký tự. |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Duyet bang cham cong thanh cong — canh bao: Cong viec #20 Phan tich: 8/8 gio — da vuot nguong 80% ngan sach (QTN-20)",
+  "data": {
+    "timesheet": {
+      "id": 50,
+      "userId": 7,
+      "weekStartDate": "2026-09-07",
+      "weekEndDate": "2026-09-13",
+      "status": "APPROVED",
+      "totalHours": 10,
+      "submittedBy": "nv01",
+      "submittedAt": "2026-09-13T10:00:00"
+    },
+    "overBudgetWarnings": [
+      "Cong viec #20 Phan tich: 8/8 gio — da vuot nguong 80% ngan sach (QTN-20)"
+    ]
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `INVALID_STATE` | Bảng không ở trạng thái `PENDING_APPROVAL`, hoặc không còn dòng `SUBMITTED` nào. |
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-02` — hệ thống ghi nhật ký lần từ chối (TC-03 của chung); **hoặc** `VT-02` hợp lệ nhưng duyệt dòng thuộc dự án người khác (TC-02, `entryIds` riêng lẻ). |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại bảng chấm công, hoặc `entryIds` chứa id không thuộc danh sách dòng chờ duyệt. |
+
+**Lưu ý cho Frontend:**
+
+- `message` có thể chứa cảnh báo vượt ngân sách dù request thành công — ưu tiên hiển thị cả
+  `data.overBudgetWarnings` (danh sách có cấu trúc) thay vì parse `message`.
+- Bảng hiển thị `data.timesheet.status = "PENDING_APPROVAL"` khi tuần còn phần của PM khác — nút duyệt
+  vẫn hiển thị cho phần của mình (dựa trên `pendingEntries` của hàng đợi).
+- Dòng đã `APPROVED` không sửa/xoá được — các API `PUT/DELETE time-entries` trả `400 INVALID_STATE` (QTN-10).
+- Sau khi duyệt, lưới giờ công trên màn hình công việc (`NCL-05-CN-005`) tự phản ánh `approvedHours` mới
+  qua `usageRatio`.
+
+---
+
+### `NCL-06-CN-004` — Từ chối bảng chấm công
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`). Cùng cơ chế phạm vi PM như `NCL-06-CN-003`: từ chối được
+cả nguyên bảng lẫn từng dòng, chỉ áp dụng cho dòng `SUBMITTED` thuộc **dự án mình quản lý**. Dòng bị từ
+chối quay về `DRAFT` để nhân viên sửa lại và nộp lại; bảng chỉ chuyển hẳn sang `REJECTED` khi không còn
+dòng `SUBMITTED` nào (của bất kỳ PM nào) trong tuần.
+
+#### `POST /timesheets/{timesheetId}/reject`
+
+```json
+{ "entryIds": [30], "reason": "Sai du an, can ghi lai" }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `entryIds` | number[] | không | Bỏ qua/null/rỗng = **từ chối nguyên bảng** (mọi dòng `SUBMITTED` thuộc dự án của PM); truyền id = từ chối từng dòng. |
+| `reason` | string | **có** | Lý do từ chối, tối đa 1000 ký tự — thiếu bị `400 VALIDATION_ERROR` trước khi chạm tới bảng chấm công. |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Tu choi bang cham cong thanh cong",
+  "data": {
+    "timesheet": {
+      "id": 50,
+      "userId": 7,
+      "weekStartDate": "2026-09-07",
+      "weekEndDate": "2026-09-13",
+      "status": "REJECTED",
+      "totalHours": 10,
+      "submittedBy": "nv01",
+      "submittedAt": "2026-09-13T10:00:00"
+    },
+    "rejectedEntries": 2
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Thiếu `reason` hoặc vượt 1000 ký tự. |
+| 400 | `INVALID_STATE` | Bảng không ở trạng thái `PENDING_APPROVAL`, hoặc không còn dòng `SUBMITTED` nào. |
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-02`; **hoặc** `VT-02` hợp lệ nhưng từ chối dòng thuộc dự án người khác. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại bảng chấm công, hoặc `entryIds` chứa id không thuộc danh sách dòng chờ duyệt. |
+
+**Lưu ý cho Frontend:**
+
+- Sau khi từ chối, dòng quay về `DRAFT` — hiển thị lại được trên lưới giờ công tuần (`GET /me/time-entries`)
+  để nhân viên sửa và nộp lại qua `POST /me/timesheets/{weekStartDate}/submit` (`NCL-06-CN-002`).
+- `data.timesheet.status` có thể vẫn là `PENDING_APPROVAL` nếu tuần còn phần của PM khác chưa xử lý —
+  tương tự cơ chế duyệt từng phần của `NCL-06-CN-003`.
+- Kênh thông báo in-app cho người nộp biết bị từ chối **chưa triển khai** (chờ Epic `NCL-14`) — hiện tại
+  chỉ có Nhật ký hệ thống ghi lại lý do/thời điểm, Frontend tạm thời có thể polling lại trạng thái bảng.
+
+---
+
+### `NCL-06-CN-005` — Điều chỉnh giờ công đã duyệt bằng bút toán đảo
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`), chỉ điều chỉnh được dòng thuộc dự án mình quản lý. Giờ công
+đã `APPROVED` là **bất biến** (QTN-10) — không sửa/xoá trực tiếp; muốn sửa phải đi qua bút toán đảo (QTN-11):
+hệ thống tự sinh một dòng **đảo** (số giờ âm, bù trừ đúng dòng gốc) và một dòng **sửa** (số giờ đúng), **giữ
+nguyên dòng gốc** — cả ba dòng đều tra cứu lại được.
+
+#### `POST /projects/{projectId}/tasks/{taskId}/time-entries/{entryId}/reversal`
+
+```json
+{ "correctedHours": 6, "reason": "Ghi nham 8 gio, thuc te lam 6 gio" }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `correctedHours` | number | **có** | Số giờ đúng sau khi sửa, từ 0.01 trở lên. |
+| `reason` | string | **có** | Lý do điều chỉnh, tối đa 1000 ký tự. |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Dieu chinh gio cong thanh cong",
+  "data": {
+    "adjustmentId": 5,
+    "originalEntry": { "id": 30, "hours": 8, "status": "APPROVED" },
+    "reversalEntry": { "id": 31, "hours": -8, "status": "APPROVED" },
+    "correctedEntry": { "id": 32, "hours": 6, "status": "APPROVED" },
+    "reason": "Ghi nham 8 gio, thuc te lam 6 gio",
+    "adjustedBy": "pm01",
+    "adjustedAt": "2026-09-14T10:00:00"
+  }
+}
+```
+
+#### `GET /projects/{projectId}/tasks/{taskId}/adjustments`
+
+Lịch sử điều chỉnh của một công việc, mới nhất trước — cùng cấu trúc `AdjustmentTraceRes` như trên, trả
+mảng `data`.
+
+**Response lỗi (áp dụng cho cả hai endpoint):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Thiếu `reason`, `correctedHours` <= 0, hoặc vượt giới hạn ký tự. |
+| 400 | `INVALID_STATE` | Dòng gốc chưa `APPROVED`; dòng không phải bản gốc (đã từng bị điều chỉnh — chỉ điều chỉnh được dòng gốc, TC-02); hoặc kỳ chấm công chứa dòng gốc đã bị **khóa** (`NCL-06-CN-006`, QTN-12). |
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-02`; **hoặc** `VT-02` hợp lệ nhưng công việc không thuộc dự án mình quản lý. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại dự án/công việc/dòng giờ công. |
+
+**Lưu ý cho Frontend:**
+
+- Hiển thị cả ba dòng (`originalEntry`/`reversalEntry`/`correctedEntry`) khi xem lịch sử để người dùng
+  hiểu rõ dấu vết — không ẩn dòng gốc hay dòng đảo dù chúng không còn "hiệu lực hiển thị".
+- Nếu backend trả `400 INVALID_STATE` với nội dung nhắc tới kỳ đã khóa, hướng người dùng liên hệ Kế toán
+  (chỉ `VT-05` mở lại được kỳ qua `NCL-06-CN-006`).
+
+---
+
+### `NCL-06-CN-006` — Khóa kỳ chấm công
+
+Yêu cầu token của **Kế toán** (`VT-05`). Kỳ tính theo **tháng** — khóa/mở đồng loạt cả tháng, không khóa
+theo tuần lẻ. Khi kỳ đã `LOCKED`, mọi thao tác ghi/sửa/điều chỉnh giờ công có ngày làm việc rơi vào kỳ đó
+đều bị chặn (QTN-12), dù dòng đó đang ở trạng thái nào.
+
+#### `GET /timesheet-periods`
+
+Danh sách kỳ chấm công, mới nhất trước.
+
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 3, "periodStart": "2026-09-01", "periodEnd": "2026-09-30", "status": "OPEN", "lockedBy": null, "lockedAt": null }
+  ]
+}
+```
+
+#### `POST /timesheet-periods/lock`
+
+```json
+{ "year": 2026, "month": 9 }
+```
+
+Khóa kỳ của tháng chỉ định — nếu kỳ chưa tồn tại, hệ thống **tự tạo rồi khóa luôn**. Chặn khóa nếu còn
+bảng chấm công `PENDING_APPROVAL` giao với khoảng ngày của kỳ.
+
+#### `POST /timesheet-periods/{periodId}/unlock`
+
+Mở lại một kỳ đã khóa (không cần body).
+
+**Response thành công — `200 OK`** (cả 2 API POST): trả về `TimesheetPeriodRes` như ở `GET` phía trên.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Thiếu `year`/`month`, hoặc `month` ngoài khoảng 1-12. |
+| 400 | `INVALID_STATE` | Khóa một kỳ đã `LOCKED` sẵn; mở một kỳ đang `OPEN`; hoặc khóa khi còn bảng `PENDING_APPROVAL` giao với kỳ. |
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-05`. |
+| 404 | `RESOURCE_NOT_FOUND` | `periodId` không tồn tại (chỉ áp dụng `unlock`). |
+
+**Lưu ý cho Frontend:**
+
+- Trước khi cho Kế toán bấm khóa, gợi ý gọi thử và hiển thị rõ lỗi `INVALID_STATE` liệt kê **còn bảng nào
+  đang chờ duyệt** (nếu backend trả danh sách trong `message`) để Kế toán biết cần nhắc PM xử lý trước.
+- Sau khi khóa, các màn hình ghi giờ công / điều chỉnh bút toán đảo của tháng đó nên vô hiệu hoá nút
+  ghi/sửa ngay khi nhận `400 INVALID_STATE` nhắc tới kỳ khóa, tránh người dùng thử lại nhiều lần.
+
+---
+
+### `NCL-06-CN-009` — Nhắc nộp bảng chấm công
+
+Mỗi **Chủ Nhật 20h00** (giờ server), hệ thống tự động rà soát tuần Thứ Hai–Chủ Nhật vừa kết thúc: nhân sự
+nào còn dòng giờ công `DRAFT` trong tuần nhưng **chưa nộp** (chưa gọi `POST /me/timesheets/{weekStartDate}/submit`,
+hoặc bảng bị `REJECTED` mà chưa nộp lại) sẽ nhận thông báo in-app nhắc nộp (`NotificationType.TIMESHEET_REMINDER`).
+PM phụ trách các dự án liên quan cũng nhận một thông báo tổng hợp danh sách nhân sự còn thiếu. Cơ chế
+này **tự động, không cần Frontend gọi API để kích hoạt** — Frontend chỉ cần hiển thị thông báo qua API
+Notification đã có (`NCL-06-CN-002` ở trên) và, nếu cần màn hình riêng, dùng endpoint tra cứu dưới đây.
+
+Chống gửi trùng (QTN-27): trong cùng một tuần, mỗi người (nhân viên lẫn PM) chỉ nhận **đúng một** thông
+báo nhắc dù hệ thống có chạy rà soát lại nhiều lần.
+
+#### `GET /timesheets/unsubmitted?weekStartDate=2026-09-07`
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`) hoặc **Nhân viên chuyên môn** (`VT-03`). Trả về danh sách
+`userId` còn chưa nộp bảng chấm công của tuần bắt đầu từ `weekStartDate` (luôn là một ngày Thứ Hai).
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": [
+    { "userId": 102, "weekStartDate": "2026-09-07", "weekEndDate": "2026-09-13" }
+  ]
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Vai trò không phải `VT-02` hoặc `VT-03` — ghi nhật ký lần từ chối (TC-03). |
+
+**Lưu ý cho Frontend:**
+
+- `weekStartDate` bắt buộc là ngày Thứ Hai (giống tham số của `POST /me/timesheets/{weekStartDate}/submit`).
+- Response chỉ trả `userId` (không kèm họ tên) — muốn hiển thị tên, ghép thêm với danh sách nhân sự đã
+  có sẵn ở màn hình quản lý người dùng (`NCL-01-CN-002`).
+- Endpoint này phục vụ **xem lại** danh sách (vd PM muốn chủ động kiểm tra tuần hiện tại), không thay thế
+  cơ chế nhắc tự động — không cần gọi endpoint này để "kích hoạt" gửi nhắc.
 
 ---
 

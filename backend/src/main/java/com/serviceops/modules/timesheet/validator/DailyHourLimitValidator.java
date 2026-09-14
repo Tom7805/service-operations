@@ -15,7 +15,7 @@ import java.time.LocalDate;
 @Component
 public class DailyHourLimitValidator {
 
-	/** Tran gio cong toi da trong mot ngay (QTN-14: gioi han 12 gio/ngay). */
+	/** Tran gio cong toi da trong mot ngay (QTN-14). */
 	public static final BigDecimal MAX_HOURS_PER_DAY = new BigDecimal("12");
 
 	private final TimeEntryRepository timeEntryRepository;
