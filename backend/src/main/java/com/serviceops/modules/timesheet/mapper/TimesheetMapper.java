@@ -2,6 +2,7 @@ package com.serviceops.modules.timesheet.mapper;
 
 import com.serviceops.modules.timesheet.dto.response.TimeEntryRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetApprovalRes;
+import com.serviceops.modules.timesheet.dto.response.TimesheetRejectRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetSummaryRes;
 import com.serviceops.modules.timesheet.entity.Timesheet;
@@ -69,5 +70,12 @@ public class TimesheetMapper {
 	 */
 	public TimesheetApprovalRes toApprovalResponse(Timesheet timesheet, List<String> overBudgetWarnings) {
 		return new TimesheetApprovalRes(toResponse(timesheet), overBudgetWarnings);
+	}
+
+	/**
+	 * Ket qua tu choi: bang cham cong sau khi tu choi + so dong bi tu choi (NCL-06-CN-004).
+	 */
+	public TimesheetRejectRes toRejectResponse(Timesheet timesheet, int rejectedEntries) {
+		return new TimesheetRejectRes(toResponse(timesheet), rejectedEntries);
 	}
 }

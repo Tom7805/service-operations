@@ -2,8 +2,10 @@ package com.serviceops.modules.timesheet.controller;
 
 import com.serviceops.common.api.BaseRes;
 import com.serviceops.modules.timesheet.dto.request.TimesheetApproveReq;
+import com.serviceops.modules.timesheet.dto.request.TimesheetRejectReq;
 import com.serviceops.modules.timesheet.dto.response.PendingTimesheetRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetApprovalRes;
+import com.serviceops.modules.timesheet.dto.response.TimesheetRejectRes;
 import com.serviceops.modules.timesheet.service.TimesheetApprovalService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,11 +19,13 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * API duyet bang cham cong (NCL-06-CN-003, Epic NCL-06).
+ * API duyet / tu choi bang cham cong (NCL-06-CN-003, NCL-06-CN-004, Epic NCL-06).
  *
- * <p>Chi Quan ly du an ({@code VT-02}) duoc goi; luat "chi duyet entry thuoc
+ * <p>Chi Quan ly du an ({@code VT-02}) duoc goi; luat "chi duyet/tu choi entry thuoc
  * du an minh quan ly" kiem o tang service (TC-02) — PM du yeu nhan
- * {@code 403 FORBIDDEN} khi duyet entry cua du an nguoi khac.</p>
+ * {@code 403 FORBIDDEN} khi thao tac tren entry cua du an nguoi khac. Vai tro khac
+ * bi tu choi 403 va bi ghi nhat ky lan tu choi boi {@code AccessDeniedAuditRecorder}
+ * (NCL-06-CN-004-TC-03).</p>
  */
 @RestController
 @RequiredArgsConstructor
@@ -47,5 +51,17 @@ public class TimesheetApprovalController {
 				: "Duyet bang cham cong thanh cong — canh bao: "
 						+ String.join("; ", result.overBudgetWarnings());
 		return BaseRes.ok(message, result);
+	}
+
+	/**
+	 * NCL-06-CN-004: tu choi nguyen bang (khong truyen entryIds) hoac tung dong (truyen
+	 * entryIds), bat buoc kem ly do. Dong bi tu choi quay ve nhap (DRAFT) de nguoi nop sua lai.
+	 */
+	@PostMapping("/timesheets/{timesheetId}/reject")
+	@PreAuthorize("hasRole('VT-02')")
+	public BaseRes<TimesheetRejectRes> reject(@PathVariable Long timesheetId,
+			@Valid @RequestBody TimesheetRejectReq request) {
+		return BaseRes.ok("Tu choi bang cham cong thanh cong",
+				timesheetApprovalService.reject(timesheetId, request));
 	}
 }
