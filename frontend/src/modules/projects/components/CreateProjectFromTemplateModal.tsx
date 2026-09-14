@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 import type {
+  AssignableProjectManager,
   ContractTargetForProject,
   ProjectCreateFromTemplateReq,
   ProjectRes,
@@ -10,6 +12,7 @@ import type {
 import {
   createProjectFromTemplate,
   deleteWorkPackage,
+  fetchAssignableProjectManagers,
   fetchProjectTemplates,
   getWorkBreakdown,
   ProjectsApiError,
@@ -62,7 +65,12 @@ export default function CreateProjectFromTemplateModal({
   const [name, setName] = useState('');
   const [startDate, setStartDate] = useState(todayIso());
   const [expectedEndDate, setExpectedEndDate] = useState('');
-  const [projectManagerId, setProjectManagerId] = useState<number | ''>(currentUserId || 7);
+  const [projectManagerId, setProjectManagerId] = useState<number | ''>(currentUserId || '');
+
+  // Danh sách người dùng ACTIVE để chọn "Người quản lý dự án" (thay vì gõ tay ID không biết trước)
+  const [managers, setManagers] = useState<AssignableProjectManager[]>([]);
+  const [loadingManagers, setLoadingManagers] = useState(false);
+  const [managersError, setManagersError] = useState<string | null>(null);
 
   // Trạng thái xử lý form
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -116,13 +124,38 @@ export default function CreateProjectFromTemplateModal({
       setName(contract.name ? `Dự án triển khai ${contract.name}` : '');
       setStartDate(contract.startDate || todayIso());
       setExpectedEndDate(contract.endDate || '');
-      setProjectManagerId(currentUserId || 7);
+      setProjectManagerId(currentUserId || '');
 
       if (isPM && isContractActive) {
         void loadTemplates();
       }
     }
   }, [isOpen, contract, isPM, isContractActive, currentUserId, loadTemplates]);
+
+  // Tải danh sách người dùng ACTIVE cho ô chọn "Người quản lý dự án"
+  useEffect(() => {
+    if (!isOpen || !isPM || !isContractActive) return;
+    let cancelled = false;
+    setLoadingManagers(true);
+    setManagersError(null);
+    fetchAssignableProjectManagers()
+      .then((list) => {
+        if (!cancelled) setManagers(list);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setManagersError(
+            err instanceof ProjectsApiError ? err.message : 'Không thể tải danh sách người dùng.'
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingManagers(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, isPM, isContractActive]);
 
   // Tải cây WBS của dự án vừa tạo
   const loadCreatedProjectWbs = useCallback(async (projectId: number) => {
@@ -220,6 +253,7 @@ export default function CreateProjectFromTemplateModal({
   };
 
   return (
+    <ModalPortal>
     <div
       className="modal-backdrop"
       role="dialog"
@@ -462,7 +496,7 @@ export default function CreateProjectFromTemplateModal({
                 <div className="form-group" style={{ marginBottom: '20px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                     <label htmlFor="project-pm-id" className="form-label" style={{ margin: 0 }}>
-                      Người quản lý dự án (User ID) <span className="field-required">*</span>
+                      Người quản lý dự án <span className="field-required">*</span>
                     </label>
                     <button
                       type="button"
@@ -473,12 +507,9 @@ export default function CreateProjectFromTemplateModal({
                       {ICONS.user} Gán cho tôi
                     </button>
                   </div>
-                  <input
+                  <select
                     id="project-pm-id"
-                    type="number"
-                    min={1}
-                    className={`form-input ${fieldErrors.projectManagerId ? 'form-input--error' : ''}`}
-                    placeholder="Nhập ID người quản lý dự án (ví dụ: 7)"
+                    className={`form-select ${fieldErrors.projectManagerId ? 'form-input--error' : ''}`}
                     value={projectManagerId}
                     onChange={(e) => {
                       const val = e.target.value ? Number(e.target.value) : '';
@@ -491,8 +522,23 @@ export default function CreateProjectFromTemplateModal({
                         });
                       }
                     }}
+                    disabled={loadingManagers}
                     data-testid="pm-id-input"
-                  />
+                  >
+                    <option value="">-- Chọn người quản lý dự án --</option>
+                    {managers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.fullName} ({m.username})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px', color: '#64748B' }}>
+                    {loadingManagers
+                      ? 'Đang tải danh sách người dùng...'
+                      : managersError
+                      ? managersError
+                      : 'Chỉ hiển thị tài khoản đang hoạt động (ACTIVE) trong hệ thống.'}
+                  </p>
                   {fieldErrors.projectManagerId && (
                     <span className="field-error" role="alert" data-testid="error-projectManagerId">
                       {fieldErrors.projectManagerId}
@@ -584,5 +630,6 @@ export default function CreateProjectFromTemplateModal({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }

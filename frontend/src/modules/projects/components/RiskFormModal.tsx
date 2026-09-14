@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
-import type { ProjectRiskReq, ProjectRiskRes, RiskLevel } from '../types/projectTypes';
-import { createRisk, updateRisk, ProjectsApiError } from '../api/projectsApi';
+import ModalPortal from '../../../components/common/ModalPortal';
+import type { AssignableProjectManager, ProjectRiskReq, ProjectRiskRes, RiskLevel } from '../types/projectTypes';
+import { createRisk, fetchAssignableProjectManagers, updateRisk, ProjectsApiError } from '../api/projectsApi';
 import { validateRiskForm } from '../validators/projectValidators';
 
 export interface RiskFormModalProps {
@@ -39,6 +40,11 @@ export default function RiskFormModal({
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Danh sách tài khoản đang ACTIVE để chọn "Người theo dõi" (thay vì gõ tay ID không biết trước).
+  const [watchers, setWatchers] = useState<AssignableProjectManager[]>([]);
+  const [loadingWatchers, setLoadingWatchers] = useState(false);
+  const [watchersError, setWatchersError] = useState<string | null>(null);
+
   useEffect(() => {
     if (!isOpen) return;
     setDescription(risk?.description ?? '');
@@ -48,6 +54,17 @@ export default function RiskFormModal({
     setWatcherId(risk ? String(risk.watcherId) : '');
     setErrors({});
     setServerError(null);
+
+    setLoadingWatchers(true);
+    setWatchersError(null);
+    fetchAssignableProjectManagers()
+      .then(setWatchers)
+      .catch((err: unknown) => {
+        setWatchersError(
+          err instanceof ProjectsApiError ? err.message : 'Không thể tải danh sách tài khoản.'
+        );
+      })
+      .finally(() => setLoadingWatchers(false));
   }, [isOpen, risk]);
 
   if (!isOpen) return null;
@@ -98,7 +115,19 @@ export default function RiskFormModal({
     }
   };
 
+  // Khi sửa rủi ro, người theo dõi hiện tại có thể không còn nằm trong danh sách
+  // "đang ACTIVE" (VD tài khoản vừa bị khóa) — vẫn phải hiện được lựa chọn đang chọn
+  // sẵn để không mất dữ liệu, nên chèn thêm một lựa chọn tổng hợp nếu thiếu.
+  const watcherOptions =
+    risk && !watchers.some((w) => String(w.id) === String(risk.watcherId))
+      ? [
+          { id: risk.watcherId, username: '', fullName: risk.watcherName ?? `#${risk.watcherId}` },
+          ...watchers,
+        ]
+      : watchers;
+
   return (
+    <ModalPortal>
     <div
       className="modal-backdrop"
       onClick={(e) => {
@@ -248,23 +277,29 @@ export default function RiskFormModal({
 
             <div className="form-group" style={{ marginBottom: '18px' }}>
               <label className="form-label" htmlFor="risk-watcher-id">
-                Người theo dõi (id tài khoản) <span className="field-required">*</span>
+                Người theo dõi <span className="field-required">*</span>
               </label>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                <input
+                <select
                   id="risk-watcher-id"
-                  type="number"
-                  className={`form-input ${errors.watcherId ? 'form-input--error' : ''}`}
+                  className={`form-select ${errors.watcherId ? 'form-input--error' : ''}`}
                   value={watcherId}
                   onChange={(e) => {
                     setWatcherId(e.target.value);
                     setErrors((prev) => ({ ...prev, watcherId: '' }));
                     setServerError(null);
                   }}
-                  placeholder="Ví dụ: 7"
-                  disabled={submitting}
-                  style={{ maxWidth: '160px' }}
-                />
+                  disabled={submitting || loadingWatchers}
+                >
+                  <option value="">
+                    {loadingWatchers ? 'Đang tải danh sách tài khoản...' : '-- Chọn người theo dõi --'}
+                  </option>
+                  {watcherOptions.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.username ? `${w.fullName} (${w.username})` : w.fullName}
+                    </option>
+                  ))}
+                </select>
                 {currentUserId != null && (
                   <button
                     type="button"
@@ -277,7 +312,7 @@ export default function RiskFormModal({
                 )}
               </div>
               <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px' }}>
-                Tài khoản theo dõi phải đang hoạt động (backend sẽ từ chối tài khoản đã khóa).
+                {watchersError ?? 'Chỉ hiển thị tài khoản đang hoạt động (ACTIVE) trong hệ thống.'}
               </p>
               {errors.watcherId && (
                 <p
@@ -305,5 +340,6 @@ export default function RiskFormModal({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }

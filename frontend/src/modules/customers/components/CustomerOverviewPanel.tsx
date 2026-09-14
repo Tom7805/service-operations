@@ -22,6 +22,8 @@ interface CustomerOverviewPanelProps {
   customerId: number;
   customerName: string;
   currentUserRoles?: string[];
+  /** ID tài khoản đang đăng nhập — dùng để nút "Gán cho tôi" ở modal tạo dự án điền đúng người. */
+  currentUserId?: number;
   /** Cho phép trang cha ghi một dòng vào luồng nhật ký hiển thị mỗi lần tải xong (đối chiếu Audit Log Backend - TC-03). */
   onLoaded?: (info: { at: string; itemCount: number }) => void;
   /** Bơm sẵn dữ liệu cho kiểm thử — khi có, panel bỏ qua lần gọi API khởi tạo. */
@@ -76,6 +78,7 @@ export default function CustomerOverviewPanel({
   customerId,
   customerName,
   currentUserRoles = ['VT-04'],
+  currentUserId,
   onLoaded,
   initialOverview,
 }: CustomerOverviewPanelProps) {
@@ -160,8 +163,11 @@ export default function CustomerOverviewPanel({
       status: item.status ?? '',
       customerId: customerId,
       customerName: customerName,
+      contractType: item.contractType ?? undefined,
       totalValue: item.amount,
+      limitValue: item.limitValue,
       startDate: item.date,
+      endDate: item.endDate,
     });
     setIsCreateProjectOpen(true);
   }, [customerId, customerName]);
@@ -177,8 +183,11 @@ export default function CustomerOverviewPanel({
       status: item.status ?? '',
       customerId: customerId,
       customerName: customerName,
+      contractType: item.contractType ?? undefined,
       totalValue: item.amount,
+      limitValue: item.limitValue,
       startDate: item.date,
+      endDate: item.endDate,
     });
     setIsCreateFromTemplateOpen(true);
   }, [customerId, customerName]);
@@ -609,6 +618,7 @@ export default function CustomerOverviewPanel({
           }}
           contract={createProjectTarget}
           currentUserRoles={currentUserRoles}
+          currentUserId={currentUserId}
           onSaved={() => {
             setIsCreateProjectOpen(false);
             setCreateProjectTarget(null);
@@ -626,6 +636,7 @@ export default function CustomerOverviewPanel({
           }}
           contract={createProjectTarget}
           currentUserRoles={currentUserRoles}
+          currentUserId={currentUserId}
           onCreated={() => {
             setIsCreateFromTemplateOpen(false);
             setCreateProjectTarget(null);

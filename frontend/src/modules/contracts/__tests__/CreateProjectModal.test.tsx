@@ -2,7 +2,9 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import CreateProjectModal from '../components/CreateProjectModal';
 import * as contractsApi from '../api/contractsApi';
+import * as projectsApi from '../../projects/api/projectsApi';
 import type { ContractTargetForProject, ProjectRes } from '../types/contractTypes';
+import type { AssignableProjectManager } from '../../projects/types/projectTypes';
 
 vi.mock('../api/contractsApi', () => ({
   createProjectFromContract: vi.fn(),
@@ -18,6 +20,15 @@ vi.mock('../api/contractsApi', () => ({
     }
   },
 }));
+
+vi.mock('../../projects/api/projectsApi', () => ({
+  fetchAssignableProjectManagers: vi.fn(),
+}));
+
+const mockManagers: AssignableProjectManager[] = [
+  { id: 7, username: 'pm01', fullName: 'Nguyễn Văn A' },
+  { id: 42, username: 'pm02', fullName: 'Người dùng đang đăng nhập' },
+];
 
 const activeContract: ContractTargetForProject = {
   id: 5,
@@ -59,6 +70,7 @@ const mockProjectRes: ProjectRes = {
 describe('CreateProjectModal (NCL-05-CN-001 — Tạo dự án từ hợp đồng)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(projectsApi.fetchAssignableProjectManagers).mockResolvedValue(mockManagers);
   });
 
   it('TC-01: Tạo dự án từ hợp đồng ACTIVE thành công với thông tin hợp lệ', async () => {
@@ -100,6 +112,9 @@ describe('CreateProjectModal (NCL-05-CN-001 — Tạo dự án từ hợp đồn
       target: { value: '2027-12-31' },
     });
 
+    await waitFor(() => {
+      expect((screen.getByLabelText(/Người quản lý dự án/i) as HTMLSelectElement).options.length).toBeGreaterThan(1);
+    });
     const pmInput = screen.getByLabelText(/Người quản lý dự án/i);
     fireEvent.change(pmInput, {
       target: { value: '7' },
@@ -206,7 +221,7 @@ describe('CreateProjectModal (NCL-05-CN-001 — Tạo dự án từ hợp đồn
     expect(contractsApi.createProjectFromContract).not.toHaveBeenCalled();
   });
 
-  it('TC-03d: Báo lỗi validation khi thiếu người quản lý dự án hoặc ID <= 0', async () => {
+  it('TC-03d: Báo lỗi validation khi thiếu người quản lý dự án', async () => {
     render(
       <CreateProjectModal
         contract={activeContract}
@@ -216,9 +231,7 @@ describe('CreateProjectModal (NCL-05-CN-001 — Tạo dự án từ hợp đồn
       />
     );
 
-    const pmInput = screen.getByLabelText(/Người quản lý dự án/i);
-    fireEvent.change(pmInput, { target: { value: '0' } });
-
+    // Không chọn người quản lý dự án (giữ nguyên lựa chọn rỗng mặc định)
     fireEvent.click(screen.getByTestId('submit-create-project-btn'));
 
     expect(screen.getByTestId('error-project-manager')).toHaveTextContent(
@@ -243,7 +256,7 @@ describe('CreateProjectModal (NCL-05-CN-001 — Tạo dự án từ hợp đồn
     expect(screen.queryByTestId('create-project-form')).not.toBeInTheDocument();
   });
 
-  it('TC-04b: Nút "Gán cho tôi" tự động điền ID người dùng đang đăng nhập', () => {
+  it('TC-04b: Nút "Gán cho tôi" tự động điền ID người dùng đang đăng nhập', async () => {
     render(
       <CreateProjectModal
         contract={activeContract}
@@ -254,7 +267,10 @@ describe('CreateProjectModal (NCL-05-CN-001 — Tạo dự án từ hợp đồn
       />
     );
 
-    const pmInput = screen.getByLabelText(/Người quản lý dự án/i) as HTMLInputElement;
+    await waitFor(() => {
+      expect((screen.getByLabelText(/Người quản lý dự án/i) as HTMLSelectElement).options.length).toBeGreaterThan(1);
+    });
+    const pmInput = screen.getByLabelText(/Người quản lý dự án/i) as HTMLSelectElement;
     fireEvent.change(pmInput, { target: { value: '' } });
     expect(pmInput.value).toBe('');
 
@@ -289,6 +305,9 @@ describe('CreateProjectModal (NCL-05-CN-001 — Tạo dự án từ hợp đồn
     });
     fireEvent.change(screen.getByLabelText(/Ngày kết thúc dự kiến/i), {
       target: { value: '2027-12-31' },
+    });
+    await waitFor(() => {
+      expect((screen.getByLabelText(/Người quản lý dự án/i) as HTMLSelectElement).options.length).toBeGreaterThan(1);
     });
     fireEvent.change(screen.getByLabelText(/Người quản lý dự án/i), {
       target: { value: '7' },

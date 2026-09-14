@@ -7,6 +7,7 @@ import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.identity.user.dto.request.CreateUserReq;
 import com.serviceops.modules.identity.user.dto.request.UpdateUserReq;
 import com.serviceops.modules.identity.user.dto.request.UserStatusReq;
+import com.serviceops.modules.identity.user.dto.response.AssignableProjectManagerRes;
 import com.serviceops.modules.identity.user.dto.response.UserRes;
 import com.serviceops.modules.identity.user.entity.Role;
 import com.serviceops.modules.identity.user.entity.User;
@@ -116,6 +117,14 @@ public class UserServiceImpl implements UserService {
             AuditTargetType.USER, user.getId(), user.getUsername(),
             "Đổi trạng thái tài khoản từ " + previousStatus + " sang " + request.status());
         return toResponse(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AssignableProjectManagerRes> findAssignableProjectManagers() {
+        return userRepository.findByStatusOrderByFullNameAsc(UserStatus.ACTIVE).stream()
+                .map(user -> new AssignableProjectManagerRes(user.getId(), user.getUsername(), user.getFullName()))
+                .toList();
     }
 
     private void replaceRoles(User user, List<String> roleCodes, String scopeType, Long scopeDepartmentId) {

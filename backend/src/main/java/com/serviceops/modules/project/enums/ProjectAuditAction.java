@@ -22,5 +22,8 @@ public enum ProjectAuditAction {
 	/** Ghi/sua/xoa gio cong theo cong viec (NCL-06-CN-001 / TC-04). */
 	TIME_ENTRY_UPDATED,
 
-	PROJECT_CLOSED
+	PROJECT_CLOSED,
+
+	/** Dong bo ngay ket thuc du kien theo hop dong duoc gia han (NCL-04-CN-007). */
+	TIMELINE_SYNCED_FROM_CONTRACT
 }

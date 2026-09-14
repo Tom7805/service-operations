@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 import type {
   ContractTargetForProject,
   ProjectCreateFromContractReq,
   ProjectRes,
 } from '../types/contractTypes';
 import { createProjectFromContract, ProjectsApiError } from '../api/contractsApi';
+import { fetchAssignableProjectManagers } from '../../projects/api/projectsApi';
+import type { AssignableProjectManager } from '../../projects/types/projectTypes';
 import { validateProjectCreateForm } from '../../projects/validators/projectValidators';
 
 export type {
@@ -53,6 +56,35 @@ export default function CreateProjectModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Danh sách người dùng ACTIVE để chọn "Người quản lý dự án" (thay vì gõ tay ID không biết trước)
+  const [managers, setManagers] = useState<AssignableProjectManager[]>([]);
+  const [loadingManagers, setLoadingManagers] = useState(false);
+  const [managersError, setManagersError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || !isAllowed || !isActive) return;
+    let cancelled = false;
+    setLoadingManagers(true);
+    setManagersError(null);
+    fetchAssignableProjectManagers()
+      .then((list) => {
+        if (!cancelled) setManagers(list);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setManagersError(
+            err instanceof ProjectsApiError ? err.message : 'Không thể tải danh sách người dùng.'
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingManagers(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, isAllowed, isActive]);
 
   // Khởi tạo giá trị mặc định khi mở modal
   useEffect(() => {
@@ -137,6 +169,7 @@ export default function CreateProjectModal({
   };
 
   return (
+    <ModalPortal>
     <div
       className="modal-backdrop"
       onClick={(e) => {
@@ -314,22 +347,30 @@ export default function CreateProjectModal({
                     Gán cho tôi
                   </button>
                 </div>
-                <input
+                <select
                   id="project-manager-id"
-                  type="number"
-                  min="1"
-                  className={`form-input ${errors.projectManagerId ? 'form-input--error' : ''}`}
+                  className={`form-select ${errors.projectManagerId ? 'form-input--error' : ''}`}
                   value={projectManagerId}
                   onChange={(e) => {
                     setProjectManagerId(e.target.value);
                     setErrors((prev) => ({ ...prev, projectManagerId: '' }));
                     setServerError(null);
                   }}
-                  placeholder="Nhập ID người quản lý dự án (ví dụ: 7)"
-                  disabled={submitting}
-                />
+                  disabled={submitting || loadingManagers}
+                >
+                  <option value="">-- Chọn người quản lý dự án --</option>
+                  {managers.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.fullName} ({m.username})
+                    </option>
+                  ))}
+                </select>
                 <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px', color: '#64748B' }}>
-                  Người dùng được chọn phải đang hoạt động (ACTIVE) trong hệ thống.
+                  {loadingManagers
+                    ? 'Đang tải danh sách người dùng...'
+                    : managersError
+                    ? managersError
+                    : 'Chỉ hiển thị tài khoản đang hoạt động (ACTIVE) trong hệ thống.'}
                 </p>
                 {errors.projectManagerId && (
                   <p className="field-error" data-testid="error-project-manager" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
@@ -362,5 +403,6 @@ export default function CreateProjectModal({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }

@@ -144,7 +144,8 @@ public class WorkPackageServiceImpl implements WorkPackageService {
 
 	private TaskRes toTaskResponse(Task task) {
 		return new TaskRes(task.getId(), task.getProjectId(), task.getWorkPackageId(), task.getParentTaskId(),
-				task.getName(), task.getDescription(), task.getExpectedStartDate(), task.getExpectedEndDate(), task.getStatus());
+				task.getName(), task.getDescription(), task.getExpectedStartDate(), task.getExpectedEndDate(),
+				task.getStatus(), task.getBudgetHours());
 	}
 
 	private String blankToNull(String value) {

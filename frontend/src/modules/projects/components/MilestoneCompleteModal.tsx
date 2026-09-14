@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 import type { ProjectMilestoneRes } from '../types/projectTypes';
 import { completeMilestone, ProjectsApiError } from '../api/projectsApi';
 import { validateMilestoneCompleteForm } from '../validators/projectValidators';
@@ -68,6 +69,7 @@ export default function MilestoneCompleteModal({
   };
 
   return (
+    <ModalPortal>
     <div
       className="modal-backdrop"
       onClick={(e) => {
@@ -160,5 +162,6 @@ export default function MilestoneCompleteModal({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }

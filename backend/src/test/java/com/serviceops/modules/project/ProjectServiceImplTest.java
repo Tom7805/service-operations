@@ -110,6 +110,43 @@ class ProjectServiceImplTest {
 	}
 
 	@Test
+	@DisplayName("Tu choi tao du an moi khi hop dong da co du an dang RUNNING (tong ngan sach khong vuot han muc)")
+	void rejectsSecondRunningProjectOnSameContract() {
+		when(contractRepository.findById(1L)).thenReturn(Optional.of(contract(1L, ContractStatus.ACTIVE)));
+		Project existingRunning = new Project();
+		existingRunning.setId(99L);
+		existingRunning.setStatus(com.serviceops.modules.project.enums.ProjectStatus.RUNNING);
+		when(projectRepository.findByContractIdOrderByIdDesc(1L)).thenReturn(java.util.List.of(existingRunning));
+
+		assertThatThrownBy(() -> service.createFromContract(1L, request()))
+				.isInstanceOf(BusinessRuleException.class)
+				.extracting(exception -> ((BusinessRuleException) exception).getErrorCode())
+				.isEqualTo(ErrorCode.INVALID_STATE);
+		verify(projectRepository, never()).save(any());
+	}
+
+	@Test
+	@DisplayName("Cho phep tao du an moi khi du an cu tren hop dong da CLOSED")
+	void allowsNewProjectWhenExistingOnesAreClosed() {
+		Contract contract = contract(1L, ContractStatus.ACTIVE);
+		when(contractRepository.findById(1L)).thenReturn(Optional.of(contract));
+		when(userRepository.findById(7L)).thenReturn(Optional.of(activeUser(7L)));
+		Project closed = new Project();
+		closed.setId(98L);
+		closed.setStatus(com.serviceops.modules.project.enums.ProjectStatus.CLOSED);
+		when(projectRepository.findByContractIdOrderByIdDesc(1L)).thenReturn(java.util.List.of(closed));
+		when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> {
+			Project project = invocation.getArgument(0);
+			project.setId(20L);
+			return project;
+		});
+
+		ProjectRes response = service.createFromContract(1L, request());
+
+		assertThat(response.id()).isEqualTo(20L);
+	}
+
+	@Test
 	@DisplayName("Khong tao du an khi nguoi quan ly khong ton tai")
 	void rejectsMissingProjectManager() {
 		when(contractRepository.findById(1L)).thenReturn(Optional.of(contract(1L, ContractStatus.ACTIVE)));

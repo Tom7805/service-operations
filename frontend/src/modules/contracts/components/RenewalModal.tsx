@@ -35,6 +35,7 @@ export default function RenewalModal({
 }: RenewalModalProps) {
   const isAllowed = currentUserRoles.includes('VT-04');
   const isActive = contract.status === 'ACTIVE';
+  const hasEndDate = Boolean(contract.endDate);
 
   const [newEndDate, setNewEndDate] = useState('');
   const [additionalValue, setAdditionalValue] = useState<string>('');
@@ -92,6 +93,11 @@ export default function RenewalModal({
 
     if (!isActive) {
       setServerError('Chỉ gia hạn được hợp đồng đang còn hiệu lực (ACTIVE); hợp đồng đã đóng vui lòng lập hợp đồng mới');
+      return;
+    }
+
+    if (!hasEndDate) {
+      setServerError('Hợp đồng chưa có ngày kết thúc nên không thể gia hạn; vui lòng khai báo ngày kết thúc cho hợp đồng trước.');
       return;
     }
 
@@ -169,14 +175,21 @@ export default function RenewalModal({
             </div>
           )}
 
+          {/* Hợp đồng chưa từng có ngày kết thúc — "gia hạn" đòi hỏi phải có hạn cũ để dời tiếp */}
+          {isAllowed && isActive && !hasEndDate && (
+            <div className="alert-box alert-box--warning" role="alert" data-testid="renewal-no-end-date-alert">
+              Hợp đồng chưa có ngày kết thúc nên không thể gia hạn; vui lòng khai báo ngày kết thúc cho hợp đồng trước.
+            </div>
+          )}
+
           {serverError && (
             <div className="alert-box alert-box--danger" role="alert">
               {serverError}
             </div>
           )}
 
-          {/* Biểu mẫu gia hạn hợp đồng (chỉ hiển thị khi là VT-04 và hợp đồng ACTIVE) */}
-          {isAllowed && isActive && (
+          {/* Biểu mẫu gia hạn hợp đồng (chỉ hiển thị khi là VT-04, hợp đồng ACTIVE và đã có ngày kết thúc) */}
+          {isAllowed && isActive && hasEndDate && (
             <form onSubmit={handleSubmit} noValidate data-testid="renewal-form">
               <div className="form-group">
                 <label className="form-label" htmlFor="renewal-new-end-date">

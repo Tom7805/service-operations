@@ -23,9 +23,15 @@ vi.mock('../api/projectsApi', () => {
     updateRisk: vi.fn(),
     changeRiskStatus: vi.fn(),
     deleteRisk: vi.fn(),
+    fetchAssignableProjectManagers: vi.fn(),
     ProjectsApiError: MockProjectsApiError,
   };
 });
+
+const mockWatchers = [
+  { id: 7, username: 'pm01', fullName: 'Nguyễn Văn A' },
+  { id: 9, username: 'pm.lead', fullName: 'Trần Thu Hà' },
+];
 
 const mockProjectRunning: ProjectRes = {
   id: 1,
@@ -81,6 +87,7 @@ const riskLow: ProjectRiskRes = {
 describe('ProjectRiskPage (NCL-05-CN-009 — Quản lý rủi ro dự án)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(projectsApi.fetchAssignableProjectManagers).mockResolvedValue(mockWatchers);
   });
 
   it('TC-03: hiển thị Access Denied cho vai trò khác VT-02 (ví dụ VT-01, VT-03)', () => {
@@ -155,6 +162,7 @@ describe('ProjectRiskPage (NCL-05-CN-009 — Quản lý rủi ro dự án)', () 
     });
     fireEvent.change(screen.getByLabelText(/Mức tác động/i), { target: { value: 'HIGH' } });
     fireEvent.change(screen.getByLabelText(/Khả năng xảy ra/i), { target: { value: 'MEDIUM' } });
+    await screen.findByRole('option', { name: /Nguyễn Văn A/i });
     fireEvent.change(screen.getByLabelText(/Người theo dõi/i), { target: { value: '7' } });
 
     fireEvent.click(screen.getByTestId('submit-risk-btn'));
@@ -182,9 +190,10 @@ describe('ProjectRiskPage (NCL-05-CN-009 — Quản lý rủi ro dự án)', () 
     await waitFor(() => expect(screen.getByTestId('risk-empty')).toBeInTheDocument());
 
     fireEvent.click(screen.getByTestId('btn-add-risk'));
+    await screen.findByRole('option', { name: /Trần Thu Hà/i });
     fireEvent.click(screen.getByText('Theo dõi bởi tôi'));
 
-    expect((screen.getByLabelText(/Người theo dõi/i) as HTMLInputElement).value).toBe('9');
+    expect((screen.getByLabelText(/Người theo dõi/i) as HTMLSelectElement).value).toBe('9');
   });
 
   it('báo lỗi validate khi thiếu trường bắt buộc, không gọi API', async () => {
@@ -195,6 +204,7 @@ describe('ProjectRiskPage (NCL-05-CN-009 — Quản lý rủi ro dự án)', () 
     await waitFor(() => expect(screen.getByTestId('risk-empty')).toBeInTheDocument());
 
     fireEvent.click(screen.getByTestId('btn-add-risk'));
+    await screen.findByRole('option', { name: /Nguyễn Văn A/i });
     fireEvent.click(screen.getByTestId('submit-risk-btn'));
 
     expect(await screen.findByTestId('error-risk-description')).toHaveTextContent(
@@ -220,7 +230,8 @@ describe('ProjectRiskPage (NCL-05-CN-009 — Quản lý rủi ro dự án)', () 
 
     const descInput = screen.getByLabelText(/Mô tả rủi ro/i) as HTMLTextAreaElement;
     expect(descInput.value).toBe('Nhà thầu phụ có nguy cơ chậm tiến độ tích hợp');
-    expect((screen.getByLabelText(/Người theo dõi/i) as HTMLInputElement).value).toBe('7');
+    await screen.findByRole('option', { name: /Nguyễn Văn A/i });
+    expect((screen.getByLabelText(/Người theo dõi/i) as HTMLSelectElement).value).toBe('7');
 
     fireEvent.change(descInput, { target: { value: 'Mô tả đã sửa' } });
     fireEvent.click(screen.getByTestId('submit-risk-btn'));

@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
 import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import type { Opportunity } from '../types/opportunityTypes';
 import type { ContractCreateFromOpportunityReq, ContractRes } from '../../contracts/types/contractTypes';
 import { createContractFromOpportunity } from '../api/opportunitiesApi';
+import { fetchOpportunityQuoteHistory } from '../api/quotesApi';
 
 interface Props {
   opportunity: Opportunity;
@@ -41,8 +42,37 @@ export default function CreateContractModal({
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [loadingQuote, setLoadingQuote] = useState(false);
+  const [latestQuoteVersion, setLatestQuoteVersion] = useState<number | null>(null);
+  const totalValueTouchedRef = useRef(false);
 
   const backdrop = useBackdropClick(onClose, submitting);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    totalValueTouchedRef.current = false;
+    setLatestQuoteVersion(null);
+    setLoadingQuote(true);
+    fetchOpportunityQuoteHistory(opportunity.id)
+      .then((quotes) => {
+        if (cancelled || quotes.length === 0) return;
+        // Danh sách trả về sắp theo version giảm dần nên phần tử đầu là báo giá mới nhất.
+        const latest = quotes[0];
+        setLatestQuoteVersion(latest.version);
+        setForm((p) => (totalValueTouchedRef.current ? p : { ...p, totalValue: latest.totalAmount }));
+      })
+      .catch(() => {
+        // Không có báo giá hoặc không thể tải: giữ nguyên hành vi nhập tay.
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingQuote(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, opportunity.id]);
 
   if (!isOpen) return null;
 
@@ -174,9 +204,16 @@ export default function CreateContractModal({
               type="number"
               className="form-input"
               value={form.totalValue ?? ''}
-              onChange={(e) => handleChange('totalValue', e.target.value === '' ? null : Number(e.target.value))}
+              onChange={(e) => {
+                totalValueTouchedRef.current = true;
+                handleChange('totalValue', e.target.value === '' ? null : Number(e.target.value));
+              }}
               min={0}
             />
+            {loadingQuote && <small className="field-hint">Đang lấy báo giá mới nhất…</small>}
+            {!loadingQuote && latestQuoteVersion !== null && (
+              <small className="field-hint">Tự động điền theo báo giá mới nhất</small>
+            )}
 
             <label className="form-label" style={{ marginTop: '12px' }}>
               Ghi chú (tuỳ chọn)

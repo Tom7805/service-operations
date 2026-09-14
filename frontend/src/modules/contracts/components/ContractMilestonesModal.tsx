@@ -38,13 +38,18 @@ const NEXT_STATUS: Record<ContractMilestoneRes['status'], ContractMilestoneRes['
   INVOICED: null,
 };
 
-function toDraftRow(m: ContractMilestoneRes): DraftRow {
+/** Mốc khai theo % phải luôn phản ánh đúng giá trị hợp đồng HIỆN TẠI — giá trị
+ *  hợp đồng có thể đã tăng/giảm qua phụ lục sau khi mốc này được lưu, nên không
+ *  dùng lại `amount` cũ trong DB cho các dòng có %, mà tính lại theo `totalValue`
+ *  mới nhất mỗi lần nạp danh sách mốc. Mốc khai theo số tiền tuỳ ý (không có %)
+ *  thì giữ nguyên amount đã lưu. */
+function toDraftRow(m: ContractMilestoneRes, contractTotalValue: number): DraftRow {
   return {
     key: `existing-${m.id}`,
     id: m.id,
     name: m.name,
     percentage: m.percentage ?? null,
-    amount: m.amount,
+    amount: m.percentage != null ? Math.round((m.percentage / 100) * contractTotalValue) : m.amount,
     expectedDate: m.expectedDate ?? null,
     acceptanceCondition: m.acceptanceCondition ?? null,
     status: m.status,
@@ -84,7 +89,9 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
     setLoadError(null);
     fetchMilestones(contract.id)
       .then((list) => {
-        if (!cancelled) setRows(list.length > 0 ? list.map(toDraftRow) : [newDraftRow()]);
+        if (!cancelled) {
+          setRows(list.length > 0 ? list.map((m) => toDraftRow(m, contract.totalValue)) : [newDraftRow()]);
+        }
       })
       .catch((err) => {
         if (!cancelled) {

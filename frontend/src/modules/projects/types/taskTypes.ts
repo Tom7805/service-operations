@@ -75,3 +75,56 @@ export interface WorkBreakdownRes {
   tasks: TaskRes[];
   children: WorkBreakdownRes[];
 }
+
+/**
+ * Phân công nhân sự cho công việc (NCL-05-CN-003).
+ * PUT /projects/{projectId}/tasks/{taskId}/assignments — danh sách mới THAY THẾ toàn bộ danh sách cũ.
+ */
+export interface TaskAssignmentReq {
+  userIds: number[];
+  expectedStartDate?: string | null;
+  expectedEndDate?: string | null;
+}
+
+/** Kết quả một lượt phân công (NCL-05-CN-003). */
+export interface TaskAssignmentRes {
+  id: number;
+  taskId: number;
+  userId: number;
+  username: string;
+  fullName: string;
+  expectedStartDate: string | null;
+  expectedEndDate: string | null;
+}
+
+/** Nhân sự đang hoạt động, đủ điều kiện được giao việc (NCL-05-CN-003). */
+export interface AssignableEmployee {
+  userId: number;
+  username: string;
+  fullName: string;
+  professionalRole: string | null;
+}
+
+/**
+ * Payload đổi trạng thái tiến độ công việc (NCL-05-CN-004).
+ * PATCH /projects/{projectId}/tasks/{taskId}/progress
+ */
+export interface TaskProgressReq {
+  status: TaskStatus;
+}
+
+/**
+ * Một công việc đang được giao cho người dùng hiện tại, hiển thị ở màn "Việc của tôi"
+ * (NCL-05-CN-004). GET /tasks/my-assignments
+ */
+export interface MyTaskRes {
+  taskId: number;
+  projectId: number;
+  projectCode: string | null;
+  projectName: string | null;
+  taskName: string;
+  description: string | null;
+  expectedStartDate: string | null;
+  expectedEndDate: string | null;
+  status: TaskStatus;
+}

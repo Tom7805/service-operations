@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 import type { ProjectRes, TaskBudgetStatusRes, TaskRes, WorkBreakdownRes } from '../types/projectTypes';
 import {
   closeProject,
@@ -12,6 +13,7 @@ import WorkBreakdownTree from './WorkBreakdownTree';
 import WorkPackageModal from './WorkPackageModal';
 import TaskFormModal from './TaskFormModal';
 import TaskBudgetModal from './TaskBudgetModal';
+import TaskAssignModal from './TaskAssignModal';
 import ProjectMilestoneTimeline from './ProjectMilestoneTimeline';
 import ProjectRiskPage from '../pages/ProjectRiskPage';
 
@@ -71,6 +73,10 @@ export default function ProjectWbsModal({
     name: '',
     budgetHours: null,
   });
+
+  // Modal phân công nhân sự (NCL-05-CN-003)
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [assignTarget, setAssignTarget] = useState<{ id: number; name: string }>({ id: 0, name: '' });
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -158,6 +164,17 @@ export default function ProjectWbsModal({
     void loadData();
   };
 
+  const handleOpenAssign = (task: TaskRes) => {
+    setAssignTarget({ id: task.id, name: task.name });
+    setIsAssignModalOpen(true);
+  };
+
+  const handleAssignSaved = () => {
+    showToast('Đã lưu phân công thành công');
+    onUpdated?.();
+    void loadData();
+  };
+
   const handleDeletePackage = async (wp: WorkBreakdownRes) => {
     if (!window.confirm(`Bạn có chắc muốn xóa hạng mục "${wp.name}" không?`)) return;
     try {
@@ -196,6 +213,7 @@ export default function ProjectWbsModal({
   };
 
   return (
+    <ModalPortal>
     <div
       className="modal-backdrop"
       onClick={(e) => {
@@ -342,6 +360,7 @@ export default function ProjectWbsModal({
                     onAddTask={handleOpenAddTask}
                     onDeletePackage={handleDeletePackage}
                     onSetBudget={handleOpenSetBudget}
+                    onAssign={handleOpenAssign}
                   />
                 </>
               ) : activeSection === 'MILESTONES' ? (
@@ -408,6 +427,16 @@ export default function ProjectWbsModal({
         currentBudgetHours={budgetTarget.budgetHours}
         onSaved={handleBudgetSaved}
       />
+
+      <TaskAssignModal
+        isOpen={isAssignModalOpen}
+        onClose={() => setIsAssignModalOpen(false)}
+        projectId={projectId}
+        taskId={assignTarget.id}
+        taskName={assignTarget.name}
+        onSaved={handleAssignSaved}
+      />
     </div>
+    </ModalPortal>
   );
 }

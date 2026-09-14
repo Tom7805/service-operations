@@ -13,6 +13,10 @@ import com.serviceops.modules.contract.repository.ContractRenewalRepository;
 import com.serviceops.modules.contract.repository.ContractRepository;
 import com.serviceops.modules.contract.service.ContractRenewalService;
 import com.serviceops.modules.contract.validator.ContractLimitValidator;
+import com.serviceops.modules.project.entity.Project;
+import com.serviceops.modules.project.enums.ProjectStatus;
+import com.serviceops.modules.project.logging.ProjectAuditLogger;
+import com.serviceops.modules.project.repository.ProjectRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -42,6 +46,8 @@ public class ContractRenewalServiceImpl implements ContractRenewalService {
 	private final ContractRenewalRepository renewalRepository;
 	private final ContractAuditLogger auditLogger;
 	private final ContractLimitValidator contractLimitValidator;
+	private final ProjectRepository projectRepository;
+	private final ProjectAuditLogger projectAuditLogger;
 
 	@Override
 	public RenewalRes create(Long contractId, RenewalCreateReq request) {
@@ -53,8 +59,13 @@ public class ContractRenewalServiceImpl implements ContractRenewalService {
 		}
 
 		LocalDate previousEndDate = contract.getEndDate();
+		if (previousEndDate == null) {
+			throw new BusinessRuleException(ErrorCode.INVALID_STATE,
+					"Hop dong chua co ngay ket thuc nen khong the gia han; "
+							+ "vui long khai bao ngay ket thuc cho hop dong truoc");
+		}
 		LocalDate newEndDate = request.newEndDate();
-		if (previousEndDate != null && !newEndDate.isAfter(previousEndDate)) {
+		if (!newEndDate.isAfter(previousEndDate)) {
 			throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR,
 					"Ngay ket thuc moi phai sau ngay ket thuc hien tai cua hop dong");
 		}
@@ -87,6 +98,9 @@ public class ContractRenewalServiceImpl implements ContractRenewalService {
 		auditLogger.record(contractId, ContractAuditAction.RENEWAL_CREATE,
 				"Gia han hop dong tu " + previousEndDate + " den " + newEndDate
 						+ ", gia tri hop dong " + before + " -> " + after);
+
+		syncRunningProjectTimeline(contractId, newEndDate);
+
 		return toResponse(renewal);
 	}
 
@@ -97,6 +111,28 @@ public class ContractRenewalServiceImpl implements ContractRenewalService {
 		return renewalRepository.findByContractIdOrderByCreatedAtDesc(contractId).stream()
 				.map(this::toResponse)
 				.toList();
+	}
+
+	/**
+	 * NCL-04-CN-007: khi hop dong duoc gia han, day ngay ket thuc du kien cua du an
+	 * dang RUNNING (neu co) theo dung ngay ket thuc moi cua hop dong. Du an da CLOSED
+	 * giu nguyen vi la du lieu lich su, khong bi doi nguoc lai.
+	 */
+	private void syncRunningProjectTimeline(Long contractId, LocalDate newEndDate) {
+		List<Project> projects = projectRepository.findByContractIdOrderByIdDesc(contractId);
+		for (Project project : projects) {
+			if (project.getStatus() != ProjectStatus.RUNNING) {
+				continue;
+			}
+			LocalDate previousExpectedEndDate = project.getExpectedEndDate();
+			if (newEndDate.equals(previousExpectedEndDate)) {
+				continue;
+			}
+			project.setExpectedEndDate(newEndDate);
+			projectRepository.save(project);
+			projectAuditLogger.recordTimelineSyncedFromContract(project.getId(), contractId,
+					previousExpectedEndDate, newEndDate);
+		}
 	}
 
 	private Contract requireContract(Long contractId) {

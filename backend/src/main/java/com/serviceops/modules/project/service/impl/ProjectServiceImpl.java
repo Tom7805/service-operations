@@ -50,6 +50,14 @@ public class ProjectServiceImpl implements ProjectService {
 					"Ngay ket thuc du kien khong duoc som hon ngay bat dau");
 		}
 
+		boolean hasRunningProject = projectRepository.findByContractIdOrderByIdDesc(contractId).stream()
+				.anyMatch(p -> p.getStatus() != ProjectStatus.CLOSED);
+		if (hasRunningProject) {
+			throw new BusinessRuleException(ErrorCode.INVALID_STATE,
+					"Hop dong nay da co du an dang chay (RUNNING); vui long dong du an hien tai truoc khi tao du an moi, "
+							+ "de tong ngan sach cac du an khong vuot han muc hop dong");
+		}
+
 		User manager = userRepository.findById(request.projectManagerId())
 				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
 						"Khong tim thay nguoi quan ly du an voi id=" + request.projectManagerId()));

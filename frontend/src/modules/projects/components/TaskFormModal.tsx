@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 import type { TaskCreateReq, TaskRes } from '../types/taskTypes';
 import { createTask, ProjectsApiError } from '../api/projectsApi';
 import { validateTaskCreateForm } from '../validators/projectValidators';
@@ -87,6 +88,7 @@ export default function TaskFormModal({
   };
 
   return (
+    <ModalPortal>
     <div
       className="modal-backdrop"
       onClick={(e) => {
@@ -240,5 +242,6 @@ export default function TaskFormModal({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }

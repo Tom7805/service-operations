@@ -12,6 +12,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Service
@@ -110,6 +111,23 @@ public class ProjectAuditLogger {
 		audit.setProjectId(projectId);
 		audit.setActionType(ProjectAuditAction.TIME_ENTRY_UPDATED);
 		audit.setDetail("Cong viec #" + taskId + ": " + detail);
+		Long actorId = currentUserScopeProvider.currentUserId();
+		audit.setActorId(actorId == null ? 0L : actorId);
+		audit.setActorUsername(currentUsername());
+		audit.setActorRole(currentRole());
+		audit.setCreatedAt(LocalDateTime.now());
+		repository.save(audit);
+	}
+
+	/** NCL-04-CN-007: hop dong duoc gia han thi day ngay ket thuc du kien cua du an RUNNING theo. */
+	public void recordTimelineSyncedFromContract(Long projectId, Long contractId, LocalDate previousEndDate,
+			LocalDate newEndDate) {
+		ProjectAuditLog audit = new ProjectAuditLog();
+		audit.setProjectId(projectId);
+		audit.setContractId(contractId);
+		audit.setActionType(ProjectAuditAction.TIMELINE_SYNCED_FROM_CONTRACT);
+		audit.setDetail("Hop dong gia han: ngay ket thuc du kien cua du an doi tu " + previousEndDate + " sang "
+				+ newEndDate);
 		Long actorId = currentUserScopeProvider.currentUserId();
 		audit.setActorId(actorId == null ? 0L : actorId);
 		audit.setActorUsername(currentUsername());

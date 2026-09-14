@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import CreateProjectFromTemplateModal from '../components/CreateProjectFromTemplateModal';
 import * as projectsApi from '../api/projectsApi';
 import type {
+  AssignableProjectManager,
   ContractTargetForProject,
   ProjectRes,
   ProjectTemplateRes,
@@ -27,9 +28,16 @@ vi.mock('../api/projectsApi', () => {
     createProjectFromTemplate: vi.fn(),
     getWorkBreakdown: vi.fn(),
     deleteWorkPackage: vi.fn(),
+    fetchAssignableProjectManagers: vi.fn(),
     ProjectsApiError: MockProjectsApiError,
   };
 });
+
+const mockManagers: AssignableProjectManager[] = [
+  { id: 7, username: 'pm01', fullName: 'Nguyễn Văn A' },
+  { id: 12, username: 'pm02', fullName: 'Trần Thị B' },
+  { id: 99, username: 'boss', fullName: 'Người dùng đang đăng nhập' },
+];
 
 const mockContract: ContractTargetForProject = {
   id: 1,
@@ -118,6 +126,7 @@ const mockWbs: WorkBreakdownRes[] = [
 describe('CreateProjectFromTemplateModal Component (NCL-05-CN-007)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(projectsApi.fetchAssignableProjectManagers).mockResolvedValue(mockManagers);
   });
 
   it('TC-03: từ chối truy cập và ẩn form đối với vai trò không phải Quản lý dự án (VT-02)', () => {
@@ -226,14 +235,14 @@ describe('CreateProjectFromTemplateModal Component (NCL-05-CN-007)', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId('template-select')).toBeInTheDocument();
+      expect((screen.getByTestId('pm-id-input') as HTMLSelectElement).options.length).toBeGreaterThan(1);
     });
 
     fireEvent.change(screen.getByTestId('pm-id-input'), { target: { value: '12' } });
-    expect((screen.getByTestId('pm-id-input') as HTMLInputElement).value).toBe('12');
+    expect((screen.getByTestId('pm-id-input') as HTMLSelectElement).value).toBe('12');
 
     fireEvent.click(screen.getByTestId('btn-assign-to-me'));
-    expect((screen.getByTestId('pm-id-input') as HTMLInputElement).value).toBe('99');
+    expect((screen.getByTestId('pm-id-input') as HTMLSelectElement).value).toBe('99');
   });
 
   it('TC-01, TC-02, TC-04: tạo dự án từ mẫu thành công, dựng cây WBS và cho phép xóa hạng mục trên dự án', async () => {
@@ -257,6 +266,7 @@ describe('CreateProjectFromTemplateModal Component (NCL-05-CN-007)', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('template-select')).toBeInTheDocument();
+      expect((screen.getByTestId('pm-id-input') as HTMLSelectElement).options.length).toBeGreaterThan(1);
     });
 
     fireEvent.change(screen.getByTestId('project-name-input'), {
@@ -294,7 +304,8 @@ describe('CreateProjectFromTemplateModal Component (NCL-05-CN-007)', () => {
       expect(screen.getByText('Hạng mục rỗng cần xóa')).toBeInTheDocument();
     });
 
-    // Kiểm tra thao tác xóa hạng mục trên cây WBS (TC-02)
+    // Kiểm tra thao tác xóa hạng mục trên cây WBS (TC-02) — menu ⋮ gộp thao tác theo dòng
+    fireEvent.click(screen.getByRole('button', { name: 'Thao tác hạng mục Hạng mục rỗng cần xóa' }));
     const deleteBtn = screen.getByTestId('delete-wp-btn-32');
     expect(deleteBtn).toBeInTheDocument();
     fireEvent.click(deleteBtn);
@@ -323,6 +334,7 @@ describe('CreateProjectFromTemplateModal Component (NCL-05-CN-007)', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('template-select')).toBeInTheDocument();
+      expect((screen.getByTestId('pm-id-input') as HTMLSelectElement).options.length).toBeGreaterThan(1);
     });
 
     fireEvent.change(screen.getByTestId('project-name-input'), {

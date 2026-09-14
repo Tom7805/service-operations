@@ -4,6 +4,7 @@ import com.serviceops.common.api.BaseRes;
 import com.serviceops.modules.identity.user.dto.request.CreateUserReq;
 import com.serviceops.modules.identity.user.dto.request.UpdateUserReq;
 import com.serviceops.modules.identity.user.dto.request.UserStatusReq;
+import com.serviceops.modules.identity.user.dto.response.AssignableProjectManagerRes;
 import com.serviceops.modules.identity.user.dto.response.UserRes;
 import com.serviceops.modules.identity.user.service.UserService;
 import jakarta.validation.Valid;
@@ -23,6 +24,17 @@ public class UserController {
     @GetMapping
     public BaseRes<List<UserRes>> findAll(@RequestParam(required = false) String keyword) {
         return BaseRes.ok(userService.findAll(keyword));
+    }
+
+    /**
+     * Danh sach tai khoan dang ACTIVE — dung cho combobox "Nguoi quan ly du an"
+     * (NCL-05-CN-001/007). Quan ly du an (VT-02) can du lieu nay nhung khong duoc
+     * phep goi /users day du (chi VT-07), nen ghi de phan quyen o muc method nay.
+     */
+    @GetMapping("/assignable-for-project")
+    @PreAuthorize("hasRole('VT-02') or hasRole('VT-07')")
+    public BaseRes<List<AssignableProjectManagerRes>> findAssignableProjectManagers() {
+        return BaseRes.ok(userService.findAssignableProjectManagers());
     }
 
     @GetMapping("/{id}")

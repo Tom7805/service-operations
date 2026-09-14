@@ -8,6 +8,7 @@ import com.serviceops.modules.identity.user.enums.UserStatus;
 import com.serviceops.modules.identity.user.entity.User;
 import com.serviceops.modules.project.dto.request.TaskAssignmentReq;
 import com.serviceops.modules.project.dto.request.TaskProgressReq;
+import com.serviceops.modules.project.dto.response.MyTaskRes;
 import com.serviceops.modules.project.dto.response.TaskAssignmentRes;
 import com.serviceops.modules.project.dto.response.TaskRes;
 import com.serviceops.modules.project.entity.Project;
@@ -116,10 +117,44 @@ public class TaskServiceImpl implements TaskService {
 		return toResponse(saved);
 	}
 
+	@Override
+	@Transactional(readOnly = true)
+	public List<MyTaskRes> findMyTasks() {
+		Long currentUserId = currentUserScopeProvider.currentUserId();
+		if (currentUserId == null) {
+			return List.of();
+		}
+		List<TaskAssignment> assignments = assignmentRepository.findByUserIdOrderByIdDesc(currentUserId);
+		if (assignments.isEmpty()) {
+			return List.of();
+		}
+		List<Long> taskIds = assignments.stream().map(TaskAssignment::getTaskId).distinct().toList();
+		var tasksById = taskRepository.findAllById(taskIds).stream()
+				.collect(java.util.stream.Collectors.toMap(Task::getId, task -> task));
+		List<Long> projectIds = tasksById.values().stream().map(Task::getProjectId).distinct().toList();
+		var projectsById = projectRepository.findAllById(projectIds).stream()
+				.collect(java.util.stream.Collectors.toMap(Project::getId, project -> project));
+
+		return assignments.stream()
+				.map(TaskAssignment::getTaskId)
+				.distinct()
+				.map(tasksById::get)
+				.filter(java.util.Objects::nonNull)
+				.map(task -> {
+					Project project = projectsById.get(task.getProjectId());
+					return new MyTaskRes(task.getId(), task.getProjectId(),
+							project != null ? project.getProjectCode() : null,
+							project != null ? project.getName() : null,
+							task.getName(), task.getDescription(), task.getExpectedStartDate(),
+							task.getExpectedEndDate(), task.getStatus());
+				})
+				.toList();
+	}
+
 	private TaskRes toResponse(Task task) {
 		return new TaskRes(task.getId(), task.getProjectId(), task.getWorkPackageId(), task.getParentTaskId(),
 				task.getName(), task.getDescription(), task.getExpectedStartDate(), task.getExpectedEndDate(),
-				task.getStatus());
+				task.getStatus(), task.getBudgetHours());
 	}
 
 	private User requireAssignableUser(Long userId) {

@@ -6,6 +6,8 @@ import com.serviceops.modules.customer.dto.response.CustomerOverviewItemRes;
 import com.serviceops.modules.customer.service.CustomerOverviewDataProvider;
 import com.serviceops.modules.opportunity.entity.Opportunity;
 import com.serviceops.modules.opportunity.repository.OpportunityRepository;
+import com.serviceops.modules.project.entity.Project;
+import com.serviceops.modules.project.repository.ProjectRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -13,12 +15,13 @@ import java.util.List;
 
 /**
  * Doc du lieu that cho ho so tong hop khach hang (NCL-02-CN-004): co hoi ban
- * hang va hop dong lay tu module da xay dung xong (opportunity, contract).
+ * hang, hop dong va du an lay tu cac module da xay dung xong (opportunity,
+ * contract, project — NCL-05).
  *
- * <p>{@code projects}, {@code invoices} va {@code receivables} van tra ve
- * rong vi module Du an (NCL-05) va Hoa don (NCL-10) hien chi la file rong
- * (chua co entity/repository nao that su ton tai) — se noi vao day khi hai
- * Epic do duoc trien khai, khong phai loi cua man hinh nay.</p>
+ * <p>{@code invoices} va {@code receivables} van tra ve rong vi module Hoa
+ * don (NCL-10) hien chi la file rong (chua co entity/repository nao that su
+ * ton tai) — se noi vao day khi Epic do duoc trien khai, khong phai loi cua
+ * man hinh nay.</p>
  */
 @Component
 @RequiredArgsConstructor
@@ -26,6 +29,7 @@ public class CustomerOverviewDataProviderImpl implements CustomerOverviewDataPro
 
 	private final OpportunityRepository opportunityRepository;
 	private final ContractRepository contractRepository;
+	private final ProjectRepository projectRepository;
 
 	@Override
 	public List<CustomerOverviewItemRes> opportunities(Long customerId) {
@@ -43,7 +47,9 @@ public class CustomerOverviewDataProviderImpl implements CustomerOverviewDataPro
 
 	@Override
 	public List<CustomerOverviewItemRes> projects(Long customerId) {
-		return List.of();
+		return projectRepository.findByCustomerIdOrderByIdDesc(customerId).stream()
+				.map(this::toItem)
+				.toList();
 	}
 
 	@Override
@@ -59,11 +65,19 @@ public class CustomerOverviewDataProviderImpl implements CustomerOverviewDataPro
 	/** Co hoi khong co ma rieng (chi hop dong moi co contractCode) nen code = null. */
 	private CustomerOverviewItemRes toItem(Opportunity opportunity) {
 		return new CustomerOverviewItemRes(opportunity.getId(), null, opportunity.getName(),
-				opportunity.getStage().name(), opportunity.getExpectedValue(), opportunity.getExpectedCloseDate());
+				opportunity.getStage().name(), opportunity.getExpectedValue(), opportunity.getExpectedCloseDate(),
+				null, null, null);
 	}
 
 	private CustomerOverviewItemRes toItem(Contract contract) {
 		return new CustomerOverviewItemRes(contract.getId(), contract.getContractCode(), contract.getName(),
-				contract.getStatus().name(), contract.getTotalValue(), contract.getStartDate());
+				contract.getStatus().name(), contract.getTotalValue(), contract.getStartDate(),
+				contract.getContractType().name(), contract.getEndDate(), contract.getLimitValue());
+	}
+
+	private CustomerOverviewItemRes toItem(Project project) {
+		return new CustomerOverviewItemRes(project.getId(), project.getProjectCode(), project.getName(),
+				project.getStatus().name(), project.getLimitValue(), project.getStartDate(),
+				project.getProjectType(), project.getExpectedEndDate(), project.getLimitValue());
 	}
 }

@@ -3,6 +3,7 @@ import type {
   ProjectCreateFromTemplateReq,
   ProjectMilestoneReq,
   ProjectRiskReq,
+  TaskAssignmentReq,
   TaskBudgetReq,
 } from '../types/projectTypes';
 
@@ -215,6 +216,36 @@ export function validateMilestoneCompleteForm(
     errors.actualDate = 'Ngày thực tế không được để trống';
   } else if (actualDate > today) {
     errors.actualDate = 'Ngày thực tế không được ở tương lai';
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+}
+
+export interface TaskAssignmentValidationResult {
+  isValid: boolean;
+  errors: Record<string, string>;
+}
+
+/**
+ * Kiểm tra hợp lệ biểu mẫu phân công nhân sự cho công việc (NCL-05-CN-003):
+ * phải chọn ít nhất một người, ngày kết thúc dự kiến không được sớm hơn ngày bắt đầu.
+ */
+export function validateTaskAssignmentForm(
+  payload: Partial<TaskAssignmentReq>
+): TaskAssignmentValidationResult {
+  const errors: Record<string, string> = {};
+
+  if (!payload.userIds || payload.userIds.length === 0) {
+    errors.userIds = 'Phải chọn ít nhất một nhân sự phụ trách';
+  }
+
+  const startDate = payload.expectedStartDate?.trim() ?? '';
+  const endDate = payload.expectedEndDate?.trim() ?? '';
+  if (startDate && endDate && endDate < startDate) {
+    errors.expectedEndDate = 'Ngày kết thúc dự kiến không được sớm hơn ngày bắt đầu';
   }
 
   return {

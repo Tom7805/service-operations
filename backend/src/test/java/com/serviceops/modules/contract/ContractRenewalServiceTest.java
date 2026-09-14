@@ -12,6 +12,10 @@ import com.serviceops.modules.contract.repository.ContractRenewalRepository;
 import com.serviceops.modules.contract.repository.ContractRepository;
 import com.serviceops.modules.contract.service.impl.ContractRenewalServiceImpl;
 import com.serviceops.modules.contract.validator.ContractLimitValidator;
+import com.serviceops.modules.project.entity.Project;
+import com.serviceops.modules.project.enums.ProjectStatus;
+import com.serviceops.modules.project.logging.ProjectAuditLogger;
+import com.serviceops.modules.project.repository.ProjectRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -48,6 +52,12 @@ class ContractRenewalServiceTest {
 	@Mock
 	private ContractAuditLogger auditLogger;
 
+	@Mock
+	private ProjectRepository projectRepository;
+
+	@Mock
+	private ProjectAuditLogger projectAuditLogger;
+
 	private final ContractLimitValidator contractLimitValidator = new ContractLimitValidator();
 
 	private ContractRenewalServiceImpl service;
@@ -55,12 +65,15 @@ class ContractRenewalServiceTest {
 	@BeforeEach
 	void setUp() {
 		service = new ContractRenewalServiceImpl(contractRepository, renewalRepository, auditLogger,
-				contractLimitValidator);
+				contractLimitValidator, projectRepository, projectAuditLogger);
 		lenient().when(renewalRepository.save(any(ContractRenewal.class))).thenAnswer(inv -> {
 			ContractRenewal r = inv.getArgument(0);
 			r.setId(1L);
 			return r;
 		});
+		// NCL-04-CN-007: khong co du an nao gan voi hop dong trong hau het cac test — chi
+		// stub khi test can kiem tra rieng logic dong bo (xem test rieng ben duoi).
+		lenient().when(projectRepository.findByContractIdOrderByIdDesc(any())).thenReturn(java.util.List.of());
 	}
 
 	private Contract activeContract() {
@@ -128,5 +141,34 @@ class ContractRenewalServiceTest {
 				.isInstanceOf(BusinessRuleException.class)
 				.extracting(ex -> ((BusinessRuleException) ex).getErrorCode())
 				.isEqualTo(ErrorCode.VALIDATION_ERROR);
+	}
+
+	@Test
+	@DisplayName("Gia han hop dong day ngay ket thuc du kien cua du an dang RUNNING, khong dong den du an da CLOSED")
+	void syncsExpectedEndDateOfRunningProjectOnly() {
+		Contract contract = activeContract();
+		when(contractRepository.findById(1L)).thenReturn(Optional.of(contract));
+
+		Project runningProject = new Project();
+		runningProject.setId(10L);
+		runningProject.setStatus(ProjectStatus.RUNNING);
+		runningProject.setExpectedEndDate(LocalDate.of(2026, 12, 31));
+
+		Project closedProject = new Project();
+		closedProject.setId(11L);
+		closedProject.setStatus(ProjectStatus.CLOSED);
+		closedProject.setExpectedEndDate(LocalDate.of(2026, 6, 30));
+
+		when(projectRepository.findByContractIdOrderByIdDesc(1L))
+				.thenReturn(java.util.List.of(runningProject, closedProject));
+
+		service.create(1L, new RenewalCreateReq(LocalDate.of(2027, 6, 30), null, null));
+
+		assertThat(runningProject.getExpectedEndDate()).isEqualTo(LocalDate.of(2027, 6, 30));
+		assertThat(closedProject.getExpectedEndDate()).isEqualTo(LocalDate.of(2026, 6, 30));
+		verify(projectRepository).save(runningProject);
+		verify(projectRepository, org.mockito.Mockito.never()).save(closedProject);
+		verify(projectAuditLogger).recordTimelineSyncedFromContract(10L, 1L,
+				LocalDate.of(2026, 12, 31), LocalDate.of(2027, 6, 30));
 	}
 }
