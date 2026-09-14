@@ -36,4 +36,16 @@ public interface TimesheetRepository extends JpaRepository<Timesheet, Long> {
 			""")
 	List<Object[]> sumHoursPerDayBetween(@Param("userId") Long userId,
 			@Param("weekFrom") LocalDate weekFrom, @Param("weekTo") LocalDate weekTo);
+
+	/**
+	 * Cac bang cham cong o mot trang thai cho truoc co tuan giao voi khoang ngay cua ky
+	 * (NCL-06-CN-006-TC-02 — chan khoa ky khi con bang cho duyet trong ky).
+	 */
+	@Query("""
+			SELECT t FROM Timesheet t
+			WHERE t.status = :status AND t.weekStartDate <= :periodEnd AND t.weekEndDate >= :periodStart
+			ORDER BY t.weekStartDate
+			""")
+	List<Timesheet> findOverlappingByStatus(@Param("status") TimesheetStatus status,
+			@Param("periodStart") LocalDate periodStart, @Param("periodEnd") LocalDate periodEnd);
 }
