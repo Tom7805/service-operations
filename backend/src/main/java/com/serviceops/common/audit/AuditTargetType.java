@@ -11,5 +11,6 @@ public enum AuditTargetType {
 	DEPARTMENT,
 	CUSTOMER,
 	MASKING,
-	GENERAL
+	GENERAL,
+	TIMESHEET
 }

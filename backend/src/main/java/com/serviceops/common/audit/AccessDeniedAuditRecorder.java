@@ -36,6 +36,7 @@ public class AccessDeniedAuditRecorder {
     private static final Map<String, Feature> FEATURES = new LinkedHashMap<>();
 
     static {
+        FEATURES.put("/timesheets", new Feature(AuditTargetType.TIMESHEET, "Từ chối bảng chấm công"));
         FEATURES.put("/milestones", new Feature(AuditTargetType.GENERAL, "Quản lý mốc tiến độ dự án"));
         FEATURES.put("/risks", new Feature(AuditTargetType.GENERAL, "Quản lý rủi ro dự án"));
         FEATURES.put("/projects/from-template", new Feature(AuditTargetType.GENERAL, "Tạo dự án từ mẫu"));
