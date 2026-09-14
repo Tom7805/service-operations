@@ -123,12 +123,12 @@ public class TimesheetSubmitServiceImpl implements TimesheetSubmitService {
 						+ " gio, " + draftEntries.size() + " dong chuyen cho duyet");
 
 		// TC-01: thong bao den PM cua cac du an trong tuan
-		notifyProjectManagers(userId, weekFrom, weekTo, saved.getTotalHours(), draftEntries.size());
+		notifyProjectManagers(saved.getId(), userId, weekFrom, weekTo, saved.getTotalHours(), draftEntries.size());
 
 		return timesheetMapper.toResponse(saved);
 	}
 
-	private void notifyProjectManagers(Long userId, LocalDate weekFrom, LocalDate weekTo,
+	private void notifyProjectManagers(Long timesheetId, Long userId, LocalDate weekFrom, LocalDate weekTo,
 			BigDecimal totalHours, int entryCount) {
 		// Lay danh sach PM unique cua cac du an co entry trong tuan nay
 		List<Task> tasks = taskRepository.findByTimeEntriesUserIdAndWorkDateBetween(userId, weekFrom, weekTo);
@@ -148,7 +148,7 @@ public class TimesheetSubmitServiceImpl implements TimesheetSubmitService {
 
 		for (Long pmId : pmIds) {
 			notificationService.sendInAppNotification(pmId, NotificationType.TIMESHEET_SUBMITTED,
-					title, content, null, "Timesheet");
+					title, content, timesheetId, "Timesheet");
 		}
 	}
 

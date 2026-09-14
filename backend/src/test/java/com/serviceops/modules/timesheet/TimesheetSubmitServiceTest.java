@@ -233,7 +233,7 @@ class TimesheetSubmitServiceTest {
 		service.submit(WEEK_FROM, WEEK_TO);
 
 		verify(notificationService).sendInAppNotification(eq(2L), eq(NotificationType.TIMESHEET_SUBMITTED),
-				any(), contains("2026-09-07"), any(), any());
+				any(), contains("2026-09-07"), eq(50L), eq("Timesheet"));
 		// Phan da duyet roi khong gui them — chi mot thong bao cho PM duy nhat.
 		verify(notificationService, times(1)).sendInAppNotification(any(), any(), any(), any(), any(), any());
 	}
