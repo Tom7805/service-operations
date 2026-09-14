@@ -112,10 +112,12 @@ public class TimesheetApprovalServiceImpl implements TimesheetApprovalService {
 		}
 
 		// TC-04: ghi nhat ky nguoi duyet, noi dung, thoi diem (actor tu SecurityContextHolder).
+		String note = request == null ? null : request.note();
 		auditLogService.record("Duyet bang cham cong", AuditTargetType.GENERAL, timesheet.getId(),
 				TIMESHEET_LABEL, "Tuan " + timesheet.getWeekStartDate() + " - " + timesheet.getWeekEndDate()
 						+ ": duyet " + targets.size() + " dong ("
-						+ sumHours(targets) + " gio)" + (anyPendingLeft ? " — con phan cho PM khac duyet" : ""));
+						+ sumHours(targets) + " gio)" + (anyPendingLeft ? " — con phan cho PM khac duyet" : "")
+						+ (note != null && !note.isBlank() ? " — ghi chu: " + note : ""));
 
 		// Hook TC-01 (tinh lai bien loi nhuan du an): module profitability chua trien khai —
 		// khi di vao hoat dong se duoc tinh lai tai day dua tren approvedHours moi cap nhat.
@@ -141,6 +143,9 @@ public class TimesheetApprovalServiceImpl implements TimesheetApprovalService {
 			TimeEntry entry = byId.get(id);
 			if (entry == null) {
 				throw notFound("Khong tim thay dong gio cong cho duyet voi id=" + id);
+			}
+			if (taskRepository.findById(entry.getTaskId()).isEmpty()) {
+				throw notFound("Khong tim thay cong viec cua dong gio cong id=" + id);
 			}
 			if (!managedByMe(entry, pmId)) {
 				throw new AccessDeniedException("Dong gio cong thuoc du an ma ban khong quan ly");

@@ -261,4 +261,35 @@ class TimesheetApprovalServiceTest {
 		verify(auditLogService).record(eq("Duyet bang cham cong"), eq(AuditTargetType.GENERAL), eq(50L),
 				eq("Bang cham cong tuan"), contains("1 dong"));
 	}
+
+	@Test
+	void auditLogIncludesPmNoteWhenProvided() {
+		when(currentUserScopeProvider.currentUserId()).thenReturn(PM_ONE);
+		when(timesheetRepository.findById(50L)).thenReturn(Optional.of(timesheet));
+		when(timeEntryRepository.findByUserIdAndWorkDateBetweenOrderByIdAsc(MEMBER, WEEK_FROM, WEEK_TO))
+				.thenReturn(List.of(entry(30L, 20L, new BigDecimal("5"))));
+		stubTaskInProject(20L, 1L, PM_ONE);
+		when(timeEntryRepository.sumHoursByTaskIdAndStatusIn(eq(20L), anyList()))
+				.thenReturn(new BigDecimal("5"));
+		when(timesheetRepository.save(any(Timesheet.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		service.approve(50L, new TimesheetApproveReq(List.of(30L), "Duyet cho dot nay"));
+
+		verify(auditLogService).record(eq("Duyet bang cham cong"), eq(AuditTargetType.GENERAL), eq(50L),
+				eq("Bang cham cong tuan"), contains("ghi chu: Duyet cho dot nay"));
+	}
+
+	@Test
+	void rejectsApprovingEntryWhoseTaskWasDeleted() {
+		when(currentUserScopeProvider.currentUserId()).thenReturn(PM_ONE);
+		when(timesheetRepository.findById(50L)).thenReturn(Optional.of(timesheet));
+		when(timeEntryRepository.findByUserIdAndWorkDateBetweenOrderByIdAsc(MEMBER, WEEK_FROM, WEEK_TO))
+				.thenReturn(List.of(entry(30L, 20L, new BigDecimal("5"))));
+		when(taskRepository.findById(20L)).thenReturn(Optional.empty());
+
+		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
+				() -> service.approve(50L, new TimesheetApproveReq(List.of(30L), null)));
+
+		assertEquals(ErrorCode.RESOURCE_NOT_FOUND, exception.getErrorCode());
+	}
 }
