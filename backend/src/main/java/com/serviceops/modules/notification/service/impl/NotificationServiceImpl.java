@@ -8,6 +8,8 @@ import com.serviceops.modules.notification.mapper.NotificationMapper;
 import com.serviceops.modules.notification.repository.NotificationRepository;
 import com.serviceops.modules.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,6 +45,14 @@ public class NotificationServiceImpl implements NotificationService {
 				.stream()
 				.map(notificationMapper::toResponse)
 				.toList();
+	}
+
+	@Override
+	public List<NotificationRes> listNotifications(Long recipientId, boolean unreadOnly, Pageable pageable) {
+		Page<Notification> page = unreadOnly
+				? notificationRepository.findByRecipientIdAndIsReadFalse(recipientId, pageable)
+				: notificationRepository.findByRecipientId(recipientId, pageable);
+		return page.stream().map(notificationMapper::toResponse).toList();
 	}
 
 	@Override

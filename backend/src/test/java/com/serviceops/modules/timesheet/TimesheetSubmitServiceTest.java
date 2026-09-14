@@ -237,4 +237,48 @@ class TimesheetSubmitServiceTest {
 		// Phan da duyet roi khong gui them — chi mot thong bao cho PM duy nhat.
 		verify(notificationService, times(1)).sendInAppNotification(any(), any(), any(), any(), any(), any());
 	}
+
+	@Test
+	void rejectsResubmitOfApprovedWeek() {
+		stubWeekEntries(List.of(draftEntry(30L, 20L, WEEK_FROM, new BigDecimal("4"))));
+		Timesheet existing = new Timesheet();
+		existing.setId(50L);
+		existing.setStatus(TimesheetStatus.APPROVED);
+		when(timesheetRepository.findByUserIdAndWeekStartDate(7L, WEEK_FROM))
+				.thenReturn(Optional.of(existing));
+
+		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
+				() -> service.submit(WEEK_FROM, WEEK_TO));
+
+		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
+		verify(timesheetRepository, never()).save(any(Timesheet.class));
+	}
+
+	@Test
+	void rejectsSubmitWhenNoAuthenticatedUser() {
+		when(currentUserScopeProvider.currentUserId()).thenReturn(null);
+
+		assertThrows(AccessDeniedException.class, () -> service.submit(WEEK_FROM, WEEK_TO));
+
+		verify(timeEntryRepository, never()).findByUserIdAndWorkDateBetweenOrderByIdAsc(any(), any(), any());
+	}
+
+	@Test
+	void totalHoursCountsAllEntriesInWeekNotOnlyDraftOnes() {
+		TimeEntry draft = draftEntry(30L, 20L, WEEK_FROM, new BigDecimal("3"));
+		TimeEntry alreadySubmitted = draftEntry(31L, 21L, WEEK_FROM, new BigDecimal("2"));
+		alreadySubmitted.setStatus(TimeEntryStatus.SUBMITTED);
+		stubWeekEntries(List.of(draft, alreadySubmitted));
+		stubPersistence();
+		when(timesheetRepository.findByUserIdAndWeekStartDate(7L, WEEK_FROM)).thenReturn(Optional.empty());
+		when(timesheetRepository.sumHoursPerDayBetween(7L, WEEK_FROM, WEEK_TO))
+				.thenReturn(List.<Object[]>of(new Object[] { WEEK_FROM, new BigDecimal("5") }));
+
+		TimesheetRes response = service.submit(WEEK_FROM, WEEK_TO);
+
+		assertEquals(new BigDecimal("5"), response.totalHours());
+		assertEquals(TimeEntryStatus.SUBMITTED, draft.getStatus());
+		assertEquals(TimeEntryStatus.SUBMITTED, alreadySubmitted.getStatus());
+		verify(timeEntryRepository).saveAll(List.of(draft));
+	}
 }
