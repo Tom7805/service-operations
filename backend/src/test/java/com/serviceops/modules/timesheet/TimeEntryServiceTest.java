@@ -13,12 +13,15 @@ import com.serviceops.modules.timesheet.dto.request.TimeEntryCreateReq;
 import com.serviceops.modules.timesheet.dto.request.TimeEntryUpdateReq;
 import com.serviceops.modules.timesheet.dto.response.TimeEntryRes;
 import com.serviceops.modules.timesheet.dto.response.TimeEntryTaskRes;
+import com.serviceops.modules.timesheet.dto.response.TimerRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetSummaryRes;
 import com.serviceops.modules.timesheet.entity.TimeEntry;
+import com.serviceops.modules.timesheet.entity.TimesheetTimer;
 import com.serviceops.modules.timesheet.enums.TimeEntryStatus;
 import com.serviceops.modules.timesheet.mapper.TimeEntryMapper;
 import com.serviceops.modules.timesheet.mapper.TimesheetMapper;
 import com.serviceops.modules.timesheet.repository.TimeEntryRepository;
+import com.serviceops.modules.timesheet.repository.TimesheetTimerRepository;
 import com.serviceops.modules.timesheet.repository.TimesheetPeriodRepository;
 import com.serviceops.modules.timesheet.service.impl.TimeEntryServiceImpl;
 import com.serviceops.modules.timesheet.validator.DailyHourLimitValidator;
@@ -37,6 +40,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
@@ -70,6 +74,8 @@ class TimeEntryServiceTest {
 	@Mock
 	private TimeEntryRepository timeEntryRepository;
 	@Mock
+	private TimesheetTimerRepository timesheetTimerRepository;
+	@Mock
 	private CurrentUserScopeProvider currentUserScopeProvider;
 	@Mock
 	private ProjectAuditLogger auditLogger;
@@ -84,11 +90,11 @@ class TimeEntryServiceTest {
 	void setUp() {
 		Clock clock = Clock.fixed(Instant.parse("2026-09-10T00:00:00Z"), ZoneId.of("UTC"));
 		service = new TimeEntryServiceImpl(projectRepository, taskRepository, assignmentRepository,
-				timeEntryRepository, currentUserScopeProvider, auditLogger,
+				timeEntryRepository, timesheetTimerRepository, currentUserScopeProvider, auditLogger,
 				new OpenProjectValidator(), new OpenPeriodValidator(clock),
 				new DailyHourLimitValidator(timeEntryRepository), new ImmutableEntryValidator(),
 				new PeriodLockValidator(periodRepository),
-				new TimeEntryMapper(), new TimesheetMapper());
+				new TimeEntryMapper(), new TimesheetMapper(), clock);
 
 		project = new Project();
 		project.setId(1L);
@@ -240,6 +246,61 @@ class TimeEntryServiceTest {
 				() -> service.create(1L, 20L, new TimeEntryCreateReq(TODAY, new BigDecimal("1"), "note", true)));
 
 		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
+	}
+
+	@Test
+	void startsTimerForOwnAssignedTask() {
+		stubAssigneeTask();
+		when(timesheetTimerRepository.save(any(TimesheetTimer.class))).thenAnswer(invocation -> {
+			TimesheetTimer saved = invocation.getArgument(0);
+			saved.setId(40L);
+			return saved;
+		});
+
+		TimerRes response = service.startTimer(1L, 20L, "Phan tich quy trinh", true);
+
+		assertEquals(40L, response.timerId());
+		assertEquals(20L, response.taskId());
+		assertEquals(7L, response.userId());
+		assertEquals(new BigDecimal("0.00"), response.elapsedHours());
+		assertEquals("Phan tich quy trinh", response.note());
+	}
+
+	@Test
+	void rejectsStartingSecondTimerForSameUser() {
+		stubAssigneeTask();
+		when(timesheetTimerRepository.findByUserId(7L)).thenReturn(Optional.of(new TimesheetTimer()));
+
+		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
+				() -> service.startTimer(1L, 20L, "Cong viec moi", true));
+
+		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
+		verify(timesheetTimerRepository, never()).save(any(TimesheetTimer.class));
+	}
+
+	@Test
+	void stopsTimerAndCreatesDraftTimeEntry() {
+		stubAssigneeTask();
+		TimesheetTimer timer = new TimesheetTimer();
+		timer.setId(40L);
+		timer.setUserId(7L);
+		timer.setTaskId(20L);
+		timer.setStartedAt(LocalDateTime.of(2026, 9, 9, 23, 0));
+		timer.setNote("Phan tich quy trinh");
+		timer.setBillable(true);
+		when(timesheetTimerRepository.findByUserId(7L)).thenReturn(Optional.of(timer));
+		when(timeEntryRepository.save(any(TimeEntry.class))).thenAnswer(invocation -> {
+			TimeEntry saved = invocation.getArgument(0);
+			saved.setId(30L);
+			return saved;
+		});
+
+		TimeEntryRes response = service.stopTimer();
+
+		assertEquals(new BigDecimal("1.00"), response.hours());
+		assertEquals(TODAY.minusDays(1), response.workDate());
+		assertEquals(TimeEntryStatus.DRAFT, response.status());
+		verify(timesheetTimerRepository).delete(timer);
 	}
 
 	private TimeEntry stubOwnDraftEntry() {

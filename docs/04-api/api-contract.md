@@ -2901,6 +2901,59 @@ Xoá bản ghi giờ công **DRAFT của chính mình**. Không cần body. Thà
 `{ "success": true, "message": "Xoa ban ghi gio cong thanh cong", "data": null }`.
 Response lỗi giống `PUT` (`404` khi không phải bản ghi của mình, `400 INVALID_STATE` khi bản ghi không còn DRAFT).
 
+### `NCL-06-CN-008` — Ghi giờ công bằng đồng hồ bấm giờ
+
+Các endpoint dưới đây yêu cầu token của **Nhân viên chuyên môn** (`VT-03`). Mỗi nhân sự chỉ có một phiên
+đồng hồ đang chạy. Phiên được lưu riêng trong `timesheet_timers`; khi dừng, hệ thống tính số giờ từ
+`startedAt` đến thời điểm dừng, làm tròn 2 chữ số thập phân (tối thiểu `0.01` giờ), rồi tạo một bản ghi
+`timesheet_entries` trạng thái `DRAFT`. Các quy tắc dự án đang chạy, kỳ chấm công mở, người được giao và
+giới hạn 12 giờ/ngày vẫn được kiểm tra như API ghi giờ thủ công.
+
+#### `POST /projects/{projectId}/tasks/{taskId}/time-entry-timer`
+
+```json
+{ "note": "Phân tích quy trình hiện tại", "billable": true }
+```
+
+`note` bắt buộc, tối đa 1000 ký tự; `billable` không bắt buộc và mặc định là `true`.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Bat dong ho bam gio thanh cong",
+  "data": {
+    "timerId": 40,
+    "projectId": 1,
+    "taskId": 20,
+    "userId": 7,
+    "startedAt": "2026-09-10T15:20:00",
+    "elapsedHours": 0.00,
+    "note": "Phân tích quy trình hiện tại",
+    "billable": true
+  }
+}
+```
+
+#### `GET /me/time-entry-timer`
+
+Trả phiên đang chạy theo cùng cấu trúc `data` của endpoint start; `data: null` nếu không có phiên.
+
+#### `POST /me/time-entry-timer/stop`
+
+Không cần body. Thành công trả về `TimeEntryRes` của bản ghi DRAFT vừa tạo, theo cùng cấu trúc response
+của `POST /projects/{projectId}/tasks/{taskId}/time-entries`.
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Thiếu `note` hoặc `note` vượt 1000 ký tự khi bắt đầu. |
+| 400 | `INVALID_STATE` | Dự án đã đóng, kỳ đã khóa, vượt 12 giờ/ngày, đã có timer đang chạy, hoặc dừng khi không có timer. |
+| 409 | `DUPLICATE_DATA` | Khi dừng, ngày/công việc đã có bản ghi giờ công gốc của chính mình. |
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Người gọi không phải `VT-03`, hoặc không được giao công việc. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại dự án/công việc của timer. |
+
 #### `GET /me/time-entries?weekFrom=2026-09-07&weekTo=2026-09-13`
 
 Trả lưới giờ công **của chính mình** trong khoảng ngày (một tuần chấm công), nhóm theo công việc — mỗi
