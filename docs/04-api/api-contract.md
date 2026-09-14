@@ -2794,6 +2794,35 @@ Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại
 - Mỗi lần ghi/sửa/xoá ghi một dòng `TIME_ENTRY_UPDATED` vào `project_audit_logs` — người thực hiện, nội dung
   (số giờ, ngày, thao tác), thời điểm (TC-04).
 
+#### `GET /me/time-entry-tasks`
+
+Trả danh sách công việc mà nhân viên chuyên môn hiện tại được giao và thuộc các dự án đang `RUNNING`.
+Endpoint này là nguồn dữ liệu cho danh sách chọn dự án/công việc khi ghi giờ; dự án `CLOSED` không xuất hiện.
+Việc lọc chỉ có tác dụng hỗ trợ giao diện, vì các API tạo/sửa/xoá bên dưới vẫn kiểm tra lại trạng thái dự án
+tại thời điểm thực hiện để xử lý trường hợp dự án vừa bị đóng.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "projectId": 1,
+      "projectName": "Du an dang chay",
+      "taskId": 20,
+      "taskName": "Phan tich quy trinh",
+      "taskStatus": "IN_PROGRESS"
+    }
+  ]
+}
+```
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Người gọi không phải Nhân viên chuyên môn (`VT-03`). |
+
 #### `POST /projects/{projectId}/tasks/{taskId}/time-entries`
 
 ```json

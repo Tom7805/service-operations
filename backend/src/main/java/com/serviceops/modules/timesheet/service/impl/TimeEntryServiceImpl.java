@@ -11,6 +11,7 @@ import com.serviceops.modules.project.repository.TaskRepository;
 import com.serviceops.modules.timesheet.dto.request.TimeEntryCreateReq;
 import com.serviceops.modules.timesheet.dto.request.TimeEntryUpdateReq;
 import com.serviceops.modules.timesheet.dto.response.TimeEntryRes;
+import com.serviceops.modules.timesheet.dto.response.TimeEntryTaskRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetSummaryRes;
 import com.serviceops.modules.timesheet.entity.TimeEntry;
 import com.serviceops.modules.timesheet.mapper.TimeEntryMapper;
@@ -123,6 +124,26 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 		timeEntryRepository.delete(entry);
 		auditLogger.recordTimeEntryChange(projectId, task.getId(),
 				"xoa " + formatHours(entry.getHours()) + " gio ngay " + entry.getWorkDate());
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<TimeEntryTaskRes> findMyRunningTasks() {
+		Long currentUserId = currentUserScopeProvider.currentUserId();
+		if (currentUserId == null) {
+			throw new AccessDeniedException("Chua xac thuc nguoi dung");
+		}
+
+		return assignmentRepository.findByUserIdOrderByIdAsc(currentUserId).stream()
+				.map(assignment -> taskRepository.findById(assignment.getTaskId()).orElse(null))
+				.filter(Objects::nonNull)
+				.map(task -> projectRepository.findById(task.getProjectId())
+						.filter(project -> project.getStatus() == com.serviceops.modules.project.enums.ProjectStatus.RUNNING)
+						.map(project -> new TimeEntryTaskRes(project.getId(), project.getName(), task.getId(), task.getName(),
+								task.getStatus()))
+						.orElse(null))
+				.filter(Objects::nonNull)
+				.toList();
 	}
 
 	@Override

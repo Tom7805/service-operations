@@ -8,6 +8,7 @@ import com.serviceops.modules.timesheet.controller.TimeEntryController;
 import com.serviceops.modules.timesheet.dto.request.TimeEntryCreateReq;
 import com.serviceops.modules.timesheet.dto.request.TimeEntryUpdateReq;
 import com.serviceops.modules.timesheet.dto.response.TimeEntryRes;
+import com.serviceops.modules.timesheet.dto.response.TimeEntryTaskRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetSummaryRes;
 import com.serviceops.modules.timesheet.enums.TimeEntryStatus;
 import com.serviceops.modules.timesheet.service.TimeEntryService;
@@ -133,6 +134,20 @@ class TimeEntryControllerIT {
 						.content(objectMapper.writeValueAsString(req)))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.errorCode").value("INVALID_STATE"));
+	}
+
+	@Test
+	@DisplayName("GET /me/time-entry-tasks: chi tra task thuoc du an dang chay")
+	void returnsOnlyRunningAssignedTasks() throws Exception {
+		when(timeEntryService.findMyRunningTasks()).thenReturn(List.of(
+				new TimeEntryTaskRes(1L, "Du an dang chay", 20L, "Cong viec dang chay", null)));
+
+		mockMvc.perform(get("/me/time-entry-tasks")
+					.with(SecurityMockMvcRequestPostProcessors.user("nv01").roles("VT-03")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.length()").value(1))
+				.andExpect(jsonPath("$.data[0].projectId").value(1))
+				.andExpect(jsonPath("$.data[0].taskId").value(20));
 	}
 
 	@Test
