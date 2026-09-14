@@ -28,7 +28,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -112,7 +111,7 @@ class TimeEntryServiceTest {
 		});
 
 		TimeEntryRes response = service.create(1L, 20L,
-				new TimeEntryCreateReq(TODAY, new BigDecimal("3.5"), "Phan tich quy trinh"));
+				new TimeEntryCreateReq(TODAY, new BigDecimal("3.5"), "Phan tich quy trinh", true));
 
 		assertEquals(30L, response.id());
 		assertEquals(20L, response.taskId());
@@ -129,9 +128,11 @@ class TimeEntryServiceTest {
 		stubAssigneeTask();
 		when(assignmentRepository.existsByTaskIdAndUserId(20L, 7L)).thenReturn(false);
 
-		assertThrows(AccessDeniedException.class, () -> service.create(1L, 20L,
-				new TimeEntryCreateReq(TODAY, new BigDecimal("2"), null)));
+		BusinessRuleException exception = assertThrows(BusinessRuleException.class, () -> service.create(1L, 20L,
+				new TimeEntryCreateReq(TODAY, new BigDecimal("2"), "note", true)));
 
+		assertEquals(ErrorCode.FORBIDDEN, exception.getErrorCode());
+		assertEquals("Ban khong phai nguoi duoc giao cong viec nay", exception.getMessage());
 		verify(timeEntryRepository, never()).save(any(TimeEntry.class));
 	}
 
@@ -141,7 +142,7 @@ class TimeEntryServiceTest {
 		when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
 
 		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
-				() -> service.create(1L, 20L, new TimeEntryCreateReq(TODAY, new BigDecimal("2"), null)));
+				() -> service.create(1L, 20L, new TimeEntryCreateReq(TODAY, new BigDecimal("2"), "note", true)));
 
 		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
 	}
@@ -152,7 +153,7 @@ class TimeEntryServiceTest {
 
 		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
 				() -> service.create(1L, 20L,
-						new TimeEntryCreateReq(TODAY.plusDays(1), new BigDecimal("2"), null)));
+						new TimeEntryCreateReq(TODAY.plusDays(1), new BigDecimal("2"), "note", true)));
 
 		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
 	}
@@ -166,7 +167,7 @@ class TimeEntryServiceTest {
 				.thenReturn(Optional.of(existing));
 
 		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
-				() -> service.create(1L, 20L, new TimeEntryCreateReq(TODAY, new BigDecimal("2"), null)));
+				() -> service.create(1L, 20L, new TimeEntryCreateReq(TODAY, new BigDecimal("2"), "note", true)));
 
 		assertEquals(ErrorCode.DUPLICATE_DATA, exception.getErrorCode());
 	}
@@ -177,7 +178,7 @@ class TimeEntryServiceTest {
 		when(timeEntryRepository.sumHoursByUserIdAndWorkDate(7L, TODAY)).thenReturn(new BigDecimal("11.5"));
 
 		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
-				() -> service.create(1L, 20L, new TimeEntryCreateReq(TODAY, new BigDecimal("1"), null)));
+				() -> service.create(1L, 20L, new TimeEntryCreateReq(TODAY, new BigDecimal("1"), "note", true)));
 
 		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
 	}
@@ -202,7 +203,7 @@ class TimeEntryServiceTest {
 		when(timeEntryRepository.save(any(TimeEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		TimeEntryRes response = service.update(1L, 20L, 30L,
-				new TimeEntryUpdateReq(new BigDecimal("3"), "Da chinh sua"));
+				new TimeEntryUpdateReq(new BigDecimal("3"), "Da chinh sua", true));
 
 		assertEquals(new BigDecimal("3"), response.hours());
 		assertEquals("Da chinh sua", response.note());
@@ -216,7 +217,7 @@ class TimeEntryServiceTest {
 		entry.setStatus(TimeEntryStatus.SUBMITTED);
 
 		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
-				() -> service.update(1L, 20L, 30L, new TimeEntryUpdateReq(new BigDecimal("3"), null)));
+				() -> service.update(1L, 20L, 30L, new TimeEntryUpdateReq(new BigDecimal("3"), null, true)));
 
 		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
 	}
@@ -227,7 +228,7 @@ class TimeEntryServiceTest {
 		entry.setUserId(8L);
 
 		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
-				() -> service.update(1L, 20L, 30L, new TimeEntryUpdateReq(new BigDecimal("3"), null)));
+				() -> service.update(1L, 20L, 30L, new TimeEntryUpdateReq(new BigDecimal("3"), null, true)));
 
 		assertEquals(ErrorCode.RESOURCE_NOT_FOUND, exception.getErrorCode());
 	}
@@ -241,6 +242,30 @@ class TimeEntryServiceTest {
 		verify(timeEntryRepository).delete(entry);
 		verify(auditLogger).recordTimeEntryChange(1L, 20L,
 				"xoa 2 gio ngay " + TODAY);
+	}
+
+	@Test
+	void rejectsDeleteOfNonDraftEntry() {
+		TimeEntry entry = stubOwnDraftEntry();
+		entry.setStatus(TimeEntryStatus.SUBMITTED);
+
+		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
+				() -> service.delete(1L, 20L, 30L));
+
+		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
+		verify(timeEntryRepository, never()).delete(any(TimeEntry.class));
+	}
+
+	@Test
+	void rejectsDeleteOfOthersEntry() {
+		TimeEntry entry = stubOwnDraftEntry();
+		entry.setUserId(8L);
+
+		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
+				() -> service.delete(1L, 20L, 30L));
+
+		assertEquals(ErrorCode.RESOURCE_NOT_FOUND, exception.getErrorCode());
+		verify(timeEntryRepository, never()).delete(any(TimeEntry.class));
 	}
 
 	@Test
@@ -284,6 +309,48 @@ class TimeEntryServiceTest {
 				() -> service.findMyWeek(LocalDate.of(2026, 9, 13), LocalDate.of(2026, 9, 7)));
 	}
 
+	@Test
+	void logsTimeWithBillableFalse() {
+		stubAssigneeTask();
+		when(timeEntryRepository.save(any(TimeEntry.class))).thenAnswer(invocation -> {
+			TimeEntry saved = invocation.getArgument(0);
+			saved.setId(30L);
+			return saved;
+		});
+
+		TimeEntryRes response = service.create(1L, 20L,
+				new TimeEntryCreateReq(TODAY, new BigDecimal("2"), "Noi dung", false));
+
+		assertEquals(Boolean.FALSE, response.billable());
+	}
+
+	@Test
+	void logsTimeDefaultsBillableToTrueWhenNull() {
+		stubAssigneeTask();
+		when(timeEntryRepository.save(any(TimeEntry.class))).thenAnswer(invocation -> {
+			TimeEntry saved = invocation.getArgument(0);
+			saved.setId(30L);
+			return saved;
+		});
+
+		TimeEntryRes response = service.create(1L, 20L,
+				new TimeEntryCreateReq(TODAY, new BigDecimal("2"), "Noi dung", null));
+
+		assertEquals(Boolean.TRUE, response.billable());
+	}
+
+	@Test
+	void updatesBillableField() {
+		stubOwnDraftEntry();
+		when(timeEntryRepository.sumHoursByUserIdAndWorkDate(7L, TODAY)).thenReturn(new BigDecimal("2"));
+		when(timeEntryRepository.save(any(TimeEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		TimeEntryRes response = service.update(1L, 20L, 30L,
+				new TimeEntryUpdateReq(new BigDecimal("3"), "Da chinh sua", false));
+
+		assertEquals(Boolean.FALSE, response.billable());
+	}
+
 	private TimeEntry entry(Long id, Long taskId, LocalDate workDate, BigDecimal hours) {
 		TimeEntry entry = new TimeEntry();
 		entry.setId(id);
@@ -291,6 +358,7 @@ class TimeEntryServiceTest {
 		entry.setUserId(7L);
 		entry.setWorkDate(workDate);
 		entry.setHours(hours);
+		entry.setBillable(true);
 		entry.setStatus(TimeEntryStatus.DRAFT);
 		return entry;
 	}

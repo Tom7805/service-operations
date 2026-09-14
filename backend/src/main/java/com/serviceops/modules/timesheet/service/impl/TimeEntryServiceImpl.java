@@ -74,6 +74,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 		entry.setWorkDate(request.workDate());
 		entry.setHours(request.hours());
 		entry.setNote(request.note());
+		entry.setBillable(request.billable() != null ? request.billable() : true);
 		entry.setCreatedBy(currentUsername());
 		LocalDateTime now = LocalDateTime.now();
 		entry.setCreatedAt(now);
@@ -96,6 +97,9 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 		BigDecimal previousHours = entry.getHours();
 		entry.setHours(request.hours());
 		entry.setNote(request.note());
+		if (request.billable() != null) {
+			entry.setBillable(request.billable());
+		}
 		entry.setUpdatedAt(LocalDateTime.now());
 		TimeEntry saved = timeEntryRepository.save(entry);
 
@@ -153,11 +157,19 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 				task == null ? BigDecimal.ZERO : task.getApprovedHours());
 	}
 
-	/** Chi nguoi dang duoc giao cong viec moi duoc ghi gio (TC-02, giong NCL-05-CN-004). */
+	/**
+	 * Chi nguoi dang duoc giao cong viec moi duoc ghi gio (TC-02, giong NCL-05-CN-004).
+	 *
+	 * <p>Dung {@link BusinessRuleException} (khong phai {@link AccessDeniedException}) de
+	 * thong bao cu the "Ban khong phai nguoi duoc giao cong viec nay" den duoc client —
+	 * {@code GlobalExceptionHandler} luon ghi de message cua AccessDeniedException bang mot
+	 * cau chung chung (dung cho loi @PreAuthorize tu choi vai tro, TC-03). Pattern nay giong
+	 * {@code DepartmentServiceImpl#requireCanView}.</p>
+	 */
 	private Long requireAssignee(Long taskId) {
 		Long currentUserId = currentUserScopeProvider.currentUserId();
 		if (currentUserId == null || !assignmentRepository.existsByTaskIdAndUserId(taskId, currentUserId)) {
-			throw new AccessDeniedException("Ban khong phai nguoi duoc giao cong viec nay");
+			throw new BusinessRuleException(ErrorCode.FORBIDDEN, "Ban khong phai nguoi duoc giao cong viec nay");
 		}
 		return currentUserId;
 	}

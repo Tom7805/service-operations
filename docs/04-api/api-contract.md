@@ -2800,7 +2800,8 @@ Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại
 {
   "workDate": "2026-09-10",
   "hours": 3.5,
-  "note": "Phân tích quy trình hiện tại"
+  "note": "Phân tích quy trình hiện tại",
+  "billable": true
 }
 ```
 
@@ -2808,7 +2809,8 @@ Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại
 |---|---|---|---|
 | `workDate` | date | có | Ngày làm việc, không được ở tương lai. |
 | `hours` | number | có | Lớn hơn 0 (giới hạn kiểm tra `@DecimalMin("0.01")`). |
-| `note` | string | không | Tối đa 1000 ký tự. |
+| `note` | string | có | Tối đa 1000 ký tự, không được để trống. |
+| `billable` | boolean | không | Có tính phí hay không — mặc định `true`. |
 
 **Response thành công — `200 OK`:**
 
@@ -2824,6 +2826,7 @@ Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại
     "hours": 3.5,
     "status": "DRAFT",
     "note": "Phân tích quy trình hiện tại",
+    "billable": true,
     "createdAt": "2026-09-10T15:20:00"
   }
 }
@@ -2833,7 +2836,7 @@ Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại
 
 | HTTP | `errorCode` | Khi nào xảy ra |
 |---|---|---|
-| 400 | `VALIDATION_ERROR` | Thiếu `workDate`/`hours`, `hours <= 0`, `note` vượt 1000 ký tự. |
+| 400 | `VALIDATION_ERROR` | Thiếu `workDate`/`hours`/`note`, `hours <= 0`, `note` rỗng/vượt 1000 ký tự. |
 | 400 | `INVALID_STATE` | Dự án đã đóng (`CLOSED`), ngày làm việc ở tương lai, hoặc tổng giờ trong ngày vượt 12 (QTN-14). |
 | 409 | `DUPLICATE_DATA` | Đã có bản ghi giờ công của chính mình trên công việc này trong cùng ngày. |
 | 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
@@ -2843,16 +2846,17 @@ Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại
 #### `PUT /projects/{projectId}/tasks/{taskId}/time-entries/{entryId}`
 
 ```json
-{ "hours": 4, "note": "Đã chỉnh sửa sau khi soát lại" }
+{ "hours": 4, "note": "Đã chỉnh sửa sau khi soát lại", "billable": true }
 ```
 
 | Trường | Kiểu | Bắt buộc | Ghi chú |
 |---|---|---|---|
 | `hours` | number | có | Lớn hơn 0 — ghi đè số giờ cũ. |
 | `note` | string | không | Ghi đè ghi chú cũ. |
+| `billable` | boolean | không | Có tính phí hay không — không truyền thì giữ nguyên giá trị cũ. |
 
 Chỉ sửa được bản ghi **DRAFT của chính mình trên đúng công việc** trong path; `workDate` và công việc không
-đổi — muốn đổi ngày thì xoá bản ghi cũ rồi ghi bản ghi mới. Kèm kiểm tra lại trần 24 giờ/ngày sau khi thay
+đổi — muốn đổi ngày thì xoá bản ghi cũ rồi ghi bản ghi mới. Kèm kiểm tra lại trần 12 giờ/ngày (QTN-14) sau khi thay
 đổi số giờ.
 
 **Response lỗi:** giống `POST`, thêm:
@@ -2884,7 +2888,7 @@ phần tử là một `TimesheetSummaryRes`:
       "weekTo": "2026-09-13",
       "entries": [
         { "id": 30, "taskId": 20, "userId": 7, "workDate": "2026-09-09", "hours": 5,
-          "status": "DRAFT", "note": null, "createdAt": "2026-09-09T17:00:00" }
+          "status": "DRAFT", "note": null, "billable": true, "createdAt": "2026-09-09T17:00:00" }
       ],
       "totalHours": 8,
       "budgetHours": 8,
@@ -2899,7 +2903,8 @@ phần tử là một `TimesheetSummaryRes`:
 - `totalHours` — tổng giờ của công việc trong khoảng ngày.
 - `usageRatio` là phân số `0.0`–`1.0+` (nhân `100` khi hiển thị); `overBudgetWarning = true` khi
   `usageRatio >= 0.80` (QTN-20); cả hai là `null`/`false` khi công việc chưa đặt ngân sách.
-- `400 VALIDATION_ERROR` khi `weekTo` sớm hơn `weekFrom`.
+- `400 VALIDATION_ERROR` khi `weekTo` sớm hơn `weekFrom`, khi thiếu `weekFrom`/`weekTo`, hoặc khi giá trị
+  không đúng định dạng ngày `yyyy-MM-dd`.
 
 **Lưu ý cho Frontend:**
 
@@ -2930,9 +2935,10 @@ Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại
   `REJECTED` cho phép nộp lại — hệ thống cập nhật lại đúng bản ghi bảng tuần cũ (unique người dùng + tuần).
 - **Lưu lịch sử (TC-05)**: mỗi lần nộp ghi một dòng nhật ký hệ thống `Nop bang cham cong tuan` — người
   thực hiện (tự điền từ phiên đăng nhập), nội dung (tuần, tổng giờ, số dòng chuyển duyệt), thời điểm.
-- **Thông báo người duyệt (TC-01)**: hiện tại người duyệt nhìn thấy bảng qua hàng đợi chờ duyệt
-  (`Timesheet` trạng thái `PENDING_APPROVAL`); thông báo in-app cho PM sẽ được gửi thêm khi module
-  notification đi vào hoạt động.
+- **Thông báo người duyệt (TC-01)**: sau khi nộp thành công, hệ thống gửi **thông báo in-app** cho
+  **từng Quản lý dự án** của các dự án có dòng giờ công trong tuần (`NotificationType.TIMESHEET_SUBMITTED`,
+  nội dung gồm tuần nộp, tổng giờ, số dòng chuyển duyệt). PM vẫn nhìn thấy bảng qua hàng đợi chờ duyệt
+  (`GET /timesheets/pending`, bảng ở trạng thái `PENDING_APPROVAL`).
 
 #### `POST /me/timesheets/{weekStartDate}/submit`
 
@@ -2978,6 +2984,66 @@ lưới `GET /me/time-entries`.
   chỉ đọc — mọi lời gọi `PUT/DELETE time-entries` với dòng đã `SUBMITTED` sẽ nhận `400 INVALID_STATE`.
 - Dùng `weekStartDate` của lưới tuần đang hiển thị làm `{weekStartDate}` trên path — khớp tự nhiên với
   dữ liệu `GET /me/time-entries`.
+
+### `NCL-06-CN-002` — Notification API (Thông báo in-app)
+
+Khi nhân viên nộp bảng chấm công (CN-002), hệ thống gửi **thông báo in-app** cho từng PM của các dự án có dòng giờ công trong tuần (`NotificationType.TIMESHEET_SUBMITTED`). PM có thể lấy danh sách thông báo qua:
+
+#### `GET /notifications?unreadOnly=false&page=0&size=20`
+
+Trả về danh sách thông báo của người dùng hiện tại, phân trang.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 100,
+      "recipientId": 2,
+      "type": "TIMESHEET_SUBMITTED",
+      "title": "Bang cham cong moi can duyet",
+      "content": "Nhan su #7 da nop bang cham cong tuan 2026-09-07 - 2026-09-13 (8 gio, 2 dong)",
+      "channel": "IN_APP",
+      "referenceId": null,
+      "referenceType": "Timesheet",
+      "isRead": false,
+      "readAt": null,
+      "sentAt": "2026-09-13T10:05:00"
+    }
+  ]
+}
+```
+
+#### `GET /notifications/unread-count`
+
+Trả về số lượng thông báo chưa đọc.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": 3
+}
+```
+
+#### `POST /notifications/read`
+
+Đánh dấu thông báo đã đọc.
+
+```json
+{ "notificationIds": [100, 101] }
+```
+
+**Response thành công — `200 OK`:**
+
+```json
+{ "success": true, "message": "Da danh dau da doc" }
+```
+
+---
 
 ### `NCL-06-CN-003` — Duyệt bảng chấm công
 

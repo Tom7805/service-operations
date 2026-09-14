@@ -9,13 +9,13 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
- * Tran gio cong mot ngay cua mot nhan su (NCL-06-CN-001). Tong so gio cong
- * da ghi trong mot ngay (cong ca ban ghi dang sua) khong duoc vuot 24 gio.
+ * Tran gio cong mot ngay cua mot nhan su (NCL-06-CN-002 - nop bang tuan, QTN-14).
+ * Tong so gio cong da ghi trong mot ngay (cong ca ban ghi dang sua) khong duoc vuot 12 gio.
  */
 @Component
 public class DailyHourLimitValidator {
 
-	/** Tran gio cong toi da trong mot ngay (QTN-14: gioi han 12 gio/ngay). */
+	/** Tran gio cong toi da trong mot ngay (QTN-14). */
 	public static final BigDecimal MAX_HOURS_PER_DAY = new BigDecimal("12");
 
 	private final TimeEntryRepository timeEntryRepository;
@@ -31,7 +31,7 @@ public class DailyHourLimitValidator {
 	 * @param existingHours  so gio ban ghi da co tren cung ngay (0 khi tao moi,
 	 *                       hoac so gio hien tai cua ban ghi khi sua) — da duoc
 	 *                       tru khoi tong truoc khi cong voi {@code hours}.
-	 * @throws BusinessRuleException INVALID_STATE neu vuot tran 24 gio/ngay.
+	 * @throws BusinessRuleException INVALID_STATE neu vuot tran 12 gio/ngay (QTN-14).
 	 */
 	public void validate(Long userId, LocalDate workDate, BigDecimal hours, BigDecimal existingHours) {
 		BigDecimal alreadyLogged = timeEntryRepository.sumHoursByUserIdAndWorkDate(userId, workDate);
