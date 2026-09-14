@@ -1,6 +1,7 @@
 package com.serviceops.modules.timesheet.mapper;
 
 import com.serviceops.modules.timesheet.dto.response.TimeEntryRes;
+import com.serviceops.modules.timesheet.dto.response.TimesheetApprovalRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetSummaryRes;
 import com.serviceops.modules.timesheet.entity.Timesheet;
@@ -61,5 +62,12 @@ public class TimesheetMapper {
 				timesheet.getSubmittedBy(),
 				timesheet.getSubmittedAt()
 		);
+	}
+
+	/**
+	 * Ket qua duyet: bang cham cong + danh sach canh bao vuot ngan sach (NCL-06-CN-003, TC-03).
+	 */
+	public TimesheetApprovalRes toApprovalResponse(Timesheet timesheet, List<String> overBudgetWarnings) {
+		return new TimesheetApprovalRes(toResponse(timesheet), overBudgetWarnings);
 	}
 }

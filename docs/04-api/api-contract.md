@@ -3045,6 +3045,107 @@ Trả về số lượng thông báo chưa đọc.
 
 ---
 
+### `NCL-06-CN-003` — Duyệt bảng chấm công
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`). PM duyệt các dòng giờ công `SUBMITTED` thuộc **dự án mình
+quản lý** (TC-02) — duyệt được cả nguyên bảng lẫn từng dòng; dòng đã duyệt chuyển `APPROVED` và **không
+sửa/xoá trực tiếp được** (QTN-10). Tổng giờ đã duyệt được cộng vào `approvedHours` của từng công việc —
+nguồn cho `usageRatio` của `NCL-05-CN-005` và tính lợi nhuận dự án (TC-01).
+
+Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại):
+
+- **TC-02 — phạm vi PM**: chỉ entry thuộc dự án có `projectManagerId` trùng với người gọi mới được duyệt.
+  Khi **duyệt nguyên bảng**, các dòng thuộc dự án của PM khác được **giữ nguyên** `SUBMITTED` cho PM đó
+  xử lý; bảng chỉ chuyển `APPROVED` khi **không còn** dòng `SUBMITTED` nào trong tuần (phần cuối cùng của
+  PM cuối). Khi **duyệt từng dòng** (`entryIds`), dòng thuộc dự án người khác nhận `403 FORBIDDEN`.
+- **TC-01**: sau khi duyệt, `approvedHours` của công việc được tính lại bằng tổng giờ `APPROVED`; khi tuần
+  được duyệt hết, bảng nhận `status = APPROVED` cùng `approvedBy`/`approvedAt`.
+- **TC-03 — vượt ngân sách vẫn duyệt được**: nếu một công việc sau duyệt đạt từ **80%** ngân sách giờ công
+  trở lên (QTN-20), hệ thống **vẫn duyệt** và trả `overBudgetWarnings` — danh sách cảnh báo từng công việc
+  (`data.overBudgetWarnings`) kèm dòng chữ cảnh báo trong `message`.
+- **TC-04**: mỗi lần duyệt ghi một dòng nhật ký hệ thống `Duyet bang cham cong` — người duyệt, nội dung
+  (tuần, số dòng, số giờ), thời điểm.
+- Bảng phải đang `PENDING_APPROVAL` — đã duyệt/từ chối nhận `400 INVALID_STATE`.
+
+#### `GET /timesheets/pending`
+
+Hàng đợi của PM hiện tại: các bảng `PENDING_APPROVAL` có **ít nhất một** dòng `SUBMITTED` thuộc dự án
+mình quản lý, kèm `pendingEntries`/`pendingHours` (phần con của chính PM này):
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "timesheetId": 50,
+      "userId": 7,
+      "weekStartDate": "2026-09-07",
+      "weekEndDate": "2026-09-13",
+      "totalHours": 10,
+      "pendingEntries": 1,
+      "pendingHours": 5,
+      "submittedAt": "2026-09-13T10:00:00"
+    }
+  ]
+}
+```
+
+#### `POST /timesheets/{timesheetId}/approve`
+
+```json
+{ "entryIds": [30], "note": "Duyet cho dot nay" }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `entryIds` | number[] | không | Bỏ qua/null/rỗng = **duyệt nguyên bảng** (tất cả dòng `SUBMITTED` thuộc dự án của PM); truyền id = duyệt từng dòng. |
+| `note` | string | không | Ghi chú của PM, tối đa 1000 ký tự. |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Duyet bang cham cong thanh cong — canh bao: Cong viec #20 Phan tich: 8/8 gio — da vuot nguong 80% ngan sach (QTN-20)",
+  "data": {
+    "timesheet": {
+      "id": 50,
+      "userId": 7,
+      "weekStartDate": "2026-09-07",
+      "weekEndDate": "2026-09-13",
+      "status": "APPROVED",
+      "totalHours": 10,
+      "submittedBy": "nv01",
+      "submittedAt": "2026-09-13T10:00:00"
+    },
+    "overBudgetWarnings": [
+      "Cong viec #20 Phan tich: 8/8 gio — da vuot nguong 80% ngan sach (QTN-20)"
+    ]
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `INVALID_STATE` | Bảng không ở trạng thái `PENDING_APPROVAL`, hoặc không còn dòng `SUBMITTED` nào. |
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-02` — hệ thống ghi nhật ký lần từ chối (TC-03 của chung); **hoặc** `VT-02` hợp lệ nhưng duyệt dòng thuộc dự án người khác (TC-02, `entryIds` riêng lẻ). |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại bảng chấm công, hoặc `entryIds` chứa id không thuộc danh sách dòng chờ duyệt. |
+
+**Lưu ý cho Frontend:**
+
+- `message` có thể chứa cảnh báo vượt ngân sách dù request thành công — ưu tiên hiển thị cả
+  `data.overBudgetWarnings` (danh sách có cấu trúc) thay vì parse `message`.
+- Bảng hiển thị `data.timesheet.status = "PENDING_APPROVAL"` khi tuần còn phần của PM khác — nút duyệt
+  vẫn hiển thị cho phần của mình (dựa trên `pendingEntries` của hàng đợi).
+- Dòng đã `APPROVED` không sửa/xoá được — các API `PUT/DELETE time-entries` trả `400 INVALID_STATE` (QTN-10).
+- Sau khi duyệt, lưới giờ công trên màn hình công việc (`NCL-05-CN-005`) tự phản ánh `approvedHours` mới
+  qua `usageRatio`.
+
+---
+
 ## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)
 
 
