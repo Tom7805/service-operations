@@ -17,11 +17,13 @@ import com.serviceops.modules.timesheet.enums.TimeEntryStatus;
 import com.serviceops.modules.timesheet.mapper.TimeEntryMapper;
 import com.serviceops.modules.timesheet.mapper.TimesheetMapper;
 import com.serviceops.modules.timesheet.repository.TimeEntryRepository;
+import com.serviceops.modules.timesheet.repository.TimesheetPeriodRepository;
 import com.serviceops.modules.timesheet.service.impl.TimeEntryServiceImpl;
 import com.serviceops.modules.timesheet.validator.DailyHourLimitValidator;
 import com.serviceops.modules.timesheet.validator.ImmutableEntryValidator;
 import com.serviceops.modules.timesheet.validator.OpenPeriodValidator;
 import com.serviceops.modules.timesheet.validator.OpenProjectValidator;
+import com.serviceops.modules.timesheet.validator.PeriodLockValidator;
 import com.serviceops.security.scope.CurrentUserScopeProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,6 +71,8 @@ class TimeEntryServiceTest {
 	private CurrentUserScopeProvider currentUserScopeProvider;
 	@Mock
 	private ProjectAuditLogger auditLogger;
+	@Mock
+	private TimesheetPeriodRepository periodRepository;
 
 	private TimeEntryServiceImpl service;
 	private Project project;
@@ -81,6 +85,7 @@ class TimeEntryServiceTest {
 				timeEntryRepository, currentUserScopeProvider, auditLogger,
 				new OpenProjectValidator(), new OpenPeriodValidator(clock),
 				new DailyHourLimitValidator(timeEntryRepository), new ImmutableEntryValidator(),
+				new PeriodLockValidator(periodRepository),
 				new TimeEntryMapper(), new TimesheetMapper());
 
 		project = new Project();
@@ -156,6 +161,25 @@ class TimeEntryServiceTest {
 						new TimeEntryCreateReq(TODAY.plusDays(1), new BigDecimal("2"), "note", true)));
 
 		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
+	}
+
+	/** NCL-06-CN-006-TC-01 (Then): ky chua ngay lam viec da khoa thi chan ghi gio moi. */
+	@Test
+	void rejectsTimeLoggingWhenPeriodIsLocked() {
+		stubAssigneeTask();
+		com.serviceops.modules.timesheet.entity.TimesheetPeriod lockedPeriod =
+				new com.serviceops.modules.timesheet.entity.TimesheetPeriod();
+		lockedPeriod.setPeriodStart(TODAY.withDayOfMonth(1));
+		lockedPeriod.setPeriodEnd(TODAY.withDayOfMonth(TODAY.lengthOfMonth()));
+		lockedPeriod.setStatus(com.serviceops.modules.timesheet.enums.PeriodStatus.LOCKED);
+		when(periodRepository.findByDate(TODAY)).thenReturn(Optional.of(lockedPeriod));
+
+		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
+				() -> service.create(1L, 20L, new TimeEntryCreateReq(TODAY, new BigDecimal("2"), "note", true)));
+
+		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
+		assertTrue(exception.getMessage().contains("da bi khoa"));
+		verify(timeEntryRepository, never()).save(any(TimeEntry.class));
 	}
 
 	@Test

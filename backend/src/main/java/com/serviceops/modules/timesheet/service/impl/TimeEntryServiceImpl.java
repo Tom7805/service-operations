@@ -21,6 +21,7 @@ import com.serviceops.modules.timesheet.validator.DailyHourLimitValidator;
 import com.serviceops.modules.timesheet.validator.ImmutableEntryValidator;
 import com.serviceops.modules.timesheet.validator.OpenPeriodValidator;
 import com.serviceops.modules.timesheet.validator.OpenProjectValidator;
+import com.serviceops.modules.timesheet.validator.PeriodLockValidator;
 import com.serviceops.security.scope.CurrentUserScopeProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -51,6 +52,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 	private final OpenPeriodValidator openPeriodValidator;
 	private final DailyHourLimitValidator dailyHourLimitValidator;
 	private final ImmutableEntryValidator immutableEntryValidator;
+	private final PeriodLockValidator periodLockValidator;
 	private final TimeEntryMapper timeEntryMapper;
 	private final TimesheetMapper timesheetMapper;
 
@@ -59,6 +61,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 		Task task = requireTaskInRunningProject(projectId, taskId);
 		Long currentUserId = requireAssignee(task.getId());
 		openPeriodValidator.validate(request.workDate());
+		periodLockValidator.validateOpen(request.workDate());
 
 		if (timeEntryRepository.existsByUserIdAndTaskIdAndWorkDate(currentUserId, task.getId(), request.workDate())) {
 			throw new BusinessRuleException(ErrorCode.DUPLICATE_DATA,
@@ -91,6 +94,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 		Long currentUserId = requireAssignee(task.getId());
 		TimeEntry entry = requireOwnEntry(entryId, currentUserId, task.getId());
 		immutableEntryValidator.validate(entry);
+		periodLockValidator.validateOpen(entry.getWorkDate());
 		dailyHourLimitValidator.validate(currentUserId, entry.getWorkDate(), request.hours(), entry.getHours());
 
 		BigDecimal previousHours = entry.getHours();
@@ -114,6 +118,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 		Long currentUserId = requireAssignee(task.getId());
 		TimeEntry entry = requireOwnEntry(entryId, currentUserId, task.getId());
 		immutableEntryValidator.validate(entry);
+		periodLockValidator.validateOpen(entry.getWorkDate());
 
 		timeEntryRepository.delete(entry);
 		auditLogger.recordTimeEntryChange(projectId, task.getId(),
