@@ -2903,7 +2903,8 @@ phần tử là một `TimesheetSummaryRes`:
 - `totalHours` — tổng giờ của công việc trong khoảng ngày.
 - `usageRatio` là phân số `0.0`–`1.0+` (nhân `100` khi hiển thị); `overBudgetWarning = true` khi
   `usageRatio >= 0.80` (QTN-20); cả hai là `null`/`false` khi công việc chưa đặt ngân sách.
-- `400 VALIDATION_ERROR` khi `weekTo` sớm hơn `weekFrom`.
+- `400 VALIDATION_ERROR` khi `weekTo` sớm hơn `weekFrom`, khi thiếu `weekFrom`/`weekTo`, hoặc khi giá trị
+  không đúng định dạng ngày `yyyy-MM-dd`.
 
 **Lưu ý cho Frontend:**
 

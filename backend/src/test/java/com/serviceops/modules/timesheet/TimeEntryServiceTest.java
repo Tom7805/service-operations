@@ -28,7 +28,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -129,9 +128,11 @@ class TimeEntryServiceTest {
 		stubAssigneeTask();
 		when(assignmentRepository.existsByTaskIdAndUserId(20L, 7L)).thenReturn(false);
 
-		assertThrows(AccessDeniedException.class, () -> service.create(1L, 20L,
+		BusinessRuleException exception = assertThrows(BusinessRuleException.class, () -> service.create(1L, 20L,
 				new TimeEntryCreateReq(TODAY, new BigDecimal("2"), "note", true)));
 
+		assertEquals(ErrorCode.FORBIDDEN, exception.getErrorCode());
+		assertEquals("Ban khong phai nguoi duoc giao cong viec nay", exception.getMessage());
 		verify(timeEntryRepository, never()).save(any(TimeEntry.class));
 	}
 
@@ -241,6 +242,30 @@ class TimeEntryServiceTest {
 		verify(timeEntryRepository).delete(entry);
 		verify(auditLogger).recordTimeEntryChange(1L, 20L,
 				"xoa 2 gio ngay " + TODAY);
+	}
+
+	@Test
+	void rejectsDeleteOfNonDraftEntry() {
+		TimeEntry entry = stubOwnDraftEntry();
+		entry.setStatus(TimeEntryStatus.SUBMITTED);
+
+		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
+				() -> service.delete(1L, 20L, 30L));
+
+		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
+		verify(timeEntryRepository, never()).delete(any(TimeEntry.class));
+	}
+
+	@Test
+	void rejectsDeleteOfOthersEntry() {
+		TimeEntry entry = stubOwnDraftEntry();
+		entry.setUserId(8L);
+
+		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
+				() -> service.delete(1L, 20L, 30L));
+
+		assertEquals(ErrorCode.RESOURCE_NOT_FOUND, exception.getErrorCode());
+		verify(timeEntryRepository, never()).delete(any(TimeEntry.class));
 	}
 
 	@Test
