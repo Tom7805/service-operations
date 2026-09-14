@@ -4,102 +4,314 @@ import com.serviceops.common.audit.AuditTargetType;
 import com.serviceops.common.audit.service.AuditLogService;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
+import com.serviceops.modules.project.entity.Project;
+import com.serviceops.modules.project.entity.Task;
+import com.serviceops.modules.project.repository.ProjectRepository;
+import com.serviceops.modules.project.repository.TaskRepository;
+import com.serviceops.modules.timesheet.dto.request.TimesheetApproveReq;
 import com.serviceops.modules.timesheet.dto.request.TimesheetRejectReq;
+import com.serviceops.modules.timesheet.dto.response.PendingTimesheetRes;
+import com.serviceops.modules.timesheet.dto.response.TimesheetApprovalRes;
+import com.serviceops.modules.timesheet.dto.response.TimesheetRejectRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetRes;
+import com.serviceops.modules.timesheet.entity.TimeEntry;
 import com.serviceops.modules.timesheet.entity.Timesheet;
+import com.serviceops.modules.timesheet.enums.TimeEntryStatus;
 import com.serviceops.modules.timesheet.enums.TimesheetStatus;
+import com.serviceops.modules.timesheet.mapper.TimesheetMapper;
+import com.serviceops.modules.timesheet.repository.TimeEntryRepository;
 import com.serviceops.modules.timesheet.repository.TimesheetRepository;
 import com.serviceops.modules.timesheet.service.TimesheetApprovalService;
+import com.serviceops.security.scope.CurrentUserScopeProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
-/**
- * NCL-06-CN-004: tu choi bang cham cong.
- *
- * <p>Quy tac (QTN-10 — gio cong da duyet la bat bien):</p>
- * <ul>
- *   <li>Chi tu choi duoc bang dang o trang thai {@code PENDING_APPROVAL} (cho duyet); bang o trang
- *       thai khac (DRAFT/APPROVED) bi tu choi voi loi {@code 400 INVALID_STATE} (TC theo QTN-10:
- *       khong the "tu choi nguoc" mot bang da duyet).</li>
- *   <li>Ly do tu choi la bat buoc — duoc {@code @NotBlank} tren {@link TimesheetRejectReq} chan o
- *       tang validate truoc khi vao service (NCL-06-CN-004-TC-02).</li>
- *   <li>Sau khi tu choi, bang quay ve trang thai {@code DRAFT} de nguoi nop sua lai
- *       (NCL-06-CN-004-TC-01); dau vet lan tu choi gan nhat (nguoi tu choi, thoi diem, ly do) duoc
- *       giu lai tren chinh ban ghi de nguoi nop biet vi sao bi tra ve.</li>
- *   <li>NCL-06-CN-004-TC-04: moi lan tu choi deu ghi Nhat ky he thong (nguoi thuc hien, noi dung,
- *       thoi diem) qua {@link AuditLogService}.</li>
- *   <li>Phan quyen (chi Quan ly du an — VT-02) duoc chan o tang controller bang
- *       {@code @PreAuthorize}; luot bi tu choi quyen duoc {@code AccessDeniedAuditRecorder} ghi nhat
- *       ky rieng (NCL-06-CN-004-TC-03).</li>
- * </ul>
- */
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class TimesheetApprovalServiceImpl implements TimesheetApprovalService {
 
+	private static final String TIMESHEET_LABEL = "Bang cham cong tuan";
+
+	private final TimeEntryRepository timeEntryRepository;
 	private final TimesheetRepository timesheetRepository;
+	private final TaskRepository taskRepository;
+	private final ProjectRepository projectRepository;
+	private final CurrentUserScopeProvider currentUserScopeProvider;
 	private final AuditLogService auditLogService;
+	private final TimesheetMapper timesheetMapper;
 	private final Clock clock;
 
 	@Override
-	public TimesheetRes reject(Long timesheetId, TimesheetRejectReq request) {
-		Timesheet timesheet = timesheetRepository.findById(timesheetId)
-				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
-						"Khong tim thay bang cham cong"));
-
-		if (timesheet.getStatus() != TimesheetStatus.PENDING_APPROVAL) {
-			throw new BusinessRuleException(ErrorCode.INVALID_STATE,
-					"Chi tu choi duoc bang cham cong dang cho duyet");
+	@Transactional(readOnly = true)
+	public List<PendingTimesheetRes> findPending() {
+		Long pmId = requireCurrentManager();
+		List<PendingTimesheetRes> queue = new ArrayList<>();
+		for (Timesheet timesheet : timesheetRepository.findByStatusOrderBySubmittedAtAsc(
+				TimesheetStatus.PENDING_APPROVAL)) {
+			List<TimeEntry> pendingForMe = entriesOf(timesheet).stream()
+					.filter(entry -> entry.getStatus() == TimeEntryStatus.SUBMITTED)
+					.filter(entry -> managedByMe(entry, pmId))
+					.toList();
+			if (!pendingForMe.isEmpty()) {
+				queue.add(new PendingTimesheetRes(timesheet.getId(), timesheet.getUserId(),
+						timesheet.getWeekStartDate(), timesheet.getWeekEndDate(), timesheet.getTotalHours(),
+						pendingForMe.size(),
+						pendingForMe.stream().map(TimeEntry::getHours).reduce(BigDecimal.ZERO, BigDecimal::add),
+						timesheet.getSubmittedAt()));
+			}
 		}
+		return queue;
+	}
+
+	@Override
+	public TimesheetApprovalRes approve(Long timesheetId, TimesheetApproveReq request) {
+		Long pmId = requireCurrentManager();
+		Timesheet timesheet = timesheetRepository.findById(timesheetId)
+				.orElseThrow(() -> notFound("Khong tim thay bang cham cong"));
+		if (timesheet.getStatus() != TimesheetStatus.PENDING_APPROVAL) {
+			throw invalidState("Bang cham cong khong o trang thai cho duyet (" + timesheet.getStatus() + ")");
+		}
+		List<TimeEntry> entries = entriesOf(timesheet);
+		List<TimeEntry> submitted = entries.stream()
+				.filter(entry -> entry.getStatus() == TimeEntryStatus.SUBMITTED)
+				.toList();
+		if (submitted.isEmpty()) {
+			throw invalidState("Khong con dong gio cong cho duyet trong bang nay");
+		}
+		List<TimeEntry> targets = resolveTargets(submitted, request, pmId);
+
+		// TC-01: dong duyet chuyen APPROVED — bat bien theo QTN-10 (ImmutableEntryValidator chan sua/xoa).
+		targets.forEach(entry -> entry.setStatus(TimeEntryStatus.APPROVED));
+		timeEntryRepository.saveAll(targets);
+		List<String> warnings = updateTaskApprovedHours(targets);
+
+		boolean anyPendingLeft = entries.stream()
+				.anyMatch(entry -> entry.getStatus() == TimeEntryStatus.SUBMITTED);
+		if (!anyPendingLeft) {
+			timesheet.setStatus(TimesheetStatus.APPROVED);
+			timesheet.setApprovedBy(currentUsername());
+			timesheet.setApprovedAt(LocalDateTime.now(clock));
+			timesheet.setUpdatedAt(LocalDateTime.now(clock));
+			timesheetRepository.save(timesheet);
+		}
+
+		// TC-04: ghi nhat ky nguoi duyet, noi dung, thoi diem (actor tu SecurityContextHolder).
+		String note = request == null ? null : request.note();
+		auditLogService.record("Duyet bang cham cong", AuditTargetType.GENERAL, timesheet.getId(),
+				TIMESHEET_LABEL, "Tuan " + timesheet.getWeekStartDate() + " - " + timesheet.getWeekEndDate()
+						+ ": duyet " + targets.size() + " dong ("
+						+ sumHours(targets) + " gio)" + (anyPendingLeft ? " — con phan cho PM khac duyet" : "")
+						+ (note != null && !note.isBlank() ? " — ghi chu: " + note : ""));
+
+		// Hook TC-01 (tinh lai bien loi nhuan du an): module profitability chua trien khai —
+		// khi di vao hoat dong se duoc tinh lai tai day dua tren approvedHours moi cap nhat.
+
+		return timesheetMapper.toApprovalResponse(timesheet, warnings);
+	}
+
+	/**
+	 * NCL-06-CN-004: tu choi bang cham cong dang cho duyet.
+	 *
+	 * <p>Quy tac:</p>
+	 * <ul>
+	 *   <li>Chi tu choi duoc bang o trang thai {@code PENDING_APPROVAL}; bang khac trang thai do
+	 *       (vd da {@code APPROVED} — QTN-10 gio da duyet bat bien) bi tu choi voi loi
+	 *       {@code 400 INVALID_STATE} (TC-01, Given).</li>
+	 *   <li>Ly do tu choi la bat buoc — chan boi {@code @NotBlank} tren {@link TimesheetRejectReq}
+	 *       truoc khi vao service (TC-02).</li>
+	 *   <li>TC-02 (giong duyet): bulk = tu choi cac dong SUBMITTED thuoc du an cua PM hien tai;
+	 *       rieng le ({@code entryIds}) = chi tu choi cac dong do, van phai thuoc du an cua PM.</li>
+	 *   <li>Dong bi tu choi quay ve {@code DRAFT} de nguoi nop sua lai (TC-01, Then). Bang chi
+	 *       chuyen han sang {@code REJECTED} khi khong con dong {@code SUBMITTED} nao (cua bat ky PM
+	 *       nao) sau thao tac nay — neu con phan cua PM khac, bang giu nguyen
+	 *       {@code PENDING_APPROVAL} cho PM do xu ly tiep.</li>
+	 *   <li>TC-04: moi lan tu choi deu ghi Nhat ky he thong (nguoi thuc hien, noi dung, thoi diem).</li>
+	 * </ul>
+	 */
+	@Override
+	public TimesheetRejectRes reject(Long timesheetId, TimesheetRejectReq request) {
+		Long pmId = requireCurrentManager();
+		Timesheet timesheet = timesheetRepository.findById(timesheetId)
+				.orElseThrow(() -> notFound("Khong tim thay bang cham cong"));
+		if (timesheet.getStatus() != TimesheetStatus.PENDING_APPROVAL) {
+			throw invalidState("Bang cham cong khong o trang thai cho duyet (" + timesheet.getStatus() + ")");
+		}
+		List<TimeEntry> entries = entriesOf(timesheet);
+		List<TimeEntry> submitted = entries.stream()
+				.filter(entry -> entry.getStatus() == TimeEntryStatus.SUBMITTED)
+				.toList();
+		if (submitted.isEmpty()) {
+			throw invalidState("Khong con dong gio cong cho duyet trong bang nay");
+		}
+		List<TimeEntry> targets = resolveRejectTargets(submitted, request, pmId);
+
+		// TC-01: dong bi tu choi quay ve DRAFT de nguoi nop sua lai va nop lai.
+		targets.forEach(entry -> entry.setStatus(TimeEntryStatus.DRAFT));
+		timeEntryRepository.saveAll(targets);
 
 		String reason = request.reason().trim();
 		LocalDateTime now = LocalDateTime.now(clock);
-
-		timesheet.setStatus(TimesheetStatus.DRAFT);
-		timesheet.setRejectedBy(currentActorId());
-		timesheet.setRejectedAt(now);
-		timesheet.setRejectReason(reason);
-		// Bang quay ve DRAFT nen bo cac dau vet nop/duyet cu — tranh hien thi lan nop truoc do
-		// nhu the van dang cho duyet.
-		timesheet.setSubmittedBy(null);
-		timesheet.setSubmittedAt(null);
-		timesheet.setUpdatedAt(now);
-		Timesheet saved = timesheetRepository.save(timesheet);
-
-		// NCL-06-CN-004-TC-01: bao cho nguoi nop biet ly do bi tra ve. Kenh gui thong bao trong ung
-		// dung (NCL-14) chua duoc trien khai — Nhat ky he thong ben duoi la noi nguoi nop/nguoi lien
-		// quan tra cuu duoc ngay ly do va thoi diem bi tu choi; se noi vao NotificationDispatcher khi
-		// module Thong bao (NCL-14) duoc hien thuc.
-		auditLogService.record(
-				"Tu choi bang cham cong",
-				AuditTargetType.TIMESHEET,
-				saved.getId(),
-				"Bang cham cong tuan " + saved.getWeekStartDate() + " - " + saved.getWeekEndDate(),
-				"Tu choi bang cham cong cua nguoi dung #" + saved.getUserId() + " voi ly do: " + reason);
-
-		return toResponse(saved);
-	}
-
-	private TimesheetRes toResponse(Timesheet timesheet) {
-		return new TimesheetRes(timesheet.getId(), timesheet.getUserId(), timesheet.getWeekStartDate(),
-				timesheet.getWeekEndDate(), timesheet.getStatus(), timesheet.getTotalHours(),
-				timesheet.getSubmittedBy(), timesheet.getSubmittedAt(), timesheet.getApprovedBy(),
-				timesheet.getApprovedAt(), timesheet.getRejectedBy(), timesheet.getRejectedAt(),
-				timesheet.getRejectReason());
-	}
-
-	private Long currentActorId() {
-		var authentication = org.springframework.security.core.context.SecurityContextHolder.getContext()
-				.getAuthentication();
-		if (authentication != null
-				&& authentication.getPrincipal() instanceof com.serviceops.security.CustomUserDetails details) {
-			return details.getId();
+		boolean anyPendingLeft = entries.stream()
+				.anyMatch(entry -> entry.getStatus() == TimeEntryStatus.SUBMITTED);
+		if (!anyPendingLeft) {
+			timesheet.setStatus(TimesheetStatus.REJECTED);
+			timesheet.setRejectedBy(currentUsername());
+			timesheet.setRejectedAt(now);
+			timesheet.setRejectReason(reason);
+			timesheet.setUpdatedAt(now);
+			timesheetRepository.save(timesheet);
 		}
-		return null;
+
+		// TC-04: ghi nhat ky nguoi tu choi, noi dung (kem ly do), thoi diem.
+		auditLogService.record("Tu choi bang cham cong", AuditTargetType.GENERAL, timesheet.getId(),
+				TIMESHEET_LABEL, "Tuan " + timesheet.getWeekStartDate() + " - " + timesheet.getWeekEndDate()
+						+ ": tu choi " + targets.size() + " dong (" + sumHours(targets) + " gio)"
+						+ (anyPendingLeft ? " — con phan cho PM khac xu ly" : "") + " — ly do: " + reason);
+
+		// TC-01 (thong bao nguoi nop): kenh gui thong bao trong ung dung (Epic NCL-14) chua trien
+		// khai — Nhat ky he thong o tren la noi nguoi nop tra cuu duoc ngay ly do va thoi diem bi
+		// tu choi; noi vao NotificationDispatcher khi module Thong bao duoc hien thuc.
+
+		return timesheetMapper.toRejectResponse(timesheet, targets.size());
+	}
+
+	/** TC-02: bulk = tu choi cac dong thuoc du an cua PM; rieng le = theo entryIds, sai quyen tu choi. */
+	private List<TimeEntry> resolveRejectTargets(List<TimeEntry> submitted, TimesheetRejectReq request, Long pmId) {
+		if (request.entryIds() == null || request.entryIds().isEmpty()) {
+			List<TimeEntry> mine = submitted.stream()
+					.filter(entry -> managedByMe(entry, pmId))
+					.toList();
+			if (mine.isEmpty()) {
+				throw new AccessDeniedException(
+						"Khong co dong gio cong nao thuoc du an ma ban quan ly trong bang nay");
+			}
+			return mine;
+		}
+		Map<Long, TimeEntry> byId = submitted.stream()
+				.collect(Collectors.toMap(TimeEntry::getId, Function.identity()));
+		return request.entryIds().stream().distinct().map(id -> {
+			TimeEntry entry = byId.get(id);
+			if (entry == null) {
+				throw notFound("Khong tim thay dong gio cong cho duyet voi id=" + id);
+			}
+			if (taskRepository.findById(entry.getTaskId()).isEmpty()) {
+				throw notFound("Khong tim thay cong viec cua dong gio cong id=" + id);
+			}
+			if (!managedByMe(entry, pmId)) {
+				throw new AccessDeniedException("Dong gio cong thuoc du an ma ban khong quan ly");
+			}
+			return entry;
+		}).toList();
+	}
+
+	/** TC-02: bulk = duyet cac dong thuoc du an cua PM; rieng le = theo entryIds, sai quyen tu choi. */
+	private List<TimeEntry> resolveTargets(List<TimeEntry> submitted, TimesheetApproveReq request, Long pmId) {
+		if (request == null || request.entryIds() == null || request.entryIds().isEmpty()) {
+			List<TimeEntry> mine = submitted.stream()
+					.filter(entry -> managedByMe(entry, pmId))
+					.toList();
+			if (mine.isEmpty()) {
+				throw new AccessDeniedException(
+						"Khong co dong gio cong nao thuoc du an ma ban quan ly trong bang nay");
+			}
+			return mine;
+		}
+		Map<Long, TimeEntry> byId = submitted.stream()
+				.collect(Collectors.toMap(TimeEntry::getId, Function.identity()));
+		return request.entryIds().stream().distinct().map(id -> {
+			TimeEntry entry = byId.get(id);
+			if (entry == null) {
+				throw notFound("Khong tim thay dong gio cong cho duyet voi id=" + id);
+			}
+			if (taskRepository.findById(entry.getTaskId()).isEmpty()) {
+				throw notFound("Khong tim thay cong viec cua dong gio cong id=" + id);
+			}
+			if (!managedByMe(entry, pmId)) {
+				throw new AccessDeniedException("Dong gio cong thuoc du an ma ban khong quan ly");
+			}
+			return entry;
+		}).toList();
+	}
+
+	/** Cong tong gio da duyet vao approved_hours cua tung cong viec; bao canh bao >= 80% ngan sach (QTN-20). */
+	private List<String> updateTaskApprovedHours(List<TimeEntry> approvedEntries) {
+		List<String> warnings = new ArrayList<>();
+		for (Long taskId : approvedEntries.stream().map(TimeEntry::getTaskId)
+				.collect(Collectors.toCollection(LinkedHashSet::new))) {
+			Task task = taskRepository.findById(taskId).orElse(null);
+			if (task == null) {
+				continue;
+			}
+			BigDecimal approved = timeEntryRepository.sumHoursByTaskIdAndStatusIn(taskId,
+					List.of(TimeEntryStatus.APPROVED));
+			task.setApprovedHours(approved);
+			taskRepository.save(task);
+			if (task.getBudgetHours() != null && task.getBudgetHours().signum() > 0) {
+				BigDecimal ratio = approved.divide(task.getBudgetHours(), 4, RoundingMode.HALF_UP);
+				if (ratio.compareTo(TimesheetMapper.OVER_BUDGET_WARNING_RATIO) >= 0) {
+					warnings.add("Cong viec #" + task.getId() + " " + task.getName() + ": " + approved
+							+ "/" + task.getBudgetHours() + " gio — da vuot nguong 80% ngan sach (QTN-20)");
+				}
+			}
+		}
+		return warnings;
+	}
+
+	private List<TimeEntry> entriesOf(Timesheet timesheet) {
+		return timeEntryRepository.findByUserIdAndWorkDateBetweenOrderByIdAsc(
+				timesheet.getUserId(), timesheet.getWeekStartDate(), timesheet.getWeekEndDate());
+	}
+
+	/** TC-02: entry thuoc du an ma nguoi goi quan ly? entry -> task -> project.projectManagerId. */
+	private boolean managedByMe(TimeEntry entry, Long pmId) {
+		Task task = taskRepository.findById(entry.getTaskId()).orElse(null);
+		if (task == null) {
+			return false;
+		}
+		Project project = projectRepository.findById(task.getProjectId()).orElse(null);
+		return project != null && Objects.equals(project.getProjectManagerId(), pmId);
+	}
+
+	private BigDecimal sumHours(List<TimeEntry> entries) {
+		return entries.stream().map(TimeEntry::getHours).reduce(BigDecimal.ZERO, BigDecimal::add);
+	}
+
+	private Long requireCurrentManager() {
+		Long userId = currentUserScopeProvider.currentUserId();
+		if (userId == null) {
+			throw new AccessDeniedException("Chua xac thuc nguoi dung");
+		}
+		return userId;
+	}
+
+	private BusinessRuleException notFound(String message) {
+		return new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, message);
+	}
+
+	private BusinessRuleException invalidState(String message) {
+		return new BusinessRuleException(ErrorCode.INVALID_STATE, message);
+	}
+
+	private String currentUsername() {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		return authentication == null ? null : authentication.getName();
 	}
 }

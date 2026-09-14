@@ -36,7 +36,6 @@ public class AccessDeniedAuditRecorder {
     private static final Map<String, Feature> FEATURES = new LinkedHashMap<>();
 
     static {
-        FEATURES.put("/timesheets", new Feature(AuditTargetType.TIMESHEET, "Từ chối bảng chấm công"));
         FEATURES.put("/milestones", new Feature(AuditTargetType.GENERAL, "Quản lý mốc tiến độ dự án"));
         FEATURES.put("/risks", new Feature(AuditTargetType.GENERAL, "Quản lý rủi ro dự án"));
         FEATURES.put("/projects/from-template", new Feature(AuditTargetType.GENERAL, "Tạo dự án từ mẫu"));
@@ -45,6 +44,11 @@ public class AccessDeniedAuditRecorder {
         FEATURES.put("/customers", new Feature(AuditTargetType.CUSTOMER, "Hồ sơ khách hàng"));
         FEATURES.put("/activities", new Feature(AuditTargetType.GENERAL, "Hoạt động chăm sóc cơ hội"));
         FEATURES.put("/quotes", new Feature(AuditTargetType.GENERAL, "Báo giá cơ hội"));
+        FEATURES.put("/time-entries", new Feature(AuditTargetType.GENERAL, "Ghi giờ công theo công việc"));
+        FEATURES.put("/timesheets/pending", new Feature(AuditTargetType.TIMESHEET, "Duyệt bảng chấm công"));
+        FEATURES.put("/approve", new Feature(AuditTargetType.TIMESHEET, "Duyệt bảng chấm công"));
+        FEATURES.put("/reject", new Feature(AuditTargetType.TIMESHEET, "Từ chối bảng chấm công"));
+        FEATURES.put("/timesheets", new Feature(AuditTargetType.TIMESHEET, "Nộp bảng chấm công theo tuần"));
         FEATURES.put("/budget", new Feature(AuditTargetType.GENERAL, "Đặt ngân sách giờ công cho công việc"));
         FEATURES.put("/tasks", new Feature(AuditTargetType.GENERAL, "Cập nhật tiến độ công việc dự án"));
         FEATURES.put("/contracts", new Feature(AuditTargetType.GENERAL, "Tạo dự án từ hợp đồng"));

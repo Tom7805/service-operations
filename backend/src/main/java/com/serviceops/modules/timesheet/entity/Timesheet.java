@@ -7,6 +7,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -15,15 +16,19 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * NCL-06-CN-001..004: bang cham cong theo tuan cua mot nhan su — gom cac dong gio cong
- * (TimeEntry) trong khoang {@code weekStartDate}..{@code weekEndDate}.
+ * Bang cham cong tuan cua mot nhan su (NCL-06-CN-002, Epic NCL-06).
+ *
+ * <p>Tao khi nhan su nop tuan: {@code weekStartDate}/{@code weekEndDate} la
+ * khoang ngay cua tuan, {@code totalHours} la tong gio cong da ghi. Rang buoc
+ * {@code uk_timesheets_user_week} dam bao moi nhan su chi co mot bang cho mot
+ * tuan — nop lai (sau bi tu choi) cap nhat la ban ghi nay.</p>
  */
 @Getter
 @Setter
 @Entity
-@Table(name = "timesheets")
+@Table(name = "timesheets", uniqueConstraints = @UniqueConstraint(
+		name = "uk_timesheets_user_week", columnNames = { "user_id", "week_start_date" }))
 public class Timesheet extends BaseEntity {
-
 	@Column(name = "user_id", nullable = false)
 	private Long userId;
 
@@ -34,32 +39,34 @@ public class Timesheet extends BaseEntity {
 	private LocalDate weekEndDate;
 
 	@Enumerated(EnumType.STRING)
-	@Column(nullable = false, columnDefinition = "VARCHAR(20)")
-	private TimesheetStatus status = TimesheetStatus.DRAFT;
+	@Column(nullable = false, columnDefinition = "VARCHAR(30)")
+	private TimesheetStatus status;
 
-	@Column(name = "total_hours", nullable = false, precision = 6, scale = 2)
+	/** Tong gio cong cua tuan tai thoi diem nop. */
+	@Column(name = "total_hours", nullable = false, precision = 10, scale = 2)
 	private BigDecimal totalHours = BigDecimal.ZERO;
 
-	@Column(name = "submitted_by")
-	private Long submittedBy;
+	@Column(name = "submitted_by", length = 100)
+	private String submittedBy;
 
 	@Column(name = "submitted_at")
 	private LocalDateTime submittedAt;
 
-	@Column(name = "approved_by")
-	private Long approvedBy;
+	/** PM duyet cuoi cung — du bang duoc duyet day du (NCL-06-CN-003, TC-04). */
+	@Column(name = "approved_by", length = 100)
+	private String approvedBy;
 
 	@Column(name = "approved_at")
 	private LocalDateTime approvedAt;
 
-	/** NCL-06-CN-004: nguoi (quan ly du an) da tu choi lan gan nhat; null neu chua tung bi tu choi. */
-	@Column(name = "rejected_by")
-	private Long rejectedBy;
+	/** NCL-06-CN-004: PM tu choi lan gan nhat khien bang chuyen hoan toan sang REJECTED. */
+	@Column(name = "rejected_by", length = 100)
+	private String rejectedBy;
 
 	@Column(name = "rejected_at")
 	private LocalDateTime rejectedAt;
 
-	/** Ly do tu choi lan gan nhat — bat buoc phai co khi tu choi (NCL-06-CN-004-TC-02). */
+	/** Ly do tu choi — bat buoc phai co khi tu choi (NCL-06-CN-004-TC-02). */
 	@Column(name = "reject_reason", length = 1000)
 	private String rejectReason;
 

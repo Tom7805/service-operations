@@ -1,35 +1,65 @@
 package com.serviceops.modules.timesheet.controller;
 
 import com.serviceops.common.api.BaseRes;
+import com.serviceops.modules.timesheet.dto.request.TimesheetApproveReq;
 import com.serviceops.modules.timesheet.dto.request.TimesheetRejectReq;
-import com.serviceops.modules.timesheet.dto.response.TimesheetRes;
+import com.serviceops.modules.timesheet.dto.response.PendingTimesheetRes;
+import com.serviceops.modules.timesheet.dto.response.TimesheetApprovalRes;
+import com.serviceops.modules.timesheet.dto.response.TimesheetRejectRes;
 import com.serviceops.modules.timesheet.service.TimesheetApprovalService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 /**
- * NCL-06-CN-004: tu choi bang cham cong.
+ * API duyet / tu choi bang cham cong (NCL-06-CN-003, NCL-06-CN-004, Epic NCL-06).
  *
- * <p>Chi Quan ly du an (VT-02) duoc thao tac (TC-03). Vai tro khac bi tu choi 403 va bi ghi nhat ky
- * lan tu choi boi {@code AccessDeniedAuditRecorder}.</p>
+ * <p>Chi Quan ly du an ({@code VT-02}) duoc goi; luat "chi duyet/tu choi entry thuoc
+ * du an minh quan ly" kiem o tang service (TC-02) — PM du yeu nhan
+ * {@code 403 FORBIDDEN} khi thao tac tren entry cua du an nguoi khac. Vai tro khac
+ * bi tu choi 403 va bi ghi nhat ky lan tu choi boi {@code AccessDeniedAuditRecorder}
+ * (NCL-06-CN-004-TC-03).</p>
  */
 @RestController
-@RequestMapping("/timesheets")
 @RequiredArgsConstructor
 public class TimesheetApprovalController {
 
 	private final TimesheetApprovalService timesheetApprovalService;
 
-	/** TC-01/TC-02: tu choi bang cham cong dang cho duyet, bat buoc kem ly do. */
-	@PutMapping("/{timesheetId}/reject")
+	/** Hang cho duyet: cac bang co dong pending thuoc du an cua PM hien tai. */
+	@GetMapping("/timesheets/pending")
 	@PreAuthorize("hasRole('VT-02')")
-	public BaseRes<TimesheetRes> reject(@PathVariable Long timesheetId,
+	public BaseRes<List<PendingTimesheetRes>> findPending() {
+		return BaseRes.ok(timesheetApprovalService.findPending());
+	}
+
+	/** Duyet nguyen bang (khong truyen entryIds) hoac tung dong (truyen entryIds). */
+	@PostMapping("/timesheets/{timesheetId}/approve")
+	@PreAuthorize("hasRole('VT-02')")
+	public BaseRes<TimesheetApprovalRes> approve(@PathVariable Long timesheetId,
+			@Valid @RequestBody(required = false) TimesheetApproveReq request) {
+		TimesheetApprovalRes result = timesheetApprovalService.approve(timesheetId, request);
+		String message = result.overBudgetWarnings().isEmpty()
+				? "Duyet bang cham cong thanh cong"
+				: "Duyet bang cham cong thanh cong — canh bao: "
+						+ String.join("; ", result.overBudgetWarnings());
+		return BaseRes.ok(message, result);
+	}
+
+	/**
+	 * NCL-06-CN-004: tu choi nguyen bang (khong truyen entryIds) hoac tung dong (truyen
+	 * entryIds), bat buoc kem ly do. Dong bi tu choi quay ve nhap (DRAFT) de nguoi nop sua lai.
+	 */
+	@PostMapping("/timesheets/{timesheetId}/reject")
+	@PreAuthorize("hasRole('VT-02')")
+	public BaseRes<TimesheetRejectRes> reject(@PathVariable Long timesheetId,
 			@Valid @RequestBody TimesheetRejectReq request) {
 		return BaseRes.ok("Tu choi bang cham cong thanh cong",
 				timesheetApprovalService.reject(timesheetId, request));

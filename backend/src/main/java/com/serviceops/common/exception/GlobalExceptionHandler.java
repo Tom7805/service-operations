@@ -13,8 +13,10 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -73,6 +75,23 @@ public class GlobalExceptionHandler {
                 .build();
 
         return ResponseEntity.badRequest().body(body);
+    }
+
+    // Thieu @RequestParam bat buoc (vd GET /me/time-entries thieu weekFrom/weekTo) — truoc day roi
+    // xuong handleUnexpected() va tra nham 500 INTERNAL_ERROR thay vi 400 VALIDATION_ERROR.
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingParam(MissingServletRequestParameterException ex) {
+        return ResponseEntity.badRequest()
+                .body(ErrorResponse.of(ErrorCode.VALIDATION_ERROR.name(),
+                        "Thieu tham so bat buoc: " + ex.getParameterName()));
+    }
+
+    // Sai kieu du lieu tham so (vd weekFrom khong dung dinh dang ngay) — cung tung roi xuong 500.
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        return ResponseEntity.badRequest()
+                .body(ErrorResponse.of(ErrorCode.VALIDATION_ERROR.name(),
+                        "Tham so " + ex.getName() + " khong dung dinh dang"));
     }
 
     @ExceptionHandler(Exception.class)
