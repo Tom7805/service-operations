@@ -36,6 +36,16 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
 	Optional<TimeEntry> findByUserIdAndTaskIdAndWorkDate(Long userId, Long taskId, LocalDate workDate);
 
 	/**
+	 * Da co ban ghi (bat ky trang thai/vai tro nao) cho cap user/task/ngay nay chua.
+	 *
+	 * <p>Thay {@link #findByUserIdAndTaskIdAndWorkDate} lam dieu kien chan tao trung o
+	 * {@code TimeEntryServiceImpl#create} — sau khi bo rang buoc duy nhat DB (NCL-06-CN-005,
+	 * migration V60) mot cap co the co nhieu hon mot dong (goc + dao + sua), khien phuong thuc
+	 * tra {@code Optional} nem loi khi co nhieu hon mot ket qua.</p>
+	 */
+	boolean existsByUserIdAndTaskIdAndWorkDate(Long userId, Long taskId, LocalDate workDate);
+
+	/**
 	 * Tong gio cong da ghi cua mot cong viec, loc theo trang thai
 	 * (VD: chi tinh DRAFT + SUBMITTED de canh bao gan vuot ngan sach QTN-20;
 	 * chi tinh APPROVED khi cap nhat approved_hours sau khi duyet).
@@ -55,4 +65,19 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
 			WHERE e.userId = :userId AND e.workDate = :workDate
 			""")
 	BigDecimal sumHoursByUserIdAndWorkDate(@Param("userId") Long userId, @Param("workDate") LocalDate workDate);
+
+	/**
+	 * Danh sach nhan su co dong gio cong DRAFT trong mot tuan (NCL-06-CN-009).
+	 *
+	 * <p>Ung vien "chua nop bang cham cong": co gio cong ghi trong tuan nhung con
+	 * o trang thai nhap, chua chuyen SUBMITTED (tuc chua goi API nop tuan).</p>
+	 */
+	@Query("""
+			SELECT DISTINCT e.userId
+			FROM TimeEntry e
+			WHERE e.status = com.serviceops.modules.timesheet.enums.TimeEntryStatus.DRAFT
+			AND e.workDate BETWEEN :weekFrom AND :weekTo
+			""")
+	List<Long> findDistinctUserIdsWithDraftEntriesBetween(
+			@Param("weekFrom") LocalDate weekFrom, @Param("weekTo") LocalDate weekTo);
 }

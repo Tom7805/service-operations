@@ -24,6 +24,9 @@ public record TimeEntryCreateReq(
 		@DecimalMin(value = "0.01", message = "So gio cong phai lon hon 0")
 		BigDecimal hours,
 
+		@jakarta.validation.constraints.NotBlank(message = "Ghi chu khong duoc de trong")
 		@Size(max = 1000, message = "Ghi chu khong duoc vuot 1000 ky tu")
-		String note) {
+		String note,
+
+		Boolean billable) {
 }

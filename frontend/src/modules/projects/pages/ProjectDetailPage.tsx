@@ -21,6 +21,8 @@ export interface ProjectDetailPageProps {
   onBack?: () => void;
   /** NCL-05-CN-009: điều hướng sang trang rủi ro dự án (ProjectRiskPage) — do màn cha quyết định. */
   onOpenRisks?: (projectId: number) => void;
+  /** NCL-06-CN-001: điều hướng sang màn ghi giờ công (TimeEntryPage) cho một công việc — do màn cha quyết định. */
+  onLogTime?: (projectId: number, taskId: number, taskName: string) => void;
   initialProject?: ProjectRes;
   initialWbs?: WorkBreakdownRes[];
 }
@@ -48,6 +50,7 @@ export default function ProjectDetailPage({
   currentUserRoles = ['VT-02'],
   onBack,
   onOpenRisks,
+  onLogTime,
   initialProject,
   initialWbs,
 }: ProjectDetailPageProps) {
@@ -99,6 +102,9 @@ export default function ProjectDetailPage({
   const canEdit = currentUserRoles.includes('VT-02') && isProjectOpen;
   // Quyền đóng dự án (NCL-05-CN-006): chỉ Quản lý dự án và dự án phải đang RUNNING
   const canClose = currentUserRoles.includes('VT-02') && isProjectOpen;
+  // Quyền ghi giờ công (NCL-06-CN-001): chỉ Nhân viên chuyên môn và dự án phải đang RUNNING
+  // (việc có đúng là người được giao công việc hay không do backend kiểm ở TimeEntryPage).
+  const canLogTime = currentUserRoles.includes('VT-03') && isProjectOpen;
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -379,10 +385,12 @@ export default function ProjectDetailPage({
             items={wbs}
             isProjectOpen={isProjectOpen}
             canEdit={canEdit}
+            canLogTime={canLogTime}
             onAddSubPackage={handleOpenAddSubPackage}
             onAddTask={handleOpenAddTask}
             onDeletePackage={handleDeletePackage}
             onSetBudget={handleOpenSetBudget}
+            onLogTime={onLogTime ? (task) => onLogTime(projectId, task.id, task.name) : undefined}
           />
         )}
       </div>

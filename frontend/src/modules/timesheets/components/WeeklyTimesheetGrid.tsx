@@ -1,136 +1,116 @@
 import { ICONS } from '../../../components/common/icons';
-import TableSkeleton from '../../../components/common/TableSkeleton';
-import type { TimeEntryStatus, TimesheetSummary } from '../types/timesheetTypes';
-import { formatDayLabel, formatIsoDate } from '../utils/weekRange';
+import type { TimesheetSummaryRes } from '../types/timesheetTypes';
+import { listWeekDates, weekdayLabel } from '../utils/weekRange';
 
-interface WeeklyTimesheetGridProps {
-  summaries: TimesheetSummary[];
-  /** 7 ngày liên tiếp của tuần đang xem, thứ Hai → Chủ Nhật. */
-  days: Date[];
-  loading: boolean;
+export interface WeeklyTimesheetGridProps {
+  weekFrom: string;
+  weekTo: string;
+  summaries: TimesheetSummaryRes[];
 }
 
-const ENTRY_STATUS_META: Record<TimeEntryStatus, { label: string; badge: string }> = {
-  DRAFT: { label: 'Đang nhập', badge: 'badge--gray' },
-  SUBMITTED: { label: 'Đã nộp, chờ duyệt', badge: 'badge--blue' },
-  APPROVED: { label: 'Đã duyệt', badge: 'badge--green' },
-  REJECTED: { label: 'Bị từ chối', badge: 'badge--red' },
-};
+/**
+ * Lưới giờ công tuần của chính mình, nhóm theo công việc (NCL-06-CN-001).
+ * Thuần hiển thị dữ liệu từ `GET /me/time-entries` — không gọi API, không có thao tác
+ * sửa/xoá (những thao tác đó cần biết `projectId` của công việc, thứ mà endpoint tổng hợp
+ * tuần không trả về; xem chi tiết/sửa/xoá ở đúng công việc trong dự án tương ứng).
+ */
+export default function WeeklyTimesheetGrid({ weekFrom, weekTo, summaries }: WeeklyTimesheetGridProps) {
+  const days = listWeekDates(weekFrom);
 
-/** Bỏ số 0 thừa: 8 giờ hiện "8", 7.5 giờ hiện "7.5". */
-function formatHours(hours: number): string {
-  return Number(hours.toFixed(2)).toString();
-}
-
-export default function WeeklyTimesheetGrid({ summaries, days, loading }: WeeklyTimesheetGridProps) {
-  const columnCount = days.length + 2; // Công việc + 7 ngày + Tổng/ngân sách
-
-  const entryByDay = (summary: TimesheetSummary, day: Date) => {
-    const iso = formatIsoDate(day);
-    return summary.entries.find((entry) => entry.workDate === iso) ?? null;
-  };
-
-  const dailyTotals = days.map((day) => {
-    const iso = formatIsoDate(day);
-    return summaries.reduce((sum, summary) => {
-      const entry = summary.entries.find((e) => e.workDate === iso);
-      return sum + (entry ? entry.hours : 0);
-    }, 0);
-  });
-
-  const grandTotal = summaries.reduce((sum, s) => sum + s.totalHours, 0);
-  const isEmpty = summaries.length === 0 || summaries.every((s) => s.entries.length === 0);
+  if (summaries.length === 0) {
+    return (
+      <div className="table-empty-state" data-testid="weekly-grid-empty" style={{ padding: '36px 20px', textAlign: 'center' }}>
+        <div className="table-empty-state__icon" style={{ fontSize: '36px', color: '#94A3B8', marginBottom: '8px' }}>
+          {ICONS.clock}
+        </div>
+        <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: '#1E293B' }}>Chưa ghi giờ công nào trong tuần này</h4>
+        <p style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }}>
+          Từ {weekFrom} đến {weekTo} — mở một công việc được giao trong dự án để bắt đầu ghi giờ công.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="user-table-card">
-      <div className="table-responsive">
-        <table className="user-data-table timesheet-grid">
-          <thead>
-            <tr>
-              <th>Công việc</th>
-              {days.map((day) => (
-                <th key={day.toISOString()} className="timesheet-grid__day-head">
-                  {formatDayLabel(day)}
-                </th>
-              ))}
-              <th className="timesheet-grid__total-head">Tổng / Ngân sách</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <TableSkeleton columns={columnCount} rows={3} />
-            ) : isEmpty ? (
-              <tr>
-                <td colSpan={columnCount}>
-                  <div className="table-empty-state">
-                    <span className="empty-icon">{ICONS.calendar}</span>
-                    <h3>Chưa có giờ công nào trong tuần này</h3>
-                    <p>Hãy ghi giờ công cho các công việc được giao trước khi nộp bảng chấm công tuần.</p>
-                  </div>
+    <div className="table-responsive" data-testid="weekly-grid">
+      <table className="user-data-table">
+        <thead>
+          <tr>
+            <th>Công việc</th>
+            {days.map((day) => (
+              <th key={day} style={{ width: '70px', textAlign: 'center' }}>
+                {weekdayLabel(day)}
+                <br />
+                <span style={{ fontWeight: 400, fontSize: '11px' }}>{day.slice(5)}</span>
+              </th>
+            ))}
+            <th style={{ width: '90px', textAlign: 'center' }}>Tổng</th>
+            <th style={{ width: '150px' }}>Ngân sách</th>
+          </tr>
+        </thead>
+        <tbody>
+          {summaries.map((s) => {
+            const hoursByDate = new Map(s.entries.map((e) => [e.workDate, e]));
+            const usagePercent = s.usageRatio != null ? Math.min(s.usageRatio * 100, 999) : null;
+            return (
+              <tr key={s.taskId} data-testid={`weekly-grid-row-${s.taskId}`}>
+                <td>
+                  <strong>{s.taskName || `Công việc #${s.taskId}`}</strong>
                 </td>
-              </tr>
-            ) : (
-              summaries.map((summary) => (
-                <tr key={summary.taskId}>
-                  <td>
-                    <span className="timesheet-grid__task-name" title={summary.taskName}>
-                      {summary.taskName}
-                    </span>
-                  </td>
-                  {days.map((day) => {
-                    const entry = entryByDay(summary, day);
-                    if (!entry) {
-                      return (
-                        <td key={day.toISOString()} className="timesheet-grid__cell timesheet-grid__cell--empty">
-                          –
-                        </td>
-                      );
-                    }
-                    const meta = ENTRY_STATUS_META[entry.status];
-                    const title = entry.note ? `${meta.label} — ${entry.note}` : meta.label;
-                    return (
-                      <td key={day.toISOString()} className="timesheet-grid__cell" title={title}>
-                        <span className="timesheet-grid__hours">{formatHours(entry.hours)}</span>
-                        <span className={`timesheet-grid__dot timesheet-grid__dot--${entry.status.toLowerCase()}`} aria-hidden="true" />
-                      </td>
-                    );
-                  })}
-                  <td className="timesheet-grid__total-cell">
-                    <strong className="timesheet-grid__hours">{formatHours(summary.totalHours)} giờ</strong>
-                    {summary.budgetHours != null && (
-                      <div className="timesheet-grid__budget">
-                        <span>
-                          Ngân sách {formatHours(summary.approvedHours ?? 0)}/{formatHours(summary.budgetHours)} giờ
-                        </span>
-                        {summary.overBudgetWarning && (
-                          <span className="user-tag badge--gold" title="Đã dùng từ 80% ngân sách công việc trở lên (QTN-20)">
-                            {ICONS.alertTriangle} Sắp/đã vượt ngân sách
-                          </span>
-                        )}
+                {days.map((day) => {
+                  const entry = hoursByDate.get(day);
+                  return (
+                    <td
+                      key={day}
+                      style={{ textAlign: 'center' }}
+                      data-testid={`weekly-grid-cell-${s.taskId}-${day}`}
+                      title={entry?.note ?? undefined}
+                    >
+                      {entry ? entry.hours : '—'}
+                    </td>
+                  );
+                })}
+                <td style={{ textAlign: 'center', fontWeight: 600 }} data-testid={`weekly-grid-total-${s.taskId}`}>
+                  {s.totalHours}
+                </td>
+                <td>
+                  {s.budgetHours != null ? (
+                    <div>
+                      <div
+                        style={{
+                          height: '6px',
+                          borderRadius: '3px',
+                          background: '#E2E8F0',
+                          overflow: 'hidden',
+                          marginBottom: '4px',
+                        }}
+                      >
+                        <div
+                          style={{
+                            height: '100%',
+                            width: `${Math.min(usagePercent ?? 0, 100)}%`,
+                            background: s.overBudgetWarning ? '#DC2626' : '#2563EB',
+                          }}
+                        />
                       </div>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-          {!isEmpty && !loading && (
-            <tfoot>
-              <tr className="timesheet-grid__footer-row">
-                <td>Tổng cộng theo ngày</td>
-                {dailyTotals.map((total, index) => (
-                  <td key={days[index].toISOString()} className="timesheet-grid__cell">
-                    <strong className="timesheet-grid__hours">{total > 0 ? formatHours(total) : '–'}</strong>
-                  </td>
-                ))}
-                <td className="timesheet-grid__total-cell">
-                  <strong className="timesheet-grid__hours">{formatHours(grandTotal)} giờ</strong>
+                      <span
+                        className={`badge ${s.overBudgetWarning ? 'badge--pink' : 'badge--green'}`}
+                        data-testid={`weekly-grid-warning-${s.taskId}`}
+                        style={{ fontSize: '11px' }}
+                      >
+                        {usagePercent?.toFixed(0)}% / {s.budgetHours} giờ
+                        {s.overBudgetWarning ? ' ⚠' : ''}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="field-hint">Chưa đặt ngân sách</span>
+                  )}
                 </td>
               </tr>
-            </tfoot>
-          )}
-        </table>
-      </div>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
