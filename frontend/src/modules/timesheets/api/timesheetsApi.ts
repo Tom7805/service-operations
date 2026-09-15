@@ -1,6 +1,7 @@
 import type {
   AdjustmentTraceRes,
   PendingTimesheetRes,
+  PeriodLockReq,
   TimeEntryAdjustmentReq,
   TimeEntryCreateReq,
   TimeEntryRes,
@@ -8,6 +9,7 @@ import type {
   TimeEntryUpdateReq,
   TimesheetApprovalRes,
   TimesheetApproveReq,
+  TimesheetPeriodRes,
   TimesheetRejectReq,
   TimesheetRejectRes,
   TimesheetRes,
@@ -221,5 +223,37 @@ export async function adjustTimeEntry(
 export async function getAdjustmentHistory(projectId: number, taskId: number): Promise<AdjustmentTraceRes[]> {
   return requestBackend<AdjustmentTraceRes[]>(`${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/adjustments`, {
     method: 'GET',
+  });
+}
+
+/**
+ * NCL-06-CN-006: danh sách kỳ chấm công, mới nhất trước.
+ * GET /timesheet-periods
+ */
+export async function getTimesheetPeriods(): Promise<TimesheetPeriodRes[]> {
+  return requestBackend<TimesheetPeriodRes[]>(`${API_BASE_URL}/timesheet-periods`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * NCL-06-CN-006: khóa kỳ chấm công của một tháng — nếu kỳ chưa tồn tại thì tự tạo rồi khóa
+ * luôn. Chặn khóa nếu còn bảng chấm công PENDING_APPROVAL giao với khoảng ngày của kỳ.
+ * POST /timesheet-periods/lock
+ */
+export async function lockTimesheetPeriod(payload: PeriodLockReq): Promise<TimesheetPeriodRes> {
+  return requestBackend<TimesheetPeriodRes>(`${API_BASE_URL}/timesheet-periods/lock`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * NCL-06-CN-006: mở lại một kỳ chấm công đã khóa.
+ * POST /timesheet-periods/{periodId}/unlock
+ */
+export async function unlockTimesheetPeriod(periodId: number): Promise<TimesheetPeriodRes> {
+  return requestBackend<TimesheetPeriodRes>(`${API_BASE_URL}/timesheet-periods/${periodId}/unlock`, {
+    method: 'POST',
   });
 }
