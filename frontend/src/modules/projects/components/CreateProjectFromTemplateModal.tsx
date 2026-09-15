@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
 import type {
+  AssignableProjectManager,
   ContractTargetForProject,
   ProjectCreateFromTemplateReq,
   ProjectRes,
@@ -11,6 +12,7 @@ import type {
 import {
   createProjectFromTemplate,
   deleteWorkPackage,
+  fetchAssignableProjectManagers,
   fetchProjectTemplates,
   getWorkBreakdown,
   ProjectsApiError,
@@ -165,6 +167,31 @@ export default function CreateProjectFromTemplateModal({
       }
     }
   }, [isOpen, contract, isPM, isContractActive, currentUserId, loadTemplates]);
+
+  // Tải danh sách người dùng ACTIVE cho ô chọn "Người quản lý dự án"
+  useEffect(() => {
+    if (!isOpen || !isPM || !isContractActive) return;
+    let cancelled = false;
+    setLoadingManagers(true);
+    setManagersError(null);
+    fetchAssignableProjectManagers()
+      .then((list) => {
+        if (!cancelled) setManagers(list);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setManagersError(
+            err instanceof ProjectsApiError ? err.message : 'Không thể tải danh sách người dùng.'
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingManagers(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, isPM, isContractActive]);
 
   // Tải cây WBS của dự án vừa tạo
   const loadCreatedProjectWbs = useCallback(async (projectId: number) => {

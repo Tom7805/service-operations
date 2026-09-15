@@ -53,6 +53,7 @@ vi.mock('../../projects/api/projectsApi', () => ({
   createWorkPackage: vi.fn(),
   createTask: vi.fn(),
   deleteWorkPackage: vi.fn(),
+  fetchAssignableProjectManagers: vi.fn().mockResolvedValue([]),
   ProjectsApiError: class extends Error {
     constructor(public statusCode: number, message: string, public errorCode?: string) {
       super(message);

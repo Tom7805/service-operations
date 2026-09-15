@@ -514,7 +514,9 @@ export default function App() {
         {/* key doi theo tab: React thay toan bo cay con, nen hieu ung xo theo tang
             chay lai o MOI lan chuyen trang chu khong chi lan tai dau tien. */}
         <main className="app-content" id="noi-dung-chinh" tabIndex={-1} key={activeTab}>
-          {activeTab === 'CHANGE_PASSWORD' ? (
+          {activeTab === 'MY_TASKS' ? (
+            <MyTasksPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+          ) : activeTab === 'CHANGE_PASSWORD' ? (
             <ChangePasswordPage onBack={() => setActiveTab('DEPARTMENTS')} onPasswordChanged={handleLogout} />
           ) : activeTab === 'NOTIFICATIONS' ? (
             <NotificationCenterPage />

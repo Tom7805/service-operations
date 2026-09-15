@@ -177,7 +177,9 @@ export default function CustomerOverviewPanel({
       status: item.status ?? '',
       customerId: customerId,
       customerName: customerName,
+      contractType: item.contractType ?? undefined,
       totalValue: item.amount,
+      limitValue: item.limitValue,
       startDate: item.date,
       contractType: item.contractType ?? undefined,
     });
@@ -195,7 +197,9 @@ export default function CustomerOverviewPanel({
       status: item.status ?? '',
       customerId: customerId,
       customerName: customerName,
+      contractType: item.contractType ?? undefined,
       totalValue: item.amount,
+      limitValue: item.limitValue,
       startDate: item.date,
       contractType: item.contractType ?? undefined,
     });

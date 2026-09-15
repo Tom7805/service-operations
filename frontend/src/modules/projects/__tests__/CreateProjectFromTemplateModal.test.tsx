@@ -4,6 +4,7 @@ import CreateProjectFromTemplateModal from '../components/CreateProjectFromTempl
 import * as projectsApi from '../api/projectsApi';
 import * as usersApi from '../../users/api/usersApi';
 import type {
+  AssignableProjectManager,
   ContractTargetForProject,
   ProjectRes,
   ProjectTemplateRes,
@@ -32,9 +33,16 @@ vi.mock('../api/projectsApi', () => {
     createProjectFromTemplate: vi.fn(),
     getWorkBreakdown: vi.fn(),
     deleteWorkPackage: vi.fn(),
+    fetchAssignableProjectManagers: vi.fn(),
     ProjectsApiError: MockProjectsApiError,
   };
 });
+
+const mockManagers: AssignableProjectManager[] = [
+  { id: 7, username: 'pm01', fullName: 'Nguyễn Văn A' },
+  { id: 12, username: 'pm02', fullName: 'Trần Thị B' },
+  { id: 99, username: 'boss', fullName: 'Người dùng đang đăng nhập' },
+];
 
 const mockContract: ContractTargetForProject = {
   id: 1,
@@ -308,7 +316,8 @@ describe('CreateProjectFromTemplateModal Component (NCL-05-CN-007)', () => {
       expect(screen.getByText('Hạng mục rỗng cần xóa')).toBeInTheDocument();
     });
 
-    // Kiểm tra thao tác xóa hạng mục trên cây WBS (TC-02)
+    // Kiểm tra thao tác xóa hạng mục trên cây WBS (TC-02) — menu ⋮ gộp thao tác theo dòng
+    fireEvent.click(screen.getByRole('button', { name: 'Thao tác hạng mục Hạng mục rỗng cần xóa' }));
     const deleteBtn = screen.getByTestId('delete-wp-btn-32');
     expect(deleteBtn).toBeInTheDocument();
     fireEvent.click(deleteBtn);

@@ -84,6 +84,7 @@ public class ProjectTemplateServiceImpl implements ProjectTemplateService {
 	public ProjectRes createProjectFromTemplate(Long contractId, ProjectCreateFromTemplateReq request) {
 		Contract contract = requireActiveContract(contractId);
 		validateDates(request);
+		requireNoRunningProject(contractId);
 		User manager = requireActiveManager(request.projectManagerId());
 		ProjectTemplate template = requireActiveTemplate(request.templateId());
 
@@ -112,6 +113,16 @@ public class ProjectTemplateServiceImpl implements ProjectTemplateService {
 		auditLogger.recordCreateFromTemplate(project.getId(), contractId, template.getCode(),
 				"Tao du an " + project.getProjectCode() + " tu hop dong " + contract.getContractCode());
 		return toResponse(project);
+	}
+
+	private void requireNoRunningProject(Long contractId) {
+		boolean hasRunningProject = projectRepository.findByContractIdOrderByIdDesc(contractId).stream()
+				.anyMatch(p -> p.getStatus() != ProjectStatus.CLOSED);
+		if (hasRunningProject) {
+			throw new BusinessRuleException(ErrorCode.INVALID_STATE,
+					"Hop dong nay da co du an dang chay (RUNNING); vui long dong du an hien tai truoc khi tao du an moi, "
+							+ "de tong ngan sach cac du an khong vuot han muc hop dong");
+		}
 	}
 
 	private Contract requireActiveContract(Long contractId) {

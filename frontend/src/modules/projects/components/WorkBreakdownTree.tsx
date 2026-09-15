@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
+import RowActionsMenu from '../../../components/common/RowActionsMenu';
 import type { TaskRes, WorkBreakdownRes, TaskStatus } from '../types/taskTypes';
 
 export interface WorkBreakdownTreeProps {
@@ -219,35 +220,35 @@ export default function WorkBreakdownTree({
 
           <div className="wbs-package-actions">
             {canEdit && isProjectOpen && (
-              <>
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-xs"
-                  onClick={() => onAddTask?.(wp, null)}
-                  data-testid={`add-task-btn-${wp.id}`}
-                >
-                  + Thêm việc
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-xs"
-                  onClick={() => onAddSubPackage?.(wp)}
-                  data-testid={`add-subpackage-btn-${wp.id}`}
-                >
-                  + Mục con
-                </button>
-                {canDelete && (
-                  <button
-                    type="button"
-                    className="btn btn-danger btn-xs"
-                    onClick={() => onDeletePackage?.(wp)}
-                    data-testid={`delete-wp-btn-${wp.id}`}
-                    title="Xóa hạng mục rỗng"
-                  >
-                    Xóa
-                  </button>
-                )}
-              </>
+              <RowActionsMenu
+                ariaLabel={`Thao tác hạng mục ${wp.name}`}
+                actions={[
+                  {
+                    key: 'add-task',
+                    label: 'Thêm việc',
+                    icon: ICONS.plus,
+                    onClick: () => onAddTask?.(wp, null),
+                    testId: `add-task-btn-${wp.id}`,
+                  },
+                  {
+                    key: 'add-subpackage',
+                    label: 'Thêm mục con',
+                    icon: ICONS.folder,
+                    onClick: () => onAddSubPackage?.(wp),
+                    testId: `add-subpackage-btn-${wp.id}`,
+                  },
+                  {
+                    key: 'delete',
+                    label: 'Xóa hạng mục',
+                    icon: ICONS.trash,
+                    tone: 'danger',
+                    onClick: () => onDeletePackage?.(wp),
+                    disabled: !canDelete,
+                    disabledReason: 'Chỉ xóa được hạng mục rỗng — không còn hạng mục con hoặc công việc bên trong',
+                    testId: `delete-wp-btn-${wp.id}`,
+                  },
+                ]}
+              />
             )}
           </div>
         </div>

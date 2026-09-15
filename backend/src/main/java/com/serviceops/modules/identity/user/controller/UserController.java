@@ -37,6 +37,17 @@ public class UserController {
         return BaseRes.ok(userService.findAll(keyword));
     }
 
+    /**
+     * Danh sach tai khoan dang ACTIVE — dung cho combobox "Nguoi quan ly du an"
+     * (NCL-05-CN-001/007). Quan ly du an (VT-02) can du lieu nay nhung khong duoc
+     * phep goi /users day du (chi VT-07), nen ghi de phan quyen o muc method nay.
+     */
+    @GetMapping("/assignable-for-project")
+    @PreAuthorize("hasRole('VT-02') or hasRole('VT-07')")
+    public BaseRes<List<AssignableProjectManagerRes>> findAssignableProjectManagers() {
+        return BaseRes.ok(userService.findAssignableProjectManagers());
+    }
+
     @GetMapping("/{id}")
     public BaseRes<UserRes> findById(@PathVariable Long id) {
         return BaseRes.ok(userService.findById(id));

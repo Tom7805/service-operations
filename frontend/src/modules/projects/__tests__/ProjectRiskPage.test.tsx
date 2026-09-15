@@ -28,9 +28,15 @@ vi.mock('../api/projectsApi', () => {
     updateRisk: vi.fn(),
     changeRiskStatus: vi.fn(),
     deleteRisk: vi.fn(),
+    fetchAssignableProjectManagers: vi.fn(),
     ProjectsApiError: MockProjectsApiError,
   };
 });
+
+const mockWatchers = [
+  { id: 7, username: 'pm01', fullName: 'Nguyễn Văn A' },
+  { id: 9, username: 'pm.lead', fullName: 'Trần Thu Hà' },
+];
 
 const mockProjectRunning: ProjectRes = {
   id: 1,
@@ -207,6 +213,7 @@ describe('ProjectRiskPage (NCL-05-CN-009 — Quản lý rủi ro dự án)', () 
     await waitFor(() => expect(screen.getByTestId('risk-empty')).toBeInTheDocument());
 
     fireEvent.click(screen.getByTestId('btn-add-risk'));
+    await screen.findByRole('option', { name: /Nguyễn Văn A/i });
     fireEvent.click(screen.getByTestId('submit-risk-btn'));
 
     expect(await screen.findByTestId('error-risk-description')).toHaveTextContent(

@@ -161,7 +161,7 @@ public class TaskServiceImpl implements TaskService {
 	private TaskRes toResponse(Task task) {
 		return new TaskRes(task.getId(), task.getProjectId(), task.getWorkPackageId(), task.getParentTaskId(),
 				task.getName(), task.getDescription(), task.getExpectedStartDate(), task.getExpectedEndDate(),
-				task.getStatus());
+				task.getStatus(), task.getBudgetHours());
 	}
 
 	private User requireAssignableUser(Long userId) {

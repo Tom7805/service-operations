@@ -5,6 +5,7 @@ import com.serviceops.modules.identity.employee.dto.request.EmployeeCreateReq;
 import com.serviceops.modules.identity.employee.dto.request.EmployeeSearchReq;
 import com.serviceops.modules.identity.employee.dto.request.EmployeeUpdateReq;
 import com.serviceops.modules.identity.employee.dto.request.EmploymentContractCreateReq;
+import com.serviceops.modules.identity.employee.dto.response.AssignableEmployeeRes;
 import com.serviceops.modules.identity.employee.dto.response.AssignableUserRes;
 import com.serviceops.modules.identity.employee.dto.response.EmployeeDetailRes;
 import com.serviceops.modules.identity.employee.dto.response.EmployeeRes;
@@ -47,6 +48,17 @@ public class EmployeeController {
     @GetMapping("/assignable-users")
     public BaseRes<List<AssignableUserRes>> findAssignableUsers() {
         return BaseRes.ok(employeeService.findAssignableUsers());
+    }
+
+    /**
+     * Nhan su du dieu kien duoc giao viec (ACTIVE, chua het han hop dong lao dong) — dung cho combobox
+     * "Phan cong" trong cay cong viec (NCL-05-CN-003). Quan ly du an (VT-02) can du lieu nay nhung
+     * khong duoc phep goi /employees day du (chi VT-06/VT-07), nen ghi de phan quyen o muc method nay.
+     */
+    @GetMapping("/assignable-for-task")
+    @PreAuthorize("hasRole('VT-02') or hasRole('VT-06') or hasRole('VT-07')")
+    public BaseRes<List<AssignableEmployeeRes>> findAssignableEmployeesForTask() {
+        return BaseRes.ok(employeeService.findAssignableEmployeesForTask());
     }
 
     @GetMapping("/{id}")

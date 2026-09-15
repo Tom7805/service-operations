@@ -127,6 +127,14 @@ public class UserServiceImpl implements UserService {
         return toResponse(userRepository.save(user));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<AssignableProjectManagerRes> findAssignableProjectManagers() {
+        return userRepository.findByStatusOrderByFullNameAsc(UserStatus.ACTIVE).stream()
+                .map(user -> new AssignableProjectManagerRes(user.getId(), user.getUsername(), user.getFullName()))
+                .toList();
+    }
+
     private void replaceRoles(User user, List<String> roleCodes, String scopeType, Long scopeDepartmentId) {
         DataScopeType type = DataScopeType.fromCode(scopeType);
         if (type == null) {

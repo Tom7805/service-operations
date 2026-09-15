@@ -60,6 +60,13 @@ export interface ProjectRes {
   createdAt: string;
 }
 
+/** Tài khoản đang hoạt động (ACTIVE) — dùng cho ô chọn "Người quản lý dự án" thay vì gõ tay ID. */
+export interface AssignableProjectManager {
+  id: number;
+  username: string;
+  fullName: string;
+}
+
 /**
  * Thông tin tối thiểu của hợp đồng để mở modal tạo dự án.
  */
@@ -184,4 +191,9 @@ export type {
   TaskProgressReq,
   WorkPackageReq,
   WorkBreakdownRes,
+  TaskAssignmentReq,
+  TaskAssignmentRes,
+  AssignableEmployee,
+  TaskProgressReq,
+  MyTaskRes,
 } from './taskTypes';

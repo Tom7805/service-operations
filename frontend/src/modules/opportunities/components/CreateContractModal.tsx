@@ -48,6 +48,9 @@ export default function CreateContractModal({
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [loadingQuote, setLoadingQuote] = useState(false);
+  const [latestQuoteVersion, setLatestQuoteVersion] = useState<number | null>(null);
+  const totalValueTouchedRef = useRef(false);
 
   // NCL-04: giá trị hợp đồng PHẢI khớp báo giá đã chốt của cơ hội — để người dùng
   // tự gõ tay rất dễ gõ sai lệch với báo giá thật (đánh máy nhầm số 0, đơn vị...),
@@ -76,6 +79,32 @@ export default function CreateContractModal({
   }, [isOpen, opportunity.id]);
 
   const backdrop = useBackdropClick(onClose, submitting);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    totalValueTouchedRef.current = false;
+    setLatestQuoteVersion(null);
+    setLoadingQuote(true);
+    fetchOpportunityQuoteHistory(opportunity.id)
+      .then((quotes) => {
+        if (cancelled || quotes.length === 0) return;
+        // Danh sách trả về sắp theo version giảm dần nên phần tử đầu là báo giá mới nhất.
+        const latest = quotes[0];
+        setLatestQuoteVersion(latest.version);
+        setForm((p) => (totalValueTouchedRef.current ? p : { ...p, totalValue: latest.totalAmount }));
+      })
+      .catch(() => {
+        // Không có báo giá hoặc không thể tải: giữ nguyên hành vi nhập tay.
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingQuote(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, opportunity.id]);
 
   if (!isOpen) return null;
 
