@@ -9,7 +9,9 @@ import com.serviceops.modules.project.entity.Task;
 import com.serviceops.modules.project.repository.ProjectRepository;
 import com.serviceops.modules.project.repository.TaskRepository;
 import com.serviceops.modules.timesheet.dto.request.TimesheetApproveReq;
+import com.serviceops.modules.timesheet.dto.request.TimesheetRejectReq;
 import com.serviceops.modules.timesheet.dto.response.TimesheetApprovalRes;
+import com.serviceops.modules.timesheet.dto.response.TimesheetRejectRes;
 import com.serviceops.modules.timesheet.entity.TimeEntry;
 import com.serviceops.modules.timesheet.entity.Timesheet;
 import com.serviceops.modules.timesheet.enums.TimeEntryStatus;
@@ -291,5 +293,100 @@ class TimesheetApprovalServiceTest {
 				() -> service.approve(50L, new TimesheetApproveReq(List.of(30L), null)));
 
 		assertEquals(ErrorCode.RESOURCE_NOT_FOUND, exception.getErrorCode());
+	}
+
+	// ==================== NCL-06-CN-004 — Tu choi bang cham cong ====================
+
+	@Test
+	void rejectsWholeTimesheetReturnsEntriesToDraft_TC01() {
+		when(currentUserScopeProvider.currentUserId()).thenReturn(PM_ONE);
+		when(timesheetRepository.findById(50L)).thenReturn(Optional.of(timesheet));
+		TimeEntry first = entry(30L, 20L, new BigDecimal("5"));
+		TimeEntry second = entry(31L, 20L, new BigDecimal("3"));
+		when(timeEntryRepository.findByUserIdAndWorkDateBetweenOrderByIdAsc(MEMBER, WEEK_FROM, WEEK_TO))
+				.thenReturn(List.of(first, second));
+		stubTaskInProject(20L, 1L, PM_ONE);
+		when(timesheetRepository.save(any(Timesheet.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		TimesheetRejectRes result = service.reject(50L, new TimesheetRejectReq(null, "Sai du an"));
+
+		assertEquals(TimeEntryStatus.DRAFT, first.getStatus());
+		assertEquals(TimeEntryStatus.DRAFT, second.getStatus());
+		assertEquals(2, result.rejectedEntries());
+		assertEquals(TimesheetStatus.REJECTED, result.timesheet().status());
+		assertEquals("Sai du an", timesheet.getRejectReason());
+		verify(auditLogService).record(eq("Tu choi bang cham cong"), eq(AuditTargetType.GENERAL), eq(50L),
+				eq("Bang cham cong tuan"), contains("ly do: Sai du an"));
+	}
+
+	@Test
+	void rejectsNonPendingTimesheet_TC01() {
+		when(currentUserScopeProvider.currentUserId()).thenReturn(PM_ONE);
+		timesheet.setStatus(TimesheetStatus.APPROVED);
+		when(timesheetRepository.findById(50L)).thenReturn(Optional.of(timesheet));
+
+		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
+				() -> service.reject(50L, new TimesheetRejectReq(null, "Ly do")));
+
+		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
+	}
+
+	@Test
+	void bulkRejectLeavesOtherManagersEntriesPending_TC02() {
+		when(currentUserScopeProvider.currentUserId()).thenReturn(PM_ONE);
+		when(timesheetRepository.findById(50L)).thenReturn(Optional.of(timesheet));
+		TimeEntry mine = entry(30L, 20L, new BigDecimal("5"));
+		TimeEntry theirs = entry(31L, 21L, new BigDecimal("5"));
+		when(timeEntryRepository.findByUserIdAndWorkDateBetweenOrderByIdAsc(MEMBER, WEEK_FROM, WEEK_TO))
+				.thenReturn(List.of(mine, theirs));
+		stubTaskInProject(20L, 1L, PM_ONE);
+		stubTaskInProject(21L, 2L, PM_TWO);
+
+		TimesheetRejectRes result = service.reject(50L, new TimesheetRejectReq(null, "Ly do"));
+
+		assertEquals(TimeEntryStatus.DRAFT, mine.getStatus());
+		assertEquals(TimeEntryStatus.SUBMITTED, theirs.getStatus());
+		assertEquals(TimesheetStatus.PENDING_APPROVAL, result.timesheet().status());
+		verify(timesheetRepository, never()).save(any(Timesheet.class));
+	}
+
+	@Test
+	void rejectsRejectingEntryInForeignProject_TC02() {
+		when(currentUserScopeProvider.currentUserId()).thenReturn(PM_ONE);
+		when(timesheetRepository.findById(50L)).thenReturn(Optional.of(timesheet));
+		when(timeEntryRepository.findByUserIdAndWorkDateBetweenOrderByIdAsc(MEMBER, WEEK_FROM, WEEK_TO))
+				.thenReturn(List.of(entry(30L, 20L, new BigDecimal("5")), entry(31L, 21L, new BigDecimal("5"))));
+		stubTaskInProject(21L, 2L, PM_TWO);
+
+		assertThrows(AccessDeniedException.class,
+				() -> service.reject(50L, new TimesheetRejectReq(List.of(31L), "Ly do")));
+	}
+
+	@Test
+	void rejectsUnknownEntryIdOnReject() {
+		when(currentUserScopeProvider.currentUserId()).thenReturn(PM_ONE);
+		when(timesheetRepository.findById(50L)).thenReturn(Optional.of(timesheet));
+		when(timeEntryRepository.findByUserIdAndWorkDateBetweenOrderByIdAsc(MEMBER, WEEK_FROM, WEEK_TO))
+				.thenReturn(List.of(entry(30L, 20L, new BigDecimal("5"))));
+
+		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
+				() -> service.reject(50L, new TimesheetRejectReq(List.of(99L), "Ly do")));
+
+		assertEquals(ErrorCode.RESOURCE_NOT_FOUND, exception.getErrorCode());
+	}
+
+	@Test
+	void auditLogsRejectionActionWithReason_TC04() {
+		when(currentUserScopeProvider.currentUserId()).thenReturn(PM_ONE);
+		when(timesheetRepository.findById(50L)).thenReturn(Optional.of(timesheet));
+		when(timeEntryRepository.findByUserIdAndWorkDateBetweenOrderByIdAsc(MEMBER, WEEK_FROM, WEEK_TO))
+				.thenReturn(List.of(entry(30L, 20L, new BigDecimal("5"))));
+		stubTaskInProject(20L, 1L, PM_ONE);
+		when(timesheetRepository.save(any(Timesheet.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		service.reject(50L, new TimesheetRejectReq(List.of(30L), "Thieu mo ta chi tiet"));
+
+		verify(auditLogService).record(eq("Tu choi bang cham cong"), eq(AuditTargetType.GENERAL), eq(50L),
+				eq("Bang cham cong tuan"), contains("ly do: Thieu mo ta chi tiet"));
 	}
 }

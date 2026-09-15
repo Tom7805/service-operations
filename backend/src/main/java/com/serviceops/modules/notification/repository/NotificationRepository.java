@@ -26,4 +26,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 	List<Notification> findByRecipientIdAndSentAtAfter(Long recipientId, LocalDateTime since);
 
 	List<Notification> findByReferenceIdAndReferenceType(Long referenceId, String referenceType);
+
+	/** QTN-27: kiem tra da gui thong bao loai nay cho referenceType nay chua — chong gui trung. */
+	boolean existsByRecipientIdAndTypeAndReferenceType(
+			Long recipientId, com.serviceops.modules.notification.enums.NotificationType type, String referenceType);
 }
