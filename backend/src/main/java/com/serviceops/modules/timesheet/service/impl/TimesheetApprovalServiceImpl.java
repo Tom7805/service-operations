@@ -22,6 +22,8 @@ import com.serviceops.modules.timesheet.mapper.TimesheetMapper;
 import com.serviceops.modules.timesheet.repository.TimeEntryRepository;
 import com.serviceops.modules.timesheet.repository.TimesheetRepository;
 import com.serviceops.modules.timesheet.service.TimesheetApprovalService;
+import com.serviceops.modules.notification.enums.NotificationType;
+import com.serviceops.modules.notification.service.NotificationService;
 import com.serviceops.security.scope.CurrentUserScopeProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -57,6 +59,7 @@ public class TimesheetApprovalServiceImpl implements TimesheetApprovalService {
 	private final CurrentUserScopeProvider currentUserScopeProvider;
 	private final AuditLogService auditLogService;
 	private final TimesheetMapper timesheetMapper;
+	private final NotificationService notificationService;
 	private final Clock clock;
 
 	@Override
@@ -186,9 +189,8 @@ public class TimesheetApprovalServiceImpl implements TimesheetApprovalService {
 						+ ": tu choi " + targets.size() + " dong (" + sumHours(targets) + " gio)"
 						+ (anyPendingLeft ? " — con phan cho PM khac xu ly" : "") + " — ly do: " + reason);
 
-		// TC-01 (thong bao nguoi nop): kenh gui thong bao trong ung dung (Epic NCL-14) chua trien
-		// khai — Nhat ky he thong o tren la noi nguoi nop tra cuu duoc ngay ly do va thoi diem bi
-		// tu choi; noi vao NotificationDispatcher khi module Thong bao duoc hien thuc.
+		// TC-01: nguoi nop nhan thong bao trong ung dung ngay khi bi tu choi.
+		notifyRejectedSubmitter(timesheet, targets, reason);
 
 		return timesheetMapper.toRejectResponse(timesheet, targets.size());
 	}
@@ -292,6 +294,19 @@ public class TimesheetApprovalServiceImpl implements TimesheetApprovalService {
 
 	private BigDecimal sumHours(List<TimeEntry> entries) {
 		return entries.stream().map(TimeEntry::getHours).reduce(BigDecimal.ZERO, BigDecimal::add);
+	}
+
+	/** TC-01: bao cho nguoi nop biet bang cham cong bi tu choi kem ly do, ngay trong ung dung. */
+	private void notifyRejectedSubmitter(Timesheet timesheet, List<TimeEntry> targets, String reason) {
+		Long submitterId = timesheet.getUserId();
+		if (submitterId == null) {
+			return;
+		}
+		String content = String.format(
+				"Bang cham cong tuan %s - %s bi tu choi (%s gio) — ly do: %s",
+				timesheet.getWeekStartDate(), timesheet.getWeekEndDate(), sumHours(targets), reason);
+		notificationService.sendInAppNotification(submitterId, NotificationType.TIMESHEET_REJECTED,
+				"Bang cham cong bi tu choi", content, timesheet.getId(), TIMESHEET_LABEL);
 	}
 
 	private Long requireCurrentManager() {

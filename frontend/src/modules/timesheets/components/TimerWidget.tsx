@@ -129,13 +129,18 @@ export default function TimerWidget({ projectId, taskId, canStart, onStopped, on
 
   const isTimerForThisTask = timer != null && timer.taskId === taskId;
   const isTimerForOtherTask = timer != null && timer.taskId !== taskId;
+  const elapsedMs = timer ? now - new Date(timer.startedAt).getTime() : 0;
+  const isNearAutoStop = timer != null && elapsedMs >= 11 * 60 * 60 * 1000;
 
   return (
     <div className="user-table-card" style={{ padding: '16px 20px', marginBottom: '16px' }} data-testid="timer-widget">
       {isTimerForThisTask && timer && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span className="status-pill status-pill--submitted" data-testid="timer-running-badge">
+            <span
+              className={`status-pill ${isNearAutoStop ? 'status-pill--locked' : 'status-pill--submitted'}`}
+              data-testid="timer-running-badge"
+            >
               <span className="status-pill__dot" />
               Đang bấm giờ
             </span>
@@ -143,6 +148,11 @@ export default function TimerWidget({ projectId, taskId, canStart, onStopped, on
               {formatElapsed(timer.startedAt, now)}
             </strong>
             <span className="field-hint">{timer.note}</span>
+            {isNearAutoStop && (
+              <span className="field-hint" style={{ color: '#DC2626' }} data-testid="timer-near-autostop-warning">
+                Sắp chạy quá 12 giờ — hệ thống sẽ tự huỷ, không tạo được dòng giờ công. Hãy dừng đồng hồ ngay.
+              </span>
+            )}
           </div>
           <button
             type="button"

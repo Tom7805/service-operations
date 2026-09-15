@@ -303,6 +303,26 @@ class TimeEntryServiceTest {
 		verify(timesheetTimerRepository).delete(timer);
 	}
 
+	/** NCL-06-CN-008 TC-02: quen bam dung, dong ho chay qua 12 gio — huy, KHONG tao dong gio cong. */
+	@Test
+	void cancelsTimerWithoutCreatingEntryWhenElapsedExceedsTwelveHours() {
+		TimesheetTimer timer = new TimesheetTimer();
+		timer.setId(40L);
+		timer.setUserId(7L);
+		timer.setTaskId(20L);
+		timer.setStartedAt(LocalDateTime.of(2026, 9, 9, 7, 0));
+		timer.setNote("Quen bam dung");
+		timer.setBillable(true);
+		when(currentUserScopeProvider.currentUserId()).thenReturn(7L);
+		when(timesheetTimerRepository.findByUserId(7L)).thenReturn(Optional.of(timer));
+
+		BusinessRuleException exception = assertThrows(BusinessRuleException.class, service::stopTimer);
+
+		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
+		verify(timesheetTimerRepository).delete(timer);
+		verify(timeEntryRepository, never()).save(any(TimeEntry.class));
+	}
+
 	private TimeEntry stubOwnDraftEntry() {
 		stubAssigneeTask();
 		TimeEntry entry = new TimeEntry();

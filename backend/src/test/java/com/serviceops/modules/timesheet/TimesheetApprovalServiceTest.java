@@ -17,6 +17,7 @@ import com.serviceops.modules.timesheet.entity.Timesheet;
 import com.serviceops.modules.timesheet.enums.TimeEntryStatus;
 import com.serviceops.modules.timesheet.enums.TimesheetStatus;
 import com.serviceops.modules.timesheet.mapper.TimesheetMapper;
+import com.serviceops.modules.notification.service.NotificationService;
 import com.serviceops.modules.timesheet.repository.TimeEntryRepository;
 import com.serviceops.modules.timesheet.repository.TimesheetRepository;
 import com.serviceops.modules.timesheet.service.impl.TimesheetApprovalServiceImpl;
@@ -71,6 +72,8 @@ class TimesheetApprovalServiceTest {
 	private CurrentUserScopeProvider currentUserScopeProvider;
 	@Mock
 	private AuditLogService auditLogService;
+	@Mock
+	private NotificationService notificationService;
 
 	private TimesheetApprovalServiceImpl service;
 	private Timesheet timesheet;
@@ -79,7 +82,8 @@ class TimesheetApprovalServiceTest {
 	void setUp() {
 		Clock clock = Clock.fixed(Instant.parse("2026-09-14T10:00:00Z"), ZoneId.of("UTC"));
 		service = new TimesheetApprovalServiceImpl(timeEntryRepository, timesheetRepository, taskRepository,
-				projectRepository, currentUserScopeProvider, auditLogService, new TimesheetMapper(), clock);
+				projectRepository, currentUserScopeProvider, auditLogService, new TimesheetMapper(),
+				notificationService, clock);
 
 		timesheet = new Timesheet();
 		timesheet.setId(50L);

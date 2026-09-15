@@ -157,6 +157,9 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 		return toTimerResponse(saved, projectId, LocalDateTime.now(clock));
 	}
 
+	/** NCL-06-CN-008 QTN-14: dong ho chay qua nguong nay bi coi la "quen bam dung" — huy, khong tao dong gio cong. */
+	private static final BigDecimal MAX_TIMER_HOURS = BigDecimal.valueOf(12);
+
 	@Override
 	public TimeEntryRes stopTimer() {
 		Long currentUserId = requireCurrentUser();
@@ -168,6 +171,15 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 		BigDecimal hours = BigDecimal.valueOf(elapsedSeconds)
 				.divide(BigDecimal.valueOf(3600), 2, RoundingMode.HALF_UP)
 				.max(new BigDecimal("0.01"));
+
+		if (hours.compareTo(MAX_TIMER_HOURS) > 0) {
+			// TC-02: quen bam dung, dong ho chay qua 12 gio — huy, KHONG tao dong gio cong,
+			// nguoi dung phai tu nhap tay lai cho dung so gio thuc te da lam.
+			timesheetTimerRepository.delete(timer);
+			throw new BusinessRuleException(ErrorCode.INVALID_STATE,
+					"Dong ho da chay qua 12 gio nen bi huy tu dong, khong tao dong gio cong nao."
+							+ " Vui long tu nhap tay dong gio cong dung voi thoi gian ban da lam.");
+		}
 
 		Task task = taskRepository.findById(timer.getTaskId())
 				.orElseThrow(() -> notFound("Khong tim thay cong viec cua dong ho bam gio"));
