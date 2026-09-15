@@ -147,3 +147,28 @@ export interface TimesheetRejectRes {
   timesheet: TimesheetRes;
   rejectedEntries: number;
 }
+
+/**
+ * Payload điều chỉnh một dòng giờ công đã duyệt bằng bút toán đảo (NCL-06-CN-005).
+ * POST /projects/{projectId}/tasks/{taskId}/time-entries/{entryId}/reversal
+ *
+ * Backend tự sinh dòng đảo (`-hours` của dòng gốc) — chỉ cần cung cấp số giờ đúng và lý do.
+ */
+export interface TimeEntryAdjustmentReq {
+  correctedHours: number;
+  reason: string;
+}
+
+/**
+ * Dấu vết đầy đủ một lần điều chỉnh (NCL-06-CN-005). Khớp AdjustmentTraceRes — cả ba dòng
+ * (gốc/đảo/sửa) đều tra cứu lại được; dòng gốc giữ nguyên không đổi (QTN-11).
+ */
+export interface AdjustmentTraceRes {
+  adjustmentId: number;
+  originalEntry: TimeEntryRes | null;
+  reversalEntry: TimeEntryRes | null;
+  correctedEntry: TimeEntryRes | null;
+  reason: string;
+  adjustedBy: string | null;
+  adjustedAt: string;
+}

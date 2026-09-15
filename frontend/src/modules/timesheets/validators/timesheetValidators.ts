@@ -1,4 +1,9 @@
-import type { TimeEntryCreateReq, TimeEntryUpdateReq, TimesheetSummaryRes } from '../types/timesheetTypes';
+import type {
+  TimeEntryAdjustmentReq,
+  TimeEntryCreateReq,
+  TimeEntryUpdateReq,
+  TimesheetSummaryRes,
+} from '../types/timesheetTypes';
 
 export interface TimeEntryValidationResult {
   isValid: boolean;
@@ -111,6 +116,31 @@ export function validateTimeEntryUpdateForm(payload: Partial<TimeEntryUpdateReq>
     errors.note = 'Ghi chú không được để trống';
   } else if (note.length > 1000) {
     errors.note = 'Ghi chú không được vượt 1000 ký tự';
+  }
+
+  return { isValid: Object.keys(errors).length === 0, errors };
+}
+
+/**
+ * Kiểm tra dữ liệu điều chỉnh giờ công bằng bút toán đảo (NCL-06-CN-005).
+ * Khớp ràng buộc backend `TimeEntryAdjustmentReq`: số giờ đúng phải lớn hơn 0, lý do bắt
+ * buộc và tối đa 1000 ký tự.
+ */
+export function validateAdjustmentForm(payload: Partial<TimeEntryAdjustmentReq>): TimeEntryValidationResult {
+  const errors: Record<string, string> = {};
+
+  const correctedHours = payload.correctedHours;
+  if (correctedHours == null || Number.isNaN(correctedHours)) {
+    errors.correctedHours = 'Số giờ đúng không được để trống';
+  } else if (correctedHours <= 0) {
+    errors.correctedHours = 'Số giờ đúng phải lớn hơn 0';
+  }
+
+  const reason = payload.reason?.trim() ?? '';
+  if (!reason) {
+    errors.reason = 'Lý do điều chỉnh không được để trống';
+  } else if (reason.length > 1000) {
+    errors.reason = 'Lý do điều chỉnh không được vượt 1000 ký tự';
   }
 
   return { isValid: Object.keys(errors).length === 0, errors };
