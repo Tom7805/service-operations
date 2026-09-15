@@ -25,6 +25,7 @@ vi.mock('../api/timesheetsApi', () => {
     createTimeEntry: vi.fn(),
     updateTimeEntry: vi.fn(),
     deleteTimeEntry: vi.fn(),
+    submitWeek: vi.fn(),
     TimesheetsApiError: MockTimesheetsApiError,
   };
 });
@@ -211,5 +212,92 @@ describe('MyTimesheetPage (NCL-06-CN-001 — Giờ công của tôi)', () => {
     await waitFor(() => {
       expect(screen.getByTestId('my-timesheet-load-error')).toHaveTextContent('Phiên đăng nhập đã hết hạn.');
     });
+  });
+});
+
+describe('Nộp bảng chấm công tuần (NCL-06-CN-002)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+  });
+
+  it('hiện nút "Nộp bảng chấm công" khi tuần có dòng DRAFT', async () => {
+    vi.mocked(timesheetsApi.getMyRunningTasks).mockResolvedValue([myTask]);
+    vi.mocked(timesheetsApi.getMyWeekTimeEntries).mockResolvedValue([summaryTask20]);
+
+    render(<MyTimesheetPage currentUserRoles={['VT-03']} />);
+
+    expect(await screen.findByTestId('btn-submit-week')).toHaveTextContent('Nộp bảng chấm công (1 dòng)');
+  });
+
+  it('ẩn nút "Nộp bảng chấm công" khi tuần trống hoặc không còn dòng DRAFT', async () => {
+    vi.mocked(timesheetsApi.getMyRunningTasks).mockResolvedValue([]);
+    vi.mocked(timesheetsApi.getMyWeekTimeEntries).mockResolvedValue([]);
+
+    render(<MyTimesheetPage currentUserRoles={['VT-03']} />);
+
+    await waitFor(() => expect(timesheetsApi.getMyWeekTimeEntries).toHaveBeenCalled());
+    expect(screen.queryByTestId('btn-submit-week')).not.toBeInTheDocument();
+  });
+
+  it('bấm nộp, xác nhận thì gọi submitWeek đúng weekFrom và hiển thị toast thành công', async () => {
+    vi.mocked(timesheetsApi.getMyRunningTasks).mockResolvedValue([myTask]);
+    vi.mocked(timesheetsApi.getMyWeekTimeEntries).mockResolvedValue([summaryTask20]);
+    vi.mocked(timesheetsApi.submitWeek).mockResolvedValue({
+      id: 50,
+      userId: 7,
+      weekStartDate: CURRENT_WEEK_FROM,
+      weekEndDate: CURRENT_WEEK_TO,
+      status: 'PENDING_APPROVAL',
+      totalHours: 5,
+      submittedBy: 'nv01',
+      submittedAt: `${CURRENT_WEEK_TO}T10:00:00`,
+    });
+
+    render(<MyTimesheetPage currentUserRoles={['VT-03']} />);
+    fireEvent.click(await screen.findByTestId('btn-submit-week'));
+
+    await waitFor(() => expect(timesheetsApi.submitWeek).toHaveBeenCalledWith(CURRENT_WEEK_FROM));
+    expect(await screen.findByTestId('submit-week-toast')).toHaveTextContent('thành công');
+    // Nộp xong phải nạp lại dữ liệu tuần để lưới cập nhật trạng thái mới.
+    expect(timesheetsApi.getMyWeekTimeEntries).toHaveBeenCalledTimes(2);
+  });
+
+  it('huỷ hộp thoại xác nhận thì không gọi submitWeek', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    vi.mocked(timesheetsApi.getMyRunningTasks).mockResolvedValue([myTask]);
+    vi.mocked(timesheetsApi.getMyWeekTimeEntries).mockResolvedValue([summaryTask20]);
+
+    render(<MyTimesheetPage currentUserRoles={['VT-03']} />);
+    fireEvent.click(await screen.findByTestId('btn-submit-week'));
+
+    expect(timesheetsApi.submitWeek).not.toHaveBeenCalled();
+  });
+
+  it('hiển thị toast lỗi khi nộp thất bại (ví dụ vượt 12 giờ/ngày — QTN-14)', async () => {
+    vi.mocked(timesheetsApi.getMyRunningTasks).mockResolvedValue([myTask]);
+    vi.mocked(timesheetsApi.getMyWeekTimeEntries).mockResolvedValue([summaryTask20]);
+    vi.mocked(timesheetsApi.submitWeek).mockRejectedValue(
+      new timesheetsApi.TimesheetsApiError('INVALID_STATE', 'Vuot gioi han 12 gio/ngay tai ngay: 2026-09-09 (14 gio)')
+    );
+
+    render(<MyTimesheetPage currentUserRoles={['VT-03']} />);
+    fireEvent.click(await screen.findByTestId('btn-submit-week'));
+
+    expect(await screen.findByTestId('submit-week-toast')).toHaveTextContent('Vuot gioi han 12 gio/ngay');
+  });
+
+  it('hiện banner "đang chờ duyệt" khi mọi dòng trong tuần đã SUBMITTED (không còn DRAFT)', async () => {
+    const submittedSummary: TimesheetSummaryRes = {
+      ...summaryTask20,
+      entries: summaryTask20.entries.map((e) => ({ ...e, status: 'SUBMITTED' })),
+    };
+    vi.mocked(timesheetsApi.getMyRunningTasks).mockResolvedValue([myTask]);
+    vi.mocked(timesheetsApi.getMyWeekTimeEntries).mockResolvedValue([submittedSummary]);
+
+    render(<MyTimesheetPage currentUserRoles={['VT-03']} />);
+
+    expect(await screen.findByTestId('submit-week-banner')).toHaveTextContent('đang chờ Quản lý dự án duyệt');
+    expect(screen.queryByTestId('btn-submit-week')).not.toBeInTheDocument();
   });
 });

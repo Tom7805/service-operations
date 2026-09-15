@@ -1,29 +1,31 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import { roleLabels } from '../../../utils/roleLabel';
-import ApprovalActionBar from '../components/ApprovalActionBar';
+import RejectActionButton from '../components/RejectActionButton';
 import { getPendingTimesheets, TimesheetsApiError } from '../api/timesheetsApi';
 import type { PendingTimesheetRes } from '../types/timesheetTypes';
 import { formatIsoDate } from '../utils/weekRange';
 
-export interface TimesheetApprovalPageProps {
+export interface TimesheetRejectPageProps {
   currentUserRoles?: string[];
   currentUserName?: string;
 }
 
 /**
- * Màn "Duyệt bảng chấm công" của Quản lý dự án (NCL-06-CN-003, kèm từ chối NCL-06-CN-004
- * trên cùng hàng đợi — hai hành động luôn đi cùng nhau trên một bảng chờ duyệt).
+ * Màn "Từ chối bảng chấm công" của Quản lý dự án (NCL-06-CN-004) — màn hình riêng, chỉ có
+ * hành động từ chối (không có nút duyệt), tách khỏi `TimesheetApprovalPage` theo yêu cầu
+ * của story này.
  *
- * Duyệt/từ chối luôn theo NGUYÊN BẢNG: `GET /timesheets/pending` chỉ trả tổng hợp
- * (`pendingEntries`/`pendingHours`), không trả danh sách từng dòng để chọn duyệt riêng lẻ —
- * đúng những gì backend hiện có, không suy diễn thêm một endpoint chưa tồn tại.
+ * Dùng chung nguồn dữ liệu `GET /timesheets/pending` với màn duyệt — backend không có
+ * endpoint hàng chờ riêng cho "chỉ những bảng cần từ chối", vì một bảng SUBMITTED luôn có
+ * thể được duyệt HOẶC từ chối, tùy PM quyết định sau khi xem lại; đúng những gì backend
+ * hiện có, không suy diễn thêm một trạng thái/endpoint chưa tồn tại.
  */
-export default function TimesheetApprovalPage({
+export default function TimesheetRejectPage({
   currentUserRoles = [],
   currentUserName = 'Quản lý dự án',
-}: TimesheetApprovalPageProps) {
-  // NCL-06-CN-003/CN-004 TC chung: chỉ Quản lý dự án (VT-02) được duyệt/từ chối.
+}: TimesheetRejectPageProps) {
+  // NCL-06-CN-004 TC chung với NCL-06-CN-003: chỉ Quản lý dự án (VT-02) được từ chối.
   const isAllowed = currentUserRoles.includes('VT-02');
 
   const [pending, setPending] = useState<PendingTimesheetRes[]>([]);
@@ -65,7 +67,7 @@ export default function TimesheetApprovalPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Chức năng Duyệt bảng chấm công chỉ dành riêng cho vai trò <strong>Quản lý dự án</strong>.
+            Chức năng Từ chối bảng chấm công chỉ dành riêng cho vai trò <strong>Quản lý dự án</strong>.
             Hệ thống đã ghi lại lần truy cập bị từ chối này vào nhật ký bảo mật.
           </p>
           <div className="security-log-badge">
@@ -82,7 +84,7 @@ export default function TimesheetApprovalPage({
   const totalPendingEntries = pending.reduce((sum, t) => sum + t.pendingEntries, 0);
 
   return (
-    <div className="user-management-page" data-testid="timesheet-approval-page">
+    <div className="user-management-page" data-testid="timesheet-reject-page">
       {toast && (
         <div className={`toast-banner toast-banner--${toast.type}`} role="status">
           <span className="toast-banner__icon">{toast.type === 'success' ? ICONS.checkCircle : ICONS.alertTriangle}</span>
@@ -95,9 +97,10 @@ export default function TimesheetApprovalPage({
 
       <div className="page-header">
         <div>
-          <h1 className="page-title">Duyệt bảng chấm công</h1>
+          <h1 className="page-title">Từ chối bảng chấm công</h1>
           <p className="page-subtitle">
-            Các bảng chấm công tuần đang chờ bạn duyệt hoặc từ chối, thuộc những dự án bạn quản lý.
+            Các bảng chấm công tuần đang chờ duyệt, thuộc những dự án bạn quản lý — từ chối bảng nào không
+            hợp lệ để nhân viên sửa lại và nộp lại.
           </p>
         </div>
         <div className="page-header-actions">
@@ -152,7 +155,7 @@ export default function TimesheetApprovalPage({
                 <th style={{ textAlign: 'right' }}>Dòng chờ duyệt</th>
                 <th style={{ textAlign: 'right' }}>Giờ chờ duyệt</th>
                 <th>Ngày nộp</th>
-                <th style={{ width: '220px' }}></th>
+                <th style={{ width: '140px' }}></th>
               </tr>
             </thead>
             <tbody>
@@ -185,18 +188,9 @@ export default function TimesheetApprovalPage({
                       <strong>{t.pendingHours}</strong> giờ
                     </td>
                     <td>{new Date(t.submittedAt).toLocaleString('vi-VN')}</td>
-                    <td>
-                      <ApprovalActionBar
+                    <td style={{ textAlign: 'right' }}>
+                      <RejectActionButton
                         timesheet={t}
-                        onApproved={(result) => {
-                          const warnings = result.overBudgetWarnings;
-                          const base = `Đã duyệt bảng chấm công của Nhân sự #${t.userId} thành công.`;
-                          showToast(
-                            warnings.length > 0 ? `${base} Cảnh báo: ${warnings.join('; ')}` : base,
-                            warnings.length > 0 ? 'error' : 'success'
-                          );
-                          setPending((prev) => prev.filter((p) => p.timesheetId !== t.timesheetId));
-                        }}
                         onRejected={(result) => {
                           showToast(
                             `Đã từ chối ${result.rejectedEntries} dòng giờ công của Nhân sự #${t.userId} — đã quay về nhập.`,

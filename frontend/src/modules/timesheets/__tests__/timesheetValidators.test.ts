@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { validateTimeEntryCreateForm, validateTimeEntryUpdateForm } from '../validators/timesheetValidators';
+import {
+  canSubmitWeek,
+  countDraftEntries,
+  isWeekEmpty,
+  validateAdjustmentForm,
+  validateRejectReason,
+  validateTimeEntryCreateForm,
+  validateTimeEntryUpdateForm,
+} from '../validators/timesheetValidators';
+import type { TimesheetSummaryRes } from '../types/timesheetTypes';
 
 const TODAY = '2026-09-10';
 
@@ -88,5 +97,134 @@ describe('timesheetValidators (NCL-06-CN-001)', () => {
       expect(res.isValid).toBe(true);
       expect(Object.keys(res.errors)).toHaveLength(0);
     });
+  });
+});
+
+function summaryWith(entries: TimesheetSummaryRes['entries']): TimesheetSummaryRes {
+  return {
+    taskId: 1,
+    taskName: 'Công việc mẫu',
+    weekFrom: '2026-09-07',
+    weekTo: '2026-09-13',
+    entries,
+    totalHours: entries.reduce((sum, e) => sum + e.hours, 0),
+    budgetHours: null,
+    approvedHours: null,
+    usageRatio: null,
+    overBudgetWarning: false,
+  };
+}
+
+function entry(
+  status: TimesheetSummaryRes['entries'][number]['status'],
+  hours = 4
+): TimesheetSummaryRes['entries'][number] {
+  return {
+    id: Math.random(),
+    taskId: 1,
+    userId: 7,
+    workDate: '2026-09-09',
+    hours,
+    status,
+    note: null,
+    billable: true,
+    createdAt: '2026-09-09T00:00:00',
+  };
+}
+
+describe('canSubmitWeek (NCL-06-CN-002)', () => {
+  it('tuần trống thì không bật nút nộp', () => {
+    expect(canSubmitWeek([summaryWith([])])).toBe(false);
+  });
+
+  it('có ít nhất một dòng DRAFT thì bật nút nộp', () => {
+    expect(canSubmitWeek([summaryWith([entry('DRAFT')])])).toBe(true);
+  });
+
+  it('toàn bộ dòng đã SUBMITTED thì không bật nút nộp (tránh gọi rồi mới nhận lỗi)', () => {
+    expect(canSubmitWeek([summaryWith([entry('SUBMITTED')])])).toBe(false);
+  });
+
+  it('toàn bộ dòng đã APPROVED thì không bật nút nộp', () => {
+    expect(canSubmitWeek([summaryWith([entry('APPROVED')])])).toBe(false);
+  });
+
+  it('nhiều công việc, chỉ cần một công việc có dòng DRAFT là đủ', () => {
+    const summaries = [summaryWith([entry('SUBMITTED')]), summaryWith([entry('DRAFT')])];
+    expect(canSubmitWeek(summaries)).toBe(true);
+  });
+});
+
+describe('countDraftEntries', () => {
+  it('đếm đúng số dòng DRAFT trên nhiều công việc', () => {
+    const summaries = [
+      summaryWith([entry('DRAFT'), entry('SUBMITTED')]),
+      summaryWith([entry('DRAFT'), entry('DRAFT')]),
+    ];
+    expect(countDraftEntries(summaries)).toBe(3);
+  });
+
+  it('trả về 0 khi không có dòng nào', () => {
+    expect(countDraftEntries([summaryWith([])])).toBe(0);
+  });
+});
+
+describe('isWeekEmpty', () => {
+  it('true khi mọi công việc đều chưa có dòng giờ công nào', () => {
+    expect(isWeekEmpty([summaryWith([]), summaryWith([])])).toBe(true);
+  });
+
+  it('false khi có ít nhất một dòng giờ công', () => {
+    expect(isWeekEmpty([summaryWith([]), summaryWith([entry('DRAFT')])])).toBe(false);
+  });
+
+  it('true khi không có công việc nào trong tuần', () => {
+    expect(isWeekEmpty([])).toBe(true);
+  });
+});
+
+describe('validateRejectReason (NCL-06-CN-004)', () => {
+  it('từ chối khi lý do để trống', () => {
+    expect(validateRejectReason('')).toBe('Lý do từ chối không được để trống');
+  });
+
+  it('từ chối khi lý do chỉ toàn khoảng trắng', () => {
+    expect(validateRejectReason('   ')).toBe('Lý do từ chối không được để trống');
+  });
+
+  it('từ chối khi lý do vượt quá 1000 ký tự', () => {
+    expect(validateRejectReason('a'.repeat(1001))).toBe('Lý do từ chối không được vượt 1000 ký tự');
+  });
+
+  it('chấp nhận lý do hợp lệ', () => {
+    expect(validateRejectReason('Ghi nhầm dự án, cần ghi lại đúng công việc')).toBeUndefined();
+  });
+});
+
+describe('validateAdjustmentForm (NCL-06-CN-005)', () => {
+  it('báo lỗi khi số giờ đúng để trống hoặc không hợp lệ', () => {
+    const errors = validateAdjustmentForm({ reason: 'Ghi nhầm giờ' });
+    expect(errors.errors.correctedHours).toBe('Số giờ đúng không được để trống');
+  });
+
+  it('báo lỗi khi số giờ đúng <= 0', () => {
+    const errors = validateAdjustmentForm({ correctedHours: 0, reason: 'Ghi nhầm giờ' });
+    expect(errors.errors.correctedHours).toBe('Số giờ đúng phải lớn hơn 0');
+  });
+
+  it('báo lỗi khi lý do để trống', () => {
+    const errors = validateAdjustmentForm({ correctedHours: 6 });
+    expect(errors.errors.reason).toBe('Lý do điều chỉnh không được để trống');
+  });
+
+  it('báo lỗi khi lý do vượt quá 1000 ký tự', () => {
+    const errors = validateAdjustmentForm({ correctedHours: 6, reason: 'a'.repeat(1001) });
+    expect(errors.errors.reason).toBe('Lý do điều chỉnh không được vượt 1000 ký tự');
+  });
+
+  it('chấp nhận dữ liệu hợp lệ', () => {
+    const result = validateAdjustmentForm({ correctedHours: 6, reason: 'Ghi nhầm 8 giờ, thực tế làm 6 giờ' });
+    expect(result.isValid).toBe(true);
+    expect(Object.keys(result.errors)).toHaveLength(0);
   });
 });

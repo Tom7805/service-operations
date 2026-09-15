@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import type { TimeEntryTaskRes, TimesheetSummaryRes } from '../types/timesheetTypes';
-import { getMyRunningTasks, getMyWeekTimeEntries, TimesheetsApiError } from '../api/timesheetsApi';
+import { getMyRunningTasks, getMyWeekTimeEntries, submitWeek, TimesheetsApiError } from '../api/timesheetsApi';
 import WeeklyTimesheetGrid from '../components/WeeklyTimesheetGrid';
 import TimeEntryPage from './TimeEntryPage';
 import { addDays, formatIsoDate, getMondayOf } from '../utils/weekRange';
+import { canSubmitWeek, countDraftEntries } from '../validators/timesheetValidators';
 
 export interface MyTimesheetPageProps {
   currentUserRoles?: string[];
@@ -35,6 +36,13 @@ export default function MyTimesheetPage({ currentUserRoles = ['VT-03'] }: MyTime
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<SelectedTask | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (text: string, type: 'success' | 'error' = 'success') => {
+    setToast({ text, type });
+    setTimeout(() => setToast(null), 5000);
+  };
 
   const loadData = useCallback(async () => {
     if (!canView) return;
@@ -67,6 +75,51 @@ export default function MyTimesheetPage({ currentUserRoles = ['VT-03'] }: MyTime
   // bị thu hồi/đóng dự án sau khi ghi (hiếm) vẫn hiển thị trong lưới nhưng không mở được nữa.
   const projectIdByTaskId = new Map(tasks.map((t) => [t.taskId, t.projectId]));
 
+  // NCL-06-CN-002: chỉ bật nút "Nộp bảng" khi tuần có ít nhất một dòng DRAFT — trạng thái
+  // khác (đã nộp/đã duyệt) thì ẩn nút để tránh gọi rồi mới nhận lỗi (theo tài liệu API).
+  const allEntries = summaries.flatMap((s) => s.entries);
+  const hasDraft = canSubmitWeek(summaries);
+  const draftCount = countDraftEntries(summaries);
+  const submitBanner = (() => {
+    if (allEntries.length === 0 || hasDraft) return null;
+    const hasApproved = allEntries.some((e) => e.status === 'APPROVED');
+    const hasSubmitted = allEntries.some((e) => e.status === 'SUBMITTED');
+    if (hasApproved) return { tone: 'approved', text: 'Bảng chấm công tuần này đã được Quản lý dự án duyệt.' };
+    if (hasSubmitted) {
+      return { tone: 'submitted', text: 'Đã nộp bảng chấm công tuần này — đang chờ Quản lý dự án duyệt.' };
+    }
+    return { tone: 'rejected', text: 'Bảng chấm công tuần này bị từ chối. Hãy chỉnh sửa giờ công rồi nộp lại.' };
+  })();
+
+  const handleSubmitWeek = async () => {
+    if (!hasDraft || submitting) return;
+    const totalDraftHours = summaries.reduce(
+      (sum, s) => sum + s.entries.filter((e) => e.status === 'DRAFT').reduce((h, e) => h + e.hours, 0),
+      0
+    );
+    const confirmed = window.confirm(
+      `Nộp bảng chấm công tuần ${formatIsoDate(weekFrom)} → ${formatIsoDate(weekTo)} với ${draftCount} `
+        + `dòng giờ công (tổng ${totalDraftHours} giờ)?\n\n`
+        + 'Sau khi nộp, bạn sẽ không sửa hoặc xóa được các dòng giờ công của tuần này cho đến khi được duyệt.'
+    );
+    if (!confirmed) return;
+
+    setSubmitting(true);
+    try {
+      const result = await submitWeek(weekFrom);
+      showToast(`Đã nộp bảng chấm công tuần thành công — tổng ${result.totalHours} giờ, đang chờ duyệt.`, 'success');
+      await loadData();
+    } catch (err: unknown) {
+      const msg =
+        err instanceof TimesheetsApiError || err instanceof Error
+          ? err.message
+          : 'Không thể nộp bảng chấm công tuần. Vui lòng thử lại.';
+      showToast(msg, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (!canView) {
     return (
       <div className="user-management-page" data-testid="my-timesheet-forbidden">
@@ -94,6 +147,16 @@ export default function MyTimesheetPage({ currentUserRoles = ['VT-03'] }: MyTime
 
   return (
     <div className="user-management-page" data-testid="my-timesheet-page">
+      {toast && (
+        <div className={`toast-banner toast-banner--${toast.type}`} role="status" data-testid="submit-week-toast">
+          <span className="toast-banner__icon">{toast.type === 'success' ? ICONS.checkCircle : ICONS.alertTriangle}</span>
+          <span>{toast.text}</span>
+          <button type="button" className="toast-banner__close" aria-label="Đóng thông báo" onClick={() => setToast(null)}>
+            {ICONS.close}
+          </button>
+        </div>
+      )}
+
       <div className="page-header" style={{ marginBottom: '16px' }}>
         <div>
           <div className="page-header__kicker">
@@ -210,10 +273,34 @@ export default function MyTimesheetPage({ currentUserRoles = ['VT-03'] }: MyTime
           </button>
         </div>
 
-        <span style={{ fontSize: '13.5px' }}>
-          Tổng giờ tuần: <strong data-testid="grand-total-hours">{grandTotal}</strong>
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ fontSize: '13.5px' }}>
+            Tổng giờ tuần: <strong data-testid="grand-total-hours">{grandTotal}</strong>
+          </span>
+          {hasDraft && (
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={handleSubmitWeek}
+              disabled={submitting}
+              data-testid="btn-submit-week"
+            >
+              {ICONS.checkCircle} {submitting ? 'Đang nộp…' : `Nộp bảng chấm công (${draftCount} dòng)`}
+            </button>
+          )}
+        </div>
       </div>
+
+      {submitBanner && (
+        <div
+          className={`status-pill status-pill--${submitBanner.tone}`}
+          style={{ marginBottom: '16px' }}
+          data-testid="submit-week-banner"
+        >
+          <span className="status-pill__dot" />
+          {submitBanner.text}
+        </div>
+      )}
 
       <div className="user-table-card" style={{ padding: '20px' }}>
         {loading ? (
