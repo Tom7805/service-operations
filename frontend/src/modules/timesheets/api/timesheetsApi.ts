@@ -16,6 +16,7 @@ import type {
   TimesheetRejectRes,
   TimesheetRes,
   TimesheetSummaryRes,
+  UnsubmittedTimesheetRes,
 } from '../types/timesheetTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
@@ -290,5 +291,18 @@ export async function getMyTimer(): Promise<TimerRes | null> {
 export async function stopTimer(): Promise<TimeEntryRes> {
   return requestBackend<TimeEntryRes>(`${API_BASE_URL}/me/time-entry-timer/stop`, {
     method: 'POST',
+  });
+}
+
+/**
+ * NCL-06-CN-009: danh sách nhân sự còn chưa nộp bảng chấm công của tuần bắt đầu từ
+ * `weekStartDate` (luôn là một ngày thứ Hai). PM xem được nhân sự của các dự án mình quản
+ * lý; nhân viên chuyên môn tự tra cứu chính mình.
+ * GET /timesheets/unsubmitted?weekStartDate=...
+ */
+export async function getUnsubmittedTimesheets(weekStartDate: string): Promise<UnsubmittedTimesheetRes[]> {
+  const params = new URLSearchParams({ weekStartDate });
+  return requestBackend<UnsubmittedTimesheetRes[]>(`${API_BASE_URL}/timesheets/unsubmitted?${params.toString()}`, {
+    method: 'GET',
   });
 }
