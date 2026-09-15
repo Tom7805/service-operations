@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
 import { useBackdropClick } from '../../../hooks/useBackdropClick';
@@ -48,8 +48,6 @@ export default function CreateContractModal({
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [loadingQuote, setLoadingQuote] = useState(false);
-  const [latestQuoteVersion, setLatestQuoteVersion] = useState<number | null>(null);
   const totalValueTouchedRef = useRef(false);
 
   // NCL-04: giá trị hợp đồng PHẢI khớp báo giá đã chốt của cơ hội — để người dùng
@@ -84,14 +82,14 @@ export default function CreateContractModal({
     if (!isOpen) return;
     let cancelled = false;
     totalValueTouchedRef.current = false;
-    setLatestQuoteVersion(null);
+    setLatestQuote(null);
     setLoadingQuote(true);
     fetchOpportunityQuoteHistory(opportunity.id)
       .then((quotes) => {
         if (cancelled || quotes.length === 0) return;
         // Danh sách trả về sắp theo version giảm dần nên phần tử đầu là báo giá mới nhất.
         const latest = quotes[0];
-        setLatestQuoteVersion(latest.version);
+        setLatestQuote(latest);
         setForm((p) => (totalValueTouchedRef.current ? p : { ...p, totalValue: latest.totalAmount }));
       })
       .catch(() => {

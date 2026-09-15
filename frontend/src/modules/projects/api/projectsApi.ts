@@ -1,5 +1,4 @@
 import type {
-  AssignableEmployee,
   AssignableProjectManager,
   ProjectCreateFromContractReq,
   ProjectCreateFromTemplateReq,
@@ -148,72 +147,6 @@ export async function createTask(
       body: JSON.stringify(payload),
     }
   );
-}
-
-/**
- * NCL-05-CN-003: Phân công nhân sự cho công việc — danh sách mới THAY THẾ toàn bộ
- * danh sách người được giao trước đó (không cộng dồn).
- * Yêu cầu vai trò Quản lý dự án (VT-02); dự án phải đang RUNNING.
- * PUT /projects/{projectId}/tasks/{taskId}/assignments
- */
-export async function assignTask(
-  projectId: number,
-  taskId: number,
-  payload: TaskAssignmentReq
-): Promise<TaskAssignmentRes[]> {
-  return requestBackend<TaskAssignmentRes[]>(
-    `${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/assignments`,
-    {
-      method: 'PUT',
-      body: JSON.stringify(payload),
-    }
-  );
-}
-
-/** NCL-05-CN-003: Danh sách người đang được giao một công việc. */
-export async function fetchTaskAssignments(projectId: number, taskId: number): Promise<TaskAssignmentRes[]> {
-  return requestBackend<TaskAssignmentRes[]>(
-    `${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/assignments`,
-    { method: 'GET' }
-  );
-}
-
-/**
- * NCL-05-CN-004: danh sách công việc đang được giao cho người dùng hiện tại (mọi dự án),
- * dùng cho màn hình "Việc của tôi".
- * GET /tasks/my-assignments
- */
-export async function fetchMyTasks(): Promise<MyTaskRes[]> {
-  return requestBackend<MyTaskRes[]>(`${API_BASE_URL}/tasks/my-assignments`, {
-    method: 'GET',
-  });
-}
-
-/**
- * NCL-05-CN-004: đổi trạng thái tiến độ một công việc mình đang được giao.
- * Chỉ người có tên trong bảng phân công của đúng công việc đó mới cập nhật được.
- * PATCH /projects/{projectId}/tasks/{taskId}/progress
- */
-export async function updateTaskProgress(
-  projectId: number,
-  taskId: number,
-  payload: TaskProgressReq
-): Promise<TaskRes> {
-  return requestBackend<TaskRes>(`${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/progress`, {
-    method: 'PATCH',
-    body: JSON.stringify(payload),
-  });
-}
-
-/**
- * Danh sách nhân sự đang hoạt động, đủ điều kiện được giao việc (NCL-05-CN-003) —
- * dùng cho combobox "Phân công" thay vì gõ tay ID.
- * GET /employees/assignable-for-task — VT-02 gọi được (VT-06/VT-07 cũng gọi được).
- */
-export async function fetchAssignableEmployeesForTask(): Promise<AssignableEmployee[]> {
-  return requestBackend<AssignableEmployee[]>(`${API_BASE_URL}/employees/assignable-for-task`, {
-    method: 'GET',
-  });
 }
 
 /**

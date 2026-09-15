@@ -20,6 +20,4 @@ public interface UserRepository extends JpaRepository<User, Long> {
     long countByDepartmentId(Long departmentId);
 
     List<User> findByUsernameContainingIgnoreCaseOrFullNameContainingIgnoreCase(String username, String fullName);
-
-    List<User> findByStatusOrderByFullNameAsc(UserStatus status);
 }

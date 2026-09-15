@@ -43,11 +43,6 @@ export default function RiskFormModal({
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Danh sách tài khoản đang ACTIVE để chọn "Người theo dõi" (thay vì gõ tay ID không biết trước).
-  const [watchers, setWatchers] = useState<AssignableProjectManager[]>([]);
-  const [loadingWatchers, setLoadingWatchers] = useState(false);
-  const [watchersError, setWatchersError] = useState<string | null>(null);
-
   useEffect(() => {
     if (!isOpen) return;
     setDescription(risk?.description ?? '');
@@ -111,17 +106,6 @@ export default function RiskFormModal({
       setSubmitting(false);
     }
   };
-
-  // Khi sửa rủi ro, người theo dõi hiện tại có thể không còn nằm trong danh sách
-  // "đang ACTIVE" (VD tài khoản vừa bị khóa) — vẫn phải hiện được lựa chọn đang chọn
-  // sẵn để không mất dữ liệu, nên chèn thêm một lựa chọn tổng hợp nếu thiếu.
-  const watcherOptions =
-    risk && !watchers.some((w) => String(w.id) === String(risk.watcherId))
-      ? [
-          { id: risk.watcherId, username: '', fullName: risk.watcherName ?? `#${risk.watcherId}` },
-          ...watchers,
-        ]
-      : watchers;
 
   return (
     <ModalPortal>

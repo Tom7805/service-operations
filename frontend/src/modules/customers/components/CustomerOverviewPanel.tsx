@@ -179,9 +179,7 @@ export default function CustomerOverviewPanel({
       customerName: customerName,
       contractType: item.contractType ?? undefined,
       totalValue: item.amount,
-      limitValue: item.limitValue,
       startDate: item.date,
-      contractType: item.contractType ?? undefined,
     });
     setIsCreateProjectOpen(true);
   }, [customerId, customerName]);
@@ -199,9 +197,7 @@ export default function CustomerOverviewPanel({
       customerName: customerName,
       contractType: item.contractType ?? undefined,
       totalValue: item.amount,
-      limitValue: item.limitValue,
       startDate: item.date,
-      contractType: item.contractType ?? undefined,
     });
     setIsCreateFromTemplateOpen(true);
   }, [customerId, customerName]);

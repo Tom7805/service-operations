@@ -3,6 +3,7 @@ package com.serviceops.modules.identity.user.service;
 import com.serviceops.modules.identity.user.dto.request.CreateUserReq;
 import com.serviceops.modules.identity.user.dto.request.UpdateUserReq;
 import com.serviceops.modules.identity.user.dto.request.UserStatusReq;
+import com.serviceops.modules.identity.user.dto.response.AssignableProjectManagerRes;
 import com.serviceops.modules.identity.user.dto.response.UserLookupRes;
 import com.serviceops.modules.identity.user.dto.response.UserRes;
 
@@ -15,4 +16,5 @@ public interface UserService {
     UserRes update(Long id, UpdateUserReq request);
     UserRes updateStatus(Long id, UserStatusReq request);
     List<UserLookupRes> lookupActive();
+    List<AssignableProjectManagerRes> findAssignableProjectManagers();
 }

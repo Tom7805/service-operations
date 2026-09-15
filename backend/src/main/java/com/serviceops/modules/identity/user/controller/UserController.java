@@ -4,6 +4,7 @@ import com.serviceops.common.api.BaseRes;
 import com.serviceops.modules.identity.user.dto.request.CreateUserReq;
 import com.serviceops.modules.identity.user.dto.request.UpdateUserReq;
 import com.serviceops.modules.identity.user.dto.request.UserStatusReq;
+import com.serviceops.modules.identity.user.dto.response.AssignableProjectManagerRes;
 import com.serviceops.modules.identity.user.dto.response.UserLookupRes;
 import com.serviceops.modules.identity.user.dto.response.UserRes;
 import com.serviceops.modules.identity.user.service.UserService;
