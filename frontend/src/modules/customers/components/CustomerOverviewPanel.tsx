@@ -22,6 +22,9 @@ interface CustomerOverviewPanelProps {
   customerId: number;
   customerName: string;
   currentUserRoles?: string[];
+  /** ID tài khoản đang đăng nhập — dùng để nút "Gán cho tôi" ở modal tạo dự án tự chọn
+   *  đúng người thay vì đoán mò từ localStorage/sessionStorage. */
+  currentUserId?: number;
   /** Cho phép trang cha ghi một dòng vào luồng nhật ký hiển thị mỗi lần tải xong (đối chiếu Audit Log Backend - TC-03). */
   onLoaded?: (info: { at: string; itemCount: number }) => void;
   /** Bơm sẵn dữ liệu cho kiểm thử — khi có, panel bỏ qua lần gọi API khởi tạo. */
@@ -76,6 +79,7 @@ export default function CustomerOverviewPanel({
   customerId,
   customerName,
   currentUserRoles = ['VT-04'],
+  currentUserId,
   onLoaded,
   initialOverview,
 }: CustomerOverviewPanelProps) {
@@ -83,6 +87,19 @@ export default function CustomerOverviewPanel({
   const [isLoading, setIsLoading] = useState(!initialOverview);
   const [errorKind, setErrorKind] = useState<'none' | 'forbidden' | 'notFound' | 'generic'>('none');
   const [errorMessage, setErrorMessage] = useState<string>('');
+
+  // Trước đây mọi khối (dòng thời gian, cơ hội, hợp đồng, dự án, hóa đơn, công nợ) hiện
+  // hết cùng lúc, cuộn rất dài và rối mắt. Thu gọn mặc định, cần xem/thao tác khối nào thì
+  // bấm mở đúng khối đó — 'timeline' và mọi section key trong SECTIONS đều dùng chung Set này.
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(() => new Set());
+  const toggleSection = (key: string) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   // Giữ tham chiếu ổn định để callback của trang cha không làm effect chạy lại vô hạn.
   const onLoadedRef = useRef(onLoaded);
@@ -162,6 +179,7 @@ export default function CustomerOverviewPanel({
       customerName: customerName,
       totalValue: item.amount,
       startDate: item.date,
+      contractType: item.contractType ?? undefined,
     });
     setIsCreateProjectOpen(true);
   }, [customerId, customerName]);
@@ -179,6 +197,7 @@ export default function CustomerOverviewPanel({
       customerName: customerName,
       totalValue: item.amount,
       startDate: item.date,
+      contractType: item.contractType ?? undefined,
     });
     setIsCreateFromTemplateOpen(true);
   }, [customerId, customerName]);
@@ -400,38 +419,76 @@ export default function CustomerOverviewPanel({
         <>
           {/* Dòng thời gian hợp nhất (TC-01) */}
           <div className="customer-summary-section">
-            <h4 className="customer-summary-section__title"><span className="icon-sm">{ICONS.clock}</span> Dòng thời gian hợp tác</h4>
-            <ol className="customer-timeline" data-testid="customer-summary-timeline">
-              {timeline.map(({ section, item }) => (
-                <li key={`${section.key}-${item.id}`} className="customer-timeline__item">
-                  <span className="customer-timeline__date">{formatDate(item.date)}</span>
-                  <span className={`customer-timeline__tag customer-timeline__tag--${section.key}`}>
-                    <span className="icon-xs">{section.icon}</span> {section.label}
-                  </span>
-                  <span className="customer-timeline__name">
-                    {item.name || '(không có tên)'}
-                    {item.code && <span className="customer-timeline__code"> · {item.code}</span>}
-                  </span>
-                  {item.status && <span className={statusClass(item.status)}>{item.status}</span>}
-                  <span className="customer-timeline__amount">{formatAmount(item.amount)}</span>
-                </li>
-              ))}
-            </ol>
+            <button
+              type="button"
+              className="customer-summary-section__title"
+              onClick={() => toggleSection('timeline')}
+              aria-expanded={expandedSections.has('timeline')}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            >
+              <span
+                className="icon-sm"
+                style={{
+                  display: 'inline-flex',
+                  transition: 'transform 0.15s ease',
+                  transform: expandedSections.has('timeline') ? 'rotate(0deg)' : 'rotate(-90deg)',
+                }}
+              >
+                {ICONS.chevronDown}
+              </span>
+              <span className="icon-sm">{ICONS.clock}</span> Dòng thời gian hợp tác
+            </button>
+            {expandedSections.has('timeline') && (
+              <ol className="customer-timeline" data-testid="customer-summary-timeline">
+                {timeline.map(({ section, item }) => (
+                  <li key={`${section.key}-${item.id}`} className="customer-timeline__item">
+                    <span className="customer-timeline__date">{formatDate(item.date)}</span>
+                    <span className={`customer-timeline__tag customer-timeline__tag--${section.key}`}>
+                      <span className="icon-xs">{section.icon}</span> {section.label}
+                    </span>
+                    <span className="customer-timeline__name">
+                      {item.name || '(không có tên)'}
+                      {item.code && <span className="customer-timeline__code"> · {item.code}</span>}
+                    </span>
+                    {item.status && <span className={statusClass(item.status)}>{item.status}</span>}
+                    <span className="customer-timeline__amount">{formatAmount(item.amount)}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
           </div>
 
           {/* Từng nhóm chi tiết */}
           {SECTIONS.map((section) => {
             const items = overview![section.key];
+            const isExpanded = expandedSections.has(section.key);
             return (
               <div
                 key={section.key}
                 className="customer-summary-section"
                 data-testid={`customer-summary-section-${section.key}`}
               >
-                <h4 className="customer-summary-section__title">
+                <button
+                  type="button"
+                  className="customer-summary-section__title"
+                  onClick={() => toggleSection(section.key)}
+                  aria-expanded={isExpanded}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  <span
+                    className="icon-sm"
+                    style={{
+                      display: 'inline-flex',
+                      transition: 'transform 0.15s ease',
+                      transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                    }}
+                  >
+                    {ICONS.chevronDown}
+                  </span>
                   <span className="icon-sm">{section.icon}</span> {section.label} <span className="cell-muted">({items.length})</span>
-                </h4>
-                {items.length === 0 ? (
+                </button>
+                {isExpanded && (
+                items.length === 0 ? (
                   <p className="customer-summary-section__empty cell-muted">{section.emptyHint}</p>
                 ) : (
                   <div className="table-responsive">
@@ -439,18 +496,26 @@ export default function CustomerOverviewPanel({
                           <thead>
                             <tr>
                               <th style={{ width: '120px' }}>Ngày</th>
-                              <th style={{ width: '140px' }}>Mã</th>
+                              {/* Chỉ hợp đồng mới có mã (contractCode) — cơ hội bán hàng không có mã
+                                  riêng theo đúng phạm vi backlog NCL-03, ẩn cột này ở các mục khác để
+                                  không hiện một cột toàn dấu gạch ngang vô nghĩa. */}
+                              {section.key === 'contracts' && <th style={{ width: '140px' }}>Mã</th>}
                               <th>Tên</th>
                               <th style={{ width: '140px' }}>Trạng thái</th>
                               <th style={{ width: '160px', textAlign: 'right' }}>Giá trị</th>
-                              <th style={{ width: '160px', textAlign: 'right' }}>Hành động</th>
+                              {/* Chỉ hợp đồng và dự án có hành động thật ở đây — cơ hội bán hàng đã có
+                                  trang riêng để thao tác (chuyển giai đoạn, chốt kết quả...), hóa đơn/
+                                  công nợ (NCL-10) chưa triển khai nên chưa có hành động nào để hiện. */}
+                              {(section.key === 'contracts' || section.key === 'projects') && (
+                                <th style={{ width: '160px', textAlign: 'right' }}>Hành động</th>
+                              )}
                             </tr>
                           </thead>
                       <tbody>
                         {items.map((item) => (
                           <tr key={item.id}>
                             <td>{formatDate(item.date)}</td>
-                            <td>{item.code || '—'}</td>
+                            {section.key === 'contracts' && <td>{item.code || '—'}</td>}
                             <td>{item.name || '—'}</td>
                             <td>
                               {item.status ? (
@@ -460,6 +525,7 @@ export default function CustomerOverviewPanel({
                               )}
                             </td>
                             <td style={{ textAlign: 'right' }}>{formatAmount(item.amount)}</td>
+                            {(section.key === 'contracts' || section.key === 'projects') && (
                             <td style={{ textAlign: 'right' }}>
                               {section.key === 'contracts' ? (
                                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
@@ -532,11 +598,13 @@ export default function CustomerOverviewPanel({
                                 <span className="cell-muted">—</span>
                               )}
                             </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
+                )
                 )}
               </div>
             );
@@ -609,6 +677,7 @@ export default function CustomerOverviewPanel({
           }}
           contract={createProjectTarget}
           currentUserRoles={currentUserRoles}
+          currentUserId={currentUserId}
           onSaved={() => {
             setIsCreateProjectOpen(false);
             setCreateProjectTarget(null);
@@ -626,6 +695,7 @@ export default function CustomerOverviewPanel({
           }}
           contract={createProjectTarget}
           currentUserRoles={currentUserRoles}
+          currentUserId={currentUserId}
           onCreated={() => {
             setIsCreateFromTemplateOpen(false);
             setCreateProjectTarget(null);

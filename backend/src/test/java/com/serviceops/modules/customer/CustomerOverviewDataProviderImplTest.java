@@ -9,6 +9,9 @@ import com.serviceops.modules.customer.service.impl.CustomerOverviewDataProvider
 import com.serviceops.modules.opportunity.entity.Opportunity;
 import com.serviceops.modules.opportunity.enums.OpportunityStage;
 import com.serviceops.modules.opportunity.repository.OpportunityRepository;
+import com.serviceops.modules.project.entity.Project;
+import com.serviceops.modules.project.enums.ProjectStatus;
+import com.serviceops.modules.project.repository.ProjectRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,11 +39,14 @@ class CustomerOverviewDataProviderImplTest {
 	@Mock
 	private ContractRepository contractRepository;
 
+	@Mock
+	private ProjectRepository projectRepository;
+
 	private CustomerOverviewDataProviderImpl provider;
 
 	@BeforeEach
 	void setUp() {
-		provider = new CustomerOverviewDataProviderImpl(opportunityRepository, contractRepository);
+		provider = new CustomerOverviewDataProviderImpl(opportunityRepository, contractRepository, projectRepository);
 	}
 
 	@Test
@@ -92,8 +98,31 @@ class CustomerOverviewDataProviderImplTest {
 	}
 
 	@Test
-	void projectsInvoicesAndReceivablesStayEmptyUntilThoseModulesAreBuilt() {
-		assertThat(provider.projects(10L)).isEmpty();
+	void mapsProjectsOfTheCustomer() {
+		Project project = new Project();
+		project.setId(7L);
+		project.setCustomerId(10L);
+		project.setProjectCode("DA-TEST");
+		project.setName("Du an ERP");
+		project.setLimitValue(new BigDecimal("500000000"));
+		project.setStartDate(LocalDate.of(2026, 3, 1));
+		project.setStatus(ProjectStatus.RUNNING);
+		when(projectRepository.findByCustomerIdOrderByIdDesc(10L)).thenReturn(List.of(project));
+
+		List<CustomerOverviewItemRes> result = provider.projects(10L);
+
+		assertThat(result).hasSize(1);
+		CustomerOverviewItemRes item = result.get(0);
+		assertThat(item.id()).isEqualTo(7L);
+		assertThat(item.code()).isEqualTo("DA-TEST");
+		assertThat(item.name()).isEqualTo("Du an ERP");
+		assertThat(item.status()).isEqualTo("RUNNING");
+		assertThat(item.amount()).isEqualByComparingTo("500000000");
+		assertThat(item.date()).isEqualTo(LocalDate.of(2026, 3, 1));
+	}
+
+	@Test
+	void invoicesAndReceivablesStayEmptyUntilThatModuleIsBuilt() {
 		assertThat(provider.invoices(10L)).isEmpty();
 		assertThat(provider.receivables(10L)).isEmpty();
 	}

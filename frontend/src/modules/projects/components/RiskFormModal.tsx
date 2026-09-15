@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 import type { ProjectRiskReq, ProjectRiskRes, RiskLevel } from '../types/projectTypes';
 import { createRisk, updateRisk, ProjectsApiError } from '../api/projectsApi';
 import { validateRiskForm } from '../validators/projectValidators';
@@ -99,6 +100,7 @@ export default function RiskFormModal({
   };
 
   return (
+    <ModalPortal>
     <div
       className="modal-backdrop"
       onClick={(e) => {
@@ -305,5 +307,6 @@ export default function RiskFormModal({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }

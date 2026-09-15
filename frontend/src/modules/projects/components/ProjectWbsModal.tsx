@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 import type { ProjectRes, TaskBudgetStatusRes, TaskRes, WorkBreakdownRes } from '../types/projectTypes';
 import {
   closeProject,
@@ -196,6 +197,7 @@ export default function ProjectWbsModal({
   };
 
   return (
+    <ModalPortal>
     <div
       className="modal-backdrop"
       onClick={(e) => {
@@ -409,5 +411,6 @@ export default function ProjectWbsModal({
         onSaved={handleBudgetSaved}
       />
     </div>
+    </ModalPortal>
   );
 }

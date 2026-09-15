@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 import type { TimeEntryRes } from '../types/timesheetTypes';
 import { createTimeEntry, TimesheetsApiError, updateTimeEntry } from '../api/timesheetsApi';
 import { validateTimeEntryCreateForm, validateTimeEntryUpdateForm } from '../validators/timesheetValidators';
@@ -139,6 +140,7 @@ export default function TimeEntryForm({
   };
 
   return (
+    <ModalPortal>
     <div
       className="modal-backdrop"
       onClick={(e) => {
@@ -304,5 +306,6 @@ export default function TimeEntryForm({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }

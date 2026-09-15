@@ -25,6 +25,23 @@ function formatAmount(amount?: number | null): string {
   return `${amount.toLocaleString('vi-VN')} đ`;
 }
 
+// Giá trị điều chỉnh có thể âm (giảm giá trị hợp đồng) nên giữ dấu trừ khi gõ,
+// chỉ thêm dấu chấm ngăn cách hàng nghìn cho phần số để dễ đọc/đếm số 0.
+function formatSignedVnNumber(raw: string): string {
+  if (raw === '' || raw === '-') return raw;
+  const negative = raw.startsWith('-');
+  const digits = raw.replace(/\D/g, '');
+  if (digits === '') return negative ? '-' : '';
+  return (negative ? '-' : '') + Number(digits).toLocaleString('vi-VN');
+}
+
+function parseSignedVnInput(raw: string): string {
+  const negative = raw.trim().startsWith('-');
+  const digits = raw.replace(/\D/g, '');
+  if (digits === '') return negative ? '-' : '';
+  return (negative ? '-' : '') + digits;
+}
+
 export default function ContractAppendixModal({
   contract,
   isOpen,
@@ -169,10 +186,15 @@ export default function ContractAppendixModal({
                 id="appendix-adjustment"
                 className={`form-input ${errors.adjustmentValue ? 'form-input--error' : ''}`}
                 aria-label="Giá trị điều chỉnh"
-                type="number"
-                value={adjustmentValue}
-                onChange={(e) => setAdjustmentValue(e.target.value)}
-                placeholder="200000000"
+                type="text"
+                inputMode="numeric"
+                value={formatSignedVnNumber(String(adjustmentValue))}
+                onChange={(e) => setAdjustmentValue(parseSignedVnInput(e.target.value))}
+                placeholder={
+                  contract.limitValue != null
+                    ? `Tối đa ${(contract.limitValue - contract.totalValue).toLocaleString('vi-VN')}`
+                    : 'Ví dụ: 200.000.000'
+                }
               />
               {errors.adjustmentValue && <small className="field-error">{errors.adjustmentValue}</small>}
 

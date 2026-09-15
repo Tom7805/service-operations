@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
 import type { WorkBreakdownRes, WorkPackageReq } from '../types/taskTypes';
 import { createWorkPackage, ProjectsApiError } from '../api/projectsApi';
 import { validateWorkPackageForm } from '../validators/projectValidators';
@@ -81,6 +82,7 @@ export default function WorkPackageModal({
   };
 
   return (
+    <ModalPortal>
     <div
       className="modal-backdrop"
       onClick={(e) => {
@@ -203,5 +205,6 @@ export default function WorkPackageModal({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }

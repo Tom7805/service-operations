@@ -57,8 +57,8 @@ class CustomerOverviewServiceTest {
 		customer.setCreatedAt(LocalDateTime.of(2026, 1, 1, 8, 0));
 		when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
 		when(dataProvider.opportunities(1L)).thenReturn(List.of(
-				new CustomerOverviewItemRes(2L, "CH-02", "Moi", "OPEN", BigDecimal.TEN, LocalDate.of(2026, 2, 1)),
-				new CustomerOverviewItemRes(1L, "CH-01", "Cu", "OPEN", BigDecimal.ONE, LocalDate.of(2026, 1, 1))));
+				new CustomerOverviewItemRes(2L, "CH-02", "Moi", "OPEN", BigDecimal.TEN, LocalDate.of(2026, 2, 1), null),
+				new CustomerOverviewItemRes(1L, "CH-01", "Cu", "OPEN", BigDecimal.ONE, LocalDate.of(2026, 1, 1), null)));
 		when(dataProvider.contracts(1L)).thenReturn(List.of());
 		when(dataProvider.projects(1L)).thenReturn(List.of());
 		when(dataProvider.invoices(1L)).thenReturn(List.of());

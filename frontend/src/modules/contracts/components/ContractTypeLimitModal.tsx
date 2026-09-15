@@ -21,6 +21,19 @@ const CONTRACT_TYPE_OPTIONS = [
   { value: 'MILESTONE', label: 'Milestone' },
 ] as const;
 
+// Số tiền gõ liền không dấu tách rất dễ đọc nhầm/đếm nhầm số 0 (98000000 vs
+// 980000000) — hiển thị có dấu chấm ngăn cách hàng nghìn kiểu vi-VN (98.000.000)
+// khi gõ, vẫn lưu về number thường khi gửi lên server.
+function formatVnNumber(value: number | null): string {
+  if (value == null || Number.isNaN(value)) return '';
+  return value.toLocaleString('vi-VN');
+}
+
+function parseVnNumber(raw: string): number | null {
+  const digits = raw.replace(/\D/g, '');
+  return digits === '' ? null : Number(digits);
+}
+
 export default function ContractTypeLimitModal({
   contract,
   isOpen,
@@ -124,11 +137,11 @@ export default function ContractTypeLimitModal({
             </label>
             <input
               aria-label="Giá trị hợp đồng"
-              type="number"
+              type="text"
+              inputMode="numeric"
               className={`form-input ${errors.totalValue ? 'form-input--error' : ''}`}
-              value={totalValue ?? ''}
-              onChange={(e) => setTotalValue(e.target.value === '' ? null : Number(e.target.value))}
-              min={0}
+              value={formatVnNumber(totalValue)}
+              onChange={(e) => setTotalValue(parseVnNumber(e.target.value))}
             />
             {errors.totalValue && <small className="field-error">{errors.totalValue}</small>}
 
@@ -137,11 +150,11 @@ export default function ContractTypeLimitModal({
             </label>
             <input
               aria-label="Hạn mức"
-              type="number"
+              type="text"
+              inputMode="numeric"
               className={`form-input ${errors.limitValue ? 'form-input--error' : ''}`}
-              value={limitValue ?? ''}
-              onChange={(e) => setLimitValue(e.target.value === '' ? null : Number(e.target.value))}
-              min={0}
+              value={formatVnNumber(limitValue)}
+              onChange={(e) => setLimitValue(parseVnNumber(e.target.value))}
             />
             {errors.limitValue && <small className="field-error">{errors.limitValue}</small>}
 

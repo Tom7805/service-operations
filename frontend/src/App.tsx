@@ -424,6 +424,7 @@ export default function App() {
             <CustomerListPage
               currentUserRoles={currentRoles}
               currentUserName={session.fullName}
+              currentUserId={session.userId}
             />
           ) : activeTab === 'CONTRACTS' ? (
             <ContractListPage
@@ -528,6 +529,13 @@ export default function App() {
                 currentUserName={session.fullName}
                 backLabel={activityOrigin === 'LIST' ? 'Quay lại Cơ hội bán hàng' : 'Tìm cơ hội khác'}
                 onBack={() => {
+                  // Tab đổi làm OpportunityListPage bị remount hoàn toàn (xem key={activeTab}
+                  // ở <main>), nên panel "Đang điều khiển" đang mở sẽ mất theo. Nhờ lại cơ chế
+                  // focusOpportunityId (vốn dùng khi nhảy tới từ Báo cáo đường ống) để trang tự
+                  // mở lại đúng cơ hội vừa xem, khỏi bắt người dùng bấm "Chọn" lại từ đầu.
+                  if (activityOrigin === 'LIST' && selectedOpportunityId) {
+                    setFocusOpportunityId(selectedOpportunityId);
+                  }
                   setSelectedOpportunityId(null);
                   setSelectedOpportunityName(undefined);
                   if (activityOrigin === 'LIST') setActiveTab('OPPORTUNITIES');

@@ -2,7 +2,12 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import CreateProjectModal from '../components/CreateProjectModal';
 import * as contractsApi from '../api/contractsApi';
+import * as usersApi from '../../users/api/usersApi';
 import type { ContractTargetForProject, ProjectRes } from '../types/contractTypes';
+
+vi.mock('../../users/api/usersApi', () => ({
+  getActiveUsersLookup: vi.fn(),
+}));
 
 vi.mock('../api/contractsApi', () => ({
   createProjectFromContract: vi.fn(),
@@ -59,6 +64,12 @@ const mockProjectRes: ProjectRes = {
 describe('CreateProjectModal (NCL-05-CN-001 — Tạo dự án từ hợp đồng)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // "Người quản lý dự án" giờ là combobox chọn tên (GET /users/lookup) thay vì ô gõ ID
+    // tự do — mock đủ id mà các test dưới cần chọn (7, 42).
+    vi.mocked(usersApi.getActiveUsersLookup).mockResolvedValue([
+      { id: 7, fullName: 'Người dùng 7' },
+      { id: 42, fullName: 'Người dùng 42' },
+    ]);
   });
 
   it('TC-01: Tạo dự án từ hợp đồng ACTIVE thành công với thông tin hợp lệ', async () => {
@@ -81,7 +92,7 @@ describe('CreateProjectModal (NCL-05-CN-001 — Tạo dự án từ hợp đồn
     // Kiểm tra thông tin kế thừa hiển thị
     expect(screen.getByText(/Tạo dự án từ hợp đồng/i)).toBeInTheDocument();
     expect(screen.getByText(/Công ty TNHH ABC/i)).toBeInTheDocument();
-    expect(screen.getByText(/FIXED_PRICE/i)).toBeInTheDocument();
+    expect(screen.getByText(/Fixed Price/i)).toBeInTheDocument();
     expect(screen.getByText(/RUNNING \(Đang triển khai\)/i)).toBeInTheDocument();
 
     // Điền thông tin form
@@ -100,6 +111,9 @@ describe('CreateProjectModal (NCL-05-CN-001 — Tạo dự án từ hợp đồn
       target: { value: '2027-12-31' },
     });
 
+    await waitFor(() => {
+      expect((screen.getByLabelText(/Người quản lý dự án/i) as HTMLSelectElement).options.length).toBeGreaterThan(1);
+    });
     const pmInput = screen.getByLabelText(/Người quản lý dự án/i);
     fireEvent.change(pmInput, {
       target: { value: '7' },
@@ -243,7 +257,7 @@ describe('CreateProjectModal (NCL-05-CN-001 — Tạo dự án từ hợp đồn
     expect(screen.queryByTestId('create-project-form')).not.toBeInTheDocument();
   });
 
-  it('TC-04b: Nút "Gán cho tôi" tự động điền ID người dùng đang đăng nhập', () => {
+  it('TC-04b: Nút "Gán cho tôi" tự động điền ID người dùng đang đăng nhập', async () => {
     render(
       <CreateProjectModal
         contract={activeContract}
@@ -254,7 +268,10 @@ describe('CreateProjectModal (NCL-05-CN-001 — Tạo dự án từ hợp đồn
       />
     );
 
-    const pmInput = screen.getByLabelText(/Người quản lý dự án/i) as HTMLInputElement;
+    await waitFor(() => {
+      expect((screen.getByLabelText(/Người quản lý dự án/i) as HTMLSelectElement).options.length).toBeGreaterThan(1);
+    });
+    const pmInput = screen.getByLabelText(/Người quản lý dự án/i) as HTMLSelectElement;
     fireEvent.change(pmInput, { target: { value: '' } });
     expect(pmInput.value).toBe('');
 
@@ -281,6 +298,9 @@ describe('CreateProjectModal (NCL-05-CN-001 — Tạo dự án từ hợp đồn
       />
     );
 
+    await waitFor(() => {
+      expect((screen.getByLabelText(/Người quản lý dự án/i) as HTMLSelectElement).options.length).toBeGreaterThan(1);
+    });
     fireEvent.change(screen.getByLabelText(/Tên dự án/i), {
       target: { value: 'Dự án ERP' },
     });

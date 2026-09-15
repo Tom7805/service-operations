@@ -19,6 +19,7 @@ interface CustomerDetailPageProps {
   customerId?: number;
   currentUserRoles?: string[];
   currentUserName?: string;
+  currentUserId?: number;
   onBack: () => void;
   initialContacts?: CustomerContact[];
   onCustomerUpdated?: (updated: Customer) => void;
@@ -31,6 +32,7 @@ export default function CustomerDetailPage({
   customerId: propCustomerId,
   currentUserRoles = ['VT-04'],
   currentUserName = 'Người dùng',
+  currentUserId,
   onBack,
   initialContacts,
   onCustomerUpdated,
@@ -281,6 +283,7 @@ export default function CustomerDetailPage({
             customerId={customer.id}
             customerName={customer.name}
             currentUserRoles={currentUserRoles}
+            currentUserId={currentUserId}
           />
         )}
 

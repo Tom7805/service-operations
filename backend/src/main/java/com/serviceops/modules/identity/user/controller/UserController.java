@@ -4,6 +4,7 @@ import com.serviceops.common.api.BaseRes;
 import com.serviceops.modules.identity.user.dto.request.CreateUserReq;
 import com.serviceops.modules.identity.user.dto.request.UpdateUserReq;
 import com.serviceops.modules.identity.user.dto.request.UserStatusReq;
+import com.serviceops.modules.identity.user.dto.response.UserLookupRes;
 import com.serviceops.modules.identity.user.dto.response.UserRes;
 import com.serviceops.modules.identity.user.service.UserService;
 import jakarta.validation.Valid;
@@ -19,6 +20,17 @@ import java.util.List;
 @PreAuthorize("hasRole('VT-07')")
 public class UserController {
     private final UserService userService;
+
+    /**
+     * Danh sach rut gon nguoi dung dang hoat dong, dung cho combobox chon nguoi (vi du
+     * "Nguoi quan ly du an" khi tao du an tu hop dong) — khong doi hoi vai tro Quan tri
+     * vien nhu GET /users vi khong tra du lieu nhay cam (chi id + ten).
+     */
+    @GetMapping("/lookup")
+    @PreAuthorize("hasAnyRole('VT-02', 'VT-07')")
+    public BaseRes<List<UserLookupRes>> lookupActive() {
+        return BaseRes.ok(userService.lookupActive());
+    }
 
     @GetMapping
     public BaseRes<List<UserRes>> findAll(@RequestParam(required = false) String keyword) {

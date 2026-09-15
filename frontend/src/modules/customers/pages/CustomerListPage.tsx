@@ -22,6 +22,7 @@ import type {
 interface CustomerListPageProps {
   currentUserRoles?: string[];
   currentUserName?: string;
+  currentUserId?: number;
   initialCustomers?: Customer[];
   onNavigateDetail?: (customer: Customer) => void;
 }
@@ -29,6 +30,7 @@ interface CustomerListPageProps {
 export default function CustomerListPage({
   currentUserRoles = ['VT-04'],
   currentUserName = 'Người dùng',
+  currentUserId,
   initialCustomers = [],
   onNavigateDetail,
 }: CustomerListPageProps) {
@@ -292,6 +294,7 @@ export default function CustomerListPage({
         customer={selectedCustomer}
         currentUserRoles={currentUserRoles}
         currentUserName={currentUserName}
+        currentUserId={currentUserId}
         onBack={() => setSelectedCustomer(null)}
         initialTab={detailInitialTab}
         onCustomerUpdated={handleCustomerUpdated}

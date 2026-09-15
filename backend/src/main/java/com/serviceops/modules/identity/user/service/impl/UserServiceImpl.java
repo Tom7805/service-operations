@@ -7,6 +7,7 @@ import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.identity.user.dto.request.CreateUserReq;
 import com.serviceops.modules.identity.user.dto.request.UpdateUserReq;
 import com.serviceops.modules.identity.user.dto.request.UserStatusReq;
+import com.serviceops.modules.identity.user.dto.response.UserLookupRes;
 import com.serviceops.modules.identity.user.dto.response.UserRes;
 import com.serviceops.modules.identity.user.entity.Role;
 import com.serviceops.modules.identity.user.entity.User;
@@ -37,6 +38,14 @@ public class UserServiceImpl implements UserService {
     private final DepartmentRepository departmentRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditLogService auditLogService;
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserLookupRes> lookupActive() {
+        return userRepository.findByStatusOrderByFullNameAsc(UserStatus.ACTIVE).stream()
+                .map(u -> new UserLookupRes(u.getId(), u.getFullName()))
+                .toList();
+    }
 
     @Override
     @Transactional(readOnly = true)

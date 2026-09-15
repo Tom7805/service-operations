@@ -2,12 +2,17 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import CreateProjectFromTemplateModal from '../components/CreateProjectFromTemplateModal';
 import * as projectsApi from '../api/projectsApi';
+import * as usersApi from '../../users/api/usersApi';
 import type {
   ContractTargetForProject,
   ProjectRes,
   ProjectTemplateRes,
   WorkBreakdownRes,
 } from '../types/projectTypes';
+
+vi.mock('../../users/api/usersApi', () => ({
+  getActiveUsersLookup: vi.fn(),
+}));
 
 vi.mock('../api/projectsApi', () => {
   class MockProjectsApiError extends Error {
@@ -118,6 +123,13 @@ const mockWbs: WorkBreakdownRes[] = [
 describe('CreateProjectFromTemplateModal Component (NCL-05-CN-007)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Danh sách để chọn "Người quản lý dự án" giờ là combobox (GET /users/lookup), không
+    // còn ô gõ ID tự do — mock đủ id mà các test bên dưới cần chọn (7, 12, 99).
+    vi.mocked(usersApi.getActiveUsersLookup).mockResolvedValue([
+      { id: 7, fullName: 'Người dùng 7' },
+      { id: 12, fullName: 'Người dùng 12' },
+      { id: 99, fullName: 'Người dùng 99' },
+    ]);
   });
 
   it('TC-03: từ chối truy cập và ẩn form đối với vai trò không phải Quản lý dự án (VT-02)', () => {
@@ -169,7 +181,7 @@ describe('CreateProjectFromTemplateModal Component (NCL-05-CN-007)', () => {
 
     expect(screen.getByText(/Thông tin kế thừa tự động từ hợp đồng/i)).toBeInTheDocument();
     expect(screen.getByText('Công ty Cổ phần Alpha')).toBeInTheDocument();
-    expect(screen.getByText('FIXED_PRICE')).toBeInTheDocument();
+    expect(screen.getByText('Fixed Price')).toBeInTheDocument();
     expect(screen.getByText('RUNNING (Đang thực hiện)')).toBeInTheDocument();
 
     await waitFor(() => {
@@ -227,13 +239,14 @@ describe('CreateProjectFromTemplateModal Component (NCL-05-CN-007)', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('template-select')).toBeInTheDocument();
+      expect((screen.getByTestId('pm-id-input') as HTMLSelectElement).options.length).toBeGreaterThan(1);
     });
 
     fireEvent.change(screen.getByTestId('pm-id-input'), { target: { value: '12' } });
-    expect((screen.getByTestId('pm-id-input') as HTMLInputElement).value).toBe('12');
+    expect((screen.getByTestId('pm-id-input') as HTMLSelectElement).value).toBe('12');
 
     fireEvent.click(screen.getByTestId('btn-assign-to-me'));
-    expect((screen.getByTestId('pm-id-input') as HTMLInputElement).value).toBe('99');
+    expect((screen.getByTestId('pm-id-input') as HTMLSelectElement).value).toBe('99');
   });
 
   it('TC-01, TC-02, TC-04: tạo dự án từ mẫu thành công, dựng cây WBS và cho phép xóa hạng mục trên dự án', async () => {
@@ -257,6 +270,7 @@ describe('CreateProjectFromTemplateModal Component (NCL-05-CN-007)', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('template-select')).toBeInTheDocument();
+      expect((screen.getByTestId('pm-id-input') as HTMLSelectElement).options.length).toBeGreaterThan(1);
     });
 
     fireEvent.change(screen.getByTestId('project-name-input'), {
@@ -323,6 +337,7 @@ describe('CreateProjectFromTemplateModal Component (NCL-05-CN-007)', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('template-select')).toBeInTheDocument();
+      expect((screen.getByTestId('pm-id-input') as HTMLSelectElement).options.length).toBeGreaterThan(1);
     });
 
     fireEvent.change(screen.getByTestId('project-name-input'), {
