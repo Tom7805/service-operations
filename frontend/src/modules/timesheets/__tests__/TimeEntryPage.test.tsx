@@ -32,6 +32,9 @@ vi.mock('../api/timesheetsApi', () => {
     createTimeEntry: vi.fn(),
     updateTimeEntry: vi.fn(),
     deleteTimeEntry: vi.fn(),
+    getMyTimer: vi.fn().mockResolvedValue(null),
+    startTimer: vi.fn(),
+    stopTimer: vi.fn(),
     TimesheetsApiError: MockTimesheetsApiError,
   };
 });

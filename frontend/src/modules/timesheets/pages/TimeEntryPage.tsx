@@ -6,6 +6,7 @@ import type { TimeEntryRes, TimeEntryStatus, TimesheetSummaryRes } from '../type
 import { deleteTimeEntry, getMyWeekTimeEntries, TimesheetsApiError } from '../api/timesheetsApi';
 import TimeEntryForm from '../components/TimeEntryForm';
 import ClosedProjectNotice from '../components/ClosedProjectNotice';
+import TimerWidget from '../components/TimerWidget';
 import { addDays, formatIsoDate, getMondayOf } from '../utils/weekRange';
 
 export interface TimeEntryPageProps {
@@ -258,6 +259,19 @@ export default function TimeEntryPage({
         <div className="alert-box alert-box--danger" role="alert" data-testid="time-entry-load-error" style={{ marginBottom: '16px' }}>
           {error}
         </div>
+      )}
+
+      {!loading && (
+        <TimerWidget
+          projectId={projectId}
+          taskId={taskId}
+          canStart={canLog}
+          onStopped={(createdEntry) => {
+            showToast(`Đã dừng đồng hồ — tạo bản ghi giờ công ${createdEntry.hours} giờ thành công.`);
+            void loadData();
+          }}
+          onError={(message) => showToast(message, 'error')}
+        />
       )}
 
       <div className="user-table-card" style={{ padding: '20px' }}>

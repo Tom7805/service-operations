@@ -200,3 +200,31 @@ export interface PeriodLockReq {
   year: number;
   month: number; // 1-12
 }
+
+/**
+ * Payload bắt đầu đồng hồ bấm giờ cho một công việc (NCL-06-CN-008).
+ * POST /projects/{projectId}/tasks/{taskId}/time-entry-timer
+ *
+ * `note` bắt buộc (khớp bản ghi giờ công sẽ tạo khi dừng); `billable` mặc định `true` nếu
+ * không truyền.
+ */
+export interface TimerStartReq {
+  note: string;
+  billable?: boolean;
+}
+
+/**
+ * Trạng thái phiên đồng hồ bấm giờ đang chạy của chính mình (NCL-06-CN-008). Khớp TimerRes —
+ * mỗi nhân sự chỉ có tối đa một phiên đang chạy tại một thời điểm.
+ */
+export interface TimerRes {
+  timerId: number;
+  projectId: number;
+  taskId: number;
+  userId: number;
+  startedAt: string;
+  /** Số giờ đã trôi qua tại thời điểm gọi API — chỉ để tham khảo, FE tự đếm tiếp theo đồng hồ máy. */
+  elapsedHours: number;
+  note: string;
+  billable: boolean;
+}
