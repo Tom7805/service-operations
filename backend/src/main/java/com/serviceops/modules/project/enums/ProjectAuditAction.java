@@ -18,5 +18,9 @@ public enum ProjectAuditAction {
 
 	TASK_PROGRESS_UPDATED,
 	TASK_BUDGET_UPDATED,
+
+	/** Ghi/sua/xoa gio cong theo cong viec (NCL-06-CN-001 / TC-04). */
+	TIME_ENTRY_UPDATED,
+
 	PROJECT_CLOSED
 }
