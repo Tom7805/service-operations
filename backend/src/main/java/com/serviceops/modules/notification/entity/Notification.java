@@ -23,7 +23,7 @@ public class Notification extends BaseEntity {
 	private Long recipientId;
 
 	@Enumerated(EnumType.STRING)
-	@Column(name = "type", nullable = false, length = 50)
+	@Column(name = "type", nullable = false, columnDefinition = "VARCHAR(50)")
 	private NotificationType type;
 
 	@Column(name = "title", nullable = false, length = 255)
@@ -33,7 +33,7 @@ public class Notification extends BaseEntity {
 	private String content;
 
 	@Enumerated(EnumType.STRING)
-	@Column(name = "channel", nullable = false, length = 20)
+	@Column(name = "channel", nullable = false, columnDefinition = "VARCHAR(20)")
 	private NotificationChannel channel;
 
 	@Column(name = "reference_id")

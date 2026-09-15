@@ -44,10 +44,14 @@ public class AccessDeniedAuditRecorder {
         FEATURES.put("/customers", new Feature(AuditTargetType.CUSTOMER, "Hồ sơ khách hàng"));
         FEATURES.put("/activities", new Feature(AuditTargetType.GENERAL, "Hoạt động chăm sóc cơ hội"));
         FEATURES.put("/quotes", new Feature(AuditTargetType.GENERAL, "Báo giá cơ hội"));
+        FEATURES.put("/timesheet-periods", new Feature(AuditTargetType.TIMESHEET, "Khóa kỳ chấm công"));
+        FEATURES.put("/reversal", new Feature(AuditTargetType.TIMESHEET, "Điều chỉnh giờ công bằng bút toán đảo"));
+        FEATURES.put("/adjustments", new Feature(AuditTargetType.TIMESHEET, "Điều chỉnh giờ công bằng bút toán đảo"));
         FEATURES.put("/time-entries", new Feature(AuditTargetType.GENERAL, "Ghi giờ công theo công việc"));
-        FEATURES.put("/timesheets/pending", new Feature(AuditTargetType.GENERAL, "Duyệt bảng chấm công"));
-        FEATURES.put("/approve", new Feature(AuditTargetType.GENERAL, "Duyệt bảng chấm công"));
-        FEATURES.put("/timesheets", new Feature(AuditTargetType.GENERAL, "Nộp bảng chấm công theo tuần"));
+        FEATURES.put("/timesheets/pending", new Feature(AuditTargetType.TIMESHEET, "Duyệt bảng chấm công"));
+        FEATURES.put("/approve", new Feature(AuditTargetType.TIMESHEET, "Duyệt bảng chấm công"));
+        FEATURES.put("/reject", new Feature(AuditTargetType.TIMESHEET, "Từ chối bảng chấm công"));
+        FEATURES.put("/timesheets", new Feature(AuditTargetType.TIMESHEET, "Nộp bảng chấm công theo tuần"));
         FEATURES.put("/budget", new Feature(AuditTargetType.GENERAL, "Đặt ngân sách giờ công cho công việc"));
         FEATURES.put("/tasks", new Feature(AuditTargetType.GENERAL, "Cập nhật tiến độ công việc dự án"));
         FEATURES.put("/contracts", new Feature(AuditTargetType.GENERAL, "Tạo dự án từ hợp đồng"));

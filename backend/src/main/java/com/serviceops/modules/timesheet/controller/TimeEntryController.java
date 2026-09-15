@@ -3,7 +3,10 @@ package com.serviceops.modules.timesheet.controller;
 import com.serviceops.common.api.BaseRes;
 import com.serviceops.modules.timesheet.dto.request.TimeEntryCreateReq;
 import com.serviceops.modules.timesheet.dto.request.TimeEntryUpdateReq;
+import com.serviceops.modules.timesheet.dto.request.TimerStartReq;
 import com.serviceops.modules.timesheet.dto.response.TimeEntryRes;
+import com.serviceops.modules.timesheet.dto.response.TimeEntryTaskRes;
+import com.serviceops.modules.timesheet.dto.response.TimerRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetSummaryRes;
 import com.serviceops.modules.timesheet.service.TimeEntryService;
 import jakarta.validation.Valid;
@@ -60,6 +63,35 @@ public class TimeEntryController {
 			@PathVariable Long entryId) {
 		timeEntryService.delete(projectId, taskId, entryId);
 		return BaseRes.ok("Xoa ban ghi gio cong thanh cong", null);
+	}
+
+	/** Bat dong ho bam gio cho mot cong viec. */
+	@PostMapping("/projects/{projectId}/tasks/{taskId}/time-entry-timer")
+	@PreAuthorize("hasRole('VT-03')")
+	public BaseRes<TimerRes> startTimer(@PathVariable Long projectId, @PathVariable Long taskId,
+			@Valid @RequestBody TimerStartReq request) {
+		return BaseRes.ok("Bat dong ho bam gio thanh cong",
+				timeEntryService.startTimer(projectId, taskId, request.note(), request.billable()));
+	}
+
+	/** Dung dong ho va tao ban ghi gio cong DRAFT. */
+	@PostMapping("/me/time-entry-timer/stop")
+	@PreAuthorize("hasRole('VT-03')")
+	public BaseRes<TimeEntryRes> stopTimer() {
+		return BaseRes.ok("Dung dong ho bam gio thanh cong", timeEntryService.stopTimer());
+	}
+
+	/** Xem dong ho dang chay cua chinh minh. */
+	@GetMapping("/me/time-entry-timer")
+	@PreAuthorize("hasRole('VT-03')")
+	public BaseRes<TimerRes> findMyTimer() {
+		return BaseRes.ok(timeEntryService.findMyTimer());
+	}
+
+	@GetMapping("/me/time-entry-tasks")
+	@PreAuthorize("hasRole('VT-03')")
+	public BaseRes<List<TimeEntryTaskRes>> findMyRunningTasks() {
+		return BaseRes.ok(timeEntryService.findMyRunningTasks());
 	}
 
 	/** Luoi gio cong tuan cua chinh minh, group theo cong viec, kem canh bao ngan sach (QTN-20). */

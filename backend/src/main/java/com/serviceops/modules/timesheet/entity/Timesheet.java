@@ -59,6 +59,17 @@ public class Timesheet extends BaseEntity {
 	@Column(name = "approved_at")
 	private LocalDateTime approvedAt;
 
+	/** NCL-06-CN-004: PM tu choi lan gan nhat khien bang chuyen hoan toan sang REJECTED. */
+	@Column(name = "rejected_by", length = 100)
+	private String rejectedBy;
+
+	@Column(name = "rejected_at")
+	private LocalDateTime rejectedAt;
+
+	/** Ly do tu choi — bat buoc phai co khi tu choi (NCL-06-CN-004-TC-02). */
+	@Column(name = "reject_reason", length = 1000)
+	private String rejectReason;
+
 	@Column(name = "created_at", nullable = false)
 	private LocalDateTime createdAt;
 

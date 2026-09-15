@@ -7,7 +7,10 @@ import com.serviceops.config.SecurityConfig;
 import com.serviceops.modules.timesheet.controller.TimeEntryController;
 import com.serviceops.modules.timesheet.dto.request.TimeEntryCreateReq;
 import com.serviceops.modules.timesheet.dto.request.TimeEntryUpdateReq;
+import com.serviceops.modules.timesheet.dto.request.TimerStartReq;
 import com.serviceops.modules.timesheet.dto.response.TimeEntryRes;
+import com.serviceops.modules.timesheet.dto.response.TimeEntryTaskRes;
+import com.serviceops.modules.timesheet.dto.response.TimerRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetSummaryRes;
 import com.serviceops.modules.timesheet.enums.TimeEntryStatus;
 import com.serviceops.modules.timesheet.service.TimeEntryService;
@@ -90,6 +93,49 @@ class TimeEntryControllerIT {
 	}
 
 	@Test
+	@DisplayName("NCL-06-CN-008: VT-03 bat dong ho bam gio — 200 OK")
+	void allowsSpecialistToStartTimer() throws Exception {
+		TimerStartReq req = new TimerStartReq("Phan tich quy trinh", true);
+		when(timeEntryService.startTimer(eq(1L), eq(20L), eq(req.note()), eq(req.billable())))
+				.thenReturn(new TimerRes(40L, 1L, 20L, 7L,
+						LocalDateTime.parse("2026-09-10T15:20:00"), new BigDecimal("0.00"), req.note(), true));
+
+		mockMvc.perform(post("/projects/1/tasks/20/time-entry-timer")
+					.with(SecurityMockMvcRequestPostProcessors.user("nv01").roles("VT-03"))
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(objectMapper.writeValueAsString(req)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.timerId").value(40))
+				.andExpect(jsonPath("$.data.taskId").value(20))
+				.andExpect(jsonPath("$.data.elapsedHours").value(0.0));
+	}
+
+	@Test
+	@DisplayName("NCL-06-CN-008: dung dong ho tao ban ghi DRAFT — 200 OK")
+	void stopsTimerAndReturnsTimeEntry() throws Exception {
+		when(timeEntryService.stopTimer()).thenReturn(sampleEntry());
+
+		mockMvc.perform(post("/me/time-entry-timer/stop")
+					.with(SecurityMockMvcRequestPostProcessors.user("nv01").roles("VT-03")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.id").value(30))
+				.andExpect(jsonPath("$.data.status").value("DRAFT"));
+	}
+
+	@Test
+	@DisplayName("NCL-06-CN-008: vai tro khac VT-03 bi tu choi bat dong ho")
+	void deniesNonSpecialistRoleOnStartTimer() throws Exception {
+		TimerStartReq req = new TimerStartReq("Ghi chu", true);
+
+		mockMvc.perform(post("/projects/1/tasks/20/time-entry-timer")
+					.with(SecurityMockMvcRequestPostProcessors.user("pm01").roles("VT-02"))
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(objectMapper.writeValueAsString(req)))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+	}
+
+	@Test
 	@DisplayName("TC-03: vai tro khac VT-03 (vd VT-02) bi tu choi ghi gio cong — 403 FORBIDDEN")
 	void deniesNonSpecialistRoleOnCreate() throws Exception {
 		TimeEntryCreateReq req = new TimeEntryCreateReq(WORK_DATE, new BigDecimal("3.5"), "Ghi chu", true);
@@ -133,6 +179,20 @@ class TimeEntryControllerIT {
 						.content(objectMapper.writeValueAsString(req)))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.errorCode").value("INVALID_STATE"));
+	}
+
+	@Test
+	@DisplayName("GET /me/time-entry-tasks: chi tra task thuoc du an dang chay")
+	void returnsOnlyRunningAssignedTasks() throws Exception {
+		when(timeEntryService.findMyRunningTasks()).thenReturn(List.of(
+				new TimeEntryTaskRes(1L, "Du an dang chay", 20L, "Cong viec dang chay", null)));
+
+		mockMvc.perform(get("/me/time-entry-tasks")
+					.with(SecurityMockMvcRequestPostProcessors.user("nv01").roles("VT-03")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.length()").value(1))
+				.andExpect(jsonPath("$.data[0].projectId").value(1))
+				.andExpect(jsonPath("$.data[0].taskId").value(20));
 	}
 
 	@Test
