@@ -5,6 +5,7 @@ import { getProject, ProjectsApiError } from '../../projects/api/projectsApi';
 import type { TimeEntryRes, TimeEntryStatus, TimesheetSummaryRes } from '../types/timesheetTypes';
 import { deleteTimeEntry, getMyWeekTimeEntries, TimesheetsApiError } from '../api/timesheetsApi';
 import TimeEntryForm from '../components/TimeEntryForm';
+import ClosedProjectNotice from '../components/ClosedProjectNotice';
 import { addDays, formatIsoDate, getMondayOf } from '../utils/weekRange';
 
 export interface TimeEntryPageProps {
@@ -251,12 +252,7 @@ export default function TimeEntryPage({
         </div>
       )}
 
-      {project && !isProjectOpen && (
-        <div className="alert-box alert-box--warning" role="alert" data-testid="time-entry-project-closed-alert" style={{ marginBottom: '16px' }}>
-          Dự án đã đóng hoặc tạm dừng (trạng thái: {project.status}). Không thể ghi, sửa hay xóa giờ công cho
-          công việc thuộc dự án này nữa.
-        </div>
-      )}
+      {project && !isProjectOpen && <ClosedProjectNotice project={project} />}
 
       {error && (
         <div className="alert-box alert-box--danger" role="alert" data-testid="time-entry-load-error" style={{ marginBottom: '16px' }}>
