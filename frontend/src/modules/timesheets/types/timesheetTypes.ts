@@ -228,3 +228,14 @@ export interface TimerRes {
   note: string;
   billable: boolean;
 }
+
+/**
+ * Một nhân sự còn chưa nộp bảng chấm công của tuần được tra cứu (NCL-06-CN-009). Khớp
+ * UnsubmittedTimesheetRes — `GET /timesheets/unsubmitted?weekStartDate=...`. PM xem được
+ * nhân sự của các dự án mình quản lý; nhân viên chuyên môn tự tra cứu chính mình.
+ */
+export interface UnsubmittedTimesheetRes {
+  userId: number;
+  weekStartDate: string; // YYYY-MM-DD
+  weekEndDate: string; // YYYY-MM-DD
+}
