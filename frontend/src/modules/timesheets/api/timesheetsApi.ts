@@ -1,8 +1,13 @@
 import type {
+  PendingTimesheetRes,
   TimeEntryCreateReq,
   TimeEntryRes,
   TimeEntryTaskRes,
   TimeEntryUpdateReq,
+  TimesheetApprovalRes,
+  TimesheetApproveReq,
+  TimesheetRejectReq,
+  TimesheetRejectRes,
   TimesheetRes,
   TimesheetSummaryRes,
 } from '../types/timesheetTypes';
@@ -139,5 +144,47 @@ export async function submitWeek(weekStartDate: string): Promise<TimesheetRes> {
   return requestBackend<TimesheetRes>(`${API_BASE_URL}/me/timesheets/${weekStartDate}/submit`, {
     method: 'POST',
     body: JSON.stringify({}),
+  });
+}
+
+/**
+ * NCL-06-CN-003: hàng chờ duyệt của Quản lý dự án (VT-02) hiện tại — các bảng
+ * PENDING_APPROVAL có ít nhất một dòng SUBMITTED thuộc dự án mình quản lý.
+ * GET /timesheets/pending
+ */
+export async function getPendingTimesheets(): Promise<PendingTimesheetRes[]> {
+  return requestBackend<PendingTimesheetRes[]>(`${API_BASE_URL}/timesheets/pending`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * NCL-06-CN-003: duyệt bảng chấm công. Bỏ trống `entryIds` trong payload = duyệt nguyên
+ * bảng (mọi dòng SUBMITTED thuộc dự án PM quản lý); vẫn thành công dù có công việc vượt
+ * ngân sách — xem `overBudgetWarnings` trong kết quả trả về.
+ * POST /timesheets/{timesheetId}/approve
+ */
+export async function approveTimesheet(
+  timesheetId: number,
+  payload: TimesheetApproveReq = {}
+): Promise<TimesheetApprovalRes> {
+  return requestBackend<TimesheetApprovalRes>(`${API_BASE_URL}/timesheets/${timesheetId}/approve`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * NCL-06-CN-004: từ chối bảng chấm công — bắt buộc `reason`. Bỏ trống `entryIds` = từ chối
+ * nguyên bảng; dòng bị từ chối quay về DRAFT để nhân viên sửa và nộp lại.
+ * POST /timesheets/{timesheetId}/reject
+ */
+export async function rejectTimesheet(
+  timesheetId: number,
+  payload: TimesheetRejectReq
+): Promise<TimesheetRejectRes> {
+  return requestBackend<TimesheetRejectRes>(`${API_BASE_URL}/timesheets/${timesheetId}/reject`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
   });
 }
