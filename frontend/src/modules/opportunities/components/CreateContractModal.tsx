@@ -2,10 +2,16 @@ import { useEffect, useRef, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
 import { useBackdropClick } from '../../../hooks/useBackdropClick';
-import type { Opportunity } from '../types/opportunityTypes';
+import type { Opportunity, QuoteRes } from '../types/opportunityTypes';
 import type { ContractCreateFromOpportunityReq, ContractRes } from '../../contracts/types/contractTypes';
 import { createContractFromOpportunity } from '../api/opportunitiesApi';
 import { fetchOpportunityQuoteHistory } from '../api/quotesApi';
+
+const currencyFormatter = new Intl.NumberFormat('vi-VN', {
+  style: 'currency',
+  currency: 'VND',
+  maximumFractionDigits: 0,
+});
 
 interface Props {
   opportunity: Opportunity;
@@ -42,9 +48,33 @@ export default function CreateContractModal({
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [loadingQuote, setLoadingQuote] = useState(false);
-  const [latestQuoteVersion, setLatestQuoteVersion] = useState<number | null>(null);
   const totalValueTouchedRef = useRef(false);
+
+  // NCL-04: giá trị hợp đồng PHẢI khớp báo giá đã chốt của cơ hội — để người dùng
+  // tự gõ tay rất dễ gõ sai lệch với báo giá thật (đánh máy nhầm số 0, đơn vị...),
+  // nên tự lấy báo giá mới nhất và khoá ô nhập, không cho sửa tay nữa.
+  const [latestQuote, setLatestQuote] = useState<QuoteRes | null>(null);
+  const [loadingQuote, setLoadingQuote] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    setLoadingQuote(true);
+    fetchOpportunityQuoteHistory(opportunity.id)
+      .then((history) => {
+        if (cancelled) return;
+        // Trả về sắp xếp giảm dần theo version — phần tử đầu là báo giá mới nhất.
+        const latest = history[0] ?? null;
+        setLatestQuote(latest);
+        setForm((p) => ({ ...p, totalValue: latest?.totalAmount ?? null }));
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingQuote(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, opportunity.id]);
 
   const backdrop = useBackdropClick(onClose, submitting);
 
@@ -52,14 +82,14 @@ export default function CreateContractModal({
     if (!isOpen) return;
     let cancelled = false;
     totalValueTouchedRef.current = false;
-    setLatestQuoteVersion(null);
+    setLatestQuote(null);
     setLoadingQuote(true);
     fetchOpportunityQuoteHistory(opportunity.id)
       .then((quotes) => {
         if (cancelled || quotes.length === 0) return;
         // Danh sách trả về sắp theo version giảm dần nên phần tử đầu là báo giá mới nhất.
         const latest = quotes[0];
-        setLatestQuoteVersion(latest.version);
+        setLatestQuote(latest);
         setForm((p) => (totalValueTouchedRef.current ? p : { ...p, totalValue: latest.totalAmount }));
       })
       .catch(() => {
@@ -95,7 +125,7 @@ export default function CreateContractModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAllowed || !isWon) return;
+    if (!isAllowed || !isWon || !latestQuote) return;
     if (!validate()) return;
     setSubmitting(true);
     setServerError(null);
@@ -201,19 +231,23 @@ export default function CreateContractModal({
             </label>
             <input
               aria-label="Giá trị hợp đồng"
-              type="number"
               className="form-input"
-              value={form.totalValue ?? ''}
-              onChange={(e) => {
-                totalValueTouchedRef.current = true;
-                handleChange('totalValue', e.target.value === '' ? null : Number(e.target.value));
-              }}
-              min={0}
+              value={
+                loadingQuote
+                  ? 'Đang tải báo giá...'
+                  : form.totalValue != null
+                    ? currencyFormatter.format(form.totalValue)
+                    : 'Chưa có báo giá cho cơ hội này'
+              }
+              disabled
+              readOnly
+              style={{ background: 'var(--surface-alt)', color: 'var(--ink-strong)', fontWeight: 600 }}
             />
-            {loadingQuote && <small className="field-hint">Đang lấy báo giá mới nhất…</small>}
-            {!loadingQuote && latestQuoteVersion !== null && (
-              <small className="field-hint">Tự động điền theo báo giá mới nhất</small>
-            )}
+            <small className="field-hint">
+              {latestQuote
+                ? `Tự động lấy từ báo giá mới nhất (v${latestQuote.version}) — không thể chỉnh sửa tay để tránh sai lệch.`
+                : 'Cơ hội chưa có báo giá nào, cần lập báo giá trước khi tạo hợp đồng.'}
+            </small>
 
             <label className="form-label" style={{ marginTop: '12px' }}>
               Ghi chú (tuỳ chọn)
@@ -232,7 +266,7 @@ export default function CreateContractModal({
               <button type="button" className="btn" onClick={onClose} disabled={submitting}>
                 Hủy
               </button>
-              <button type="submit" className="btn-primary" disabled={submitting || !isAllowed || !isWon}>
+              <button type="submit" className="btn-primary" disabled={submitting || !isAllowed || !isWon || !latestQuote}>
                 {submitting ? 'Đang tạo…' : 'Tạo hợp đồng'}
               </button>
             </div>

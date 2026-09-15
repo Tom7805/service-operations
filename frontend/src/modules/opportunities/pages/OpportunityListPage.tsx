@@ -44,6 +44,10 @@ export default function OpportunityListPage({
   const [isLoading, setIsLoading] = useState(initialOpportunities.length === 0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
+  // "Thu gọn thanh tiến trình" trước đây gọi setSelectedOpportunity(null), tức là BỎ CHỌN
+  // hẳn cơ hội chứ không chỉ ẩn panel — muốn xem lại phải xuống bảng bấm "Chọn" từ đầu.
+  // Tách riêng cờ ẩn/hiện này để thu gọn xong vẫn giữ nguyên cơ hội đang chọn, mở lại được ngay.
+  const [isProgressPanelCollapsed, setIsProgressPanelCollapsed] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [stageFilter, setStageFilter] = useState<string>('ALL');
@@ -54,6 +58,8 @@ export default function OpportunityListPage({
   const stageControlRef = useRef<HTMLDivElement | null>(null);
   const selectOpportunityFromRow = (opp: Opportunity) => {
     setSelectedOpportunity((prev) => (prev?.id === opp.id ? prev : opp));
+    // Chọn (lại) một cơ hội luôn mở panel ra, kể cả khi đang thu gọn từ lần trước.
+    setIsProgressPanelCollapsed(false);
     requestAnimationFrame(() => {
       stageControlRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
     });
@@ -133,7 +139,13 @@ export default function OpportunityListPage({
     if (target) {
       setSearchTerm('');
       setStageFilter('ALL');
-      selectOpportunityFromRow(target);
+      // Không dùng selectOpportunityFromRow ở đây: hàm đó kèm scrollIntoView để
+      // kéo trang xuống panel khi người dùng vừa bấm chọn 1 hàng ở giữa trang dài.
+      // Còn đây là tự khôi phục lựa chọn ngay sau khi trang MỚI mount lại (quay lại
+      // từ Ghi nhận chăm sóc / nhảy từ Báo cáo đường ống) — panel vốn đã nằm ngay
+      // đầu trang, cuộn thêm chỉ đẩy khuất tiêu đề trang lên trên, không cần thiết.
+      setSelectedOpportunity(target);
+      setIsProgressPanelCollapsed(false);
     }
     onFocusConsumed?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -142,6 +154,7 @@ export default function OpportunityListPage({
   const handleCreatedSuccess = (newOpportunity: Opportunity) => {
     setOpportunities((prev) => [newOpportunity, ...prev]);
     setSelectedOpportunity(newOpportunity);
+    setIsProgressPanelCollapsed(false);
     showToast(`Tạo cơ hội bán hàng "${newOpportunity.name}" thành công!`, 'success');
   };
 
@@ -150,6 +163,7 @@ export default function OpportunityListPage({
       prev.map((o) => (o.id === updated.id ? updated : o))
     );
     setSelectedOpportunity(updated);
+    setIsProgressPanelCollapsed(false);
     showToast(`Đã cập nhật giai đoạn cho "${updated.name}" thành công!`, 'success');
   };
 
@@ -164,7 +178,15 @@ export default function OpportunityListPage({
     // trước — nhưng lý do thua (nếu có) chỉ hiện ở panel phía trên, nên sau khi
     // chốt xong phải TỰ mở panel đó lên để người dùng thấy ngay kết quả, không
     // phải tự bấm chọn lại cơ hội vừa xử lý xong.
-    selectOpportunityFromRow(updated);
+    // Không dùng selectOpportunityFromRow ở đây: nó giữ nguyên object cũ khi id
+    // trùng với cơ hội đang chọn sẵn (tối ưu tránh re-render khi click lại cùng
+    // hàng), nhưng cơ hội đang chọn CHÍNH LÀ cơ hội vừa chốt nên object mới luôn
+    // phải thắng, nếu không panel vẫn hiển thị giai đoạn Đàm phán cũ dù đã Won/Lost.
+    setSelectedOpportunity(updated);
+    setIsProgressPanelCollapsed(false);
+    requestAnimationFrame(() => {
+      stageControlRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    });
     const outcome = updated.stage === 'WON' ? 'Thắng' : 'Thua';
     showToast(`Đã ghi nhận kết quả ${outcome} cho "${updated.name}".`, 'success');
   };
@@ -420,19 +442,21 @@ export default function OpportunityListPage({
               <button
                 type="button"
                 className="btn btn-secondary"
-                onClick={() => setSelectedOpportunity(null)}
+                onClick={() => setIsProgressPanelCollapsed((v) => !v)}
                 style={{ padding: '2px 8px', fontSize: '13px' }}
               >
-                Thu gọn thanh tiến trình
+                {isProgressPanelCollapsed ? 'Mở rộng thanh tiến trình' : 'Thu gọn thanh tiến trình'}
               </button>
             </div>
           </div>
-          <StageTransitionControl
-            opportunity={selectedOpportunity}
-            onOpportunityUpdated={handleOpportunityUpdated}
-            currentUserRoles={currentUserRoles}
-            onRequestClose={(result) => openCloseModal(selectedOpportunity, result)}
-          />
+          {!isProgressPanelCollapsed && (
+            <StageTransitionControl
+              opportunity={selectedOpportunity}
+              onOpportunityUpdated={handleOpportunityUpdated}
+              currentUserRoles={currentUserRoles}
+              onRequestClose={(result) => openCloseModal(selectedOpportunity, result)}
+            />
+          )}
         </div>
       )}
 
@@ -923,10 +947,16 @@ export default function OpportunityListPage({
                           <button
                             type="button"
                             className={`btn ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
-                            onClick={() => setSelectedOpportunity(isSelected ? null : opp)}
+                            onClick={() => (isSelected ? setSelectedOpportunity(null) : selectOpportunityFromRow(opp))}
                             style={{ fontSize: '12.5px', padding: '4px 10px', whiteSpace: 'nowrap' }}
                           >
-                            {isSelected ? 'Đang chọn' : 'Chuyển giai đoạn'}
+                            {/* Nút này chỉ chọn hàng để mở panel tiến trình phía trên, không tự
+                                chuyển giai đoạn — nhãn "Chuyển giai đoạn" gây hiểu nhầm nên luôn
+                                dùng "Chọn" bất kể cơ hội còn mở hay đã đóng. Chọn (không phải bỏ
+                                chọn) phải đi qua selectOpportunityFromRow để mở lại panel nếu
+                                đang bị thu gọn từ lần trước — nếu không, "Chọn" bấm xong mà panel
+                                đang thu gọn thì y hệt không thấy gì (đúng bug đã gặp). */}
+                            {isSelected ? 'Đang chọn' : 'Chọn'}
                           </button>
                         </div>
                       </td>

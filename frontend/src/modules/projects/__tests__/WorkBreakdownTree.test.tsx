@@ -120,20 +120,19 @@ describe('WorkBreakdownTree Component (NCL-05-CN-002)', () => {
       />
     );
 
-    const addTaskButtons = screen.getAllByRole('button', { name: /\+ Thêm việc/i });
-    expect(addTaskButtons.length).toBeGreaterThan(0);
-    fireEvent.click(addTaskButtons[0]);
+    // Thao tác hạng mục nay gộp trong menu kebab (⋮) — mở đúng menu của hạng mục
+    // muốn thao tác rồi bấm vào mục con bên trong theo data-testid ổn định.
+    fireEvent.click(screen.getByLabelText('Thao tác hạng mục Giai đoạn 1: Thiết kế'));
+    fireEvent.click(screen.getByTestId('add-task-btn-101'));
     expect(onAddTask).toHaveBeenCalledWith(mockWbsData[0], null);
 
-    const addSubPkgButtons = screen.getAllByRole('button', { name: /\+ Mục con/i });
-    expect(addSubPkgButtons.length).toBeGreaterThan(0);
-    fireEvent.click(addSubPkgButtons[0]);
+    fireEvent.click(screen.getByLabelText('Thao tác hạng mục Giai đoạn 1: Thiết kế'));
+    fireEvent.click(screen.getByTestId('add-subpackage-btn-101'));
     expect(onAddSubPackage).toHaveBeenCalledWith(mockWbsData[0]);
 
     // Xóa chỉ hiển thị với hạng mục rỗng không có task và không có mục con (hạng mục 103)
-    const deleteButtons = screen.getAllByRole('button', { name: /Xóa/i });
-    expect(deleteButtons.length).toBeGreaterThan(0);
-    fireEvent.click(deleteButtons[0]);
+    fireEvent.click(screen.getByLabelText('Thao tác hạng mục Giai đoạn 3: Nghiệm thu'));
+    fireEvent.click(screen.getByTestId('delete-wp-btn-103'));
     expect(onDeletePackage).toHaveBeenCalledWith(mockWbsData[1]);
   });
 
@@ -147,9 +146,7 @@ describe('WorkBreakdownTree Component (NCL-05-CN-002)', () => {
       />
     );
 
-    expect(screen.queryByRole('button', { name: /\+ Thêm việc/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /\+ Mục con/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Xóa/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Thao tác hạng mục/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /\+ Việc con/i })).not.toBeInTheDocument();
   });
 
@@ -163,9 +160,7 @@ describe('WorkBreakdownTree Component (NCL-05-CN-002)', () => {
       />
     );
 
-    expect(screen.queryByRole('button', { name: /\+ Thêm việc/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /\+ Mục con/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Xóa/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Thao tác hạng mục/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /\+ Việc con/i })).not.toBeInTheDocument();
   });
 

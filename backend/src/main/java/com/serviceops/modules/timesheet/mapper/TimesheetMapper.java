@@ -1,7 +1,11 @@
 package com.serviceops.modules.timesheet.mapper;
 
 import com.serviceops.modules.timesheet.dto.response.TimeEntryRes;
+import com.serviceops.modules.timesheet.dto.response.TimesheetApprovalRes;
+import com.serviceops.modules.timesheet.dto.response.TimesheetRejectRes;
+import com.serviceops.modules.timesheet.dto.response.TimesheetRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetSummaryRes;
+import com.serviceops.modules.timesheet.entity.Timesheet;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -43,5 +47,35 @@ public class TimesheetMapper {
 
 		return new TimesheetSummaryRes(taskId, taskName, weekFrom, weekTo, entries, totalHours,
 				budgetHours, approvedHours, usageRatio, overBudgetWarning);
+	}
+
+	/**
+	 * Anh xa bang cham cong tuan sang ban ghi tra ve FE (NCL-06-CN-002).
+	 */
+	public TimesheetRes toResponse(Timesheet timesheet) {
+		return new TimesheetRes(
+				timesheet.getId(),
+				timesheet.getUserId(),
+				timesheet.getWeekStartDate(),
+				timesheet.getWeekEndDate(),
+				timesheet.getStatus(),
+				timesheet.getTotalHours(),
+				timesheet.getSubmittedBy(),
+				timesheet.getSubmittedAt()
+		);
+	}
+
+	/**
+	 * Ket qua duyet: bang cham cong + danh sach canh bao vuot ngan sach (NCL-06-CN-003, TC-03).
+	 */
+	public TimesheetApprovalRes toApprovalResponse(Timesheet timesheet, List<String> overBudgetWarnings) {
+		return new TimesheetApprovalRes(toResponse(timesheet), overBudgetWarnings);
+	}
+
+	/**
+	 * Ket qua tu choi: bang cham cong sau khi tu choi + so dong bi tu choi (NCL-06-CN-004).
+	 */
+	public TimesheetRejectRes toRejectResponse(Timesheet timesheet, int rejectedEntries) {
+		return new TimesheetRejectRes(toResponse(timesheet), rejectedEntries);
 	}
 }

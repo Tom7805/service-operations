@@ -16,7 +16,7 @@ import java.util.List;
 /**
  * Doc du lieu that cho ho so tong hop khach hang (NCL-02-CN-004): co hoi ban
  * hang, hop dong va du an lay tu cac module da xay dung xong (opportunity,
- * contract, project — NCL-05).
+ * contract, project).
  *
  * <p>{@code invoices} va {@code receivables} van tra ve rong vi module Hoa
  * don (NCL-10) hien chi la file rong (chua co entity/repository nao that su
@@ -65,19 +65,18 @@ public class CustomerOverviewDataProviderImpl implements CustomerOverviewDataPro
 	/** Co hoi khong co ma rieng (chi hop dong moi co contractCode) nen code = null. */
 	private CustomerOverviewItemRes toItem(Opportunity opportunity) {
 		return new CustomerOverviewItemRes(opportunity.getId(), null, opportunity.getName(),
-				opportunity.getStage().name(), opportunity.getExpectedValue(), opportunity.getExpectedCloseDate(),
-				null, null, null);
+				opportunity.getStage().name(), opportunity.getExpectedValue(), opportunity.getExpectedCloseDate(), null);
 	}
 
 	private CustomerOverviewItemRes toItem(Contract contract) {
 		return new CustomerOverviewItemRes(contract.getId(), contract.getContractCode(), contract.getName(),
 				contract.getStatus().name(), contract.getTotalValue(), contract.getStartDate(),
-				contract.getContractType().name(), contract.getEndDate(), contract.getLimitValue());
+				contract.getContractType() == null ? null : contract.getContractType().name());
 	}
 
+	/** Du an khong co "gia tri hop dong" rieng nen dung han muc ke thua (limitValue) cho cot Gia tri. */
 	private CustomerOverviewItemRes toItem(Project project) {
 		return new CustomerOverviewItemRes(project.getId(), project.getProjectCode(), project.getName(),
-				project.getStatus().name(), project.getLimitValue(), project.getStartDate(),
-				project.getProjectType(), project.getExpectedEndDate(), project.getLimitValue());
+				project.getStatus().name(), project.getLimitValue(), project.getStartDate(), null);
 	}
 }

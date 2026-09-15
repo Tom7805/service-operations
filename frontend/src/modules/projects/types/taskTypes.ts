@@ -77,54 +77,36 @@ export interface WorkBreakdownRes {
 }
 
 /**
- * Phân công nhân sự cho công việc (NCL-05-CN-003).
- * PUT /projects/{projectId}/tasks/{taskId}/assignments — danh sách mới THAY THẾ toàn bộ danh sách cũ.
+ * Payload phân công nhân sự cho công việc (NCL-05-CN-003).
+ * Danh sách userIds gửi lên sẽ THAY THẾ toàn bộ danh sách phân công cũ, không cộng dồn.
+ * PUT /projects/{projectId}/tasks/{taskId}/assignments
  */
 export interface TaskAssignmentReq {
   userIds: number[];
-  expectedStartDate?: string | null;
-  expectedEndDate?: string | null;
+  expectedStartDate: string;
+  expectedEndDate: string;
 }
 
-/** Kết quả một lượt phân công (NCL-05-CN-003). */
+/**
+ * Một bản ghi phân công nhân sự cho công việc (NCL-05-CN-003).
+ * Khớp TaskAssignmentRes từ backend.
+ */
 export interface TaskAssignmentRes {
   id: number;
   taskId: number;
   userId: number;
   username: string;
   fullName: string;
-  expectedStartDate: string | null;
-  expectedEndDate: string | null;
-}
-
-/** Nhân sự đang hoạt động, đủ điều kiện được giao việc (NCL-05-CN-003). */
-export interface AssignableEmployee {
-  userId: number;
-  username: string;
-  fullName: string;
-  professionalRole: string | null;
+  expectedStartDate: string;
+  expectedEndDate: string;
 }
 
 /**
- * Payload đổi trạng thái tiến độ công việc (NCL-05-CN-004).
+ * Payload cập nhật tiến độ công việc (NCL-05-CN-004).
+ * Chỉ người có tên trong danh sách phân công của chính công việc đó mới gọi được,
+ * không phân biệt vai trò — xem TaskServiceImpl.updateProgress ở backend.
  * PATCH /projects/{projectId}/tasks/{taskId}/progress
  */
 export interface TaskProgressReq {
-  status: TaskStatus;
-}
-
-/**
- * Một công việc đang được giao cho người dùng hiện tại, hiển thị ở màn "Việc của tôi"
- * (NCL-05-CN-004). GET /tasks/my-assignments
- */
-export interface MyTaskRes {
-  taskId: number;
-  projectId: number;
-  projectCode: string | null;
-  projectName: string | null;
-  taskName: string;
-  description: string | null;
-  expectedStartDate: string | null;
-  expectedEndDate: string | null;
   status: TaskStatus;
 }

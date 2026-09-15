@@ -10,6 +10,6 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
 	/** NCL-05-CN-001: danh sach du an cua mot hop dong, moi nhat truoc. */
 	List<Project> findByContractIdOrderByIdDesc(Long contractId);
 
-	/** Danh sach du an cua mot khach hang (ho so tong hop NCL-02-CN-004), moi nhat truoc. */
+	/** NCL-02-CN-004: danh sach du an cua mot khach hang cho ho so tong hop, moi nhat truoc. */
 	List<Project> findByCustomerIdOrderByIdDesc(Long customerId);
 }

@@ -15,6 +15,6 @@ public interface TaskService {
 
 	TaskRes updateProgress(Long projectId, Long taskId, TaskProgressReq request);
 
-	/** NCL-05-CN-004: danh sach cong viec dang duoc giao cho nguoi dung hien tai. */
+	/** Danh sach cong viec dang duoc giao cho nguoi dung hien tai, tren tat ca du an. */
 	List<MyTaskRes> findMyTasks();
 }

@@ -82,8 +82,14 @@ public class WorkPackageController {
 		return BaseRes.ok(taskService.findAssignments(projectId, taskId));
 	}
 
+	/**
+	 * NCL-05-CN-004: Cap nhat tien do cong viec. Khong gioi han vai tro cu the (PM co the
+	 * giao viec cho bat ky vai tro nao con ACTIVE) — quyen thuc su duoc kiem tra o
+	 * TaskServiceImpl.updateProgress: nguoi goi phai co ten trong danh sach duoc giao
+	 * (project_task_assignments) cua chinh cong viec nay.
+	 */
 	@PatchMapping("/tasks/{taskId}/progress")
-	@PreAuthorize("hasRole('VT-03')")
+	@PreAuthorize("isAuthenticated()")
 	public BaseRes<TaskRes> updateTaskProgress(@PathVariable Long projectId, @PathVariable Long taskId,
 			@Valid @RequestBody TaskProgressReq request) {
 		return BaseRes.ok("Cap nhat tien do cong viec thanh cong",

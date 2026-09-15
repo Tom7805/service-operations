@@ -8,6 +8,8 @@ export interface WorkBreakdownTreeProps {
   items: WorkBreakdownRes[];
   isProjectOpen?: boolean;
   canEdit?: boolean;
+  /** NCL-06-CN-001: Nhân viên chuyên môn (VT-03) và dự án đang RUNNING mới ghi được giờ công. */
+  canLogTime?: boolean;
   onAddSubPackage?: (parent: WorkBreakdownRes) => void;
   onAddTask?: (wp: WorkBreakdownRes, parentTask?: TaskRes | null) => void;
   onDeletePackage?: (wp: WorkBreakdownRes) => void;
@@ -15,6 +17,8 @@ export interface WorkBreakdownTreeProps {
   onSetBudget?: (task: TaskRes) => void;
   /** NCL-05-CN-003: mở form phân công nhân sự cho một công việc. */
   onAssign?: (task: TaskRes) => void;
+  /** NCL-06-CN-001: mở màn ghi giờ công (TimeEntryPage) cho một công việc. */
+  onLogTime?: (task: TaskRes) => void;
 }
 
 const statusBadgeConfig: Record<TaskStatus, { label: string; className: string }> = {
@@ -59,11 +63,13 @@ export default function WorkBreakdownTree({
   items,
   isProjectOpen = true,
   canEdit = false,
+  canLogTime = false,
   onAddSubPackage,
   onAddTask,
   onDeletePackage,
   onSetBudget,
   onAssign,
+  onLogTime,
 }: WorkBreakdownTreeProps) {
   // Trạng thái thu gọn/mở rộng từng hạng mục (mặc định mở tất cả)
   const [collapsed, setCollapsed] = useState<Record<number, boolean>>({});
@@ -119,33 +125,48 @@ export default function WorkBreakdownTree({
 
           <span className={`wbs-badge ${badge.className}`}>{badge.label}</span>
 
+          {canLogTime && isProjectOpen && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-xs"
+              onClick={() => onLogTime?.(task)}
+              title="Ghi giờ công cho công việc này"
+              data-testid={`log-time-btn-${task.id}`}
+            >
+              {ICONS.clock} Ghi giờ công
+            </button>
+          )}
+
           {canEdit && isProjectOpen && (
-            <RowActionsMenu
-              ariaLabel={`Thao tác công việc ${task.name}`}
-              actions={[
-                {
-                  key: 'assign',
-                  label: 'Phân công nhân sự',
-                  icon: ICONS.users,
-                  onClick: () => onAssign?.(task),
-                  testId: `assign-task-btn-${task.id}`,
-                },
-                {
-                  key: 'budget',
-                  label: task.budgetHours != null ? 'Đổi ngân sách giờ công' : 'Đặt ngân sách giờ công',
-                  icon: ICONS.clock,
-                  onClick: () => onSetBudget?.(task),
-                  testId: `set-budget-btn-${task.id}`,
-                },
-                {
-                  key: 'add-subtask',
-                  label: 'Thêm công việc con',
-                  icon: ICONS.plus,
-                  onClick: () => onAddTask?.(wp, task),
-                  testId: `add-subtask-btn-${task.id}`,
-                },
-              ]}
-            />
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary btn-xs"
+                onClick={() => onAssign?.(task)}
+                title="Phân công nhân sự"
+                data-testid={`assign-task-btn-${task.id}`}
+              >
+                {ICONS.users} Phân công
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-xs"
+                onClick={() => onSetBudget?.(task)}
+                title="Đặt ngân sách giờ công"
+                data-testid={`set-budget-btn-${task.id}`}
+              >
+                {task.budgetHours != null ? 'Đổi ngân sách' : '+ Ngân sách'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-xs"
+                onClick={() => onAddTask?.(wp, task)}
+                title="Thêm công việc con"
+                data-testid={`add-subtask-btn-${task.id}`}
+              >
+                + Việc con
+              </button>
+            </>
           )}
         </div>
 

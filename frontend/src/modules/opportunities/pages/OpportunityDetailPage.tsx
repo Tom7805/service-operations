@@ -101,6 +101,10 @@ export default function OpportunityDetailPage({
   const [errors, setErrors] = useState<OpportunityActivityFormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+  // Thông báo tạo hợp đồng riêng, KHÔNG dùng chung submitMessage của form "Ghi nhận chăm
+  // sóc" — submitMessage render tít dưới cùng form đó (sau ô "Nội dung trao đổi"), cách rất
+  // xa nút "Tạo hợp đồng" ở đầu trang nên người dùng không thấy được kết quả vừa tạo.
+  const [contractCreatedMessage, setContractCreatedMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isSalesAllowed) return;
@@ -174,7 +178,8 @@ export default function OpportunityDetailPage({
     } catch (e) {
       void e;
     }
-    setSubmitMessage('Tạo hợp đồng thành công.');
+    setContractCreatedMessage(`Đã tạo hợp đồng ${c.contractCode} thành công.`);
+    setTimeout(() => setContractCreatedMessage(null), 5000);
   };
 
   const validationErrors = useMemo(() => {
@@ -295,6 +300,15 @@ export default function OpportunityDetailPage({
           )}
         </div>
       </div>
+
+      {contractCreatedMessage && (
+        <div className="alert-box alert-box--success" data-testid="contract-created-banner">
+          <span className="alert-box__icon">{ICONS.checkCircle}</span>
+          <div className="alert-box__content">
+            <p>{contractCreatedMessage}</p>
+          </div>
+        </div>
+      )}
 
       {isClosed && (
         <div className="alert-box alert-box--info" data-testid="activity-readonly-banner">

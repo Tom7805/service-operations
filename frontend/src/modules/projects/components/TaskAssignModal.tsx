@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
-import type { AssignableEmployee, TaskAssignmentReq } from '../types/taskTypes';
-import { assignTask, fetchAssignableEmployeesForTask, fetchTaskAssignments, ProjectsApiError } from '../api/projectsApi';
+import { getActiveUsersLookup, type UserLookup } from '../../users/api/usersApi';
+import type { TaskAssignmentReq, TaskAssignmentRes } from '../types/taskTypes';
+import { assignTask, getTaskAssignments, ProjectsApiError } from '../api/projectsApi';
 import { validateTaskAssignmentForm } from '../validators/projectValidators';
 
 export interface TaskAssignModalProps {
@@ -11,12 +12,13 @@ export interface TaskAssignModalProps {
   projectId: number;
   taskId: number;
   taskName?: string;
-  onSaved?: () => void;
+  onSaved?: (assignments: TaskAssignmentRes[]) => void;
 }
 
 /**
- * NCL-05-CN-003: Phân công một hoặc nhiều nhân viên phụ trách một công việc.
- * Danh sách người được giao MỚI sẽ THAY THẾ toàn bộ danh sách cũ (không cộng dồn).
+ * NCL-05-CN-003: Phân công nhân sự cho công việc.
+ * Danh sách người được giao mới sẽ THAY THẾ toàn bộ danh sách cũ, không cộng dồn.
+ * Chỉ Quản lý dự án (VT-02) thao tác được, dự án phải đang RUNNING.
  */
 export default function TaskAssignModal({
   isOpen,
@@ -26,10 +28,8 @@ export default function TaskAssignModal({
   taskName,
   onSaved,
 }: TaskAssignModalProps) {
-  const [employees, setEmployees] = useState<AssignableEmployee[]>([]);
-  const [loadingEmployees, setLoadingEmployees] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-
+  const [users, setUsers] = useState<UserLookup[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   const [expectedStartDate, setExpectedStartDate] = useState('');
   const [expectedEndDate, setExpectedEndDate] = useState('');
@@ -39,35 +39,34 @@ export default function TaskAssignModal({
 
   useEffect(() => {
     if (!isOpen) return;
-    let cancelled = false;
+
     setErrors({});
     setServerError(null);
-    setLoadError(null);
-    setLoadingEmployees(true);
+    setSelectedUserIds([]);
+    setExpectedStartDate('');
+    setExpectedEndDate('');
+    setLoadingUsers(true);
 
-    Promise.all([fetchAssignableEmployeesForTask(), fetchTaskAssignments(projectId, taskId)])
-      .then(([employeeList, assignments]) => {
-        if (cancelled) return;
-        setEmployees(employeeList);
-        setSelectedUserIds(assignments.map((a) => a.userId));
-        // Cả nhóm dùng chung một khung ngày — lấy từ người đầu tiên đã được giao (nếu có).
-        setExpectedStartDate(assignments[0]?.expectedStartDate ?? '');
-        setExpectedEndDate(assignments[0]?.expectedEndDate ?? '');
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setLoadError(
-            err instanceof ProjectsApiError ? err.message : 'Không thể tải dữ liệu phân công.'
-          );
+    (async () => {
+      try {
+        const [userList, currentAssignments] = await Promise.all([
+          getActiveUsersLookup(),
+          getTaskAssignments(projectId, taskId),
+        ]);
+        setUsers(userList);
+        if (currentAssignments.length > 0) {
+          setSelectedUserIds(currentAssignments.map((a) => a.userId));
+          setExpectedStartDate(currentAssignments[0].expectedStartDate);
+          setExpectedEndDate(currentAssignments[0].expectedEndDate);
         }
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingEmployees(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
+      } catch (err: unknown) {
+        const msg =
+          err instanceof Error ? err.message : 'Không thể nạp danh sách nhân viên. Vui lòng thử lại.';
+        setServerError(msg);
+      } finally {
+        setLoadingUsers(false);
+      }
+    })();
   }, [isOpen, projectId, taskId]);
 
   if (!isOpen) return null;
@@ -77,6 +76,7 @@ export default function TaskAssignModal({
       prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
     );
     setErrors((prev) => ({ ...prev, userIds: '' }));
+    setServerError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -85,8 +85,8 @@ export default function TaskAssignModal({
 
     const payload: TaskAssignmentReq = {
       userIds: selectedUserIds,
-      expectedStartDate: expectedStartDate || null,
-      expectedEndDate: expectedEndDate || null,
+      expectedStartDate,
+      expectedEndDate,
     };
 
     const validation = validateTaskAssignmentForm(payload);
@@ -99,8 +99,8 @@ export default function TaskAssignModal({
     setServerError(null);
 
     try {
-      await assignTask(projectId, taskId, payload);
-      onSaved?.();
+      const assignments = await assignTask(projectId, taskId, payload);
+      onSaved?.(assignments);
       onClose();
     } catch (err: unknown) {
       if (err instanceof ProjectsApiError) {
@@ -108,7 +108,7 @@ export default function TaskAssignModal({
       } else if (err instanceof Error) {
         setServerError(err.message);
       } else {
-        setServerError('Không thể phân công. Vui lòng thử lại.');
+        setServerError('Không thể phân công nhân sự. Vui lòng thử lại.');
       }
     } finally {
       setSubmitting(false);
@@ -131,7 +131,7 @@ export default function TaskAssignModal({
           <div className="modal-header__title-wrap">
             <h3 id="task-assign-modal-title" className="modal-title">
               <span className="modal-title__icon">{ICONS.users}</span>
-              Phân công nhân sự cho công việc
+              Phân công nhân sự
             </h3>
             {taskName && (
               <p className="field-hint">
@@ -151,132 +151,141 @@ export default function TaskAssignModal({
         </div>
 
         <div className="modal-body" style={{ overflowY: 'auto' }}>
-          {loadError && (
-            <div className="alert-box alert-box--danger" role="alert" style={{ marginBottom: '14px' }}>
-              {loadError}
-            </div>
-          )}
           {serverError && (
             <div className="alert-box alert-box--danger" role="alert" data-testid="task-assign-server-error" style={{ marginBottom: '14px' }}>
               {serverError}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} noValidate data-testid="task-assign-form">
-            <div className="form-group" style={{ marginBottom: '14px' }}>
-              <label className="form-label">
-                Nhân sự phụ trách <span className="field-required">*</span>
-              </label>
-              {loadingEmployees ? (
-                <p className="field-hint">Đang tải danh sách nhân sự...</p>
-              ) : employees.length === 0 ? (
-                <p className="field-hint">Không có nhân sự nào đủ điều kiện được giao việc.</p>
-              ) : (
+          {loadingUsers ? (
+            <div className="table-loading-state" data-testid="task-assign-loading">
+              <span className="spinner-lg" />
+              <p style={{ marginTop: '10px' }}>Đang nạp danh sách nhân viên...</p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} noValidate data-testid="task-assign-form">
+              <div className="form-group" style={{ marginBottom: '14px' }}>
+                <label className="form-label">
+                  Nhân viên phụ trách <span className="field-required">*</span>
+                </label>
                 <div
                   style={{
                     maxHeight: '220px',
                     overflowY: 'auto',
                     border: '1px solid #E2E8F0',
                     borderRadius: '8px',
+                    padding: '8px 10px',
                   }}
+                  data-testid="task-assign-user-list"
                 >
-                  {employees.map((emp) => (
-                    <label
-                      key={emp.userId}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '8px 12px',
-                        borderBottom: '1px solid #F1F5F9',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedUserIds.includes(emp.userId)}
-                        onChange={() => toggleUser(emp.userId)}
-                        disabled={submitting}
-                      />
-                      <span>
-                        {emp.fullName} ({emp.username})
-                        {emp.professionalRole && (
-                          <span className="cell-muted"> — {emp.professionalRole}</span>
-                        )}
-                      </span>
-                    </label>
-                  ))}
+                  {users.length === 0 ? (
+                    <p className="field-hint" style={{ margin: 0 }}>
+                      Không có nhân viên nào đang hoạt động.
+                    </p>
+                  ) : (
+                    users.map((u) => (
+                      <label
+                        key={u.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '4px 0',
+                          fontSize: '14px',
+                          cursor: submitting ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedUserIds.includes(u.id)}
+                          onChange={() => toggleUser(u.id)}
+                          disabled={submitting}
+                          data-testid={`task-assign-user-${u.id}`}
+                        />
+                        {u.fullName}
+                      </label>
+                    ))
+                  )}
                 </div>
-              )}
-              {errors.userIds && (
-                <p className="field-error" data-testid="error-task-assign-users" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
-                  {errors.userIds}
-                </p>
-              )}
-              <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px', color: '#64748B' }}>
-                Lưu sẽ THAY THẾ toàn bộ danh sách người đang được giao trước đó, không cộng dồn.
-              </p>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
-              <div className="form-group">
-                <label className="form-label" htmlFor="task-assign-start-date">
-                  Ngày bắt đầu dự kiến
-                </label>
-                <input
-                  id="task-assign-start-date"
-                  type="date"
-                  className="form-input"
-                  value={expectedStartDate}
-                  onChange={(e) => {
-                    setExpectedStartDate(e.target.value);
-                    setErrors((prev) => ({ ...prev, expectedEndDate: '' }));
-                  }}
-                  disabled={submitting}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="task-assign-end-date">
-                  Ngày kết thúc dự kiến
-                </label>
-                <input
-                  id="task-assign-end-date"
-                  type="date"
-                  className={`form-input ${errors.expectedEndDate ? 'form-input--error' : ''}`}
-                  value={expectedEndDate}
-                  onChange={(e) => {
-                    setExpectedEndDate(e.target.value);
-                    setErrors((prev) => ({ ...prev, expectedEndDate: '' }));
-                  }}
-                  disabled={submitting}
-                />
-                {errors.expectedEndDate && (
-                  <p className="field-error" data-testid="error-task-assign-end-date" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
-                    {errors.expectedEndDate}
+                {errors.userIds && (
+                  <p className="field-error" data-testid="error-task-assign-users" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                    {errors.userIds}
                   </p>
                 )}
+                <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px', color: '#64748B' }}>
+                  Danh sách người được chọn sẽ thay thế toàn bộ danh sách phân công hiện tại, không cộng dồn.
+                  Có thể phân công cho bất kỳ vai trò nào đang hoạt động; người được giao sẽ tự cập nhật tiến độ công việc này sau khi đăng nhập.
+                </p>
               </div>
-            </div>
 
-            <div className="modal-footer" style={{ padding: '16px 0 0', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={onClose}
-                disabled={submitting}
-              >
-                Hủy bỏ
-              </button>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={submitting || loadingEmployees}
-                data-testid="submit-task-assign-btn"
-              >
-                {submitting ? 'Đang lưu…' : 'Lưu phân công'}
-              </button>
-            </div>
-          </form>
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '14px' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label className="form-label" htmlFor="task-assign-start-date">
+                    Ngày bắt đầu dự kiến <span className="field-required">*</span>
+                  </label>
+                  <input
+                    id="task-assign-start-date"
+                    type="date"
+                    className={`form-input ${errors.expectedStartDate ? 'form-input--error' : ''}`}
+                    value={expectedStartDate}
+                    onChange={(e) => {
+                      setExpectedStartDate(e.target.value);
+                      setErrors((prev) => ({ ...prev, expectedStartDate: '', expectedEndDate: '' }));
+                      setServerError(null);
+                    }}
+                    disabled={submitting}
+                  />
+                  {errors.expectedStartDate && (
+                    <p className="field-error" data-testid="error-task-assign-start-date" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                      {errors.expectedStartDate}
+                    </p>
+                  )}
+                </div>
+
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label className="form-label" htmlFor="task-assign-end-date">
+                    Ngày kết thúc dự kiến <span className="field-required">*</span>
+                  </label>
+                  <input
+                    id="task-assign-end-date"
+                    type="date"
+                    className={`form-input ${errors.expectedEndDate ? 'form-input--error' : ''}`}
+                    value={expectedEndDate}
+                    onChange={(e) => {
+                      setExpectedEndDate(e.target.value);
+                      setErrors((prev) => ({ ...prev, expectedEndDate: '' }));
+                      setServerError(null);
+                    }}
+                    disabled={submitting}
+                  />
+                  {errors.expectedEndDate && (
+                    <p className="field-error" data-testid="error-task-assign-end-date" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                      {errors.expectedEndDate}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="modal-footer" style={{ padding: '16px 0 0', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={onClose}
+                  disabled={submitting}
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={submitting}
+                  data-testid="submit-task-assign-btn"
+                >
+                  {submitting ? 'Đang lưu…' : 'Lưu phân công'}
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
     </div>

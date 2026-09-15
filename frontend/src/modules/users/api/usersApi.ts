@@ -58,6 +58,17 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
   return payload.data as T;
 }
 
+export interface UserLookup {
+  id: number;
+  fullName: string;
+}
+
+/** Danh sách rút gọn người dùng đang hoạt động cho combobox chọn tên (ví dụ "Người quản
+ *  lý dự án") — không đòi vai trò Quản trị viên như getUsers(), chỉ id + tên. */
+export async function getActiveUsersLookup(): Promise<UserLookup[]> {
+  return requestBackend<UserLookup[]>(`${API_BASE_URL}/users/lookup`, { method: 'GET' });
+}
+
 export async function getUsers(keyword?: string): Promise<User[]> {
   const url = new URL(`${API_BASE_URL}/users`);
   if (keyword && keyword.trim()) {

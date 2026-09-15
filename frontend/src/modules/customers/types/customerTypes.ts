@@ -122,12 +122,8 @@ export interface CustomerOverviewItem {
   status: string | null;
   amount: number | null;
   date: string | null; // ISO date (yyyy-MM-dd)
-  /** Chỉ có giá trị với dòng hợp đồng; null với cơ hội/dự án khác. */
-  contractType?: string | null;
-  /** Chỉ có giá trị với dòng hợp đồng; null với cơ hội/dự án khác. */
-  endDate?: string | null;
-  /** Chỉ có giá trị với dòng hợp đồng; null với cơ hội/dự án khác hoặc hợp đồng chưa đặt hạn mức. */
-  limitValue?: number | null;
+  /** Chỉ có ở hợp đồng (ví dụ TIME_AND_MATERIAL) — null với cơ hội bán hàng. */
+  contractType: string | null;
 }
 
 /**

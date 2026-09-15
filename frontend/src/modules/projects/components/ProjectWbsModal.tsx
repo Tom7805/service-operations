@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
-import type { ProjectRes, TaskBudgetStatusRes, TaskRes, WorkBreakdownRes } from '../types/projectTypes';
+import type {
+  ProjectRes,
+  TaskAssignmentRes,
+  TaskBudgetStatusRes,
+  TaskRes,
+  WorkBreakdownRes,
+} from '../types/projectTypes';
 import {
   closeProject,
   deleteWorkPackage,
@@ -76,7 +82,10 @@ export default function ProjectWbsModal({
 
   // Modal phân công nhân sự (NCL-05-CN-003)
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-  const [assignTarget, setAssignTarget] = useState<{ id: number; name: string }>({ id: 0, name: '' });
+  const [assignTarget, setAssignTarget] = useState<{ id: number; name: string }>({
+    id: 0,
+    name: '',
+  });
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -169,8 +178,8 @@ export default function ProjectWbsModal({
     setIsAssignModalOpen(true);
   };
 
-  const handleAssignSaved = () => {
-    showToast('Đã lưu phân công thành công');
+  const handleAssignSaved = (assignments: TaskAssignmentRes[]) => {
+    showToast(`Đã phân công ${assignments.length} nhân viên cho công việc thành công`);
     onUpdated?.();
     void loadData();
   };

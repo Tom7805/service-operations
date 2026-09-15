@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
 import type {
-  AssignableProjectManager,
   ContractTargetForProject,
   ProjectCreateFromTemplateReq,
   ProjectRes,
@@ -12,13 +11,13 @@ import type {
 import {
   createProjectFromTemplate,
   deleteWorkPackage,
-  fetchAssignableProjectManagers,
   fetchProjectTemplates,
   getWorkBreakdown,
   ProjectsApiError,
 } from '../api/projectsApi';
 import { validateProjectCreateFromTemplateForm } from '../validators/projectValidators';
 import WorkBreakdownTree from './WorkBreakdownTree';
+import { getActiveUsersLookup, type UserLookup } from '../../users/api/usersApi';
 
 export interface CreateProjectFromTemplateModalProps {
   isOpen: boolean;
@@ -38,6 +37,18 @@ const currencyFormatter = new Intl.NumberFormat('vi-VN', {
 function formatAmount(value: number | null | undefined): string {
   if (value == null || Number.isNaN(value)) return '—';
   return currencyFormatter.format(value);
+}
+
+const CONTRACT_TYPE_LABELS: Record<string, string> = {
+  TIME_AND_MATERIAL: 'Time & Material',
+  FIXED_PRICE: 'Fixed Price',
+  MAINTENANCE: 'Maintenance',
+  MILESTONE: 'Milestone',
+};
+
+function contractTypeLabel(value: string | null | undefined): string {
+  if (!value) return 'Chưa xác định';
+  return CONTRACT_TYPE_LABELS[value] ?? value;
 }
 
 function todayIso(): string {
@@ -67,10 +78,33 @@ export default function CreateProjectFromTemplateModal({
   const [expectedEndDate, setExpectedEndDate] = useState('');
   const [projectManagerId, setProjectManagerId] = useState<number | ''>(currentUserId || '');
 
-  // Danh sách người dùng ACTIVE để chọn "Người quản lý dự án" (thay vì gõ tay ID không biết trước)
-  const [managers, setManagers] = useState<AssignableProjectManager[]>([]);
+  // Trước đây ô này bắt gõ tay User ID — đổi sang combobox chọn theo tên (GET
+  // /users/lookup) giống modal "Tạo dự án từ hợp đồng", vì không ai nhớ ID đồng nghiệp.
+  const [managerOptions, setManagerOptions] = useState<UserLookup[]>([]);
   const [loadingManagers, setLoadingManagers] = useState(false);
-  const [managersError, setManagersError] = useState<string | null>(null);
+  const [managerLoadError, setManagerLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    setLoadingManagers(true);
+    setManagerLoadError(null);
+    getActiveUsersLookup()
+      .then((users) => {
+        if (!cancelled) setManagerOptions(users);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setManagerOptions([]);
+        setManagerLoadError(err instanceof Error ? err.message : 'Không thể tải danh sách người dùng.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingManagers(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
 
   // Trạng thái xử lý form
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -132,31 +166,6 @@ export default function CreateProjectFromTemplateModal({
     }
   }, [isOpen, contract, isPM, isContractActive, currentUserId, loadTemplates]);
 
-  // Tải danh sách người dùng ACTIVE cho ô chọn "Người quản lý dự án"
-  useEffect(() => {
-    if (!isOpen || !isPM || !isContractActive) return;
-    let cancelled = false;
-    setLoadingManagers(true);
-    setManagersError(null);
-    fetchAssignableProjectManagers()
-      .then((list) => {
-        if (!cancelled) setManagers(list);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setManagersError(
-            err instanceof ProjectsApiError ? err.message : 'Không thể tải danh sách người dùng.'
-          );
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingManagers(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, isPM, isContractActive]);
-
   // Tải cây WBS của dự án vừa tạo
   const loadCreatedProjectWbs = useCallback(async (projectId: number) => {
     setLoadingWbs(true);
@@ -174,7 +183,7 @@ export default function CreateProjectFromTemplateModal({
 
   // Gán cho tôi
   const handleAssignToMe = () => {
-    setProjectManagerId(currentUserId || 7);
+    setProjectManagerId(currentUserId || '');
     if (fieldErrors.projectManagerId) {
       setFieldErrors((prev) => {
         const next = { ...prev };
@@ -311,7 +320,7 @@ export default function CreateProjectFromTemplateModal({
                   </div>
                   <div className="project-preview-item">
                     <span className="field-hint">Loại dự án:</span>
-                    <strong>{contract.contractType || 'FIXED_PRICE'}</strong>
+                    <strong>{contractTypeLabel(contract.contractType)}</strong>
                   </div>
                   <div className="project-preview-item">
                     <span className="field-hint">Hạn mức ngân sách trần:</span>
@@ -503,8 +512,9 @@ export default function CreateProjectFromTemplateModal({
                       className="btn btn-secondary btn-xs"
                       onClick={handleAssignToMe}
                       data-testid="btn-assign-to-me"
+                      style={{ padding: '2px 8px', fontSize: '12px' }}
                     >
-                      {ICONS.user} Gán cho tôi
+                      Gán cho tôi
                     </button>
                   </div>
                   <select
@@ -525,20 +535,20 @@ export default function CreateProjectFromTemplateModal({
                     disabled={loadingManagers}
                     data-testid="pm-id-input"
                   >
-                    <option value="">-- Chọn người quản lý dự án --</option>
-                    {managers.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.fullName} ({m.username})
+                    <option value="">
+                      {loadingManagers ? 'Đang tải danh sách người dùng...' : '-- Chọn người quản lý dự án --'}
+                    </option>
+                    {managerOptions.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.fullName}
                       </option>
                     ))}
                   </select>
-                  <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px', color: '#64748B' }}>
-                    {loadingManagers
-                      ? 'Đang tải danh sách người dùng...'
-                      : managersError
-                      ? managersError
-                      : 'Chỉ hiển thị tài khoản đang hoạt động (ACTIVE) trong hệ thống.'}
-                  </p>
+                  {managerLoadError && (
+                    <span className="field-error" role="alert">
+                      {managerLoadError}
+                    </span>
+                  )}
                   {fieldErrors.projectManagerId && (
                     <span className="field-error" role="alert" data-testid="error-projectManagerId">
                       {fieldErrors.projectManagerId}

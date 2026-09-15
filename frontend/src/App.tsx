@@ -19,7 +19,16 @@ import OpportunitySearchPicker from './modules/opportunities/components/Opportun
 import OpportunityListPage from './modules/opportunities/pages/OpportunityListPage';
 import RevenueForecastPage from './modules/opportunities/pages/RevenueForecastPage';
 import PipelineReportPage from './modules/reports/pages/PipelineReportPage';
-import MyTasksPage from './modules/projects/pages/MyTasksPage';
+import MyWorkPage from './modules/mytasks/pages/MyWorkPage';
+import TimesheetApprovalPage from './modules/timesheets/pages/TimesheetApprovalPage';
+import TimesheetRejectPage from './modules/timesheets/pages/TimesheetRejectPage';
+import TimesheetAdjustmentPage from './modules/timesheets/pages/TimesheetAdjustmentPage';
+import TimesheetPeriodPage from './modules/timesheets/pages/TimesheetPeriodPage';
+import UnsubmittedTimesheetsPage from './modules/timesheets/pages/UnsubmittedTimesheetsPage';
+import NotificationCenterPage from './modules/notifications/pages/NotificationCenterPage';
+import NotificationList from './modules/notifications/components/NotificationList';
+import { getNotifications, getUnreadCount, markNotificationsRead } from './modules/notifications/api/notificationsApi';
+import type { NotificationRes } from './modules/notifications/types/notificationTypes';
 import { ICONS } from './components/common/icons';
 import CommandPalette from './components/common/CommandPalette';
 import useScrollReveal from './hooks/useScrollReveal';
@@ -46,7 +55,13 @@ type Tab =
   | 'TWO_FACTOR_SETTINGS'
   | 'REPORTS'
   | 'PIPELINE_REPORT'
-  | 'MY_TASKS';
+  | 'MY_WORK'
+  | 'TIMESHEET_APPROVAL'
+  | 'TIMESHEET_REJECT'
+  | 'TIMESHEET_ADJUSTMENT'
+  | 'TIMESHEET_PERIOD'
+  | 'UNSUBMITTED_TIMESHEETS'
+  | 'NOTIFICATIONS';
 
 interface NavItem {
   tab: Tab;
@@ -76,11 +91,15 @@ interface NavItem {
 
 /** Điều hướng chính — vận hành nghiệp vụ hàng ngày. */
 const NAV_ITEMS: NavItem[] = [
-  {
-    tab: 'MY_TASKS', icon: ICONS.clipboardList, label: 'Việc của tôi', requires: ['VT-01', 'VT-02', 'VT-03'],
-    // NCL-05-CN-004: nhan vien duoc phan cong (thuong la VT-03) tu xem va doi trang thai
-    // cong viec cua minh o day — trươc day khong co loi vao nao cho vai tro nay ca.
-  },
+  // NCL-05-CN-003/004 + NCL-06-CN-001/002 gộp chung một màn: công việc được giao (mọi
+  // vai trò, quyền thật nằm ở backend) cộng bảng giờ công tuần (phần ghi/nộp giờ công
+  // chỉ hiện cho VT-03 ngay trong trang, vì TimeEntryController chỉ mở cho vai trò này).
+  { tab: 'MY_WORK', icon: ICONS.clock, label: 'Công việc và giờ công' },
+  { tab: 'TIMESHEET_APPROVAL', icon: ICONS.checkCircle, label: 'Duyệt bảng chấm công', requires: ['VT-02'] },
+  { tab: 'TIMESHEET_REJECT', icon: ICONS.close, label: 'Từ chối bảng chấm công', requires: ['VT-02'] },
+  { tab: 'TIMESHEET_ADJUSTMENT', icon: ICONS.edit, label: 'Điều chỉnh giờ công đã duyệt', requires: ['VT-02'] },
+  { tab: 'TIMESHEET_PERIOD', icon: ICONS.lock, label: 'Khóa kỳ chấm công', requires: ['VT-05'] },
+  { tab: 'UNSUBMITTED_TIMESHEETS', icon: ICONS.clock, label: 'Nhân sự chưa nộp', requires: ['VT-02', 'VT-03'] },
   { tab: 'CUSTOMERS', icon: ICONS.building, label: 'Khách hàng', requires: ['VT-04', 'VT-02'] },
   {
     tab: 'CONTRACTS', icon: ICONS.receipt, label: 'Hợp đồng', requires: ['VT-05'],
@@ -152,7 +171,10 @@ export default function App() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [notifTab, setNotifTab] = useState<'ALL' | 'MENTIONS' | 'SYSTEM'>('ALL');
+  const [notifTab, setNotifTab] = useState<'ALL' | 'UNREAD'>('ALL');
+  const [notifications, setNotifications] = useState<NotificationRes[]>([]);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const notifRef = useRef<HTMLDivElement>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(
     () => localStorage.getItem('sidebarCollapsed') === '1'
@@ -197,6 +219,58 @@ export default function App() {
   // NCL-01-CN-004 TC-03: admin đổi vai trò ở tab/máy khác → phiên này áp dụng ngay
   // (làm mới khi focus lại + poll 30s), không bắt đăng nhập lại; 401 thì đăng xuất.
   useSessionSync({ session, onRefresh: persistSession, onExpired: handleLogout });
+
+  // NCL-06-CN-009: chấm đỏ trên chuông thông báo phản ánh đúng số chưa đọc thật (gồm cả
+  // TIMESHEET_REMINDER) — nạp ngay khi đăng nhập rồi làm mới định kỳ mỗi 30 giây.
+  useEffect(() => {
+    if (!session) return;
+    let cancelled = false;
+    const fetchUnread = async () => {
+      try {
+        const count = await getUnreadCount();
+        if (!cancelled) setUnreadCount(count);
+      } catch {
+        // Bỏ qua lỗi đếm chưa đọc — không làm gián đoạn trải nghiệm chính.
+      }
+    };
+    void fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [session]);
+
+  // Nạp danh sách thông báo thật khi mở ô chuông hoặc đổi tab Tất cả/Chưa đọc.
+  useEffect(() => {
+    if (!session || !notifOpen) return;
+    let cancelled = false;
+    setNotifLoading(true);
+    getNotifications(notifTab === 'UNREAD', 0, 8)
+      .then((data) => {
+        if (!cancelled) setNotifications(data);
+      })
+      .catch(() => {
+        if (!cancelled) setNotifications([]);
+      })
+      .finally(() => {
+        if (!cancelled) setNotifLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [session, notifOpen, notifTab]);
+
+  async function handleMarkNotificationRead(notification: NotificationRes) {
+    setNotifications((prev) => prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n)));
+    setUnreadCount((c) => Math.max(0, c - 1));
+    try {
+      await markNotificationsRead([notification.id]);
+    } catch {
+      setNotifications((prev) => prev.map((n) => (n.id === notification.id ? { ...n, isRead: false } : n)));
+      setUnreadCount((c) => c + 1);
+    }
+  }
 
   if (!session) return <LoginPage onAuthenticated={handleAuthenticated} />;
 
@@ -264,6 +338,7 @@ export default function App() {
           ...NAV_ITEMS.map((i) => ({ id: i.tab, label: i.label, group: 'Điều hướng', icon: i.icon })),
           ...SYSTEM_NAV_ITEMS.map((i) => ({ id: i.tab, label: i.label, group: 'Bảo mật & hệ thống', icon: i.icon })),
           { id: 'CHANGE_PASSWORD', label: 'Đổi mật khẩu', group: 'Tài khoản của tôi', icon: ICONS.key },
+          { id: 'NOTIFICATIONS', label: 'Thông báo', group: 'Tài khoản của tôi', icon: ICONS.bell },
         ]}
         onSelect={(id) => setActiveTab(id as Tab)}
       />
@@ -334,12 +409,18 @@ export default function App() {
                 aria-haspopup="menu"
                 aria-expanded={notifOpen}
                 onClick={() => setNotifOpen((open) => !open)}
+                data-testid="btn-notif-bell"
               >
                 {ICONS.bell}
+                {unreadCount > 0 && (
+                  <span className="notif-badge" data-testid="notif-unread-badge">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </button>
 
               {notifOpen && (
-                <div className="notif-panel" role="menu">
+                <div className="notif-panel" role="menu" data-testid="notif-panel">
                   <div className="notif-panel__tabs">
                     <button
                       type="button"
@@ -350,26 +431,34 @@ export default function App() {
                     </button>
                     <button
                       type="button"
-                      className={`notif-panel__tab ${notifTab === 'MENTIONS' ? 'notif-panel__tab--active' : ''}`}
-                      onClick={() => setNotifTab('MENTIONS')}
+                      className={`notif-panel__tab ${notifTab === 'UNREAD' ? 'notif-panel__tab--active' : ''}`}
+                      onClick={() => setNotifTab('UNREAD')}
+                      data-testid="notif-tab-unread"
                     >
-                      Nhắc đến
-                    </button>
-                    <button
-                      type="button"
-                      className={`notif-panel__tab ${notifTab === 'SYSTEM' ? 'notif-panel__tab--active' : ''}`}
-                      onClick={() => setNotifTab('SYSTEM')}
-                    >
-                      Hệ thống
+                      Chưa đọc
                     </button>
                     <span className="notif-panel__tabs-spacer" />
-                    <span className="notif-panel__chevron">{ICONS.chevronDown}</span>
                   </div>
 
-                  <div className="notif-panel__empty">
-                    <span className="notif-panel__empty-icon">{ICONS.bell}</span>
-                    <p>Chưa có thông báo nào</p>
-                  </div>
+                  {notifLoading ? (
+                    <div className="notif-panel__empty">
+                      <p>Đang tải…</p>
+                    </div>
+                  ) : (
+                    <NotificationList notifications={notifications} onMarkRead={handleMarkNotificationRead} />
+                  )}
+
+                  <button
+                    type="button"
+                    className="btn-link"
+                    style={{ width: '100%', textAlign: 'center', padding: '12px', borderTop: '1px solid #F1F0EE' }}
+                    onClick={() => {
+                      setNotifOpen(false);
+                      setActiveTab('NOTIFICATIONS');
+                    }}
+                  >
+                    Xem tất cả thông báo
+                  </button>
                 </div>
               )}
             </div>
@@ -425,10 +514,22 @@ export default function App() {
         {/* key doi theo tab: React thay toan bo cay con, nen hieu ung xo theo tang
             chay lai o MOI lan chuyen trang chu khong chi lan tai dau tien. */}
         <main className="app-content" id="noi-dung-chinh" tabIndex={-1} key={activeTab}>
-          {activeTab === 'MY_TASKS' ? (
-            <MyTasksPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
-          ) : activeTab === 'CHANGE_PASSWORD' ? (
+          {activeTab === 'CHANGE_PASSWORD' ? (
             <ChangePasswordPage onBack={() => setActiveTab('DEPARTMENTS')} onPasswordChanged={handleLogout} />
+          ) : activeTab === 'NOTIFICATIONS' ? (
+            <NotificationCenterPage />
+          ) : activeTab === 'MY_WORK' ? (
+            <MyWorkPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+          ) : activeTab === 'TIMESHEET_APPROVAL' ? (
+            <TimesheetApprovalPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+          ) : activeTab === 'TIMESHEET_REJECT' ? (
+            <TimesheetRejectPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+          ) : activeTab === 'TIMESHEET_ADJUSTMENT' ? (
+            <TimesheetAdjustmentPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+          ) : activeTab === 'TIMESHEET_PERIOD' ? (
+            <TimesheetPeriodPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+          ) : activeTab === 'UNSUBMITTED_TIMESHEETS' ? (
+            <UnsubmittedTimesheetsPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'CUSTOMERS' ? (
             <CustomerListPage
               currentUserRoles={currentRoles}
@@ -538,6 +639,13 @@ export default function App() {
                 currentUserName={session.fullName}
                 backLabel={activityOrigin === 'LIST' ? 'Quay lại Cơ hội bán hàng' : 'Tìm cơ hội khác'}
                 onBack={() => {
+                  // Tab đổi làm OpportunityListPage bị remount hoàn toàn (xem key={activeTab}
+                  // ở <main>), nên panel "Đang điều khiển" đang mở sẽ mất theo. Nhờ lại cơ chế
+                  // focusOpportunityId (vốn dùng khi nhảy tới từ Báo cáo đường ống) để trang tự
+                  // mở lại đúng cơ hội vừa xem, khỏi bắt người dùng bấm "Chọn" lại từ đầu.
+                  if (activityOrigin === 'LIST' && selectedOpportunityId) {
+                    setFocusOpportunityId(selectedOpportunityId);
+                  }
                   setSelectedOpportunityId(null);
                   setSelectedOpportunityName(undefined);
                   if (activityOrigin === 'LIST') setActiveTab('OPPORTUNITIES');

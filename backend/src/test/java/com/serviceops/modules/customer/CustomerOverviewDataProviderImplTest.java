@@ -100,15 +100,12 @@ class CustomerOverviewDataProviderImplTest {
 	@Test
 	void mapsProjectsOfTheCustomer() {
 		Project project = new Project();
-		project.setId(20L);
+		project.setId(7L);
 		project.setCustomerId(10L);
 		project.setProjectCode("DA-TEST");
 		project.setName("Du an ERP");
-		project.setProjectType("FIXED_PRICE");
 		project.setLimitValue(new BigDecimal("500000000"));
 		project.setStartDate(LocalDate.of(2026, 3, 1));
-		project.setExpectedEndDate(LocalDate.of(2026, 12, 31));
-		project.setProjectManagerId(3L);
 		project.setStatus(ProjectStatus.RUNNING);
 		when(projectRepository.findByCustomerIdOrderByIdDesc(10L)).thenReturn(List.of(project));
 
@@ -116,7 +113,7 @@ class CustomerOverviewDataProviderImplTest {
 
 		assertThat(result).hasSize(1);
 		CustomerOverviewItemRes item = result.get(0);
-		assertThat(item.id()).isEqualTo(20L);
+		assertThat(item.id()).isEqualTo(7L);
 		assertThat(item.code()).isEqualTo("DA-TEST");
 		assertThat(item.name()).isEqualTo("Du an ERP");
 		assertThat(item.status()).isEqualTo("RUNNING");

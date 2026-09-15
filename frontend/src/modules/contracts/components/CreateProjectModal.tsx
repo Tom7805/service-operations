@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { getActiveUsersLookup, type UserLookup } from '../../users/api/usersApi';
 import type {
   ContractTargetForProject,
   ProjectCreateFromContractReq,
@@ -37,6 +38,18 @@ function formatAmount(value: number | null | undefined): string {
   return currencyFormatter.format(value);
 }
 
+const CONTRACT_TYPE_LABELS: Record<string, string> = {
+  TIME_AND_MATERIAL: 'Time & Material',
+  FIXED_PRICE: 'Fixed Price',
+  MAINTENANCE: 'Maintenance',
+  MILESTONE: 'Milestone',
+};
+
+function contractTypeLabel(value: string | null | undefined): string {
+  if (!value) return 'Chưa xác định';
+  return CONTRACT_TYPE_LABELS[value] ?? value;
+}
+
 export default function CreateProjectModal({
   isOpen,
   onClose,
@@ -57,26 +70,28 @@ export default function CreateProjectModal({
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Danh sách người dùng ACTIVE để chọn "Người quản lý dự án" (thay vì gõ tay ID không biết trước)
-  const [managers, setManagers] = useState<AssignableProjectManager[]>([]);
+  // Trước đây ô này bắt gõ tay ID người dùng — không ai nhớ ID của đồng nghiệp, nên đổi
+  // sang combobox chọn theo tên (GET /users/lookup, mở cho VT-02 chứ không chỉ VT-07).
+  const [managerOptions, setManagerOptions] = useState<UserLookup[]>([]);
   const [loadingManagers, setLoadingManagers] = useState(false);
-  const [managersError, setManagersError] = useState<string | null>(null);
+  const [managerLoadError, setManagerLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isOpen || !isAllowed || !isActive) return;
+    if (!isOpen) return;
     let cancelled = false;
     setLoadingManagers(true);
-    setManagersError(null);
-    fetchAssignableProjectManagers()
-      .then((list) => {
-        if (!cancelled) setManagers(list);
+    setManagerLoadError(null);
+    getActiveUsersLookup()
+      .then((users) => {
+        if (!cancelled) setManagerOptions(users);
       })
-      .catch((err) => {
-        if (!cancelled) {
-          setManagersError(
-            err instanceof ProjectsApiError ? err.message : 'Không thể tải danh sách người dùng.'
-          );
-        }
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setManagerOptions([]);
+        // Trước đây lỗi bị nuốt im lặng (chỉ để list rỗng) nên không ai biết vì sao
+        // dropdown trống — luôn hiện rõ lý do để còn debug (ví dụ backend chưa khởi
+        // động lại với endpoint /users/lookup mới, hoặc không đủ quyền VT-02/VT-07).
+        setManagerLoadError(err instanceof Error ? err.message : 'Không thể tải danh sách người dùng.');
       })
       .finally(() => {
         if (!cancelled) setLoadingManagers(false);
@@ -84,7 +99,7 @@ export default function CreateProjectModal({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, isAllowed, isActive]);
+  }, [isOpen]);
 
   // Khởi tạo giá trị mặc định khi mở modal
   useEffect(() => {
@@ -238,7 +253,7 @@ export default function CreateProjectModal({
                   </div>
                   <div className="project-preview-item">
                     <span className="field-hint">Loại dự án / hợp đồng:</span>
-                    <strong>{contract.contractType || 'Kế thừa từ HĐ'}</strong>
+                    <strong>{contractTypeLabel(contract.contractType)}</strong>
                   </div>
                   <div className="project-preview-item">
                     <span className="field-hint">Hạn mức kế thừa:</span>
@@ -336,7 +351,7 @@ export default function CreateProjectModal({
               <div className="form-group" style={{ marginBottom: '18px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                   <label className="form-label" htmlFor="project-manager-id" style={{ margin: 0 }}>
-                    Người quản lý dự án (ID người dùng) <span className="field-required">*</span>
+                    Người quản lý dự án <span className="field-required">*</span>
                   </label>
                   <button
                     type="button"
@@ -358,20 +373,24 @@ export default function CreateProjectModal({
                   }}
                   disabled={submitting || loadingManagers}
                 >
-                  <option value="">-- Chọn người quản lý dự án --</option>
-                  {managers.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.fullName} ({m.username})
+                  <option value="">
+                    {loadingManagers ? 'Đang tải danh sách người dùng...' : '-- Chọn người quản lý dự án --'}
+                  </option>
+                  {managerOptions.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.fullName}
                     </option>
                   ))}
                 </select>
-                <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px', color: '#64748B' }}>
-                  {loadingManagers
-                    ? 'Đang tải danh sách người dùng...'
-                    : managersError
-                    ? managersError
-                    : 'Chỉ hiển thị tài khoản đang hoạt động (ACTIVE) trong hệ thống.'}
-                </p>
+                {managerLoadError ? (
+                  <p className="field-error" style={{ fontSize: '12px', marginTop: '4px', color: '#DC2626' }}>
+                    {managerLoadError}
+                  </p>
+                ) : (
+                  <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px', color: '#64748B' }}>
+                    Chỉ hiện người dùng đang hoạt động (ACTIVE) trong hệ thống.
+                  </p>
+                )}
                 {errors.projectManagerId && (
                   <p className="field-error" data-testid="error-project-manager" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
                     {errors.projectManagerId}

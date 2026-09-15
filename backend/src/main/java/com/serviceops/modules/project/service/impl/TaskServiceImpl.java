@@ -33,6 +33,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -124,30 +126,35 @@ public class TaskServiceImpl implements TaskService {
 		if (currentUserId == null) {
 			return List.of();
 		}
-		List<TaskAssignment> assignments = assignmentRepository.findByUserIdOrderByIdDesc(currentUserId);
+		List<TaskAssignment> assignments = assignmentRepository.findByUserIdOrderByIdAsc(currentUserId);
 		if (assignments.isEmpty()) {
 			return List.of();
 		}
+
 		List<Long> taskIds = assignments.stream().map(TaskAssignment::getTaskId).distinct().toList();
-		var tasksById = taskRepository.findAllById(taskIds).stream()
-				.collect(java.util.stream.Collectors.toMap(Task::getId, task -> task));
+		Map<Long, Task> tasksById = taskRepository.findAllById(taskIds).stream()
+				.collect(Collectors.toMap(Task::getId, task -> task));
+
 		List<Long> projectIds = tasksById.values().stream().map(Task::getProjectId).distinct().toList();
-		var projectsById = projectRepository.findAllById(projectIds).stream()
-				.collect(java.util.stream.Collectors.toMap(Project::getId, project -> project));
+		Map<Long, Project> projectsById = projectRepository.findAllById(projectIds).stream()
+				.collect(Collectors.toMap(Project::getId, project -> project));
 
 		return assignments.stream()
-				.map(TaskAssignment::getTaskId)
-				.distinct()
-				.map(tasksById::get)
-				.filter(java.util.Objects::nonNull)
-				.map(task -> {
+				.map(assignment -> {
+					Task task = tasksById.get(assignment.getTaskId());
+					if (task == null) {
+						return null;
+					}
 					Project project = projectsById.get(task.getProjectId());
-					return new MyTaskRes(task.getId(), task.getProjectId(),
-							project != null ? project.getProjectCode() : null,
-							project != null ? project.getName() : null,
-							task.getName(), task.getDescription(), task.getExpectedStartDate(),
-							task.getExpectedEndDate(), task.getStatus());
+					if (project == null) {
+						return null;
+					}
+					return new MyTaskRes(task.getId(), task.getName(), task.getStatus(),
+							task.getExpectedStartDate(), task.getExpectedEndDate(),
+							project.getId(), project.getProjectCode(), project.getName(), project.getStatus(),
+							assignment.getExpectedStartDate(), assignment.getExpectedEndDate());
 				})
+				.filter(java.util.Objects::nonNull)
 				.toList();
 	}
 
