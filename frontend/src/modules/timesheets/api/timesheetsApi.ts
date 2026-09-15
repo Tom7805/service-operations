@@ -1,5 +1,7 @@
 import type {
+  AdjustmentTraceRes,
   PendingTimesheetRes,
+  TimeEntryAdjustmentReq,
   TimeEntryCreateReq,
   TimeEntryRes,
   TimeEntryTaskRes,
@@ -186,5 +188,38 @@ export async function rejectTimesheet(
   return requestBackend<TimesheetRejectRes>(`${API_BASE_URL}/timesheets/${timesheetId}/reject`, {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * NCL-06-CN-005: điều chỉnh một dòng giờ công đã duyệt bằng bút toán đảo (QTN-11). Chỉ điều
+ * chỉnh được dòng gốc đang APPROVED, thuộc dự án PM quản lý; kỳ chấm công chứa ngày làm việc
+ * của dòng gốc không được khóa (NCL-06-CN-006).
+ * POST /projects/{projectId}/tasks/{taskId}/time-entries/{entryId}/reversal
+ */
+export async function adjustTimeEntry(
+  projectId: number,
+  taskId: number,
+  entryId: number,
+  payload: TimeEntryAdjustmentReq
+): Promise<AdjustmentTraceRes> {
+  return requestBackend<AdjustmentTraceRes>(
+    `${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/time-entries/${entryId}/reversal`,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+/**
+ * NCL-06-CN-005: lịch sử điều chỉnh của một công việc, mới nhất trước. Gọi được cũng là
+ * cách xác nhận `projectId`/`taskId` hợp lệ và thuộc dự án PM quản lý trước khi tạo điều
+ * chỉnh mới (400/403/404 nếu sai).
+ * GET /projects/{projectId}/tasks/{taskId}/adjustments
+ */
+export async function getAdjustmentHistory(projectId: number, taskId: number): Promise<AdjustmentTraceRes[]> {
+  return requestBackend<AdjustmentTraceRes[]>(`${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/adjustments`, {
+    method: 'GET',
   });
 }

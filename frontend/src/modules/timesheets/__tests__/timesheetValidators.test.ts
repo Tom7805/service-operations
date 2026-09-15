@@ -3,6 +3,7 @@ import {
   canSubmitWeek,
   countDraftEntries,
   isWeekEmpty,
+  validateAdjustmentForm,
   validateRejectReason,
   validateTimeEntryCreateForm,
   validateTimeEntryUpdateForm,
@@ -197,5 +198,33 @@ describe('validateRejectReason (NCL-06-CN-004)', () => {
 
   it('chấp nhận lý do hợp lệ', () => {
     expect(validateRejectReason('Ghi nhầm dự án, cần ghi lại đúng công việc')).toBeUndefined();
+  });
+});
+
+describe('validateAdjustmentForm (NCL-06-CN-005)', () => {
+  it('báo lỗi khi số giờ đúng để trống hoặc không hợp lệ', () => {
+    const errors = validateAdjustmentForm({ reason: 'Ghi nhầm giờ' });
+    expect(errors.errors.correctedHours).toBe('Số giờ đúng không được để trống');
+  });
+
+  it('báo lỗi khi số giờ đúng <= 0', () => {
+    const errors = validateAdjustmentForm({ correctedHours: 0, reason: 'Ghi nhầm giờ' });
+    expect(errors.errors.correctedHours).toBe('Số giờ đúng phải lớn hơn 0');
+  });
+
+  it('báo lỗi khi lý do để trống', () => {
+    const errors = validateAdjustmentForm({ correctedHours: 6 });
+    expect(errors.errors.reason).toBe('Lý do điều chỉnh không được để trống');
+  });
+
+  it('báo lỗi khi lý do vượt quá 1000 ký tự', () => {
+    const errors = validateAdjustmentForm({ correctedHours: 6, reason: 'a'.repeat(1001) });
+    expect(errors.errors.reason).toBe('Lý do điều chỉnh không được vượt 1000 ký tự');
+  });
+
+  it('chấp nhận dữ liệu hợp lệ', () => {
+    const result = validateAdjustmentForm({ correctedHours: 6, reason: 'Ghi nhầm 8 giờ, thực tế làm 6 giờ' });
+    expect(result.isValid).toBe(true);
+    expect(Object.keys(result.errors)).toHaveLength(0);
   });
 });
