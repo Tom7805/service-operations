@@ -79,6 +79,18 @@ export function isWeekEmpty(summaries: TimesheetSummaryRes[]): boolean {
 }
 
 /**
+ * Kiểm tra lý do từ chối bảng chấm công (NCL-06-CN-004).
+ * Khớp ràng buộc backend `TimesheetRejectReq`: bắt buộc, tối đa 1000 ký tự — thiếu nhận
+ * `400 VALIDATION_ERROR` trước khi backend chạm tới bảng chấm công.
+ */
+export function validateRejectReason(reason: string): string | undefined {
+  const trimmed = reason.trim();
+  if (!trimmed) return 'Lý do từ chối không được để trống';
+  if (trimmed.length > 1000) return 'Lý do từ chối không được vượt 1000 ký tự';
+  return undefined;
+}
+
+/**
  * Kiểm tra hợp lệ dữ liệu sửa bản ghi giờ công (NCL-06-CN-001).
  * Khớp ràng buộc backend `TimeEntryUpdateReq`: số giờ công phải lớn hơn 0. Backend không
  * bắt buộc `note` khi sửa nhưng PUT luôn ghi đè ghi chú cũ (kể cả bằng rỗng/`null`) — FE

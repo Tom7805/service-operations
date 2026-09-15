@@ -3,6 +3,7 @@ import {
   canSubmitWeek,
   countDraftEntries,
   isWeekEmpty,
+  validateRejectReason,
   validateTimeEntryCreateForm,
   validateTimeEntryUpdateForm,
 } from '../validators/timesheetValidators';
@@ -178,5 +179,23 @@ describe('isWeekEmpty', () => {
 
   it('true khi không có công việc nào trong tuần', () => {
     expect(isWeekEmpty([])).toBe(true);
+  });
+});
+
+describe('validateRejectReason (NCL-06-CN-004)', () => {
+  it('từ chối khi lý do để trống', () => {
+    expect(validateRejectReason('')).toBe('Lý do từ chối không được để trống');
+  });
+
+  it('từ chối khi lý do chỉ toàn khoảng trắng', () => {
+    expect(validateRejectReason('   ')).toBe('Lý do từ chối không được để trống');
+  });
+
+  it('từ chối khi lý do vượt quá 1000 ký tự', () => {
+    expect(validateRejectReason('a'.repeat(1001))).toBe('Lý do từ chối không được vượt 1000 ký tự');
+  });
+
+  it('chấp nhận lý do hợp lệ', () => {
+    expect(validateRejectReason('Ghi nhầm dự án, cần ghi lại đúng công việc')).toBeUndefined();
   });
 });

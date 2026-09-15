@@ -92,3 +92,58 @@ export interface TimesheetRes {
   submittedBy: string | null;
   submittedAt: string | null;
 }
+
+/**
+ * Một bảng chấm công trong hàng chờ duyệt của PM hiện tại (NCL-06-CN-003).
+ * Khớp PendingTimesheetRes — chỉ các bảng có ít nhất một dòng SUBMITTED thuộc dự án PM
+ * quản lý; `pendingEntries`/`pendingHours` là phần con thuộc dự án của PM này (bảng có thể
+ * còn phần khác thuộc PM khác).
+ */
+export interface PendingTimesheetRes {
+  timesheetId: number;
+  userId: number;
+  weekStartDate: string; // YYYY-MM-DD
+  weekEndDate: string; // YYYY-MM-DD
+  /** Tổng giờ công của cả tuần (mọi dự án), không chỉ phần của PM này. */
+  totalHours: number;
+  pendingEntries: number;
+  pendingHours: number;
+  submittedAt: string;
+}
+
+/**
+ * Payload duyệt bảng chấm công (NCL-06-CN-003).
+ * POST /timesheets/{timesheetId}/approve
+ *
+ * Bỏ qua/để trống `entryIds` = duyệt nguyên bảng (mọi dòng SUBMITTED thuộc dự án PM quản
+ * lý); truyền id = chỉ duyệt từng dòng đó.
+ */
+export interface TimesheetApproveReq {
+  entryIds?: number[];
+  note?: string;
+}
+
+/** Kết quả duyệt bảng chấm công (NCL-06-CN-003). Khớp TimesheetApprovalRes. */
+export interface TimesheetApprovalRes {
+  timesheet: TimesheetRes;
+  /** Cảnh báo từng công việc đã đạt/vượt 80% ngân sách (QTN-20) — duyệt vẫn thành công. */
+  overBudgetWarnings: string[];
+}
+
+/**
+ * Payload từ chối bảng chấm công (NCL-06-CN-004).
+ * POST /timesheets/{timesheetId}/reject
+ *
+ * `reason` bắt buộc. Bỏ qua/để trống `entryIds` = từ chối nguyên bảng; truyền id = chỉ từ
+ * chối từng dòng đó — dòng bị từ chối quay về DRAFT để nhân viên sửa và nộp lại.
+ */
+export interface TimesheetRejectReq {
+  entryIds?: number[];
+  reason: string;
+}
+
+/** Kết quả từ chối bảng chấm công (NCL-06-CN-004). Khớp TimesheetRejectRes. */
+export interface TimesheetRejectRes {
+  timesheet: TimesheetRes;
+  rejectedEntries: number;
+}
