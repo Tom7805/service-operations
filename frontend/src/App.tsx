@@ -19,6 +19,7 @@ import OpportunitySearchPicker from './modules/opportunities/components/Opportun
 import OpportunityListPage from './modules/opportunities/pages/OpportunityListPage';
 import RevenueForecastPage from './modules/opportunities/pages/RevenueForecastPage';
 import PipelineReportPage from './modules/reports/pages/PipelineReportPage';
+import MyTimesheetPage from './modules/timesheets/pages/MyTimesheetPage';
 import { ICONS } from './components/common/icons';
 import CommandPalette from './components/common/CommandPalette';
 import useScrollReveal from './hooks/useScrollReveal';
@@ -44,7 +45,8 @@ type Tab =
   | 'CHANGE_PASSWORD'
   | 'TWO_FACTOR_SETTINGS'
   | 'REPORTS'
-  | 'PIPELINE_REPORT';
+  | 'PIPELINE_REPORT'
+  | 'MY_TIMESHEET';
 
 interface NavItem {
   tab: Tab;
@@ -74,6 +76,7 @@ interface NavItem {
 
 /** Điều hướng chính — vận hành nghiệp vụ hàng ngày. */
 const NAV_ITEMS: NavItem[] = [
+  { tab: 'MY_TIMESHEET', icon: ICONS.clock, label: 'Chấm công của tôi', requires: ['VT-03'] },
   { tab: 'CUSTOMERS', icon: ICONS.building, label: 'Khách hàng', requires: ['VT-04', 'VT-02'] },
   {
     tab: 'CONTRACTS', icon: ICONS.receipt, label: 'Hợp đồng', requires: ['VT-05'],
@@ -420,6 +423,8 @@ export default function App() {
         <main className="app-content" id="noi-dung-chinh" tabIndex={-1} key={activeTab}>
           {activeTab === 'CHANGE_PASSWORD' ? (
             <ChangePasswordPage onBack={() => setActiveTab('DEPARTMENTS')} onPasswordChanged={handleLogout} />
+          ) : activeTab === 'MY_TIMESHEET' ? (
+            <MyTimesheetPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'CUSTOMERS' ? (
             <CustomerListPage
               currentUserRoles={currentRoles}

@@ -3,6 +3,7 @@ import type {
   TimeEntryRes,
   TimeEntryTaskRes,
   TimeEntryUpdateReq,
+  TimesheetRes,
   TimesheetSummaryRes,
 } from '../types/timesheetTypes';
 
@@ -124,5 +125,19 @@ export async function getMyWeekTimeEntries(weekFrom: string, weekTo: string): Pr
   const params = new URLSearchParams({ weekFrom, weekTo });
   return requestBackend<TimesheetSummaryRes[]>(`${API_BASE_URL}/me/time-entries?${params.toString()}`, {
     method: 'GET',
+  });
+}
+
+/**
+ * NCL-06-CN-002: nộp bảng chấm công tuần bắt đầu từ `weekStartDate` (thứ Hai, khớp
+ * `weekFrom` của lưới tuần). Toàn bộ dòng DRAFT trong tuần chuyển sang SUBMITTED và bảng
+ * tuần chuyển PENDING_APPROVAL cho PM duyệt. Không nộp lại được khi đã PENDING_APPROVAL/
+ * APPROVED — bảng REJECTED thì nộp lại được.
+ * POST /me/timesheets/{weekStartDate}/submit
+ */
+export async function submitWeek(weekStartDate: string): Promise<TimesheetRes> {
+  return requestBackend<TimesheetRes>(`${API_BASE_URL}/me/timesheets/${weekStartDate}/submit`, {
+    method: 'POST',
+    body: JSON.stringify({}),
   });
 }

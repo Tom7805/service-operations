@@ -74,3 +74,21 @@ export interface TimesheetSummaryRes {
   /** Cảnh báo khi usageRatio >= 0.80 (QTN-20). */
   overBudgetWarning: boolean;
 }
+
+/** Trạng thái bảng chấm công tuần — chỉ tồn tại sau khi đã nộp lần đầu (NCL-06-CN-002). */
+export type TimesheetStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+
+/**
+ * Kết quả trả về sau khi nộp bảng chấm công tuần (NCL-06-CN-002).
+ * Khớp TimesheetRes — POST /me/timesheets/{weekStartDate}/submit.
+ */
+export interface TimesheetRes {
+  id: number;
+  userId: number;
+  weekStartDate: string; // YYYY-MM-DD
+  weekEndDate: string; // YYYY-MM-DD
+  status: TimesheetStatus;
+  totalHours: number;
+  submittedBy: string | null;
+  submittedAt: string | null;
+}
