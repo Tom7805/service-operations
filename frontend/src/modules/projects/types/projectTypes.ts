@@ -179,6 +179,9 @@ export type {
   TaskCreateReq,
   TaskBudgetReq,
   TaskBudgetStatusRes,
+  TaskAssignmentReq,
+  TaskAssignmentRes,
+  TaskProgressReq,
   WorkPackageReq,
   WorkBreakdownRes,
 } from './taskTypes';

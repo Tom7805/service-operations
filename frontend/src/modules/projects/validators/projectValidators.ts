@@ -3,6 +3,7 @@ import type {
   ProjectCreateFromTemplateReq,
   ProjectMilestoneReq,
   ProjectRiskReq,
+  TaskAssignmentReq,
   TaskBudgetReq,
 } from '../types/projectTypes';
 
@@ -242,6 +243,45 @@ export function validateTaskBudgetForm(
     errors.budgetHours = 'Ngân sách giờ công không được để trống';
   } else if (budgetHours <= 0) {
     errors.budgetHours = 'Ngân sách giờ công phải lớn hơn 0';
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+}
+
+export interface TaskAssignmentValidationResult {
+  isValid: boolean;
+  errors: Record<string, string>;
+}
+
+/**
+ * Kiểm tra hợp lệ dữ liệu phân công nhân sự cho công việc (NCL-05-CN-003).
+ */
+export function validateTaskAssignmentForm(
+  payload: Partial<TaskAssignmentReq>
+): TaskAssignmentValidationResult {
+  const errors: Record<string, string> = {};
+
+  if (!payload.userIds || payload.userIds.length === 0) {
+    errors.userIds = 'Chọn ít nhất một nhân viên phụ trách';
+  }
+
+  if (!payload.expectedStartDate) {
+    errors.expectedStartDate = 'Ngày bắt đầu dự kiến không được để trống';
+  }
+
+  if (!payload.expectedEndDate) {
+    errors.expectedEndDate = 'Ngày kết thúc dự kiến không được để trống';
+  }
+
+  if (
+    payload.expectedStartDate &&
+    payload.expectedEndDate &&
+    payload.expectedEndDate < payload.expectedStartDate
+  ) {
+    errors.expectedEndDate = 'Ngày kết thúc dự kiến không được trước ngày bắt đầu';
   }
 
   return {

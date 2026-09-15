@@ -75,3 +75,38 @@ export interface WorkBreakdownRes {
   tasks: TaskRes[];
   children: WorkBreakdownRes[];
 }
+
+/**
+ * Payload phân công nhân sự cho công việc (NCL-05-CN-003).
+ * Danh sách userIds gửi lên sẽ THAY THẾ toàn bộ danh sách phân công cũ, không cộng dồn.
+ * PUT /projects/{projectId}/tasks/{taskId}/assignments
+ */
+export interface TaskAssignmentReq {
+  userIds: number[];
+  expectedStartDate: string;
+  expectedEndDate: string;
+}
+
+/**
+ * Một bản ghi phân công nhân sự cho công việc (NCL-05-CN-003).
+ * Khớp TaskAssignmentRes từ backend.
+ */
+export interface TaskAssignmentRes {
+  id: number;
+  taskId: number;
+  userId: number;
+  username: string;
+  fullName: string;
+  expectedStartDate: string;
+  expectedEndDate: string;
+}
+
+/**
+ * Payload cập nhật tiến độ công việc (NCL-05-CN-004).
+ * Chỉ người có tên trong danh sách phân công của chính công việc đó mới gọi được,
+ * không phân biệt vai trò — xem TaskServiceImpl.updateProgress ở backend.
+ * PATCH /projects/{projectId}/tasks/{taskId}/progress
+ */
+export interface TaskProgressReq {
+  status: TaskStatus;
+}

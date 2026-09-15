@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
-import type { ProjectRes, TaskBudgetStatusRes, TaskRes, WorkBreakdownRes } from '../types/projectTypes';
+import type {
+  ProjectRes,
+  TaskAssignmentRes,
+  TaskBudgetStatusRes,
+  TaskRes,
+  WorkBreakdownRes,
+} from '../types/projectTypes';
 import {
   closeProject,
   deleteWorkPackage,
@@ -13,6 +19,7 @@ import WorkBreakdownTree from './WorkBreakdownTree';
 import WorkPackageModal from './WorkPackageModal';
 import TaskFormModal from './TaskFormModal';
 import TaskBudgetModal from './TaskBudgetModal';
+import TaskAssignModal from './TaskAssignModal';
 import ProjectMilestoneTimeline from './ProjectMilestoneTimeline';
 import ProjectRiskPage from '../pages/ProjectRiskPage';
 
@@ -71,6 +78,13 @@ export default function ProjectWbsModal({
     id: 0,
     name: '',
     budgetHours: null,
+  });
+
+  // Modal phân công nhân sự (NCL-05-CN-003)
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [assignTarget, setAssignTarget] = useState<{ id: number; name: string }>({
+    id: 0,
+    name: '',
   });
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -155,6 +169,17 @@ export default function ProjectWbsModal({
         : `Đã đặt ngân sách ${status.budgetHours} giờ công thành công`,
       status.overBudgetWarning ? 'error' : 'success'
     );
+    onUpdated?.();
+    void loadData();
+  };
+
+  const handleOpenAssign = (task: TaskRes) => {
+    setAssignTarget({ id: task.id, name: task.name });
+    setIsAssignModalOpen(true);
+  };
+
+  const handleAssignSaved = (assignments: TaskAssignmentRes[]) => {
+    showToast(`Đã phân công ${assignments.length} nhân viên cho công việc thành công`);
     onUpdated?.();
     void loadData();
   };
@@ -344,6 +369,7 @@ export default function ProjectWbsModal({
                     onAddTask={handleOpenAddTask}
                     onDeletePackage={handleDeletePackage}
                     onSetBudget={handleOpenSetBudget}
+                    onAssign={handleOpenAssign}
                   />
                 </>
               ) : activeSection === 'MILESTONES' ? (
@@ -409,6 +435,15 @@ export default function ProjectWbsModal({
         taskName={budgetTarget.name}
         currentBudgetHours={budgetTarget.budgetHours}
         onSaved={handleBudgetSaved}
+      />
+
+      <TaskAssignModal
+        isOpen={isAssignModalOpen}
+        onClose={() => setIsAssignModalOpen(false)}
+        projectId={projectId}
+        taskId={assignTarget.id}
+        taskName={assignTarget.name}
+        onSaved={handleAssignSaved}
       />
     </div>
     </ModalPortal>

@@ -19,7 +19,7 @@ import OpportunitySearchPicker from './modules/opportunities/components/Opportun
 import OpportunityListPage from './modules/opportunities/pages/OpportunityListPage';
 import RevenueForecastPage from './modules/opportunities/pages/RevenueForecastPage';
 import PipelineReportPage from './modules/reports/pages/PipelineReportPage';
-import MyTimesheetPage from './modules/timesheets/pages/MyTimesheetPage';
+import MyWorkPage from './modules/mytasks/pages/MyWorkPage';
 import TimesheetApprovalPage from './modules/timesheets/pages/TimesheetApprovalPage';
 import TimesheetRejectPage from './modules/timesheets/pages/TimesheetRejectPage';
 import TimesheetAdjustmentPage from './modules/timesheets/pages/TimesheetAdjustmentPage';
@@ -55,7 +55,7 @@ type Tab =
   | 'TWO_FACTOR_SETTINGS'
   | 'REPORTS'
   | 'PIPELINE_REPORT'
-  | 'MY_TIMESHEET'
+  | 'MY_WORK'
   | 'TIMESHEET_APPROVAL'
   | 'TIMESHEET_REJECT'
   | 'TIMESHEET_ADJUSTMENT'
@@ -91,7 +91,10 @@ interface NavItem {
 
 /** Điều hướng chính — vận hành nghiệp vụ hàng ngày. */
 const NAV_ITEMS: NavItem[] = [
-  { tab: 'MY_TIMESHEET', icon: ICONS.clock, label: 'Chấm công của tôi', requires: ['VT-03'] },
+  // NCL-05-CN-003/004 + NCL-06-CN-001/002 gộp chung một màn: công việc được giao (mọi
+  // vai trò, quyền thật nằm ở backend) cộng bảng giờ công tuần (phần ghi/nộp giờ công
+  // chỉ hiện cho VT-03 ngay trong trang, vì TimeEntryController chỉ mở cho vai trò này).
+  { tab: 'MY_WORK', icon: ICONS.clock, label: 'Công việc và giờ công' },
   { tab: 'TIMESHEET_APPROVAL', icon: ICONS.checkCircle, label: 'Duyệt bảng chấm công', requires: ['VT-02'] },
   { tab: 'TIMESHEET_REJECT', icon: ICONS.close, label: 'Từ chối bảng chấm công', requires: ['VT-02'] },
   { tab: 'TIMESHEET_ADJUSTMENT', icon: ICONS.edit, label: 'Điều chỉnh giờ công đã duyệt', requires: ['VT-02'] },
@@ -515,8 +518,8 @@ export default function App() {
             <ChangePasswordPage onBack={() => setActiveTab('DEPARTMENTS')} onPasswordChanged={handleLogout} />
           ) : activeTab === 'NOTIFICATIONS' ? (
             <NotificationCenterPage />
-          ) : activeTab === 'MY_TIMESHEET' ? (
-            <MyTimesheetPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+          ) : activeTab === 'MY_WORK' ? (
+            <MyWorkPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'TIMESHEET_APPROVAL' ? (
             <TimesheetApprovalPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'TIMESHEET_REJECT' ? (

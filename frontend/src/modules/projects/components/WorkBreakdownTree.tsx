@@ -14,6 +14,8 @@ export interface WorkBreakdownTreeProps {
   onDeletePackage?: (wp: WorkBreakdownRes) => void;
   /** NCL-05-CN-005: mở form đặt/đổi ngân sách giờ công cho một công việc. */
   onSetBudget?: (task: TaskRes) => void;
+  /** NCL-05-CN-003: mở form phân công nhân sự cho một công việc. */
+  onAssign?: (task: TaskRes) => void;
   /** NCL-06-CN-001: mở màn ghi giờ công (TimeEntryPage) cho một công việc. */
   onLogTime?: (task: TaskRes) => void;
 }
@@ -65,6 +67,7 @@ export default function WorkBreakdownTree({
   onAddTask,
   onDeletePackage,
   onSetBudget,
+  onAssign,
   onLogTime,
 }: WorkBreakdownTreeProps) {
   // Trạng thái thu gọn/mở rộng từng hạng mục (mặc định mở tất cả)
@@ -135,6 +138,15 @@ export default function WorkBreakdownTree({
 
           {canEdit && isProjectOpen && (
             <>
+              <button
+                type="button"
+                className="btn btn-secondary btn-xs"
+                onClick={() => onAssign?.(task)}
+                title="Phân công nhân sự"
+                data-testid={`assign-task-btn-${task.id}`}
+              >
+                {ICONS.users} Phân công
+              </button>
               <button
                 type="button"
                 className="btn btn-secondary btn-xs"

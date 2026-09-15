@@ -9,9 +9,12 @@ import type {
   ProjectRiskRes,
   ProjectRiskStatusReq,
   ProjectTemplateRes,
+  TaskAssignmentReq,
+  TaskAssignmentRes,
   TaskBudgetReq,
   TaskBudgetStatusRes,
   TaskCreateReq,
+  TaskProgressReq,
   TaskRes,
   WorkBreakdownRes,
   WorkPackageReq,
@@ -152,6 +155,55 @@ export async function setTaskBudget(
       body: JSON.stringify(payload),
     }
   );
+}
+
+/**
+ * NCL-05-CN-003: Lấy danh sách nhân sự đang được phân công cho một công việc.
+ * Cho phép Quản lý dự án (VT-02), Nhân viên chuyên môn (VT-03), Ban giám đốc (VT-01).
+ * GET /projects/{projectId}/tasks/{taskId}/assignments
+ */
+export async function getTaskAssignments(projectId: number, taskId: number): Promise<TaskAssignmentRes[]> {
+  return requestBackend<TaskAssignmentRes[]>(
+    `${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/assignments`,
+    { method: 'GET' }
+  );
+}
+
+/**
+ * NCL-05-CN-003: Phân công nhân sự cho một công việc.
+ * Danh sách gửi lên sẽ THAY THẾ toàn bộ danh sách phân công cũ, không cộng dồn.
+ * Yêu cầu vai trò Quản lý dự án (VT-02); dự án phải đang RUNNING.
+ * PUT /projects/{projectId}/tasks/{taskId}/assignments
+ */
+export async function assignTask(
+  projectId: number,
+  taskId: number,
+  payload: TaskAssignmentReq
+): Promise<TaskAssignmentRes[]> {
+  return requestBackend<TaskAssignmentRes[]>(
+    `${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/assignments`,
+    {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+/**
+ * NCL-05-CN-004: Cập nhật tiến độ (trạng thái) một công việc.
+ * Chỉ người có tên trong danh sách phân công của chính công việc đó gọi được,
+ * không phân biệt vai trò; dự án phải đang RUNNING.
+ * PATCH /projects/{projectId}/tasks/{taskId}/progress
+ */
+export async function updateTaskProgress(
+  projectId: number,
+  taskId: number,
+  payload: TaskProgressReq
+): Promise<TaskRes> {
+  return requestBackend<TaskRes>(`${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/progress`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
 }
 
 /**

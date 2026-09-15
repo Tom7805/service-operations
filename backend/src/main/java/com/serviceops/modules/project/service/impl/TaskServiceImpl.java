@@ -8,6 +8,7 @@ import com.serviceops.modules.identity.user.enums.UserStatus;
 import com.serviceops.modules.identity.user.entity.User;
 import com.serviceops.modules.project.dto.request.TaskAssignmentReq;
 import com.serviceops.modules.project.dto.request.TaskProgressReq;
+import com.serviceops.modules.project.dto.response.MyTaskRes;
 import com.serviceops.modules.project.dto.response.TaskAssignmentRes;
 import com.serviceops.modules.project.dto.response.TaskRes;
 import com.serviceops.modules.project.entity.Project;
@@ -32,6 +33,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -114,6 +117,45 @@ public class TaskServiceImpl implements TaskService {
 		auditLogger.recordProgressUpdate(projectId, saved.getId(), previousStatus, saved.getStatus());
 
 		return toResponse(saved);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<MyTaskRes> findMyTasks() {
+		Long currentUserId = currentUserScopeProvider.currentUserId();
+		if (currentUserId == null) {
+			return List.of();
+		}
+		List<TaskAssignment> assignments = assignmentRepository.findByUserIdOrderByIdAsc(currentUserId);
+		if (assignments.isEmpty()) {
+			return List.of();
+		}
+
+		List<Long> taskIds = assignments.stream().map(TaskAssignment::getTaskId).distinct().toList();
+		Map<Long, Task> tasksById = taskRepository.findAllById(taskIds).stream()
+				.collect(Collectors.toMap(Task::getId, task -> task));
+
+		List<Long> projectIds = tasksById.values().stream().map(Task::getProjectId).distinct().toList();
+		Map<Long, Project> projectsById = projectRepository.findAllById(projectIds).stream()
+				.collect(Collectors.toMap(Project::getId, project -> project));
+
+		return assignments.stream()
+				.map(assignment -> {
+					Task task = tasksById.get(assignment.getTaskId());
+					if (task == null) {
+						return null;
+					}
+					Project project = projectsById.get(task.getProjectId());
+					if (project == null) {
+						return null;
+					}
+					return new MyTaskRes(task.getId(), task.getName(), task.getStatus(),
+							task.getExpectedStartDate(), task.getExpectedEndDate(),
+							project.getId(), project.getProjectCode(), project.getName(), project.getStatus(),
+							assignment.getExpectedStartDate(), assignment.getExpectedEndDate());
+				})
+				.filter(java.util.Objects::nonNull)
+				.toList();
 	}
 
 	private TaskRes toResponse(Task task) {
