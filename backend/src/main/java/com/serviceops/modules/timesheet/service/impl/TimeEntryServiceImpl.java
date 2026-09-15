@@ -11,16 +11,21 @@ import com.serviceops.modules.project.repository.TaskRepository;
 import com.serviceops.modules.timesheet.dto.request.TimeEntryCreateReq;
 import com.serviceops.modules.timesheet.dto.request.TimeEntryUpdateReq;
 import com.serviceops.modules.timesheet.dto.response.TimeEntryRes;
+import com.serviceops.modules.timesheet.dto.response.TimeEntryTaskRes;
+import com.serviceops.modules.timesheet.dto.response.TimerRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetSummaryRes;
 import com.serviceops.modules.timesheet.entity.TimeEntry;
+import com.serviceops.modules.timesheet.entity.TimesheetTimer;
 import com.serviceops.modules.timesheet.mapper.TimeEntryMapper;
 import com.serviceops.modules.timesheet.mapper.TimesheetMapper;
 import com.serviceops.modules.timesheet.repository.TimeEntryRepository;
+import com.serviceops.modules.timesheet.repository.TimesheetTimerRepository;
 import com.serviceops.modules.timesheet.service.TimeEntryService;
 import com.serviceops.modules.timesheet.validator.DailyHourLimitValidator;
 import com.serviceops.modules.timesheet.validator.ImmutableEntryValidator;
 import com.serviceops.modules.timesheet.validator.OpenPeriodValidator;
 import com.serviceops.modules.timesheet.validator.OpenProjectValidator;
+import com.serviceops.modules.timesheet.validator.PeriodLockValidator;
 import com.serviceops.security.scope.CurrentUserScopeProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -30,6 +35,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -45,20 +52,24 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 	private final TaskRepository taskRepository;
 	private final TaskAssignmentRepository assignmentRepository;
 	private final TimeEntryRepository timeEntryRepository;
+	private final TimesheetTimerRepository timesheetTimerRepository;
 	private final CurrentUserScopeProvider currentUserScopeProvider;
 	private final ProjectAuditLogger auditLogger;
 	private final OpenProjectValidator openProjectValidator;
 	private final OpenPeriodValidator openPeriodValidator;
 	private final DailyHourLimitValidator dailyHourLimitValidator;
 	private final ImmutableEntryValidator immutableEntryValidator;
+	private final PeriodLockValidator periodLockValidator;
 	private final TimeEntryMapper timeEntryMapper;
 	private final TimesheetMapper timesheetMapper;
+	private final Clock clock;
 
 	@Override
 	public TimeEntryRes create(Long projectId, Long taskId, TimeEntryCreateReq request) {
 		Task task = requireTaskInRunningProject(projectId, taskId);
 		Long currentUserId = requireAssignee(task.getId());
 		openPeriodValidator.validate(request.workDate());
+		periodLockValidator.validateOpen(request.workDate());
 
 		if (timeEntryRepository.existsByUserIdAndTaskIdAndWorkDate(currentUserId, task.getId(), request.workDate())) {
 			throw new BusinessRuleException(ErrorCode.DUPLICATE_DATA,
@@ -75,7 +86,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 		entry.setNote(request.note());
 		entry.setBillable(request.billable() != null ? request.billable() : true);
 		entry.setCreatedBy(currentUsername());
-		LocalDateTime now = LocalDateTime.now();
+		LocalDateTime now = LocalDateTime.now(clock);
 		entry.setCreatedAt(now);
 		entry.setUpdatedAt(now);
 		TimeEntry saved = timeEntryRepository.save(entry);
@@ -91,6 +102,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 		Long currentUserId = requireAssignee(task.getId());
 		TimeEntry entry = requireOwnEntry(entryId, currentUserId, task.getId());
 		immutableEntryValidator.validate(entry);
+		periodLockValidator.validateOpen(entry.getWorkDate());
 		dailyHourLimitValidator.validate(currentUserId, entry.getWorkDate(), request.hours(), entry.getHours());
 
 		BigDecimal previousHours = entry.getHours();
@@ -114,10 +126,87 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 		Long currentUserId = requireAssignee(task.getId());
 		TimeEntry entry = requireOwnEntry(entryId, currentUserId, task.getId());
 		immutableEntryValidator.validate(entry);
+		periodLockValidator.validateOpen(entry.getWorkDate());
 
 		timeEntryRepository.delete(entry);
 		auditLogger.recordTimeEntryChange(projectId, task.getId(),
 				"xoa " + formatHours(entry.getHours()) + " gio ngay " + entry.getWorkDate());
+	}
+
+	@Override
+	public TimerRes startTimer(Long projectId, Long taskId, String note, Boolean billable) {
+		Task task = requireTaskInRunningProject(projectId, taskId);
+		Long currentUserId = requireAssignee(task.getId());
+		LocalDate today = LocalDate.now(clock);
+		openPeriodValidator.validate(today);
+		periodLockValidator.validateOpen(today);
+
+		if (timesheetTimerRepository.findByUserId(currentUserId).isPresent()) {
+			throw new BusinessRuleException(ErrorCode.INVALID_STATE,
+					"Ban dang co mot dong ho bam gio dang chay");
+		}
+
+		TimesheetTimer timer = new TimesheetTimer();
+		timer.setUserId(currentUserId);
+		timer.setTaskId(task.getId());
+		timer.setStartedAt(LocalDateTime.now(clock));
+		timer.setNote(note);
+		timer.setBillable(billable != null ? billable : true);
+		TimesheetTimer saved = timesheetTimerRepository.save(timer);
+		auditLogger.recordTimeEntryChange(projectId, task.getId(), "bat dau dong ho bam gio");
+		return toTimerResponse(saved, projectId, LocalDateTime.now(clock));
+	}
+
+	@Override
+	public TimeEntryRes stopTimer() {
+		Long currentUserId = requireCurrentUser();
+		TimesheetTimer timer = timesheetTimerRepository.findByUserId(currentUserId)
+				.orElseThrow(() -> new BusinessRuleException(ErrorCode.INVALID_STATE,
+						"Khong co dong ho bam gio dang chay"));
+		LocalDateTime stoppedAt = LocalDateTime.now(clock);
+		long elapsedSeconds = java.time.Duration.between(timer.getStartedAt(), stoppedAt).getSeconds();
+		BigDecimal hours = BigDecimal.valueOf(elapsedSeconds)
+				.divide(BigDecimal.valueOf(3600), 2, RoundingMode.HALF_UP)
+				.max(new BigDecimal("0.01"));
+
+		Task task = taskRepository.findById(timer.getTaskId())
+				.orElseThrow(() -> notFound("Khong tim thay cong viec cua dong ho bam gio"));
+		TimeEntryRes result = create(task.getProjectId(), task.getId(),
+				new TimeEntryCreateReq(timer.getStartedAt().toLocalDate(), hours, timer.getNote(), timer.getBillable()));
+		timesheetTimerRepository.delete(timer);
+		return result;
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public TimerRes findMyTimer() {
+		Long currentUserId = requireCurrentUser();
+		return timesheetTimerRepository.findByUserId(currentUserId)
+				.map(timer -> {
+					Task task = taskRepository.findById(timer.getTaskId()).orElse(null);
+					return task == null ? null : toTimerResponse(timer, task.getProjectId(), LocalDateTime.now(clock));
+				})
+				.orElse(null);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<TimeEntryTaskRes> findMyRunningTasks() {
+		Long currentUserId = currentUserScopeProvider.currentUserId();
+		if (currentUserId == null) {
+			throw new AccessDeniedException("Chua xac thuc nguoi dung");
+		}
+
+		return assignmentRepository.findByUserIdOrderByIdAsc(currentUserId).stream()
+				.map(assignment -> taskRepository.findById(assignment.getTaskId()).orElse(null))
+				.filter(Objects::nonNull)
+				.map(task -> projectRepository.findById(task.getProjectId())
+						.filter(project -> project.getStatus() == com.serviceops.modules.project.enums.ProjectStatus.RUNNING)
+						.map(project -> new TimeEntryTaskRes(project.getId(), project.getName(), task.getId(), task.getName(),
+								task.getStatus()))
+						.orElse(null))
+				.filter(Objects::nonNull)
+				.toList();
 	}
 
 	@Override
@@ -171,6 +260,22 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 			throw new BusinessRuleException(ErrorCode.FORBIDDEN, "Ban khong phai nguoi duoc giao cong viec nay");
 		}
 		return currentUserId;
+	}
+
+	private Long requireCurrentUser() {
+		Long currentUserId = currentUserScopeProvider.currentUserId();
+		if (currentUserId == null) {
+			throw new AccessDeniedException("Chua xac thuc nguoi dung");
+		}
+		return currentUserId;
+	}
+
+	private TimerRes toTimerResponse(TimesheetTimer timer, Long projectId, LocalDateTime now) {
+		BigDecimal elapsedHours = BigDecimal.valueOf(java.time.Duration.between(timer.getStartedAt(), now).getSeconds())
+				.divide(BigDecimal.valueOf(3600), 2, RoundingMode.HALF_UP)
+				.max(new BigDecimal("0.00"));
+		return new TimerRes(timer.getId(), projectId, timer.getTaskId(), timer.getUserId(), timer.getStartedAt(),
+				 elapsedHours, timer.getNote(), timer.getBillable());
 	}
 
 	private Task requireTaskInRunningProject(Long projectId, Long taskId) {

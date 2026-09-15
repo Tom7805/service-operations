@@ -65,4 +65,19 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
 			WHERE e.userId = :userId AND e.workDate = :workDate
 			""")
 	BigDecimal sumHoursByUserIdAndWorkDate(@Param("userId") Long userId, @Param("workDate") LocalDate workDate);
+
+	/**
+	 * Danh sach nhan su co dong gio cong DRAFT trong mot tuan (NCL-06-CN-009).
+	 *
+	 * <p>Ung vien "chua nop bang cham cong": co gio cong ghi trong tuan nhung con
+	 * o trang thai nhap, chua chuyen SUBMITTED (tuc chua goi API nop tuan).</p>
+	 */
+	@Query("""
+			SELECT DISTINCT e.userId
+			FROM TimeEntry e
+			WHERE e.status = com.serviceops.modules.timesheet.enums.TimeEntryStatus.DRAFT
+			AND e.workDate BETWEEN :weekFrom AND :weekTo
+			""")
+	List<Long> findDistinctUserIdsWithDraftEntriesBetween(
+			@Param("weekFrom") LocalDate weekFrom, @Param("weekTo") LocalDate weekTo);
 }

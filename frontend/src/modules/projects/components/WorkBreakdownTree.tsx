@@ -7,11 +7,15 @@ export interface WorkBreakdownTreeProps {
   items: WorkBreakdownRes[];
   isProjectOpen?: boolean;
   canEdit?: boolean;
+  /** NCL-06-CN-001: Nhân viên chuyên môn (VT-03) và dự án đang RUNNING mới ghi được giờ công. */
+  canLogTime?: boolean;
   onAddSubPackage?: (parent: WorkBreakdownRes) => void;
   onAddTask?: (wp: WorkBreakdownRes, parentTask?: TaskRes | null) => void;
   onDeletePackage?: (wp: WorkBreakdownRes) => void;
   /** NCL-05-CN-005: mở form đặt/đổi ngân sách giờ công cho một công việc. */
   onSetBudget?: (task: TaskRes) => void;
+  /** NCL-06-CN-001: mở màn ghi giờ công (TimeEntryPage) cho một công việc. */
+  onLogTime?: (task: TaskRes) => void;
 }
 
 const statusBadgeConfig: Record<TaskStatus, { label: string; className: string }> = {
@@ -56,10 +60,12 @@ export default function WorkBreakdownTree({
   items,
   isProjectOpen = true,
   canEdit = false,
+  canLogTime = false,
   onAddSubPackage,
   onAddTask,
   onDeletePackage,
   onSetBudget,
+  onLogTime,
 }: WorkBreakdownTreeProps) {
   // Trạng thái thu gọn/mở rộng từng hạng mục (mặc định mở tất cả)
   const [collapsed, setCollapsed] = useState<Record<number, boolean>>({});
@@ -114,6 +120,18 @@ export default function WorkBreakdownTree({
           )}
 
           <span className={`wbs-badge ${badge.className}`}>{badge.label}</span>
+
+          {canLogTime && isProjectOpen && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-xs"
+              onClick={() => onLogTime?.(task)}
+              title="Ghi giờ công cho công việc này"
+              data-testid={`log-time-btn-${task.id}`}
+            >
+              {ICONS.clock} Ghi giờ công
+            </button>
+          )}
 
           {canEdit && isProjectOpen && (
             <>
