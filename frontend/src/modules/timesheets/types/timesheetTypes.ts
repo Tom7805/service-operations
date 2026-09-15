@@ -172,3 +172,31 @@ export interface AdjustmentTraceRes {
   adjustedBy: string | null;
   adjustedAt: string;
 }
+
+/** Trạng thái kỳ chấm công theo tháng (NCL-06-CN-006). */
+export type PeriodStatus = 'OPEN' | 'LOCKED';
+
+/**
+ * Kỳ chấm công theo tháng (NCL-06-CN-006). Khớp TimesheetPeriodRes — khóa/mở đồng loạt cả
+ * tháng, không khóa theo tuần lẻ.
+ */
+export interface TimesheetPeriodRes {
+  id: number;
+  periodStart: string; // YYYY-MM-DD, ngày 1 của tháng
+  periodEnd: string; // YYYY-MM-DD, ngày cuối tháng
+  status: PeriodStatus;
+  lockedBy: string | null;
+  lockedAt: string | null;
+}
+
+/**
+ * Payload khóa kỳ chấm công theo tháng (NCL-06-CN-006).
+ * POST /timesheet-periods/lock
+ *
+ * Chọn kỳ theo tháng (`year`/`month`) chứ không nhập trực tiếp ngày đầu/cuối — backend tự
+ * suy ra khoảng ngày của cả tháng. Nếu kỳ cho tháng đó chưa tồn tại thì tạo mới rồi khóa luôn.
+ */
+export interface PeriodLockReq {
+  year: number;
+  month: number; // 1-12
+}
