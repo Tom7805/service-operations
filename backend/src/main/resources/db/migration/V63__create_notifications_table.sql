@@ -2,7 +2,7 @@
 -- Luu tru thong bao in-app/email/sms/push den nguoi dung.
 -- (Chuyen tu V13, do V13 da duoc mot so moi truong ap dung khi con la file rong,
 -- sua truc tiep V13 se gay Flyway checksum mismatch.)
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
     id               BIGINT AUTO_INCREMENT PRIMARY KEY,
     recipient_id     BIGINT NOT NULL,
     type             VARCHAR(50) NOT NULL,
