@@ -7,6 +7,8 @@ import type {
   TimeEntryRes,
   TimeEntryTaskRes,
   TimeEntryUpdateReq,
+  TimerRes,
+  TimerStartReq,
   TimesheetApprovalRes,
   TimesheetApproveReq,
   TimesheetPeriodRes,
@@ -254,6 +256,39 @@ export async function lockTimesheetPeriod(payload: PeriodLockReq): Promise<Times
  */
 export async function unlockTimesheetPeriod(periodId: number): Promise<TimesheetPeriodRes> {
   return requestBackend<TimesheetPeriodRes>(`${API_BASE_URL}/timesheet-periods/${periodId}/unlock`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * NCL-06-CN-008: bắt đầu đồng hồ bấm giờ cho một công việc. Mỗi nhân sự chỉ có một phiên
+ * đang chạy — bắt đầu khi đang có phiên khác nhận 400 INVALID_STATE.
+ * POST /projects/{projectId}/tasks/{taskId}/time-entry-timer
+ */
+export async function startTimer(projectId: number, taskId: number, payload: TimerStartReq): Promise<TimerRes> {
+  return requestBackend<TimerRes>(`${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/time-entry-timer`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * NCL-06-CN-008: phiên đồng hồ bấm giờ đang chạy của chính mình — null nếu không có.
+ * GET /me/time-entry-timer
+ */
+export async function getMyTimer(): Promise<TimerRes | null> {
+  return requestBackend<TimerRes | null>(`${API_BASE_URL}/me/time-entry-timer`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * NCL-06-CN-008: dừng đồng hồ đang chạy — hệ thống tự tính số giờ từ lúc bắt đầu đến lúc
+ * dừng (làm tròn 2 chữ số, tối thiểu 0.01 giờ) và tạo một bản ghi giờ công DRAFT.
+ * POST /me/time-entry-timer/stop
+ */
+export async function stopTimer(): Promise<TimeEntryRes> {
+  return requestBackend<TimeEntryRes>(`${API_BASE_URL}/me/time-entry-timer/stop`, {
     method: 'POST',
   });
 }
