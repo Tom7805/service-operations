@@ -10,6 +10,8 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -23,6 +25,7 @@ public class Notification extends BaseEntity {
 	private Long recipientId;
 
 	@Enumerated(EnumType.STRING)
+	@JdbcTypeCode(SqlTypes.VARCHAR)
 	@Column(name = "type", nullable = false, length = 50)
 	private NotificationType type;
 
@@ -33,6 +36,7 @@ public class Notification extends BaseEntity {
 	private String content;
 
 	@Enumerated(EnumType.STRING)
+	@JdbcTypeCode(SqlTypes.VARCHAR)
 	@Column(name = "channel", nullable = false, length = 20)
 	private NotificationChannel channel;
 
