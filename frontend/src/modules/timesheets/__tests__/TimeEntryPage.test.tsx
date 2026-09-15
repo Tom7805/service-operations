@@ -161,6 +161,10 @@ describe('TimeEntryPage (NCL-06-CN-001 — Ghi giờ công theo công việc)', 
 
     expect(screen.queryByTestId('btn-add-time-entry')).not.toBeInTheDocument();
     expect(screen.queryByTestId('btn-edit-entry-30')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('btn-delete-entry-30')).not.toBeInTheDocument();
+    // NCL-06-CN-007: vẫn xem lại được bản ghi giờ công cũ dù dự án đã đóng — chỉ chặn
+    // ghi mới/sửa/xóa, không ẩn dữ liệu lịch sử.
+    expect(screen.getByTestId('entry-row-30')).toBeInTheDocument();
   });
 
   it('TC-01: mở form, điền dữ liệu và ghi giờ công mới thành công', async () => {
