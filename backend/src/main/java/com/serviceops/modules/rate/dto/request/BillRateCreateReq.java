@@ -11,6 +11,9 @@ public record BillRateCreateReq(
 		@NotBlank(message = "Vai trò chuyên môn không được để trống")
 		String professionalRole,
 
+		@NotBlank(message = "Cấp bậc không được để trống")
+		String level,
+
 		@NotNull(message = "Đơn giá theo ngày không được để trống")
 		@DecimalMin(value = "0.00", message = "Đơn giá theo ngày không được âm")
 		BigDecimal dailyRate,
