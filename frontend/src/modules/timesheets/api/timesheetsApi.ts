@@ -319,3 +319,16 @@ export async function getUnsubmittedTimesheets(weekStartDate: string): Promise<U
     method: 'GET',
   });
 }
+
+/**
+ * Gửi nhắc ngay (thủ công) cho danh sách nhân sự chưa nộp của tuần `weekStartDate`.
+ * Dùng lại cơ chế nhắc tự động hàng tuần — vẫn tuân thủ QTN-27 (không gửi trùng
+ * trong cùng tuần), trả về số người thực sự vừa được nhắc.
+ * POST /timesheets/unsubmitted/remind?weekStartDate=...
+ */
+export async function remindUnsubmittedTimesheetsNow(weekStartDate: string): Promise<number> {
+  const params = new URLSearchParams({ weekStartDate });
+  return requestBackend<number>(`${API_BASE_URL}/timesheets/unsubmitted/remind?${params.toString()}`, {
+    method: 'POST',
+  });
+}

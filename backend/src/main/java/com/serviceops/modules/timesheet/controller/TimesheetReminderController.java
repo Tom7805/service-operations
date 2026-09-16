@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -21,9 +22,10 @@ import java.util.stream.Collectors;
  * API tra cuu danh sach chua nop bang cham cong (NCL-06-CN-009, Epic NCL-06).
  *
  * <p>Viec gui nhac thuc su chay tu dong hang tuan qua
- * {@code TimesheetReminderScheduler} — endpoint nay chi phuc vu man hinh xem
- * lai danh sach (PM xem toan bo nhan su cua du an minh phu trach; nhan vien
- * chuyen mon tu kiem tra chinh minh, TC-03).</p>
+ * {@code TimesheetReminderScheduler}. Ngoai ra man hinh "Nhan su chua nop"
+ * co the bam nut "Gui nhac ngay" de goi thu cong qua {@code POST
+ * /timesheets/unsubmitted/remind} — dung lai chinh {@code sendReminders},
+ * nen van tuan thu QTN-27 (khong gui trung trong cung tuan).</p>
  */
 @RestController
 @RequiredArgsConstructor
@@ -44,5 +46,14 @@ public class TimesheetReminderController {
 				.map(userId -> new UnsubmittedTimesheetRes(userId, namesByUserId.get(userId), weekStartDate, weekEndDate))
 				.toList();
 		return BaseRes.ok(result);
+	}
+
+	@PostMapping("/timesheets/unsubmitted/remind")
+	@PreAuthorize("hasRole('VT-02') or hasRole('VT-03')")
+	public BaseRes<Integer> remindNow(
+			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStartDate) {
+		LocalDate weekEndDate = weekStartDate.plusDays(6);
+		int reminded = timesheetReminderService.sendReminders(weekStartDate, weekEndDate);
+		return BaseRes.ok(reminded);
 	}
 }
