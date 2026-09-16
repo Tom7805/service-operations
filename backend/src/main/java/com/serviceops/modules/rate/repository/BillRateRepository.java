@@ -24,11 +24,26 @@ public interface BillRateRepository extends JpaRepository<BillRate, Long> {
 			String professionalRole, LocalDate effectiveDate);
 
 	/**
+	 * Tra dung dong don gia hieu luc tai mot moc thoi diem cu the (NCL-07-CN-002, QTN-15) —
+	 * lay dong co {@code effectiveFrom} gan nhat nhung khong vuot qua {@code asOf}, loc theo
+	 * ca vai tro lan cap bac. Dung de "gio cong cu van tinh theo gia cu khi cong ty tang gia".
+	 */
+	Optional<BillRate> findTopByProfessionalRoleIgnoreCaseAndLevelIgnoreCaseAndEffectiveFromLessThanEqualOrderByEffectiveFromDesc(
+			String professionalRole, String level, LocalDate asOf);
+
+	/**
 	 * Voi moi chuc danh + cap bac, lay dung dong don gia dang hieu luc tai {@code asOf}
 	 * (effective_from gan nhat nhung khong vuot qua asOf) — dung de dung danh
 	 * sach chuc danh cho o chon o man hinh lap bao gia (NCL-03-CN-003), tranh
 	 * nguoi dung go tay sai ten khien khong tra duoc don gia.
 	 */
+	/**
+	 * Toan bo cac moc hieu luc da khai bao cho mot cap (vai tro, cap bac), moi nhat sau cung —
+	 * nguon du lieu cho man hinh lich su thay doi don gia (NCL-07-CN-007).
+	 */
+	List<BillRate> findByProfessionalRoleIgnoreCaseAndLevelIgnoreCaseOrderByEffectiveFromAsc(
+			String professionalRole, String level);
+
 	@Query(value = """
 			SELECT br1.* FROM bill_rates br1
 			INNER JOIN (

@@ -85,6 +85,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 		entry.setHours(request.hours());
 		entry.setNote(request.note());
 		entry.setBillable(request.billable() != null ? request.billable() : true);
+		entry.setWorkType(request.workType() != null ? request.workType() : com.serviceops.modules.timesheet.enums.WorkType.NORMAL);
 		entry.setCreatedBy(currentUsername());
 		LocalDateTime now = LocalDateTime.now(clock);
 		entry.setCreatedAt(now);
@@ -110,6 +111,9 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 		entry.setNote(request.note());
 		if (request.billable() != null) {
 			entry.setBillable(request.billable());
+		}
+		if (request.workType() != null) {
+			entry.setWorkType(request.workType());
 		}
 		entry.setUpdatedAt(LocalDateTime.now());
 		TimeEntry saved = timeEntryRepository.save(entry);
@@ -184,7 +188,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 		Task task = taskRepository.findById(timer.getTaskId())
 				.orElseThrow(() -> notFound("Khong tim thay cong viec cua dong ho bam gio"));
 		TimeEntryRes result = create(task.getProjectId(), task.getId(),
-				new TimeEntryCreateReq(timer.getStartedAt().toLocalDate(), hours, timer.getNote(), timer.getBillable()));
+				new TimeEntryCreateReq(timer.getStartedAt().toLocalDate(), hours, timer.getNote(), timer.getBillable(), null));
 		timesheetTimerRepository.delete(timer);
 		return result;
 	}

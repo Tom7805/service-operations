@@ -65,11 +65,14 @@ class TimesheetAdjustmentControllerTest {
 
 	private AdjustmentTraceRes sampleTrace() {
 		TimeEntryRes original = new TimeEntryRes(30L, 20L, 7L, LocalDate.of(2026, 9, 7),
-				new BigDecimal("8"), TimeEntryStatus.APPROVED, null, true, LocalDateTime.of(2026, 9, 7, 9, 0));
+				new BigDecimal("8"), TimeEntryStatus.APPROVED, null, true,
+				com.serviceops.modules.timesheet.enums.WorkType.NORMAL, LocalDateTime.of(2026, 9, 7, 9, 0));
 		TimeEntryRes reversal = new TimeEntryRes(31L, 20L, 7L, LocalDate.of(2026, 9, 7),
-				new BigDecimal("-8"), TimeEntryStatus.APPROVED, null, true, LocalDateTime.of(2026, 9, 14, 10, 0));
+				new BigDecimal("-8"), TimeEntryStatus.APPROVED, null, true,
+				com.serviceops.modules.timesheet.enums.WorkType.NORMAL, LocalDateTime.of(2026, 9, 14, 10, 0));
 		TimeEntryRes corrected = new TimeEntryRes(32L, 20L, 7L, LocalDate.of(2026, 9, 7),
-				new BigDecimal("6"), TimeEntryStatus.APPROVED, null, true, LocalDateTime.of(2026, 9, 14, 10, 0));
+				new BigDecimal("6"), TimeEntryStatus.APPROVED, null, true,
+				com.serviceops.modules.timesheet.enums.WorkType.NORMAL, LocalDateTime.of(2026, 9, 14, 10, 0));
 		return new AdjustmentTraceRes(5L, original, reversal, corrected, "Ghi nham gio",
 				"pm01", LocalDateTime.of(2026, 9, 14, 10, 0));
 	}

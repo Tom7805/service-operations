@@ -3,6 +3,7 @@ package com.serviceops.modules.timesheet.entity;
 import com.serviceops.common.entity.BaseEntity;
 import com.serviceops.modules.timesheet.enums.TimeEntryStatus;
 import com.serviceops.modules.timesheet.enums.TimeEntryType;
+import com.serviceops.modules.timesheet.enums.WorkType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -69,6 +70,11 @@ public class TimeEntry extends BaseEntity {
 
 	@Column(name = "billable", nullable = false)
 	private Boolean billable = true;
+
+	/** Loai hinh cong viec (NCL-07-CN-006) — quyet dinh he so nhan don gia khi tinh doanh thu. */
+	@Enumerated(EnumType.STRING)
+	@Column(name = "work_type", nullable = false, columnDefinition = "VARCHAR(20)")
+	private WorkType workType = WorkType.NORMAL;
 
 	@Column(name = "created_at", nullable = false)
 	private LocalDateTime createdAt;

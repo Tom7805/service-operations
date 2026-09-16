@@ -9,6 +9,7 @@ import com.serviceops.modules.project.entity.Task;
 import com.serviceops.modules.project.repository.ProjectRepository;
 import com.serviceops.modules.project.repository.TaskRepository;
 import com.serviceops.modules.timesheet.dto.request.TimeEntryAdjustmentReq;
+import com.serviceops.modules.timesheet.dto.response.AdjustableEntryRes;
 import com.serviceops.modules.timesheet.dto.response.AdjustmentTraceRes;
 import com.serviceops.modules.timesheet.entity.TimeEntry;
 import com.serviceops.modules.timesheet.entity.TimeEntryAdjustment;
@@ -30,8 +31,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * NCL-06-CN-005: dieu chinh mot dong gio cong da duyet bang but toan dao (QTN-11).
@@ -156,6 +161,41 @@ public class TimesheetAdjustmentServiceImpl implements TimesheetAdjustmentServic
 		Task task = requireManagedTask(projectId, taskId);
 		return adjustmentRepository.findByTaskIdOrderByAdjustedAtDesc(task.getId()).stream()
 				.map(this::toTraceLoadingEntries)
+				.toList();
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<AdjustableEntryRes> findAdjustableEntries() {
+		Long pmId = requireCurrentManager();
+		List<Project> myProjects = projectRepository.findByProjectManagerId(pmId);
+		if (myProjects.isEmpty()) {
+			return List.of();
+		}
+		Map<Long, Project> projectById = myProjects.stream()
+				.collect(Collectors.toMap(Project::getId, Function.identity()));
+
+		List<Task> myTasks = new ArrayList<>();
+		for (Project project : myProjects) {
+			myTasks.addAll(taskRepository.findByProjectIdOrderByIdAsc(project.getId()));
+		}
+		if (myTasks.isEmpty()) {
+			return List.of();
+		}
+		Map<Long, Task> taskById = myTasks.stream().collect(Collectors.toMap(Task::getId, Function.identity()));
+
+		List<TimeEntry> entries = timeEntryRepository
+				.findApprovedOriginalEntriesByTaskIdIn(new ArrayList<>(taskById.keySet()));
+
+		return entries.stream()
+				.filter(entry -> !adjustmentRepository.existsByOriginalEntryId(entry.getId()))
+				.map(entry -> {
+					Task task = taskById.get(entry.getTaskId());
+					Project project = projectById.get(task.getProjectId());
+					return new AdjustableEntryRes(entry.getId(), project.getId(), project.getName(), task.getId(),
+							task.getName(), entry.getUserId(), entry.getWorkDate(), entry.getHours(),
+							entry.getNote());
+				})
 				.toList();
 	}
 

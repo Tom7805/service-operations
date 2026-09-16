@@ -21,6 +21,14 @@ export interface TimeEntryFormProps {
    */
   existingEntries?: TimeEntryRes[];
   onSaved?: (entry: TimeEntryRes) => void;
+  /**
+   * Thứ Hai/Chủ nhật của tuần đang xem trên bảng lưới phía sau modal — dùng để chọn sẵn một
+   * ngày làm việc hợp lý thuộc đúng tuần đó khi ghi giờ công mới (thay vì luôn mặc định hôm
+   * nay, khiến bản ghi lạc sang tuần khác khi người dùng quên tự đổi ngày). Không ảnh hưởng
+   * khi sửa bản ghi có sẵn (ngày làm việc giữ nguyên theo `entry.workDate`).
+   */
+  weekFrom?: string;
+  weekTo?: string;
 }
 
 /** Ngày hôm nay theo múi giờ cục bộ — khớp `todayIso()` của `timesheetValidators.ts`. */
@@ -30,6 +38,20 @@ function todayIso(): string {
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+/**
+ * Ngày làm việc mặc định khi mở form ghi giờ công mới: hôm nay nếu hôm nay nằm trong tuần
+ * đang xem; nếu tuần đang xem đã qua hẳn thì lấy ngày cuối tuần đó (luôn hợp lệ vì < hôm nay);
+ * nếu tuần đang xem là tương lai thì đành lấy hôm nay (mọi ngày trong tuần đó đều bị khoá vì
+ * vượt quá `max`, không có lựa chọn nào hợp lệ để mặc định sẵn).
+ */
+function pickDefaultWorkDate(weekFrom?: string, weekTo?: string): string {
+  const today = todayIso();
+  if (!weekFrom || !weekTo) return today;
+  if (today >= weekFrom && today <= weekTo) return today;
+  if (weekTo < today) return weekTo;
+  return today;
 }
 
 function extractErrorMessage(err: unknown): string {
@@ -46,6 +68,8 @@ export default function TimeEntryForm({
   entry = null,
   existingEntries = [],
   onSaved,
+  weekFrom,
+  weekTo,
 }: TimeEntryFormProps) {
   // Bản ghi đang thao tác — có thể đổi từ null (tạo mới) sang một bản ghi có sẵn khi phát
   // hiện trùng ngày ngay trên form, nên tách khỏi prop `entry` gốc.
@@ -64,14 +88,14 @@ export default function TimeEntryForm({
   useEffect(() => {
     if (!isOpen) return;
     setActiveEntry(entry);
-    setWorkDate(entry?.workDate ?? todayIso());
+    setWorkDate(entry?.workDate ?? pickDefaultWorkDate(weekFrom, weekTo));
     setHours(entry ? String(entry.hours) : '');
     setNote(entry?.note ?? '');
     setBillable(entry?.billable ?? true);
     setErrors({});
     setServerError(null);
     setDuplicateEntry(null);
-  }, [isOpen, entry]);
+  }, [isOpen, entry, weekFrom, weekTo]);
 
   if (!isOpen) return null;
 

@@ -3,9 +3,11 @@ package com.serviceops.modules.timesheet.controller;
 import com.serviceops.common.api.BaseRes;
 import com.serviceops.modules.timesheet.dto.request.TimesheetApproveReq;
 import com.serviceops.modules.timesheet.dto.request.TimesheetRejectReq;
+import com.serviceops.modules.timesheet.dto.response.AdjustableEntryRes;
 import com.serviceops.modules.timesheet.dto.response.PendingTimesheetRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetApprovalRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetRejectRes;
+import com.serviceops.modules.timesheet.service.TimesheetAdjustmentService;
 import com.serviceops.modules.timesheet.service.TimesheetApprovalService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,12 +34,24 @@ import java.util.List;
 public class TimesheetApprovalController {
 
 	private final TimesheetApprovalService timesheetApprovalService;
+	private final TimesheetAdjustmentService timesheetAdjustmentService;
 
 	/** Hang cho duyet: cac bang co dong pending thuoc du an cua PM hien tai. */
 	@GetMapping("/timesheets/pending")
 	@PreAuthorize("hasRole('VT-02')")
 	public BaseRes<List<PendingTimesheetRes>> findPending() {
 		return BaseRes.ok(timesheetApprovalService.findPending());
+	}
+
+	/**
+	 * NCL-06-CN-005: danh sach dong gio cong DA DUYET con dieu chinh duoc (dong goc, chua
+	 * tung dieu chinh) thuoc cac du an cua PM hien tai — de PM chon truc tiep tren man hinh
+	 * "Dieu chinh gio cong da duyet" thay vi phai tu biet truoc Project ID/Task ID/Entry ID.
+	 */
+	@GetMapping("/timesheets/adjustable-entries")
+	@PreAuthorize("hasRole('VT-02')")
+	public BaseRes<List<AdjustableEntryRes>> findAdjustableEntries() {
+		return BaseRes.ok(timesheetAdjustmentService.findAdjustableEntries());
 	}
 
 	/** Duyet nguyen bang (khong truyen entryIds) hoac tung dong (truyen entryIds). */

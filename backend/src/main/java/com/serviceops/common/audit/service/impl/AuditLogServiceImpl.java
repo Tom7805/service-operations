@@ -63,6 +63,13 @@ public class AuditLogServiceImpl implements AuditLogService {
 
 	@Override
 	@Transactional(readOnly = true)
+	public Optional<AuditLogRes> findFirstForTarget(AuditTargetType targetType, Long targetId) {
+		return repository.findFirstByTargetTypeAndTargetIdOrderByPerformedAtAsc(targetType, targetId)
+				.map(this::toResponse);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
 	public AuditLogPageRes search(AuditLogSearchReq request) {
 		Specification<AuditLog> spec = AuditLogSpecification.from(request);
 		PageRequest pageRequest = PageRequest.of(request.getPage(), request.getSize(),
