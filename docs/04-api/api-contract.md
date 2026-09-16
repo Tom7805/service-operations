@@ -3679,6 +3679,109 @@ GET /contracts/{contractId}/bill-rates/resolve?professionalRole=Lap+trinh+vien+c
 | 400 | `VALIDATION_ERROR` | Thiếu thông tin bắt buộc hoặc `dailyRate` âm |
 | 409 | `DUPLICATE_DATA` | Đã tồn tại đơn giá riêng cho cùng `professionalRole` + `level` + `effectiveFrom` trong hợp đồng |
 
+### `NCL-07-CN-004` — Khai báo chi phí giờ công nội bộ
+
+Khai báo và tra cứu chi phí giờ công nội bộ của từng nhân sự theo mốc thời gian (`employee_hourly_rates`), phục vụ việc tính giá vốn dự án (QTN-17).
+
+Quyền truy cập:
+- Khai báo (`POST`): Yêu cầu token **Nhân sự** (`VT-06`) hoặc **Quản trị viên** (`VT-07`).
+- Xem lịch sử & tra cứu giá vốn (`GET`): Cho phép **Nhân sự** (`VT-06`), **Kế toán** (`VT-05`), **Ban giám đốc** (`VT-01`), **Quản trị viên** (`VT-07`).
+- Vai trò khác (ví dụ Quản lý dự án `VT-02`) bị chặn `403 FORBIDDEN` và tự động ghi nhật ký lần từ chối (TC-02).
+
+Nhật ký dữ liệu nhạy cảm (TC-04): Mọi thao tác khai báo, chỉnh sửa hoặc xem danh sách chi phí giờ công đều được tự động ghi nhận vào `sensitive_data_access_logs` (loại dữ liệu `SALARY` / `COST`).
+
+#### `POST /employees/{employeeId}/rates`
+
+Khai báo mốc chi phí giờ công nội bộ cho nhân sự `{employeeId}`. Hệ thống lưu bản ghi mới và giữ nguyên bản ghi lịch sử cũ (TC-01).
+
+```json
+{
+  "hourlyRate": 250000,
+  "effectiveFrom": "2026-01-01"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `hourlyRate` | number | có | Chi phí giờ công nội bộ, không được âm |
+| `effectiveFrom` | date (`yyyy-MM-dd`) | có | Ngày bắt đầu hiệu lực của mức chi phí |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Khai bao chi phi gio cong noi bo thanh cong",
+  "data": {
+    "id": 10,
+    "employeeId": 1,
+    "hourlyRate": 250000,
+    "effectiveFrom": "2026-01-01"
+  }
+}
+```
+
+#### `GET /employees/{employeeId}/rates`
+
+Xem danh sách lịch sử chi phí giờ công nội bộ của nhân sự `{employeeId}` (mới nhất xếp trước).
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 10, "employeeId": 1, "hourlyRate": 250000, "effectiveFrom": "2026-01-01" }
+  ]
+}
+```
+
+#### `GET /employees/{employeeId}/rates/resolve?asOf=2026-06-01`
+
+Tra cứu chi phí giờ công của nhân sự `{employeeId}` tại mốc thời điểm `asOf` phát sinh dòng giờ công.
+
+| Query param | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `asOf` | date (`yyyy-MM-dd`) | có | Ngày phát sinh dòng giờ công cần tính giá vốn |
+
+**Response thành công — `200 OK` (có dữ liệu):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "employeeId": 1,
+    "hourlyRate": 250000,
+    "effectiveFrom": "2026-01-01",
+    "missingCostData": false
+  }
+}
+```
+
+**Response thành công — `200 OK` (ngoại lệ TC-03: `asOf` sớm hơn mọi mốc hiệu lực đã khai báo):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "employeeId": 1,
+    "hourlyRate": null,
+    "effectiveFrom": null,
+    "missingCostData": true
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Người dùng không có vai trò được phép (ví dụ VT-02) — ghi nhật ký từ chối (TC-02) |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy hồ sơ nhân sự `{employeeId}` |
+| 400 | `VALIDATION_ERROR` | Thiếu `hourlyRate` / `effectiveFrom` hoặc `hourlyRate` âm |
+| 409 | `DUPLICATE_DATA` | Đã tồn tại khai báo chi phí giờ công cho nhân sự tại ngày hiệu lực đã chọn |
+
 ---
 
 ## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)
