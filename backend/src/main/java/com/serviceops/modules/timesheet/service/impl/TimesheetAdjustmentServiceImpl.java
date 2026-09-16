@@ -6,6 +6,7 @@ import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.project.entity.Project;
 import com.serviceops.modules.project.entity.Task;
+import com.serviceops.modules.project.enums.ProjectStatus;
 import com.serviceops.modules.project.repository.ProjectRepository;
 import com.serviceops.modules.project.repository.TaskRepository;
 import com.serviceops.modules.timesheet.dto.request.TimeEntryAdjustmentReq;
@@ -168,7 +169,11 @@ public class TimesheetAdjustmentServiceImpl implements TimesheetAdjustmentServic
 	@Transactional(readOnly = true)
 	public List<AdjustableEntryRes> findAdjustableEntries() {
 		Long pmId = requireCurrentManager();
-		List<Project> myProjects = projectRepository.findByProjectManagerId(pmId);
+		// Du an da dong la ho so lich su chi doc (QTN-13) — khong con dieu chinh duoc gio cong
+		// cua no nua, giong het cach NCL-06-CN-007 chan ghi gio moi vao du an da dong.
+		List<Project> myProjects = projectRepository.findByProjectManagerId(pmId).stream()
+				.filter(project -> project.getStatus() == ProjectStatus.RUNNING)
+				.toList();
 		if (myProjects.isEmpty()) {
 			return List.of();
 		}
@@ -225,6 +230,11 @@ public class TimesheetAdjustmentServiceImpl implements TimesheetAdjustmentServic
 				.orElseThrow(() -> notFound("Khong tim thay cong viec thuoc du an"));
 		if (!Objects.equals(project.getProjectManagerId(), pmId)) {
 			throw new AccessDeniedException("Ban khong phai quan ly cua du an nay");
+		}
+		// Du an da dong la ho so lich su chi doc (QTN-13) — chan luon o day de goi thang API
+		// (bo qua man hinh danh sach) cung khong dieu chinh duoc gio cong cua du an da dong.
+		if (project.getStatus() == ProjectStatus.CLOSED) {
+			throw invalidState("Du an da dong, khong the dieu chinh gio cong");
 		}
 		return task;
 	}
