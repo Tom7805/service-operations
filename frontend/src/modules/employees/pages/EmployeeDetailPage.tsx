@@ -1,16 +1,49 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { addEmploymentContract, EmployeeApiError, getEmployeeById } from '../api/employeesApi';
-import type { EmployeeDetail, EmploymentContractCreatePayload, EmploymentTypeCode } from '../types/employeeTypes';
+import {
+  addEmploymentContract,
+  createEmployeeHourlyRate,
+  EmployeeApiError,
+  fetchEmployeeHourlyRates,
+  getEmployeeById,
+  resolveEmployeeHourlyRate,
+} from '../api/employeesApi';
+import type {
+  EmployeeDetail,
+  EmployeeHourlyRateRes,
+  EmploymentContractCreatePayload,
+  EmploymentTypeCode,
+  ResolvedEmployeeHourlyRateRes,
+} from '../types/employeeTypes';
 import { EMPLOYMENT_TYPE_LABELS } from '../types/employeeTypes';
-import { validateContractForm, type ContractFormErrors } from '../validators/employeeValidators';
+import { validateContractForm, validateHourlyRateForm, type ContractFormErrors } from '../validators/employeeValidators';
 import { ICONS } from '../../../components/common/icons';
 
 interface EmployeeDetailPageProps {
   employeeId: number;
   onBack: () => void;
+  currentUserRoles?: string[];
 }
 
-export default function EmployeeDetailPage({ employeeId, onBack }: EmployeeDetailPageProps) {
+/** NCL-07-CN-004: xem lịch sử/tra cứu chi phí giờ công nội bộ (dữ liệu nhạy cảm SALARY/COST). */
+const HOURLY_RATE_VIEW_ROLES = ['VT-01', 'VT-05', 'VT-06', 'VT-07'];
+/** NCL-07-CN-004: khai báo mốc chi phí giờ công nội bộ mới. */
+const HOURLY_RATE_DECLARE_ROLES = ['VT-06', 'VT-07'];
+
+function formatHourlyRate(value: number): string {
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(
+    value
+  );
+}
+
+function formatDate(value: string): string {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString('vi-VN');
+}
+
+export default function EmployeeDetailPage({ employeeId, onBack, currentUserRoles = [] }: EmployeeDetailPageProps) {
+  const canViewHourlyRate = HOURLY_RATE_VIEW_ROLES.some((r) => currentUserRoles.includes(r));
+  const canDeclareHourlyRate = HOURLY_RATE_DECLARE_ROLES.some((r) => currentUserRoles.includes(r));
+
   const [employee, setEmployee] = useState<EmployeeDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,6 +54,88 @@ export default function EmployeeDetailPage({ employeeId, onBack }: EmployeeDetai
   const [contractErrors, setContractErrors] = useState<ContractFormErrors>({});
   const [contractServerError, setContractServerError] = useState<string | null>(null);
   const [submittingContract, setSubmittingContract] = useState(false);
+
+  const [hourlyRates, setHourlyRates] = useState<EmployeeHourlyRateRes[]>([]);
+  const [hourlyRatesLoading, setHourlyRatesLoading] = useState(false);
+  const [hourlyRatesError, setHourlyRatesError] = useState<string | null>(null);
+
+  const [newHourlyRate, setNewHourlyRate] = useState('');
+  const [newEffectiveFrom, setNewEffectiveFrom] = useState('');
+  const [hourlyRateErrors, setHourlyRateErrors] = useState<{ hourlyRate?: string; effectiveFrom?: string }>({});
+  const [hourlyRateServerError, setHourlyRateServerError] = useState<string | null>(null);
+  const [submittingHourlyRate, setSubmittingHourlyRate] = useState(false);
+
+  const [resolveAsOf, setResolveAsOf] = useState('');
+  const [resolveResult, setResolveResult] = useState<ResolvedEmployeeHourlyRateRes | null>(null);
+  const [resolveError, setResolveError] = useState<string | null>(null);
+  const [resolving, setResolving] = useState(false);
+
+  const loadHourlyRates = useCallback(async () => {
+    if (!canViewHourlyRate) return;
+    setHourlyRatesLoading(true);
+    setHourlyRatesError(null);
+    try {
+      const data = await fetchEmployeeHourlyRates(employeeId);
+      setHourlyRates(data);
+    } catch (err) {
+      setHourlyRatesError(
+        err instanceof EmployeeApiError ? err.message : 'Không tải được lịch sử chi phí giờ công nội bộ.'
+      );
+    } finally {
+      setHourlyRatesLoading(false);
+    }
+  }, [employeeId, canViewHourlyRate]);
+
+  useEffect(() => {
+    void loadHourlyRates();
+  }, [loadHourlyRates]);
+
+  const handleAddHourlyRate = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!canDeclareHourlyRate) return;
+    setHourlyRateServerError(null);
+
+    const rateValue = newHourlyRate === '' ? undefined : Number(newHourlyRate);
+    const nextErrors = validateHourlyRateForm({ hourlyRate: rateValue, effectiveFrom: newEffectiveFrom });
+    setHourlyRateErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
+    setSubmittingHourlyRate(true);
+    try {
+      const created = await createEmployeeHourlyRate(employeeId, {
+        hourlyRate: rateValue as number,
+        effectiveFrom: newEffectiveFrom,
+      });
+      setHourlyRates((prev) => [created, ...prev]);
+      setNewHourlyRate('');
+      setNewEffectiveFrom('');
+      setHourlyRateErrors({});
+    } catch (err) {
+      setHourlyRateServerError(
+        err instanceof EmployeeApiError ? err.message : 'Không thể khai báo chi phí giờ công nội bộ.'
+      );
+    } finally {
+      setSubmittingHourlyRate(false);
+    }
+  };
+
+  const handleResolveHourlyRate = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!resolveAsOf || resolving) return;
+    setResolving(true);
+    setResolveError(null);
+    setResolveResult(null);
+    try {
+      const resolved = await resolveEmployeeHourlyRate(employeeId, resolveAsOf);
+      setResolveResult(resolved);
+    } catch (err) {
+      setResolveError(
+        err instanceof EmployeeApiError ? err.message : 'Không tra được chi phí giờ công tại thời điểm này.'
+      );
+    } finally {
+      setResolving(false);
+    }
+  };
 
   const loadDetail = useCallback(async () => {
     setLoading(true);
@@ -255,6 +370,153 @@ export default function EmployeeDetailPage({ employeeId, onBack }: EmployeeDetai
             </div>
           </form>
         </div>
+
+        {canViewHourlyRate && (
+          <>
+            <hr className="divider" />
+
+            <div className="detail-section" data-testid="hourly-rate-section">
+              <h3 className="section-title">Chi phí giờ công nội bộ</h3>
+              <p style={{ color: '#5B5A57', fontSize: 13.5, marginTop: '-4px' }}>
+                Dữ liệu nhạy cảm (lương/giá vốn) — dùng để tính giá vốn dự án. Mỗi lần xem hoặc khai báo đều
+                được hệ thống tự ghi vào nhật ký truy cập dữ liệu nhạy cảm.
+              </p>
+
+              {hourlyRatesLoading ? (
+                <div className="skeleton skeleton-card mt-2" style={{ height: '80px' }} />
+              ) : hourlyRatesError ? (
+                <div className="alert alert--error mt-2" role="alert">
+                  <span className="alert__icon">{ICONS.alertTriangle}</span>
+                  <span>{hourlyRatesError}</span>
+                  <button type="button" className="btn-link text-white ml-auto" onClick={() => void loadHourlyRates()}>
+                    Thử lại
+                  </button>
+                </div>
+              ) : hourlyRates.length === 0 ? (
+                <p style={{ color: '#5B5A57', fontSize: 13.5 }}>Chưa có mốc chi phí giờ công nào được khai báo.</p>
+              ) : (
+                <div className="table-responsive">
+                  <table className="user-data-table" data-testid="hourly-rate-table">
+                    <thead>
+                      <tr>
+                        <th>Chi phí / giờ</th>
+                        <th>Hiệu lực từ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {hourlyRates.map((r) => (
+                        <tr key={r.id}>
+                          <td style={{ fontFamily: 'var(--font-mono, monospace)' }}>{formatHourlyRate(r.hourlyRate)}</td>
+                          <td>{formatDate(r.effectiveFrom)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {canDeclareHourlyRate && (
+                <form onSubmit={handleAddHourlyRate} className="form-grid mt-4">
+                  {hourlyRateServerError && (
+                    <div className="alert alert--error form-field--full" role="alert">
+                      <span className="alert__icon">{ICONS.alertTriangle}</span>
+                      <span>{hourlyRateServerError}</span>
+                    </div>
+                  )}
+
+                  <div className="form-field">
+                    <label htmlFor="hourly-rate-input" className="form-label">
+                      Chi phí giờ công (VNĐ) <span className="req">*</span>
+                    </label>
+                    <input
+                      id="hourly-rate-input"
+                      type="number"
+                      min={0}
+                      className={`form-input ${hourlyRateErrors.hourlyRate ? 'form-input--error' : ''}`}
+                      value={newHourlyRate}
+                      onChange={(e) => {
+                        setNewHourlyRate(e.target.value);
+                        if (hourlyRateErrors.hourlyRate) setHourlyRateErrors({ ...hourlyRateErrors, hourlyRate: undefined });
+                      }}
+                      disabled={submittingHourlyRate}
+                    />
+                    {hourlyRateErrors.hourlyRate && <span className="field-error">{hourlyRateErrors.hourlyRate}</span>}
+                  </div>
+
+                  <div className="form-field">
+                    <label htmlFor="hourly-rate-effective-from-input" className="form-label">
+                      Ngày hiệu lực <span className="req">*</span>
+                    </label>
+                    <input
+                      id="hourly-rate-effective-from-input"
+                      type="date"
+                      className={`form-input ${hourlyRateErrors.effectiveFrom ? 'form-input--error' : ''}`}
+                      value={newEffectiveFrom}
+                      onChange={(e) => {
+                        setNewEffectiveFrom(e.target.value);
+                        if (hourlyRateErrors.effectiveFrom) setHourlyRateErrors({ ...hourlyRateErrors, effectiveFrom: undefined });
+                      }}
+                      disabled={submittingHourlyRate}
+                    />
+                    {hourlyRateErrors.effectiveFrom && <span className="field-error">{hourlyRateErrors.effectiveFrom}</span>}
+                  </div>
+
+                  <div className="form-field form-field--full" style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <button type="submit" className="btn-primary" disabled={submittingHourlyRate}>
+                      {submittingHourlyRate ? 'Đang lưu...' : '+ Khai báo chi phí giờ công'}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              <hr className="divider" />
+
+              <h4 style={{ fontSize: '13.5px', fontWeight: 600, marginBottom: '10px' }}>
+                Tra chi phí giờ công tại một thời điểm
+              </h4>
+              <form onSubmit={handleResolveHourlyRate} style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                <div className="form-field" style={{ minWidth: '180px' }}>
+                  <label htmlFor="hourly-rate-resolve-as-of" className="form-label">
+                    Ngày phát sinh
+                  </label>
+                  <input
+                    id="hourly-rate-resolve-as-of"
+                    type="date"
+                    className="form-input"
+                    value={resolveAsOf}
+                    onChange={(e) => setResolveAsOf(e.target.value)}
+                  />
+                </div>
+                <button type="submit" className="btn-secondary" disabled={!resolveAsOf || resolving}>
+                  {resolving ? 'Đang tra…' : 'Tra chi phí'}
+                </button>
+              </form>
+
+              {resolveError && (
+                <div className="alert alert--error mt-2" role="alert">
+                  <span className="alert__icon">{ICONS.alertTriangle}</span>
+                  <span>{resolveError}</span>
+                </div>
+              )}
+
+              {resolveResult && resolveResult.missingCostData && (
+                <div className="alert-box alert-box--info mt-2" role="status" data-testid="hourly-rate-missing">
+                  <span className="icon-xs">{ICONS.info}</span> Chưa có chi phí giờ công nào hiệu lực trước hoặc
+                  đúng ngày {formatDate(resolveAsOf)} — nhân sự này chưa có mốc chi phí nào tính đến thời điểm đó.
+                </div>
+              )}
+
+              {resolveResult && !resolveResult.missingCostData && resolveResult.hourlyRate != null && (
+                <div className="alert-box alert-box--success mt-2" role="status" data-testid="hourly-rate-resolved">
+                  <strong>{formatHourlyRate(resolveResult.hourlyRate)} / giờ</strong>
+                  <div className="field-hint" style={{ marginTop: '4px' }}>
+                    Mốc áp dụng có hiệu lực từ {formatDate(resolveResult.effectiveFrom as string)}.
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

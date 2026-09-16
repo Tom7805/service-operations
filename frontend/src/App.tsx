@@ -652,7 +652,11 @@ export default function App() {
           ) : activeTab === 'TWO_FACTOR_SETTINGS' ? (
             <TwoFactorSetupPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'EMPLOYEE_DETAIL' && selectedEmployeeId ? (
-            <EmployeeDetailPage employeeId={selectedEmployeeId} onBack={() => setActiveTab('EMPLOYEES')} />
+            <EmployeeDetailPage
+              employeeId={selectedEmployeeId}
+              onBack={() => setActiveTab('EMPLOYEES')}
+              currentUserRoles={currentRoles}
+            />
           ) : activeTab === 'EMPLOYEES' ? (
             <EmployeeListPage
               currentUserRoles={currentRoles}

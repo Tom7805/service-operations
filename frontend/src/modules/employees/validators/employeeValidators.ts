@@ -1,4 +1,9 @@
-import type { EmployeeCreatePayload, EmployeeUpdatePayload, EmploymentContractCreatePayload } from '../types/employeeTypes';
+import type {
+  EmployeeCreatePayload,
+  EmployeeHourlyRateCreatePayload,
+  EmployeeUpdatePayload,
+  EmploymentContractCreatePayload,
+} from '../types/employeeTypes';
 
 export interface FormErrors {
   userId?: string;
@@ -74,6 +79,28 @@ export function validateContractForm(payload: Partial<EmploymentContractCreatePa
   // NCL-01-CN-007-TC-03: ngày kết thúc hợp đồng không được sớm hơn ngày bắt đầu.
   if (payload.startDate && payload.endDate && payload.endDate < payload.startDate) {
     errors.endDate = 'Ngày kết thúc không được sớm hơn ngày bắt đầu';
+  }
+
+  return errors;
+}
+
+export interface HourlyRateFormErrors {
+  hourlyRate?: string;
+  effectiveFrom?: string;
+}
+
+/** Khớp ràng buộc của `EmployeeHourlyRateCreateReq` phía backend (NCL-07-CN-004). */
+export function validateHourlyRateForm(payload: Partial<EmployeeHourlyRateCreatePayload>): HourlyRateFormErrors {
+  const errors: HourlyRateFormErrors = {};
+
+  if (payload.hourlyRate == null || Number.isNaN(payload.hourlyRate)) {
+    errors.hourlyRate = 'Chi phí giờ công không được để trống';
+  } else if (payload.hourlyRate < 0) {
+    errors.hourlyRate = 'Chi phí giờ công không được âm';
+  }
+
+  if (!payload.effectiveFrom) {
+    errors.effectiveFrom = 'Ngày hiệu lực không được để trống';
   }
 
   return errors;

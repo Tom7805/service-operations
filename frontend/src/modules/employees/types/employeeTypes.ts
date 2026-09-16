@@ -67,3 +67,35 @@ export const EMPLOYMENT_TYPE_LABELS: Record<EmploymentTypeCode, string> = {
 
 /** NCL-01-CN-007-TC-01/TC-02: mặc định của backend khi không truyền standardHoursPerWeek. */
 export const DEFAULT_STANDARD_HOURS_PER_WEEK = 40;
+
+/**
+ * NCL-07-CN-004 — Khai báo chi phí giờ công nội bộ. Mỗi mốc là một dòng lịch
+ * sử riêng (backend không ghi đè, chỉ thêm dòng mới) — dữ liệu nhạy cảm
+ * (SALARY/COST), mọi thao tác khai báo/xem đều được backend tự ghi nhật ký.
+ */
+export interface EmployeeHourlyRateRes {
+  id: number;
+  employeeId: number;
+  hourlyRate: number;
+  /** `yyyy-MM-dd` */
+  effectiveFrom: string;
+}
+
+export interface EmployeeHourlyRateCreatePayload {
+  hourlyRate: number;
+  /** `yyyy-MM-dd` */
+  effectiveFrom: string;
+}
+
+/**
+ * Kết quả tra cứu `GET /employees/{employeeId}/rates/resolve` — chi phí giờ
+ * công áp dụng tại một ngày phát sinh. `missingCostData` = true khi ngày đó
+ * sớm hơn mọi mốc hiệu lực đã khai báo (TC-03) — không phải lỗi hệ thống,
+ * `hourlyRate`/`effectiveFrom` sẽ là `null`.
+ */
+export interface ResolvedEmployeeHourlyRateRes {
+  employeeId: number;
+  hourlyRate: number | null;
+  effectiveFrom: string | null;
+  missingCostData: boolean;
+}
