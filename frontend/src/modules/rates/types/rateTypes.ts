@@ -132,3 +132,35 @@ export interface WorkTypeRateFactorPayload {
   workType: WorkType;
   factor: number;
 }
+
+/**
+ * NCL-07-CN-007 — Xem lịch sử thay đổi đơn giá. Toàn bộ các mốc đơn giá đã
+ * từng khai báo cho một cặp (vai trò, cấp bậc), giúp Kế toán giải trình vì
+ * sao doanh thu giữa hai kỳ khác nhau. Không phải bảng lưu lịch sử riêng —
+ * đây chính là toàn bộ các dòng `bill_rates` của cặp đó (mỗi lần khai báo là
+ * một dòng mới, không bao giờ ghi đè — NCL-07-CN-001/002).
+ */
+export interface BillRateHistoryEntryRes {
+  /** Chỉ dùng làm `key` khi render — không hiển thị cho người dùng. */
+  id: number;
+  dailyRate: number;
+  /** `yyyy-MM-dd` */
+  effectiveFrom: string;
+  /** `yyyy-MM-dd` — `null` nếu đây là mốc mới nhất, đang áp dụng (khớp `current`) */
+  effectiveTo: string | null;
+  /** `true` cho đúng một phần tử — mốc mới nhất, đang áp dụng */
+  current: boolean;
+  /** `null` nếu dòng được tạo từ dữ liệu seed trước khi có audit log — hiển thị "—" */
+  changedBy: string | null;
+  /** ISO datetime, `null` cùng điều kiện với `changedBy` */
+  changedAt: string | null;
+}
+
+export interface BillRateHistoryRes {
+  professionalRole: string;
+  level: string;
+  /** Sắp theo `effectiveFrom` TĂNG DẦN (cũ nhất trước) — đảo mảng ở FE nếu muốn mới nhất trước. */
+  entries: BillRateHistoryEntryRes[];
+  /** `false` khi chỉ có đúng 1 mốc — hiển thị rõ "chưa từng thay đổi" (TC-02), tránh trông như lỗi tải thiếu. */
+  everChanged: boolean;
+}

@@ -95,3 +95,25 @@ export function validateWorkTypeFactor(factor: number | null): string | undefine
   }
   return undefined;
 }
+
+/** Khớp validate của `GET /bill-rates/history` phía backend (NCL-07-CN-007). */
+export interface RateHistoryQueryFormValues {
+  professionalRole: string;
+  level: string;
+}
+
+export type RateHistoryQueryFormErrors = Partial<Record<keyof RateHistoryQueryFormValues, string>>;
+
+export function validateRateHistoryQuery(values: RateHistoryQueryFormValues): RateHistoryQueryFormErrors {
+  const errors: RateHistoryQueryFormErrors = {};
+
+  if (!values.professionalRole.trim()) {
+    errors.professionalRole = 'Vai trò chuyên môn không được để trống';
+  }
+
+  if (!values.level.trim()) {
+    errors.level = 'Cấp bậc không được để trống';
+  }
+
+  return errors;
+}

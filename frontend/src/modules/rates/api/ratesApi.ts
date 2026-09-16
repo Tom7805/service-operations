@@ -1,5 +1,6 @@
 import type {
   BillRateCreatePayload,
+  BillRateHistoryRes,
   BillRateRes,
   ContractBillRateCreatePayload,
   ContractBillRateRes,
@@ -185,4 +186,18 @@ export async function upsertWorkTypeRate(payload: WorkTypeRateFactorPayload): Pr
     method: 'POST',
     body: JSON.stringify(payload),
   });
+}
+
+/**
+ * GET /bill-rates/history?professionalRole&level — toàn bộ các mốc đơn giá
+ * đã từng khai báo cho một cặp (vai trò, cấp bậc), giúp Kế toán giải trình vì
+ * sao doanh thu giữa hai kỳ khác nhau (NCL-07-CN-007). `404` nghĩa là vai
+ * trò/cấp bậc đó chưa từng có đơn giá nào được khai báo — không phải lỗi hệ
+ * thống, khác với `entries` chỉ có 1 mốc (`everChanged: false`, vẫn trả 200).
+ */
+export async function fetchBillRateHistory(professionalRole: string, level: string): Promise<BillRateHistoryRes> {
+  const url = new URL(`${API_BASE_URL}/bill-rates/history`);
+  url.searchParams.set('professionalRole', professionalRole);
+  url.searchParams.set('level', level);
+  return requestBackend<BillRateHistoryRes>(url.toString(), { method: 'GET' });
 }

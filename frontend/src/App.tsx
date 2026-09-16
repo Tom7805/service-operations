@@ -15,6 +15,7 @@ import CustomerListPage from './modules/customers/pages/CustomerListPage';
 import CustomerMergePage from './modules/customers/pages/CustomerMergePage';
 import ContractListPage from './modules/contracts/pages/ContractListPage';
 import BillRatePage from './modules/rates/pages/BillRatePage';
+import RateHistoryPage from './modules/rates/pages/RateHistoryPage';
 import OpportunityDetailPage from './modules/opportunities/pages/OpportunityDetailPage';
 import OpportunitySearchPicker from './modules/opportunities/components/OpportunitySearchPicker';
 import OpportunityListPage from './modules/opportunities/pages/OpportunityListPage';
@@ -44,6 +45,7 @@ type Tab =
   | 'REVENUE_FORECAST'
   | 'CUSTOMER_MERGE'
   | 'BILL_RATES'
+  | 'RATE_HISTORY'
   | 'DEPARTMENTS'
   | 'PERMISSIONS'
   | 'USERS'
@@ -128,6 +130,12 @@ const BUSINESS_NAV_ITEMS: NavItem[] = [
     tab: 'BILL_RATES', icon: ICONS.money, label: 'Bảng đơn giá', requires: ['VT-05', 'VT-07'],
     // NCL-07-CN-001: khai báo đơn giá theo NGÀY công cho từng (vai trò, cấp bậc),
     // dùng bởi NCL-03-CN-003 (Lập báo giá). Chỉ Kế toán/Quản trị viên thao tác được.
+  },
+  {
+    tab: 'RATE_HISTORY', icon: ICONS.history, label: 'Lịch sử đơn giá', requires: ['VT-05', 'VT-07'],
+    // NCL-07-CN-007: toàn bộ các mốc đơn giá đã từng khai báo cho một (vai trò, cấp
+    // bậc) — giải trình chênh lệch doanh thu giữa hai kỳ. Tách khỏi "Bảng đơn giá" vì
+    // đây là tra cứu độc lập theo cặp cụ thể, không phải quản lý toàn bộ bảng giá.
   },
   { tab: 'OPPORTUNITY_DETAIL', icon: ICONS.building, label: 'Cơ hội', requires: ['VT-04'] },
 ];
@@ -637,6 +645,8 @@ export default function App() {
             <CustomerMergePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'BILL_RATES' ? (
             <BillRatePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+          ) : activeTab === 'RATE_HISTORY' ? (
+            <RateHistoryPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'DEPARTMENTS' ? (
             <DepartmentTreePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'PERMISSIONS' ? (
