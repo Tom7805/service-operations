@@ -8,6 +8,9 @@ vi.mock('../api/ratesApi', () => ({
   fetchCurrentBillRates: vi.fn(),
   createBillRate: vi.fn(),
   resolveBillRate: vi.fn(),
+  fetchContractBillRates: vi.fn(),
+  createContractBillRate: vi.fn(),
+  resolveContractBillRate: vi.fn(),
   RatesApiError: class extends Error {
     constructor(public code: string, message: string, public statusCode?: number) {
       super(message);

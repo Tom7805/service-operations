@@ -1,4 +1,12 @@
-import type { BillRateCreatePayload, BillRateRes, ResolveBillRateQuery } from '../types/rateTypes';
+import type {
+  BillRateCreatePayload,
+  BillRateRes,
+  ContractBillRateCreatePayload,
+  ContractBillRateRes,
+  ResolveBillRateQuery,
+  ResolveContractBillRateQuery,
+  ResolvedContractBillRateRes,
+} from '../types/rateTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -92,4 +100,49 @@ export async function resolveBillRate(query: ResolveBillRateQuery): Promise<Bill
   url.searchParams.set('level', query.level);
   url.searchParams.set('asOf', query.asOf);
   return requestBackend<BillRateRes>(url.toString(), { method: 'GET' });
+}
+
+/**
+ * GET /contracts/{contractId}/bill-rates — danh sách đơn giá riêng đã khai báo
+ * cho một hợp đồng cụ thể, mới nhất trước (NCL-07-CN-003). 404 nếu không tìm
+ * thấy hợp đồng với `contractId` đó.
+ */
+export async function fetchContractBillRates(contractId: number): Promise<ContractBillRateRes[]> {
+  return requestBackend<ContractBillRateRes[]>(`${API_BASE_URL}/contracts/${contractId}/bill-rates`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * POST /contracts/{contractId}/bill-rates — khai báo mức giá đàm phán riêng
+ * cho một hợp đồng, ưu tiên hơn bảng đơn giá chung công ty khi tính doanh thu
+ * (NCL-07-CN-003, QTN-16). Trùng `(professionalRole, level, effectiveFrom)`
+ * trong cùng hợp đồng trả về 409 DUPLICATE_DATA.
+ */
+export async function createContractBillRate(
+  contractId: number,
+  payload: ContractBillRateCreatePayload
+): Promise<ContractBillRateRes> {
+  return requestBackend<ContractBillRateRes>(`${API_BASE_URL}/contracts/${contractId}/bill-rates`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * GET /contracts/{contractId}/bill-rates/resolve — đơn giá áp dụng cho hợp
+ * đồng tại một ngày phát sinh, đã áp quy tắc ưu tiên QTN-16: ưu tiên đơn giá
+ * riêng hợp đồng, không có thì tự rơi về đơn giá chung công ty. `404` nếu
+ * không tìm thấy hợp đồng, hoặc không có đơn giá hợp lệ (chung lẫn riêng) tại
+ * mốc `asOf` — không phải lỗi hệ thống.
+ */
+export async function resolveContractBillRate(
+  contractId: number,
+  query: ResolveContractBillRateQuery
+): Promise<ResolvedContractBillRateRes> {
+  const url = new URL(`${API_BASE_URL}/contracts/${contractId}/bill-rates/resolve`);
+  url.searchParams.set('professionalRole', query.professionalRole);
+  url.searchParams.set('level', query.level);
+  url.searchParams.set('asOf', query.asOf);
+  return requestBackend<ResolvedContractBillRateRes>(url.toString(), { method: 'GET' });
 }
