@@ -19,3 +19,16 @@ export interface BillRateCreatePayload {
   /** `yyyy-MM-dd` */
   effectiveFrom: string;
 }
+
+/**
+ * NCL-07-CN-002 — Đặt hiệu lực theo thời điểm cho đơn giá.
+ * Tham số truy vấn `GET /bill-rates/resolve`: trả về dòng đơn giá có hiệu lực
+ * tại một ngày phát sinh cụ thể (`asOf`), dùng khi tính lại doanh thu cho giờ
+ * công đã ghi nhận trong quá khứ — không bị ảnh hưởng bởi lần tăng giá sau đó.
+ */
+export interface ResolveBillRateQuery {
+  professionalRole: string;
+  level: string;
+  /** `yyyy-MM-dd` — ngày phát sinh cần tra giá */
+  asOf: string;
+}

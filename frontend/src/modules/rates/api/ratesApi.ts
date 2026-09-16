@@ -1,4 +1,4 @@
-import type { BillRateCreatePayload, BillRateRes } from '../types/rateTypes';
+import type { BillRateCreatePayload, BillRateRes, ResolveBillRateQuery } from '../types/rateTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -76,4 +76,20 @@ export async function fetchCurrentBillRates(): Promise<BillRateRes[]> {
   return requestBackend<BillRateRes[]>(`${API_BASE_URL}/bill-rates/current`, {
     method: 'GET',
   });
+}
+
+/**
+ * GET /bill-rates/resolve — tra đúng dòng đơn giá có hiệu lực tại một ngày phát
+ * sinh cụ thể (`asOf`), dùng khi tính lại doanh thu cho giờ công đã ghi nhận
+ * trong quá khứ để không bị ảnh hưởng bởi lần tăng giá sau ngày đó (NCL-07-CN-002,
+ * QTN-15). Backend chọn dòng có `effectiveFrom` gần nhất nhưng không vượt quá
+ * `asOf`. 404 nghĩa là chưa từng có đơn giá cho vai trò/cấp bậc đó tại thời điểm
+ * này — không phải lỗi hệ thống, message backend đã đủ rõ để hiển thị thẳng.
+ */
+export async function resolveBillRate(query: ResolveBillRateQuery): Promise<BillRateRes> {
+  const url = new URL(`${API_BASE_URL}/bill-rates/resolve`);
+  url.searchParams.set('professionalRole', query.professionalRole);
+  url.searchParams.set('level', query.level);
+  url.searchParams.set('asOf', query.asOf);
+  return requestBackend<BillRateRes>(url.toString(), { method: 'GET' });
 }

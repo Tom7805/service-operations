@@ -5,6 +5,7 @@ import { roleLabels } from '../../../utils/roleLabel';
 import { fetchCurrentBillRates, RatesApiError } from '../api/ratesApi';
 import type { BillRateRes } from '../types/rateTypes';
 import RateFormModal from '../components/RateFormModal';
+import RateResolveLookup from '../components/RateResolveLookup';
 
 interface BillRatePageProps {
   currentUserRoles?: string[];
@@ -320,6 +321,8 @@ export default function BillRatePage({
         cùng ngày hiệu lực. Mỗi lần khai báo thành công đều được ghi vào Nhật ký hệ thống (người thực hiện ·
         nội dung · thời điểm).
       </p>
+
+      <RateResolveLookup />
 
       <RateFormModal
         isOpen={isFormOpen}

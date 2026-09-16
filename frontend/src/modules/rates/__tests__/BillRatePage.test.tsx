@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import BillRatePage from '../pages/BillRatePage';
 import * as ratesApi from '../api/ratesApi';
@@ -7,6 +7,7 @@ import type { BillRateRes } from '../types/rateTypes';
 vi.mock('../api/ratesApi', () => ({
   fetchCurrentBillRates: vi.fn(),
   createBillRate: vi.fn(),
+  resolveBillRate: vi.fn(),
   RatesApiError: class extends Error {
     constructor(public code: string, message: string, public statusCode?: number) {
       super(message);
@@ -64,12 +65,13 @@ describe('BillRatePage (NCL-07-CN-001 — Khai báo bảng đơn giá theo vai t
 
     fireEvent.click(screen.getByRole('button', { name: /Khai báo đơn giá/i }));
 
-    fireEvent.change(screen.getByLabelText('Vai trò chuyên môn'), { target: { value: 'Kiểm thử viên' } });
-    fireEvent.change(screen.getByLabelText('Cấp bậc'), { target: { value: 'Trung cấp' } });
-    fireEvent.change(screen.getByLabelText('Đơn giá theo ngày công'), { target: { value: '1200000' } });
-    fireEvent.change(screen.getByLabelText('Ngày hiệu lực'), { target: { value: '2020-01-01' } });
+    const modal = within(screen.getByRole('dialog'));
+    fireEvent.change(modal.getByLabelText('Vai trò chuyên môn'), { target: { value: 'Kiểm thử viên' } });
+    fireEvent.change(modal.getByLabelText('Cấp bậc'), { target: { value: 'Trung cấp' } });
+    fireEvent.change(modal.getByLabelText('Đơn giá theo ngày công'), { target: { value: '1200000' } });
+    fireEvent.change(modal.getByLabelText('Ngày hiệu lực'), { target: { value: '2020-01-01' } });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu đơn giá' }));
+    fireEvent.click(modal.getByRole('button', { name: 'Lưu đơn giá' }));
 
     await waitFor(() => {
       expect(ratesApi.createBillRate).toHaveBeenCalledWith({
@@ -91,9 +93,10 @@ describe('BillRatePage (NCL-07-CN-001 — Khai báo bảng đơn giá theo vai t
     await waitFor(() => expect(screen.getByTestId('bill-rate-empty')).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: /Khai báo đơn giá/i }));
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu đơn giá' }));
+    const modal = within(screen.getByRole('dialog'));
+    fireEvent.click(modal.getByRole('button', { name: 'Lưu đơn giá' }));
 
-    expect(await screen.findByText('Vai trò chuyên môn không được để trống')).toBeInTheDocument();
+    expect(await modal.findByText('Vai trò chuyên môn không được để trống')).toBeInTheDocument();
     expect(ratesApi.createBillRate).not.toHaveBeenCalled();
   });
 });

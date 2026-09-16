@@ -32,3 +32,31 @@ export function validateBillRateForm(values: BillRateFormValues): BillRateFormEr
 
   return errors;
 }
+
+/** Khớp validate của `GET /bill-rates/resolve` phía backend (NCL-07-CN-002). */
+export interface ResolveBillRateFormValues {
+  professionalRole: string;
+  level: string;
+  /** `yyyy-MM-dd`, có thể rỗng khi chưa nhập */
+  asOf: string;
+}
+
+export type ResolveBillRateFormErrors = Partial<Record<keyof ResolveBillRateFormValues, string>>;
+
+export function validateResolveBillRateForm(values: ResolveBillRateFormValues): ResolveBillRateFormErrors {
+  const errors: ResolveBillRateFormErrors = {};
+
+  if (!values.professionalRole.trim()) {
+    errors.professionalRole = 'Vai trò chuyên môn không được để trống';
+  }
+
+  if (!values.level.trim()) {
+    errors.level = 'Cấp bậc không được để trống';
+  }
+
+  if (!values.asOf) {
+    errors.asOf = 'Ngày phát sinh không được để trống';
+  }
+
+  return errors;
+}
