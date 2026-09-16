@@ -23,14 +23,12 @@ import com.serviceops.modules.timesheet.mapper.TimesheetMapper;
 import com.serviceops.modules.timesheet.repository.TimeEntryRepository;
 import com.serviceops.modules.timesheet.repository.TimesheetTimerRepository;
 import com.serviceops.modules.timesheet.repository.TimesheetPeriodRepository;
-import com.serviceops.modules.timesheet.repository.TimesheetRepository;
 import com.serviceops.modules.timesheet.service.impl.TimeEntryServiceImpl;
 import com.serviceops.modules.timesheet.validator.DailyHourLimitValidator;
 import com.serviceops.modules.timesheet.validator.ImmutableEntryValidator;
 import com.serviceops.modules.timesheet.validator.OpenPeriodValidator;
 import com.serviceops.modules.timesheet.validator.OpenProjectValidator;
 import com.serviceops.modules.timesheet.validator.PeriodLockValidator;
-import com.serviceops.modules.timesheet.validator.WeekNotSubmittedValidator;
 import com.serviceops.security.scope.CurrentUserScopeProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -83,8 +81,6 @@ class TimeEntryServiceTest {
 	private ProjectAuditLogger auditLogger;
 	@Mock
 	private TimesheetPeriodRepository periodRepository;
-	@Mock
-	private TimesheetRepository timesheetRepository;
 
 	private TimeEntryServiceImpl service;
 	private Project project;
@@ -97,7 +93,7 @@ class TimeEntryServiceTest {
 				timeEntryRepository, timesheetTimerRepository, currentUserScopeProvider, auditLogger,
 				new OpenProjectValidator(), new OpenPeriodValidator(clock),
 				new DailyHourLimitValidator(timeEntryRepository), new ImmutableEntryValidator(),
-				new PeriodLockValidator(periodRepository), new WeekNotSubmittedValidator(timesheetRepository),
+				new PeriodLockValidator(periodRepository),
 				new TimeEntryMapper(), new TimesheetMapper(), clock);
 
 		project = new Project();
@@ -162,40 +158,6 @@ class TimeEntryServiceTest {
 				() -> service.create(1L, 20L, new TimeEntryCreateReq(TODAY, new BigDecimal("2"), "note", true, null)));
 
 		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
-	}
-
-	@Test
-	void rejectsCreatingEntryForWeekAlreadyApproved() {
-		stubAssigneeTask();
-		com.serviceops.modules.timesheet.entity.Timesheet approved = new com.serviceops.modules.timesheet.entity.Timesheet();
-		approved.setStatus(com.serviceops.modules.timesheet.enums.TimesheetStatus.APPROVED);
-		LocalDate mondayOfWeek = LocalDate.of(2026, 9, 7);
-		when(timesheetRepository.findByUserIdAndWeekStartDate(7L, mondayOfWeek)).thenReturn(Optional.of(approved));
-
-		BusinessRuleException exception = assertThrows(BusinessRuleException.class, () -> service.create(1L, 20L,
-				new TimeEntryCreateReq(TODAY, new BigDecimal("2"), "note", true, null)));
-
-		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
-		verify(timeEntryRepository, never()).save(any(TimeEntry.class));
-	}
-
-	@Test
-	void allowsCreatingEntryForWeekWhoseTimesheetWasRejected() {
-		stubAssigneeTask();
-		com.serviceops.modules.timesheet.entity.Timesheet rejected = new com.serviceops.modules.timesheet.entity.Timesheet();
-		rejected.setStatus(com.serviceops.modules.timesheet.enums.TimesheetStatus.REJECTED);
-		LocalDate mondayOfWeek = LocalDate.of(2026, 9, 7);
-		when(timesheetRepository.findByUserIdAndWeekStartDate(7L, mondayOfWeek)).thenReturn(Optional.of(rejected));
-		when(timeEntryRepository.save(any(TimeEntry.class))).thenAnswer(invocation -> {
-			TimeEntry saved = invocation.getArgument(0);
-			saved.setId(30L);
-			return saved;
-		});
-
-		TimeEntryRes response = service.create(1L, 20L,
-				new TimeEntryCreateReq(TODAY, new BigDecimal("2"), "note", true, null));
-
-		assertEquals(30L, response.id());
 	}
 
 	@Test

@@ -73,10 +73,15 @@ public class TimesheetSubmitServiceImpl implements TimesheetSubmitService {
 			throw invalidState("Khong con dong gio cong nhap (DRAFT) nao trong tuan de nop");
 		}
 
-		// TC-03: bang da nop tu truoc (cho duyet hoac da duyet) thi khong nop lai;
-		// bang bi tu choi (REJECTED) cho nop lai — cap nhat lai ban ghi cu.
+		// Bang dang PENDING_APPROVAL (da nop, chua ai xu ly) thi khong nop chong len —
+		// doi PM duyet/tu choi lo cu roi hay tinh tiep. Bang REJECTED cho nop lai (cap
+		// nhat lai ban ghi cu). Bang APPROVED van cho nop tiep NEU co dong DRAFT moi
+		// (VD: sau khi tuan da duyet, nguoi dung duoc giao them viec o mot du an khac
+		// van dang RUNNING va ghi them gio cong) — cac dong da APPROVED tu truoc giu
+		// nguyen bat bien (QTN-10), chi phan DRAFT moi chuyen SUBMITTED, PM duyet rieng
+		// phan bo sung nay o luot duyet ke tiep.
 		Timesheet timesheet = timesheetRepository.findByUserIdAndWeekStartDate(userId, weekFrom).orElse(null);
-		if (timesheet != null && timesheet.getStatus() != TimesheetStatus.REJECTED) {
+		if (timesheet != null && timesheet.getStatus() == TimesheetStatus.PENDING_APPROVAL) {
 			throw invalidState("Bang cham cong tuan bat dau " + weekFrom + " da duoc nop tu truoc ("
 					+ timesheet.getStatus() + "), khong the nop lai");
 		}
