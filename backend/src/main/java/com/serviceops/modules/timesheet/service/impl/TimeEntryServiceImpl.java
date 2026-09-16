@@ -26,6 +26,7 @@ import com.serviceops.modules.timesheet.validator.ImmutableEntryValidator;
 import com.serviceops.modules.timesheet.validator.OpenPeriodValidator;
 import com.serviceops.modules.timesheet.validator.OpenProjectValidator;
 import com.serviceops.modules.timesheet.validator.PeriodLockValidator;
+import com.serviceops.modules.timesheet.validator.WeekNotSubmittedValidator;
 import com.serviceops.security.scope.CurrentUserScopeProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -60,6 +61,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 	private final DailyHourLimitValidator dailyHourLimitValidator;
 	private final ImmutableEntryValidator immutableEntryValidator;
 	private final PeriodLockValidator periodLockValidator;
+	private final WeekNotSubmittedValidator weekNotSubmittedValidator;
 	private final TimeEntryMapper timeEntryMapper;
 	private final TimesheetMapper timesheetMapper;
 	private final Clock clock;
@@ -70,6 +72,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 		Long currentUserId = requireAssignee(task.getId());
 		openPeriodValidator.validate(request.workDate());
 		periodLockValidator.validateOpen(request.workDate());
+		weekNotSubmittedValidator.validate(currentUserId, request.workDate());
 
 		if (timeEntryRepository.existsByUserIdAndTaskIdAndWorkDate(currentUserId, task.getId(), request.workDate())) {
 			throw new BusinessRuleException(ErrorCode.DUPLICATE_DATA,
