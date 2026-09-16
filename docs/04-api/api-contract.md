@@ -3592,6 +3592,93 @@ Frontend nên hiển thị giá trị này để kế toán thấy rõ giá đan
   `asOf` (vd `asOf` sớm hơn cả dòng đầu tiên từng khai báo); nên hiển thị thông báo "chưa có đơn giá tại
   thời điểm này" thay vì lỗi chung chung.
 
+### `NCL-07-CN-003` — Khai báo đơn giá riêng theo hợp đồng
+
+Yêu cầu token của **Kế toán** (`VT-05`) hoặc **Quản trị viên** (`VT-07`) — vai trò khác nhận `403 FORBIDDEN` và hệ thống ghi nhật ký lần từ chối (TC-03).
+
+Khác với bảng đơn giá chung công ty (`NCL-07-CN-001`), đơn giá riêng theo hợp đồng (`contract_bill_rates`) cho phép định nghĩa mức giá đàm phán riêng cho một hợp đồng cụ thể. Quy tắc ưu tiên (QTN-16): Khi tính doanh thu cho một dòng giờ công của vai trò/cấp bậc trong hợp đồng, hệ thống ưu tiên lấy đơn giá riêng theo hợp đồng (nếu có), nếu không khai báo đơn giá riêng thì hệ thống quay về dùng đơn giá chung của công ty (TC-01, TC-02).
+
+Thao tác khai báo/thay đổi đơn giá riêng thành công sẽ tự động ghi nhật ký lịch sử (`audit_logs`) thông tin người thực hiện, nội dung thay đổi và thời điểm (TC-04).
+
+#### `POST /contracts/{contractId}/bill-rates`
+
+Khai báo đơn giá riêng cho hợp đồng `{contractId}`.
+
+```json
+{
+  "professionalRole": "Lap trinh vien cao cap",
+  "level": "Cao cap",
+  "dailyRate": 3000000,
+  "effectiveFrom": "2026-01-01"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `professionalRole` | string | có | Vai trò chuyên môn, không để trống |
+| `level` | string | có | Cấp bậc, không để trống |
+| `dailyRate` | number | có | Đơn giá theo ngày công, không được âm |
+| `effectiveFrom` | date (`yyyy-MM-dd`) | có | Ngày bắt đầu hiệu lực |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Khai bao don gia rieng theo hop dong thanh cong",
+  "data": {
+    "contractId": 1,
+    "professionalRole": "Lap trinh vien cao cap",
+    "level": "Cao cap",
+    "dailyRate": 3000000,
+    "effectiveFrom": "2026-01-01"
+  }
+}
+```
+
+#### `GET /contracts/{contractId}/bill-rates/resolve`
+
+Tra cứu đơn giá áp dụng cho hợp đồng `{contractId}` tại ngày phát sinh `asOf`. Tự động áp dụng quy tắc QTN-16: ưu tiên đơn giá riêng theo hợp đồng, nếu không có sẽ tự rơi về đơn giá chung công ty.
+
+```
+GET /contracts/{contractId}/bill-rates/resolve?professionalRole=Lap+trinh+vien+cao+cap&level=Cao+cap&asOf=2026-06-30
+```
+
+| Query param | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `professionalRole` | string | có | Vai trò chuyên môn |
+| `level` | string | có | Cấp bậc |
+| `asOf` | date (`yyyy-MM-dd`) | có | Ngày phát sinh cần tính doanh thu |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "dailyRate": 3000000,
+    "effectiveFrom": "2026-01-01",
+    "isContractSpecific": true
+  }
+}
+```
+
+| Trường | Kiểu | Ghi chú |
+|---|---|---|
+| `dailyRate` | number | Mức đơn giá được áp dụng |
+| `effectiveFrom` | date | Ngày hiệu lực của mốc đơn giá được áp dụng |
+| `isContractSpecific` | boolean | `true` nếu áp dụng đơn giá riêng hợp đồng (TC-01), `false` nếu rơi về đơn giá chung công ty (TC-02) |
+
+**Response lỗi (áp dụng cho cả 2 endpoint trên):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) hoặc Quản trị viên (`VT-07`) — ghi nhật ký lần từ chối (TC-03) |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy Hợp đồng `{contractId}`, hoặc không tìm thấy đơn giá chung lẫn riêng hợp lệ tại mốc `asOf` |
+| 400 | `VALIDATION_ERROR` | Thiếu thông tin bắt buộc hoặc `dailyRate` âm |
+| 409 | `DUPLICATE_DATA` | Đã tồn tại đơn giá riêng cho cùng `professionalRole` + `level` + `effectiveFrom` trong hợp đồng |
+
 ---
 
 ## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)
