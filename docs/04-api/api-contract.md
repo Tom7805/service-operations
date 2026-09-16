@@ -3782,6 +3782,86 @@ Tra cứu chi phí giờ công của nhân sự `{employeeId}` tại mốc thờ
 | 400 | `VALIDATION_ERROR` | Thiếu `hourlyRate` / `effectiveFrom` hoặc `hourlyRate` âm |
 | 409 | `DUPLICATE_DATA` | Đã tồn tại khai báo chi phí giờ công cho nhân sự tại ngày hiệu lực đã chọn |
 
+### `NCL-07-CN-005` — Tra cứu đơn giá áp dụng cho một dòng giờ công
+
+Cho một dòng giờ công (`timesheet_entries`) đã ghi nhận, tra ra **đúng đơn giá đang được dùng để tính
+doanh thu** cho dòng đó — không cần Frontend tự tra `professionalRole`/`contractId`/`asOf` rồi gọi tiếp
+`GET /contracts/{contractId}/bill-rates/resolve`. Backend tự suy ra:
+
+- `professionalRole`: lấy từ hồ sơ nhân sự (`employees.professional_role`) của người ghi dòng giờ công đó.
+- `contractId`: lấy từ `dòng giờ công → công việc (task) → dự án (project) → hợp đồng`.
+- `asOf`: chính là `workDate` (ngày công) của dòng giờ công — đảm bảo dòng luôn áp giá đang hiệu lực tại
+  đúng ngày nó phát sinh, không bị ảnh hưởng bởi lần tăng giá sau đó (kế thừa nguyên tắc QTN-15 của
+  `NCL-07-CN-002`).
+
+Sau khi suy ra 3 giá trị trên, endpoint áp dụng đúng quy tắc ưu tiên **QTN-16** đã có ở `NCL-07-CN-003`
+(ưu tiên đơn giá riêng theo hợp đồng, không có thì rơi về đơn giá chung công ty).
+
+`level` (cấp bậc) **không tự suy ra được** — hồ sơ nhân sự hiện chưa lưu cấp bậc — nên Frontend phải gửi
+kèm qua query param (ví dụ lấy từ lựa chọn của Kế toán khi xem dòng giờ công đó).
+
+Yêu cầu token **Kế toán** (`VT-05`) hoặc **Quản trị viên** (`VT-07`) — cùng nhóm quyền với các endpoint
+tra cứu đơn giá khác vì đây cũng là một phần của "quản lý hiệu lực của đơn giá" phục vụ tính doanh thu;
+vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối.
+
+#### `GET /timesheet-entries/{entryId}/bill-rate/resolve`
+
+```
+GET /timesheet-entries/100/bill-rate/resolve?level=Cao+cap
+```
+
+| Tham số | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `entryId` | path, number | có | ID dòng giờ công (`timesheet_entries.id`) cần tra đơn giá |
+| `level` | query, string | có | Cấp bậc của người thực hiện dòng giờ công đó, không để trống |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "timeEntryId": 100,
+    "taskId": 5,
+    "projectId": 2,
+    "contractId": 1,
+    "professionalRole": "Lap trinh vien cao cap",
+    "level": "Cao cap",
+    "workDate": "2026-06-30",
+    "hours": 8.00,
+    "dailyRate": 3000000,
+    "effectiveFrom": "2026-01-01",
+    "isContractSpecific": true
+  }
+}
+```
+
+| Trường | Kiểu | Ghi chú |
+|---|---|---|
+| `workDate` | date | Ngày công của dòng giờ công — cũng chính là mốc `asOf` dùng để tra đơn giá |
+| `hours` | number | Số giờ công đã ghi của dòng, trả kèm để đối chiếu (không dùng để tính `dailyRate`) |
+| `dailyRate` | number | Đơn giá được áp dụng cho dòng giờ công này |
+| `effectiveFrom` | date | Ngày hiệu lực của mốc đơn giá được áp dụng (có thể khác `workDate`) |
+| `isContractSpecific` | boolean | `true` nếu áp dụng đơn giá riêng hợp đồng, `false` nếu rơi về đơn giá chung công ty (QTN-16) |
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) hoặc Quản trị viên (`VT-07`) — ghi nhật ký lần từ chối |
+| 400 | `VALIDATION_ERROR` | Thiếu `level` (rỗng/chỉ khoảng trắng) |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy dòng giờ công `{entryId}`, hoặc không tìm thấy hồ sơ nhân sự của người thực hiện, hoặc chưa có đơn giá nào (chung lẫn riêng hợp đồng) hiệu lực trước hoặc đúng `workDate` cho vai trò + cấp bậc đó |
+
+**Lưu ý cho Frontend:**
+- Đây là endpoint tổng hợp — Frontend **không cần** tự gọi `GET /contracts/{contractId}/bill-rates/resolve`
+  nữa cho màn hình xem chi tiết dòng giờ công; chỉ cần biết `entryId` và hỏi người dùng chọn `level`.
+- `404` không phải lỗi hệ thống — có thể do dòng giờ công không tồn tại, người thực hiện chưa có hồ sơ nhân
+  sự đầy đủ, hoặc vai trò/cấp bậc đó chưa từng có đơn giá tại thời điểm `workDate`; nên hiển thị thông báo
+  phù hợp với từng trường hợp thay vì lỗi chung chung.
+- `effectiveFrom` trong response có thể khác `workDate` đã gửi — luôn hiển thị giá trị này để kế toán thấy
+  rõ giá đang tính dựa trên mốc hiệu lực nào.
+
 ---
 
 ## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)
