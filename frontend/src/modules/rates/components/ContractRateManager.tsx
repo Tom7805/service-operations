@@ -80,7 +80,9 @@ export default function ContractRateManager({ currentUserRoles = [] }: Props) {
       </div>
       <p className="field-hint" style={{ marginBottom: '14px' }}>
         Mức giá đàm phán riêng cho một hợp đồng cụ thể — khi tính doanh thu, hệ thống ưu tiên dùng đơn giá
-        riêng này thay vì bảng đơn giá chung công ty.
+        riêng này thay vì bảng đơn giá chung công ty. Lưu ý: "ID hợp đồng" ở đây là mã số nội bộ, khác với
+        "Mã hợp đồng" (ví dụ HD-001) hiển thị trên trang Hợp đồng — mở trang Hợp đồng, ID số nằm ngay dưới
+        mã hợp đồng của từng dòng.
       </p>
 
       <form onSubmit={handleOpenContract} style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>

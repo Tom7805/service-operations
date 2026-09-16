@@ -81,6 +81,8 @@ export default function RateResolveLookup() {
       <p className="field-hint" style={{ marginBottom: '14px' }}>
         Dùng khi tính lại doanh thu cho giờ công đã ghi nhận trong quá khứ — hệ thống trả về dòng đơn giá có
         hiệu lực gần nhất nhưng không vượt quá ngày phát sinh bạn nhập, kể cả khi đã có đơn giá mới hơn.
+        Nhập "Vai trò chuyên môn"/"Cấp bậc" đúng như một dòng đã khai báo trong bảng đơn giá phía trên
+        (không phân biệt hoa/thường, nhưng phải đúng chữ) — copy trực tiếp từ đó là chắc chắn nhất.
       </p>
 
       {serverError && (

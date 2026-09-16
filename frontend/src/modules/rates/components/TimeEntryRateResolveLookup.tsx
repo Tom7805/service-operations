@@ -79,7 +79,9 @@ export default function TimeEntryRateResolveLookup() {
       </div>
       <p className="field-hint" style={{ marginBottom: '14px' }}>
         Chỉ cần ID dòng giờ công và cấp bậc của người thực hiện — hệ thống tự suy ra vai trò, hợp đồng và
-        ngày phát sinh để tra đúng đơn giá đang dùng để tính doanh thu cho dòng đó.
+        ngày phát sinh để tra đúng đơn giá đang dùng để tính doanh thu cho dòng đó. Lấy "ID dòng giờ công" ở
+        trang "Điều chỉnh giờ công đã duyệt" — mỗi dòng có ghi ID ngay dưới ngày công. "Cấp bậc" là cấp bậc
+        đã khai báo cho vai trò của người đó trong bảng đơn giá (ví dụ: Cao cấp), không phải chức danh trong hồ sơ nhân sự.
       </p>
 
       {serverError && (

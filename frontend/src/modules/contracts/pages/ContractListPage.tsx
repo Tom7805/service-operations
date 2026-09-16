@@ -447,7 +447,10 @@ export default function ContractListPage({
                   const busy = busyContractId === c.id;
                   return (
                     <tr key={c.id}>
-                      <td style={{ fontFamily: 'var(--font-mono, monospace)', fontWeight: 600 }}>{c.contractCode}</td>
+                      <td style={{ fontFamily: 'var(--font-mono, monospace)', fontWeight: 600 }} title={`ID hợp đồng: ${c.id}`}>
+                        {c.contractCode}
+                        <div className="cell-muted" style={{ fontWeight: 400, fontSize: '11px' }}>ID: {c.id}</div>
+                      </td>
                       <td>{c.name || '—'}</td>
                       <td>{c.customerName || '—'}</td>
                       <td>{CONTRACT_TYPE_LABEL[c.contractType] ?? c.contractType}</td>

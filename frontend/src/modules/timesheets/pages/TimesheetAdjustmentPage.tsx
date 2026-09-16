@@ -270,7 +270,10 @@ export default function TimesheetAdjustmentPage({
                     <td title={`Mã dự án #${entry.projectId}`}>{entry.projectName}</td>
                     <td title={`Mã công việc #${entry.taskId}`}>{entry.taskName}</td>
                     <td>{employeeLabel(entry.userId)}</td>
-                    <td>{new Date(entry.workDate).toLocaleDateString('vi-VN')}</td>
+                    <td title={`ID dòng giờ công: ${entry.entryId}`}>
+                      {new Date(entry.workDate).toLocaleDateString('vi-VN')}
+                      <div className="cell-muted" style={{ fontSize: '11px' }}>ID: {entry.entryId}</div>
+                    </td>
                     <td>
                       <strong>{formatHours(entry.hours)} giờ</strong>
                     </td>
