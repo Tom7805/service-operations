@@ -102,6 +102,7 @@ export interface TimesheetRes {
 export interface PendingTimesheetRes {
   timesheetId: number;
   userId: number;
+  userName: string | null;
   weekStartDate: string; // YYYY-MM-DD
   weekEndDate: string; // YYYY-MM-DD
   /** Tổng giờ công của cả tuần (mọi dự án), không chỉ phần của PM này. */
@@ -254,6 +255,7 @@ export interface TimerRes {
  */
 export interface UnsubmittedTimesheetRes {
   userId: number;
+  userName: string | null;
   weekStartDate: string; // YYYY-MM-DD
   weekEndDate: string; // YYYY-MM-DD
 }

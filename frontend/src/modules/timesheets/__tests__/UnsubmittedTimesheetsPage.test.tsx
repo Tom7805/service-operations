@@ -55,8 +55,8 @@ describe('UnsubmittedTimesheetsPage (NCL-06-CN-009)', () => {
 
   it('hiển thị danh sách nhân sự chưa nộp', async () => {
     vi.mocked(timesheetsApi.getUnsubmittedTimesheets).mockResolvedValue([
-      { userId: 7, weekStartDate: CURRENT_WEEK_FROM, weekEndDate: addDays(CURRENT_WEEK_FROM, 6) },
-      { userId: 8, weekStartDate: CURRENT_WEEK_FROM, weekEndDate: addDays(CURRENT_WEEK_FROM, 6) },
+      { userId: 7, userName: 'Nguyen Van A', weekStartDate: CURRENT_WEEK_FROM, weekEndDate: addDays(CURRENT_WEEK_FROM, 6) },
+      { userId: 8, userName: 'Tran Thi B', weekStartDate: CURRENT_WEEK_FROM, weekEndDate: addDays(CURRENT_WEEK_FROM, 6) },
     ]);
 
     render(<UnsubmittedTimesheetsPage currentUserRoles={['VT-02']} />);

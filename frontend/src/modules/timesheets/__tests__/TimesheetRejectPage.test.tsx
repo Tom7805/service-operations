@@ -27,6 +27,7 @@ vi.mock('../api/timesheetsApi', () => {
 const PENDING_1: PendingTimesheetRes = {
   timesheetId: 50,
   userId: 7,
+  userName: 'Nguyen Van A',
   weekStartDate: '2026-09-07',
   weekEndDate: '2026-09-13',
   totalHours: 10,
@@ -38,6 +39,7 @@ const PENDING_1: PendingTimesheetRes = {
 const PENDING_2: PendingTimesheetRes = {
   timesheetId: 51,
   userId: 8,
+  userName: 'Tran Thi B',
   weekStartDate: '2026-09-07',
   weekEndDate: '2026-09-13',
   totalHours: 8,
@@ -62,8 +64,8 @@ describe('TimesheetRejectPage (NCL-06-CN-004 — Từ chối bảng chấm công
 
     render(<TimesheetRejectPage currentUserRoles={['VT-02']} />);
 
-    expect(await screen.findByTestId('pending-row-50')).toHaveTextContent('Nhân sự #7');
-    expect(screen.getByTestId('pending-row-51')).toHaveTextContent('Nhân sự #8');
+    expect(await screen.findByTestId('pending-row-50')).toHaveTextContent('Nguyen Van A');
+    expect(screen.getByTestId('pending-row-51')).toHaveTextContent('Tran Thi B');
     expect(screen.getByTestId('btn-reject-50')).toBeInTheDocument();
     expect(screen.queryByTestId('btn-approve-50')).not.toBeInTheDocument();
   });
@@ -111,7 +113,7 @@ describe('TimesheetRejectPage (NCL-06-CN-004 — Từ chối bảng chấm công
 
     await waitFor(() => expect(screen.queryByTestId('pending-row-50')).not.toBeInTheDocument());
     expect(screen.getByTestId('pending-row-51')).toBeInTheDocument();
-    expect(screen.getByText(/Đã từ chối 1 dòng giờ công của Nhân sự #7/i)).toBeInTheDocument();
+    expect(screen.getByText(/Đã từ chối 1 dòng giờ công của Nguyen Van A/i)).toBeInTheDocument();
   });
 
   it('cho phép tải lại danh sách qua nút Tải lại', async () => {

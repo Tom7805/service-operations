@@ -74,7 +74,7 @@ class TimesheetApprovalControllerTest {
 	@WithMockUser(authorities = "ROLE_VT-02")
 	void allowsProjectManagerToViewPendingQueue() throws Exception {
 		when(timesheetApprovalService.findPending()).thenReturn(List.of(
-				new PendingTimesheetRes(50L, 7L, LocalDate.of(2026, 9, 7), LocalDate.of(2026, 9, 13),
+				new PendingTimesheetRes(50L, 7L, "Nguyen Van A", LocalDate.of(2026, 9, 7), LocalDate.of(2026, 9, 13),
 						new BigDecimal("10"), 1, new BigDecimal("5"), LocalDateTime.of(2026, 9, 13, 10, 0))));
 
 		mockMvc.perform(get("/timesheets/pending"))

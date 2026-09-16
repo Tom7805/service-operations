@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
  *
  * @param timesheetId    ma bang cham cong tuan.
  * @param userId         nhan su nop bang.
+ * @param userName       ho ten nhan su nop bang, de hien thi thay vi chi co ma so.
  * @param weekStartDate  ngay dau tuan cham cong.
  * @param weekEndDate    ngay cuoi tuan cham cong.
  * @param totalHours     tong gio cong cua ca tuan (moi du an).
@@ -20,6 +21,7 @@ import java.time.LocalDateTime;
  * @param pendingHours   tong gio con cho duyet thuoc du an cua PM.
  * @param submittedAt    thoi diem nhan su nop bang.
  */
-public record PendingTimesheetRes(Long timesheetId, Long userId, LocalDate weekStartDate, LocalDate weekEndDate,
-		BigDecimal totalHours, long pendingEntries, BigDecimal pendingHours, LocalDateTime submittedAt) {
+public record PendingTimesheetRes(Long timesheetId, Long userId, String userName, LocalDate weekStartDate,
+		LocalDate weekEndDate, BigDecimal totalHours, long pendingEntries, BigDecimal pendingHours,
+		LocalDateTime submittedAt) {
 }

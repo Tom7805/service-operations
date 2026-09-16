@@ -24,6 +24,7 @@ import com.serviceops.modules.timesheet.repository.TimesheetRepository;
 import com.serviceops.modules.timesheet.service.TimesheetApprovalService;
 import com.serviceops.modules.notification.enums.NotificationType;
 import com.serviceops.modules.notification.service.NotificationService;
+import com.serviceops.modules.identity.user.repository.UserRepository;
 import com.serviceops.security.scope.CurrentUserScopeProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -60,21 +61,30 @@ public class TimesheetApprovalServiceImpl implements TimesheetApprovalService {
 	private final AuditLogService auditLogService;
 	private final TimesheetMapper timesheetMapper;
 	private final NotificationService notificationService;
+	private final UserRepository userRepository;
 	private final Clock clock;
 
 	@Override
 	@Transactional(readOnly = true)
 	public List<PendingTimesheetRes> findPending() {
 		Long pmId = requireCurrentManager();
+		List<Timesheet> pendingTimesheets = timesheetRepository.findByStatusOrderBySubmittedAtAsc(
+				TimesheetStatus.PENDING_APPROVAL);
+		Map<Long, String> namesByUserId = userRepository
+				.findAllById(pendingTimesheets.stream().map(Timesheet::getUserId).distinct().toList())
+				.stream()
+				.collect(Collectors.toMap(com.serviceops.modules.identity.user.entity.User::getId,
+						com.serviceops.modules.identity.user.entity.User::getFullName));
+
 		List<PendingTimesheetRes> queue = new ArrayList<>();
-		for (Timesheet timesheet : timesheetRepository.findByStatusOrderBySubmittedAtAsc(
-				TimesheetStatus.PENDING_APPROVAL)) {
+		for (Timesheet timesheet : pendingTimesheets) {
 			List<TimeEntry> pendingForMe = entriesOf(timesheet).stream()
 					.filter(entry -> entry.getStatus() == TimeEntryStatus.SUBMITTED)
 					.filter(entry -> managedByMe(entry, pmId))
 					.toList();
 			if (!pendingForMe.isEmpty()) {
 				queue.add(new PendingTimesheetRes(timesheet.getId(), timesheet.getUserId(),
+						namesByUserId.get(timesheet.getUserId()),
 						timesheet.getWeekStartDate(), timesheet.getWeekEndDate(), timesheet.getTotalHours(),
 						pendingForMe.size(),
 						pendingForMe.stream().map(TimeEntry::getHours).reduce(BigDecimal.ZERO, BigDecimal::add),

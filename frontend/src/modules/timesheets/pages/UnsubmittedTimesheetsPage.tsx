@@ -153,7 +153,7 @@ export default function UnsubmittedTimesheetsPage({
               ) : (
                 result.map((r) => (
                   <tr key={r.userId} data-testid={`unsubmitted-row-${r.userId}`}>
-                    <td>Nhân sự #{r.userId}</td>
+                    <td>{r.userName ?? `Nhân sự #${r.userId}`}</td>
                     <td>
                       {formatIsoDate(r.weekStartDate)} → {formatIsoDate(r.weekEndDate)}
                     </td>
