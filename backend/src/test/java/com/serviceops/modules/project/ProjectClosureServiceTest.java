@@ -12,6 +12,9 @@ import com.serviceops.modules.project.repository.ProjectRepository;
 import com.serviceops.modules.project.repository.TaskRepository;
 import com.serviceops.modules.project.service.impl.ProjectClosureServiceImpl;
 import com.serviceops.modules.project.validator.ProjectClosureValidator;
+import com.serviceops.modules.timesheet.entity.TimeEntry;
+import com.serviceops.modules.timesheet.enums.TimeEntryStatus;
+import com.serviceops.modules.timesheet.repository.TimeEntryRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +27,8 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -43,21 +48,28 @@ class ProjectClosureServiceTest {
 	@Mock
 	private TaskRepository taskRepository;
 	@Mock
+	private TimeEntryRepository timeEntryRepository;
+	@Mock
 	private ProjectAuditLogger auditLogger;
 
 	private ProjectClosureServiceImpl service;
 
 	@BeforeEach
 	void setUp() {
-		service = new ProjectClosureServiceImpl(projectRepository, taskRepository, new ProjectClosureValidator(),
-				auditLogger);
+		service = new ProjectClosureServiceImpl(projectRepository, taskRepository, timeEntryRepository,
+				new ProjectClosureValidator(), auditLogger);
 	}
 
 	@Test
 	void closesRunningProjectWithoutPendingApprovalTasks() {
 		Project project = runningProject();
+		Task done = new Task();
+		done.setId(10L);
+		done.setProjectId(PROJECT_ID);
+		done.setStatus(TaskStatus.DONE);
 		when(projectRepository.findById(PROJECT_ID)).thenReturn(Optional.of(project));
-		when(taskRepository.findByProjectIdAndStatusOrderByIdAsc(PROJECT_ID, TaskStatus.WAITING_APPROVAL))
+		when(taskRepository.findByProjectIdOrderByIdAsc(PROJECT_ID)).thenReturn(List.of(done));
+		when(timeEntryRepository.findByTaskIdInAndStatus(List.of(10L), TimeEntryStatus.DRAFT))
 				.thenReturn(List.of());
 		when(projectRepository.save(project)).thenReturn(project);
 
@@ -77,8 +89,7 @@ class ProjectClosureServiceTest {
 		pending.setProjectId(PROJECT_ID);
 		pending.setName("Kiem thu module A");
 		pending.setStatus(TaskStatus.WAITING_APPROVAL);
-		when(taskRepository.findByProjectIdAndStatusOrderByIdAsc(PROJECT_ID, TaskStatus.WAITING_APPROVAL))
-				.thenReturn(List.of(pending));
+		when(taskRepository.findByProjectIdOrderByIdAsc(PROJECT_ID)).thenReturn(List.of(pending));
 
 		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
 				() -> service.closeProject(PROJECT_ID));
@@ -87,6 +98,28 @@ class ProjectClosureServiceTest {
 		assertEquals(ProjectStatus.RUNNING, project.getStatus());
 		verify(projectRepository, never()).save(project);
 		verify(auditLogger, never()).recordClose(any(), any());
+	}
+
+	@Test
+	void deletesStrayDraftTimeEntriesWhenClosing() {
+		Project project = runningProject();
+		Task done = new Task();
+		done.setId(30L);
+		done.setProjectId(PROJECT_ID);
+		done.setStatus(TaskStatus.DONE);
+		TimeEntry draft = new TimeEntry();
+		draft.setTaskId(30L);
+		draft.setStatus(TimeEntryStatus.DRAFT);
+		when(projectRepository.findById(PROJECT_ID)).thenReturn(Optional.of(project));
+		when(taskRepository.findByProjectIdOrderByIdAsc(PROJECT_ID)).thenReturn(List.of(done));
+		when(timeEntryRepository.findByTaskIdInAndStatus(List.of(30L), TimeEntryStatus.DRAFT))
+				.thenReturn(List.of(draft));
+		when(projectRepository.save(project)).thenReturn(project);
+
+		service.closeProject(PROJECT_ID);
+
+		verify(timeEntryRepository).deleteAll(List.of(draft));
+		verify(auditLogger).recordTimeEntryChange(eq(PROJECT_ID), isNull(), any());
 	}
 
 	@Test

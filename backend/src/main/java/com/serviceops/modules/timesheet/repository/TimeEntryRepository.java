@@ -94,4 +94,14 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
 			""")
 	List<Long> findDistinctUserIdsWithDraftEntriesBetween(
 			@Param("weekFrom") LocalDate weekFrom, @Param("weekTo") LocalDate weekTo);
+
+	/**
+	 * Cac dong gio cong con NHAP (DRAFT) cua mot nhom cong viec — dung khi dong du an
+	 * (NCL-05-CN-006) de don sach cac dong nhap con sot lai truoc khi du an tro thanh
+	 * "ho so lich su chi doc": dong NHAP chua tung duoc nop/duyet nen khong anh huong
+	 * gio cong da duyet/doanh thu, xoa duoc an toan thay vi de mac ket vinh vien (khong
+	 * con sua/xoa duoc qua giao dien vi du an da dong, nhung van tinh vao so dong can
+	 * nop cua bang cham cong tuan).
+	 */
+	List<TimeEntry> findByTaskIdInAndStatus(List<Long> taskIds, TimeEntryStatus status);
 }
