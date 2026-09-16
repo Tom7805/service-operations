@@ -893,7 +893,7 @@ body { background: var(--canvas); }
 .side-nav__item {
   display: flex; align-items: center; gap: 10px; width: 100%; background: transparent; border: none;
   border-radius: var(--radius-sm); padding: 7px 10px; font-size: 14.5px; font-weight: 400; color: var(--ink-muted);
-  cursor: pointer; text-align: left; white-space: nowrap; position: relative;
+  cursor: pointer; text-align: left; white-space: nowrap; position: relative; flex-shrink: 0;
   transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
 .side-nav--collapsed .side-nav__item { justify-content: center; padding: 8px; }
@@ -911,6 +911,12 @@ body { background: var(--canvas); }
 .side-nav__group-label {
   font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: var(--track-caps-lg); color: #5F5E5B;
   padding: 16px 14px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 12px;
+  /* overflow:hidden xoa "kich thuoc toi thieu tu dong" ma flexbox danh cho cac
+     flex item — neu khong co flex-shrink:0, khi danh sach menu dai ra vuot
+     chieu cao sidebar, trinh duyet co nhan nay ve gan 0px TRUOC ca khi cuon,
+     lam chu bien mat trong khi cac muc khac (khong co overflow:hidden tren
+     chinh no) van giu nguyen kich thuoc. */
+  flex-shrink: 0;
 }
 .side-nav--collapsed .side-nav__group-label { padding: 14px 0 4px; border-top: 1px solid var(--overlay-subtle); margin: 0 6px; }
 

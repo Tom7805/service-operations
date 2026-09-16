@@ -89,14 +89,18 @@ interface NavItem {
   viewOnlyHint?: string;
 }
 
-/** Điều hướng chính — vận hành nghiệp vụ hàng ngày. */
-const NAV_ITEMS: NavItem[] = [
+/** Chấm công — nhóm đầu tiên, không cần nhãn riêng vì đã ở đầu danh sách. */
+const TIMESHEET_NAV_ITEMS: NavItem[] = [
   { tab: 'MY_TIMESHEET', icon: ICONS.clock, label: 'Chấm công của tôi', requires: ['VT-03'] },
   { tab: 'TIMESHEET_APPROVAL', icon: ICONS.checkCircle, label: 'Duyệt bảng chấm công', requires: ['VT-02'] },
   { tab: 'TIMESHEET_REJECT', icon: ICONS.close, label: 'Từ chối bảng chấm công', requires: ['VT-02'] },
   { tab: 'TIMESHEET_ADJUSTMENT', icon: ICONS.edit, label: 'Điều chỉnh giờ công đã duyệt', requires: ['VT-02'] },
   { tab: 'TIMESHEET_PERIOD', icon: ICONS.lock, label: 'Khóa kỳ chấm công', requires: ['VT-05'] },
   { tab: 'UNSUBMITTED_TIMESHEETS', icon: ICONS.clock, label: 'Nhân sự chưa nộp', requires: ['VT-02', 'VT-03'] },
+];
+
+/** Kinh doanh — khách hàng, hợp đồng, cơ hội bán hàng, doanh thu, báo cáo. */
+const BUSINESS_NAV_ITEMS: NavItem[] = [
   { tab: 'CUSTOMERS', icon: ICONS.building, label: 'Khách hàng', requires: ['VT-04', 'VT-02'] },
   {
     tab: 'CONTRACTS', icon: ICONS.receipt, label: 'Hợp đồng', requires: ['VT-05'],
@@ -115,10 +119,16 @@ const NAV_ITEMS: NavItem[] = [
   { tab: 'REVENUE_FORECAST', icon: ICONS.chart, label: 'Dự báo doanh thu', requires: ['VT-01', 'VT-04'] },
   { tab: 'REPORTS', icon: ICONS.document, label: 'Báo cáo', matches: ['PIPELINE_REPORT'], requires: ['VT-01', 'VT-04'] },
   { tab: 'CUSTOMER_MERGE', icon: ICONS.merge, label: 'Gộp KH trùng', requires: ['VT-07'] },
+  { tab: 'OPPORTUNITY_DETAIL', icon: ICONS.building, label: 'Cơ hội', requires: ['VT-04'] },
+];
+
+/** Quản trị & Tổ chức — cơ cấu tổ chức, tài khoản, nhân sự, phân quyền. Tách
+ * khỏi nhóm Kinh doanh vì đây là công việc quản trị nội bộ (VT-07/VT-06), không
+ * phải nghiệp vụ bán hàng hàng ngày. */
+const ADMIN_NAV_ITEMS: NavItem[] = [
   { tab: 'DEPARTMENTS', icon: ICONS.tree, label: 'Tổ chức', requires: ['VT-07'] },
   { tab: 'USERS', icon: ICONS.user, label: 'Tài khoản', matches: ['DETAIL'], requires: ['VT-07'] },
   { tab: 'EMPLOYEES', icon: ICONS.users, label: 'Nhân sự', matches: ['EMPLOYEE_DETAIL'], requires: ['VT-06', 'VT-07'] },
-  { tab: 'OPPORTUNITY_DETAIL', icon: ICONS.building, label: 'Cơ hội', requires: ['VT-04'] },
   { tab: 'PERMISSIONS', icon: ICONS.shield, label: 'Phân quyền', requires: ['VT-07'] },
 ];
 
@@ -130,7 +140,12 @@ const SYSTEM_NAV_ITEMS: NavItem[] = [
   { tab: 'AUDIT_LOG', icon: ICONS.shieldOff, label: 'Dữ liệu nhạy cảm', requires: ['VT-07'] },
 ];
 
-const ALL_NAV_ITEMS: NavItem[] = [...NAV_ITEMS, ...SYSTEM_NAV_ITEMS];
+const ALL_NAV_ITEMS: NavItem[] = [
+  ...TIMESHEET_NAV_ITEMS,
+  ...BUSINESS_NAV_ITEMS,
+  ...ADMIN_NAV_ITEMS,
+  ...SYSTEM_NAV_ITEMS,
+];
 
 
 function readStoredSession(): AuthSession | null {
@@ -332,7 +347,9 @@ export default function App() {
       {/* Bảng lệnh Ctrl/⌘+K — nhảy tới bất kỳ màn hình nào không cần rời bàn phím. */}
       <CommandPalette
         items={[
-          ...NAV_ITEMS.map((i) => ({ id: i.tab, label: i.label, group: 'Điều hướng', icon: i.icon })),
+          ...TIMESHEET_NAV_ITEMS.map((i) => ({ id: i.tab, label: i.label, group: 'Chấm công', icon: i.icon })),
+          ...BUSINESS_NAV_ITEMS.map((i) => ({ id: i.tab, label: i.label, group: 'Kinh doanh', icon: i.icon })),
+          ...ADMIN_NAV_ITEMS.map((i) => ({ id: i.tab, label: i.label, group: 'Quản trị & Tổ chức', icon: i.icon })),
           ...SYSTEM_NAV_ITEMS.map((i) => ({ id: i.tab, label: i.label, group: 'Bảo mật & hệ thống', icon: i.icon })),
           { id: 'CHANGE_PASSWORD', label: 'Đổi mật khẩu', group: 'Tài khoản của tôi', icon: ICONS.key },
           { id: 'NOTIFICATIONS', label: 'Thông báo', group: 'Tài khoản của tôi', icon: ICONS.bell },
@@ -367,7 +384,13 @@ export default function App() {
           </div>
 
           <nav className="side-nav__list" aria-label="Điều hướng chính">
-            {renderNavGroup(NAV_ITEMS)}
+            {renderNavGroup(TIMESHEET_NAV_ITEMS)}
+
+            <div className="side-nav__group-label">{!sidebarCollapsed ? 'Kinh doanh' : ''}</div>
+            {renderNavGroup(BUSINESS_NAV_ITEMS)}
+
+            <div className="side-nav__group-label">{!sidebarCollapsed ? 'Quản trị & Tổ chức' : ''}</div>
+            {renderNavGroup(ADMIN_NAV_ITEMS)}
 
             <div className="side-nav__group-label">{!sidebarCollapsed ? 'Bảo mật & Hệ thống' : ''}</div>
             {renderNavGroup(SYSTEM_NAV_ITEMS)}
