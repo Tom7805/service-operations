@@ -19,6 +19,9 @@ public class BillRate extends BaseEntity {
 	@Column(name = "professional_role", nullable = false, length = 255)
 	private String professionalRole;
 
+	@Column(name = "level", nullable = false, length = 100)
+	private String level;
+
 	@Column(name = "daily_rate", nullable = false, precision = 18, scale = 2)
 	private BigDecimal dailyRate;
 

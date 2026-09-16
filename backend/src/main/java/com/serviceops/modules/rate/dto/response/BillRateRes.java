@@ -10,6 +10,7 @@ import java.time.LocalDate;
  */
 public record BillRateRes(
 		String professionalRole,
+		String level,
 		BigDecimal dailyRate,
 		LocalDate effectiveFrom
 ) {}

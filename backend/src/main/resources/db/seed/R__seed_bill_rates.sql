@@ -20,32 +20,35 @@
 --  trước 2024-01-01 vẫn phải lấy đơn giá cũ, không bị tính nhầm sang giá mới.
 --
 --  Idempotent qua ON DUPLICATE KEY UPDATE theo khóa duy nhất
---  (professional_role, effective_from) đã khai báo ở V38.
+--  (professional_role, level, effective_from) — cột `level` (cấp bậc) được bổ
+--  sung ở V64__add_level_to_bill_rates.sql theo AC của NCL-07-CN-001 (mỗi dòng
+--  đơn giá gồm vai trò + cấp bậc + đơn giá). Giá trị cấp bậc dưới đây chỉ mang
+--  tính minh hoạ, suy ra từ tên vai trò sẵn có — nghiệp vụ có thể điều chỉnh.
 -- ----------------------------------------------------------------------------
-INSERT INTO bill_rates (professional_role, daily_rate, effective_from)
+INSERT INTO bill_rates (professional_role, level, daily_rate, effective_from)
 VALUES
     -- Tên KHÔNG hậu tố tiếng Anh (khớp 2 dòng mặc định của QuoteBuilder.tsx)
-    ('Lập trình viên cao cấp',              2200000, '2023-01-01'),
-    ('Lập trình viên cao cấp',              2500000, '2024-01-01'),
-    ('Kỹ sư kiểm thử phần mềm',             1400000, '2023-01-01'),
-    ('Kỹ sư kiểm thử phần mềm',             1600000, '2024-01-01'),
+    ('Lập trình viên cao cấp',              'Cao cấp',  2200000, '2023-01-01'),
+    ('Lập trình viên cao cấp',              'Cao cấp',  2500000, '2024-01-01'),
+    ('Kỹ sư kiểm thử phần mềm',             'Trung cấp',1400000, '2023-01-01'),
+    ('Kỹ sư kiểm thử phần mềm',             'Trung cấp',1600000, '2024-01-01'),
 
     -- Tên CÓ hậu tố tiếng Anh (khớp datalist POPULAR_PROFESSIONAL_ROLES)
-    ('Quản lý dự án (Project Manager)',                    2800000, '2023-01-01'),
-    ('Quản lý dự án (Project Manager)',                    3200000, '2024-01-01'),
-    ('Kiến trúc sư giải pháp (Solution Architect)',        3000000, '2023-01-01'),
-    ('Kiến trúc sư giải pháp (Solution Architect)',        3500000, '2024-01-01'),
-    ('Lập trình viên cao cấp (Senior Developer)',          2200000, '2023-01-01'),
-    ('Lập trình viên cao cấp (Senior Developer)',          2500000, '2024-01-01'),
-    ('Lập trình viên (Developer)',                         1600000, '2023-01-01'),
-    ('Lập trình viên (Developer)',                         1800000, '2024-01-01'),
-    ('Kỹ sư kiểm thử phần mềm (QA/QC Engineer)',           1400000, '2023-01-01'),
-    ('Kỹ sư kiểm thử phần mềm (QA/QC Engineer)',           1600000, '2024-01-01'),
-    ('Thiết kế giao diện & trải nghiệm (UI/UX Designer)',  1800000, '2023-01-01'),
-    ('Thiết kế giao diện & trải nghiệm (UI/UX Designer)',  2000000, '2024-01-01'),
-    ('Kỹ sư hệ thống / DevOps (DevOps Engineer)',          2000000, '2023-01-01'),
-    ('Kỹ sư hệ thống / DevOps (DevOps Engineer)',          2300000, '2024-01-01'),
-    ('Chuyên viên phân tích nghiệp vụ (Business Analyst)', 1900000, '2023-01-01'),
-    ('Chuyên viên phân tích nghiệp vụ (Business Analyst)', 2100000, '2024-01-01')
+    ('Quản lý dự án (Project Manager)',                    'Quản lý',  2800000, '2023-01-01'),
+    ('Quản lý dự án (Project Manager)',                    'Quản lý',  3200000, '2024-01-01'),
+    ('Kiến trúc sư giải pháp (Solution Architect)',        'Cao cấp',  3000000, '2023-01-01'),
+    ('Kiến trúc sư giải pháp (Solution Architect)',        'Cao cấp',  3500000, '2024-01-01'),
+    ('Lập trình viên cao cấp (Senior Developer)',          'Cao cấp',  2200000, '2023-01-01'),
+    ('Lập trình viên cao cấp (Senior Developer)',          'Cao cấp',  2500000, '2024-01-01'),
+    ('Lập trình viên (Developer)',                         'Trung cấp',1600000, '2023-01-01'),
+    ('Lập trình viên (Developer)',                         'Trung cấp',1800000, '2024-01-01'),
+    ('Kỹ sư kiểm thử phần mềm (QA/QC Engineer)',           'Trung cấp',1400000, '2023-01-01'),
+    ('Kỹ sư kiểm thử phần mềm (QA/QC Engineer)',           'Trung cấp',1600000, '2024-01-01'),
+    ('Thiết kế giao diện & trải nghiệm (UI/UX Designer)',  'Trung cấp',1800000, '2023-01-01'),
+    ('Thiết kế giao diện & trải nghiệm (UI/UX Designer)',  'Trung cấp',2000000, '2024-01-01'),
+    ('Kỹ sư hệ thống / DevOps (DevOps Engineer)',          'Trung cấp',2000000, '2023-01-01'),
+    ('Kỹ sư hệ thống / DevOps (DevOps Engineer)',          'Trung cấp',2300000, '2024-01-01'),
+    ('Chuyên viên phân tích nghiệp vụ (Business Analyst)', 'Trung cấp',1900000, '2023-01-01'),
+    ('Chuyên viên phân tích nghiệp vụ (Business Analyst)', 'Trung cấp',2100000, '2024-01-01')
 ON DUPLICATE KEY UPDATE
     daily_rate = VALUES(daily_rate);

@@ -3447,6 +3447,92 @@ Yêu cầu token của **Quản lý dự án** (`VT-02`) hoặc **Nhân viên ch
 
 ---
 
+## Epic `NCL-07` — Quản lý đơn giá
+
+### `NCL-07-CN-001` — Khai báo bảng đơn giá theo vai trò
+
+Yêu cầu token của **Kế toán** (`VT-05`) hoặc **Quản trị viên** (`VT-07`) — vai trò khác nhận `403 FORBIDDEN`
+và bị ghi nhật ký lần từ chối vào Nhật ký hệ thống (`audit_logs`, TC-03, `AccessDeniedAuditRecorder`).
+
+Mỗi dòng đơn giá gồm **vai trò chuyên môn**, **cấp bậc** và **đơn giá theo ngày công** — đơn vị tiền là
+theo **ngày**, không phải theo giờ, để khớp với cách `NCL-03-CN-003` (Lập báo giá) đang tính
+`amount = workDays * dailyRate`. Khoá duy nhất là `(professionalRole, level, effectiveFrom)` — cùng
+vai trò + cấp bậc không được khai báo hai lần cho cùng một ngày hiệu lực (TC-02 phần dữ liệu trùng).
+Khai báo thành công ghi một dòng vào Nhật ký hệ thống — người thực hiện, nội dung (vai trò/cấp bậc/đơn
+giá/ngày hiệu lực), thời điểm (TC-04); Frontend không cần gọi thêm API nào để việc ghi log này xảy ra.
+
+> **Không ảnh hưởng luồng báo giá hiện có.** `NCL-03-CN-003` tra cứu đơn giá **chỉ theo tên vai trò**
+> (chưa biết khái niệm cấp bậc), lấy dòng có `effectiveFrom` gần nhất không vượt quá ngày lập báo giá.
+> Nếu một vai trò có nhiều cấp bậc khai báo trùng ngày hiệu lực, báo giá sẽ lấy dòng bất kỳ trong số đó —
+> Frontend màn hình báo giá không cần và không nên gửi `level`.
+
+#### `POST /bill-rates`
+
+```json
+{
+  "professionalRole": "Lap trinh vien cao cap",
+  "level": "Cao cap",
+  "dailyRate": 2500000,
+  "effectiveFrom": "2026-01-01"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `professionalRole` | string | có | Vai trò chuyên môn, không để trống |
+| `level` | string | có | Cấp bậc (vd "Trung cấp", "Cao cấp", "Quản lý"), không để trống |
+| `dailyRate` | number | có | Đơn giá theo ngày công, không được âm |
+| `effectiveFrom` | date (`yyyy-MM-dd`) | có | Ngày bắt đầu hiệu lực |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Tao bang don gia theo vai tro thanh cong",
+  "data": {
+    "professionalRole": "Lap trinh vien cao cap",
+    "level": "Cao cap",
+    "dailyRate": 2500000,
+    "effectiveFrom": "2026-01-01"
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) hoặc Quản trị viên (`VT-07`) — ghi nhật ký lần từ chối (TC-03) |
+| 400 | `VALIDATION_ERROR` | Thiếu `professionalRole`/`level`/`effectiveFrom`; hoặc `dailyRate` âm (TC-02) |
+| 409 | `DUPLICATE_DATA` | Đã tồn tại đơn giá cho cùng `professionalRole` + `level` tại `effectiveFrom` đã chọn |
+
+#### `GET /bill-rates/current`
+
+Danh sách mỗi cặp (vai trò, cấp bậc) đang có đơn giá hiệu lực tính đến hôm nay — dùng cho ô chọn vai trò
+ở màn hình lập báo giá (`NCL-03-CN-003`) thay vì gõ tay tự do. Yêu cầu token **Nhân viên kinh doanh**
+(`VT-04`), **Kế toán** (`VT-05`) hoặc **Quản trị viên** (`VT-07`).
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": [
+    { "professionalRole": "Lap trinh vien cao cap", "level": "Cao cap", "dailyRate": 2500000, "effectiveFrom": "2024-01-01" }
+  ]
+}
+```
+
+**Lưu ý cho Frontend:**
+- `professionalRole` ở đây là chuỗi hiển thị/khớp chính xác dùng khi gửi `items[].professionalRole` cho
+  `POST /opportunities/{opportunityId}/quotes` — `level` chỉ để hiển thị thêm, không gửi kèm khi lập báo giá.
+- Đơn giá mới khai báo (`effectiveFrom` trong tương lai) sẽ **không** xuất hiện ở endpoint này cho tới đúng
+  ngày hiệu lực — đây là chủ đích (QTN-15: đơn giá áp theo thời điểm phát sinh).
+
+---
+
 ## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)
 
 
