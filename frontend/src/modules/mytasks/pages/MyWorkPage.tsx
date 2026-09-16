@@ -140,10 +140,19 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
     if (allEntries.length === 0 || hasDraft) return null;
     const hasApproved = allEntries.some((e) => e.status === 'APPROVED');
     const hasSubmitted = allEntries.some((e) => e.status === 'SUBMITTED');
-    if (hasApproved) return { tone: 'approved', text: 'Bảng chấm công tuần này đã được Quản lý dự án duyệt.' };
+    // Kiểm tra "đang chờ duyệt" TRƯỚC "đã duyệt": sau khi được phép nộp bổ sung việc
+    // mới vào một tuần đã duyệt, tuần có thể ở trạng thái hỗn hợp (phần cũ đã duyệt,
+    // phần mới vừa nộp) — nếu ưu tiên "đã duyệt" trước sẽ báo sai là xong hết, trong
+    // khi PM chưa hề duyệt phần mới.
     if (hasSubmitted) {
-      return { tone: 'submitted', text: 'Đã nộp bảng chấm công tuần này — đang chờ Quản lý dự án duyệt.' };
+      return {
+        tone: 'submitted',
+        text: hasApproved
+          ? 'Một phần giờ công tuần này đã được duyệt, phần còn lại vừa nộp — đang chờ Quản lý dự án duyệt.'
+          : 'Đã nộp bảng chấm công tuần này — đang chờ Quản lý dự án duyệt.',
+      };
     }
+    if (hasApproved) return { tone: 'approved', text: 'Bảng chấm công tuần này đã được Quản lý dự án duyệt.' };
     return { tone: 'rejected', text: 'Bảng chấm công tuần này bị từ chối. Hãy chỉnh sửa giờ công rồi nộp lại.' };
   })();
 
