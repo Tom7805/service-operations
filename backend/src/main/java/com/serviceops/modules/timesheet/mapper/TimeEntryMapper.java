@@ -23,6 +23,7 @@ public class TimeEntryMapper {
 				entry.getStatus(),
 				entry.getNote(),
 				entry.getBillable(),
+				entry.getWorkType(),
 				entry.getCreatedAt()
 		);
 	}

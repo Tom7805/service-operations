@@ -3829,9 +3829,12 @@ GET /timesheet-entries/100/bill-rate/resolve?level=Cao+cap
     "level": "Cao cap",
     "workDate": "2026-06-30",
     "hours": 8.00,
+    "workType": "OVERTIME",
     "dailyRate": 3000000,
     "effectiveFrom": "2026-01-01",
-    "isContractSpecific": true
+    "isContractSpecific": true,
+    "rateFactor": 1.50,
+    "appliedDailyRate": 4500000.00
   }
 }
 ```
@@ -3840,9 +3843,12 @@ GET /timesheet-entries/100/bill-rate/resolve?level=Cao+cap
 |---|---|---|
 | `workDate` | date | Ngày công của dòng giờ công — cũng chính là mốc `asOf` dùng để tra đơn giá |
 | `hours` | number | Số giờ công đã ghi của dòng, trả kèm để đối chiếu (không dùng để tính `dailyRate`) |
-| `dailyRate` | number | Đơn giá được áp dụng cho dòng giờ công này |
+| `workType` | string (enum) | Loại hình công việc của dòng giờ công — `NORMAL`/`OVERTIME`/`WEEKEND`/`HOLIDAY` (`NCL-07-CN-006`) |
+| `dailyRate` | number | Đơn giá theo vai trò/cấp bậc **trước khi** nhân hệ số loại hình công việc |
 | `effectiveFrom` | date | Ngày hiệu lực của mốc đơn giá được áp dụng (có thể khác `workDate`) |
 | `isContractSpecific` | boolean | `true` nếu áp dụng đơn giá riêng hợp đồng, `false` nếu rơi về đơn giá chung công ty (QTN-16) |
+| `rateFactor` | number | Hệ số nhân theo `workType` (`NCL-07-CN-006`), tra từ `GET /work-type-rates` |
+| `appliedDailyRate` | number | **Đơn giá cuối cùng** = `dailyRate * rateFactor` (làm tròn 2 chữ số thập phân) — dùng số này để tính doanh thu, không dùng `dailyRate` |
 
 **Response lỗi:**
 
@@ -3851,7 +3857,7 @@ GET /timesheet-entries/100/bill-rate/resolve?level=Cao+cap
 | 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
 | 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) hoặc Quản trị viên (`VT-07`) — ghi nhật ký lần từ chối |
 | 400 | `VALIDATION_ERROR` | Thiếu `level` (rỗng/chỉ khoảng trắng) |
-| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy dòng giờ công `{entryId}`, hoặc không tìm thấy hồ sơ nhân sự của người thực hiện, hoặc chưa có đơn giá nào (chung lẫn riêng hợp đồng) hiệu lực trước hoặc đúng `workDate` cho vai trò + cấp bậc đó |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy dòng giờ công `{entryId}`, hoặc không tìm thấy hồ sơ nhân sự của người thực hiện, hoặc chưa có đơn giá nào (chung lẫn riêng hợp đồng) hiệu lực trước hoặc đúng `workDate` cho vai trò + cấp bậc đó, hoặc chưa khai báo hệ số cho `workType` của dòng đó (`NCL-07-CN-006`) |
 
 **Lưu ý cho Frontend:**
 - Đây là endpoint tổng hợp — Frontend **không cần** tự gọi `GET /contracts/{contractId}/bill-rates/resolve`
@@ -3861,6 +3867,94 @@ GET /timesheet-entries/100/bill-rate/resolve?level=Cao+cap
   phù hợp với từng trường hợp thay vì lỗi chung chung.
 - `effectiveFrom` trong response có thể khác `workDate` đã gửi — luôn hiển thị giá trị này để kế toán thấy
   rõ giá đang tính dựa trên mốc hiệu lực nào.
+- Kể từ `NCL-07-CN-006`, response có thêm `workType`/`rateFactor`/`appliedDailyRate` — đây là bổ sung thêm
+  trường (backward-compatible), Frontend đang tích hợp từ trước không cần đổi gì nếu chưa dùng các trường
+  mới; nhưng **nên chuyển sang hiển thị `appliedDailyRate`** thay vì `dailyRate` vì đó mới là đơn giá cuối
+  cùng dùng để tính doanh thu cho dòng giờ công.
+
+### `NCL-07-CN-006` — Đơn giá theo loại hình công việc
+
+Cho phép khai báo **hệ số nhân đơn giá** theo loại hình công việc của một dòng giờ công — ví dụ giờ ngoài
+giờ hành chính (`OVERTIME`) nhân `1.5`, giờ cuối tuần (`WEEKEND`) nhân `2.0`, giờ lễ/Tết (`HOLIDAY`) nhân
+`3.0` — áp dụng lên đơn giá theo vai trò/cấp bậc (`NCL-07-CN-001`..`003`) để ra đơn giá cuối cùng cho dòng
+đó. Bốn loại hình cố định (`NORMAL`/`OVERTIME`/`WEEKEND`/`HOLIDAY`) đã có sẵn hệ số mặc định
+(`1.00`/`1.50`/`2.00`/`3.00`) khi triển khai — Kế toán/Quản trị viên có thể sửa lại qua endpoint dưới đây.
+
+Dòng giờ công (`timesheet_entries`) nay có thêm trường `workType` (mặc định `NORMAL` nếu không chọn) khi
+ghi/sửa giờ công (`POST`/`PUT .../time-entries`, Epic `NCL-06`) — người ghi giờ công (Nhân viên chuyên môn,
+`VT-03`) tự chọn loại hình phù hợp với dòng mình ghi. `GET /timesheet-entries/{entryId}/bill-rate/resolve`
+(`NCL-07-CN-005`) tự động nhân hệ số này vào `dailyRate` để ra `appliedDailyRate` — Frontend **không cần**
+tự nhân hệ số.
+
+Khai báo/sửa hệ số yêu cầu token **Kế toán** (`VT-05`) hoặc **Quản trị viên** (`VT-07`) — cùng nhóm quyền
+với các endpoint quản lý đơn giá khác; vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối. Xem
+danh sách hệ số cho phép thêm **Nhân viên chuyên môn** (`VT-03`) vì họ cần biết các lựa chọn hợp lệ khi ghi
+giờ công.
+
+#### `POST /work-type-rates`
+
+Khai báo hệ số cho một loại hình công việc — nếu loại hình đó đã có hệ số thì **ghi đè** giá trị cũ (không
+giữ lịch sử theo ngày hiệu lực như `BillRate`, vì đây là hệ số nghiệp vụ ít thay đổi chứ không phải mức giá
+đàm phán).
+
+```json
+{
+  "workType": "OVERTIME",
+  "factor": 1.5
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `workType` | string (enum) | có | Một trong `NORMAL`/`OVERTIME`/`WEEKEND`/`HOLIDAY` |
+| `factor` | number | có | Hệ số nhân, phải lớn hơn 0 |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Khai bao he so don gia theo loai hinh cong viec thanh cong",
+  "data": {
+    "workType": "OVERTIME",
+    "factor": 1.5
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) hoặc Quản trị viên (`VT-07`) — ghi nhật ký lần từ chối |
+| 400 | `VALIDATION_ERROR` | Thiếu `workType`/`factor`, `workType` không thuộc 4 giá trị hợp lệ, hoặc `factor` ≤ 0 |
+
+#### `GET /work-type-rates`
+
+Danh sách hệ số hiện tại của tất cả loại hình công việc, sắp theo tên loại hình.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": [
+    { "workType": "NORMAL", "factor": 1.00 },
+    { "workType": "OVERTIME", "factor": 1.50 },
+    { "workType": "WEEKEND", "factor": 2.00 },
+    { "workType": "HOLIDAY", "factor": 3.00 }
+  ]
+}
+```
+
+**Lưu ý cho Frontend:**
+- Dùng danh sách này để dựng ô chọn `workType` ở màn hình ghi giờ công (Epic `NCL-06`) — tránh gõ tay sai
+  giá trị enum.
+- Nếu một loại hình chưa từng được khai báo hệ số (trường hợp hiếm — chỉ xảy ra nếu dữ liệu mặc định bị xoá
+  thủ công), `GET /timesheet-entries/{entryId}/bill-rate/resolve` cho dòng giờ công thuộc loại hình đó sẽ
+  trả `404 RESOURCE_NOT_FOUND` thay vì coi hệ số là `1.00` — hiển thị thông báo "chưa khai báo hệ số cho
+  loại hình công việc này" thay vì lỗi chung chung.
 
 ---
 

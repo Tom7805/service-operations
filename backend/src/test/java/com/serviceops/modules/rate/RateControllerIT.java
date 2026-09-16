@@ -4,6 +4,7 @@ import com.serviceops.config.SecurityConfig;
 import com.serviceops.modules.rate.controller.RateLookupController;
 import com.serviceops.modules.rate.dto.response.ResolvedRateRes;
 import com.serviceops.modules.rate.service.RateResolutionService;
+import com.serviceops.modules.timesheet.enums.WorkType;
 import com.serviceops.security.CustomUserDetailsService;
 import com.serviceops.security.JwtAuthFilter;
 import com.serviceops.security.JwtAuthenticationEntryPoint;
@@ -48,8 +49,9 @@ class RateControllerIT {
 	@WithMockUser(authorities = "ROLE_VT-05")
 	void allowsAccountantToResolveRateForTimeEntry() throws Exception {
 		ResolvedRateRes res = new ResolvedRateRes(100L, 5L, 2L, 1L, "Lập trình viên", "Cao cấp",
-				LocalDate.of(2026, 6, 30), new BigDecimal("8.00"),
-				new BigDecimal("3000000"), LocalDate.of(2026, 1, 1), true);
+				LocalDate.of(2026, 6, 30), new BigDecimal("8.00"), WorkType.NORMAL,
+				new BigDecimal("3000000"), LocalDate.of(2026, 1, 1), true,
+				new BigDecimal("1.00"), new BigDecimal("3000000.00"));
 
 		when(rateResolutionService.resolveForTimeEntry(eq(100L), any())).thenReturn(res);
 
@@ -67,8 +69,9 @@ class RateControllerIT {
 	@WithMockUser(authorities = "ROLE_VT-07")
 	void allowsAdminToResolveRateForTimeEntry() throws Exception {
 		ResolvedRateRes res = new ResolvedRateRes(100L, 5L, 2L, 1L, "Lập trình viên", "Cao cấp",
-				LocalDate.of(2026, 6, 30), new BigDecimal("8.00"),
-				new BigDecimal("1600000"), LocalDate.of(2024, 1, 1), false);
+				LocalDate.of(2026, 6, 30), new BigDecimal("8.00"), WorkType.NORMAL,
+				new BigDecimal("1600000"), LocalDate.of(2024, 1, 1), false,
+				new BigDecimal("1.00"), new BigDecimal("1600000.00"));
 
 		when(rateResolutionService.resolveForTimeEntry(eq(100L), any())).thenReturn(res);
 

@@ -124,7 +124,7 @@ class TimeEntryServiceTest {
 		});
 
 		TimeEntryRes response = service.create(1L, 20L,
-				new TimeEntryCreateReq(TODAY, new BigDecimal("3.5"), "Phan tich quy trinh", true));
+				new TimeEntryCreateReq(TODAY, new BigDecimal("3.5"), "Phan tich quy trinh", true, null));
 
 		assertEquals(30L, response.id());
 		assertEquals(20L, response.taskId());
@@ -142,7 +142,7 @@ class TimeEntryServiceTest {
 		when(assignmentRepository.existsByTaskIdAndUserId(20L, 7L)).thenReturn(false);
 
 		BusinessRuleException exception = assertThrows(BusinessRuleException.class, () -> service.create(1L, 20L,
-				new TimeEntryCreateReq(TODAY, new BigDecimal("2"), "note", true)));
+				new TimeEntryCreateReq(TODAY, new BigDecimal("2"), "note", true, null)));
 
 		assertEquals(ErrorCode.FORBIDDEN, exception.getErrorCode());
 		assertEquals("Ban khong phai nguoi duoc giao cong viec nay", exception.getMessage());
@@ -155,7 +155,7 @@ class TimeEntryServiceTest {
 		when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
 
 		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
-				() -> service.create(1L, 20L, new TimeEntryCreateReq(TODAY, new BigDecimal("2"), "note", true)));
+				() -> service.create(1L, 20L, new TimeEntryCreateReq(TODAY, new BigDecimal("2"), "note", true, null)));
 
 		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
 	}
@@ -201,7 +201,7 @@ class TimeEntryServiceTest {
 
 		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
 				() -> service.create(1L, 20L,
-						new TimeEntryCreateReq(TODAY.plusDays(1), new BigDecimal("2"), "note", true)));
+						new TimeEntryCreateReq(TODAY.plusDays(1), new BigDecimal("2"), "note", true, null)));
 
 		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
 	}
@@ -218,7 +218,7 @@ class TimeEntryServiceTest {
 		when(periodRepository.findByDate(TODAY)).thenReturn(Optional.of(lockedPeriod));
 
 		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
-				() -> service.create(1L, 20L, new TimeEntryCreateReq(TODAY, new BigDecimal("2"), "note", true)));
+				() -> service.create(1L, 20L, new TimeEntryCreateReq(TODAY, new BigDecimal("2"), "note", true, null)));
 
 		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
 		assertTrue(exception.getMessage().contains("da bi khoa"));
@@ -232,7 +232,7 @@ class TimeEntryServiceTest {
 				.thenReturn(true);
 
 		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
-				() -> service.create(1L, 20L, new TimeEntryCreateReq(TODAY, new BigDecimal("2"), "note", true)));
+				() -> service.create(1L, 20L, new TimeEntryCreateReq(TODAY, new BigDecimal("2"), "note", true, null)));
 
 		assertEquals(ErrorCode.DUPLICATE_DATA, exception.getErrorCode());
 	}
@@ -243,7 +243,7 @@ class TimeEntryServiceTest {
 		when(timeEntryRepository.sumHoursByUserIdAndWorkDate(7L, TODAY)).thenReturn(new BigDecimal("11.5"));
 
 		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
-				() -> service.create(1L, 20L, new TimeEntryCreateReq(TODAY, new BigDecimal("1"), "note", true)));
+				() -> service.create(1L, 20L, new TimeEntryCreateReq(TODAY, new BigDecimal("1"), "note", true, null)));
 
 		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
 	}
@@ -343,7 +343,7 @@ class TimeEntryServiceTest {
 		when(timeEntryRepository.save(any(TimeEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		TimeEntryRes response = service.update(1L, 20L, 30L,
-				new TimeEntryUpdateReq(new BigDecimal("3"), "Da chinh sua", true));
+				new TimeEntryUpdateReq(new BigDecimal("3"), "Da chinh sua", true, null));
 
 		assertEquals(new BigDecimal("3"), response.hours());
 		assertEquals("Da chinh sua", response.note());
@@ -357,7 +357,7 @@ class TimeEntryServiceTest {
 		entry.setStatus(TimeEntryStatus.SUBMITTED);
 
 		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
-				() -> service.update(1L, 20L, 30L, new TimeEntryUpdateReq(new BigDecimal("3"), null, true)));
+				() -> service.update(1L, 20L, 30L, new TimeEntryUpdateReq(new BigDecimal("3"), null, true, null)));
 
 		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
 	}
@@ -368,7 +368,7 @@ class TimeEntryServiceTest {
 		entry.setUserId(8L);
 
 		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
-				() -> service.update(1L, 20L, 30L, new TimeEntryUpdateReq(new BigDecimal("3"), null, true)));
+				() -> service.update(1L, 20L, 30L, new TimeEntryUpdateReq(new BigDecimal("3"), null, true, null)));
 
 		assertEquals(ErrorCode.RESOURCE_NOT_FOUND, exception.getErrorCode());
 	}
@@ -459,7 +459,7 @@ class TimeEntryServiceTest {
 		});
 
 		TimeEntryRes response = service.create(1L, 20L,
-				new TimeEntryCreateReq(TODAY, new BigDecimal("2"), "Noi dung", false));
+				new TimeEntryCreateReq(TODAY, new BigDecimal("2"), "Noi dung", false, null));
 
 		assertEquals(Boolean.FALSE, response.billable());
 	}
@@ -474,7 +474,7 @@ class TimeEntryServiceTest {
 		});
 
 		TimeEntryRes response = service.create(1L, 20L,
-				new TimeEntryCreateReq(TODAY, new BigDecimal("2"), "Noi dung", null));
+				new TimeEntryCreateReq(TODAY, new BigDecimal("2"), "Noi dung", null, null));
 
 		assertEquals(Boolean.TRUE, response.billable());
 	}
@@ -486,7 +486,7 @@ class TimeEntryServiceTest {
 		when(timeEntryRepository.save(any(TimeEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		TimeEntryRes response = service.update(1L, 20L, 30L,
-				new TimeEntryUpdateReq(new BigDecimal("3"), "Da chinh sua", false));
+				new TimeEntryUpdateReq(new BigDecimal("3"), "Da chinh sua", false, null));
 
 		assertEquals(Boolean.FALSE, response.billable());
 	}
