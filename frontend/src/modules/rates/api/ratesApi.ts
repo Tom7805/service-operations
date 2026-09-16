@@ -1,0 +1,79 @@
+import type { BillRateCreatePayload, BillRateRes } from '../types/rateTypes';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
+
+export class RatesApiError extends Error {
+  constructor(
+    public readonly code: string,
+    message: string,
+    public readonly statusCode?: number,
+    public readonly fieldErrors?: Array<{ field: string; message: string }>
+  ) {
+    super(message);
+    this.name = 'RatesApiError';
+  }
+}
+
+async function requestBackend<T>(url: string, options: RequestInit = {}): Promise<T> {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...((options.headers as Record<string, string>) || {}),
+  };
+
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  let response: Response;
+  try {
+    response = await fetch(url, { ...options, headers });
+  } catch {
+    throw new RatesApiError(
+      'NETWORK_ERROR',
+      `Không thể kết nối đến máy chủ Backend (${API_BASE_URL}). Vui lòng kiểm tra lại dịch vụ máy chủ.`,
+      503
+    );
+  }
+
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok || payload.success === false) {
+    const code = payload.errorCode || payload.code || (response.status === 403 ? 'FORBIDDEN' : 'UNKNOWN_ERROR');
+    let message = payload.message || 'Đã có lỗi xảy ra khi gọi dịch vụ máy chủ Backend.';
+    if (payload.fieldErrors && payload.fieldErrors.length > 0) {
+      const firstFieldErr = payload.fieldErrors[0];
+      message = `${firstFieldErr.message} (${firstFieldErr.field})`;
+    } else if (response.status === 403) {
+      message = 'Bạn không có quyền thực hiện thao tác này.';
+    } else if (response.status === 401) {
+      message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+    }
+    throw new RatesApiError(code, message, response.status, payload.fieldErrors);
+  }
+
+  return payload.data as T;
+}
+
+/**
+ * POST /bill-rates — khai báo một dòng đơn giá (vai trò chuyên môn + cấp bậc +
+ * đơn giá theo ngày + ngày hiệu lực). Chỉ Kế toán (VT-05) hoặc Quản trị viên
+ * (VT-07); vai trò khác nhận 403 (được backend ghi vào Nhật ký hệ thống).
+ * Trùng `(professionalRole, level, effectiveFrom)` trả về 409 DUPLICATE_DATA.
+ */
+export async function createBillRate(payload: BillRateCreatePayload): Promise<BillRateRes> {
+  return requestBackend<BillRateRes>(`${API_BASE_URL}/bill-rates`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * GET /bill-rates/current — danh sách mỗi cặp (vai trò, cấp bậc) đang có đơn giá
+ * hiệu lực tính đến hôm nay. Đơn giá vừa khai báo với `effectiveFrom` trong
+ * tương lai sẽ KHÔNG xuất hiện ở đây cho tới đúng ngày hiệu lực — đây là chủ đích
+ * (QTN-15), không phải lỗi tải lại danh sách.
+ */
+export async function fetchCurrentBillRates(): Promise<BillRateRes[]> {
+  return requestBackend<BillRateRes[]>(`${API_BASE_URL}/bill-rates/current`, {
+    method: 'GET',
+  });
+}

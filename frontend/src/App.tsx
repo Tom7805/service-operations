@@ -14,6 +14,7 @@ import TwoFactorSetupPage from './modules/auth/pages/TwoFactorSetupPage';
 import CustomerListPage from './modules/customers/pages/CustomerListPage';
 import CustomerMergePage from './modules/customers/pages/CustomerMergePage';
 import ContractListPage from './modules/contracts/pages/ContractListPage';
+import BillRatePage from './modules/rates/pages/BillRatePage';
 import OpportunityDetailPage from './modules/opportunities/pages/OpportunityDetailPage';
 import OpportunitySearchPicker from './modules/opportunities/components/OpportunitySearchPicker';
 import OpportunityListPage from './modules/opportunities/pages/OpportunityListPage';
@@ -42,6 +43,7 @@ type Tab =
   | 'OPPORTUNITIES'
   | 'REVENUE_FORECAST'
   | 'CUSTOMER_MERGE'
+  | 'BILL_RATES'
   | 'DEPARTMENTS'
   | 'PERMISSIONS'
   | 'USERS'
@@ -122,6 +124,11 @@ const BUSINESS_NAV_ITEMS: NavItem[] = [
   { tab: 'REVENUE_FORECAST', icon: ICONS.chart, label: 'Dự báo doanh thu', requires: ['VT-01', 'VT-04'] },
   { tab: 'REPORTS', icon: ICONS.document, label: 'Báo cáo', matches: ['PIPELINE_REPORT'], requires: ['VT-01', 'VT-04'] },
   { tab: 'CUSTOMER_MERGE', icon: ICONS.merge, label: 'Gộp KH trùng', requires: ['VT-07'] },
+  {
+    tab: 'BILL_RATES', icon: ICONS.money, label: 'Bảng đơn giá', requires: ['VT-05', 'VT-07'],
+    // NCL-07-CN-001: khai báo đơn giá theo NGÀY công cho từng (vai trò, cấp bậc),
+    // dùng bởi NCL-03-CN-003 (Lập báo giá). Chỉ Kế toán/Quản trị viên thao tác được.
+  },
   { tab: 'OPPORTUNITY_DETAIL', icon: ICONS.building, label: 'Cơ hội', requires: ['VT-04'] },
 ];
 
@@ -628,6 +635,8 @@ export default function App() {
             />
           ) : activeTab === 'CUSTOMER_MERGE' ? (
             <CustomerMergePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+          ) : activeTab === 'BILL_RATES' ? (
+            <BillRatePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'DEPARTMENTS' ? (
             <DepartmentTreePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'PERMISSIONS' ? (
