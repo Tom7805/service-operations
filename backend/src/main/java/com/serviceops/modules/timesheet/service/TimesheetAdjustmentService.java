@@ -1,6 +1,7 @@
 package com.serviceops.modules.timesheet.service;
 
 import com.serviceops.modules.timesheet.dto.request.TimeEntryAdjustmentReq;
+import com.serviceops.modules.timesheet.dto.response.AdjustableEntryRes;
 import com.serviceops.modules.timesheet.dto.response.AdjustmentTraceRes;
 
 import java.util.List;
@@ -22,4 +23,11 @@ public interface TimesheetAdjustmentService {
 
 	/** Lich su dieu chinh cua mot cong viec — moi nhat truoc ("tra cuu duoc"). */
 	List<AdjustmentTraceRes> findHistory(Long projectId, Long taskId);
+
+	/**
+	 * Danh sach dong gio cong DA DUYET, con la dong GOC va chua tung dieu chinh, thuoc cac
+	 * du an cua PM hien tai — nguon du lieu cho PM chon truc tiep tren man hinh thay vi phai
+	 * biet truoc Project ID/Task ID/Entry ID.
+	 */
+	List<AdjustableEntryRes> findAdjustableEntries();
 }

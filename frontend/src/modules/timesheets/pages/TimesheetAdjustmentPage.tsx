@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import { roleLabels } from '../../../utils/roleLabel';
 import AdjustmentModal from '../components/AdjustmentModal';
-import { getAdjustmentHistory, TimesheetsApiError } from '../api/timesheetsApi';
-import type { AdjustmentTraceRes } from '../types/timesheetTypes';
+import { getAdjustableEntries, getAdjustmentHistory, TimesheetsApiError } from '../api/timesheetsApi';
+import { getActiveUsersLookup } from '../../users/api/usersApi';
+import type { AdjustableEntryRes, AdjustmentTraceRes } from '../types/timesheetTypes';
 
 export interface TimesheetAdjustmentPageProps {
   currentUserRoles?: string[];
@@ -18,10 +19,11 @@ function formatHours(hours: number | undefined): string {
 /**
  * Màn "Điều chỉnh giờ công đã duyệt" của Quản lý dự án (NCL-06-CN-005).
  *
- * Backend không có endpoint liệt kê tất cả công việc/dòng giờ công APPROVED của PM để duyệt
- * chọn — tra cứu theo đúng cặp Dự án/Công việc (giống cách `GET /projects/{id}/tasks/{id}/
- * adjustments` yêu cầu), rồi mới tạo điều chỉnh mới cho một dòng cụ thể trong công việc đó.
- * Đúng những gì backend hiện có, không suy diễn thêm một endpoint chưa tồn tại.
+ * PM chọn thẳng dòng cần sửa từ bảng "Dòng giờ công có thể điều chỉnh"
+ * (`GET /timesheets/adjustable-entries` — chỉ dòng APPROVED, còn là dòng gốc, chưa từng
+ * điều chỉnh, thuộc các dự án của chính PM) thay vì phải tự biết trước Project ID/Task ID/
+ * Entry ID. Sau khi bấm "Điều chỉnh" trên một dòng, có thể xem lại lịch sử điều chỉnh của
+ * đúng công việc đó (`GET /projects/{id}/tasks/{id}/adjustments`).
  */
 export default function TimesheetAdjustmentPage({
   currentUserRoles = [],
@@ -30,14 +32,37 @@ export default function TimesheetAdjustmentPage({
   // NCL-06-CN-005 TC-02: chỉ Quản lý dự án (VT-02) được điều chỉnh.
   const isAllowed = currentUserRoles.includes('VT-02');
 
-  const [projectIdInput, setProjectIdInput] = useState('');
-  const [taskIdInput, setTaskIdInput] = useState('');
-  const [lookupError, setLookupError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [entries, setEntries] = useState<AdjustableEntryRes[]>([]);
+  const [entriesLoading, setEntriesLoading] = useState(false);
+  const [entriesError, setEntriesError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
-  const [activeTask, setActiveTask] = useState<{ projectId: number; taskId: number } | null>(null);
-  const [history, setHistory] = useState<AdjustmentTraceRes[]>([]);
+  // Tên nhân sự theo mã (userId → họ tên) — chỉ để hiển thị đẹp hơn "Nhân sự #14" trên bảng,
+  // không ảnh hưởng dữ liệu gửi API. Lỗi khi tải (ví dụ mạng chập chờn) không chặn màn hình,
+  // chỉ rớt về hiển thị mã như trước.
+  const [userNames, setUserNames] = useState<Map<number, string>>(new Map());
+
+  useEffect(() => {
+    if (!isAllowed) return;
+    getActiveUsersLookup()
+      .then((users) => setUserNames(new Map(users.map((u) => [u.id, u.fullName]))))
+      .catch(() => {
+        /* bỏ qua — bảng vẫn dùng được, chỉ hiện "Nhân sự #id" thay vì tên */
+      });
+  }, [isAllowed]);
+
+  const employeeLabel = (userId: number) => userNames.get(userId) ?? `Nhân sự #${userId}`;
+
+  const [selectedEntry, setSelectedEntry] = useState<AdjustableEntryRes | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+
+  const [historyTask, setHistoryTask] = useState<{ projectId: number; taskId: number; taskName: string } | null>(
+    null
+  );
+  const [history, setHistory] = useState<AdjustmentTraceRes[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
@@ -45,35 +70,68 @@ export default function TimesheetAdjustmentPage({
     setTimeout(() => setToast(null), 6000);
   };
 
-  const handleLookup = async () => {
-    const projectId = Number(projectIdInput);
-    const taskId = Number(taskIdInput);
-    if (!Number.isInteger(projectId) || projectId <= 0 || !Number.isInteger(taskId) || taskId <= 0) {
-      setLookupError('Vui lòng nhập mã dự án và mã công việc hợp lệ (số nguyên dương).');
-      return;
+  const loadEntries = async () => {
+    setEntriesLoading(true);
+    setEntriesError(null);
+    try {
+      const data = await getAdjustableEntries();
+      setEntries(data);
+    } catch (err) {
+      const message =
+        err instanceof TimesheetsApiError || err instanceof Error
+          ? err.message
+          : 'Không thể tải danh sách dòng giờ công có thể điều chỉnh.';
+      setEntriesError(message);
+    } finally {
+      setEntriesLoading(false);
     }
+  };
 
-    setLoading(true);
-    setLookupError(null);
+  useEffect(() => {
+    if (isAllowed) {
+      loadEntries();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAllowed]);
+
+  const filteredEntries = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return entries;
+    return entries.filter(
+      (e) =>
+        e.projectName.toLowerCase().includes(q) ||
+        e.taskName.toLowerCase().includes(q) ||
+        String(e.projectId).includes(q) ||
+        String(e.taskId).includes(q) ||
+        String(e.userId).includes(q)
+    );
+  }, [entries, search]);
+
+  const openAdjustModal = (entry: AdjustableEntryRes) => {
+    setSelectedEntry(entry);
+    setModalOpen(true);
+  };
+
+  const loadHistory = async (projectId: number, taskId: number, taskName: string) => {
+    setHistoryTask({ projectId, taskId, taskName });
+    setHistoryLoading(true);
+    setHistoryError(null);
     try {
       const data = await getAdjustmentHistory(projectId, taskId);
       setHistory(data);
-      setActiveTask({ projectId, taskId });
     } catch (err) {
-      setActiveTask(null);
       setHistory([]);
       const message =
         err instanceof TimesheetsApiError || err instanceof Error
           ? err.message
           : 'Không thể tải lịch sử điều chỉnh.';
-      setLookupError(message);
+      setHistoryError(message);
     } finally {
-      setLoading(false);
+      setHistoryLoading(false);
     }
   };
 
   const handleAdjusted = (trace: AdjustmentTraceRes) => {
-    setHistory((prev) => [trace, ...prev]);
     setModalOpen(false);
     showToast(
       `Đã điều chỉnh dòng #${trace.originalEntry?.id} thành công — số giờ đúng: ${formatHours(
@@ -81,6 +139,13 @@ export default function TimesheetAdjustmentPage({
       )} giờ.`,
       'success'
     );
+    // Dòng vừa điều chỉnh không còn đủ điều kiện điều chỉnh tiếp — bỏ khỏi danh sách chọn
+    // ngay trên giao diện, không cần tải lại toàn bộ danh sách.
+    if (selectedEntry) {
+      setEntries((prev) => prev.filter((e) => e.entryId !== selectedEntry.entryId));
+      loadHistory(selectedEntry.projectId, selectedEntry.taskId, selectedEntry.taskName);
+    }
+    setSelectedEntry(null);
   };
 
   if (!isAllowed) {
@@ -125,71 +190,138 @@ export default function TimesheetAdjustmentPage({
         </div>
       </div>
 
-      <div className="user-table-card" style={{ padding: '20px', marginBottom: '16px' }}>
-        <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 700 }}>Tra cứu công việc</h3>
-        <div className="form-grid">
+      <div className="user-table-card">
+        <div className="user-table-toolbar">
           <div>
-            <label className="form-label" htmlFor="lookup-project-id">
-              Mã dự án (Project ID)
-            </label>
+            <strong>Dòng giờ công có thể điều chỉnh</strong>
+            <p className="text-muted font-sm" style={{ margin: '4px 0 0' }}>
+              Chỉ hiện dòng đã duyệt, còn là dòng gốc và thuộc dự án bạn quản lý.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <input
-              id="lookup-project-id"
-              type="number"
-              min={1}
+              type="text"
               className="form-input"
-              placeholder="Ví dụ: 1"
-              value={projectIdInput}
-              onChange={(e) => setProjectIdInput(e.target.value)}
-              data-testid="lookup-project-id"
+              placeholder="Tìm theo dự án, công việc, mã..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ minWidth: '240px' }}
+              data-testid="adjustable-entries-search"
             />
-          </div>
-          <div>
-            <label className="form-label" htmlFor="lookup-task-id">
-              Mã công việc (Task ID)
-            </label>
-            <input
-              id="lookup-task-id"
-              type="number"
-              min={1}
-              className="form-input"
-              placeholder="Ví dụ: 20"
-              value={taskIdInput}
-              onChange={(e) => setTaskIdInput(e.target.value)}
-              data-testid="lookup-task-id"
-            />
-          </div>
-        </div>
-        <div style={{ marginTop: '12px' }}>
-          <button type="button" className="btn-primary" onClick={handleLookup} disabled={loading} data-testid="btn-lookup">
-            {loading ? 'Đang tải…' : 'Xem lịch sử điều chỉnh'}
-          </button>
-        </div>
-
-        {lookupError && (
-          <div className="alert alert--error mb-4" role="alert" style={{ marginTop: '12px' }}>
-            <span className="alert__icon">{ICONS.alertTriangle}</span>
-            <span>{lookupError}</span>
-          </div>
-        )}
-      </div>
-
-      {activeTask && (
-        <div className="user-table-card">
-          <div className="user-table-toolbar">
-            <div>
-              <strong>
-                Dự án #{activeTask.projectId} — Công việc #{activeTask.taskId}
-              </strong>
-            </div>
             <button
               type="button"
-              className="btn-primary"
-              onClick={() => setModalOpen(true)}
-              data-testid="btn-open-adjustment-modal"
+              className="btn-secondary"
+              onClick={loadEntries}
+              disabled={entriesLoading}
+              data-testid="btn-refresh-entries"
             >
-              <span className="btn-icon">+</span> Điều chỉnh giờ công
+              {entriesLoading ? 'Đang tải…' : 'Làm mới'}
             </button>
           </div>
+        </div>
+
+        {entriesError && (
+          <div className="alert alert--error mb-4" role="alert" style={{ margin: '0 20px 16px' }}>
+            <span className="alert__icon">{ICONS.alertTriangle}</span>
+            <span>{entriesError}</span>
+          </div>
+        )}
+
+        <div className="table-responsive">
+          <table className="user-data-table">
+            <thead>
+              <tr>
+                <th>Dự án</th>
+                <th>Công việc</th>
+                <th>Nhân sự</th>
+                <th>Ngày</th>
+                <th>Số giờ</th>
+                <th>Ghi chú</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {entriesLoading ? (
+                <tr>
+                  <td colSpan={7}>
+                    <div className="table-empty-state">
+                      <span className="empty-icon">{ICONS.history}</span>
+                      <h3>Đang tải…</h3>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredEntries.length === 0 ? (
+                <tr>
+                  <td colSpan={7}>
+                    <div className="table-empty-state">
+                      <span className="empty-icon">{ICONS.checkCircle}</span>
+                      <h3>{entries.length === 0 ? 'Không có dòng giờ công nào cần điều chỉnh' : 'Không tìm thấy kết quả phù hợp'}</h3>
+                      <p>
+                        {entries.length === 0
+                          ? 'Mọi dòng giờ công đã duyệt thuộc dự án bạn quản lý hiện đều đúng, hoặc đã được điều chỉnh trước đó.'
+                          : 'Thử một từ khoá tìm kiếm khác.'}
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredEntries.map((entry) => (
+                  <tr key={entry.entryId} data-testid={`adjustable-entry-row-${entry.entryId}`}>
+                    <td title={`Mã dự án #${entry.projectId}`}>{entry.projectName}</td>
+                    <td title={`Mã công việc #${entry.taskId}`}>{entry.taskName}</td>
+                    <td>{employeeLabel(entry.userId)}</td>
+                    <td>{new Date(entry.workDate).toLocaleDateString('vi-VN')}</td>
+                    <td>
+                      <strong>{formatHours(entry.hours)} giờ</strong>
+                    </td>
+                    <td>{entry.note || '—'}</td>
+                    <td style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => loadHistory(entry.projectId, entry.taskId, entry.taskName)}
+                        data-testid={`btn-view-history-${entry.entryId}`}
+                      >
+                        Lịch sử
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        onClick={() => openAdjustModal(entry)}
+                        data-testid={`btn-adjust-${entry.entryId}`}
+                      >
+                        Điều chỉnh
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="table-footer">
+          Hiển thị <strong>{filteredEntries.length}</strong> / {entries.length} dòng có thể điều chỉnh
+        </div>
+      </div>
+
+      {historyTask && (
+        <div className="user-table-card" style={{ marginTop: '16px' }}>
+          <div className="user-table-toolbar">
+            <div title={`Mã dự án #${historyTask.projectId} · Mã công việc #${historyTask.taskId}`}>
+              <strong>Lịch sử điều chỉnh — {historyTask.taskName}</strong>
+            </div>
+            <button type="button" className="btn-secondary" onClick={() => setHistoryTask(null)}>
+              Đóng
+            </button>
+          </div>
+
+          {historyError && (
+            <div className="alert alert--error mb-4" role="alert" style={{ margin: '0 20px 16px' }}>
+              <span className="alert__icon">{ICONS.alertTriangle}</span>
+              <span>{historyError}</span>
+            </div>
+          )}
 
           <div className="table-responsive">
             <table className="user-data-table">
@@ -204,29 +336,35 @@ export default function TimesheetAdjustmentPage({
                 </tr>
               </thead>
               <tbody>
-                {history.length === 0 ? (
+                {historyLoading ? (
+                  <tr>
+                    <td colSpan={6}>
+                      <div className="table-empty-state">
+                        <span className="empty-icon">{ICONS.history}</span>
+                        <h3>Đang tải…</h3>
+                      </div>
+                    </td>
+                  </tr>
+                ) : history.length === 0 ? (
                   <tr>
                     <td colSpan={6}>
                       <div className="table-empty-state">
                         <span className="empty-icon">{ICONS.history}</span>
                         <h3>Chưa có điều chỉnh nào cho công việc này</h3>
-                        <p>Bấm "Điều chỉnh giờ công" để tạo bút toán đảo đầu tiên.</p>
                       </div>
                     </td>
                   </tr>
                 ) : (
                   history.map((trace) => (
                     <tr key={trace.adjustmentId} data-testid={`adjustment-row-${trace.adjustmentId}`}>
-                      <td>
-                        #{trace.originalEntry?.id} · {formatHours(trace.originalEntry?.hours)} giờ
+                      <td title={`Mã dòng #${trace.originalEntry?.id}`}>
+                        {formatHours(trace.originalEntry?.hours)} giờ
                       </td>
-                      <td>
-                        #{trace.reversalEntry?.id} · {formatHours(trace.reversalEntry?.hours)} giờ
+                      <td title={`Mã dòng #${trace.reversalEntry?.id}`}>
+                        {formatHours(trace.reversalEntry?.hours)} giờ
                       </td>
-                      <td>
-                        <strong>
-                          #{trace.correctedEntry?.id} · {formatHours(trace.correctedEntry?.hours)} giờ
-                        </strong>
+                      <td title={`Mã dòng #${trace.correctedEntry?.id}`}>
+                        <strong>{formatHours(trace.correctedEntry?.hours)} giờ</strong>
                       </td>
                       <td>{trace.reason}</td>
                       <td>{trace.adjustedBy ?? '—'}</td>
@@ -244,11 +382,16 @@ export default function TimesheetAdjustmentPage({
         </div>
       )}
 
-      {modalOpen && activeTask && (
+      {modalOpen && selectedEntry && (
         <AdjustmentModal
-          projectId={activeTask.projectId}
-          taskId={activeTask.taskId}
-          onClose={() => setModalOpen(false)}
+          projectId={selectedEntry.projectId}
+          taskId={selectedEntry.taskId}
+          presetEntry={selectedEntry}
+          employeeName={employeeLabel(selectedEntry.userId)}
+          onClose={() => {
+            setModalOpen(false);
+            setSelectedEntry(null);
+          }}
           onAdjusted={handleAdjusted}
         />
       )}
