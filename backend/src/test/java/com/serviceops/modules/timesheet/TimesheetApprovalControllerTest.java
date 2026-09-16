@@ -10,6 +10,7 @@ import com.serviceops.modules.timesheet.dto.response.TimesheetApprovalRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetRejectRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetRes;
 import com.serviceops.modules.timesheet.enums.TimesheetStatus;
+import com.serviceops.modules.timesheet.service.TimesheetAdjustmentService;
 import com.serviceops.modules.timesheet.service.TimesheetApprovalService;
 import com.serviceops.security.CustomUserDetailsService;
 import com.serviceops.security.JwtAuthFilter;
@@ -56,6 +57,9 @@ class TimesheetApprovalControllerTest {
 
 	@MockBean
 	private TimesheetApprovalService timesheetApprovalService;
+
+	@MockBean
+	private TimesheetAdjustmentService timesheetAdjustmentService;
 
 	@MockBean
 	private AccessDeniedAuditRecorder accessDeniedAuditRecorder;

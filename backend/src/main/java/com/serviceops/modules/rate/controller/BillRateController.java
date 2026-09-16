@@ -2,6 +2,7 @@ package com.serviceops.modules.rate.controller;
 
 import com.serviceops.common.api.BaseRes;
 import com.serviceops.modules.rate.dto.request.BillRateCreateReq;
+import com.serviceops.modules.rate.dto.response.BillRateHistoryRes;
 import com.serviceops.modules.rate.dto.response.BillRateRes;
 import com.serviceops.modules.rate.service.BillRateService;
 import jakarta.validation.Valid;
@@ -56,5 +57,19 @@ public class BillRateController {
 			@RequestParam String level,
 			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate asOf) {
 		return BaseRes.ok(billRateService.resolve(professionalRole, level, asOf));
+	}
+
+	/**
+	 * NCL-07-CN-007: toan bo cac moc don gia da khai bao cho mot cap (vai tro, cap bac), giup Ke
+	 * toan giai trinh vi sao hai ky co doanh thu khac nhau. Cung nhom quyen voi thao tac khai bao/
+	 * tra cuu hieu luc — vai tro khac nhan {@code 403 FORBIDDEN} va bi ghi nhat ky lan tu choi
+	 * (TC-03).
+	 */
+	@GetMapping("/history")
+	@PreAuthorize("hasRole('VT-05') or hasRole('VT-07')")
+	public BaseRes<BillRateHistoryRes> history(
+			@RequestParam String professionalRole,
+			@RequestParam String level) {
+		return BaseRes.ok(billRateService.history(professionalRole, level));
 	}
 }
