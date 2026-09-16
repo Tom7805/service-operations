@@ -12,8 +12,10 @@ import com.serviceops.modules.rate.dto.request.RateLookupReq;
 import com.serviceops.modules.rate.dto.response.ResolvedContractBillRateRes;
 import com.serviceops.modules.rate.dto.response.ResolvedRateRes;
 import com.serviceops.modules.rate.service.ContractBillRateService;
+import com.serviceops.modules.rate.service.WorkTypeRateService;
 import com.serviceops.modules.rate.service.impl.RateResolutionServiceImpl;
 import com.serviceops.modules.timesheet.entity.TimeEntry;
+import com.serviceops.modules.timesheet.enums.WorkType;
 import com.serviceops.modules.timesheet.repository.TimeEntryRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -48,16 +50,24 @@ class RateResolutionServiceTest {
 	@Mock
 	private ContractBillRateService contractBillRateService;
 
+	@Mock
+	private WorkTypeRateService workTypeRateService;
+
 	@InjectMocks
 	private RateResolutionServiceImpl service;
 
 	private TimeEntry entry(Long id, Long taskId, Long userId, LocalDate workDate, BigDecimal hours) {
+		return entry(id, taskId, userId, workDate, hours, WorkType.NORMAL);
+	}
+
+	private TimeEntry entry(Long id, Long taskId, Long userId, LocalDate workDate, BigDecimal hours, WorkType workType) {
 		TimeEntry e = new TimeEntry();
 		e.setId(id);
 		e.setTaskId(taskId);
 		e.setUserId(userId);
 		e.setWorkDate(workDate);
 		e.setHours(hours);
+		e.setWorkType(workType);
 		return e;
 	}
 
@@ -94,6 +104,7 @@ class RateResolutionServiceTest {
 				new BigDecimal("3000000"), LocalDate.of(2026, 1, 1), true);
 		when(contractBillRateService.resolve(1L, "Lập trình viên", "Cao cấp", LocalDate.of(2026, 6, 30)))
 				.thenReturn(resolved);
+		when(workTypeRateService.resolveFactor(WorkType.NORMAL)).thenReturn(new BigDecimal("1.00"));
 
 		ResolvedRateRes result = service.resolveForTimeEntry(100L, new RateLookupReq("Cao cấp"));
 
@@ -104,9 +115,34 @@ class RateResolutionServiceTest {
 		assertThat(result.professionalRole()).isEqualTo("Lập trình viên");
 		assertThat(result.level()).isEqualTo("Cao cấp");
 		assertThat(result.workDate()).isEqualTo(LocalDate.of(2026, 6, 30));
+		assertThat(result.workType()).isEqualTo(WorkType.NORMAL);
 		assertThat(result.dailyRate()).isEqualByComparingTo("3000000");
 		assertThat(result.effectiveFrom()).isEqualTo(LocalDate.of(2026, 1, 1));
 		assertThat(result.isContractSpecific()).isTrue();
+		assertThat(result.rateFactor()).isEqualByComparingTo("1.00");
+		assertThat(result.appliedDailyRate()).isEqualByComparingTo("3000000.00");
+	}
+
+	@Test
+	@DisplayName("NCL-07-CN-006: Nhan he so theo loai hinh cong viec vao don gia da tra")
+	void appliesWorkTypeFactorToResolvedRate() {
+		when(timeEntryRepository.findById(101L))
+				.thenReturn(Optional.of(entry(101L, 5L, 7L, LocalDate.of(2026, 6, 30), new BigDecimal("4.00"), WorkType.OVERTIME)));
+		when(taskRepository.findById(5L)).thenReturn(Optional.of(task(5L, 2L)));
+		when(projectRepository.findById(2L)).thenReturn(Optional.of(project(2L, 1L)));
+		when(employeeRepository.findByUser_Id(7L)).thenReturn(Optional.of(employee("Lập trình viên")));
+
+		ResolvedContractBillRateRes resolved = new ResolvedContractBillRateRes(
+				new BigDecimal("1000000"), LocalDate.of(2026, 1, 1), false);
+		when(contractBillRateService.resolve(1L, "Lập trình viên", "Cao cấp", LocalDate.of(2026, 6, 30)))
+				.thenReturn(resolved);
+		when(workTypeRateService.resolveFactor(WorkType.OVERTIME)).thenReturn(new BigDecimal("1.50"));
+
+		ResolvedRateRes result = service.resolveForTimeEntry(101L, new RateLookupReq("Cao cấp"));
+
+		assertThat(result.workType()).isEqualTo(WorkType.OVERTIME);
+		assertThat(result.rateFactor()).isEqualByComparingTo("1.50");
+		assertThat(result.appliedDailyRate()).isEqualByComparingTo("1500000.00");
 	}
 
 	@Test

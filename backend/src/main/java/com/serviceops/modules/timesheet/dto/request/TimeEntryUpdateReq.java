@@ -1,5 +1,6 @@
 package com.serviceops.modules.timesheet.dto.request;
 
+import com.serviceops.modules.timesheet.enums.WorkType;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -21,5 +22,8 @@ public record TimeEntryUpdateReq(
 		@Size(max = 1000, message = "Ghi chu khong duoc vuot 1000 ky tu")
 		String note,
 
-		Boolean billable) {
+		Boolean billable,
+
+		/** Loai hinh cong viec (NCL-07-CN-006) — null nghia la giu nguyen gia tri hien co. */
+		WorkType workType) {
 }

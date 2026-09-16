@@ -1,6 +1,7 @@
 package com.serviceops.modules.timesheet.dto.response;
 
 import com.serviceops.modules.timesheet.enums.TimeEntryStatus;
+import com.serviceops.modules.timesheet.enums.WorkType;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -17,8 +18,9 @@ import java.time.LocalDateTime;
  * @param status    trang thai ban ghi (DRAFT/SUBMITTED/APPROVED/REJECTED).
  * @param note      ghi chu nguoi ghi.
  * @param billable  co tinh phi khong (mac dinh true).
+ * @param workType  loai hinh cong viec (NCL-07-CN-006), mac dinh NORMAL.
  * @param createdAt thoi diem tao ban ghi.
  */
 public record TimeEntryRes(Long id, Long taskId, Long userId, LocalDate workDate, BigDecimal hours,
-		TimeEntryStatus status, String note, Boolean billable, LocalDateTime createdAt) {
+		TimeEntryStatus status, String note, Boolean billable, WorkType workType, LocalDateTime createdAt) {
 }

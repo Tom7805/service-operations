@@ -13,10 +13,13 @@ import com.serviceops.modules.rate.dto.response.ResolvedContractBillRateRes;
 import com.serviceops.modules.rate.dto.response.ResolvedRateRes;
 import com.serviceops.modules.rate.service.ContractBillRateService;
 import com.serviceops.modules.rate.service.RateResolutionService;
+import com.serviceops.modules.rate.service.WorkTypeRateService;
 import com.serviceops.modules.timesheet.entity.TimeEntry;
 import com.serviceops.modules.timesheet.repository.TimeEntryRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.RoundingMode;
 
 @Service
 @Transactional(readOnly = true)
@@ -27,17 +30,20 @@ public class RateResolutionServiceImpl implements RateResolutionService {
 	private final ProjectRepository projectRepository;
 	private final EmployeeRepository employeeRepository;
 	private final ContractBillRateService contractBillRateService;
+	private final WorkTypeRateService workTypeRateService;
 
 	public RateResolutionServiceImpl(TimeEntryRepository timeEntryRepository,
 									  TaskRepository taskRepository,
 									  ProjectRepository projectRepository,
 									  EmployeeRepository employeeRepository,
-									  ContractBillRateService contractBillRateService) {
+									  ContractBillRateService contractBillRateService,
+									  WorkTypeRateService workTypeRateService) {
 		this.timeEntryRepository = timeEntryRepository;
 		this.taskRepository = taskRepository;
 		this.projectRepository = projectRepository;
 		this.employeeRepository = employeeRepository;
 		this.contractBillRateService = contractBillRateService;
+		this.workTypeRateService = workTypeRateService;
 	}
 
 	@Override
@@ -78,8 +84,15 @@ public class RateResolutionServiceImpl implements RateResolutionService {
 		ResolvedContractBillRateRes resolved = contractBillRateService.resolve(
 				project.getContractId(), role, level, entry.getWorkDate());
 
+		// NCL-07-CN-006: nhan them he so theo loai hinh cong viec cua chinh dong gio cong nay
+		// de ra don gia cuoi cung dung tinh doanh thu.
+		java.math.BigDecimal factor = workTypeRateService.resolveFactor(entry.getWorkType());
+		java.math.BigDecimal appliedDailyRate = resolved.dailyRate().multiply(factor)
+				.setScale(2, RoundingMode.HALF_UP);
+
 		return new ResolvedRateRes(entry.getId(), task.getId(), project.getId(), project.getContractId(),
-				role, level, entry.getWorkDate(), entry.getHours(),
-				resolved.dailyRate(), resolved.effectiveFrom(), resolved.isContractSpecific());
+				role, level, entry.getWorkDate(), entry.getHours(), entry.getWorkType(),
+				resolved.dailyRate(), resolved.effectiveFrom(), resolved.isContractSpecific(),
+				factor, appliedDailyRate);
 	}
 }
