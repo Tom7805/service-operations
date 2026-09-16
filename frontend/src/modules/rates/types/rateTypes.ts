@@ -75,3 +75,43 @@ export interface ResolvedContractBillRateRes {
   effectiveFrom: string;
   isContractSpecific: boolean;
 }
+
+/** NCL-07-CN-006: loại hình công việc của một dòng giờ công. */
+export type WorkType = 'NORMAL' | 'OVERTIME' | 'WEEKEND' | 'HOLIDAY';
+
+export const WORK_TYPE_LABELS: Record<WorkType, string> = {
+  NORMAL: 'Giờ hành chính',
+  OVERTIME: 'Ngoài giờ hành chính',
+  WEEKEND: 'Cuối tuần',
+  HOLIDAY: 'Lễ / Tết',
+};
+
+/**
+ * NCL-07-CN-005 — Tra cứu đơn giá áp dụng cho một dòng giờ công
+ * (`GET /timesheet-entries/{entryId}/bill-rate/resolve`). Endpoint tổng hợp:
+ * backend tự suy ra `professionalRole` (hồ sơ nhân sự), `contractId` (dòng →
+ * công việc → dự án → hợp đồng) và `asOf` (chính là `workDate`), rồi áp đúng
+ * quy tắc ưu tiên QTN-16 và nhân hệ số theo `workType` (NCL-07-CN-006) để ra
+ * `appliedDailyRate` — mức đơn giá CUỐI CÙNG dùng để tính doanh thu, khác với
+ * `dailyRate` (đơn giá trước khi nhân hệ số).
+ */
+export interface ResolvedTimeEntryRateRes {
+  timeEntryId: number;
+  taskId: number;
+  projectId: number;
+  contractId: number;
+  professionalRole: string;
+  level: string;
+  /** `yyyy-MM-dd` — ngày công của dòng giờ công, cũng là mốc `asOf` dùng tra giá */
+  workDate: string;
+  hours: number;
+  workType: WorkType;
+  /** Đơn giá theo vai trò/cấp bậc TRƯỚC khi nhân hệ số loại hình công việc */
+  dailyRate: number;
+  /** `yyyy-MM-dd` — ngày hiệu lực của mốc đơn giá được áp dụng (có thể khác `workDate`) */
+  effectiveFrom: string;
+  isContractSpecific: boolean;
+  rateFactor: number;
+  /** Đơn giá CUỐI CÙNG = `dailyRate * rateFactor` — dùng số này để tính doanh thu */
+  appliedDailyRate: number;
+}

@@ -6,6 +6,7 @@ import type {
   ResolveBillRateQuery,
   ResolveContractBillRateQuery,
   ResolvedContractBillRateRes,
+  ResolvedTimeEntryRateRes,
 } from '../types/rateTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
@@ -145,4 +146,20 @@ export async function resolveContractBillRate(
   url.searchParams.set('level', query.level);
   url.searchParams.set('asOf', query.asOf);
   return requestBackend<ResolvedContractBillRateRes>(url.toString(), { method: 'GET' });
+}
+
+/**
+ * GET /timesheet-entries/{entryId}/bill-rate/resolve?level=... — đơn giá áp
+ * dụng cho một dòng giờ công cụ thể (NCL-07-CN-005). Endpoint tổng hợp: chỉ
+ * cần `entryId` + `level` (cấp bậc, không tự suy ra được từ hồ sơ nhân sự) —
+ * backend tự suy ra vai trò, hợp đồng và ngày phát sinh (= `workDate` của
+ * dòng), áp quy tắc ưu tiên QTN-16 rồi nhân hệ số theo `workType`
+ * (NCL-07-CN-006) để ra `appliedDailyRate`. `404` nếu không tìm thấy dòng giờ
+ * công/hồ sơ nhân sự, hoặc chưa có đơn giá hay hệ số hợp lệ tại thời điểm đó
+ * — không phải lỗi hệ thống.
+ */
+export async function resolveTimeEntryBillRate(entryId: number, level: string): Promise<ResolvedTimeEntryRateRes> {
+  const url = new URL(`${API_BASE_URL}/timesheet-entries/${entryId}/bill-rate/resolve`);
+  url.searchParams.set('level', level);
+  return requestBackend<ResolvedTimeEntryRateRes>(url.toString(), { method: 'GET' });
 }

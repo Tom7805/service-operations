@@ -7,6 +7,7 @@ import type { BillRateRes } from '../types/rateTypes';
 import RateFormModal from '../components/RateFormModal';
 import RateResolveLookup from '../components/RateResolveLookup';
 import ContractRateManager from '../components/ContractRateManager';
+import TimeEntryRateResolveLookup from '../components/TimeEntryRateResolveLookup';
 
 interface BillRatePageProps {
   currentUserRoles?: string[];
@@ -326,6 +327,8 @@ export default function BillRatePage({
       <RateResolveLookup />
 
       <ContractRateManager currentUserRoles={currentUserRoles} />
+
+      <TimeEntryRateResolveLookup />
 
       <RateFormModal
         isOpen={isFormOpen}

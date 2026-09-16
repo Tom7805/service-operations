@@ -60,3 +60,27 @@ export function validateResolveBillRateForm(values: ResolveBillRateFormValues): 
 
   return errors;
 }
+
+/** Khớp validate của `GET /timesheet-entries/{entryId}/bill-rate/resolve` (NCL-07-CN-005). */
+export interface TimeEntryRateLookupFormValues {
+  /** Rỗng khi chưa nhập */
+  entryId: string;
+  level: string;
+}
+
+export type TimeEntryRateLookupFormErrors = Partial<Record<keyof TimeEntryRateLookupFormValues, string>>;
+
+export function validateTimeEntryRateLookupForm(values: TimeEntryRateLookupFormValues): TimeEntryRateLookupFormErrors {
+  const errors: TimeEntryRateLookupFormErrors = {};
+
+  const idNum = Number(values.entryId);
+  if (!values.entryId.trim() || !Number.isFinite(idNum) || idNum <= 0) {
+    errors.entryId = 'ID dòng giờ công phải là số nguyên dương';
+  }
+
+  if (!values.level.trim()) {
+    errors.level = 'Cấp bậc không được để trống';
+  }
+
+  return errors;
+}
