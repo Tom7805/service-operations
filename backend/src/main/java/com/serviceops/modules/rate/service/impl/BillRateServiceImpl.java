@@ -34,6 +34,10 @@ public class BillRateServiceImpl implements BillRateService {
 		if (role.isBlank()) {
 			throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR, "Vai trò chuyên môn không được để trống");
 		}
+		String level = request.level() == null ? "" : request.level().trim();
+		if (level.isBlank()) {
+			throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR, "Cấp bậc không được để trống");
+		}
 		if (request.dailyRate() == null || request.dailyRate().compareTo(java.math.BigDecimal.ZERO) < 0) {
 			throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR, "Đơn giá theo ngày không được âm");
 		}
@@ -41,26 +45,28 @@ public class BillRateServiceImpl implements BillRateService {
 			throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR, "Ngày hiệu lực không được để trống");
 		}
 
-		billRateRepository.findByProfessionalRoleIgnoreCaseAndEffectiveFrom(role, request.effectiveFrom())
+		billRateRepository.findByProfessionalRoleIgnoreCaseAndLevelIgnoreCaseAndEffectiveFrom(role, level, request.effectiveFrom())
 				.ifPresent(existing -> {
 					throw new BusinessRuleException(ErrorCode.DUPLICATE_DATA,
-							"Đơn giá cho vai trò này đã tồn tại tại ngày hiệu lực đã chọn");
+							"Đơn giá cho vai trò và cấp bậc này đã tồn tại tại ngày hiệu lực đã chọn");
 				});
 
 		BillRate entity = new BillRate();
 		entity.setProfessionalRole(role);
+		entity.setLevel(level);
 		entity.setDailyRate(request.dailyRate());
 		entity.setEffectiveFrom(request.effectiveFrom());
 		BillRate saved = billRateRepository.save(entity);
 		auditLogService.record("Khởi tạo bảng đơn giá theo vai trò", AuditTargetType.GENERAL, saved.getId(),
-				role, "Tạo đơn giá mới: " + role + " = " + request.dailyRate() + " / ngày, hiệu lực từ " + request.effectiveFrom());
-		return new BillRateRes(saved.getProfessionalRole(), saved.getDailyRate(), saved.getEffectiveFrom());
+				role, "Tạo đơn giá mới: " + role + " (" + level + ") = " + request.dailyRate()
+						+ " / ngày, hiệu lực từ " + request.effectiveFrom());
+		return new BillRateRes(saved.getProfessionalRole(), saved.getLevel(), saved.getDailyRate(), saved.getEffectiveFrom());
 	}
 
 	@Override
 	public List<BillRateRes> listCurrentlyEffective() {
 		return billRateRepository.findAllCurrentlyEffective(LocalDate.now()).stream()
-				.map(rate -> new BillRateRes(rate.getProfessionalRole(), rate.getDailyRate(), rate.getEffectiveFrom()))
+				.map(rate -> new BillRateRes(rate.getProfessionalRole(), rate.getLevel(), rate.getDailyRate(), rate.getEffectiveFrom()))
 				.toList();
 	}
 }
