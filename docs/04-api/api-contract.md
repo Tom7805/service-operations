@@ -3531,6 +3531,67 @@ Danh sách mỗi cặp (vai trò, cấp bậc) đang có đơn giá hiệu lực
 - Đơn giá mới khai báo (`effectiveFrom` trong tương lai) sẽ **không** xuất hiện ở endpoint này cho tới đúng
   ngày hiệu lực — đây là chủ đích (QTN-15: đơn giá áp theo thời điểm phát sinh).
 
+### `NCL-07-CN-002` — Đặt hiệu lực theo thời điểm cho đơn giá
+
+Không có bảng/API riêng — đây là hệ quả trực tiếp của cách `NCL-07-CN-001` đã thiết kế: `POST /bill-rates`
+**luôn tạo dòng mới**, không bao giờ ghi đè hay xoá dòng cũ (khoá duy nhất `(professionalRole, level,
+effectiveFrom)` đã buộc mỗi mốc hiệu lực là một dòng riêng — TC-01, TC-03). Phần còn thiếu của story này
+là **tra đúng dòng hiệu lực tại một ngày phát sinh cụ thể** (TC-02, QTN-15), bổ sung ở endpoint dưới đây.
+
+#### `GET /bill-rates/resolve`
+
+Trả về dòng đơn giá có hiệu lực tại một ngày phát sinh cụ thể — dùng khi tính doanh thu cho một dòng giờ
+công đã ghi nhận trong quá khứ, để dòng đó **luôn áp giá đang hiệu lực tại đúng ngày nó phát sinh**, không
+bị ảnh hưởng bởi lần tăng giá sau đó (TC-02). Yêu cầu token **Kế toán** (`VT-05`) hoặc **Quản trị viên**
+(`VT-07`) — cùng nhóm quyền với thao tác khai báo, vì đây cũng là một phần của "quản lý hiệu lực của đơn
+giá" (TC-04); vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối.
+
+```
+GET /bill-rates/resolve?professionalRole=Lap+trinh+vien+cao+cap&level=Cao+cap&asOf=2026-06-30
+```
+
+| Query param | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `professionalRole` | string | có | Vai trò chuyên môn, khớp chính xác (không phân biệt hoa/thường) |
+| `level` | string | có | Cấp bậc, khớp chính xác (không phân biệt hoa/thường) |
+| `asOf` | date (`yyyy-MM-dd`) | có | Ngày phát sinh cần tra giá (vd ngày công của dòng giờ công) |
+
+Backend chọn dòng có `effectiveFrom` **gần nhất nhưng không vượt quá** `asOf` — đúng dòng hiệu lực tại
+thời điểm đó, kể cả khi đã có dòng hiệu lực mới hơn (ngày trong tương lai so với `asOf`) được khai báo sau.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "professionalRole": "Lap trinh vien cao cap",
+    "level": "Cao cap",
+    "dailyRate": 500000,
+    "effectiveFrom": "2026-01-01"
+  }
+}
+```
+
+`effectiveFrom` trong response là ngày hiệu lực của **dòng được áp dụng** (có thể khác `asOf` đã gửi) —
+Frontend nên hiển thị giá trị này để kế toán thấy rõ giá đang tính dựa trên mốc hiệu lực nào.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) hoặc Quản trị viên (`VT-07`) — ghi nhật ký lần từ chối (TC-04) |
+| 400 | `VALIDATION_ERROR` | Thiếu `professionalRole`/`level`/`asOf` |
+| 404 | `RESOURCE_NOT_FOUND` | Chưa có dòng đơn giá nào hiệu lực **trước hoặc đúng** `asOf` cho vai trò + cấp bậc đó |
+
+**Lưu ý cho Frontend:**
+- Khác với `GET /bill-rates/current` (luôn lấy theo **hôm nay**), endpoint này nhận `asOf` tuỳ ý — dùng
+  cho màn hình xem lại/tính doanh thu của các kỳ trước, không phải màn hình lập báo giá mới.
+- `404` không phải lỗi hệ thống — nghĩa là vai trò/cấp bậc đó **chưa từng có đơn giá** tại thời điểm
+  `asOf` (vd `asOf` sớm hơn cả dòng đầu tiên từng khai báo); nên hiển thị thông báo "chưa có đơn giá tại
+  thời điểm này" thay vì lỗi chung chung.
+
 ---
 
 ## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)

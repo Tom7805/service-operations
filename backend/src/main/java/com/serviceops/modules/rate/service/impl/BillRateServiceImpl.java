@@ -69,4 +69,26 @@ public class BillRateServiceImpl implements BillRateService {
 				.map(rate -> new BillRateRes(rate.getProfessionalRole(), rate.getLevel(), rate.getDailyRate(), rate.getEffectiveFrom()))
 				.toList();
 	}
+
+	@Override
+	public BillRateRes resolve(String professionalRole, String level, LocalDate asOf) {
+		String role = professionalRole == null ? "" : professionalRole.trim();
+		if (role.isBlank()) {
+			throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR, "Vai trò chuyên môn không được để trống");
+		}
+		String lvl = level == null ? "" : level.trim();
+		if (lvl.isBlank()) {
+			throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR, "Cấp bậc không được để trống");
+		}
+		if (asOf == null) {
+			throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR, "Ngày phát sinh không được để trống");
+		}
+
+		BillRate rate = billRateRepository
+				.findTopByProfessionalRoleIgnoreCaseAndLevelIgnoreCaseAndEffectiveFromLessThanEqualOrderByEffectiveFromDesc(
+						role, lvl, asOf)
+				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
+						"Chưa có đơn giá hiệu lực cho " + role + " (" + lvl + ") tại ngày " + asOf));
+		return new BillRateRes(rate.getProfessionalRole(), rate.getLevel(), rate.getDailyRate(), rate.getEffectiveFrom());
+	}
 }

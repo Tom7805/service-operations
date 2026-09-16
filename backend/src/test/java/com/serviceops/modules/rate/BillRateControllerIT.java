@@ -27,6 +27,7 @@ import java.time.LocalDate;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -106,5 +107,48 @@ class BillRateControllerIT {
 					.content(objectMapper.writeValueAsString(req)))
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.errorCode").value("DUPLICATE_DATA"));
+	}
+
+	@Test
+	@DisplayName("Ke toan tra dung don gia hieu luc tai ngay gio cong phat sinh (NCL-07-CN-002 TC-02)")
+	@WithMockUser(authorities = "ROLE_VT-05")
+	void resolvesRateAsOfWorkDate() throws Exception {
+		BillRateRes res = new BillRateRes("Lập trình viên cao cấp", "Cao cấp", new BigDecimal("500000"), LocalDate.of(2026, 1, 1));
+		when(billRateService.resolve("Lập trình viên cao cấp", "Cao cấp", LocalDate.of(2026, 6, 30))).thenReturn(res);
+
+		mockMvc.perform(get("/bill-rates/resolve")
+					.param("professionalRole", "Lập trình viên cao cấp")
+					.param("level", "Cao cấp")
+					.param("asOf", "2026-06-30"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.dailyRate").value(500000))
+				.andExpect(jsonPath("$.data.effectiveFrom").value("2026-01-01"));
+	}
+
+	@Test
+	@DisplayName("Vai tro khong phai ke toan/quan tri vien bi tu choi tra cuu hieu luc don gia (NCL-07-CN-002 TC-04)")
+	@WithMockUser(authorities = "ROLE_VT-04")
+	void deniesOtherRolesFromResolve() throws Exception {
+		mockMvc.perform(get("/bill-rates/resolve")
+					.param("professionalRole", "Lập trình viên cao cấp")
+					.param("level", "Cao cấp")
+					.param("asOf", "2026-06-30"))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+	}
+
+	@Test
+	@DisplayName("Chua co don gia hieu luc tai ngay yeu cau tra ve 404")
+	@WithMockUser(authorities = "ROLE_VT-05")
+	void resolveReturnsNotFoundWhenNoRateApplies() throws Exception {
+		when(billRateService.resolve("Lập trình viên cao cấp", "Cao cấp", LocalDate.of(2020, 1, 1)))
+				.thenThrow(new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Chưa có đơn giá hiệu lực"));
+
+		mockMvc.perform(get("/bill-rates/resolve")
+					.param("professionalRole", "Lập trình viên cao cấp")
+					.param("level", "Cao cấp")
+					.param("asOf", "2020-01-01"))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.errorCode").value("RESOURCE_NOT_FOUND"));
 	}
 }
