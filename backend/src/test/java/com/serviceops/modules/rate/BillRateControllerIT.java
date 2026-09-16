@@ -54,8 +54,8 @@ class BillRateControllerIT {
 	@DisplayName("Ke toan (VT-05) tao bang don gia thanh cong")
 	@WithMockUser(authorities = "ROLE_VT-05")
 	void allowsAccountantToCreateBillRate() throws Exception {
-		BillRateCreateReq req = new BillRateCreateReq("Lập trình viên cao cấp", new BigDecimal("2500000"), LocalDate.of(2025, 1, 1));
-		BillRateRes res = new BillRateRes("Lập trình viên cao cấp", new BigDecimal("2500000"), LocalDate.of(2025, 1, 1));
+		BillRateCreateReq req = new BillRateCreateReq("Lập trình viên cao cấp", "Cao cấp", new BigDecimal("2500000"), LocalDate.of(2025, 1, 1));
+		BillRateRes res = new BillRateRes("Lập trình viên cao cấp", "Cao cấp", new BigDecimal("2500000"), LocalDate.of(2025, 1, 1));
 		when(billRateService.create(any())).thenReturn(res);
 
 		mockMvc.perform(post("/bill-rates")
@@ -64,6 +64,7 @@ class BillRateControllerIT {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.success").value(true))
 				.andExpect(jsonPath("$.data.professionalRole").value("Lập trình viên cao cấp"))
+				.andExpect(jsonPath("$.data.level").value("Cao cấp"))
 				.andExpect(jsonPath("$.data.dailyRate").value(2500000));
 	}
 
@@ -71,7 +72,7 @@ class BillRateControllerIT {
 	@DisplayName("Vai tro khong phai ke toan hoac quan tri vien bi tu choi")
 	@WithMockUser(authorities = "ROLE_VT-04")
 	void deniesOtherRoles() throws Exception {
-		BillRateCreateReq req = new BillRateCreateReq("Lập trình viên cao cấp", new BigDecimal("2500000"), LocalDate.of(2025, 1, 1));
+		BillRateCreateReq req = new BillRateCreateReq("Lập trình viên cao cấp", "Cao cấp", new BigDecimal("2500000"), LocalDate.of(2025, 1, 1));
 
 		mockMvc.perform(post("/bill-rates")
 					.contentType("application/json")
@@ -84,7 +85,7 @@ class BillRateControllerIT {
 	@DisplayName("Don gia am bi reject 400")
 	@WithMockUser(authorities = "ROLE_VT-05")
 	void rejectsNegativeDailyRate() throws Exception {
-		BillRateCreateReq req = new BillRateCreateReq("Lập trình viên cao cấp", new BigDecimal("-1000"), LocalDate.of(2025, 1, 1));
+		BillRateCreateReq req = new BillRateCreateReq("Lập trình viên cao cấp", "Cao cấp", new BigDecimal("-1000"), LocalDate.of(2025, 1, 1));
 
 		mockMvc.perform(post("/bill-rates")
 					.contentType("application/json")
@@ -97,7 +98,7 @@ class BillRateControllerIT {
 	@DisplayName("Neu service nem BusinessRuleException thi tra ve ma tuong ung")
 	@WithMockUser(authorities = "ROLE_VT-07")
 	void returnsBusinessRuleError() throws Exception {
-		BillRateCreateReq req = new BillRateCreateReq("Lập trình viên cao cấp", new BigDecimal("2500000"), LocalDate.of(2025, 1, 1));
+		BillRateCreateReq req = new BillRateCreateReq("Lập trình viên cao cấp", "Cao cấp", new BigDecimal("2500000"), LocalDate.of(2025, 1, 1));
 		when(billRateService.create(any(BillRateCreateReq.class))).thenThrow(new BusinessRuleException(ErrorCode.DUPLICATE_DATA, "Đơn giá đã tồn tại"));
 
 		mockMvc.perform(post("/bill-rates")
