@@ -2,7 +2,9 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import ContractRateManager from '../components/ContractRateManager';
 import * as ratesApi from '../api/ratesApi';
+import * as contractsApi from '../../contracts/api/contractsApi';
 import type { ContractBillRateRes } from '../types/rateTypes';
+import type { ContractRes } from '../../contracts/types/contractTypes';
 
 vi.mock('../api/ratesApi', () => ({
   fetchContractBillRates: vi.fn(),
@@ -16,19 +18,29 @@ vi.mock('../api/ratesApi', () => ({
   },
 }));
 
+vi.mock('../../contracts/api/contractsApi', () => ({
+  fetchContracts: vi.fn(),
+}));
+
 const contractRates: ContractBillRateRes[] = [
   { contractId: 1, professionalRole: 'Lập trình viên cao cấp', level: 'Cao cấp', dailyRate: 3_000_000, effectiveFrom: '2026-01-01' },
 ];
 
+const ROLE_OPTIONS = ['Lập trình viên cao cấp', 'Kiểm thử viên'];
+const LEVELS_BY_ROLE = { 'Lập trình viên cao cấp': ['Cao cấp'], 'Kiểm thử viên': ['Trung cấp'] };
+
 describe('ContractRateManager (NCL-07-CN-003 — Khai báo đơn giá riêng theo hợp đồng)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mặc định coi như chưa tải được danh sách hợp đồng (vd VT-07 không có quyền liệt
+    // kê) để các test cũ dùng ô nhập ID không bị đổi hành vi.
+    vi.mocked(contractsApi.fetchContracts).mockRejectedValue(new Error('no list permission'));
   });
 
-  it('chưa nhập ID hợp đồng thì chưa gọi API, chỉ hiện ô nhập', () => {
-    render(<ContractRateManager currentUserRoles={['VT-05']} />);
+  it('chưa nhập ID hợp đồng thì chưa gọi API, chỉ hiện ô nhập', async () => {
+    render(<ContractRateManager currentUserRoles={['VT-05']} roleOptions={ROLE_OPTIONS} levelsByRole={LEVELS_BY_ROLE} />);
 
-    expect(screen.getByLabelText('ID hợp đồng')).toBeInTheDocument();
+    expect(await screen.findByLabelText('ID hợp đồng')).toBeInTheDocument();
     expect(ratesApi.fetchContractBillRates).not.toHaveBeenCalled();
     expect(screen.queryByTestId('contract-rate-table')).toBeNull();
   });
@@ -36,14 +48,33 @@ describe('ContractRateManager (NCL-07-CN-003 — Khai báo đơn giá riêng the
   it('TC-01/TC-02: nhập ID hợp đồng rồi mở → tải đúng danh sách đơn giá riêng của hợp đồng đó', async () => {
     vi.mocked(ratesApi.fetchContractBillRates).mockResolvedValue(contractRates);
 
-    render(<ContractRateManager currentUserRoles={['VT-05']} />);
+    render(<ContractRateManager currentUserRoles={['VT-05']} roleOptions={ROLE_OPTIONS} levelsByRole={LEVELS_BY_ROLE} />);
 
+    await screen.findByLabelText('ID hợp đồng');
     fireEvent.change(screen.getByLabelText('ID hợp đồng'), { target: { value: '1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Mở đơn giá hợp đồng' }));
 
     await waitFor(() => expect(ratesApi.fetchContractBillRates).toHaveBeenCalledWith(1));
     await waitFor(() => expect(screen.getByTestId('contract-rate-table')).toBeInTheDocument());
-    expect(screen.getByText('Lập trình viên cao cấp')).toBeInTheDocument();
+    expect(within(screen.getByTestId('contract-rate-table')).getByText('Lập trình viên cao cấp')).toBeInTheDocument();
+  });
+
+  it('VT-05 tải được danh sách hợp đồng thì chọn theo tên thay vì gõ ID', async () => {
+    const contracts: ContractRes[] = [
+      { id: 1, contractCode: 'HD-001', name: 'Website bán hàng', opportunityId: null, customerId: 1, quoteId: null, contractType: 'FIXED_PRICE', totalValue: 100000000, status: 'ACTIVE' } as ContractRes,
+    ];
+    vi.mocked(contractsApi.fetchContracts).mockResolvedValue(contracts);
+    vi.mocked(ratesApi.fetchContractBillRates).mockResolvedValue(contractRates);
+
+    render(<ContractRateManager currentUserRoles={['VT-05']} roleOptions={ROLE_OPTIONS} levelsByRole={LEVELS_BY_ROLE} />);
+
+    const select = await screen.findByLabelText('Hợp đồng');
+    expect(screen.queryByLabelText('ID hợp đồng')).toBeNull();
+    fireEvent.change(select, { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Mở đơn giá hợp đồng' }));
+
+    await waitFor(() => expect(ratesApi.fetchContractBillRates).toHaveBeenCalledWith(1));
+    expect(await screen.findByText('HD-001')).toBeInTheDocument();
   });
 
   it('khai báo đơn giá riêng thành công thì bảng cập nhật ngay, không cần tải lại', async () => {
@@ -57,7 +88,7 @@ describe('ContractRateManager (NCL-07-CN-003 — Khai báo đơn giá riêng the
     };
     vi.mocked(ratesApi.createContractBillRate).mockResolvedValue(created);
 
-    render(<ContractRateManager currentUserRoles={['VT-07']} />);
+    render(<ContractRateManager currentUserRoles={['VT-07']} roleOptions={ROLE_OPTIONS} levelsByRole={LEVELS_BY_ROLE} />);
 
     fireEvent.change(screen.getByLabelText('ID hợp đồng'), { target: { value: '7' } });
     fireEvent.click(screen.getByRole('button', { name: 'Mở đơn giá hợp đồng' }));
@@ -83,7 +114,7 @@ describe('ContractRateManager (NCL-07-CN-003 — Khai báo đơn giá riêng the
     });
 
     await waitFor(() => expect(screen.getByTestId('contract-rate-table')).toBeInTheDocument());
-    expect(screen.getByText('Kiểm thử viên')).toBeInTheDocument();
+    expect(within(screen.getByTestId('contract-rate-table')).getByText('Kiểm thử viên')).toBeInTheDocument();
   });
 
   it('lỗi tải danh sách (vd hợp đồng không tồn tại) hiển thị rõ và có nút thử lại', async () => {
@@ -91,8 +122,9 @@ describe('ContractRateManager (NCL-07-CN-003 — Khai báo đơn giá riêng the
       new ratesApi.RatesApiError('RESOURCE_NOT_FOUND', 'Không tìm thấy hợp đồng với ID: 999', 404)
     );
 
-    render(<ContractRateManager currentUserRoles={['VT-05']} />);
+    render(<ContractRateManager currentUserRoles={['VT-05']} roleOptions={ROLE_OPTIONS} levelsByRole={LEVELS_BY_ROLE} />);
 
+    await screen.findByLabelText('ID hợp đồng');
     fireEvent.change(screen.getByLabelText('ID hợp đồng'), { target: { value: '999' } });
     fireEvent.click(screen.getByRole('button', { name: 'Mở đơn giá hợp đồng' }));
 

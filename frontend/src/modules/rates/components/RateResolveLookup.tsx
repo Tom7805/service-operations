@@ -11,6 +11,13 @@ const EMPTY_FORM: ResolveBillRateFormValues = {
   asOf: '',
 };
 
+interface Props {
+  /** Danh sách vai trò chuyên môn đã từng khai báo, để chọn theo tên thay vì gõ tay. */
+  roleOptions: string[];
+  /** Cấp bậc đã khai báo cho từng vai trò — dùng để lọc lựa chọn cấp bậc theo vai trò đã chọn. */
+  levelsByRole: Record<string, string[]>;
+}
+
 function formatDailyRate(value: number): string {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(
     value
@@ -31,7 +38,7 @@ function formatDate(value: string): string {
  * Không mở modal riêng — đặt ngay dưới bảng đơn giá vì cùng nhóm quyền
  * (VT-05/VT-07) và người dùng cần đối chiếu qua lại với các dòng đã khai báo.
  */
-export default function RateResolveLookup() {
+export default function RateResolveLookup({ roleOptions, levelsByRole }: Props) {
   const [values, setValues] = useState<ResolveBillRateFormValues>(EMPTY_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -81,8 +88,6 @@ export default function RateResolveLookup() {
       <p className="field-hint" style={{ marginBottom: '14px' }}>
         Dùng khi tính lại doanh thu cho giờ công đã ghi nhận trong quá khứ — hệ thống trả về dòng đơn giá có
         hiệu lực gần nhất nhưng không vượt quá ngày phát sinh bạn nhập, kể cả khi đã có đơn giá mới hơn.
-        Nhập "Vai trò chuyên môn"/"Cấp bậc" đúng như một dòng đã khai báo trong bảng đơn giá phía trên
-        (không phân biệt hoa/thường, nhưng phải đúng chữ) — copy trực tiếp từ đó là chắc chắn nhất.
       </p>
 
       {serverError && (
@@ -91,19 +96,30 @@ export default function RateResolveLookup() {
         </div>
       )}
 
+      {roleOptions.length === 0 && (
+        <p className="field-hint" style={{ marginBottom: '14px' }}>
+          Chưa có đơn giá nào được khai báo ở bảng trên — hãy khai báo ít nhất một dòng trước khi tra cứu.
+        </p>
+      )}
+
       <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'flex-end' }}>
         <div style={{ minWidth: '200px', flex: '1 1 200px' }}>
           <label className="form-label" htmlFor="resolve-role">
             Vai trò chuyên môn
           </label>
-          <input
+          <select
             id="resolve-role"
-            type="text"
             className={`form-input ${errors.professionalRole ? 'form-input--error' : ''}`}
-            placeholder="Ví dụ: Lập trình viên"
             value={values.professionalRole}
-            onChange={(e) => setValues((v) => ({ ...v, professionalRole: e.target.value }))}
-          />
+            onChange={(e) => setValues((v) => ({ ...v, professionalRole: e.target.value, level: '' }))}
+          >
+            <option value="">-- Chọn vai trò --</option>
+            {roleOptions.map((role) => (
+              <option key={role} value={role}>
+                {role}
+              </option>
+            ))}
+          </select>
           {errors.professionalRole && <small className="field-error">{errors.professionalRole}</small>}
         </div>
 
@@ -111,14 +127,20 @@ export default function RateResolveLookup() {
           <label className="form-label" htmlFor="resolve-level">
             Cấp bậc
           </label>
-          <input
+          <select
             id="resolve-level"
-            type="text"
             className={`form-input ${errors.level ? 'form-input--error' : ''}`}
-            placeholder="Ví dụ: Cao cấp"
             value={values.level}
+            disabled={!values.professionalRole}
             onChange={(e) => setValues((v) => ({ ...v, level: e.target.value }))}
-          />
+          >
+            <option value="">-- Chọn cấp bậc --</option>
+            {(levelsByRole[values.professionalRole] ?? []).map((level) => (
+              <option key={level} value={level}>
+                {level}
+              </option>
+            ))}
+          </select>
           {errors.level && <small className="field-error">{errors.level}</small>}
         </div>
 

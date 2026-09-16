@@ -22,6 +22,10 @@ vi.mock('../api/ratesApi', () => ({
   },
 }));
 
+vi.mock('../../contracts/api/contractsApi', () => ({
+  fetchContracts: vi.fn(() => Promise.reject(new Error('not needed for this suite'))),
+}));
+
 const billRates: BillRateRes[] = [
   { professionalRole: 'Lập trình viên', level: 'Trung cấp', dailyRate: 1_500_000, effectiveFrom: '2024-01-01' },
   { professionalRole: 'Lập trình viên', level: 'Cao cấp', dailyRate: 2_500_000, effectiveFrom: '2024-01-01' },
@@ -50,9 +54,10 @@ describe('BillRatePage (NCL-07-CN-001 — Khai báo bảng đơn giá theo vai t
       expect(screen.getByTestId('bill-rate-table')).toBeInTheDocument();
     });
 
-    expect(screen.getAllByText('Lập trình viên')).toHaveLength(2);
-    expect(screen.getByText('Trung cấp')).toBeInTheDocument();
-    expect(screen.getByText('Cao cấp')).toBeInTheDocument();
+    const table = screen.getByTestId('bill-rate-table');
+    expect(within(table).getAllByText('Lập trình viên')).toHaveLength(2);
+    expect(within(table).getByText('Trung cấp')).toBeInTheDocument();
+    expect(within(table).getByText('Cao cấp')).toBeInTheDocument();
   });
 
   it('Quản trị viên (VT-07) cũng khai báo được: mở modal, điền form, lưu thành công thì bảng cập nhật ngay', async () => {
@@ -88,7 +93,9 @@ describe('BillRatePage (NCL-07-CN-001 — Khai báo bảng đơn giá theo vai t
       });
     });
 
-    await waitFor(() => expect(screen.getByText('Kiểm thử viên')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(within(screen.getByTestId('bill-rate-table')).getByText('Kiểm thử viên')).toBeInTheDocument()
+    );
   });
 
   it('TC-02: chặn phía client khi thiếu trường bắt buộc, không gọi API tạo', async () => {

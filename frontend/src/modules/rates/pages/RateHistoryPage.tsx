@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import { roleLabels } from '../../../utils/roleLabel';
-import { fetchBillRateHistory, RatesApiError } from '../api/ratesApi';
+import { fetchBillRateHistory, fetchCurrentBillRates, RatesApiError } from '../api/ratesApi';
 import type { BillRateHistoryRes } from '../types/rateTypes';
 import { validateRateHistoryQuery, type RateHistoryQueryFormValues } from '../validators/rateValidators';
 import RateEffectiveTimeline from '../components/RateEffectiveTimeline';
@@ -36,6 +36,28 @@ export default function RateHistoryPage({
   const [notFoundMessage, setNotFoundMessage] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [billRates, setBillRates] = useState<{ professionalRole: string; level: string }[]>([]);
+
+  useEffect(() => {
+    if (!isAllowed) return;
+    fetchCurrentBillRates()
+      .then(setBillRates)
+      .catch(() => setBillRates([]));
+  }, [isAllowed]);
+
+  const roleOptions = useMemo(
+    () => Array.from(new Set(billRates.map((r) => r.professionalRole))).sort((a, b) => a.localeCompare(b)),
+    [billRates]
+  );
+  const levelsByRole = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const r of billRates) {
+      const list = map[r.professionalRole] ?? (map[r.professionalRole] = []);
+      if (!list.includes(r.level)) list.push(r.level);
+    }
+    Object.values(map).forEach((list) => list.sort((a, b) => a.localeCompare(b)));
+    return map;
+  }, [billRates]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -120,14 +142,19 @@ export default function RateHistoryPage({
             <label className="form-label" htmlFor="rate-history-role">
               Vai trò chuyên môn
             </label>
-            <input
+            <select
               id="rate-history-role"
-              type="text"
               className={`form-input ${errors.professionalRole ? 'form-input--error' : ''}`}
-              placeholder="Ví dụ: Lập trình viên"
               value={values.professionalRole}
-              onChange={(e) => setValues((v) => ({ ...v, professionalRole: e.target.value }))}
-            />
+              onChange={(e) => setValues((v) => ({ ...v, professionalRole: e.target.value, level: '' }))}
+            >
+              <option value="">-- Chọn vai trò --</option>
+              {roleOptions.map((role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
+            </select>
             {errors.professionalRole && <small className="field-error">{errors.professionalRole}</small>}
           </div>
 
@@ -135,14 +162,20 @@ export default function RateHistoryPage({
             <label className="form-label" htmlFor="rate-history-level">
               Cấp bậc
             </label>
-            <input
+            <select
               id="rate-history-level"
-              type="text"
               className={`form-input ${errors.level ? 'form-input--error' : ''}`}
-              placeholder="Ví dụ: Cao cấp"
               value={values.level}
+              disabled={!values.professionalRole}
               onChange={(e) => setValues((v) => ({ ...v, level: e.target.value }))}
-            />
+            >
+              <option value="">-- Chọn cấp bậc --</option>
+              {(levelsByRole[values.professionalRole] ?? []).map((level) => (
+                <option key={level} value={level}>
+                  {level}
+                </option>
+              ))}
+            </select>
             {errors.level && <small className="field-error">{errors.level}</small>}
           </div>
 
@@ -179,7 +212,7 @@ export default function RateHistoryPage({
 
         {!loading && !history && !notFoundMessage && !serverError && !hasSearched && (
           <p className="field-hint" style={{ marginTop: '14px' }}>
-            Nhập vai trò chuyên môn và cấp bậc rồi bấm "Xem lịch sử" để tra cứu.
+            Chọn vai trò chuyên môn và cấp bậc rồi bấm "Xem lịch sử" để tra cứu.
           </p>
         )}
       </div>

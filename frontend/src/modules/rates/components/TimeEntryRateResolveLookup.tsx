@@ -14,6 +14,11 @@ const EMPTY_FORM: TimeEntryRateLookupFormValues = {
   level: '',
 };
 
+interface Props {
+  /** Toàn bộ cấp bậc đã từng khai báo trong bảng đơn giá, để chọn theo tên thay vì gõ tay. */
+  levelOptions: string[];
+}
+
 function formatMoney(value: number): string {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 2 }).format(
     value
@@ -33,7 +38,7 @@ function formatDate(value: string): string {
  * đã nhân hệ số loại hình công việc — NCL-07-CN-006) làm trọng tâm, `dailyRate`
  * chỉ để đối chiếu.
  */
-export default function TimeEntryRateResolveLookup() {
+export default function TimeEntryRateResolveLookup({ levelOptions }: Props) {
   const [values, setValues] = useState<TimeEntryRateLookupFormValues>(EMPTY_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -80,8 +85,7 @@ export default function TimeEntryRateResolveLookup() {
       <p className="field-hint" style={{ marginBottom: '14px' }}>
         Chỉ cần ID dòng giờ công và cấp bậc của người thực hiện — hệ thống tự suy ra vai trò, hợp đồng và
         ngày phát sinh để tra đúng đơn giá đang dùng để tính doanh thu cho dòng đó. Lấy "ID dòng giờ công" ở
-        trang "Điều chỉnh giờ công đã duyệt" — mỗi dòng có ghi ID ngay dưới ngày công. "Cấp bậc" là cấp bậc
-        đã khai báo cho vai trò của người đó trong bảng đơn giá (ví dụ: Cao cấp), không phải chức danh trong hồ sơ nhân sự.
+        trang "Điều chỉnh giờ công đã duyệt" — mỗi dòng có ghi ID ngay dưới ngày công.
       </p>
 
       {serverError && (
@@ -111,14 +115,19 @@ export default function TimeEntryRateResolveLookup() {
           <label className="form-label" htmlFor="time-entry-resolve-level">
             Cấp bậc
           </label>
-          <input
+          <select
             id="time-entry-resolve-level"
-            type="text"
             className={`form-input ${errors.level ? 'form-input--error' : ''}`}
-            placeholder="Ví dụ: Cao cấp"
             value={values.level}
             onChange={(e) => setValues((v) => ({ ...v, level: e.target.value }))}
-          />
+          >
+            <option value="">-- Chọn cấp bậc --</option>
+            {levelOptions.map((level) => (
+              <option key={level} value={level}>
+                {level}
+              </option>
+            ))}
+          </select>
           {errors.level && <small className="field-error">{errors.level}</small>}
         </div>
 

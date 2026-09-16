@@ -1,6 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { ICONS } from '../../../components/common/icons';
+import { fetchContracts } from '../../contracts/api/contractsApi';
+import type { ContractRes } from '../../contracts/types/contractTypes';
 import { fetchContractBillRates, RatesApiError } from '../api/ratesApi';
 import type { ContractBillRateRes } from '../types/rateTypes';
 import ContractRateFormModal from './ContractRateFormModal';
@@ -8,6 +10,10 @@ import ContractRateResolveLookup from './ContractRateResolveLookup';
 
 interface Props {
   currentUserRoles?: string[];
+  /** Danh sách vai trò chuyên môn đã từng khai báo, để chọn theo tên thay vì gõ tay. */
+  roleOptions: string[];
+  /** Cấp bậc đã khai báo cho từng vai trò — dùng để lọc lựa chọn cấp bậc theo vai trò đã chọn. */
+  levelsByRole: Record<string, string[]>;
 }
 
 function formatDailyRate(value: number): string {
@@ -23,16 +29,19 @@ function formatDate(value: string): string {
 
 /**
  * NCL-07-CN-003 — "Đơn giá riêng theo hợp đồng": Kế toán (VT-05) hoặc Quản
- * trị viên (VT-07) nhập ID hợp đồng để xem/khai báo mức giá đàm phán riêng
- * cho hợp đồng đó, ưu tiên hơn bảng đơn giá chung khi tính doanh thu (QTN-16).
+ * trị viên (VT-07) chọn hợp đồng để xem/khai báo mức giá đàm phán riêng cho
+ * hợp đồng đó, ưu tiên hơn bảng đơn giá chung khi tính doanh thu (QTN-16).
  *
- * Không dùng `GET /contracts` để chọn từ danh sách vì endpoint đó chỉ mở cho
- * Kế toán (VT-05) — Quản trị viên (VT-07) được phép quản lý đơn giá riêng
- * theo hợp đồng nhưng KHÔNG có quyền liệt kê hợp đồng, nên khung nhập ID trực
- * tiếp là lối vào chung cho cả hai vai trò, khớp đúng nhóm quyền của chính
- * các endpoint `/contracts/{contractId}/bill-rates*`.
+ * `GET /contracts` (danh sách theo tên) chỉ mở cho Kế toán (VT-05) — Quản trị
+ * viên (VT-07) được phép quản lý đơn giá riêng theo hợp đồng nhưng KHÔNG có
+ * quyền liệt kê hợp đồng, nên với vai trò này vẫn phải nhập ID hợp đồng trực
+ * tiếp (xem trang Hợp đồng, cột "Mã hợp đồng" có ghi kèm ID), khớp đúng nhóm
+ * quyền của chính các endpoint `/contracts/{contractId}/bill-rates*`.
  */
-export default function ContractRateManager({ currentUserRoles = [] }: Props) {
+export default function ContractRateManager({ currentUserRoles = [], roleOptions, levelsByRole }: Props) {
+  const canListContracts = currentUserRoles.includes('VT-05');
+  const [contracts, setContracts] = useState<ContractRes[]>([]);
+  const [contractsLoadError, setContractsLoadError] = useState<string | null>(null);
   const [contractIdInput, setContractIdInput] = useState('');
   const [activeContractId, setActiveContractId] = useState<number | null>(null);
   const [rates, setRates] = useState<ContractBillRateRes[]>([]);
@@ -40,6 +49,13 @@ export default function ContractRateManager({ currentUserRoles = [] }: Props) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!canListContracts) return;
+    fetchContracts()
+      .then(setContracts)
+      .catch(() => setContractsLoadError('Không tải được danh sách hợp đồng — vẫn có thể nhập ID hợp đồng thủ công.'));
+  }, [canListContracts]);
 
   const loadContractRates = useCallback(async (contractId: number) => {
     setIsLoading(true);
@@ -80,26 +96,53 @@ export default function ContractRateManager({ currentUserRoles = [] }: Props) {
       </div>
       <p className="field-hint" style={{ marginBottom: '14px' }}>
         Mức giá đàm phán riêng cho một hợp đồng cụ thể — khi tính doanh thu, hệ thống ưu tiên dùng đơn giá
-        riêng này thay vì bảng đơn giá chung công ty. Lưu ý: "ID hợp đồng" ở đây là mã số nội bộ, khác với
-        "Mã hợp đồng" (ví dụ HD-001) hiển thị trên trang Hợp đồng — mở trang Hợp đồng, ID số nằm ngay dưới
-        mã hợp đồng của từng dòng.
+        riêng này thay vì bảng đơn giá chung công ty.
       </p>
 
-      <form onSubmit={handleOpenContract} style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-        <div style={{ minWidth: '200px' }}>
-          <label className="form-label" htmlFor="contract-rate-id">
-            ID hợp đồng
-          </label>
-          <input
-            id="contract-rate-id"
-            type="number"
-            min={1}
-            className="form-input"
-            placeholder="Ví dụ: 1"
-            value={contractIdInput}
-            onChange={(e) => setContractIdInput(e.target.value)}
-          />
+      {contractsLoadError && (
+        <div className="alert-box alert-box--danger" role="alert" style={{ marginBottom: '10px' }}>
+          {contractsLoadError}
         </div>
+      )}
+
+      <form onSubmit={handleOpenContract} style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        {canListContracts && !contractsLoadError ? (
+          <div style={{ minWidth: '280px' }}>
+            <label className="form-label" htmlFor="contract-rate-select">
+              Hợp đồng
+            </label>
+            <select
+              id="contract-rate-select"
+              className="form-input"
+              value={contractIdInput}
+              onChange={(e) => setContractIdInput(e.target.value)}
+            >
+              <option value="">-- Chọn hợp đồng --</option>
+              {contracts.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.contractCode} — {c.name}
+                  {c.customerName ? ` (${c.customerName})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div style={{ minWidth: '200px' }}>
+            <label className="form-label" htmlFor="contract-rate-id">
+              ID hợp đồng
+            </label>
+            <input
+              id="contract-rate-id"
+              type="number"
+              min={1}
+              className="form-input"
+              placeholder="Ví dụ: 1"
+              value={contractIdInput}
+              onChange={(e) => setContractIdInput(e.target.value)}
+            />
+            <small className="field-hint">Xem ID ở trang Hợp đồng, dưới mỗi mã hợp đồng.</small>
+          </div>
+        )}
         <button type="submit" className="btn btn-secondary" disabled={!contractIdInput.trim()}>
           Mở đơn giá hợp đồng
         </button>
@@ -115,7 +158,7 @@ export default function ContractRateManager({ currentUserRoles = [] }: Props) {
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
             <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}>
-              Hợp đồng #{activeContractId}
+              {contracts.find((c) => c.id === activeContractId)?.contractCode ?? `Hợp đồng #${activeContractId}`}
             </h3>
             <button type="button" className="btn btn-primary" onClick={() => setIsFormOpen(true)}>
               <span className="icon-xs">{ICONS.plus}</span> Khai báo đơn giá riêng
@@ -171,7 +214,11 @@ export default function ContractRateManager({ currentUserRoles = [] }: Props) {
             </div>
           )}
 
-          <ContractRateResolveLookup contractId={activeContractId} />
+          <ContractRateResolveLookup
+            contractId={activeContractId}
+            roleOptions={roleOptions}
+            levelsByRole={levelsByRole}
+          />
 
           <ContractRateFormModal
             contractId={activeContractId}

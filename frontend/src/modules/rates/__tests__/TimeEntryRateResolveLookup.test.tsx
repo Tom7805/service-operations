@@ -20,13 +20,15 @@ function fillAndSubmit(entryId = '100', level = 'Cao cấp') {
   fireEvent.click(screen.getByRole('button', { name: 'Tra đơn giá' }));
 }
 
+const LEVEL_OPTIONS = ['Cao cấp'];
+
 describe('TimeEntryRateResolveLookup (NCL-07-CN-005 — Tra cứu đơn giá áp dụng cho một dòng giờ công)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('chặn phía client khi thiếu ID hoặc cấp bậc, không gọi API', async () => {
-    render(<TimeEntryRateResolveLookup />);
+    render(<TimeEntryRateResolveLookup levelOptions={LEVEL_OPTIONS} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Tra đơn giá' }));
 
@@ -54,7 +56,7 @@ describe('TimeEntryRateResolveLookup (NCL-07-CN-005 — Tra cứu đơn giá áp
     };
     vi.mocked(ratesApi.resolveTimeEntryBillRate).mockResolvedValue(resolved);
 
-    render(<TimeEntryRateResolveLookup />);
+    render(<TimeEntryRateResolveLookup levelOptions={LEVEL_OPTIONS} />);
     fillAndSubmit();
 
     await waitFor(() => {
@@ -74,7 +76,7 @@ describe('TimeEntryRateResolveLookup (NCL-07-CN-005 — Tra cứu đơn giá áp
       new ratesApi.RatesApiError('RESOURCE_NOT_FOUND', 'Khong tim thay dong gio cong voi ID: 999', 404)
     );
 
-    render(<TimeEntryRateResolveLookup />);
+    render(<TimeEntryRateResolveLookup levelOptions={LEVEL_OPTIONS} />);
     fillAndSubmit('999', 'Cao cấp');
 
     const notFound = await screen.findByTestId('time-entry-rate-resolve-not-found');
@@ -87,7 +89,7 @@ describe('TimeEntryRateResolveLookup (NCL-07-CN-005 — Tra cứu đơn giá áp
       new ratesApi.RatesApiError('FORBIDDEN', 'Bạn không có quyền thực hiện thao tác này.', 403)
     );
 
-    render(<TimeEntryRateResolveLookup />);
+    render(<TimeEntryRateResolveLookup levelOptions={LEVEL_OPTIONS} />);
     fillAndSubmit();
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Bạn không có quyền thực hiện thao tác này.');

@@ -21,6 +21,9 @@ function fillAndSubmit() {
   fireEvent.click(screen.getByRole('button', { name: 'Tra đơn giá' }));
 }
 
+const ROLE_OPTIONS = ['Lập trình viên cao cấp'];
+const LEVELS_BY_ROLE = { 'Lập trình viên cao cấp': ['Cao cấp'] };
+
 describe('ContractRateResolveLookup (NCL-07-CN-003 — QTN-16 ưu tiên đơn giá riêng hợp đồng)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -30,7 +33,7 @@ describe('ContractRateResolveLookup (NCL-07-CN-003 — QTN-16 ưu tiên đơn gi
     const resolved: ResolvedContractBillRateRes = { dailyRate: 3_000_000, effectiveFrom: '2026-01-01', isContractSpecific: true };
     vi.mocked(ratesApi.resolveContractBillRate).mockResolvedValue(resolved);
 
-    render(<ContractRateResolveLookup contractId={1} />);
+    render(<ContractRateResolveLookup contractId={1} roleOptions={ROLE_OPTIONS} levelsByRole={LEVELS_BY_ROLE} />);
     fillAndSubmit();
 
     await waitFor(() => {
@@ -50,7 +53,7 @@ describe('ContractRateResolveLookup (NCL-07-CN-003 — QTN-16 ưu tiên đơn gi
     const resolved: ResolvedContractBillRateRes = { dailyRate: 2_500_000, effectiveFrom: '2024-01-01', isContractSpecific: false };
     vi.mocked(ratesApi.resolveContractBillRate).mockResolvedValue(resolved);
 
-    render(<ContractRateResolveLookup contractId={2} />);
+    render(<ContractRateResolveLookup contractId={2} roleOptions={ROLE_OPTIONS} levelsByRole={LEVELS_BY_ROLE} />);
     fillAndSubmit();
 
     const result = await screen.findByTestId('contract-rate-resolve-result');
@@ -63,7 +66,7 @@ describe('ContractRateResolveLookup (NCL-07-CN-003 — QTN-16 ưu tiên đơn gi
       new ratesApi.RatesApiError('RESOURCE_NOT_FOUND', 'Không tìm thấy hợp đồng với ID: 1', 404)
     );
 
-    render(<ContractRateResolveLookup contractId={1} />);
+    render(<ContractRateResolveLookup contractId={1} roleOptions={ROLE_OPTIONS} levelsByRole={LEVELS_BY_ROLE} />);
     fillAndSubmit();
 
     const notFound = await screen.findByTestId('contract-rate-resolve-not-found');

@@ -7,6 +7,10 @@ import { validateResolveBillRateForm, type ResolveBillRateFormValues } from '../
 
 interface Props {
   contractId: number;
+  /** Danh sách vai trò chuyên môn đã từng khai báo, để chọn theo tên thay vì gõ tay. */
+  roleOptions: string[];
+  /** Cấp bậc đã khai báo cho từng vai trò — dùng để lọc lựa chọn cấp bậc theo vai trò đã chọn. */
+  levelsByRole: Record<string, string[]>;
 }
 
 const EMPTY_FORM: ResolveBillRateFormValues = {
@@ -33,7 +37,7 @@ function formatDate(value: string): string {
  * đơn giá chung công ty (TC-02) — `isContractSpecific` phân biệt rõ hai
  * trường hợp này cho Kế toán.
  */
-export default function ContractRateResolveLookup({ contractId }: Props) {
+export default function ContractRateResolveLookup({ contractId, roleOptions, levelsByRole }: Props) {
   const [values, setValues] = useState<ResolveBillRateFormValues>(EMPTY_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -97,14 +101,19 @@ export default function ContractRateResolveLookup({ contractId }: Props) {
           <label className="form-label" htmlFor="contract-resolve-role">
             Vai trò chuyên môn
           </label>
-          <input
+          <select
             id="contract-resolve-role"
-            type="text"
             className={`form-input ${errors.professionalRole ? 'form-input--error' : ''}`}
-            placeholder="Ví dụ: Lập trình viên"
             value={values.professionalRole}
-            onChange={(e) => setValues((v) => ({ ...v, professionalRole: e.target.value }))}
-          />
+            onChange={(e) => setValues((v) => ({ ...v, professionalRole: e.target.value, level: '' }))}
+          >
+            <option value="">-- Chọn vai trò --</option>
+            {roleOptions.map((role) => (
+              <option key={role} value={role}>
+                {role}
+              </option>
+            ))}
+          </select>
           {errors.professionalRole && <small className="field-error">{errors.professionalRole}</small>}
         </div>
 
@@ -112,14 +121,20 @@ export default function ContractRateResolveLookup({ contractId }: Props) {
           <label className="form-label" htmlFor="contract-resolve-level">
             Cấp bậc
           </label>
-          <input
+          <select
             id="contract-resolve-level"
-            type="text"
             className={`form-input ${errors.level ? 'form-input--error' : ''}`}
-            placeholder="Ví dụ: Cao cấp"
             value={values.level}
+            disabled={!values.professionalRole}
             onChange={(e) => setValues((v) => ({ ...v, level: e.target.value }))}
-          />
+          >
+            <option value="">-- Chọn cấp bậc --</option>
+            {(levelsByRole[values.professionalRole] ?? []).map((level) => (
+              <option key={level} value={level}>
+                {level}
+              </option>
+            ))}
+          </select>
           {errors.level && <small className="field-error">{errors.level}</small>}
         </div>
 

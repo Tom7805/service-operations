@@ -19,8 +19,11 @@ describe('RateResolveLookup (NCL-07-CN-002 — Đặt hiệu lực theo thời �
     vi.clearAllMocks();
   });
 
+  const ROLE_OPTIONS = ['Lập trình viên cao cấp', 'Tester'];
+  const LEVELS_BY_ROLE = { 'Lập trình viên cao cấp': ['Cao cấp'], Tester: ['Junior'] };
+
   it('chặn phía client khi thiếu trường bắt buộc, không gọi API', async () => {
-    render(<RateResolveLookup />);
+    render(<RateResolveLookup roleOptions={ROLE_OPTIONS} levelsByRole={LEVELS_BY_ROLE} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Tra đơn giá' }));
 
@@ -37,7 +40,7 @@ describe('RateResolveLookup (NCL-07-CN-002 — Đặt hiệu lực theo thời �
     };
     vi.mocked(ratesApi.resolveBillRate).mockResolvedValue(resolved);
 
-    render(<RateResolveLookup />);
+    render(<RateResolveLookup roleOptions={ROLE_OPTIONS} levelsByRole={LEVELS_BY_ROLE} />);
 
     fireEvent.change(screen.getByLabelText('Vai trò chuyên môn'), { target: { value: 'Lập trình viên cao cấp' } });
     fireEvent.change(screen.getByLabelText('Cấp bậc'), { target: { value: 'Cao cấp' } });
@@ -63,7 +66,7 @@ describe('RateResolveLookup (NCL-07-CN-002 — Đặt hiệu lực theo thời �
       new ratesApi.RatesApiError('RESOURCE_NOT_FOUND', 'Chưa có đơn giá hiệu lực cho Tester (Junior) tại ngày 2020-01-01', 404)
     );
 
-    render(<RateResolveLookup />);
+    render(<RateResolveLookup roleOptions={ROLE_OPTIONS} levelsByRole={LEVELS_BY_ROLE} />);
 
     fireEvent.change(screen.getByLabelText('Vai trò chuyên môn'), { target: { value: 'Tester' } });
     fireEvent.change(screen.getByLabelText('Cấp bậc'), { target: { value: 'Junior' } });

@@ -1,11 +1,12 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import RateHistoryPage from '../pages/RateHistoryPage';
 import * as ratesApi from '../api/ratesApi';
-import type { BillRateHistoryRes } from '../types/rateTypes';
+import type { BillRateHistoryRes, BillRateRes } from '../types/rateTypes';
 
 vi.mock('../api/ratesApi', () => ({
   fetchBillRateHistory: vi.fn(),
+  fetchCurrentBillRates: vi.fn(),
   RatesApiError: class extends Error {
     constructor(public code: string, message: string, public statusCode?: number) {
       super(message);
@@ -14,8 +15,15 @@ vi.mock('../api/ratesApi', () => ({
   },
 }));
 
-function fillAndSearch(role = 'Lập trình viên cao cấp', level = 'Cao cấp') {
-  fireEvent.change(screen.getByLabelText('Vai trò chuyên môn'), { target: { value: role } });
+const CURRENT_BILL_RATES: BillRateRes[] = [
+  { professionalRole: 'Lập trình viên cao cấp', level: 'Cao cấp', dailyRate: 1_000_000, effectiveFrom: '2025-01-01' },
+  { professionalRole: 'Kiểm thử viên', level: 'Trung cấp', dailyRate: 700_000, effectiveFrom: '2025-01-01' },
+];
+
+async function fillAndSearch(role = 'Lập trình viên cao cấp', level = 'Cao cấp') {
+  const roleSelect = screen.getByLabelText('Vai trò chuyên môn');
+  await within(roleSelect).findByRole('option', { name: role });
+  fireEvent.change(roleSelect, { target: { value: role } });
   fireEvent.change(screen.getByLabelText('Cấp bậc'), { target: { value: level } });
   fireEvent.click(screen.getByRole('button', { name: 'Xem lịch sử' }));
 }
@@ -23,6 +31,7 @@ function fillAndSearch(role = 'Lập trình viên cao cấp', level = 'Cao cấp
 describe('RateHistoryPage (NCL-07-CN-007 — Xem lịch sử thay đổi đơn giá)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(ratesApi.fetchCurrentBillRates).mockResolvedValue(CURRENT_BILL_RATES);
   });
 
   it('TC-03: vai trò khác Kế toán/Quản trị viên bị từ chối, không gọi API', () => {
@@ -54,7 +63,7 @@ describe('RateHistoryPage (NCL-07-CN-007 — Xem lịch sử thay đổi đơn g
     vi.mocked(ratesApi.fetchBillRateHistory).mockResolvedValue(history);
 
     render(<RateHistoryPage currentUserRoles={['VT-05']} currentUserName="Hoàng Văn Nam" />);
-    fillAndSearch();
+    await fillAndSearch();
 
     await waitFor(() => {
       expect(ratesApi.fetchBillRateHistory).toHaveBeenCalledWith('Lập trình viên cao cấp', 'Cao cấp');
@@ -84,7 +93,7 @@ describe('RateHistoryPage (NCL-07-CN-007 — Xem lịch sử thay đổi đơn g
     vi.mocked(ratesApi.fetchBillRateHistory).mockResolvedValue(history);
 
     render(<RateHistoryPage currentUserRoles={['VT-07']} currentUserName="Trần Thị B" />);
-    fillAndSearch('Kiểm thử viên', 'Trung cấp');
+    await fillAndSearch('Kiểm thử viên', 'Trung cấp');
 
     expect(await screen.findByTestId('rate-history-never-changed')).toBeInTheDocument();
     // changedBy/changedAt null -> hiển thị "—" thay vì để trống.
@@ -98,7 +107,7 @@ describe('RateHistoryPage (NCL-07-CN-007 — Xem lịch sử thay đổi đơn g
     );
 
     render(<RateHistoryPage currentUserRoles={['VT-05']} currentUserName="Hoàng Văn Nam" />);
-    fillAndSearch();
+    await fillAndSearch();
 
     const notFound = await screen.findByTestId('rate-history-not-found');
     expect(notFound).toHaveTextContent('Chưa từng khai báo đơn giá cho vai trò/cấp bậc này');

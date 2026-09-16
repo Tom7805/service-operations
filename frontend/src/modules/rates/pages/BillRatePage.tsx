@@ -140,6 +140,26 @@ export default function BillRatePage({
     [filtered]
   );
 
+  // Cho các khối tra cứu bên dưới chọn theo tên thay vì gõ tay — dựng từ chính
+  // các dòng đã khai báo ở bảng trên, nên chắc chắn khớp đúng dữ liệu thật.
+  const roleOptions = useMemo(
+    () => Array.from(new Set(billRates.map((r) => r.professionalRole))).sort((a, b) => a.localeCompare(b)),
+    [billRates]
+  );
+  const levelsByRole = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const r of billRates) {
+      const list = map[r.professionalRole] ?? (map[r.professionalRole] = []);
+      if (!list.includes(r.level)) list.push(r.level);
+    }
+    Object.values(map).forEach((list) => list.sort((a, b) => a.localeCompare(b)));
+    return map;
+  }, [billRates]);
+  const levelOptions = useMemo(
+    () => Array.from(new Set(billRates.map((r) => r.level))).sort((a, b) => a.localeCompare(b)),
+    [billRates]
+  );
+
   // NCL-07-CN-001 (TC-03): từ chối quyền cho vai trò khác Kế toán/Quản trị viên.
   if (!isAllowed) {
     return (
@@ -325,11 +345,11 @@ export default function BillRatePage({
         nội dung · thời điểm).
       </p>
 
-      <RateResolveLookup />
+      <RateResolveLookup roleOptions={roleOptions} levelsByRole={levelsByRole} />
 
-      <ContractRateManager currentUserRoles={currentUserRoles} />
+      <ContractRateManager currentUserRoles={currentUserRoles} roleOptions={roleOptions} levelsByRole={levelsByRole} />
 
-      <TimeEntryRateResolveLookup />
+      <TimeEntryRateResolveLookup levelOptions={levelOptions} />
 
       <WorkTypeRateManager />
 
