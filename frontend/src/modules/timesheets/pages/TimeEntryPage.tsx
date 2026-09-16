@@ -3,7 +3,7 @@ import { ICONS } from '../../../components/common/icons';
 import type { ProjectRes } from '../../projects/types/projectTypes';
 import { getProject, ProjectsApiError } from '../../projects/api/projectsApi';
 import type { TimeEntryRes, TimeEntryStatus, TimesheetSummaryRes } from '../types/timesheetTypes';
-import { deleteTimeEntry, getMyWeekTimeEntries, TimesheetsApiError } from '../api/timesheetsApi';
+import { deleteTimeEntry, getMyWeekTimeEntries, submitWeek, TimesheetsApiError } from '../api/timesheetsApi';
 import TimeEntryForm from '../components/TimeEntryForm';
 import ClosedProjectNotice from '../components/ClosedProjectNotice';
 import TimerWidget from '../components/TimerWidget';
@@ -55,9 +55,14 @@ export default function TimeEntryPage({
 
   const [project, setProject] = useState<ProjectRes | null>(initialProject ?? null);
   const [summary, setSummary] = useState<TimesheetSummaryRes | null>(null);
+  // Toàn bộ công việc trong tuần (không chỉ công việc đang xem) — cần để biết có bao nhiêu dòng
+  // Nháp trên cả tuần khi nộp bảng chấm công ngay tại đây, vì "Nộp bảng chấm công" luôn nộp
+  // nguyên tuần của nhân sự (mọi dự án/công việc), không chỉ riêng công việc đang xem.
+  const [weekSummaries, setWeekSummaries] = useState<TimesheetSummaryRes[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TimeEntryRes | null>(null);
@@ -82,6 +87,7 @@ export default function TimeEntryPage({
       ]);
       setProject(projData);
       setSummary(weekData.find((item) => item.taskId === taskId) ?? null);
+      setWeekSummaries(weekData);
     } catch (err: unknown) {
       const msg =
         err instanceof ProjectsApiError || err instanceof TimesheetsApiError || err instanceof Error
@@ -98,6 +104,34 @@ export default function TimeEntryPage({
   }, [loadData]);
 
   const entries = summary?.entries ?? [];
+
+  const draftEntriesInWeek = weekSummaries.flatMap((s) => s.entries.filter((e) => e.status === 'DRAFT'));
+  const draftCountInWeek = draftEntriesInWeek.length;
+  const draftHoursInWeek = draftEntriesInWeek.reduce((sum, e) => sum + e.hours, 0);
+
+  const handleSubmitWeek = async () => {
+    if (draftCountInWeek === 0 || submitting) return;
+    const confirmed = window.confirm(
+      `Nộp bảng chấm công tuần ${formatIsoDate(weekFrom)} → ${formatIsoDate(weekTo)} với ${draftCountInWeek} `
+        + `dòng giờ công (tổng ${draftHoursInWeek} giờ) — gồm cả các công việc khác trong tuần?\n\n`
+        + 'Sau khi nộp, bạn sẽ không sửa hoặc xóa được các dòng giờ công của tuần này cho đến khi được duyệt.'
+    );
+    if (!confirmed) return;
+
+    setSubmitting(true);
+    try {
+      const result = await submitWeek(weekFrom);
+      showToast(`Đã nộp bảng chấm công tuần thành công — tổng ${result.totalHours} giờ, đang chờ duyệt.`, 'success');
+      void loadData();
+    } catch (err: unknown) {
+      const msg = err instanceof TimesheetsApiError || err instanceof Error
+        ? err.message
+        : 'Không thể nộp bảng chấm công tuần. Vui lòng thử lại.';
+      showToast(msg, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const openCreateForm = () => {
     setEditingEntry(null);
@@ -188,6 +222,18 @@ export default function TimeEntryPage({
           >
             {ICONS.refresh} Tải lại
           </button>
+          {canView && draftCountInWeek > 0 && (
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={handleSubmitWeek}
+              disabled={submitting}
+              data-testid="btn-submit-week-from-task"
+              title="Nộp toàn bộ giờ công Nháp của tuần này (mọi công việc), không chỉ riêng công việc đang xem"
+            >
+              {ICONS.checkCircle} {submitting ? 'Đang nộp…' : `Nộp bảng chấm công (${draftCountInWeek} dòng)`}
+            </button>
+          )}
           {canLog && (
             <button
               type="button"
