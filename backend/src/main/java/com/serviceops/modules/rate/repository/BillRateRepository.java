@@ -11,6 +11,8 @@ import java.util.Optional;
 
 public interface BillRateRepository extends JpaRepository<BillRate, Long> {
 
+	Optional<BillRate> findByProfessionalRoleIgnoreCaseAndEffectiveFrom(String professionalRole, LocalDate effectiveFrom);
+
 	Optional<BillRate> findTopByProfessionalRoleIgnoreCaseAndEffectiveFromLessThanEqualOrderByEffectiveFromDesc(
 			String professionalRole, LocalDate effectiveDate);
 

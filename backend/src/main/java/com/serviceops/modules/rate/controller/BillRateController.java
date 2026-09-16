@@ -1,11 +1,15 @@
 package com.serviceops.modules.rate.controller;
 
 import com.serviceops.common.api.BaseRes;
+import com.serviceops.modules.rate.dto.request.BillRateCreateReq;
 import com.serviceops.modules.rate.dto.response.BillRateRes;
 import com.serviceops.modules.rate.service.BillRateService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -17,6 +21,12 @@ import java.util.List;
 public class BillRateController {
 
 	private final BillRateService billRateService;
+
+	@PostMapping
+	@PreAuthorize("hasRole('VT-05') or hasRole('VT-07')")
+	public BaseRes<BillRateRes> create(@Valid @RequestBody BillRateCreateReq request) {
+		return BaseRes.ok("Tao bang don gia theo vai tro thanh cong", billRateService.create(request));
+	}
 
 	/**
 	 * Danh sach chuc danh dang co don gia ban hieu luc, dung de dung o chon

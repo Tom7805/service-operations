@@ -1,6 +1,12 @@
 package com.serviceops.modules.rate.service.impl;
 
+import com.serviceops.common.audit.AuditTargetType;
+import com.serviceops.common.audit.service.AuditLogService;
+import com.serviceops.common.exception.BusinessRuleException;
+import com.serviceops.common.exception.ErrorCode;
+import com.serviceops.modules.rate.dto.request.BillRateCreateReq;
 import com.serviceops.modules.rate.dto.response.BillRateRes;
+import com.serviceops.modules.rate.entity.BillRate;
 import com.serviceops.modules.rate.repository.BillRateRepository;
 import com.serviceops.modules.rate.service.BillRateService;
 import org.springframework.stereotype.Service;
@@ -14,9 +20,41 @@ import java.util.List;
 public class BillRateServiceImpl implements BillRateService {
 
 	private final BillRateRepository billRateRepository;
+	private final AuditLogService auditLogService;
 
-	public BillRateServiceImpl(BillRateRepository billRateRepository) {
+	public BillRateServiceImpl(BillRateRepository billRateRepository, AuditLogService auditLogService) {
 		this.billRateRepository = billRateRepository;
+		this.auditLogService = auditLogService;
+	}
+
+	@Override
+	@Transactional
+	public BillRateRes create(BillRateCreateReq request) {
+		String role = request.professionalRole() == null ? "" : request.professionalRole().trim();
+		if (role.isBlank()) {
+			throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR, "Vai trò chuyên môn không được để trống");
+		}
+		if (request.dailyRate() == null || request.dailyRate().compareTo(java.math.BigDecimal.ZERO) < 0) {
+			throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR, "Đơn giá theo ngày không được âm");
+		}
+		if (request.effectiveFrom() == null) {
+			throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR, "Ngày hiệu lực không được để trống");
+		}
+
+		billRateRepository.findByProfessionalRoleIgnoreCaseAndEffectiveFrom(role, request.effectiveFrom())
+				.ifPresent(existing -> {
+					throw new BusinessRuleException(ErrorCode.DUPLICATE_DATA,
+							"Đơn giá cho vai trò này đã tồn tại tại ngày hiệu lực đã chọn");
+				});
+
+		BillRate entity = new BillRate();
+		entity.setProfessionalRole(role);
+		entity.setDailyRate(request.dailyRate());
+		entity.setEffectiveFrom(request.effectiveFrom());
+		BillRate saved = billRateRepository.save(entity);
+		auditLogService.record("Khởi tạo bảng đơn giá theo vai trò", AuditTargetType.GENERAL, saved.getId(),
+				role, "Tạo đơn giá mới: " + role + " = " + request.dailyRate() + " / ngày, hiệu lực từ " + request.effectiveFrom());
+		return new BillRateRes(saved.getProfessionalRole(), saved.getDailyRate(), saved.getEffectiveFrom());
 	}
 
 	@Override

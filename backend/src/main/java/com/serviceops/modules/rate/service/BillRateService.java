@@ -1,10 +1,13 @@
 package com.serviceops.modules.rate.service;
 
+import com.serviceops.modules.rate.dto.request.BillRateCreateReq;
 import com.serviceops.modules.rate.dto.response.BillRateRes;
 
 import java.util.List;
 
 public interface BillRateService {
+
+	BillRateRes create(BillRateCreateReq request);
 
 	/**
 	 * Danh sach chuc danh dang co don gia ban hieu luc tinh den hom nay,
