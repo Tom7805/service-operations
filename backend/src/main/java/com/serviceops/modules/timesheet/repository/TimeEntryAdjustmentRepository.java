@@ -12,4 +12,7 @@ public interface TimeEntryAdjustmentRepository extends JpaRepository<TimeEntryAd
 
 	/** Lich su dieu chinh cua chinh mot dong goc cu the. */
 	List<TimeEntryAdjustment> findByOriginalEntryIdOrderByAdjustedAtDesc(Long originalEntryId);
+
+	/** Dong goc nay da tung duoc dieu chinh chua — loai khoi danh sach "co the dieu chinh". */
+	boolean existsByOriginalEntryId(Long originalEntryId);
 }

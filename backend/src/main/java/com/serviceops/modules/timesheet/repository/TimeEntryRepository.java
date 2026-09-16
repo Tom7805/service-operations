@@ -67,6 +67,20 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
 	BigDecimal sumHoursByUserIdAndWorkDate(@Param("userId") Long userId, @Param("workDate") LocalDate workDate);
 
 	/**
+	 * Cac dong gio cong DA DUYET va con la dong GOC (chua dao/sua) cua mot nhom cong viec —
+	 * nguon du lieu cho danh sach "co the dieu chinh" ma PM chon truc tiep thay vi phai tu
+	 * biet truoc Project ID/Task ID/Entry ID (NCL-06-CN-005).
+	 */
+	@Query("""
+			SELECT e FROM TimeEntry e
+			WHERE e.status = com.serviceops.modules.timesheet.enums.TimeEntryStatus.APPROVED
+			AND e.type = com.serviceops.modules.timesheet.enums.TimeEntryType.ORIGINAL
+			AND e.taskId IN :taskIds
+			ORDER BY e.workDate DESC, e.id DESC
+			""")
+	List<TimeEntry> findApprovedOriginalEntriesByTaskIdIn(@Param("taskIds") List<Long> taskIds);
+
+	/**
 	 * Danh sach nhan su co dong gio cong DRAFT trong mot tuan (NCL-06-CN-009).
 	 *
 	 * <p>Ung vien "chua nop bang cham cong": co gio cong ghi trong tuan nhung con

@@ -734,6 +734,7 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
 .alert--error { background: #FDEBEC; border: 1px solid rgba(159,47,45,.20); color: #9F2F2D; }
 .alert--warning { background: #FBF3DB; border: 1px solid rgba(149,100,0,.22); color: #956400; }
 .alert--success { background: #EDF3EC; border: 1px solid rgba(52,101,56,.20); color: #346538; }
+.alert--info { background: #EAF1FB; border: 1px solid rgba(30,86,160,.20); color: #1E56A0; }
 .toast-banner { position: fixed; bottom: 24px; right: 24px; background: #111111; color: #ffffff; padding: 14px 20px; border-radius: var(--radius-md); box-shadow: 0 10px 30px var(--overlay-strong); display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: 600; z-index: 10000; transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
   opacity: 1; transform: translateY(0); }
 /* Vao va RA cung mot canh (canh duoi) — day la thu khien thao tac vuot-de-dong

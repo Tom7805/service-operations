@@ -3,7 +3,7 @@ import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
 import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import { adjustTimeEntry, TimesheetsApiError } from '../api/timesheetsApi';
-import type { AdjustmentTraceRes } from '../types/timesheetTypes';
+import type { AdjustableEntryRes, AdjustmentTraceRes } from '../types/timesheetTypes';
 import { validateAdjustmentForm } from '../validators/timesheetValidators';
 
 interface AdjustmentModalProps {
@@ -11,19 +11,37 @@ interface AdjustmentModalProps {
   taskId: number;
   onClose: () => void;
   onAdjusted: (trace: AdjustmentTraceRes) => void;
+  /**
+   * Dòng giờ công đã chọn sẵn từ bảng "Dòng giờ công có thể điều chỉnh"
+   * (`GET /timesheets/adjustable-entries`) — khi có, mã dòng (Entry ID) được điền sẵn và khóa
+   * lại (không gõ tay), kèm thông tin nhân sự/ngày/số giờ hiện tại để PM đối chiếu đúng dòng.
+   */
+  presetEntry?: AdjustableEntryRes;
+  /** Họ tên nhân sự của `presetEntry.userId` — hiện thay cho "Nhân sự #id" khi có sẵn. */
+  employeeName?: string;
+}
+
+function formatHours(hours: number | undefined): string {
+  if (hours == null) return '—';
+  return Number(hours.toFixed(2)).toString();
 }
 
 /**
  * Modal tạo một điều chỉnh giờ công đã duyệt bằng bút toán đảo (NCL-06-CN-005).
  *
- * `entryId` phải do PM nhập trực tiếp: `GET /projects/{projectId}/tasks/{taskId}/adjustments`
- * chỉ trả lịch sử các lần điều chỉnh ĐÃ thực hiện, backend hiện không có endpoint liệt kê các
- * dòng giờ công APPROVED của một công việc để chọn — đúng những gì backend hiện có, không suy
- * diễn thêm một endpoint chưa tồn tại. PM xác định đúng dòng cần sửa qua trao đổi với nhân sự/
- * dấu vết đã biết từ trước (ví dụ mã dòng trong thông báo/nhật ký).
+ * Khi mở từ bảng chọn (`presetEntry`), Entry ID được điền sẵn và khóa lại — PM không cần tự
+ * biết trước mã dòng. Vẫn giữ ô nhập tay làm lối vào dự phòng khi mở trực tiếp không qua bảng
+ * chọn (ví dụ PM đã biết sẵn mã dòng từ nhật ký/thông báo).
  */
-export default function AdjustmentModal({ projectId, taskId, onClose, onAdjusted }: AdjustmentModalProps) {
-  const [entryId, setEntryId] = useState('');
+export default function AdjustmentModal({
+  projectId,
+  taskId,
+  onClose,
+  onAdjusted,
+  presetEntry,
+  employeeName,
+}: AdjustmentModalProps) {
+  const [entryId, setEntryId] = useState(presetEntry ? String(presetEntry.entryId) : '');
   const [correctedHours, setCorrectedHours] = useState('');
   const [reason, setReason] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -109,27 +127,51 @@ export default function AdjustmentModal({ projectId, taskId, onClose, onAdjusted
               <strong>sửa</strong> (số giờ đúng) — dòng gốc được giữ nguyên, cả ba dòng đều tra cứu lại được.
             </p>
 
-            <div className="form-grid">
-              <div>
-                <label className="form-label" htmlFor="entry-id">
-                  Mã dòng giờ công (Entry ID) <span className="text-danger">*</span>
-                </label>
-                <input
-                  id="entry-id"
-                  type="number"
-                  min={1}
-                  step={1}
-                  className={`form-input ${errors.entryId ? 'form-input--error' : ''}`}
-                  placeholder="Ví dụ: 30"
-                  value={entryId}
-                  onChange={(e) => setEntryId(e.target.value)}
-                  disabled={submitting}
-                />
-                {errors.entryId && <p className="field-error">{errors.entryId}</p>}
-                <p className="field-hint">Dòng phải đang ở trạng thái Đã duyệt và là dòng gốc (chưa từng điều chỉnh).</p>
+            {presetEntry && (
+              <div
+                className="alert alert--info mb-4"
+                role="note"
+                style={{ marginBottom: '16px' }}
+                title={`Mã dòng #${presetEntry.entryId}`}
+              >
+                <span className="alert__icon">{ICONS.info}</span>
+                <span>
+                  {employeeName ?? `Nhân sự #${presetEntry.userId}`} · ngày{' '}
+                  {new Date(presetEntry.workDate).toLocaleDateString('vi-VN')} · hiện đang ghi{' '}
+                  <strong>{formatHours(presetEntry.hours)} giờ</strong>
+                  {presetEntry.note ? ` · ghi chú: "${presetEntry.note}"` : ''}
+                </span>
               </div>
+            )}
 
-              <div>
+            <div className="form-grid">
+              {/* Đã có sẵn dòng được chọn từ bảng "Dòng giờ công có thể điều chỉnh" (presetEntry,
+                  hiện rõ trong banner xanh ở trên) thì không cần lặp lại ô Entry ID nữa — giá trị
+                  vẫn được giữ trong state `entryId` để gửi API, chỉ ẩn khỏi giao diện cho gọn.
+                  Ô này chỉ hiện lại khi modal được mở trực tiếp không qua bảng chọn (lối vào dự
+                  phòng, hiện chưa có nơi nào trong ứng dụng gọi theo cách đó). */}
+              {!presetEntry && (
+                <div>
+                  <label className="form-label" htmlFor="entry-id">
+                    Mã dòng giờ công (Entry ID) <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    id="entry-id"
+                    type="number"
+                    min={1}
+                    step={1}
+                    className={`form-input ${errors.entryId ? 'form-input--error' : ''}`}
+                    placeholder="Ví dụ: 30"
+                    value={entryId}
+                    onChange={(e) => setEntryId(e.target.value)}
+                    disabled={submitting}
+                  />
+                  {errors.entryId && <p className="field-error">{errors.entryId}</p>}
+                  <p className="field-hint">Dòng phải đang ở trạng thái Đã duyệt và là dòng gốc (chưa từng điều chỉnh).</p>
+                </div>
+              )}
+
+              <div className={presetEntry ? 'form-field--full' : undefined}>
                 <label className="form-label" htmlFor="corrected-hours">
                   Số giờ đúng <span className="text-danger">*</span>
                 </label>
@@ -143,6 +185,7 @@ export default function AdjustmentModal({ projectId, taskId, onClose, onAdjusted
                   value={correctedHours}
                   onChange={(e) => setCorrectedHours(e.target.value)}
                   disabled={submitting}
+                  style={presetEntry ? { maxWidth: '200px' } : undefined}
                 />
                 {errors.correctedHours && <p className="field-error">{errors.correctedHours}</p>}
               </div>

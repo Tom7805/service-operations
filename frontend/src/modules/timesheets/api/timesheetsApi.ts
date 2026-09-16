@@ -1,4 +1,5 @@
 import type {
+  AdjustableEntryRes,
   AdjustmentTraceRes,
   PendingTimesheetRes,
   PeriodLockReq,
@@ -193,6 +194,18 @@ export async function rejectTimesheet(
   return requestBackend<TimesheetRejectRes>(`${API_BASE_URL}/timesheets/${timesheetId}/reject`, {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * NCL-06-CN-005: danh sách dòng giờ công ĐÃ DUYỆT, còn là dòng gốc và chưa từng điều chỉnh,
+ * thuộc các dự án PM hiện tại quản lý — nguồn dữ liệu cho PM chọn trực tiếp trên màn hình
+ * thay vì phải tự biết trước Project ID/Task ID/Entry ID.
+ * GET /timesheets/adjustable-entries
+ */
+export async function getAdjustableEntries(): Promise<AdjustableEntryRes[]> {
+  return requestBackend<AdjustableEntryRes[]>(`${API_BASE_URL}/timesheets/adjustable-entries`, {
+    method: 'GET',
   });
 }
 

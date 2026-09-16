@@ -368,6 +368,8 @@ export default function TimeEntryPage({
         taskName={taskName || summary?.taskName || undefined}
         entry={editingEntry}
         existingEntries={entries}
+        weekFrom={weekFrom}
+        weekTo={weekTo}
         onSaved={() => {
           showToast(editingEntry ? 'Đã cập nhật giờ công thành công' : 'Đã ghi giờ công thành công');
           void loadData();
