@@ -7,6 +7,8 @@ import type {
   ResolveContractBillRateQuery,
   ResolvedContractBillRateRes,
   ResolvedTimeEntryRateRes,
+  WorkTypeRateFactorPayload,
+  WorkTypeRateFactorRes,
 } from '../types/rateTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
@@ -162,4 +164,25 @@ export async function resolveTimeEntryBillRate(entryId: number, level: string): 
   const url = new URL(`${API_BASE_URL}/timesheet-entries/${entryId}/bill-rate/resolve`);
   url.searchParams.set('level', level);
   return requestBackend<ResolvedTimeEntryRateRes>(url.toString(), { method: 'GET' });
+}
+
+/**
+ * GET /work-type-rates — hệ số nhân đơn giá hiện tại của cả 4 loại hình công
+ * việc, sắp theo tên loại hình (NCL-07-CN-006). Cho phép cả Nhân viên chuyên
+ * môn (VT-03) xem, ngoài Kế toán/Quản trị viên.
+ */
+export async function fetchWorkTypeRates(): Promise<WorkTypeRateFactorRes[]> {
+  return requestBackend<WorkTypeRateFactorRes[]>(`${API_BASE_URL}/work-type-rates`, { method: 'GET' });
+}
+
+/**
+ * POST /work-type-rates — khai báo/cập nhật hệ số cho một loại hình công
+ * việc. LUÔN GHI ĐÈ giá trị cũ nếu loại hình đó đã có hệ số (không giữ lịch
+ * sử theo ngày hiệu lực). Chỉ Kế toán (VT-05) hoặc Quản trị viên (VT-07).
+ */
+export async function upsertWorkTypeRate(payload: WorkTypeRateFactorPayload): Promise<WorkTypeRateFactorRes> {
+  return requestBackend<WorkTypeRateFactorRes>(`${API_BASE_URL}/work-type-rates`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }

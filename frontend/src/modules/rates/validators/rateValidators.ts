@@ -84,3 +84,14 @@ export function validateTimeEntryRateLookupForm(values: TimeEntryRateLookupFormV
 
   return errors;
 }
+
+/** Khớp ràng buộc của `WorkTypeRateFactorReq` phía backend (NCL-07-CN-006): `factor` phải lớn hơn 0. */
+export function validateWorkTypeFactor(factor: number | null): string | undefined {
+  if (factor == null || Number.isNaN(factor)) {
+    return 'Hệ số không được để trống';
+  }
+  if (factor <= 0) {
+    return 'Hệ số phải lớn hơn 0';
+  }
+  return undefined;
+}

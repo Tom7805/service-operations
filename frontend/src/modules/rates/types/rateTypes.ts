@@ -115,3 +115,20 @@ export interface ResolvedTimeEntryRateRes {
   /** Đơn giá CUỐI CÙNG = `dailyRate * rateFactor` — dùng số này để tính doanh thu */
   appliedDailyRate: number;
 }
+
+/**
+ * NCL-07-CN-006 — Đơn giá theo loại hình công việc. Hệ số nhân áp lên đơn giá
+ * theo vai trò/cấp bậc để ra đơn giá cuối cùng cho một dòng giờ công
+ * (`NCL-07-CN-005`). `POST /work-type-rates` luôn GHI ĐÈ hệ số cũ (không giữ
+ * lịch sử theo ngày hiệu lực như `BillRate`, vì đây là hệ số nghiệp vụ ít
+ * thay đổi chứ không phải mức giá đàm phán).
+ */
+export interface WorkTypeRateFactorRes {
+  workType: WorkType;
+  factor: number;
+}
+
+export interface WorkTypeRateFactorPayload {
+  workType: WorkType;
+  factor: number;
+}
