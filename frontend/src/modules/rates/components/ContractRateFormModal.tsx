@@ -3,14 +3,15 @@ import type { FormEvent } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
 import { useBackdropClick } from '../../../hooks/useBackdropClick';
-import { createBillRate, RatesApiError } from '../api/ratesApi';
-import type { BillRateRes } from '../types/rateTypes';
+import { createContractBillRate, RatesApiError } from '../api/ratesApi';
+import type { ContractBillRateRes } from '../types/rateTypes';
 import { validateBillRateForm, type BillRateFormValues } from '../validators/rateValidators';
 
 interface Props {
+  contractId: number;
   isOpen: boolean;
   onClose: () => void;
-  onSaved: (created: BillRateRes) => void;
+  onSaved: (created: ContractBillRateRes) => void;
   currentUserRoles?: string[];
 }
 
@@ -21,8 +22,6 @@ const EMPTY_FORM: BillRateFormValues = {
   effectiveFrom: '',
 };
 
-// Số tiền gõ liền không dấu tách rất dễ đọc nhầm số 0 — hiển thị có dấu chấm
-// ngăn cách hàng nghìn kiểu vi-VN khi gõ, vẫn lưu về number thường khi gửi lên.
 function formatVnNumber(value: number | null): string {
   if (value == null || Number.isNaN(value)) return '';
   return value.toLocaleString('vi-VN');
@@ -34,11 +33,11 @@ function parseVnNumber(raw: string): number | null {
 }
 
 /**
- * NCL-07-CN-001 — Modal khai báo một dòng đơn giá theo (vai trò chuyên môn, cấp
- * bậc), hiệu lực từ một ngày cụ thể. Đơn vị tiền là theo NGÀY công (không phải
- * giờ) để khớp cách `NCL-03-CN-003` tính `amount = workDays * dailyRate`.
+ * NCL-07-CN-003 — Modal khai báo đơn giá RIÊNG cho một hợp đồng cụ thể (mức
+ * giá đàm phán), khác với `RateFormModal` (đơn giá CHUNG công ty). Khi tính
+ * doanh thu, dòng riêng theo hợp đồng luôn được ưu tiên hơn (QTN-16).
  */
-export default function RateFormModal({ isOpen, onClose, onSaved, currentUserRoles = [] }: Props) {
+export default function ContractRateFormModal({ contractId, isOpen, onClose, onSaved, currentUserRoles = [] }: Props) {
   const isAllowed = currentUserRoles.includes('VT-05') || currentUserRoles.includes('VT-07');
 
   const [values, setValues] = useState<BillRateFormValues>(EMPTY_FORM);
@@ -68,7 +67,7 @@ export default function RateFormModal({ isOpen, onClose, onSaved, currentUserRol
     setSubmitting(true);
     setServerError(null);
     try {
-      const created = await createBillRate({
+      const created = await createContractBillRate(contractId, {
         professionalRole: values.professionalRole.trim(),
         level: values.level.trim(),
         dailyRate: values.dailyRate as number,
@@ -78,7 +77,7 @@ export default function RateFormModal({ isOpen, onClose, onSaved, currentUserRol
       resetAndClose();
     } catch (err) {
       setServerError(
-        err instanceof RatesApiError ? err.message : 'Không thể khai báo đơn giá. Vui lòng thử lại.'
+        err instanceof RatesApiError ? err.message : 'Không thể khai báo đơn giá riêng. Vui lòng thử lại.'
       );
     } finally {
       setSubmitting(false);
@@ -98,11 +97,12 @@ export default function RateFormModal({ isOpen, onClose, onSaved, currentUserRol
           <div className="modal-header">
             <div className="modal-header__title-wrap">
               <h3 className="modal-title">
-                <span className="modal-title__icon">{ICONS.money}</span>
-                Khai báo đơn giá theo vai trò
+                <span className="modal-title__icon">{ICONS.receipt}</span>
+                Khai báo đơn giá riêng cho hợp đồng #{contractId}
               </h3>
               <p className="field-hint">
-                Mỗi dòng gồm vai trò chuyên môn, cấp bậc và đơn giá theo ngày công.
+                Mức giá đàm phán riêng cho hợp đồng này — được ưu tiên hơn đơn giá chung công ty khi tính
+                doanh thu.
               </p>
             </div>
             <button
@@ -119,7 +119,7 @@ export default function RateFormModal({ isOpen, onClose, onSaved, currentUserRol
           <div className="modal-body">
             {!isAllowed && (
               <div className="alert-box alert-box--danger">
-                Chỉ Kế toán hoặc Quản trị viên mới được khai báo đơn giá.
+                Chỉ Kế toán hoặc Quản trị viên mới được khai báo đơn giá riêng theo hợp đồng.
               </div>
             )}
 
@@ -130,11 +130,11 @@ export default function RateFormModal({ isOpen, onClose, onSaved, currentUserRol
             )}
 
             <form onSubmit={handleSubmit} noValidate>
-              <label className="form-label" htmlFor="bill-rate-role">
+              <label className="form-label" htmlFor="contract-rate-role">
                 Vai trò chuyên môn
               </label>
               <input
-                id="bill-rate-role"
+                id="contract-rate-role"
                 type="text"
                 className={`form-input ${errors.professionalRole ? 'form-input--error' : ''}`}
                 placeholder="Ví dụ: Lập trình viên"
@@ -144,31 +144,25 @@ export default function RateFormModal({ isOpen, onClose, onSaved, currentUserRol
               />
               {errors.professionalRole && <small className="field-error">{errors.professionalRole}</small>}
 
-              <label className="form-label" style={{ marginTop: '12px' }} htmlFor="bill-rate-level">
+              <label className="form-label" style={{ marginTop: '12px' }} htmlFor="contract-rate-level">
                 Cấp bậc
               </label>
               <input
-                id="bill-rate-level"
+                id="contract-rate-level"
                 type="text"
-                list="bill-rate-level-options"
                 className={`form-input ${errors.level ? 'form-input--error' : ''}`}
-                placeholder="Ví dụ: Trung cấp, Cao cấp, Quản lý"
+                placeholder="Ví dụ: Cao cấp"
                 value={values.level}
                 onChange={(e) => setValues((v) => ({ ...v, level: e.target.value }))}
                 disabled={!isAllowed}
               />
-              <datalist id="bill-rate-level-options">
-                <option value="Trung cấp" />
-                <option value="Cao cấp" />
-                <option value="Quản lý" />
-              </datalist>
               {errors.level && <small className="field-error">{errors.level}</small>}
 
-              <label className="form-label" style={{ marginTop: '12px' }} htmlFor="bill-rate-daily-rate">
+              <label className="form-label" style={{ marginTop: '12px' }} htmlFor="contract-rate-daily-rate">
                 Đơn giá theo ngày công (VNĐ)
               </label>
               <input
-                id="bill-rate-daily-rate"
+                id="contract-rate-daily-rate"
                 type="text"
                 inputMode="numeric"
                 aria-label="Đơn giá theo ngày công"
@@ -179,11 +173,11 @@ export default function RateFormModal({ isOpen, onClose, onSaved, currentUserRol
               />
               {errors.dailyRate && <small className="field-error">{errors.dailyRate}</small>}
 
-              <label className="form-label" style={{ marginTop: '12px' }} htmlFor="bill-rate-effective-from">
+              <label className="form-label" style={{ marginTop: '12px' }} htmlFor="contract-rate-effective-from">
                 Ngày hiệu lực
               </label>
               <input
-                id="bill-rate-effective-from"
+                id="contract-rate-effective-from"
                 type="date"
                 className={`form-input ${errors.effectiveFrom ? 'form-input--error' : ''}`}
                 value={values.effectiveFrom}
@@ -192,8 +186,8 @@ export default function RateFormModal({ isOpen, onClose, onSaved, currentUserRol
               />
               {errors.effectiveFrom && <small className="field-error">{errors.effectiveFrom}</small>}
               <p className="field-hint" style={{ marginTop: '6px' }}>
-                Cùng vai trò + cấp bậc không được khai báo hai lần cho cùng một ngày hiệu lực. Đơn giá
-                hiệu lực trong tương lai chưa xuất hiện ở màn hình lập báo giá cho tới đúng ngày này.
+                Cùng vai trò + cấp bậc không được khai báo hai lần cho cùng một ngày hiệu lực trong hợp đồng
+                này.
               </p>
 
               <div style={{ marginTop: '16px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
@@ -201,7 +195,7 @@ export default function RateFormModal({ isOpen, onClose, onSaved, currentUserRol
                   Hủy
                 </button>
                 <button type="submit" className="btn-primary" disabled={submitting || !isAllowed}>
-                  {submitting ? 'Đang lưu…' : 'Lưu đơn giá'}
+                  {submitting ? 'Đang lưu…' : 'Lưu đơn giá riêng'}
                 </button>
               </div>
             </form>
