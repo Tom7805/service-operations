@@ -9,10 +9,7 @@ import com.serviceops.modules.project.entity.Project;
 import com.serviceops.modules.project.entity.Task;
 import com.serviceops.modules.project.repository.ProjectRepository;
 import com.serviceops.modules.project.repository.TaskRepository;
-import com.serviceops.modules.timesheet.entity.Timesheet;
-import com.serviceops.modules.timesheet.enums.TimesheetStatus;
 import com.serviceops.modules.timesheet.repository.TimeEntryRepository;
-import com.serviceops.modules.timesheet.repository.TimesheetRepository;
 import com.serviceops.modules.timesheet.service.TimesheetReminderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -44,7 +41,6 @@ public class TimesheetReminderServiceImpl implements TimesheetReminderService {
 	private static final String PM_SUMMARY_TITLE = "Danh sach nhan su chua nop bang cham cong";
 
 	private final TimeEntryRepository timeEntryRepository;
-	private final TimesheetRepository timesheetRepository;
 	private final NotificationRepository notificationRepository;
 	private final NotificationService notificationService;
 	private final TaskRepository taskRepository;
@@ -53,10 +49,13 @@ public class TimesheetReminderServiceImpl implements TimesheetReminderService {
 
 	@Override
 	public List<Long> findUnsubmittedUserIds(LocalDate weekFrom, LocalDate weekTo) {
-		List<Long> draftUserIds = timeEntryRepository.findDistinctUserIdsWithDraftEntriesBetween(weekFrom, weekTo);
-		return draftUserIds.stream()
-				.filter(userId -> !hasSubmittedTimesheet(userId, weekFrom))
-				.toList();
+		// Chi can con dong TimeEntry o trang thai DRAFT trong tuan la coi nhu "chua nop"
+		// dong do — khong con loai theo trang thai Timesheet cua tuan nua: tu khi cho
+		// phep nop bo sung viec moi vao mot tuan da APPROVED, mot nguoi co the vua co
+		// Timesheet.APPROVED (tu lan nop truoc) VUA co dong DRAFT moi (viec vua duoc
+		// giao them) — neu con loai theo Timesheet.status thi ho bi coi la "da nop"
+		// oan trong khi dong moi ro rang chua tung duoc nop.
+		return timeEntryRepository.findDistinctUserIdsWithDraftEntriesBetween(weekFrom, weekTo);
 	}
 
 	@Override
@@ -90,13 +89,6 @@ public class TimesheetReminderServiceImpl implements TimesheetReminderService {
 							+ remindedCount + " nhan su chua nop");
 		}
 		return remindedCount;
-	}
-
-	private boolean hasSubmittedTimesheet(Long userId, LocalDate weekFrom) {
-		return timesheetRepository.findByUserIdAndWeekStartDate(userId, weekFrom)
-				.map(Timesheet::getStatus)
-				.filter(status -> status == TimesheetStatus.PENDING_APPROVAL || status == TimesheetStatus.APPROVED)
-				.isPresent();
 	}
 
 	/** Gom nguoi chua nop theo PM phu trach du an cua ho, gui moi PM mot thong bao tong hop. */
