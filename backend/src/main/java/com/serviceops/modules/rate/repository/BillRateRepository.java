@@ -37,6 +37,13 @@ public interface BillRateRepository extends JpaRepository<BillRate, Long> {
 	 * sach chuc danh cho o chon o man hinh lap bao gia (NCL-03-CN-003), tranh
 	 * nguoi dung go tay sai ten khien khong tra duoc don gia.
 	 */
+	/**
+	 * Toan bo cac moc hieu luc da khai bao cho mot cap (vai tro, cap bac), moi nhat sau cung —
+	 * nguon du lieu cho man hinh lich su thay doi don gia (NCL-07-CN-007).
+	 */
+	List<BillRate> findByProfessionalRoleIgnoreCaseAndLevelIgnoreCaseOrderByEffectiveFromAsc(
+			String professionalRole, String level);
+
 	@Query(value = """
 			SELECT br1.* FROM bill_rates br1
 			INNER JOIN (

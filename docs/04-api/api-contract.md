@@ -3956,6 +3956,90 @@ Danh sách hệ số hiện tại của tất cả loại hình công việc, s�
   trả `404 RESOURCE_NOT_FOUND` thay vì coi hệ số là `1.00` — hiển thị thông báo "chưa khai báo hệ số cho
   loại hình công việc này" thay vì lỗi chung chung.
 
+### `NCL-07-CN-007` — Xem lịch sử thay đổi đơn giá
+
+Trả về toàn bộ các mốc đơn giá đã từng khai báo cho một cặp (vai trò, cấp bậc), giúp Kế toán giải trình vì
+sao doanh thu giữa hai kỳ khác nhau (ví dụ do công ty tăng giá giữa chừng — `NCL-07-CN-002`). Không có bảng
+lưu lịch sử riêng: mỗi lần `POST /bill-rates` tạo dòng mới (không bao giờ ghi đè — `NCL-07-CN-001`/`002`),
+nên "lịch sử" chính là toàn bộ các dòng `bill_rates` của cặp đó, sắp theo `effectiveFrom`; "người thay đổi"
+tra lại từ `audit_logs` mà `POST /bill-rates` đã tự ghi tại thời điểm tạo — không cần Frontend hay Backend
+ghi thêm gì mới khi xem màn hình này.
+
+Yêu cầu token **Kế toán** (`VT-05`) hoặc **Quản trị viên** (`VT-07`) — cùng nhóm quyền với các endpoint quản
+lý đơn giá khác; vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối (TC-03).
+
+#### `GET /bill-rates/history`
+
+```
+GET /bill-rates/history?professionalRole=Lap+trinh+vien+cao+cap&level=Cao+cap
+```
+
+| Query param | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `professionalRole` | string | có | Vai trò chuyên môn, khớp chính xác (không phân biệt hoa/thường) |
+| `level` | string | có | Cấp bậc, khớp chính xác (không phân biệt hoa/thường) |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "professionalRole": "Lap trinh vien cao cap",
+    "level": "Cao cap",
+    "everChanged": true,
+    "entries": [
+      {
+        "id": 1,
+        "dailyRate": 500000,
+        "effectiveFrom": "2025-01-01",
+        "effectiveTo": "2025-12-31",
+        "current": false,
+        "changedBy": "ke.toan01",
+        "changedAt": "2025-01-01T09:00:00"
+      },
+      {
+        "id": 2,
+        "dailyRate": 600000,
+        "effectiveFrom": "2026-01-01",
+        "effectiveTo": null,
+        "current": true,
+        "changedBy": "ke.toan02",
+        "changedAt": "2025-12-20T14:00:00"
+      }
+    ]
+  }
+}
+```
+
+| Trường | Kiểu | Ghi chú |
+|---|---|---|
+| `everChanged` | boolean | `false` khi `entries` chỉ có đúng 1 phần tử — Frontend hiển thị rõ "chưa từng thay đổi" thay vì bảng có 1 dòng trông giống lỗi tải thiếu dữ liệu (TC-02) |
+| `entries[].id` | number | Mã dòng đơn giá, không cần hiển thị cho người dùng — chỉ để làm `key` khi render danh sách |
+| `entries[].effectiveFrom` | date | Ngày bắt đầu hiệu lực của mốc này |
+| `entries[].effectiveTo` | date \| null | Ngày cuối cùng còn hiệu lực (`effectiveFrom` của mốc kế tiếp trừ 1 ngày); `null` nếu đây là mốc mới nhất |
+| `entries[].current` | boolean | `true` cho đúng một phần tử — mốc mới nhất, đang áp dụng (luôn đi kèm `effectiveTo = null`) |
+| `entries[].changedBy` | string \| null | Tên đăng nhập người đã khai báo mốc này; `null` nếu dòng được tạo từ dữ liệu seed trước khi có audit log — Frontend nên hiển thị "—" thay vì để trống |
+| `entries[].changedAt` | datetime \| null | Thời điểm khai báo; `null` cùng điều kiện với `changedBy` |
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) hoặc Quản trị viên (`VT-07`) — ghi nhật ký lần từ chối (TC-03) |
+| 400 | `VALIDATION_ERROR` | Thiếu `professionalRole` hoặc `level` |
+| 404 | `RESOURCE_NOT_FOUND` | Vai trò + cấp bậc đó chưa từng có đơn giá nào được khai báo |
+
+**Lưu ý cho Frontend:**
+- `entries` luôn sắp theo `effectiveFrom` **tăng dần** (cũ nhất trước) — nếu muốn hiển thị mới nhất trước
+  thì tự đảo mảng phía Frontend.
+- Khác với `GET /bill-rates/current` (chỉ trả các cặp **đang** hiệu lực hôm nay), endpoint này trả **toàn
+  bộ** lịch sử kể cả các mốc đã hết hiệu lực từ lâu — dùng cho màn hình tra cứu/giải trình, không phải màn
+  hình chọn giá khi lập báo giá.
+- `404` không phải lỗi hệ thống — nghĩa là vai trò/cấp bậc đó **chưa từng được khai báo đơn giá lần nào**;
+  nên phân biệt với trường hợp "có 1 mốc" (vẫn trả `200` kèm `everChanged: false`).
+
 ---
 
 ## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)
