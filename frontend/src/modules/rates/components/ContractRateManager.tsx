@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import { fetchContracts } from '../../contracts/api/contractsApi';
@@ -87,6 +87,27 @@ export default function ContractRateManager({ currentUserRoles = [], roleOptions
     setToast(`Đã khai báo đơn giá riêng cho hợp đồng #${created.contractId}: ${created.professionalRole} (${created.level}).`);
     window.setTimeout(() => setToast(null), 4500);
   };
+
+  // Vai trò/cấp bậc để chọn ở "Tra đơn giá áp dụng cho hợp đồng này" phải gồm cả những
+  // cặp vừa khai báo RIÊNG cho hợp đồng này — không chỉ bảng đơn giá chung công ty —
+  // nếu không, vừa khai báo xong sẽ không tra được ngay cặp đó.
+  const contractRoleOptions = useMemo(() => {
+    const set = new Set(roleOptions);
+    rates.forEach((r) => set.add(r.professionalRole));
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [roleOptions, rates]);
+  const contractLevelsByRole = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    Object.entries(levelsByRole).forEach(([role, levels]) => {
+      map[role] = [...levels];
+    });
+    rates.forEach((r) => {
+      const list = map[r.professionalRole] ?? (map[r.professionalRole] = []);
+      if (!list.includes(r.level)) list.push(r.level);
+    });
+    Object.values(map).forEach((list) => list.sort((a, b) => a.localeCompare(b)));
+    return map;
+  }, [levelsByRole, rates]);
 
   return (
     <div className="user-table-card" style={{ marginTop: '16px', padding: '20px' }} data-testid="contract-rate-manager">
@@ -216,8 +237,8 @@ export default function ContractRateManager({ currentUserRoles = [], roleOptions
 
           <ContractRateResolveLookup
             contractId={activeContractId}
-            roleOptions={roleOptions}
-            levelsByRole={levelsByRole}
+            roleOptions={contractRoleOptions}
+            levelsByRole={contractLevelsByRole}
           />
 
           <ContractRateFormModal
