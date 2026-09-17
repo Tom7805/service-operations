@@ -41,7 +41,7 @@ public class TimesheetReminderController {
 		LocalDate weekEndDate = weekStartDate.plusDays(6);
 		List<Long> userIds = timesheetReminderService.findUnsubmittedUserIds(weekStartDate, weekEndDate);
 		Map<Long, String> namesByUserId = userRepository.findAllById(userIds).stream()
-				.collect(Collectors.toMap(User::getId, User::getFullName));
+				.collect(Collectors.toMap(User::getId, u -> u.getFullName() == null ? "" : u.getFullName()));
 		List<UnsubmittedTimesheetRes> result = userIds.stream()
 				.map(userId -> new UnsubmittedTimesheetRes(userId, namesByUserId.get(userId), weekStartDate, weekEndDate))
 				.toList();

@@ -74,7 +74,7 @@ public class TimesheetApprovalServiceImpl implements TimesheetApprovalService {
 				.findAllById(pendingTimesheets.stream().map(Timesheet::getUserId).distinct().toList())
 				.stream()
 				.collect(Collectors.toMap(com.serviceops.modules.identity.user.entity.User::getId,
-						com.serviceops.modules.identity.user.entity.User::getFullName));
+						u -> u.getFullName() == null ? "" : u.getFullName()));
 
 		List<PendingTimesheetRes> queue = new ArrayList<>();
 		for (Timesheet timesheet : pendingTimesheets) {
