@@ -35,6 +35,68 @@ bổ sung thêm 1 mục theo đúng Epic/Story tương ứng bên dưới — Fr
 - **Swagger UI (tra cứu trực tiếp khi backend đang chạy):** `http://localhost:8080/api/v1/swagger-ui/index.html`
 - **OpenAPI JSON (import vào Postman/Insomnia):** `http://localhost:8080/api/v1/v3/api-docs`
 
+## Epic `NCL-08` — Chi phí dự án
+
+### `NCL-08-CN-001` — Ghi nhận chi phí phát sinh của dự án
+
+#### `POST /projects/{projectId}/expenses`
+
+Yêu cầu token của nhân viên chuyên môn (`VT-03`). Chỉ dự án đang chạy mới nhận chi phí.
+
+**Request:**
+```json
+{
+  "type": "TRAVEL",
+  "amount": 2000000,
+  "expenseDate": "2026-09-10",
+  "description": "Chi phi di lai gap khach hang",
+  "receiptUrl": "https://files.example/receipt-1.pdf",
+  "billable": false
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `projectId` | number | có | Lấy từ URL. Phải trỏ tới dự án đang chạy. |
+| `type` | string | có | `TRAVEL`, `TOOLS` hoặc `OTHER`. |
+| `amount` | number | có | Lớn hơn `0`, đơn vị tiền tệ của công ty. |
+| `expenseDate` | date | có | Định dạng `YYYY-MM-DD`, không được ở tương lai. |
+| `description` | string | có | Không rỗng, tối đa 1000 ký tự. |
+| `receiptUrl` | string | không | Đường dẫn chứng từ mô phỏng, tối đa 500 ký tự. |
+| `billable` | boolean | không | Có tính lại cho khách hàng hay không; mặc định `false`. |
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Ghi nhan chi phi thanh cong",
+  "data": {
+    "id": 30,
+    "projectId": 1,
+    "userId": 7,
+    "type": "TRAVEL",
+    "amount": 2000000.00,
+    "expenseDate": "2026-09-10",
+    "description": "Chi phi di lai gap khach hang",
+    "receiptUrl": "https://files.example/receipt-1.pdf",
+    "billable": false,
+    "status": "SUBMITTED",
+    "createdAt": "2026-09-10T08:00:00"
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Thiếu/sai loại chi phí, số tiền không dương, mô tả rỗng hoặc ngày ở tương lai. |
+| 400 | `INVALID_STATE` | Dự án đã đóng hoặc không còn ở trạng thái `RUNNING`. |
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-03`. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy dự án. |
+
+Sau khi tạo, phiếu ở trạng thái `SUBMITTED`; hệ thống ghi audit gồm người tạo, thời điểm và nội dung thao tác.
+
 ---
 
 ## Epic `NCL-01` — Đăng nhập và phân quyền theo cây tổ chức

@@ -119,6 +119,20 @@ public class ProjectAuditLogger {
 		repository.save(audit);
 	}
 
+	/** NCL-08-CN-001: ghi nhat ky khi tao phieu chi phi du an. */
+	public void recordExpenseCreated(Long projectId, Long expenseId, BigDecimal amount) {
+		ProjectAuditLog audit = new ProjectAuditLog();
+		audit.setProjectId(projectId);
+		audit.setActionType(ProjectAuditAction.EXPENSE_CREATED);
+		audit.setDetail("Tao phieu chi phi #" + expenseId + ": " + amount.toPlainString());
+		Long actorId = currentUserScopeProvider.currentUserId();
+		audit.setActorId(actorId == null ? 0L : actorId);
+		audit.setActorUsername(currentUsername());
+		audit.setActorRole(currentRole());
+		audit.setCreatedAt(LocalDateTime.now());
+		repository.save(audit);
+	}
+
 	/** NCL-04-CN-007: hop dong duoc gia han thi day ngay ket thuc du kien cua du an RUNNING theo. */
 	public void recordTimelineSyncedFromContract(Long projectId, Long contractId, LocalDate previousEndDate,
 			LocalDate newEndDate) {
