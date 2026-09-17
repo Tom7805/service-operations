@@ -39,6 +39,12 @@ public class ProjectExpenseController {
 				projectExpenseService.updateRejected(expenseId, request));
 	}
 
+	@GetMapping("/projects/{projectId}/expenses")
+	@PreAuthorize("hasRole('VT-02') or hasRole('VT-03') or hasRole('VT-05')")
+	public BaseRes<List<ExpenseRes>> findByProject(@PathVariable Long projectId) {
+		return BaseRes.ok(projectExpenseService.findByProject(projectId));
+	}
+
 	@GetMapping("/expenses/pending")
 	@PreAuthorize("hasRole('VT-05')")
 	public BaseRes<List<ExpenseRes>> findPending() {

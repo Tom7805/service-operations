@@ -143,4 +143,21 @@ class SubcontractorExpenseControllerIT {
 					.contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"\"}"))
 				.andExpect(status().isBadRequest());
 	}
+
+	@Test
+	void projectManagerCanListProjectSubcontractorExpenses() throws Exception {
+		when(subcontractorExpenseService.findByProject(1L)).thenReturn(List.of(new SubcontractorExpenseRes(40L, 1L,
+				5L, "Cong ty TNHH ABC", "Trien khai module bao cao", new BigDecimal("50000000"),
+				LocalDate.of(2026, 9, 10), ExpenseStatus.APPROVED, LocalDateTime.parse("2026-09-10T08:00:00"))));
+
+		mockMvc.perform(get("/projects/1/subcontractor-expenses").with(user("pm01").roles("VT-02")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data[0].id").value(40));
+	}
+
+	@Test
+	void specialistCannotListProjectSubcontractorExpenses() throws Exception {
+		mockMvc.perform(get("/projects/1/subcontractor-expenses").with(user("dev01").roles("VT-03")))
+				.andExpect(status().isForbidden());
+	}
 }

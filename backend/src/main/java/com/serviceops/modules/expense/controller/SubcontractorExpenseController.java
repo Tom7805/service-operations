@@ -31,6 +31,12 @@ public class SubcontractorExpenseController {
 				subcontractorExpenseService.create(projectId, request));
 	}
 
+	@GetMapping("/projects/{projectId}/subcontractor-expenses")
+	@PreAuthorize("hasRole('VT-02') or hasRole('VT-05')")
+	public BaseRes<List<SubcontractorExpenseRes>> findByProject(@PathVariable Long projectId) {
+		return BaseRes.ok(subcontractorExpenseService.findByProject(projectId));
+	}
+
 	@GetMapping("/subcontractor-expenses/pending")
 	@PreAuthorize("hasRole('VT-05')")
 	public BaseRes<List<SubcontractorExpenseRes>> findPending() {

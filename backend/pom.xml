@@ -184,6 +184,23 @@
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
+            <plugin>
+                <!-- Du an khong dung maven-failsafe-plugin nen cac lop *IT.java (quy uoc
+                     Failsafe) khong duoc Surefire mac dinh nhan dien va bi bo qua hoan toan
+                     trong `mvn test`. Them tuong minh de cac test tich hop nay thuc su chay
+                     thay vi chi ton tai "cho co" trong src/test. -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <includes>
+                        <include>**/Test*.java</include>
+                        <include>**/*Test.java</include>
+                        <include>**/*Tests.java</include>
+                        <include>**/*TestCase.java</include>
+                        <include>**/*IT.java</include>
+                    </includes>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

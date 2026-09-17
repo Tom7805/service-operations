@@ -28,6 +28,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -151,6 +152,33 @@ class ExpenseControllerIT {
 		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 				.put("/expenses/30/billable").with(user("dev01").roles("VT-03"))
 				.contentType(MediaType.APPLICATION_JSON).content("{\"billable\":true}"))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void projectManagerCanListProjectExpenses() throws Exception {
+		when(projectExpenseService.findByProject(1L)).thenReturn(java.util.List.of(new ExpenseRes(30L, 1L, 7L,
+				ExpenseType.TRAVEL, new BigDecimal("2000000"), LocalDate.of(2026, 9, 10),
+				"Chi phi di lai gap khach hang", null, false, ExpenseStatus.APPROVED,
+				LocalDateTime.parse("2026-09-10T08:00:00"))));
+
+		mockMvc.perform(get("/projects/1/expenses").with(user("pm01").roles("VT-02")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data[0].id").value(30));
+	}
+
+	@Test
+	void specialistCanListOwnProjectExpenses() throws Exception {
+		when(projectExpenseService.findByProject(1L)).thenReturn(java.util.List.of());
+
+		mockMvc.perform(get("/projects/1/expenses").with(user("dev01").roles("VT-03")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data").isArray());
+	}
+
+	@Test
+	void salesCannotListProjectExpenses() throws Exception {
+		mockMvc.perform(get("/projects/1/expenses").with(user("sale01").roles("VT-04")))
 				.andExpect(status().isForbidden());
 	}
 

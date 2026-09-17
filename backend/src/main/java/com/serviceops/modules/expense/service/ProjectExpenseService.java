@@ -12,6 +12,8 @@ public interface ProjectExpenseService {
 
 	ExpenseRes updateRejected(Long expenseId, ExpenseCreateReq request);
 
+	List<ExpenseRes> findByProject(Long projectId);
+
 	List<ExpenseRes> findPending();
 
 	ExpenseRes approve(Long expenseId);

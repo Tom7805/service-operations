@@ -29,6 +29,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -217,6 +218,30 @@ class ProjectExpenseServiceTest {
 		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
 		verify(expenseRepository, never()).save(any(ProjectExpense.class));
 		verify(auditLogger, never()).recordExpenseBillableUpdated(any(), any(), any());
+	}
+
+	@Test
+	void findByProjectReturnsExpensesForExistingProject() {
+		when(projectRepository.existsById(1L)).thenReturn(true);
+		when(currentUserScopeProvider.currentUserId()).thenReturn(5L);
+		ProjectExpense expense = expense(ExpenseStatus.APPROVED);
+		when(expenseRepository.findByProjectIdOrderByExpenseDateDescIdDesc(1L)).thenReturn(List.of(expense));
+
+		List<ExpenseRes> result = service.findByProject(1L);
+
+		assertEquals(1, result.size());
+		assertEquals(30L, result.get(0).id());
+	}
+
+	@Test
+	void findByProjectRejectsMissingProject() {
+		when(projectRepository.existsById(99L)).thenReturn(false);
+		when(currentUserScopeProvider.currentUserId()).thenReturn(5L);
+
+		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
+				() -> service.findByProject(99L));
+
+		assertEquals(ErrorCode.RESOURCE_NOT_FOUND, exception.getErrorCode());
 	}
 
 	private ProjectExpense expense(ExpenseStatus status) {

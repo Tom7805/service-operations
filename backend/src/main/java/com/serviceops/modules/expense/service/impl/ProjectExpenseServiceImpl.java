@@ -116,6 +116,17 @@ public class ProjectExpenseServiceImpl implements ProjectExpenseService {
 
 	@Override
 	@Transactional(readOnly = true)
+	public List<ExpenseRes> findByProject(Long projectId) {
+		requireAuthenticatedUser();
+		if (!projectRepository.existsById(projectId)) {
+			throw new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Khong tim thay du an");
+		}
+		return expenseRepository.findByProjectIdOrderByExpenseDateDescIdDesc(projectId).stream()
+				.map(expenseMapper::toResponse).toList();
+	}
+
+	@Override
+	@Transactional(readOnly = true)
 	public List<ExpenseRes> findPending() {
 		requireAuthenticatedUser();
 		return expenseRepository.findByStatusOrderByExpenseDateAscIdAsc(ExpenseStatus.SUBMITTED).stream()

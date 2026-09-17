@@ -10,4 +10,6 @@ public interface ProjectExpenseRepository extends JpaRepository<ProjectExpense, 
 	List<ProjectExpense> findByStatusOrderByExpenseDateAscIdAsc(ExpenseStatus status);
 
 	List<ProjectExpense> findByProjectIdAndStatusOrderByExpenseDateAscIdAsc(Long projectId, ExpenseStatus status);
+
+	List<ProjectExpense> findByProjectIdOrderByExpenseDateDescIdDesc(Long projectId);
 }

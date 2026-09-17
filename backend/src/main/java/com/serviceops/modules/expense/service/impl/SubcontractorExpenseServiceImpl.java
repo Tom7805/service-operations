@@ -73,6 +73,17 @@ public class SubcontractorExpenseServiceImpl implements SubcontractorExpenseServ
 
 	@Override
 	@Transactional(readOnly = true)
+	public List<SubcontractorExpenseRes> findByProject(Long projectId) {
+		requireAuthenticatedUser();
+		if (!projectRepository.existsById(projectId)) {
+			throw new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Khong tim thay du an");
+		}
+		return expenseRepository.findByProjectIdOrderByIncurredPeriodDescIdDesc(projectId).stream()
+				.map(expenseMapper::toResponse).toList();
+	}
+
+	@Override
+	@Transactional(readOnly = true)
 	public List<SubcontractorExpenseRes> findPending() {
 		requireAuthenticatedUser();
 		return expenseRepository.findByStatusOrderByIncurredPeriodAscIdAsc(ExpenseStatus.SUBMITTED).stream()

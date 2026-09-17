@@ -11,6 +11,8 @@ public interface SubcontractorExpenseService {
 
 	SubcontractorExpenseRes create(Long projectId, SubcontractorExpenseReq request);
 
+	List<SubcontractorExpenseRes> findByProject(Long projectId);
+
 	List<SubcontractorExpenseRes> findPending();
 
 	SubcontractorExpenseRes approve(Long expenseId);
