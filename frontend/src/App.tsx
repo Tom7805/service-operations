@@ -27,6 +27,7 @@ import TimesheetRejectPage from './modules/timesheets/pages/TimesheetRejectPage'
 import TimesheetAdjustmentPage from './modules/timesheets/pages/TimesheetAdjustmentPage';
 import TimesheetPeriodPage from './modules/timesheets/pages/TimesheetPeriodPage';
 import UnsubmittedTimesheetsPage from './modules/timesheets/pages/UnsubmittedTimesheetsPage';
+import ExpenseApprovalPage from './modules/expenses/pages/ExpenseApprovalPage';
 import NotificationCenterPage from './modules/notifications/pages/NotificationCenterPage';
 import NotificationList from './modules/notifications/components/NotificationList';
 import { getNotifications, getUnreadCount, markNotificationsRead } from './modules/notifications/api/notificationsApi';
@@ -454,6 +455,8 @@ export default function App() {
             <TimesheetPeriodPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'UNSUBMITTED_TIMESHEETS' ? (
             <UnsubmittedTimesheetsPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+          ) : activeTab === 'EXPENSE_APPROVAL' ? (
+            <ExpenseApprovalPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'CUSTOMERS' ? (
             <CustomerListPage
               currentUserRoles={currentRoles}

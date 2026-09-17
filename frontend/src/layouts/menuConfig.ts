@@ -32,6 +32,7 @@ export type Tab =
   | 'TIMESHEET_ADJUSTMENT'
   | 'TIMESHEET_PERIOD'
   | 'UNSUBMITTED_TIMESHEETS'
+  | 'EXPENSE_APPROVAL'
   | 'NOTIFICATIONS';
 
 export interface NavItem {
@@ -110,6 +111,11 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
     // NCL-07-CN-007: toàn bộ các mốc đơn giá đã từng khai báo cho một (vai trò, cấp
     // bậc) — giải thích chênh lệch doanh thu giữa hai kỳ. Tách khỏi "Bảng đơn giá" vì
     // đây là tra cứu độc lập theo cặp cụ thể, không phải quản lý toàn bộ bảng giá.
+  },
+  {
+    tab: 'EXPENSE_APPROVAL', icon: ICONS.money, label: 'Duyệt chi phí dự án', requires: ['VT-05'],
+    // NCL-08-CN-002: Kế toán xem hàng chờ duyệt và duyệt/từ chối từng phiếu chi phí dự
+    // án (NCL-08-CN-001) trước khi phiếu được tính vào giá vốn dự án.
   },
   { tab: 'OPPORTUNITY_DETAIL', icon: ICONS.building, label: 'Cơ hộp', requires: ['VT-04'] },
 ];
