@@ -184,11 +184,16 @@ export default function App() {
     }
   }
 
-  if (!session) return <LoginPage onAuthenticated={handleAuthenticated} />;
-
   // Quyền truy cập luôn theo vai trò thật của tài khoản đang đăng nhập (trả về từ backend lúc dang nhap),
   // khong dung bat ky co che gia lap nao o phia giao dien.
-  const currentRoles = session.roles;
+  // Dùng mảng rỗng khi chưa đăng nhập (không được `return` sớm ở đây) — các hook
+  // ngay dưới PHẢI luôn được gọi theo đúng thứ tự ở mọi lần render, kể cả khi
+  // `session` vừa chuyển null → có giá trị (đăng nhập) hoặc ngược lại (đăng
+  // xuất). `return` sớm trước những hook này từng làm số hook gọi được thay đổi
+  // giữa hai lần render liên tiếp, khiến React ném lỗi "Rendered more hooks than
+  // during the previous render" và toàn bộ ứng dụng trắng trang — chỉ tải lại
+  // trang (mount mới) mới hết vì lúc đó không còn xảy ra chuyển trạng thái nữa.
+  const currentRoles = session?.roles ?? [];
 
   // Vai trò mới (đăng nhập / làm mới qua useSessionSync) → tab mở rộng mỗi lần
   // đổi trang. useSessionSync làm mới khi focus lại + poll 30s; 401 thì đăng xuất.
@@ -204,6 +209,8 @@ export default function App() {
   // Sidebar + bảng lệnh chỉ liệt kê chức năng người dùng thực sự thấy được
   // (có quyền, hoặc ở chế độ chỉ xem). Các mục bị khóa hoàn toàn không hiện ra.
   const navGroups = useMemo(() => navGroupsFor(currentRoles), [currentRoles]);
+
+  if (!session) return <LoginPage onAuthenticated={handleAuthenticated} />;
 
   const activeNavItem =
     ALL_NAV_ITEMS.find((item) => item.tab === activeTab) ??
