@@ -1,4 +1,5 @@
 import type {
+  AdjustableEntryRes,
   AdjustmentTraceRes,
   PendingTimesheetRes,
   PeriodLockReq,
@@ -197,6 +198,18 @@ export async function rejectTimesheet(
 }
 
 /**
+ * NCL-06-CN-005: danh sách dòng giờ công ĐÃ DUYỆT, còn là dòng gốc và chưa từng điều chỉnh,
+ * thuộc các dự án PM hiện tại quản lý — nguồn dữ liệu cho PM chọn trực tiếp trên màn hình
+ * thay vì phải tự biết trước Project ID/Task ID/Entry ID.
+ * GET /timesheets/adjustable-entries
+ */
+export async function getAdjustableEntries(): Promise<AdjustableEntryRes[]> {
+  return requestBackend<AdjustableEntryRes[]>(`${API_BASE_URL}/timesheets/adjustable-entries`, {
+    method: 'GET',
+  });
+}
+
+/**
  * NCL-06-CN-005: điều chỉnh một dòng giờ công đã duyệt bằng bút toán đảo (QTN-11). Chỉ điều
  * chỉnh được dòng gốc đang APPROVED, thuộc dự án PM quản lý; kỳ chấm công chứa ngày làm việc
  * của dòng gốc không được khóa (NCL-06-CN-006).
@@ -304,5 +317,18 @@ export async function getUnsubmittedTimesheets(weekStartDate: string): Promise<U
   const params = new URLSearchParams({ weekStartDate });
   return requestBackend<UnsubmittedTimesheetRes[]>(`${API_BASE_URL}/timesheets/unsubmitted?${params.toString()}`, {
     method: 'GET',
+  });
+}
+
+/**
+ * Gửi nhắc ngay (thủ công) cho danh sách nhân sự chưa nộp của tuần `weekStartDate`.
+ * Dùng lại cơ chế nhắc tự động hàng tuần — vẫn tuân thủ QTN-27 (không gửi trùng
+ * trong cùng tuần), trả về số người thực sự vừa được nhắc.
+ * POST /timesheets/unsubmitted/remind?weekStartDate=...
+ */
+export async function remindUnsubmittedTimesheetsNow(weekStartDate: string): Promise<number> {
+  const params = new URLSearchParams({ weekStartDate });
+  return requestBackend<number>(`${API_BASE_URL}/timesheets/unsubmitted/remind?${params.toString()}`, {
+    method: 'POST',
   });
 }

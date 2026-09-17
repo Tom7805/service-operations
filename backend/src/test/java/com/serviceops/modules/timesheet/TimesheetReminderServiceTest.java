@@ -8,10 +8,7 @@ import com.serviceops.modules.project.entity.Project;
 import com.serviceops.modules.project.entity.Task;
 import com.serviceops.modules.project.repository.ProjectRepository;
 import com.serviceops.modules.project.repository.TaskRepository;
-import com.serviceops.modules.timesheet.entity.Timesheet;
-import com.serviceops.modules.timesheet.enums.TimesheetStatus;
 import com.serviceops.modules.timesheet.repository.TimeEntryRepository;
-import com.serviceops.modules.timesheet.repository.TimesheetRepository;
 import com.serviceops.modules.timesheet.service.impl.TimesheetReminderServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,8 +46,6 @@ class TimesheetReminderServiceTest {
 	@Mock
 	private TimeEntryRepository timeEntryRepository;
 	@Mock
-	private TimesheetRepository timesheetRepository;
-	@Mock
 	private NotificationRepository notificationRepository;
 	@Mock
 	private NotificationService notificationService;
@@ -65,40 +60,35 @@ class TimesheetReminderServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		service = new TimesheetReminderServiceImpl(timeEntryRepository, timesheetRepository,
+		service = new TimesheetReminderServiceImpl(timeEntryRepository,
 				notificationRepository, notificationService, taskRepository, projectRepository, auditLogService);
 	}
 
 	@Test
-	void findUnsubmittedUserIds_loaiNguoiDaNop_TC02() {
-		// Given: hai nguoi co dong DRAFT, mot nguoi da nop (PENDING_APPROVAL)
+	void findUnsubmittedUserIds_traVeDungNguoiConDongNhap() {
+		// Given: hai nguoi con dong TimeEntry o trang thai NHAP trong tuan
 		when(timeEntryRepository.findDistinctUserIdsWithDraftEntriesBetween(WEEK_FROM, WEEK_TO))
 				.thenReturn(List.of(101L, 102L));
-		Timesheet submitted = new Timesheet();
-		submitted.setStatus(TimesheetStatus.PENDING_APPROVAL);
-		when(timesheetRepository.findByUserIdAndWeekStartDate(101L, WEEK_FROM)).thenReturn(Optional.of(submitted));
-		when(timesheetRepository.findByUserIdAndWeekStartDate(102L, WEEK_FROM)).thenReturn(Optional.empty());
-
-		// When
-		List<Long> result = service.findUnsubmittedUserIds(WEEK_FROM, WEEK_TO);
-
-		// Then: chi con nguoi 102 (chua nop)
-		assertEquals(List.of(102L), result);
-	}
-
-	@Test
-	void findUnsubmittedUserIds_bangBiTuChoiVanTinhLaChuaNop() {
-		// Given: nguoi co Timesheet nhung dang REJECTED (chua nop lai)
-		when(timeEntryRepository.findDistinctUserIdsWithDraftEntriesBetween(WEEK_FROM, WEEK_TO))
-				.thenReturn(List.of(USER_ID));
-		Timesheet rejected = new Timesheet();
-		rejected.setStatus(TimesheetStatus.REJECTED);
-		when(timesheetRepository.findByUserIdAndWeekStartDate(USER_ID, WEEK_FROM)).thenReturn(Optional.of(rejected));
 
 		// When
 		List<Long> result = service.findUnsubmittedUserIds(WEEK_FROM, WEEK_TO);
 
 		// Then
+		assertEquals(List.of(101L, 102L), result);
+	}
+
+	/**
+	 * Sau khi cho phep nop bo sung viec moi vao mot tuan da APPROVED (Timesheet header
+	 * van con APPROVED tu lan nop truoc), mot dong NHAP moi phat sinh sau do van phai
+	 * duoc tinh la "chua nop" — khong duoc loai theo trang thai Timesheet cua ca tuan nua.
+	 */
+	@Test
+	void findUnsubmittedUserIds_vanTinhLaChuaNopDuTuanDaTungDuocApprove() {
+		when(timeEntryRepository.findDistinctUserIdsWithDraftEntriesBetween(WEEK_FROM, WEEK_TO))
+				.thenReturn(List.of(USER_ID));
+
+		List<Long> result = service.findUnsubmittedUserIds(WEEK_FROM, WEEK_TO);
+
 		assertEquals(List.of(USER_ID), result);
 	}
 
@@ -107,7 +97,6 @@ class TimesheetReminderServiceTest {
 		// Given: mot nguoi chua nop, chua tung duoc nhac trong tuan nay
 		when(timeEntryRepository.findDistinctUserIdsWithDraftEntriesBetween(WEEK_FROM, WEEK_TO))
 				.thenReturn(List.of(USER_ID));
-		when(timesheetRepository.findByUserIdAndWeekStartDate(USER_ID, WEEK_FROM)).thenReturn(Optional.empty());
 		when(notificationRepository.existsByRecipientIdAndTypeAndReferenceType(
 				eq(USER_ID), eq(NotificationType.TIMESHEET_REMINDER), anyString())).thenReturn(false);
 		when(notificationRepository.existsByRecipientIdAndTypeAndReferenceType(
@@ -154,7 +143,6 @@ class TimesheetReminderServiceTest {
 		// Given: nguoi nay da duoc nhac tu truoc trong chinh tuan nay
 		when(timeEntryRepository.findDistinctUserIdsWithDraftEntriesBetween(WEEK_FROM, WEEK_TO))
 				.thenReturn(List.of(USER_ID));
-		when(timesheetRepository.findByUserIdAndWeekStartDate(USER_ID, WEEK_FROM)).thenReturn(Optional.empty());
 		when(notificationRepository.existsByRecipientIdAndTypeAndReferenceType(
 				eq(USER_ID), eq(NotificationType.TIMESHEET_REMINDER), anyString())).thenReturn(true);
 		when(taskRepository.findByTimeEntriesUserIdAndWorkDateBetween(USER_ID, WEEK_FROM, WEEK_TO))

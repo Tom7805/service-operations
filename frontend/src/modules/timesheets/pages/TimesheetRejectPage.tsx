@@ -178,7 +178,7 @@ export default function TimesheetRejectPage({
               ) : (
                 pending.map((t) => (
                   <tr key={t.timesheetId} data-testid={`pending-row-${t.timesheetId}`}>
-                    <td>Nhân sự #{t.userId}</td>
+                    <td>{t.userName ?? `Nhân sự #${t.userId}`}</td>
                     <td>
                       {formatIsoDate(t.weekStartDate)} → {formatIsoDate(t.weekEndDate)}
                     </td>
@@ -193,7 +193,7 @@ export default function TimesheetRejectPage({
                         timesheet={t}
                         onRejected={(result) => {
                           showToast(
-                            `Đã từ chối ${result.rejectedEntries} dòng giờ công của Nhân sự #${t.userId} — đã quay về nhập.`,
+                            `Đã từ chối ${result.rejectedEntries} dòng giờ công của ${t.userName ?? `Nhân sự #${t.userId}`} — đã quay về nhập.`,
                             'success'
                           );
                           setPending((prev) => prev.filter((p) => p.timesheetId !== t.timesheetId));

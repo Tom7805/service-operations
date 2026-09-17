@@ -6,9 +6,11 @@ import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.project.entity.Project;
 import com.serviceops.modules.project.entity.Task;
+import com.serviceops.modules.project.enums.ProjectStatus;
 import com.serviceops.modules.project.repository.ProjectRepository;
 import com.serviceops.modules.project.repository.TaskRepository;
 import com.serviceops.modules.timesheet.dto.request.TimeEntryAdjustmentReq;
+import com.serviceops.modules.timesheet.dto.response.AdjustableEntryRes;
 import com.serviceops.modules.timesheet.dto.response.AdjustmentTraceRes;
 import com.serviceops.modules.timesheet.entity.TimeEntry;
 import com.serviceops.modules.timesheet.entity.TimeEntryAdjustment;
@@ -45,6 +47,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -93,6 +96,7 @@ class TimesheetAdjustmentServiceTest {
 		project = new Project();
 		project.setId(PROJECT_ID);
 		project.setProjectManagerId(PM_ID);
+		project.setStatus(ProjectStatus.RUNNING);
 
 		task = new Task();
 		task.setId(TASK_ID);
@@ -110,9 +114,9 @@ class TimesheetAdjustmentServiceTest {
 		original.setType(TimeEntryType.ORIGINAL);
 		original.setBillable(true);
 
-		when(currentUserScopeProvider.currentUserId()).thenReturn(PM_ID);
-		when(projectRepository.findById(PROJECT_ID)).thenReturn(Optional.of(project));
-		when(taskRepository.findById(TASK_ID)).thenReturn(Optional.of(task));
+		lenient().when(currentUserScopeProvider.currentUserId()).thenReturn(PM_ID);
+		lenient().when(projectRepository.findById(PROJECT_ID)).thenReturn(Optional.of(project));
+		lenient().when(taskRepository.findById(TASK_ID)).thenReturn(Optional.of(task));
 	}
 
 	/** TC-01: sinh dong dao (-8) va dong sua (6), dong goc giu nguyen. */
@@ -187,6 +191,43 @@ class TimesheetAdjustmentServiceTest {
 						new TimeEntryAdjustmentReq(new BigDecimal("6"), "ly do")));
 
 		verify(timeEntryRepository, never()).findById(ENTRY_ID);
+	}
+
+	/** Du an da dong la ho so lich su chi doc — khong con dieu chinh gio cong duoc nua. */
+	@Test
+	void rejectsAdjustmentWhenProjectClosed() {
+		project.setStatus(ProjectStatus.CLOSED);
+
+		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
+				() -> service.adjust(PROJECT_ID, TASK_ID, ENTRY_ID,
+						new TimeEntryAdjustmentReq(new BigDecimal("6"), "ly do")));
+
+		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
+		verify(timeEntryRepository, never()).findById(ENTRY_ID);
+	}
+
+	/** Du an da dong khong con xuat hien trong danh sach dong co the dieu chinh cua PM. */
+	@Test
+	void findAdjustableEntriesExcludesClosedProjects() {
+		Project closedProject = new Project();
+		closedProject.setId(2L);
+		closedProject.setProjectManagerId(PM_ID);
+		closedProject.setStatus(ProjectStatus.CLOSED);
+		closedProject.setName("Du an da dong");
+		Task closedTask = new Task();
+		closedTask.setId(21L);
+		closedTask.setProjectId(2L);
+
+		when(projectRepository.findByProjectManagerId(PM_ID)).thenReturn(List.of(project, closedProject));
+		when(taskRepository.findByProjectIdOrderByIdAsc(PROJECT_ID)).thenReturn(List.of(task));
+		when(timeEntryRepository.findApprovedOriginalEntriesByTaskIdIn(List.of(TASK_ID))).thenReturn(List.of(original));
+		when(adjustmentRepository.existsByOriginalEntryId(ENTRY_ID)).thenReturn(false);
+
+		List<AdjustableEntryRes> result = service.findAdjustableEntries();
+
+		assertEquals(1, result.size());
+		assertEquals(PROJECT_ID, result.get(0).projectId());
+		verify(taskRepository, never()).findByProjectIdOrderByIdAsc(2L);
 	}
 
 	/** TC-03: ky cham cong chua ngay cua dong goc da bi khoa thi chan dieu chinh. */

@@ -44,6 +44,8 @@ public class AccessDeniedAuditRecorder {
         FEATURES.put("/customers", new Feature(AuditTargetType.CUSTOMER, "Hồ sơ khách hàng"));
         FEATURES.put("/activities", new Feature(AuditTargetType.GENERAL, "Hoạt động chăm sóc cơ hội"));
         FEATURES.put("/quotes", new Feature(AuditTargetType.GENERAL, "Báo giá cơ hội"));
+        FEATURES.put("/bill-rates", new Feature(AuditTargetType.GENERAL, "Khai báo bảng đơn giá theo vai trò"));
+        FEATURES.put("/overhead-allocations", new Feature(AuditTargetType.EXPENSE, "Phân bổ chi phí chung cho dự án"));
         FEATURES.put("/timesheet-periods", new Feature(AuditTargetType.TIMESHEET, "Khóa kỳ chấm công"));
         FEATURES.put("/reversal", new Feature(AuditTargetType.TIMESHEET, "Điều chỉnh giờ công bằng bút toán đảo"));
         FEATURES.put("/adjustments", new Feature(AuditTargetType.TIMESHEET, "Điều chỉnh giờ công bằng bút toán đảo"));
@@ -62,6 +64,7 @@ public class AccessDeniedAuditRecorder {
         FEATURES.put("/masking-rules", new Feature(AuditTargetType.MASKING, "Cấu hình che dữ liệu nhạy cảm"));
         FEATURES.put("/roles", new Feature(AuditTargetType.ROLE_SCOPE, "Phân quyền"));
         FEATURES.put("/users", new Feature(AuditTargetType.USER, "Quản lý tài khoản"));
+        FEATURES.put("/rates", new Feature(AuditTargetType.MASKING, "Chi phí giờ công nội bộ"));
         FEATURES.put("/employees", new Feature(AuditTargetType.USER, "Quản lý nhân sự"));
         FEATURES.put("/departments", new Feature(AuditTargetType.DEPARTMENT, "Quản lý tổ chức"));
         FEATURES.put("/auth/two-factor", new Feature(AuditTargetType.TWO_FACTOR, "Xác thực hai bước"));

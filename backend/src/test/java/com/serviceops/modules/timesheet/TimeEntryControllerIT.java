@@ -73,13 +73,14 @@ class TimeEntryControllerIT {
 
 	private TimeEntryRes sampleEntry() {
 		return new TimeEntryRes(30L, 20L, 7L, WORK_DATE, new BigDecimal("3.5"), TimeEntryStatus.DRAFT,
-				"Phan tich quy trinh hien tai", true, LocalDateTime.parse("2026-09-10T15:20:00"));
+				"Phan tich quy trinh hien tai", true, com.serviceops.modules.timesheet.enums.WorkType.NORMAL,
+				LocalDateTime.parse("2026-09-10T15:20:00"));
 	}
 
 	@Test
 	@DisplayName("TC-02/TC-03: Nhan vien chuyen mon (VT-03) ghi gio cong thanh cong — 200 OK")
 	void allowsSpecialistToLogTime() throws Exception {
-		TimeEntryCreateReq req = new TimeEntryCreateReq(WORK_DATE, new BigDecimal("3.5"), "Phan tich quy trinh hien tai", true);
+		TimeEntryCreateReq req = new TimeEntryCreateReq(WORK_DATE, new BigDecimal("3.5"), "Phan tich quy trinh hien tai", true, null);
 		when(timeEntryService.create(eq(1L), eq(20L), any())).thenReturn(sampleEntry());
 
 		mockMvc.perform(post("/projects/1/tasks/20/time-entries")
@@ -138,7 +139,7 @@ class TimeEntryControllerIT {
 	@Test
 	@DisplayName("TC-03: vai tro khac VT-03 (vd VT-02) bi tu choi ghi gio cong — 403 FORBIDDEN")
 	void deniesNonSpecialistRoleOnCreate() throws Exception {
-		TimeEntryCreateReq req = new TimeEntryCreateReq(WORK_DATE, new BigDecimal("3.5"), "Ghi chu", true);
+		TimeEntryCreateReq req = new TimeEntryCreateReq(WORK_DATE, new BigDecimal("3.5"), "Ghi chu", true, null);
 
 		mockMvc.perform(post("/projects/1/tasks/20/time-entries")
 						.with(SecurityMockMvcRequestPostProcessors.user("pm01").roles("VT-02"))
@@ -152,7 +153,7 @@ class TimeEntryControllerIT {
 	@Test
 	@DisplayName("TC-02: VT-03 hop le nhung khong duoc giao cong viec — 403 FORBIDDEN voi thong bao cu the")
 	void deniesSpecialistNotAssignedToTask() throws Exception {
-		TimeEntryCreateReq req = new TimeEntryCreateReq(WORK_DATE, new BigDecimal("3.5"), "Ghi chu", true);
+		TimeEntryCreateReq req = new TimeEntryCreateReq(WORK_DATE, new BigDecimal("3.5"), "Ghi chu", true, null);
 		when(timeEntryService.create(eq(1L), eq(20L), any()))
 				.thenThrow(new BusinessRuleException(ErrorCode.FORBIDDEN,
 						"Ban khong phai nguoi duoc giao cong viec nay"));
@@ -169,7 +170,7 @@ class TimeEntryControllerIT {
 	@Test
 	@DisplayName("Du an da dong -> 400 INVALID_STATE")
 	void rejectsClosedProject() throws Exception {
-		TimeEntryCreateReq req = new TimeEntryCreateReq(WORK_DATE, new BigDecimal("3.5"), "Ghi chu", true);
+		TimeEntryCreateReq req = new TimeEntryCreateReq(WORK_DATE, new BigDecimal("3.5"), "Ghi chu", true, null);
 		when(timeEntryService.create(eq(1L), eq(20L), any()))
 				.thenThrow(new BusinessRuleException(ErrorCode.INVALID_STATE, "Khong the ghi gio cong cho du an da dong"));
 
@@ -198,7 +199,7 @@ class TimeEntryControllerIT {
 	@Test
 	@DisplayName("Ghi trung (cong viec, ngay) -> 409 DUPLICATE_DATA")
 	void rejectsDuplicateEntry() throws Exception {
-		TimeEntryCreateReq req = new TimeEntryCreateReq(WORK_DATE, new BigDecimal("3.5"), "Ghi chu", true);
+		TimeEntryCreateReq req = new TimeEntryCreateReq(WORK_DATE, new BigDecimal("3.5"), "Ghi chu", true, null);
 		when(timeEntryService.create(eq(1L), eq(20L), any()))
 				.thenThrow(new BusinessRuleException(ErrorCode.DUPLICATE_DATA, "Da co ban ghi gio cong"));
 
@@ -237,10 +238,11 @@ class TimeEntryControllerIT {
 	@Test
 	@DisplayName("PUT: sua gio cong ban ghi DRAFT cua chinh minh — 200 OK")
 	void allowsUpdateOfOwnDraftEntry() throws Exception {
-		TimeEntryUpdateReq req = new TimeEntryUpdateReq(new BigDecimal("4"), "Da chinh sua sau khi soat lai", true);
+		TimeEntryUpdateReq req = new TimeEntryUpdateReq(new BigDecimal("4"), "Da chinh sua sau khi soat lai", true, null);
 		when(timeEntryService.update(eq(1L), eq(20L), eq(30L), any())).thenReturn(
 				new TimeEntryRes(30L, 20L, 7L, WORK_DATE, new BigDecimal("4"), TimeEntryStatus.DRAFT,
-						"Da chinh sua sau khi soat lai", true, LocalDateTime.parse("2026-09-10T15:20:00")));
+						"Da chinh sua sau khi soat lai", true, com.serviceops.modules.timesheet.enums.WorkType.NORMAL,
+						LocalDateTime.parse("2026-09-10T15:20:00")));
 
 		mockMvc.perform(put("/projects/1/tasks/20/time-entries/30")
 						.with(SecurityMockMvcRequestPostProcessors.user("nv01").roles("VT-03"))
@@ -253,7 +255,7 @@ class TimeEntryControllerIT {
 	@Test
 	@DisplayName("PUT: ban ghi da SUBMITTED/APPROVED -> 400 INVALID_STATE")
 	void rejectsUpdateOfNonDraftEntry() throws Exception {
-		TimeEntryUpdateReq req = new TimeEntryUpdateReq(new BigDecimal("4"), null, null);
+		TimeEntryUpdateReq req = new TimeEntryUpdateReq(new BigDecimal("4"), null, null, null);
 		when(timeEntryService.update(eq(1L), eq(20L), eq(30L), any())).thenThrow(
 				new BusinessRuleException(ErrorCode.INVALID_STATE,
 						"Ban ghi gio cong da nop/da duyet, khong the sua hoac xoa truc tiep"));
@@ -269,7 +271,7 @@ class TimeEntryControllerIT {
 	@Test
 	@DisplayName("PUT: ban ghi khong ton tai hoac khong phai cua minh -> 404 RESOURCE_NOT_FOUND")
 	void rejectsUpdateOfMissingOrForeignEntry() throws Exception {
-		TimeEntryUpdateReq req = new TimeEntryUpdateReq(new BigDecimal("4"), null, null);
+		TimeEntryUpdateReq req = new TimeEntryUpdateReq(new BigDecimal("4"), null, null, null);
 		when(timeEntryService.update(eq(1L), eq(20L), eq(99L), any())).thenThrow(
 				new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
 						"Khong tim thay ban ghi gio cong cua ban tren cong viec nay"));

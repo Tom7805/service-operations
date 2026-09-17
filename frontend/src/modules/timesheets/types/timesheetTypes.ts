@@ -102,6 +102,7 @@ export interface TimesheetRes {
 export interface PendingTimesheetRes {
   timesheetId: number;
   userId: number;
+  userName: string | null;
   weekStartDate: string; // YYYY-MM-DD
   weekEndDate: string; // YYYY-MM-DD
   /** Tổng giờ công của cả tuần (mọi dự án), không chỉ phần của PM này. */
@@ -173,6 +174,24 @@ export interface AdjustmentTraceRes {
   adjustedAt: string;
 }
 
+/**
+ * Một dòng giờ công ĐÃ DUYỆT, còn là dòng gốc và chưa từng điều chỉnh — đủ điều kiện để
+ * PM chọn tạo bút toán đảo (NCL-06-CN-005). Khớp AdjustableEntryRes —
+ * `GET /timesheets/adjustable-entries`. Nguồn dữ liệu cho PM chọn trực tiếp trên màn hình
+ * thay vì phải tự biết trước Project ID/Task ID/Entry ID.
+ */
+export interface AdjustableEntryRes {
+  entryId: number;
+  projectId: number;
+  projectName: string;
+  taskId: number;
+  taskName: string;
+  userId: number;
+  workDate: string; // YYYY-MM-DD
+  hours: number;
+  note: string | null;
+}
+
 /** Trạng thái kỳ chấm công theo tháng (NCL-06-CN-006). */
 export type PeriodStatus = 'OPEN' | 'LOCKED';
 
@@ -236,6 +255,7 @@ export interface TimerRes {
  */
 export interface UnsubmittedTimesheetRes {
   userId: number;
+  userName: string | null;
   weekStartDate: string; // YYYY-MM-DD
   weekEndDate: string; // YYYY-MM-DD
 }

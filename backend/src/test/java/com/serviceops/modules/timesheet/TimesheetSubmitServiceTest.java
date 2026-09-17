@@ -238,12 +238,44 @@ class TimesheetSubmitServiceTest {
 		verify(notificationService, times(1)).sendInAppNotification(any(), any(), any(), any(), any(), any());
 	}
 
+	/**
+	 * Tuan da APPROVED nhung nguoi dung duoc giao them viec o mot du an khac van
+	 * RUNNING va ghi them gio cong moi (VD) — cho nop tiep: dong da APPROVED tu
+	 * truoc giu nguyen bat bien (QTN-10), chi dong DRAFT moi chuyen SUBMITTED, PM
+	 * duyet rieng phan bo sung o luot duyet ke tiep.
+	 */
 	@Test
-	void rejectsResubmitOfApprovedWeek() {
-		stubWeekEntries(List.of(draftEntry(30L, 20L, WEEK_FROM, new BigDecimal("4"))));
+	void allowsResubmitOfApprovedWeekWithNewDraftEntry() {
+		TimeEntry previouslyApproved = draftEntry(20L, 15L, WEEK_FROM, new BigDecimal("4"));
+		previouslyApproved.setStatus(TimeEntryStatus.APPROVED);
+		TimeEntry newDraft = draftEntry(30L, 21L, WEEK_FROM, new BigDecimal("3"));
+		stubWeekEntries(List.of(previouslyApproved, newDraft));
+		stubPersistence();
 		Timesheet existing = new Timesheet();
 		existing.setId(50L);
 		existing.setStatus(TimesheetStatus.APPROVED);
+		when(timesheetRepository.findByUserIdAndWeekStartDate(7L, WEEK_FROM))
+				.thenReturn(Optional.of(existing));
+		when(timesheetRepository.sumHoursPerDayBetween(7L, WEEK_FROM, WEEK_TO))
+				.thenReturn(List.<Object[]>of(new Object[] { WEEK_FROM, new BigDecimal("7") }));
+
+		TimesheetRes response = service.submit(WEEK_FROM, WEEK_TO);
+
+		assertEquals(50L, response.id());
+		assertEquals(TimesheetStatus.PENDING_APPROVAL, response.status());
+		assertEquals(new BigDecimal("7"), response.totalHours());
+		assertEquals(TimeEntryStatus.APPROVED, previouslyApproved.getStatus());
+		assertEquals(TimeEntryStatus.SUBMITTED, newDraft.getStatus());
+		verify(timeEntryRepository).saveAll(List.of(newDraft));
+	}
+
+	/** Tuan dang PENDING_APPROVAL (da nop, chua ai xu ly) thi khong nop chong len. */
+	@Test
+	void rejectsResubmitWhilePendingApproval() {
+		stubWeekEntries(List.of(draftEntry(30L, 20L, WEEK_FROM, new BigDecimal("4"))));
+		Timesheet existing = new Timesheet();
+		existing.setId(50L);
+		existing.setStatus(TimesheetStatus.PENDING_APPROVAL);
 		when(timesheetRepository.findByUserIdAndWeekStartDate(7L, WEEK_FROM))
 				.thenReturn(Optional.of(existing));
 

@@ -27,6 +27,7 @@ vi.mock('../api/timesheetsApi', () => {
 const TIMESHEET: PendingTimesheetRes = {
   timesheetId: 50,
   userId: 7,
+  userName: 'Nguyen Van A',
   weekStartDate: '2026-09-07',
   weekEndDate: '2026-09-13',
   totalHours: 10,

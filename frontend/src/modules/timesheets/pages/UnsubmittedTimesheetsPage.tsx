@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import { roleLabels } from '../../../utils/roleLabel';
-import { getUnsubmittedTimesheets, TimesheetsApiError } from '../api/timesheetsApi';
+import { getUnsubmittedTimesheets, remindUnsubmittedTimesheetsNow, TimesheetsApiError } from '../api/timesheetsApi';
 import type { UnsubmittedTimesheetRes } from '../types/timesheetTypes';
 import { addDays, formatIsoDate, getMondayOf } from '../utils/weekRange';
 
@@ -11,10 +11,11 @@ export interface UnsubmittedTimesheetsPageProps {
 }
 
 /**
- * Màn "Nhân sự chưa nộp bảng chấm công" (NCL-06-CN-009). Việc gửi nhắc thực sự chạy tự
- * động hằng tuần ở backend (`TimesheetReminderScheduler`) và hiển thị qua chuông thông báo
- * (xem `NotificationCenterPage`) — màn này chỉ phục vụ xem lại/tra cứu chủ động theo tuần,
- * đúng như `GET /timesheets/unsubmitted` cung cấp, không kích hoạt gửi nhắc nào cả.
+ * Màn "Nhân sự chưa nộp bảng chấm công" (NCL-06-CN-009). Việc nhắc nộp tự động vẫn chạy
+ * hằng tuần ở backend (`TimesheetReminderScheduler`) và hiển thị qua chuông thông báo (xem
+ * `NotificationCenterPage`); nút "Gửi nhắc ngay" ở đây gọi lại đúng cơ chế đó theo yêu cầu
+ * (POST /timesheets/unsubmitted/remind) nên vẫn tuân thủ QTN-27 — không gửi trùng trong
+ * cùng tuần cho người đã được nhắc.
  */
 export default function UnsubmittedTimesheetsPage({
   currentUserRoles = [],
@@ -27,6 +28,8 @@ export default function UnsubmittedTimesheetsPage({
   const [result, setResult] = useState<UnsubmittedTimesheetRes[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reminding, setReminding] = useState(false);
+  const [remindMessage, setRemindMessage] = useState<string | null>(null);
 
   const fetchUnsubmitted = useCallback(async () => {
     if (!isAllowed) return;
@@ -48,6 +51,26 @@ export default function UnsubmittedTimesheetsPage({
   useEffect(() => {
     void fetchUnsubmitted();
   }, [fetchUnsubmitted]);
+
+  const handleRemindNow = useCallback(async () => {
+    setReminding(true);
+    setRemindMessage(null);
+    setError(null);
+    try {
+      const reminded = await remindUnsubmittedTimesheetsNow(weekStart);
+      setRemindMessage(
+        reminded > 0
+          ? `Đã gửi thông báo nhắc nộp cho ${reminded} nhân sự.`
+          : 'Không có ai cần nhắc thêm — mọi người đã được nhắc trong tuần này hoặc đã nộp đủ.',
+      );
+    } catch (err) {
+      const message =
+        err instanceof TimesheetsApiError || err instanceof Error ? err.message : 'Không thể gửi nhắc lúc này.';
+      setError(message);
+    } finally {
+      setReminding(false);
+    }
+  }, [weekStart]);
 
   if (!isAllowed) {
     return (
@@ -78,11 +101,26 @@ export default function UnsubmittedTimesheetsPage({
         <div>
           <h1 className="page-title">Nhân sự chưa nộp bảng chấm công</h1>
           <p className="page-subtitle">
-            Tra cứu theo tuần — danh sách này chỉ để xem lại, việc gửi thông báo nhắc nộp chạy tự động vào
-            Chủ Nhật hằng tuần và hiển thị qua chuông thông báo.
+            Tra cứu theo tuần. Việc nhắc nộp chạy tự động vào Chủ Nhật hằng tuần — bấm "Gửi nhắc ngay" nếu
+            muốn gửi thông báo cho danh sách này ngay bây giờ.
           </p>
         </div>
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={handleRemindNow}
+          disabled={reminding || loading || !result || result.length === 0}
+        >
+          {reminding ? 'Đang gửi…' : 'Gửi nhắc ngay'}
+        </button>
       </div>
+
+      {remindMessage && (
+        <div className="alert alert--success mb-4" role="status">
+          <span className="alert__icon">{ICONS.checkCircle}</span>
+          <span>{remindMessage}</span>
+        </div>
+      )}
 
       <div className="timesheet-week-nav">
         <button
@@ -153,7 +191,7 @@ export default function UnsubmittedTimesheetsPage({
               ) : (
                 result.map((r) => (
                   <tr key={r.userId} data-testid={`unsubmitted-row-${r.userId}`}>
-                    <td>Nhân sự #{r.userId}</td>
+                    <td>{r.userName ?? `Nhân sự #${r.userId}`}</td>
                     <td>
                       {formatIsoDate(r.weekStartDate)} → {formatIsoDate(r.weekEndDate)}
                     </td>

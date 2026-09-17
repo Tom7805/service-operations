@@ -19,6 +19,7 @@ vi.mock('../api/timesheetsApi', () => {
 
   return {
     getUnsubmittedTimesheets: vi.fn(),
+    remindUnsubmittedTimesheetsNow: vi.fn(),
     TimesheetsApiError: MockTimesheetsApiError,
   };
 });
@@ -55,8 +56,8 @@ describe('UnsubmittedTimesheetsPage (NCL-06-CN-009)', () => {
 
   it('hiển thị danh sách nhân sự chưa nộp', async () => {
     vi.mocked(timesheetsApi.getUnsubmittedTimesheets).mockResolvedValue([
-      { userId: 7, weekStartDate: CURRENT_WEEK_FROM, weekEndDate: addDays(CURRENT_WEEK_FROM, 6) },
-      { userId: 8, weekStartDate: CURRENT_WEEK_FROM, weekEndDate: addDays(CURRENT_WEEK_FROM, 6) },
+      { userId: 7, userName: 'Nguyen Van A', weekStartDate: CURRENT_WEEK_FROM, weekEndDate: addDays(CURRENT_WEEK_FROM, 6) },
+      { userId: 8, userName: 'Tran Thi B', weekStartDate: CURRENT_WEEK_FROM, weekEndDate: addDays(CURRENT_WEEK_FROM, 6) },
     ]);
 
     render(<UnsubmittedTimesheetsPage currentUserRoles={['VT-02']} />);
@@ -96,5 +97,22 @@ describe('UnsubmittedTimesheetsPage (NCL-06-CN-009)', () => {
     render(<UnsubmittedTimesheetsPage currentUserRoles={['VT-02']} />);
 
     expect(await screen.findByText('Phiên đăng nhập đã hết hạn.')).toBeInTheDocument();
+  });
+
+  it('bấm "Gửi nhắc ngay" gọi API nhắc thủ công và báo số người vừa được nhắc', async () => {
+    vi.mocked(timesheetsApi.getUnsubmittedTimesheets).mockResolvedValue([
+      { userId: 7, userName: 'Nguyen Van A', weekStartDate: CURRENT_WEEK_FROM, weekEndDate: addDays(CURRENT_WEEK_FROM, 6) },
+    ]);
+    vi.mocked(timesheetsApi.remindUnsubmittedTimesheetsNow).mockResolvedValue(1);
+
+    render(<UnsubmittedTimesheetsPage currentUserRoles={['VT-02']} />);
+    expect(await screen.findByTestId('unsubmitted-row-7')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Gửi nhắc ngay/i }));
+
+    await waitFor(() =>
+      expect(timesheetsApi.remindUnsubmittedTimesheetsNow).toHaveBeenCalledWith(CURRENT_WEEK_FROM)
+    );
+    expect(await screen.findByText('Đã gửi thông báo nhắc nộp cho 1 nhân sự.')).toBeInTheDocument();
   });
 });

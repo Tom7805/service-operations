@@ -22,6 +22,18 @@ public enum ProjectAuditAction {
 	/** Ghi/sua/xoa gio cong theo cong viec (NCL-06-CN-001 / TC-04). */
 	TIME_ENTRY_UPDATED,
 
+	/** Ghi nhan chi phi phat sinh cua du an (NCL-08-CN-001). */
+	EXPENSE_CREATED,
+	EXPENSE_APPROVED,
+	EXPENSE_REJECTED,
+	EXPENSE_RESUBMITTED,
+	EXPENSE_BILLABLE_UPDATED,
+
+	/** Ghi nhan chi phi thue ngoai cua du an (NCL-08-CN-004). */
+	SUBCONTRACTOR_EXPENSE_CREATED,
+	SUBCONTRACTOR_EXPENSE_APPROVED,
+	SUBCONTRACTOR_EXPENSE_REJECTED,
+
 	PROJECT_CLOSED,
 
 	/** Dong bo ngay ket thuc du kien theo hop dong duoc gia han (NCL-04-CN-007). */

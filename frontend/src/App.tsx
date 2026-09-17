@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import LoginPage from './modules/auth/pages/LoginPage';
 import type { AuthSession } from './modules/auth/types/authTypes';
 import UserListPage from './modules/users/pages/UserListPage';
@@ -14,6 +14,8 @@ import TwoFactorSetupPage from './modules/auth/pages/TwoFactorSetupPage';
 import CustomerListPage from './modules/customers/pages/CustomerListPage';
 import CustomerMergePage from './modules/customers/pages/CustomerMergePage';
 import ContractListPage from './modules/contracts/pages/ContractListPage';
+import BillRatePage from './modules/rates/pages/BillRatePage';
+import RateHistoryPage from './modules/rates/pages/RateHistoryPage';
 import OpportunityDetailPage from './modules/opportunities/pages/OpportunityDetailPage';
 import OpportunitySearchPicker from './modules/opportunities/components/OpportunitySearchPicker';
 import OpportunityListPage from './modules/opportunities/pages/OpportunityListPage';
@@ -34,107 +36,15 @@ import CommandPalette from './components/common/CommandPalette';
 import useScrollReveal from './hooks/useScrollReveal';
 import { roleLabels } from './utils/roleLabel';
 import { useSessionSync } from './hooks/useSessionSync';
-import type { ReactNode } from 'react';
-
-type Tab =
-  | 'CUSTOMERS'
-  | 'CONTRACTS'
-  | 'OPPORTUNITIES'
-  | 'REVENUE_FORECAST'
-  | 'CUSTOMER_MERGE'
-  | 'DEPARTMENTS'
-  | 'PERMISSIONS'
-  | 'USERS'
-  | 'DETAIL'
-  | 'AUDIT_LOG'
-  | 'SYSTEM_AUDIT_LOG'
-  | 'EMPLOYEES'
-  | 'EMPLOYEE_DETAIL'
-  | 'OPPORTUNITY_DETAIL'
-  | 'CHANGE_PASSWORD'
-  | 'TWO_FACTOR_SETTINGS'
-  | 'REPORTS'
-  | 'PIPELINE_REPORT'
-  | 'MY_WORK'
-  | 'TIMESHEET_APPROVAL'
-  | 'TIMESHEET_REJECT'
-  | 'TIMESHEET_ADJUSTMENT'
-  | 'TIMESHEET_PERIOD'
-  | 'UNSUBMITTED_TIMESHEETS'
-  | 'NOTIFICATIONS';
-
-interface NavItem {
-  tab: Tab;
-  icon: ReactNode;
-  label: string;
-  /** Các tab con cũng nên tô sáng mục điều hướng này (ví dụ trang chi tiết). */
-  matches?: Tab[];
-  /**
-   * Vai trò cần có để dùng được màn hình này. CHỈ dùng để hiển thị chỉ báo khóa
-   * trên menu — cổng bảo mật thật vẫn nằm trong từng trang và ở backend, không
-   * đổi. Mục đích duy nhất: người dùng biết TRƯỚC khi bấm, thay vì bấm vào rồi
-   * mới gặp ngõ cụt.
-   */
-  requires?: string[];
-  /**
-   * Đặt khi trang KHÔNG chặn hẳn người thiếu `requires` mà chỉ hạ xuống chế độ
-   * xem (ví dụ "Cơ hội bán hàng": ai cũng xem được đường ống, chỉ riêng thao
-   * tác tạo/chuyển giai đoạn mới cần đúng vai trò). Nếu để trống, mặc định coi
-   * là chặn hẳn (bấm vào sẽ gặp màn "Không có thẩm quyền").
-   *
-   * Icon khóa 🔒 chỉ nên xuất hiện cho mục chặn hẳn — dùng chung cho cả hai
-   * loại từng khiến người dùng hiểu lầm "khóa mà vẫn bấm vào xem được, vậy
-   * khóa để làm gì" (xem log phản hồi ngày 07/09/2026).
-   */
-  viewOnlyHint?: string;
-}
-
-/** Điều hướng chính — vận hành nghiệp vụ hàng ngày. */
-const NAV_ITEMS: NavItem[] = [
-  // NCL-05-CN-003/004 + NCL-06-CN-001/002 gộp chung một màn: công việc được giao (mọi
-  // vai trò, quyền thật nằm ở backend) cộng bảng giờ công tuần (phần ghi/nộp giờ công
-  // chỉ hiện cho VT-03 ngay trong trang, vì TimeEntryController chỉ mở cho vai trò này).
-  { tab: 'MY_WORK', icon: ICONS.clock, label: 'Công việc và giờ công' },
-  { tab: 'TIMESHEET_APPROVAL', icon: ICONS.checkCircle, label: 'Duyệt bảng chấm công', requires: ['VT-02'] },
-  { tab: 'TIMESHEET_REJECT', icon: ICONS.close, label: 'Từ chối bảng chấm công', requires: ['VT-02'] },
-  { tab: 'TIMESHEET_ADJUSTMENT', icon: ICONS.edit, label: 'Điều chỉnh giờ công đã duyệt', requires: ['VT-02'] },
-  { tab: 'TIMESHEET_PERIOD', icon: ICONS.lock, label: 'Khóa kỳ chấm công', requires: ['VT-05'] },
-  { tab: 'UNSUBMITTED_TIMESHEETS', icon: ICONS.clock, label: 'Nhân sự chưa nộp', requires: ['VT-02', 'VT-03'] },
-  { tab: 'CUSTOMERS', icon: ICONS.building, label: 'Khách hàng', requires: ['VT-04', 'VT-02'] },
-  {
-    tab: 'CONTRACTS', icon: ICONS.receipt, label: 'Hợp đồng', requires: ['VT-05'],
-    // Màn hình lấy hợp đồng làm trung tâm cho Kế toán (VT-05): khai báo loại &
-    // hạn mức, mốc thanh toán, kích hoạt, nhắc gia hạn. Các nghiệp vụ này chỉ
-    // VT-05 thao tác được nhưng Kế toán KHÔNG vào được hồ sơ khách hàng
-    // (chỉ VT-04/VT-02) — đây là lối vào thay thế.
-  },
-  {
-    tab: 'OPPORTUNITIES', icon: ICONS.target, label: 'Cơ hội bán hàng', requires: ['VT-01', 'VT-02', 'VT-04'],
-    // OpportunityListPage cho MỌI vai trò xem đường ống bán hàng — chỉ chặn
-    // thao tác tạo/chuyển giai đoạn nếu thiếu vai trò Nhân viên kinh doanh
-    // (VT-04). Không phải màn hình chặn hẳn như các mục khác.
-    viewOnlyHint: 'Cơ hội bán hàng — chế độ chỉ xem, cần vai trò Nhân viên kinh doanh để tạo hoặc chuyển giai đoạn',
-  },
-  { tab: 'REVENUE_FORECAST', icon: ICONS.chart, label: 'Dự báo doanh thu', requires: ['VT-01', 'VT-04'] },
-  { tab: 'REPORTS', icon: ICONS.document, label: 'Báo cáo', matches: ['PIPELINE_REPORT'], requires: ['VT-01', 'VT-04'] },
-  { tab: 'CUSTOMER_MERGE', icon: ICONS.merge, label: 'Gộp KH trùng', requires: ['VT-07'] },
-  { tab: 'DEPARTMENTS', icon: ICONS.tree, label: 'Tổ chức', requires: ['VT-07'] },
-  { tab: 'USERS', icon: ICONS.user, label: 'Tài khoản', matches: ['DETAIL'], requires: ['VT-07'] },
-  { tab: 'EMPLOYEES', icon: ICONS.users, label: 'Nhân sự', matches: ['EMPLOYEE_DETAIL'], requires: ['VT-06', 'VT-07'] },
-  { tab: 'OPPORTUNITY_DETAIL', icon: ICONS.building, label: 'Cơ hội', requires: ['VT-04'] },
-  { tab: 'PERMISSIONS', icon: ICONS.shield, label: 'Phân quyền', requires: ['VT-07'] },
-];
-
-/** Bảo mật & Hệ thống — nhóm riêng, tách khỏi điều hướng nghiệp vụ hàng ngày (theo mẫu "Favorites"
- * của tham chiếu: một nhãn xám nhỏ đứng trên nhóm mục phụ). */
-const SYSTEM_NAV_ITEMS: NavItem[] = [
-  { tab: 'TWO_FACTOR_SETTINGS', icon: ICONS.key, label: '2FA', requires: ['VT-07'] },
-  { tab: 'SYSTEM_AUDIT_LOG', icon: ICONS.history, label: 'Nhật ký hệ thống', requires: ['VT-07'] },
-  { tab: 'AUDIT_LOG', icon: ICONS.shieldOff, label: 'Dữ liệu nhạy cảm', requires: ['VT-07'] },
-];
-
-const ALL_NAV_ITEMS: NavItem[] = [...NAV_ITEMS, ...SYSTEM_NAV_ITEMS];
-
+import {
+  Tab,
+  NavItem,
+  ALL_NAV_ITEMS,
+  canAccess,
+  navGroupsFor,
+  defaultTabFor,
+  isTabVisible,
+} from './layouts/menuConfig';
 
 function readStoredSession(): AuthSession | null {
   const raw = localStorage.getItem('session');
@@ -155,17 +65,19 @@ function getInitials(fullName: string): string {
 
 export default function App() {
   const [session, setSession] = useState<AuthSession | null>(readStoredSession);
-  const [activeTab, setActiveTab] = useState<Tab>('DEPARTMENTS');
+  // Tab mặc định luôn là mục người dùng thấy được — tránh đưa ngay vào "Tổ
+  // chức" (chỉ dành cho VT-07) rồi báo "Không có thẩm quyền" ngay khi đăng nhập.
+  const [activeTab, setActiveTab] = useState<Tab>(() => defaultTabFor(readStoredSession()?.roles ?? []));
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
   const [selectedOpportunityId, setSelectedOpportunityId] = useState<number | null>(null);
   const [selectedOpportunityName, setSelectedOpportunityName] = useState<string | undefined>(undefined);
   /** Nhớ người dùng vào màn "Ghi nhận chăm sóc" từ đâu để nút quay lại trả về
-   *  đúng chỗ: từ danh sách "Cơ hội bán hàng" thì về lại danh sách, còn tự tìm
-   *  trực tiếp trong tab "Cơ hội" thì quay về ô tìm kiếm. */
+   *  đúng chỗ: từ danh sách "Cơ hộp bán hàng" thì về lại danh sách, còn tự tìm
+   *  trực tiếp trong tab "Cơ hộp" thì quay về ô tìm kiếm. */
   const [activityOrigin, setActivityOrigin] = useState<'LIST' | 'PICKER' | null>(null);
-  /** Từ báo cáo đường ống, bấm vào một cơ hội đọng lâu thì nhảy sang "Cơ hội
-   *  bán hàng" và tự mở đúng cơ hội đó lên để xử lý ngay (chuyển giai đoạn/
+  /** Từ báo cáo đường ống, bấm vào một cơ hộp đọng lâu thì nhảy sang "Cơ hộp
+   *  bán hàng" và tự mở đúng cơ hộp đó lên để xử lý ngay (chuyển giai đoạn/
    *  chốt kết quả), thay vì chỉ biết mỗi con số ID không thao tác được gì. */
   const [focusOpportunityId, setFocusOpportunityId] = useState<number | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -278,46 +190,46 @@ export default function App() {
   // khong dung bat ky co che gia lap nao o phia giao dien.
   const currentRoles = session.roles;
 
+  // Vai trò mới (đăng nhập / làm mới qua useSessionSync) → tab mở rộng mỗi lần
+  // đổi trang. useSessionSync làm mới khi focus lại + poll 30s; 401 thì đăng xuất.
+  const defaultTab = useMemo(() => defaultTabFor(currentRoles), [currentRoles]);
+  useEffect(() => {
+    if (!isTabVisible(activeTab, currentRoles)) {
+      setActiveTab(defaultTab);
+    }
+    // Chỉ kiểm tra lại khi vai trò thay đổi — tránh đẩy lùi khi chỉ chuyển tab con.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentRoles, defaultTab]);
+
+  // Sidebar + bảng lệnh chỉ liệt kê chức năng người dùng thực sự thấy được
+  // (có quyền, hoặc ở chế độ chỉ xem). Các mục bị khóa hoàn toàn không hiện ra.
+  const navGroups = useMemo(() => navGroupsFor(currentRoles), [currentRoles]);
+
   const activeNavItem =
     ALL_NAV_ITEMS.find((item) => item.tab === activeTab) ??
     ALL_NAV_ITEMS.find((item) => (item.matches ?? []).includes(activeTab));
 
-  /** Chỉ để hiển thị. Cổng bảo mật thật nằm trong từng trang và ở backend. */
-  const canAccess = (item: NavItem) =>
-    !item.requires || item.requires.some((r) => currentRoles.includes(r));
-
   const renderNavGroup = (items: NavItem[]) =>
     items.map((item) => {
       const isActive = activeTab === item.tab || (item.matches ?? []).includes(activeTab);
-      const underprivileged = !canAccess(item);
-      // Chỉ mục CHẶN HẲN mới coi là "locked" (mờ đi + icon khóa). Mục chỉ hạ
-      // xuống chế độ xem (viewOnlyHint) vẫn mở được bình thường, không mờ,
-      // không có icon khóa — tránh hiểu lầm "khóa mà vẫn bấm vào xem được".
-      const isViewOnlyForUser = underprivileged && Boolean(item.viewOnlyHint);
-      const locked = underprivileged && !item.viewOnlyHint;
-      const title = locked
-        ? `${item.label} — cần vai trò khác`
-        : isViewOnlyForUser
-        ? item.viewOnlyHint
-        : (sidebarCollapsed ? item.label : undefined);
+      // `items` ở đây luôn là mục đã lọc theo vai trò (qua navGroupsFor), nên không
+      // còn mục bị khóa hoàn toàn. Chỉ mục "chỉ xem" (viewOnlyHint) vẫn hiện — người
+      // dùng vẫn xem được đường ống bán hàng; mục chặn hẳn đã ẩn ở navGroupsFor.
+      const isViewOnlyForUser = !canAccess(item, currentRoles) && Boolean(item.viewOnlyHint);
+      const title = isViewOnlyForUser ? item.viewOnlyHint : sidebarCollapsed ? item.label : undefined;
       return (
         <button
           key={item.tab}
           type="button"
-          className={`side-nav__item ${isActive ? 'side-nav__item--active' : ''} ${locked ? 'side-nav__item--locked' : ''}`}
+          className={`side-nav__item ${isActive ? 'side-nav__item--active' : ''}`}
+          title={title}
           onClick={() => setActiveTab(item.tab)}
           aria-current={isActive ? 'page' : undefined}
-          title={title}
         >
           <span className="side-nav__item__icon" aria-hidden="true">
             {item.icon}
           </span>
           {!sidebarCollapsed && <span className="side-nav__item__label">{item.label}</span>}
-          {!sidebarCollapsed && locked && (
-            <span className="side-nav__item__lock" aria-label="Cần vai trò khác">
-              {ICONS.lock}
-            </span>
-          )}
           {!sidebarCollapsed && isViewOnlyForUser && (
             <span className="side-nav__item__view-only" aria-label="Chế độ chỉ xem">
               Chỉ xem
@@ -335,8 +247,9 @@ export default function App() {
       {/* Bảng lệnh Ctrl/⌘+K — nhảy tới bất kỳ màn hình nào không cần rời bàn phím. */}
       <CommandPalette
         items={[
-          ...NAV_ITEMS.map((i) => ({ id: i.tab, label: i.label, group: 'Điều hướng', icon: i.icon })),
-          ...SYSTEM_NAV_ITEMS.map((i) => ({ id: i.tab, label: i.label, group: 'Bảo mật & hệ thống', icon: i.icon })),
+          ...navGroups.flatMap((group) =>
+            group.items.map((i) => ({ id: i.tab, label: i.label, group: group.paletteLabel, icon: i.icon })),
+          ),
           { id: 'CHANGE_PASSWORD', label: 'Đổi mật khẩu', group: 'Tài khoản của tôi', icon: ICONS.key },
           { id: 'NOTIFICATIONS', label: 'Thông báo', group: 'Tài khoản của tôi', icon: ICONS.bell },
         ]}
@@ -369,11 +282,15 @@ export default function App() {
             </button>
           </div>
 
-          <nav className="side-nav__list" aria-label="Điều hướng chính">
-            {renderNavGroup(NAV_ITEMS)}
-
-            <div className="side-nav__group-label">{!sidebarCollapsed ? 'Bảo mật & Hệ thống' : ''}</div>
-            {renderNavGroup(SYSTEM_NAV_ITEMS)}
+          <nav className="side-nav__list" aria-label="Điều hưừng chính">
+            {navGroups.map((group) => (
+              <Fragment key={group.id}>
+                {group.label !== null && (
+                  <div className="side-nav__group-label">{!sidebarCollapsed ? group.label : ''}</div>
+                )}
+                {renderNavGroup(group.items)}
+              </Fragment>
+            ))}
           </nav>
         </aside>
 
@@ -515,7 +432,7 @@ export default function App() {
             chay lai o MOI lan chuyen trang chu khong chi lan tai dau tien. */}
         <main className="app-content" id="noi-dung-chinh" tabIndex={-1} key={activeTab}>
           {activeTab === 'CHANGE_PASSWORD' ? (
-            <ChangePasswordPage onBack={() => setActiveTab('DEPARTMENTS')} onPasswordChanged={handleLogout} />
+            <ChangePasswordPage onBack={() => setActiveTab(defaultTab)} onPasswordChanged={handleLogout} />
           ) : activeTab === 'NOTIFICATIONS' ? (
             <NotificationCenterPage />
           ) : activeTab === 'MY_WORK' ? (
@@ -586,8 +503,8 @@ export default function App() {
                   <span className="report-card__body">
                     <span className="report-card__title">Đường ống bán hàng theo giai đoạn</span>
                     <span className="report-card__desc">
-                      Số cơ hội, giá trị dự kiến và số ngày trung bình đứng ở mỗi giai đoạn — kèm
-                      cảnh báo cơ hội đọng lâu bất thường.
+                      Số cơ hộp, giá trị dự kiến và số ngày trung bình đứng ở mỗi giai đoạn — kèm
+                      cảnh báo cơ hộp đọng lâu bất thường.
                     </span>
                   </span>
                   <span className="report-card__arrow">{ICONS.arrowRight}</span>
@@ -605,6 +522,10 @@ export default function App() {
             />
           ) : activeTab === 'CUSTOMER_MERGE' ? (
             <CustomerMergePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+          ) : activeTab === 'BILL_RATES' ? (
+            <BillRatePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+          ) : activeTab === 'RATE_HISTORY' ? (
+            <RateHistoryPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'DEPARTMENTS' ? (
             <DepartmentTreePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'PERMISSIONS' ? (
@@ -620,7 +541,11 @@ export default function App() {
           ) : activeTab === 'TWO_FACTOR_SETTINGS' ? (
             <TwoFactorSetupPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'EMPLOYEE_DETAIL' && selectedEmployeeId ? (
-            <EmployeeDetailPage employeeId={selectedEmployeeId} onBack={() => setActiveTab('EMPLOYEES')} />
+            <EmployeeDetailPage
+              employeeId={selectedEmployeeId}
+              onBack={() => setActiveTab('EMPLOYEES')}
+              currentUserRoles={currentRoles}
+            />
           ) : activeTab === 'EMPLOYEES' ? (
             <EmployeeListPage
               currentUserRoles={currentRoles}
@@ -637,12 +562,12 @@ export default function App() {
                 opportunityName={selectedOpportunityName}
                 currentUserRoles={currentRoles}
                 currentUserName={session.fullName}
-                backLabel={activityOrigin === 'LIST' ? 'Quay lại Cơ hội bán hàng' : 'Tìm cơ hội khác'}
+                backLabel={activityOrigin === 'LIST' ? 'Quay lại Cơ hộp bán hàng' : 'Tìm cơ hộp khác'}
                 onBack={() => {
                   // Tab đổi làm OpportunityListPage bị remount hoàn toàn (xem key={activeTab}
                   // ở <main>), nên panel "Đang điều khiển" đang mở sẽ mất theo. Nhờ lại cơ chế
                   // focusOpportunityId (vốn dùng khi nhảy tới từ Báo cáo đường ống) để trang tự
-                  // mở lại đúng cơ hội vừa xem, khỏi bắt người dùng bấm "Chọn" lại từ đầu.
+                  // mở lại đúng cơ hộp vừa xem, khỏi bắt người dùng bấm "Chọn" lại từ đầu.
                   if (activityOrigin === 'LIST' && selectedOpportunityId) {
                     setFocusOpportunityId(selectedOpportunityId);
                   }
@@ -661,11 +586,11 @@ export default function App() {
                       <span className="page-header__dot" />
                       <span className="page-header__meta">CHĂM SÓC CƠ HỘI</span>
                     </div>
-                    <h1 className="page-title">Ghi nhận hoạt động chăm sóc cơ hội</h1>
+                    <h1 className="page-title">Ghi nhận hoạt động chăm sóc cơ hộp</h1>
                     <p className="page-subtitle">
                       Đây là màn hình xem lại lịch sử chăm sóc và ghi nhận cuộc gọi, email hoặc buổi gặp mới cho
-                      một cơ hội cụ thể — tìm bằng tên cơ hội hoặc tên khách hàng bên dưới. Cách nhanh hơn: mở{' '}
-                      <strong>"Cơ hội bán hàng"</strong>, chọn một cơ hội rồi bấm <strong>"Ghi nhận chăm sóc"</strong>.
+                      một cơ hộp cụ thể — tìm bằng tên cơ hộp hoặc tên khách hàng bên dưới. Cách nhanh hơn: mở{' '}
+                      <strong>"Cơ hộp bán hàng"</strong>, chọn một cơ hộp rồi bấm <strong>"Ghi nhận chăm sóc"</strong>.
                     </p>
                   </div>
                 </div>

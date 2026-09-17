@@ -12,5 +12,8 @@ public enum AuditTargetType {
 	CUSTOMER,
 	MASKING,
 	GENERAL,
-	TIMESHEET
+	TIMESHEET,
+
+	/** Chi phi du an va chi phi chung (NCL-08-CN-005). */
+	EXPENSE
 }

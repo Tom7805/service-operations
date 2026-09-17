@@ -3,9 +3,12 @@ import type {
   Employee,
   EmployeeCreatePayload,
   EmployeeDetail,
+  EmployeeHourlyRateCreatePayload,
+  EmployeeHourlyRateRes,
   EmployeeUpdatePayload,
   EmploymentContract,
   EmploymentContractCreatePayload,
+  ResolvedEmployeeHourlyRateRes,
 } from '../types/employeeTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
@@ -106,4 +109,46 @@ export async function getEmploymentContracts(employeeId: number): Promise<Employ
   return requestBackend<EmploymentContract[]>(`${API_BASE_URL}/employees/${employeeId}/contracts`, {
     method: 'GET',
   });
+}
+
+/**
+ * POST /employees/{employeeId}/rates — khai báo một mốc chi phí giờ công nội
+ * bộ (NCL-07-CN-004, TC-01). Chỉ Nhân sự (VT-06) hoặc Quản trị viên (VT-07);
+ * vai trò khác nhận 403 (ghi nhật ký lần từ chối, TC-02). Trùng ngày hiệu lực
+ * cho cùng nhân sự trả về 409 DUPLICATE_DATA.
+ */
+export async function createEmployeeHourlyRate(
+  employeeId: number,
+  payload: EmployeeHourlyRateCreatePayload
+): Promise<EmployeeHourlyRateRes> {
+  return requestBackend<EmployeeHourlyRateRes>(`${API_BASE_URL}/employees/${employeeId}/rates`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * GET /employees/{employeeId}/rates — lịch sử chi phí giờ công nội bộ, mới
+ * nhất trước. Cho phép Nhân sự (VT-06), Kế toán (VT-05), Ban giám đốc (VT-01)
+ * hoặc Quản trị viên (VT-07) xem; vai trò khác nhận 403.
+ */
+export async function fetchEmployeeHourlyRates(employeeId: number): Promise<EmployeeHourlyRateRes[]> {
+  return requestBackend<EmployeeHourlyRateRes[]>(`${API_BASE_URL}/employees/${employeeId}/rates`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * GET /employees/{employeeId}/rates/resolve?asOf=... — chi phí giờ công áp
+ * dụng tại ngày phát sinh dòng giờ công, phục vụ tính giá vốn dự án (QTN-17).
+ * `missingCostData: true` (không phải lỗi HTTP) khi `asOf` sớm hơn mọi mốc đã
+ * khai báo (TC-03).
+ */
+export async function resolveEmployeeHourlyRate(
+  employeeId: number,
+  asOf: string
+): Promise<ResolvedEmployeeHourlyRateRes> {
+  const url = new URL(`${API_BASE_URL}/employees/${employeeId}/rates/resolve`);
+  url.searchParams.set('asOf', asOf);
+  return requestBackend<ResolvedEmployeeHourlyRateRes>(url.toString(), { method: 'GET' });
 }

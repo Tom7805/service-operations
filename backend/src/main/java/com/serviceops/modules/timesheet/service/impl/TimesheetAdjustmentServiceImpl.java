@@ -6,9 +6,11 @@ import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.project.entity.Project;
 import com.serviceops.modules.project.entity.Task;
+import com.serviceops.modules.project.enums.ProjectStatus;
 import com.serviceops.modules.project.repository.ProjectRepository;
 import com.serviceops.modules.project.repository.TaskRepository;
 import com.serviceops.modules.timesheet.dto.request.TimeEntryAdjustmentReq;
+import com.serviceops.modules.timesheet.dto.response.AdjustableEntryRes;
 import com.serviceops.modules.timesheet.dto.response.AdjustmentTraceRes;
 import com.serviceops.modules.timesheet.entity.TimeEntry;
 import com.serviceops.modules.timesheet.entity.TimeEntryAdjustment;
@@ -30,8 +32,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * NCL-06-CN-005: dieu chinh mot dong gio cong da duyet bang but toan dao (QTN-11).
@@ -159,6 +165,45 @@ public class TimesheetAdjustmentServiceImpl implements TimesheetAdjustmentServic
 				.toList();
 	}
 
+	@Override
+	@Transactional(readOnly = true)
+	public List<AdjustableEntryRes> findAdjustableEntries() {
+		Long pmId = requireCurrentManager();
+		// Du an da dong la ho so lich su chi doc (QTN-13) — khong con dieu chinh duoc gio cong
+		// cua no nua, giong het cach NCL-06-CN-007 chan ghi gio moi vao du an da dong.
+		List<Project> myProjects = projectRepository.findByProjectManagerId(pmId).stream()
+				.filter(project -> project.getStatus() == ProjectStatus.RUNNING)
+				.toList();
+		if (myProjects.isEmpty()) {
+			return List.of();
+		}
+		Map<Long, Project> projectById = myProjects.stream()
+				.collect(Collectors.toMap(Project::getId, Function.identity()));
+
+		List<Task> myTasks = new ArrayList<>();
+		for (Project project : myProjects) {
+			myTasks.addAll(taskRepository.findByProjectIdOrderByIdAsc(project.getId()));
+		}
+		if (myTasks.isEmpty()) {
+			return List.of();
+		}
+		Map<Long, Task> taskById = myTasks.stream().collect(Collectors.toMap(Task::getId, Function.identity()));
+
+		List<TimeEntry> entries = timeEntryRepository
+				.findApprovedOriginalEntriesByTaskIdIn(new ArrayList<>(taskById.keySet()));
+
+		return entries.stream()
+				.filter(entry -> !adjustmentRepository.existsByOriginalEntryId(entry.getId()))
+				.map(entry -> {
+					Task task = taskById.get(entry.getTaskId());
+					Project project = projectById.get(task.getProjectId());
+					return new AdjustableEntryRes(entry.getId(), project.getId(), project.getName(), task.getId(),
+							task.getName(), entry.getUserId(), entry.getWorkDate(), entry.getHours(),
+							entry.getNote());
+				})
+				.toList();
+	}
+
 	private AdjustmentTraceRes toTraceLoadingEntries(TimeEntryAdjustment adjustment) {
 		TimeEntry original = timeEntryRepository.findById(adjustment.getOriginalEntryId()).orElse(null);
 		TimeEntry reversal = timeEntryRepository.findById(adjustment.getReversalEntryId()).orElse(null);
@@ -185,6 +230,11 @@ public class TimesheetAdjustmentServiceImpl implements TimesheetAdjustmentServic
 				.orElseThrow(() -> notFound("Khong tim thay cong viec thuoc du an"));
 		if (!Objects.equals(project.getProjectManagerId(), pmId)) {
 			throw new AccessDeniedException("Ban khong phai quan ly cua du an nay");
+		}
+		// Du an da dong la ho so lich su chi doc (QTN-13) — chan luon o day de goi thang API
+		// (bo qua man hinh danh sach) cung khong dieu chinh duoc gio cong cua du an da dong.
+		if (project.getStatus() == ProjectStatus.CLOSED) {
+			throw invalidState("Du an da dong, khong the dieu chinh gio cong");
 		}
 		return task;
 	}

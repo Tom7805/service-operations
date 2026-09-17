@@ -35,6 +35,180 @@ bổ sung thêm 1 mục theo đúng Epic/Story tương ứng bên dưới — Fr
 - **Swagger UI (tra cứu trực tiếp khi backend đang chạy):** `http://localhost:8080/api/v1/swagger-ui/index.html`
 - **OpenAPI JSON (import vào Postman/Insomnia):** `http://localhost:8080/api/v1/v3/api-docs`
 
+## Epic `NCL-08` — Chi phí dự án
+
+### `NCL-08-CN-001` — Ghi nhận chi phí phát sinh của dự án
+
+#### `POST /projects/{projectId}/expenses`
+
+Yêu cầu token của nhân viên chuyên môn (`VT-03`). Chỉ dự án đang chạy mới nhận chi phí.
+
+**Request:**
+```json
+{
+  "type": "TRAVEL",
+  "amount": 2000000,
+  "expenseDate": "2026-09-10",
+  "description": "Chi phi di lai gap khach hang",
+  "receiptUrl": "https://files.example/receipt-1.pdf",
+  "billable": false
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `projectId` | number | có | Lấy từ URL. Phải trỏ tới dự án đang chạy. |
+| `type` | string | có | `TRAVEL`, `TOOLS` hoặc `OTHER`. |
+| `amount` | number | có | Lớn hơn `0`, đơn vị tiền tệ của công ty. |
+| `expenseDate` | date | có | Định dạng `YYYY-MM-DD`, không được ở tương lai. |
+| `description` | string | có | Không rỗng, tối đa 1000 ký tự. |
+| `receiptUrl` | string | không | Đường dẫn chứng từ mô phỏng, tối đa 500 ký tự. |
+| `billable` | boolean | không | Có tính lại cho khách hàng hay không; mặc định `false`. |
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Ghi nhan chi phi thanh cong",
+  "data": {
+    "id": 30,
+    "projectId": 1,
+    "userId": 7,
+    "type": "TRAVEL",
+    "amount": 2000000.00,
+    "expenseDate": "2026-09-10",
+    "description": "Chi phi di lai gap khach hang",
+    "receiptUrl": "https://files.example/receipt-1.pdf",
+    "billable": false,
+    "status": "SUBMITTED",
+    "createdAt": "2026-09-10T08:00:00"
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Thiếu/sai loại chi phí, số tiền không dương, mô tả rỗng hoặc ngày ở tương lai. |
+| 400 | `INVALID_STATE` | Dự án đã đóng hoặc không còn ở trạng thái `RUNNING`. |
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-03`. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy dự án. |
+
+Sau khi tạo, phiếu ở trạng thái `SUBMITTED`; hệ thống ghi audit gồm người tạo, thời điểm và nội dung thao tác.
+
+### `NCL-08-CN-002` — Duyệt chi phí dự án
+
+Kế toán (`VT-05`) xem hàng chờ duyệt, duyệt hoặc từ chối phiếu chi phí. Phiếu được duyệt là dữ liệu
+được phép đưa vào giá vốn dự án; phiếu từ chối giữ nguyên dữ liệu gốc và lưu lý do để người tạo xử lý lại.
+
+#### `GET /expenses/pending`
+
+Trả về các phiếu đang ở trạng thái `SUBMITTED`, sắp xếp theo ngày phát sinh tăng dần rồi tới mã phiếu.
+Yêu cầu token của kế toán (`VT-05`).
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": 30,
+      "projectId": 1,
+      "userId": 7,
+      "type": "TRAVEL",
+      "amount": 2000000.00,
+      "expenseDate": "2026-09-10",
+      "description": "Chi phi di lai gap khach hang",
+      "receiptUrl": "https://files.example/receipt-1.pdf",
+      "billable": false,
+      "status": "SUBMITTED",
+      "createdAt": "2026-09-10T08:00:00",
+      "approvedBy": null,
+      "approvedAt": null,
+      "rejectedBy": null,
+      "rejectedAt": null,
+      "rejectReason": null
+    }
+  ]
+}
+```
+
+#### `POST /expenses/{expenseId}/approve`
+
+Duyệt một phiếu đang `SUBMITTED`. Không cần request body. Khi thành công, phiếu chuyển sang `APPROVED`,
+lưu người duyệt và thời điểm duyệt, đồng thời ghi audit. Chỉ phiếu `APPROVED` được tính vào giá vốn dự án.
+
+**Response thành công — `200 OK`:** trả về cùng cấu trúc `ExpenseRes` như hàng chờ, với `status` là
+`APPROVED`, `approvedBy` và `approvedAt` có giá trị.
+
+#### `POST /expenses/{expenseId}/reject`
+
+Từ chối một phiếu đang `SUBMITTED`. Yêu cầu token của kế toán (`VT-05`) và lý do là bắt buộc.
+
+**Request:**
+```json
+{
+  "reason": "Thieu chung tu goc"
+}
+```
+
+**Response thành công — `200 OK`:** trả về cùng cấu trúc `ExpenseRes`, với `status` là `REJECTED`,
+`rejectedBy`, `rejectedAt` và `rejectReason` có giá trị.
+
+**Response lỗi cho cả ba endpoint:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Request từ chối thiếu lý do hoặc lý do dài hơn 1000 ký tự. |
+| 400 | `INVALID_STATE` | Phiếu không còn ở trạng thái `SUBMITTED` (đã duyệt hoặc đã từ chối). |
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-05`. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy phiếu chi phí. |
+
+Mọi thao tác duyệt/từ chối đều ghi audit gồm người thực hiện, thời điểm, phiếu và lý do từ chối nếu có.
+
+#### `PUT /expenses/{expenseId}`
+
+Người tạo phiếu (`VT-03`) dùng lại request tạo chi phí để sửa và nộp lại phiếu đang `REJECTED`.
+Hệ thống kiểm tra người gọi đúng là `userId` của phiếu, dự án còn `RUNNING`, sau đó xóa thông tin từ chối,
+chuyển trạng thái về `SUBMITTED` và đưa phiếu trở lại hàng chờ duyệt. Phiếu `SUBMITTED` hoặc `APPROVED`
+không được sửa.
+
+### `NCL-08-CN-003` — Đánh dấu chi phí tính lại cho khách hàng
+
+#### `PUT /expenses/{expenseId}/billable`
+
+Yêu cầu token của quản lý dự án (`VT-02`). Chỉ phiếu chi phí đã được kế toán duyệt (`APPROVED`) mới được
+đánh dấu hoặc bỏ đánh dấu tính lại cho khách hàng. Endpoint là idempotent: gửi lại cùng giá trị không tạo thêm
+thay đổi dữ liệu ngoài bản ghi audit.
+
+**Request:**
+```json
+{
+  "billable": true
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `expenseId` | number | có | Lấy từ URL; phải trỏ tới phiếu chi phí đã duyệt. |
+| `billable` | boolean | có | `true` để tính lại cho khách hàng, `false` để bỏ đánh dấu. |
+
+**Response thành công — `200 OK`:** trả về cùng cấu trúc `ExpenseRes`, với `billable` bằng giá trị vừa cập nhật
+và `status` là `APPROVED`.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Thiếu trường `billable` hoặc giá trị không phải boolean. |
+| 400 | `INVALID_STATE` | Phiếu chưa được duyệt, đã ở trạng thái khác `APPROVED`, hoặc đã nằm trong hóa đơn khi yêu cầu bỏ đánh dấu. |
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-02`. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy phiếu chi phí. |
+
+Mỗi lần cập nhật ghi audit gồm người thực hiện, thời điểm, phiếu và giá trị `billable` mới.
+
 ---
 
 ## Epic `NCL-01` — Đăng nhập và phân quyền theo cây tổ chức
@@ -3444,6 +3618,601 @@ Yêu cầu token của **Quản lý dự án** (`VT-02`) hoặc **Nhân viên ch
   có sẵn ở màn hình quản lý người dùng (`NCL-01-CN-002`).
 - Endpoint này phục vụ **xem lại** danh sách (vd PM muốn chủ động kiểm tra tuần hiện tại), không thay thế
   cơ chế nhắc tự động — không cần gọi endpoint này để "kích hoạt" gửi nhắc.
+
+---
+
+## Epic `NCL-07` — Quản lý đơn giá
+
+### `NCL-07-CN-001` — Khai báo bảng đơn giá theo vai trò
+
+Yêu cầu token của **Kế toán** (`VT-05`) hoặc **Quản trị viên** (`VT-07`) — vai trò khác nhận `403 FORBIDDEN`
+và bị ghi nhật ký lần từ chối vào Nhật ký hệ thống (`audit_logs`, TC-03, `AccessDeniedAuditRecorder`).
+
+Mỗi dòng đơn giá gồm **vai trò chuyên môn**, **cấp bậc** và **đơn giá theo ngày công** — đơn vị tiền là
+theo **ngày**, không phải theo giờ, để khớp với cách `NCL-03-CN-003` (Lập báo giá) đang tính
+`amount = workDays * dailyRate`. Khoá duy nhất là `(professionalRole, level, effectiveFrom)` — cùng
+vai trò + cấp bậc không được khai báo hai lần cho cùng một ngày hiệu lực (TC-02 phần dữ liệu trùng).
+Khai báo thành công ghi một dòng vào Nhật ký hệ thống — người thực hiện, nội dung (vai trò/cấp bậc/đơn
+giá/ngày hiệu lực), thời điểm (TC-04); Frontend không cần gọi thêm API nào để việc ghi log này xảy ra.
+
+> **Không ảnh hưởng luồng báo giá hiện có.** `NCL-03-CN-003` tra cứu đơn giá **chỉ theo tên vai trò**
+> (chưa biết khái niệm cấp bậc), lấy dòng có `effectiveFrom` gần nhất không vượt quá ngày lập báo giá.
+> Nếu một vai trò có nhiều cấp bậc khai báo trùng ngày hiệu lực, báo giá sẽ lấy dòng bất kỳ trong số đó —
+> Frontend màn hình báo giá không cần và không nên gửi `level`.
+
+#### `POST /bill-rates`
+
+```json
+{
+  "professionalRole": "Lap trinh vien cao cap",
+  "level": "Cao cap",
+  "dailyRate": 2500000,
+  "effectiveFrom": "2026-01-01"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `professionalRole` | string | có | Vai trò chuyên môn, không để trống |
+| `level` | string | có | Cấp bậc (vd "Trung cấp", "Cao cấp", "Quản lý"), không để trống |
+| `dailyRate` | number | có | Đơn giá theo ngày công, không được âm |
+| `effectiveFrom` | date (`yyyy-MM-dd`) | có | Ngày bắt đầu hiệu lực |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Tao bang don gia theo vai tro thanh cong",
+  "data": {
+    "professionalRole": "Lap trinh vien cao cap",
+    "level": "Cao cap",
+    "dailyRate": 2500000,
+    "effectiveFrom": "2026-01-01"
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) hoặc Quản trị viên (`VT-07`) — ghi nhật ký lần từ chối (TC-03) |
+| 400 | `VALIDATION_ERROR` | Thiếu `professionalRole`/`level`/`effectiveFrom`; hoặc `dailyRate` âm (TC-02) |
+| 409 | `DUPLICATE_DATA` | Đã tồn tại đơn giá cho cùng `professionalRole` + `level` tại `effectiveFrom` đã chọn |
+
+#### `GET /bill-rates/current`
+
+Danh sách mỗi cặp (vai trò, cấp bậc) đang có đơn giá hiệu lực tính đến hôm nay — dùng cho ô chọn vai trò
+ở màn hình lập báo giá (`NCL-03-CN-003`) thay vì gõ tay tự do. Yêu cầu token **Nhân viên kinh doanh**
+(`VT-04`), **Kế toán** (`VT-05`) hoặc **Quản trị viên** (`VT-07`).
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": [
+    { "professionalRole": "Lap trinh vien cao cap", "level": "Cao cap", "dailyRate": 2500000, "effectiveFrom": "2024-01-01" }
+  ]
+}
+```
+
+**Lưu ý cho Frontend:**
+- `professionalRole` ở đây là chuỗi hiển thị/khớp chính xác dùng khi gửi `items[].professionalRole` cho
+  `POST /opportunities/{opportunityId}/quotes` — `level` chỉ để hiển thị thêm, không gửi kèm khi lập báo giá.
+- Đơn giá mới khai báo (`effectiveFrom` trong tương lai) sẽ **không** xuất hiện ở endpoint này cho tới đúng
+  ngày hiệu lực — đây là chủ đích (QTN-15: đơn giá áp theo thời điểm phát sinh).
+
+### `NCL-07-CN-002` — Đặt hiệu lực theo thời điểm cho đơn giá
+
+Không có bảng/API riêng — đây là hệ quả trực tiếp của cách `NCL-07-CN-001` đã thiết kế: `POST /bill-rates`
+**luôn tạo dòng mới**, không bao giờ ghi đè hay xoá dòng cũ (khoá duy nhất `(professionalRole, level,
+effectiveFrom)` đã buộc mỗi mốc hiệu lực là một dòng riêng — TC-01, TC-03). Phần còn thiếu của story này
+là **tra đúng dòng hiệu lực tại một ngày phát sinh cụ thể** (TC-02, QTN-15), bổ sung ở endpoint dưới đây.
+
+#### `GET /bill-rates/resolve`
+
+Trả về dòng đơn giá có hiệu lực tại một ngày phát sinh cụ thể — dùng khi tính doanh thu cho một dòng giờ
+công đã ghi nhận trong quá khứ, để dòng đó **luôn áp giá đang hiệu lực tại đúng ngày nó phát sinh**, không
+bị ảnh hưởng bởi lần tăng giá sau đó (TC-02). Yêu cầu token **Kế toán** (`VT-05`) hoặc **Quản trị viên**
+(`VT-07`) — cùng nhóm quyền với thao tác khai báo, vì đây cũng là một phần của "quản lý hiệu lực của đơn
+giá" (TC-04); vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối.
+
+```
+GET /bill-rates/resolve?professionalRole=Lap+trinh+vien+cao+cap&level=Cao+cap&asOf=2026-06-30
+```
+
+| Query param | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `professionalRole` | string | có | Vai trò chuyên môn, khớp chính xác (không phân biệt hoa/thường) |
+| `level` | string | có | Cấp bậc, khớp chính xác (không phân biệt hoa/thường) |
+| `asOf` | date (`yyyy-MM-dd`) | có | Ngày phát sinh cần tra giá (vd ngày công của dòng giờ công) |
+
+Backend chọn dòng có `effectiveFrom` **gần nhất nhưng không vượt quá** `asOf` — đúng dòng hiệu lực tại
+thời điểm đó, kể cả khi đã có dòng hiệu lực mới hơn (ngày trong tương lai so với `asOf`) được khai báo sau.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "professionalRole": "Lap trinh vien cao cap",
+    "level": "Cao cap",
+    "dailyRate": 500000,
+    "effectiveFrom": "2026-01-01"
+  }
+}
+```
+
+`effectiveFrom` trong response là ngày hiệu lực của **dòng được áp dụng** (có thể khác `asOf` đã gửi) —
+Frontend nên hiển thị giá trị này để kế toán thấy rõ giá đang tính dựa trên mốc hiệu lực nào.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) hoặc Quản trị viên (`VT-07`) — ghi nhật ký lần từ chối (TC-04) |
+| 400 | `VALIDATION_ERROR` | Thiếu `professionalRole`/`level`/`asOf` |
+| 404 | `RESOURCE_NOT_FOUND` | Chưa có dòng đơn giá nào hiệu lực **trước hoặc đúng** `asOf` cho vai trò + cấp bậc đó |
+
+**Lưu ý cho Frontend:**
+- Khác với `GET /bill-rates/current` (luôn lấy theo **hôm nay**), endpoint này nhận `asOf` tuỳ ý — dùng
+  cho màn hình xem lại/tính doanh thu của các kỳ trước, không phải màn hình lập báo giá mới.
+- `404` không phải lỗi hệ thống — nghĩa là vai trò/cấp bậc đó **chưa từng có đơn giá** tại thời điểm
+  `asOf` (vd `asOf` sớm hơn cả dòng đầu tiên từng khai báo); nên hiển thị thông báo "chưa có đơn giá tại
+  thời điểm này" thay vì lỗi chung chung.
+
+### `NCL-07-CN-003` — Khai báo đơn giá riêng theo hợp đồng
+
+Yêu cầu token của **Kế toán** (`VT-05`) hoặc **Quản trị viên** (`VT-07`) — vai trò khác nhận `403 FORBIDDEN` và hệ thống ghi nhật ký lần từ chối (TC-03).
+
+Khác với bảng đơn giá chung công ty (`NCL-07-CN-001`), đơn giá riêng theo hợp đồng (`contract_bill_rates`) cho phép định nghĩa mức giá đàm phán riêng cho một hợp đồng cụ thể. Quy tắc ưu tiên (QTN-16): Khi tính doanh thu cho một dòng giờ công của vai trò/cấp bậc trong hợp đồng, hệ thống ưu tiên lấy đơn giá riêng theo hợp đồng (nếu có), nếu không khai báo đơn giá riêng thì hệ thống quay về dùng đơn giá chung của công ty (TC-01, TC-02).
+
+Thao tác khai báo/thay đổi đơn giá riêng thành công sẽ tự động ghi nhật ký lịch sử (`audit_logs`) thông tin người thực hiện, nội dung thay đổi và thời điểm (TC-04).
+
+#### `POST /contracts/{contractId}/bill-rates`
+
+Khai báo đơn giá riêng cho hợp đồng `{contractId}`.
+
+```json
+{
+  "professionalRole": "Lap trinh vien cao cap",
+  "level": "Cao cap",
+  "dailyRate": 3000000,
+  "effectiveFrom": "2026-01-01"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `professionalRole` | string | có | Vai trò chuyên môn, không để trống |
+| `level` | string | có | Cấp bậc, không để trống |
+| `dailyRate` | number | có | Đơn giá theo ngày công, không được âm |
+| `effectiveFrom` | date (`yyyy-MM-dd`) | có | Ngày bắt đầu hiệu lực |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Khai bao don gia rieng theo hop dong thanh cong",
+  "data": {
+    "contractId": 1,
+    "professionalRole": "Lap trinh vien cao cap",
+    "level": "Cao cap",
+    "dailyRate": 3000000,
+    "effectiveFrom": "2026-01-01"
+  }
+}
+```
+
+#### `GET /contracts/{contractId}/bill-rates/resolve`
+
+Tra cứu đơn giá áp dụng cho hợp đồng `{contractId}` tại ngày phát sinh `asOf`. Tự động áp dụng quy tắc QTN-16: ưu tiên đơn giá riêng theo hợp đồng, nếu không có sẽ tự rơi về đơn giá chung công ty.
+
+```
+GET /contracts/{contractId}/bill-rates/resolve?professionalRole=Lap+trinh+vien+cao+cap&level=Cao+cap&asOf=2026-06-30
+```
+
+| Query param | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `professionalRole` | string | có | Vai trò chuyên môn |
+| `level` | string | có | Cấp bậc |
+| `asOf` | date (`yyyy-MM-dd`) | có | Ngày phát sinh cần tính doanh thu |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "dailyRate": 3000000,
+    "effectiveFrom": "2026-01-01",
+    "isContractSpecific": true
+  }
+}
+```
+
+| Trường | Kiểu | Ghi chú |
+|---|---|---|
+| `dailyRate` | number | Mức đơn giá được áp dụng |
+| `effectiveFrom` | date | Ngày hiệu lực của mốc đơn giá được áp dụng |
+| `isContractSpecific` | boolean | `true` nếu áp dụng đơn giá riêng hợp đồng (TC-01), `false` nếu rơi về đơn giá chung công ty (TC-02) |
+
+**Response lỗi (áp dụng cho cả 2 endpoint trên):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) hoặc Quản trị viên (`VT-07`) — ghi nhật ký lần từ chối (TC-03) |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy Hợp đồng `{contractId}`, hoặc không tìm thấy đơn giá chung lẫn riêng hợp lệ tại mốc `asOf` |
+| 400 | `VALIDATION_ERROR` | Thiếu thông tin bắt buộc hoặc `dailyRate` âm |
+| 409 | `DUPLICATE_DATA` | Đã tồn tại đơn giá riêng cho cùng `professionalRole` + `level` + `effectiveFrom` trong hợp đồng |
+
+### `NCL-07-CN-004` — Khai báo chi phí giờ công nội bộ
+
+Khai báo và tra cứu chi phí giờ công nội bộ của từng nhân sự theo mốc thời gian (`employee_hourly_rates`), phục vụ việc tính giá vốn dự án (QTN-17).
+
+Quyền truy cập:
+- Khai báo (`POST`): Yêu cầu token **Nhân sự** (`VT-06`) hoặc **Quản trị viên** (`VT-07`).
+- Xem lịch sử & tra cứu giá vốn (`GET`): Cho phép **Nhân sự** (`VT-06`), **Kế toán** (`VT-05`), **Ban giám đốc** (`VT-01`), **Quản trị viên** (`VT-07`).
+- Vai trò khác (ví dụ Quản lý dự án `VT-02`) bị chặn `403 FORBIDDEN` và tự động ghi nhật ký lần từ chối (TC-02).
+
+Nhật ký dữ liệu nhạy cảm (TC-04): Mọi thao tác khai báo, chỉnh sửa hoặc xem danh sách chi phí giờ công đều được tự động ghi nhận vào `sensitive_data_access_logs` (loại dữ liệu `SALARY` / `COST`).
+
+#### `POST /employees/{employeeId}/rates`
+
+Khai báo mốc chi phí giờ công nội bộ cho nhân sự `{employeeId}`. Hệ thống lưu bản ghi mới và giữ nguyên bản ghi lịch sử cũ (TC-01).
+
+```json
+{
+  "hourlyRate": 250000,
+  "effectiveFrom": "2026-01-01"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `hourlyRate` | number | có | Chi phí giờ công nội bộ, không được âm |
+| `effectiveFrom` | date (`yyyy-MM-dd`) | có | Ngày bắt đầu hiệu lực của mức chi phí |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Khai bao chi phi gio cong noi bo thanh cong",
+  "data": {
+    "id": 10,
+    "employeeId": 1,
+    "hourlyRate": 250000,
+    "effectiveFrom": "2026-01-01"
+  }
+}
+```
+
+#### `GET /employees/{employeeId}/rates`
+
+Xem danh sách lịch sử chi phí giờ công nội bộ của nhân sự `{employeeId}` (mới nhất xếp trước).
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 10, "employeeId": 1, "hourlyRate": 250000, "effectiveFrom": "2026-01-01" }
+  ]
+}
+```
+
+#### `GET /employees/{employeeId}/rates/resolve?asOf=2026-06-01`
+
+Tra cứu chi phí giờ công của nhân sự `{employeeId}` tại mốc thời điểm `asOf` phát sinh dòng giờ công.
+
+| Query param | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `asOf` | date (`yyyy-MM-dd`) | có | Ngày phát sinh dòng giờ công cần tính giá vốn |
+
+**Response thành công — `200 OK` (có dữ liệu):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "employeeId": 1,
+    "hourlyRate": 250000,
+    "effectiveFrom": "2026-01-01",
+    "missingCostData": false
+  }
+}
+```
+
+**Response thành công — `200 OK` (ngoại lệ TC-03: `asOf` sớm hơn mọi mốc hiệu lực đã khai báo):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "employeeId": 1,
+    "hourlyRate": null,
+    "effectiveFrom": null,
+    "missingCostData": true
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Người dùng không có vai trò được phép (ví dụ VT-02) — ghi nhật ký từ chối (TC-02) |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy hồ sơ nhân sự `{employeeId}` |
+| 400 | `VALIDATION_ERROR` | Thiếu `hourlyRate` / `effectiveFrom` hoặc `hourlyRate` âm |
+| 409 | `DUPLICATE_DATA` | Đã tồn tại khai báo chi phí giờ công cho nhân sự tại ngày hiệu lực đã chọn |
+
+### `NCL-07-CN-005` — Tra cứu đơn giá áp dụng cho một dòng giờ công
+
+Cho một dòng giờ công (`timesheet_entries`) đã ghi nhận, tra ra **đúng đơn giá đang được dùng để tính
+doanh thu** cho dòng đó — không cần Frontend tự tra `professionalRole`/`contractId`/`asOf` rồi gọi tiếp
+`GET /contracts/{contractId}/bill-rates/resolve`. Backend tự suy ra:
+
+- `professionalRole`: lấy từ hồ sơ nhân sự (`employees.professional_role`) của người ghi dòng giờ công đó.
+- `contractId`: lấy từ `dòng giờ công → công việc (task) → dự án (project) → hợp đồng`.
+- `asOf`: chính là `workDate` (ngày công) của dòng giờ công — đảm bảo dòng luôn áp giá đang hiệu lực tại
+  đúng ngày nó phát sinh, không bị ảnh hưởng bởi lần tăng giá sau đó (kế thừa nguyên tắc QTN-15 của
+  `NCL-07-CN-002`).
+
+Sau khi suy ra 3 giá trị trên, endpoint áp dụng đúng quy tắc ưu tiên **QTN-16** đã có ở `NCL-07-CN-003`
+(ưu tiên đơn giá riêng theo hợp đồng, không có thì rơi về đơn giá chung công ty).
+
+`level` (cấp bậc) **không tự suy ra được** — hồ sơ nhân sự hiện chưa lưu cấp bậc — nên Frontend phải gửi
+kèm qua query param (ví dụ lấy từ lựa chọn của Kế toán khi xem dòng giờ công đó).
+
+Yêu cầu token **Kế toán** (`VT-05`) hoặc **Quản trị viên** (`VT-07`) — cùng nhóm quyền với các endpoint
+tra cứu đơn giá khác vì đây cũng là một phần của "quản lý hiệu lực của đơn giá" phục vụ tính doanh thu;
+vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối.
+
+#### `GET /timesheet-entries/{entryId}/bill-rate/resolve`
+
+```
+GET /timesheet-entries/100/bill-rate/resolve?level=Cao+cap
+```
+
+| Tham số | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `entryId` | path, number | có | ID dòng giờ công (`timesheet_entries.id`) cần tra đơn giá |
+| `level` | query, string | có | Cấp bậc của người thực hiện dòng giờ công đó, không để trống |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "timeEntryId": 100,
+    "taskId": 5,
+    "projectId": 2,
+    "contractId": 1,
+    "professionalRole": "Lap trinh vien cao cap",
+    "level": "Cao cap",
+    "workDate": "2026-06-30",
+    "hours": 8.00,
+    "workType": "OVERTIME",
+    "dailyRate": 3000000,
+    "effectiveFrom": "2026-01-01",
+    "isContractSpecific": true,
+    "rateFactor": 1.50,
+    "appliedDailyRate": 4500000.00
+  }
+}
+```
+
+| Trường | Kiểu | Ghi chú |
+|---|---|---|
+| `workDate` | date | Ngày công của dòng giờ công — cũng chính là mốc `asOf` dùng để tra đơn giá |
+| `hours` | number | Số giờ công đã ghi của dòng, trả kèm để đối chiếu (không dùng để tính `dailyRate`) |
+| `workType` | string (enum) | Loại hình công việc của dòng giờ công — `NORMAL`/`OVERTIME`/`WEEKEND`/`HOLIDAY` (`NCL-07-CN-006`) |
+| `dailyRate` | number | Đơn giá theo vai trò/cấp bậc **trước khi** nhân hệ số loại hình công việc |
+| `effectiveFrom` | date | Ngày hiệu lực của mốc đơn giá được áp dụng (có thể khác `workDate`) |
+| `isContractSpecific` | boolean | `true` nếu áp dụng đơn giá riêng hợp đồng, `false` nếu rơi về đơn giá chung công ty (QTN-16) |
+| `rateFactor` | number | Hệ số nhân theo `workType` (`NCL-07-CN-006`), tra từ `GET /work-type-rates` |
+| `appliedDailyRate` | number | **Đơn giá cuối cùng** = `dailyRate * rateFactor` (làm tròn 2 chữ số thập phân) — dùng số này để tính doanh thu, không dùng `dailyRate` |
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) hoặc Quản trị viên (`VT-07`) — ghi nhật ký lần từ chối |
+| 400 | `VALIDATION_ERROR` | Thiếu `level` (rỗng/chỉ khoảng trắng) |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy dòng giờ công `{entryId}`, hoặc không tìm thấy hồ sơ nhân sự của người thực hiện, hoặc chưa có đơn giá nào (chung lẫn riêng hợp đồng) hiệu lực trước hoặc đúng `workDate` cho vai trò + cấp bậc đó, hoặc chưa khai báo hệ số cho `workType` của dòng đó (`NCL-07-CN-006`) |
+
+**Lưu ý cho Frontend:**
+- Đây là endpoint tổng hợp — Frontend **không cần** tự gọi `GET /contracts/{contractId}/bill-rates/resolve`
+  nữa cho màn hình xem chi tiết dòng giờ công; chỉ cần biết `entryId` và hỏi người dùng chọn `level`.
+- `404` không phải lỗi hệ thống — có thể do dòng giờ công không tồn tại, người thực hiện chưa có hồ sơ nhân
+  sự đầy đủ, hoặc vai trò/cấp bậc đó chưa từng có đơn giá tại thời điểm `workDate`; nên hiển thị thông báo
+  phù hợp với từng trường hợp thay vì lỗi chung chung.
+- `effectiveFrom` trong response có thể khác `workDate` đã gửi — luôn hiển thị giá trị này để kế toán thấy
+  rõ giá đang tính dựa trên mốc hiệu lực nào.
+- Kể từ `NCL-07-CN-006`, response có thêm `workType`/`rateFactor`/`appliedDailyRate` — đây là bổ sung thêm
+  trường (backward-compatible), Frontend đang tích hợp từ trước không cần đổi gì nếu chưa dùng các trường
+  mới; nhưng **nên chuyển sang hiển thị `appliedDailyRate`** thay vì `dailyRate` vì đó mới là đơn giá cuối
+  cùng dùng để tính doanh thu cho dòng giờ công.
+
+### `NCL-07-CN-006` — Đơn giá theo loại hình công việc
+
+Cho phép khai báo **hệ số nhân đơn giá** theo loại hình công việc của một dòng giờ công — ví dụ giờ ngoài
+giờ hành chính (`OVERTIME`) nhân `1.5`, giờ cuối tuần (`WEEKEND`) nhân `2.0`, giờ lễ/Tết (`HOLIDAY`) nhân
+`3.0` — áp dụng lên đơn giá theo vai trò/cấp bậc (`NCL-07-CN-001`..`003`) để ra đơn giá cuối cùng cho dòng
+đó. Bốn loại hình cố định (`NORMAL`/`OVERTIME`/`WEEKEND`/`HOLIDAY`) đã có sẵn hệ số mặc định
+(`1.00`/`1.50`/`2.00`/`3.00`) khi triển khai — Kế toán/Quản trị viên có thể sửa lại qua endpoint dưới đây.
+
+Dòng giờ công (`timesheet_entries`) nay có thêm trường `workType` (mặc định `NORMAL` nếu không chọn) khi
+ghi/sửa giờ công (`POST`/`PUT .../time-entries`, Epic `NCL-06`) — người ghi giờ công (Nhân viên chuyên môn,
+`VT-03`) tự chọn loại hình phù hợp với dòng mình ghi. `GET /timesheet-entries/{entryId}/bill-rate/resolve`
+(`NCL-07-CN-005`) tự động nhân hệ số này vào `dailyRate` để ra `appliedDailyRate` — Frontend **không cần**
+tự nhân hệ số.
+
+Khai báo/sửa hệ số yêu cầu token **Kế toán** (`VT-05`) hoặc **Quản trị viên** (`VT-07`) — cùng nhóm quyền
+với các endpoint quản lý đơn giá khác; vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối. Xem
+danh sách hệ số cho phép thêm **Nhân viên chuyên môn** (`VT-03`) vì họ cần biết các lựa chọn hợp lệ khi ghi
+giờ công.
+
+#### `POST /work-type-rates`
+
+Khai báo hệ số cho một loại hình công việc — nếu loại hình đó đã có hệ số thì **ghi đè** giá trị cũ (không
+giữ lịch sử theo ngày hiệu lực như `BillRate`, vì đây là hệ số nghiệp vụ ít thay đổi chứ không phải mức giá
+đàm phán).
+
+```json
+{
+  "workType": "OVERTIME",
+  "factor": 1.5
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `workType` | string (enum) | có | Một trong `NORMAL`/`OVERTIME`/`WEEKEND`/`HOLIDAY` |
+| `factor` | number | có | Hệ số nhân, phải lớn hơn 0 |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Khai bao he so don gia theo loai hinh cong viec thanh cong",
+  "data": {
+    "workType": "OVERTIME",
+    "factor": 1.5
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) hoặc Quản trị viên (`VT-07`) — ghi nhật ký lần từ chối |
+| 400 | `VALIDATION_ERROR` | Thiếu `workType`/`factor`, `workType` không thuộc 4 giá trị hợp lệ, hoặc `factor` ≤ 0 |
+
+#### `GET /work-type-rates`
+
+Danh sách hệ số hiện tại của tất cả loại hình công việc, sắp theo tên loại hình.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": [
+    { "workType": "NORMAL", "factor": 1.00 },
+    { "workType": "OVERTIME", "factor": 1.50 },
+    { "workType": "WEEKEND", "factor": 2.00 },
+    { "workType": "HOLIDAY", "factor": 3.00 }
+  ]
+}
+```
+
+**Lưu ý cho Frontend:**
+- Dùng danh sách này để dựng ô chọn `workType` ở màn hình ghi giờ công (Epic `NCL-06`) — tránh gõ tay sai
+  giá trị enum.
+- Nếu một loại hình chưa từng được khai báo hệ số (trường hợp hiếm — chỉ xảy ra nếu dữ liệu mặc định bị xoá
+  thủ công), `GET /timesheet-entries/{entryId}/bill-rate/resolve` cho dòng giờ công thuộc loại hình đó sẽ
+  trả `404 RESOURCE_NOT_FOUND` thay vì coi hệ số là `1.00` — hiển thị thông báo "chưa khai báo hệ số cho
+  loại hình công việc này" thay vì lỗi chung chung.
+
+### `NCL-07-CN-007` — Xem lịch sử thay đổi đơn giá
+
+Trả về toàn bộ các mốc đơn giá đã từng khai báo cho một cặp (vai trò, cấp bậc), giúp Kế toán giải trình vì
+sao doanh thu giữa hai kỳ khác nhau (ví dụ do công ty tăng giá giữa chừng — `NCL-07-CN-002`). Không có bảng
+lưu lịch sử riêng: mỗi lần `POST /bill-rates` tạo dòng mới (không bao giờ ghi đè — `NCL-07-CN-001`/`002`),
+nên "lịch sử" chính là toàn bộ các dòng `bill_rates` của cặp đó, sắp theo `effectiveFrom`; "người thay đổi"
+tra lại từ `audit_logs` mà `POST /bill-rates` đã tự ghi tại thời điểm tạo — không cần Frontend hay Backend
+ghi thêm gì mới khi xem màn hình này.
+
+Yêu cầu token **Kế toán** (`VT-05`) hoặc **Quản trị viên** (`VT-07`) — cùng nhóm quyền với các endpoint quản
+lý đơn giá khác; vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối (TC-03).
+
+#### `GET /bill-rates/history`
+
+```
+GET /bill-rates/history?professionalRole=Lap+trinh+vien+cao+cap&level=Cao+cap
+```
+
+| Query param | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `professionalRole` | string | có | Vai trò chuyên môn, khớp chính xác (không phân biệt hoa/thường) |
+| `level` | string | có | Cấp bậc, khớp chính xác (không phân biệt hoa/thường) |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "professionalRole": "Lap trinh vien cao cap",
+    "level": "Cao cap",
+    "everChanged": true,
+    "entries": [
+      {
+        "id": 1,
+        "dailyRate": 500000,
+        "effectiveFrom": "2025-01-01",
+        "effectiveTo": "2025-12-31",
+        "current": false,
+        "changedBy": "ke.toan01",
+        "changedAt": "2025-01-01T09:00:00"
+      },
+      {
+        "id": 2,
+        "dailyRate": 600000,
+        "effectiveFrom": "2026-01-01",
+        "effectiveTo": null,
+        "current": true,
+        "changedBy": "ke.toan02",
+        "changedAt": "2025-12-20T14:00:00"
+      }
+    ]
+  }
+}
+```
+
+| Trường | Kiểu | Ghi chú |
+|---|---|---|
+| `everChanged` | boolean | `false` khi `entries` chỉ có đúng 1 phần tử — Frontend hiển thị rõ "chưa từng thay đổi" thay vì bảng có 1 dòng trông giống lỗi tải thiếu dữ liệu (TC-02) |
+| `entries[].id` | number | Mã dòng đơn giá, không cần hiển thị cho người dùng — chỉ để làm `key` khi render danh sách |
+| `entries[].effectiveFrom` | date | Ngày bắt đầu hiệu lực của mốc này |
+| `entries[].effectiveTo` | date \| null | Ngày cuối cùng còn hiệu lực (`effectiveFrom` của mốc kế tiếp trừ 1 ngày); `null` nếu đây là mốc mới nhất |
+| `entries[].current` | boolean | `true` cho đúng một phần tử — mốc mới nhất, đang áp dụng (luôn đi kèm `effectiveTo = null`) |
+| `entries[].changedBy` | string \| null | Tên đăng nhập người đã khai báo mốc này; `null` nếu dòng được tạo từ dữ liệu seed trước khi có audit log — Frontend nên hiển thị "—" thay vì để trống |
+| `entries[].changedAt` | datetime \| null | Thời điểm khai báo; `null` cùng điều kiện với `changedBy` |
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) hoặc Quản trị viên (`VT-07`) — ghi nhật ký lần từ chối (TC-03) |
+| 400 | `VALIDATION_ERROR` | Thiếu `professionalRole` hoặc `level` |
+| 404 | `RESOURCE_NOT_FOUND` | Vai trò + cấp bậc đó chưa từng có đơn giá nào được khai báo |
+
+**Lưu ý cho Frontend:**
+- `entries` luôn sắp theo `effectiveFrom` **tăng dần** (cũ nhất trước) — nếu muốn hiển thị mới nhất trước
+  thì tự đảo mảng phía Frontend.
+- Khác với `GET /bill-rates/current` (chỉ trả các cặp **đang** hiệu lực hôm nay), endpoint này trả **toàn
+  bộ** lịch sử kể cả các mốc đã hết hiệu lực từ lâu — dùng cho màn hình tra cứu/giải trình, không phải màn
+  hình chọn giá khi lập báo giá.
+- `404` không phải lỗi hệ thống — nghĩa là vai trò/cấp bậc đó **chưa từng được khai báo đơn giá lần nào**;
+  nên phân biệt với trường hợp "có 1 mốc" (vẫn trả `200` kèm `everChanged: false`).
 
 ---
 

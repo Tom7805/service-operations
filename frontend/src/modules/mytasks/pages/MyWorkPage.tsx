@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import { getMyTasks, MyTasksApiError } from '../api/myTasksApi';
 import type { MyTaskRes } from '../types/myTaskTypes';
 import { updateTaskProgress, ProjectsApiError } from '../../projects/api/projectsApi';
@@ -108,6 +110,7 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
   const [weekError, setWeekError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [selectedTask, setSelectedTask] = useState<SelectedTask | null>(null);
+  const [confirmSubmit, setConfirmSubmit] = useState(false);
 
   const loadWeek = useCallback(async () => {
     if (!canLogTime) return;
@@ -137,26 +140,31 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
     if (allEntries.length === 0 || hasDraft) return null;
     const hasApproved = allEntries.some((e) => e.status === 'APPROVED');
     const hasSubmitted = allEntries.some((e) => e.status === 'SUBMITTED');
-    if (hasApproved) return { tone: 'approved', text: 'Bảng chấm công tuần này đã được Quản lý dự án duyệt.' };
+    // Kiểm tra "đang chờ duyệt" TRƯỚC "đã duyệt": sau khi được phép nộp bổ sung việc
+    // mới vào một tuần đã duyệt, tuần có thể ở trạng thái hỗn hợp (phần cũ đã duyệt,
+    // phần mới vừa nộp) — nếu ưu tiên "đã duyệt" trước sẽ báo sai là xong hết, trong
+    // khi PM chưa hề duyệt phần mới.
     if (hasSubmitted) {
-      return { tone: 'submitted', text: 'Đã nộp bảng chấm công tuần này — đang chờ Quản lý dự án duyệt.' };
+      return {
+        tone: 'submitted',
+        text: hasApproved
+          ? 'Một phần giờ công tuần này đã được duyệt, phần còn lại vừa nộp — đang chờ Quản lý dự án duyệt.'
+          : 'Đã nộp bảng chấm công tuần này — đang chờ Quản lý dự án duyệt.',
+      };
     }
+    if (hasApproved) return { tone: 'approved', text: 'Bảng chấm công tuần này đã được Quản lý dự án duyệt.' };
     return { tone: 'rejected', text: 'Bảng chấm công tuần này bị từ chối. Hãy chỉnh sửa giờ công rồi nộp lại.' };
   })();
 
+  const totalDraftHours = summaries.reduce(
+    (sum, s) => sum + s.entries.filter((e) => e.status === 'DRAFT').reduce((h, e) => h + e.hours, 0),
+    0
+  );
+
   const handleSubmitWeek = async () => {
     if (!hasDraft || submitting) return;
-    const totalDraftHours = summaries.reduce(
-      (sum, s) => sum + s.entries.filter((e) => e.status === 'DRAFT').reduce((h, e) => h + e.hours, 0),
-      0
-    );
-    const confirmed = window.confirm(
-      `Nộp bảng chấm công tuần ${formatIsoDate(weekFrom)} → ${formatIsoDate(weekTo)} với ${draftCount} `
-        + `dòng giờ công (tổng ${totalDraftHours} giờ)?\n\n`
-        + 'Sau khi nộp, bạn sẽ không sửa hoặc xóa được các dòng giờ công của tuần này cho đến khi được duyệt.'
-    );
-    if (!confirmed) return;
 
+    setConfirmSubmit(false);
     setSubmitting(true);
     try {
       const result = await submitWeek(weekFrom);
@@ -174,6 +182,7 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
   };
 
   const projectStatusByTaskId = new Map(tasks.map((t) => [t.taskId, t.projectStatus]));
+  const confirmBackdrop = useBackdropClick(() => setConfirmSubmit(false), submitting);
 
   if (selectedTask) {
     return (
@@ -359,7 +368,7 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
                 Tổng giờ tuần: <strong data-testid="grand-total-hours">{grandTotal}</strong>
               </span>
               {hasDraft && (
-                <button type="button" className="btn-primary" onClick={handleSubmitWeek} disabled={submitting} data-testid="btn-submit-week">
+                <button type="button" className="btn-primary" onClick={() => setConfirmSubmit(true)} disabled={submitting} data-testid="btn-submit-week">
                   {ICONS.checkCircle} {submitting ? 'Đang nộp…' : `Nộp bảng chấm công (${draftCount} dòng)`}
                 </button>
               )}
@@ -406,6 +415,61 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
             )}
           </div>
         </>
+      )}
+
+      {confirmSubmit && (
+        <ModalPortal>
+          <div
+            className="modal-backdrop"
+            onMouseDown={confirmBackdrop.onMouseDown}
+            onClick={confirmBackdrop.onClick}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="modal-card" style={{ maxWidth: '440px' }}>
+              <div className="modal-header">
+                <div className="modal-header__title-wrap">
+                  <h3 className="modal-title">
+                    <span className="modal-title__icon">{ICONS.checkCircle}</span>
+                    Nộp bảng chấm công tuần
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  className="modal-close"
+                  onClick={() => setConfirmSubmit(false)}
+                  disabled={submitting}
+                  aria-label="Đóng"
+                >
+                  {ICONS.close}
+                </button>
+              </div>
+              <div className="modal-body">
+                <p>
+                  Nộp bảng chấm công tuần {formatIsoDate(weekFrom)} → {formatIsoDate(weekTo)} với{' '}
+                  <strong>{draftCount}</strong> dòng giờ công (tổng <strong>{totalDraftHours}</strong> giờ)?
+                </p>
+                <p className="field-hint">
+                  Sau khi nộp, bạn sẽ không sửa hoặc xóa được các dòng giờ công của tuần này cho đến khi được duyệt.
+                </p>
+                <div style={{ marginTop: '16px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                  <button type="button" className="btn" onClick={() => setConfirmSubmit(false)} disabled={submitting}>
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => void handleSubmitWeek()}
+                    disabled={submitting}
+                    data-testid="btn-confirm-submit-week"
+                  >
+                    {submitting ? 'Đang nộp…' : 'Xác nhận nộp'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ModalPortal>
       )}
     </div>
   );

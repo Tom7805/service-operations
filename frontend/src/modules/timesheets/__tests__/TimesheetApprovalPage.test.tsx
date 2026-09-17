@@ -28,6 +28,7 @@ vi.mock('../api/timesheetsApi', () => {
 const PENDING_1: PendingTimesheetRes = {
   timesheetId: 50,
   userId: 7,
+  userName: 'Nguyen Van A',
   weekStartDate: '2026-09-07',
   weekEndDate: '2026-09-13',
   totalHours: 10,
@@ -39,6 +40,7 @@ const PENDING_1: PendingTimesheetRes = {
 const PENDING_2: PendingTimesheetRes = {
   timesheetId: 51,
   userId: 8,
+  userName: 'Tran Thi B',
   weekStartDate: '2026-09-07',
   weekEndDate: '2026-09-13',
   totalHours: 8,
@@ -64,8 +66,8 @@ describe('TimesheetApprovalPage (NCL-06-CN-003 — Duyệt bảng chấm công)'
 
     render(<TimesheetApprovalPage currentUserRoles={['VT-02']} />);
 
-    expect(await screen.findByTestId('pending-row-50')).toHaveTextContent('Nhân sự #7');
-    expect(screen.getByTestId('pending-row-51')).toHaveTextContent('Nhân sự #8');
+    expect(await screen.findByTestId('pending-row-50')).toHaveTextContent('Nguyen Van A');
+    expect(screen.getByTestId('pending-row-51')).toHaveTextContent('Tran Thi B');
   });
 
   it('hiển thị trạng thái trống khi không có bảng nào chờ duyệt', async () => {
@@ -110,7 +112,7 @@ describe('TimesheetApprovalPage (NCL-06-CN-003 — Duyệt bảng chấm công)'
 
     await waitFor(() => expect(screen.queryByTestId('pending-row-50')).not.toBeInTheDocument());
     expect(screen.getByTestId('pending-row-51')).toBeInTheDocument();
-    expect(screen.getByText(/Đã duyệt bảng chấm công của Nhân sự #7 thành công/i)).toBeInTheDocument();
+    expect(screen.getByText(/Đã duyệt bảng chấm công của Nguyen Van A thành công/i)).toBeInTheDocument();
   });
 
   it('duyệt thành công kèm cảnh báo vượt ngân sách vẫn hiện toast với nội dung cảnh báo', async () => {
@@ -162,6 +164,6 @@ describe('TimesheetApprovalPage (NCL-06-CN-003 — Duyệt bảng chấm công)'
     fireEvent.click(screen.getByTestId('btn-confirm-reject'));
 
     await waitFor(() => expect(screen.queryByTestId('pending-row-50')).not.toBeInTheDocument());
-    expect(screen.getByText(/Đã từ chối 1 dòng giờ công của Nhân sự #7/i)).toBeInTheDocument();
+    expect(screen.getByText(/Đã từ chối 1 dòng giờ công của Nguyen Van A/i)).toBeInTheDocument();
   });
 });

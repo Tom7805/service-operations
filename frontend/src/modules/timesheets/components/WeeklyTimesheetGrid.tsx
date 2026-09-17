@@ -59,14 +59,23 @@ export default function WeeklyTimesheetGrid({ weekFrom, weekTo, summaries }: Wee
                 </td>
                 {days.map((day) => {
                   const entry = hoursByDate.get(day);
+                  // Sau khi cho phép nộp bổ sung vào tuần đã duyệt, một ô có thể mang giờ
+                  // công CHƯA được duyệt (SUBMITTED) nằm cạnh các ô khác đã APPROVED —
+                  // đánh dấu riêng để không nhìn nhầm cả tuần đã xong hết.
+                  const pending = entry != null && entry.status !== 'APPROVED';
                   return (
                     <td
                       key={day}
-                      style={{ textAlign: 'center' }}
+                      style={{ textAlign: 'center', color: pending ? '#1F6C9F' : undefined }}
                       data-testid={`weekly-grid-cell-${s.taskId}-${day}`}
-                      title={entry?.note ?? undefined}
+                      title={
+                        entry
+                          ? [entry.note, pending ? 'Đang chờ Quản lý dự án duyệt' : null].filter(Boolean).join(' — ')
+                          : undefined
+                      }
                     >
                       {entry ? entry.hours : '—'}
+                      {pending && <span title="Đang chờ duyệt">*</span>}
                     </td>
                   );
                 })}
