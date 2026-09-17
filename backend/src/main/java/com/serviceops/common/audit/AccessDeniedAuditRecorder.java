@@ -45,6 +45,7 @@ public class AccessDeniedAuditRecorder {
         FEATURES.put("/activities", new Feature(AuditTargetType.GENERAL, "Hoạt động chăm sóc cơ hội"));
         FEATURES.put("/quotes", new Feature(AuditTargetType.GENERAL, "Báo giá cơ hội"));
         FEATURES.put("/bill-rates", new Feature(AuditTargetType.GENERAL, "Khai báo bảng đơn giá theo vai trò"));
+        FEATURES.put("/overhead-allocations", new Feature(AuditTargetType.EXPENSE, "Phân bổ chi phí chung cho dự án"));
         FEATURES.put("/timesheet-periods", new Feature(AuditTargetType.TIMESHEET, "Khóa kỳ chấm công"));
         FEATURES.put("/reversal", new Feature(AuditTargetType.TIMESHEET, "Điều chỉnh giờ công bằng bút toán đảo"));
         FEATURES.put("/adjustments", new Feature(AuditTargetType.TIMESHEET, "Điều chỉnh giờ công bằng bút toán đảo"));

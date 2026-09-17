@@ -104,4 +104,19 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
 	 * nop cua bang cham cong tuan).
 	 */
 	List<TimeEntry> findByTaskIdInAndStatus(List<Long> taskIds, TimeEntryStatus status);
+
+	/**
+	 * Tong gio cong DA DUYET cua tung cong viec trong mot khoang ngay, nguon du lieu de
+	 * quy ve ty trong gio cong theo du an khi phan bo chi phi chung (NCL-08-CN-005 / QTN-29).
+	 * Tra ve mang {@code [taskId, tongGio]}; khong dung entity Task o day de tranh phu thuoc
+	 * nguoc tu module chi phi/ky sang module cham cong.
+	 */
+	@Query("""
+			SELECT e.taskId, COALESCE(SUM(e.hours), 0)
+			FROM TimeEntry e
+			WHERE e.status = com.serviceops.modules.timesheet.enums.TimeEntryStatus.APPROVED
+			AND e.workDate BETWEEN :from AND :to
+			GROUP BY e.taskId
+			""")
+	List<Object[]> sumApprovedHoursGroupByTaskIdBetween(@Param("from") LocalDate from, @Param("to") LocalDate to);
 }
