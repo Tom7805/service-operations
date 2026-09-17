@@ -105,9 +105,24 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
     ]);
   });
 
-  it('Quản trị viên (VT-07) thấy toàn bộ mục (không ẩn mục nào)', () => {
-    expect(tabsFor(['VT-07'])).toHaveLength(ALL_NAV_ITEMS.length);
-    expect(tabsFor(['VT-07'])).toEqual(ALL_NAV_ITEMS.map((i) => i.tab));
+  it('Quản trị viên (VT-07) chỉ thấy mục quản trị + mục dùng chung, không tham gia nghiệp vụ bán hàng/dự án/kế toán', () => {
+    // Đúng theo vai trò VT-07 trong tài liệu backlog: "Không tham gia nghiệp vụ
+    // bán hàng, dự án hay kế toán" — nên KHÔNG thấy Khách hàng, Hợp đồng, Duyệt
+    // bảng chấm công... dù có toàn quyền quản trị hệ thống.
+    expect(tabsFor(['VT-07'])).toEqual([
+      'MY_WORK',
+      'OPPORTUNITIES',
+      'CUSTOMER_MERGE',
+      'BILL_RATES',
+      'RATE_HISTORY',
+      'DEPARTMENTS',
+      'USERS',
+      'EMPLOYEES',
+      'PERMISSIONS',
+      'TWO_FACTOR_SETTINGS',
+      'SYSTEM_AUDIT_LOG',
+      'AUDIT_LOG',
+    ]);
   });
 
   it('Nhân viên công ty (VT-08) chỉ thấy Công việc + Cơ hộp (chỉ xem)', () => {
