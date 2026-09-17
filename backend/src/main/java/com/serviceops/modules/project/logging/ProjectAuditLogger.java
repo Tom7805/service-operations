@@ -169,6 +169,36 @@ public class ProjectAuditLogger {
 		repository.save(audit);
 	}
 
+	/** NCL-08-CN-004: ghi nhat ky khi tao phieu chi phi thue ngoai. */
+	public void recordSubcontractorExpenseCreated(Long projectId, Long expenseId, String contractorName,
+			BigDecimal amount) {
+		ProjectAuditLog audit = new ProjectAuditLog();
+		audit.setProjectId(projectId);
+		audit.setActionType(ProjectAuditAction.SUBCONTRACTOR_EXPENSE_CREATED);
+		audit.setDetail("Tao phieu chi phi thue ngoai #" + expenseId + " (" + contractorName + "): "
+				+ amount.toPlainString());
+		fillActor(audit);
+		repository.save(audit);
+	}
+
+	public void recordSubcontractorExpenseApproved(Long projectId, Long expenseId, BigDecimal amount) {
+		ProjectAuditLog audit = new ProjectAuditLog();
+		audit.setProjectId(projectId);
+		audit.setActionType(ProjectAuditAction.SUBCONTRACTOR_EXPENSE_APPROVED);
+		audit.setDetail("Duyet phieu chi phi thue ngoai #" + expenseId + ": " + amount.toPlainString());
+		fillActor(audit);
+		repository.save(audit);
+	}
+
+	public void recordSubcontractorExpenseRejected(Long projectId, Long expenseId, String reason) {
+		ProjectAuditLog audit = new ProjectAuditLog();
+		audit.setProjectId(projectId);
+		audit.setActionType(ProjectAuditAction.SUBCONTRACTOR_EXPENSE_REJECTED);
+		audit.setDetail("Tu choi phieu chi phi thue ngoai #" + expenseId + ": " + reason);
+		fillActor(audit);
+		repository.save(audit);
+	}
+
 	private void fillActor(ProjectAuditLog audit) {
 		Long actorId = currentUserScopeProvider.currentUserId();
 		audit.setActorId(actorId == null ? 0L : actorId);
