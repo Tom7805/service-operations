@@ -133,6 +133,41 @@ public class ProjectAuditLogger {
 		repository.save(audit);
 	}
 
+	public void recordExpenseApproved(Long projectId, Long expenseId, BigDecimal amount) {
+		ProjectAuditLog audit = new ProjectAuditLog();
+		audit.setProjectId(projectId);
+		audit.setActionType(ProjectAuditAction.EXPENSE_APPROVED);
+		audit.setDetail("Duyet phieu chi phi #" + expenseId + ": " + amount.toPlainString());
+		fillActor(audit);
+		repository.save(audit);
+	}
+
+	public void recordExpenseRejected(Long projectId, Long expenseId, String reason) {
+		ProjectAuditLog audit = new ProjectAuditLog();
+		audit.setProjectId(projectId);
+		audit.setActionType(ProjectAuditAction.EXPENSE_REJECTED);
+		audit.setDetail("Tu choi phieu chi phi #" + expenseId + ": " + reason);
+		fillActor(audit);
+		repository.save(audit);
+	}
+
+	public void recordExpenseResubmitted(Long projectId, Long expenseId) {
+		ProjectAuditLog audit = new ProjectAuditLog();
+		audit.setProjectId(projectId);
+		audit.setActionType(ProjectAuditAction.EXPENSE_RESUBMITTED);
+		audit.setDetail("Cap nhat va nop lai phieu chi phi #" + expenseId);
+		fillActor(audit);
+		repository.save(audit);
+	}
+
+	private void fillActor(ProjectAuditLog audit) {
+		Long actorId = currentUserScopeProvider.currentUserId();
+		audit.setActorId(actorId == null ? 0L : actorId);
+		audit.setActorUsername(currentUsername());
+		audit.setActorRole(currentRole());
+		audit.setCreatedAt(LocalDateTime.now());
+	}
+
 	/** NCL-04-CN-007: hop dong duoc gia han thi day ngay ket thuc du kien cua du an RUNNING theo. */
 	public void recordTimelineSyncedFromContract(Long projectId, Long contractId, LocalDate previousEndDate,
 			LocalDate newEndDate) {

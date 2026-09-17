@@ -24,6 +24,9 @@ public enum ProjectAuditAction {
 
 	/** Ghi nhan chi phi phat sinh cua du an (NCL-08-CN-001). */
 	EXPENSE_CREATED,
+	EXPENSE_APPROVED,
+	EXPENSE_REJECTED,
+	EXPENSE_RESUBMITTED,
 
 	PROJECT_CLOSED,
 

@@ -58,4 +58,19 @@ public class ProjectExpense extends BaseEntity {
 
 	@Column(name = "updated_at", nullable = false)
 	private LocalDateTime updatedAt;
+
+	@Column(name = "approved_by", length = 100)
+	private String approvedBy;
+
+	@Column(name = "approved_at")
+	private LocalDateTime approvedAt;
+
+	@Column(name = "rejected_by", length = 100)
+	private String rejectedBy;
+
+	@Column(name = "rejected_at")
+	private LocalDateTime rejectedAt;
+
+	@Column(name = "reject_reason", length = 1000)
+	private String rejectReason;
 }

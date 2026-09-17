@@ -94,4 +94,40 @@ class ExpenseControllerIT {
 					.content(body))
 				.andExpect(status().isBadRequest());
 	}
+
+	@Test
+	void accountantCanApproveExpense() throws Exception {
+		when(projectExpenseService.approve(30L)).thenReturn(new ExpenseRes(30L, 1L, 7L,
+				ExpenseType.TRAVEL, new BigDecimal("2000000"), LocalDate.of(2026, 9, 10),
+				"Chi phi di lai gap khach hang", null, false, ExpenseStatus.APPROVED,
+				LocalDateTime.parse("2026-09-10T08:00:00")));
+
+		mockMvc.perform(post("/expenses/30/approve").with(user("accountant").roles("VT-05")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.status").value("APPROVED"));
+	}
+
+	@Test
+	void specialistCannotApproveExpense() throws Exception {
+		mockMvc.perform(post("/expenses/30/approve").with(user("dev01").roles("VT-03")))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void accountantRejectRequiresReason() throws Exception {
+		mockMvc.perform(post("/expenses/30/reject").with(user("accountant").roles("VT-05"))
+					.contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"\"}"))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void accountantCanListPendingExpenses() throws Exception {
+		when(projectExpenseService.findPending()).thenReturn(java.util.List.of());
+
+		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+					.get("/expenses/pending").with(user("accountant").roles("VT-05")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.data").isArray());
+	}
 }

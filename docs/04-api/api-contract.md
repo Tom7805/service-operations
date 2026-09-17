@@ -97,6 +97,84 @@ Yêu cầu token của nhân viên chuyên môn (`VT-03`). Chỉ dự án đang 
 
 Sau khi tạo, phiếu ở trạng thái `SUBMITTED`; hệ thống ghi audit gồm người tạo, thời điểm và nội dung thao tác.
 
+### `NCL-08-CN-002` — Duyệt chi phí dự án
+
+Kế toán (`VT-05`) xem hàng chờ duyệt, duyệt hoặc từ chối phiếu chi phí. Phiếu được duyệt là dữ liệu
+được phép đưa vào giá vốn dự án; phiếu từ chối giữ nguyên dữ liệu gốc và lưu lý do để người tạo xử lý lại.
+
+#### `GET /expenses/pending`
+
+Trả về các phiếu đang ở trạng thái `SUBMITTED`, sắp xếp theo ngày phát sinh tăng dần rồi tới mã phiếu.
+Yêu cầu token của kế toán (`VT-05`).
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": 30,
+      "projectId": 1,
+      "userId": 7,
+      "type": "TRAVEL",
+      "amount": 2000000.00,
+      "expenseDate": "2026-09-10",
+      "description": "Chi phi di lai gap khach hang",
+      "receiptUrl": "https://files.example/receipt-1.pdf",
+      "billable": false,
+      "status": "SUBMITTED",
+      "createdAt": "2026-09-10T08:00:00",
+      "approvedBy": null,
+      "approvedAt": null,
+      "rejectedBy": null,
+      "rejectedAt": null,
+      "rejectReason": null
+    }
+  ]
+}
+```
+
+#### `POST /expenses/{expenseId}/approve`
+
+Duyệt một phiếu đang `SUBMITTED`. Không cần request body. Khi thành công, phiếu chuyển sang `APPROVED`,
+lưu người duyệt và thời điểm duyệt, đồng thời ghi audit. Chỉ phiếu `APPROVED` được tính vào giá vốn dự án.
+
+**Response thành công — `200 OK`:** trả về cùng cấu trúc `ExpenseRes` như hàng chờ, với `status` là
+`APPROVED`, `approvedBy` và `approvedAt` có giá trị.
+
+#### `POST /expenses/{expenseId}/reject`
+
+Từ chối một phiếu đang `SUBMITTED`. Yêu cầu token của kế toán (`VT-05`) và lý do là bắt buộc.
+
+**Request:**
+```json
+{
+  "reason": "Thieu chung tu goc"
+}
+```
+
+**Response thành công — `200 OK`:** trả về cùng cấu trúc `ExpenseRes`, với `status` là `REJECTED`,
+`rejectedBy`, `rejectedAt` và `rejectReason` có giá trị.
+
+**Response lỗi cho cả ba endpoint:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Request từ chối thiếu lý do hoặc lý do dài hơn 1000 ký tự. |
+| 400 | `INVALID_STATE` | Phiếu không còn ở trạng thái `SUBMITTED` (đã duyệt hoặc đã từ chối). |
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-05`. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy phiếu chi phí. |
+
+Mọi thao tác duyệt/từ chối đều ghi audit gồm người thực hiện, thời điểm, phiếu và lý do từ chối nếu có.
+
+#### `PUT /expenses/{expenseId}`
+
+Người tạo phiếu (`VT-03`) dùng lại request tạo chi phí để sửa và nộp lại phiếu đang `REJECTED`.
+Hệ thống kiểm tra người gọi đúng là `userId` của phiếu, dự án còn `RUNNING`, sau đó xóa thông tin từ chối,
+chuyển trạng thái về `SUBMITTED` và đưa phiếu trở lại hàng chờ duyệt. Phiếu `SUBMITTED` hoặc `APPROVED`
+không được sửa.
+
 ---
 
 ## Epic `NCL-01` — Đăng nhập và phân quyền theo cây tổ chức

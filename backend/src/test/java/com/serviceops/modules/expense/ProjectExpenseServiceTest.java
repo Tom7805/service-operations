@@ -3,6 +3,7 @@ package com.serviceops.modules.expense;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.expense.dto.request.ExpenseCreateReq;
+import com.serviceops.modules.expense.dto.request.ExpenseRejectReq;
 import com.serviceops.modules.expense.dto.response.ExpenseRes;
 import com.serviceops.modules.expense.entity.ProjectExpense;
 import com.serviceops.modules.expense.enums.ExpenseStatus;
@@ -25,6 +26,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Optional;
 
@@ -111,5 +113,73 @@ class ProjectExpenseServiceTest {
 
 		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
 		verify(expenseRepository, never()).save(any(ProjectExpense.class));
+	}
+
+	@Test
+	void approvesSubmittedExpenseAndRecordsAudit() {
+		ProjectExpense expense = expense(ExpenseStatus.SUBMITTED);
+		when(currentUserScopeProvider.currentUserId()).thenReturn(5L);
+		when(expenseRepository.findById(30L)).thenReturn(Optional.of(expense));
+		when(expenseRepository.save(expense)).thenReturn(expense);
+
+		ExpenseRes response = service.approve(30L);
+
+		assertEquals(ExpenseStatus.APPROVED, response.status());
+		assertEquals(ExpenseStatus.APPROVED, expense.getStatus());
+		assertEquals(LocalDateTime.parse("2026-09-10T08:00:00"), expense.getApprovedAt());
+		verify(auditLogger).recordExpenseApproved(1L, 30L, new BigDecimal("2000000"));
+	}
+
+	@Test
+	void rejectsSubmittedExpenseWithReasonAndRecordsAudit() {
+		ProjectExpense expense = expense(ExpenseStatus.SUBMITTED);
+		when(currentUserScopeProvider.currentUserId()).thenReturn(5L);
+		when(expenseRepository.findById(30L)).thenReturn(Optional.of(expense));
+		when(expenseRepository.save(expense)).thenReturn(expense);
+
+		ExpenseRes response = service.reject(30L, new ExpenseRejectReq("  Thieu chung tu  "));
+
+		assertEquals(ExpenseStatus.REJECTED, response.status());
+		assertEquals("Thieu chung tu", expense.getRejectReason());
+		verify(auditLogger).recordExpenseRejected(1L, 30L, "Thieu chung tu");
+	}
+
+	@Test
+	void cannotApproveExpenseThatWasAlreadyRejected() {
+		ProjectExpense expense = expense(ExpenseStatus.REJECTED);
+		when(currentUserScopeProvider.currentUserId()).thenReturn(5L);
+		when(expenseRepository.findById(30L)).thenReturn(Optional.of(expense));
+
+		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
+				() -> service.approve(30L));
+
+		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
+		verify(expenseRepository, never()).save(any(ProjectExpense.class));
+	}
+
+	@Test
+	void creatorCanEditRejectedExpenseAndResubmit() {
+		ProjectExpense expense = expense(ExpenseStatus.REJECTED);
+		expense.setUserId(7L);
+		expense.setRejectReason("Thieu chung tu");
+		when(currentUserScopeProvider.currentUserId()).thenReturn(7L);
+		when(expenseRepository.findById(30L)).thenReturn(Optional.of(expense));
+		when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
+		when(expenseRepository.save(expense)).thenReturn(expense);
+
+		ExpenseRes response = service.updateRejected(30L, request(TODAY));
+
+		assertEquals(ExpenseStatus.SUBMITTED, response.status());
+		assertEquals(null, expense.getRejectReason());
+		verify(auditLogger).recordExpenseResubmitted(1L, 30L);
+	}
+
+	private ProjectExpense expense(ExpenseStatus status) {
+		ProjectExpense expense = new ProjectExpense();
+		expense.setId(30L);
+		expense.setProjectId(1L);
+		expense.setAmount(new BigDecimal("2000000"));
+		expense.setStatus(status);
+		return expense;
 	}
 }
