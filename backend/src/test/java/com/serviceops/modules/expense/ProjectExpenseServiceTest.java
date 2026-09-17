@@ -2,6 +2,7 @@ package com.serviceops.modules.expense;
 
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
+import com.serviceops.modules.expense.dto.request.ExpenseBillableReq;
 import com.serviceops.modules.expense.dto.request.ExpenseCreateReq;
 import com.serviceops.modules.expense.dto.request.ExpenseRejectReq;
 import com.serviceops.modules.expense.dto.response.ExpenseRes;
@@ -172,6 +173,50 @@ class ProjectExpenseServiceTest {
 		assertEquals(ExpenseStatus.SUBMITTED, response.status());
 		assertEquals(null, expense.getRejectReason());
 		verify(auditLogger).recordExpenseResubmitted(1L, 30L);
+	}
+
+	@Test
+	void projectManagerCanMarkApprovedExpenseAsBillable() {
+		ProjectExpense expense = expense(ExpenseStatus.APPROVED);
+		when(currentUserScopeProvider.currentUserId()).thenReturn(5L);
+		when(expenseRepository.findById(30L)).thenReturn(Optional.of(expense));
+		when(expenseRepository.save(expense)).thenReturn(expense);
+
+		ExpenseRes response = service.updateBillable(30L, new ExpenseBillableReq(true));
+
+		assertEquals(Boolean.TRUE, response.billable());
+		assertEquals(Boolean.TRUE, expense.getBillable());
+		verify(auditLogger).recordExpenseBillableUpdated(1L, 30L, true);
+	}
+
+	@Test
+	void cannotMarkSubmittedExpenseAsBillable() {
+		ProjectExpense expense = expense(ExpenseStatus.SUBMITTED);
+		when(currentUserScopeProvider.currentUserId()).thenReturn(5L);
+		when(expenseRepository.findById(30L)).thenReturn(Optional.of(expense));
+
+		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
+				() -> service.updateBillable(30L, new ExpenseBillableReq(true)));
+
+		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
+		verify(expenseRepository, never()).save(any(ProjectExpense.class));
+		verify(auditLogger, never()).recordExpenseBillableUpdated(any(), any(), any());
+	}
+
+	@Test
+	void cannotUnmarkExpenseAlreadyIncludedInInvoice() {
+		ProjectExpense expense = expense(ExpenseStatus.APPROVED);
+		expense.setBillable(true);
+		expense.setInvoiced(true);
+		when(currentUserScopeProvider.currentUserId()).thenReturn(5L);
+		when(expenseRepository.findById(30L)).thenReturn(Optional.of(expense));
+
+		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
+				() -> service.updateBillable(30L, new ExpenseBillableReq(false)));
+
+		assertEquals(ErrorCode.INVALID_STATE, exception.getErrorCode());
+		verify(expenseRepository, never()).save(any(ProjectExpense.class));
+		verify(auditLogger, never()).recordExpenseBillableUpdated(any(), any(), any());
 	}
 
 	private ProjectExpense expense(ExpenseStatus status) {

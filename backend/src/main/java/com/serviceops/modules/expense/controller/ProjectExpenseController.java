@@ -1,6 +1,7 @@
 package com.serviceops.modules.expense.controller;
 
 import com.serviceops.common.api.BaseRes;
+import com.serviceops.modules.expense.dto.request.ExpenseBillableReq;
 import com.serviceops.modules.expense.dto.request.ExpenseCreateReq;
 import com.serviceops.modules.expense.dto.request.ExpenseRejectReq;
 import com.serviceops.modules.expense.dto.response.ExpenseRes;
@@ -55,5 +56,13 @@ public class ProjectExpenseController {
 	public BaseRes<ExpenseRes> reject(@PathVariable Long expenseId,
 			@Valid @RequestBody ExpenseRejectReq request) {
 		return BaseRes.ok("Tu choi chi phi thanh cong", projectExpenseService.reject(expenseId, request));
+	}
+
+	@PutMapping("/expenses/{expenseId}/billable")
+	@PreAuthorize("hasRole('VT-02')")
+	public BaseRes<ExpenseRes> updateBillable(@PathVariable Long expenseId,
+			@Valid @RequestBody ExpenseBillableReq request) {
+		return BaseRes.ok("Cap nhat chi phi tinh lai cho khach hang thanh cong",
+				projectExpenseService.updateBillable(expenseId, request));
 	}
 }

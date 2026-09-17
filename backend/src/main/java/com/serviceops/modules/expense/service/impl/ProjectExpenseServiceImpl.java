@@ -3,6 +3,7 @@ package com.serviceops.modules.expense.service.impl;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.expense.dto.request.ExpenseCreateReq;
+import com.serviceops.modules.expense.dto.request.ExpenseBillableReq;
 import com.serviceops.modules.expense.dto.request.ExpenseRejectReq;
 import com.serviceops.modules.expense.dto.response.ExpenseRes;
 import com.serviceops.modules.expense.entity.ProjectExpense;
@@ -154,6 +155,24 @@ public class ProjectExpenseServiceImpl implements ProjectExpenseService {
 		expense.setUpdatedAt(now);
 		ProjectExpense saved = expenseRepository.save(expense);
 		auditLogger.recordExpenseRejected(saved.getProjectId(), saved.getId(), reason);
+		return expenseMapper.toResponse(saved);
+	}
+
+	@Override
+	public ExpenseRes updateBillable(Long expenseId, ExpenseBillableReq request) {
+		requireAuthenticatedUser();
+		ProjectExpense expense = findExpense(expenseId);
+		if (expense.getStatus() != ExpenseStatus.APPROVED) {
+			throw invalidState("Chi phi phai duoc duyet truoc khi danh dau tinh lai cho khach hang");
+		}
+		if (!request.billable() && Boolean.TRUE.equals(expense.getInvoiced())) {
+			throw invalidState("Chi phi da nam trong hoa don, khong the bo danh dau tinh lai cho khach hang");
+		}
+		LocalDateTime now = LocalDateTime.now(clock);
+		expense.setBillable(request.billable());
+		expense.setUpdatedAt(now);
+		ProjectExpense saved = expenseRepository.save(expense);
+		auditLogger.recordExpenseBillableUpdated(saved.getProjectId(), saved.getId(), saved.getBillable());
 		return expenseMapper.toResponse(saved);
 	}
 

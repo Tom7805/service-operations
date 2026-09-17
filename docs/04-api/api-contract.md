@@ -175,6 +175,40 @@ Hệ thống kiểm tra người gọi đúng là `userId` của phiếu, dự �
 chuyển trạng thái về `SUBMITTED` và đưa phiếu trở lại hàng chờ duyệt. Phiếu `SUBMITTED` hoặc `APPROVED`
 không được sửa.
 
+### `NCL-08-CN-003` — Đánh dấu chi phí tính lại cho khách hàng
+
+#### `PUT /expenses/{expenseId}/billable`
+
+Yêu cầu token của quản lý dự án (`VT-02`). Chỉ phiếu chi phí đã được kế toán duyệt (`APPROVED`) mới được
+đánh dấu hoặc bỏ đánh dấu tính lại cho khách hàng. Endpoint là idempotent: gửi lại cùng giá trị không tạo thêm
+thay đổi dữ liệu ngoài bản ghi audit.
+
+**Request:**
+```json
+{
+  "billable": true
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `expenseId` | number | có | Lấy từ URL; phải trỏ tới phiếu chi phí đã duyệt. |
+| `billable` | boolean | có | `true` để tính lại cho khách hàng, `false` để bỏ đánh dấu. |
+
+**Response thành công — `200 OK`:** trả về cùng cấu trúc `ExpenseRes`, với `billable` bằng giá trị vừa cập nhật
+và `status` là `APPROVED`.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Thiếu trường `billable` hoặc giá trị không phải boolean. |
+| 400 | `INVALID_STATE` | Phiếu chưa được duyệt, đã ở trạng thái khác `APPROVED`, hoặc đã nằm trong hóa đơn khi yêu cầu bỏ đánh dấu. |
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-02`. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy phiếu chi phí. |
+
+Mỗi lần cập nhật ghi audit gồm người thực hiện, thời điểm, phiếu và giá trị `billable` mới.
+
 ---
 
 ## Epic `NCL-01` — Đăng nhập và phân quyền theo cây tổ chức

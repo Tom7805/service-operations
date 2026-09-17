@@ -46,6 +46,9 @@ public class ProjectExpense extends BaseEntity {
 	@Column(nullable = false)
 	private Boolean billable = false;
 
+	@Column(nullable = false)
+	private Boolean invoiced = false;
+
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, columnDefinition = "VARCHAR(20)")
 	private ExpenseStatus status = ExpenseStatus.SUBMITTED;

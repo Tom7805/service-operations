@@ -160,6 +160,15 @@ public class ProjectAuditLogger {
 		repository.save(audit);
 	}
 
+	public void recordExpenseBillableUpdated(Long projectId, Long expenseId, Boolean billable) {
+		ProjectAuditLog audit = new ProjectAuditLog();
+		audit.setProjectId(projectId);
+		audit.setActionType(ProjectAuditAction.EXPENSE_BILLABLE_UPDATED);
+		audit.setDetail("Cap nhat phieu chi phi #" + expenseId + " tinh lai cho khach hang: " + billable);
+		fillActor(audit);
+		repository.save(audit);
+	}
+
 	private void fillActor(ProjectAuditLog audit) {
 		Long actorId = currentUserScopeProvider.currentUserId();
 		audit.setActorId(actorId == null ? 0L : actorId);

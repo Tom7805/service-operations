@@ -130,4 +130,35 @@ class ExpenseControllerIT {
 				.andExpect(jsonPath("$.success").value(true))
 				.andExpect(jsonPath("$.data").isArray());
 	}
+
+	@Test
+	void projectManagerCanUpdateBillableFlag() throws Exception {
+		when(projectExpenseService.updateBillable(eq(30L), any())).thenReturn(new ExpenseRes(30L, 1L, 7L,
+				ExpenseType.TRAVEL, new BigDecimal("2000000"), LocalDate.of(2026, 9, 10),
+				"Chi phi di lai gap khach hang", null, true, ExpenseStatus.APPROVED,
+				LocalDateTime.parse("2026-09-10T08:00:00")));
+
+		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+				.put("/expenses/30/billable").with(user("pm01").roles("VT-02"))
+				.contentType(MediaType.APPLICATION_JSON).content("{\"billable\":true}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.billable").value(true))
+				.andExpect(jsonPath("$.data.status").value("APPROVED"));
+	}
+
+	@Test
+	void specialistCannotUpdateBillableFlag() throws Exception {
+		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+				.put("/expenses/30/billable").with(user("dev01").roles("VT-03"))
+				.contentType(MediaType.APPLICATION_JSON).content("{\"billable\":true}"))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void billableFlagIsRequired() throws Exception {
+		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+				.put("/expenses/30/billable").with(user("pm01").roles("VT-02"))
+				.contentType(MediaType.APPLICATION_JSON).content("{}"))
+				.andExpect(status().isBadRequest());
+	}
 }
