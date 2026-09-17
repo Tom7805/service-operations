@@ -117,6 +117,48 @@ describe('ContractRateManager (NCL-07-CN-003 — Khai báo đơn giá riêng the
     expect(within(screen.getByTestId('contract-rate-table')).getByText('Kiểm thử viên')).toBeInTheDocument();
   });
 
+  it('vai trò/cấp bậc vừa khai báo riêng cho hợp đồng này (chưa có ở bảng chung) phải xuất hiện ngay trong ô tra đơn giá áp dụng', async () => {
+    vi.mocked(ratesApi.fetchContractBillRates).mockResolvedValue([]);
+    const created: ContractBillRateRes = {
+      contractId: 7,
+      professionalRole: 'Chuyên viên vận hành',
+      level: 'Chuyên gia',
+      dailyRate: 2_000_000,
+      effectiveFrom: '2026-02-01',
+    };
+    vi.mocked(ratesApi.createContractBillRate).mockResolvedValue(created);
+
+    // roleOptions/levelsByRole (bảng đơn giá CHUNG) không hề có "Chuyên viên vận hành".
+    render(<ContractRateManager currentUserRoles={['VT-07']} roleOptions={ROLE_OPTIONS} levelsByRole={LEVELS_BY_ROLE} />);
+
+    fireEvent.change(screen.getByLabelText('ID hợp đồng'), { target: { value: '7' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Mở đơn giá hợp đồng' }));
+    await waitFor(() => expect(screen.getByTestId('contract-rate-empty')).toBeInTheDocument());
+
+    const resolveRoleSelect = screen.getByLabelText('Vai trò chuyên môn');
+    expect(within(resolveRoleSelect).queryByRole('option', { name: 'Chuyên viên vận hành' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Khai báo đơn giá riêng/i }));
+    const modal = within(screen.getByRole('dialog'));
+    fireEvent.change(modal.getByLabelText('Vai trò chuyên môn'), { target: { value: 'Chuyên viên vận hành' } });
+    fireEvent.change(modal.getByLabelText('Cấp bậc'), { target: { value: 'Chuyên gia' } });
+    fireEvent.change(modal.getByLabelText('Đơn giá theo ngày công'), { target: { value: '2000000' } });
+    fireEvent.change(modal.getByLabelText('Ngày hiệu lực'), { target: { value: '2026-02-01' } });
+    fireEvent.click(modal.getByRole('button', { name: 'Lưu đơn giá riêng' }));
+
+    await waitFor(() => expect(ratesApi.createContractBillRate).toHaveBeenCalled());
+
+    // Sau khi khai báo, ô "Tra đơn giá áp dụng cho hợp đồng này" phải chọn được ngay
+    // cặp vừa thêm mà không cần tải lại trang.
+    await waitFor(() =>
+      expect(within(screen.getByLabelText('Vai trò chuyên môn')).getByRole('option', { name: 'Chuyên viên vận hành' })).toBeInTheDocument()
+    );
+    fireEvent.change(screen.getByLabelText('Vai trò chuyên môn'), { target: { value: 'Chuyên viên vận hành' } });
+    expect(
+      within(screen.getByLabelText('Cấp bậc')).getByRole('option', { name: 'Chuyên gia' })
+    ).toBeInTheDocument();
+  });
+
   it('lỗi tải danh sách (vd hợp đồng không tồn tại) hiển thị rõ và có nút thử lại', async () => {
     vi.mocked(ratesApi.fetchContractBillRates).mockRejectedValue(
       new ratesApi.RatesApiError('RESOURCE_NOT_FOUND', 'Không tìm thấy hợp đồng với ID: 999', 404)
