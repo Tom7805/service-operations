@@ -17,5 +17,8 @@ public enum NotificationType {
 
 	PROJECT_MILESTONE_DUE,
 
-	CONTRACT_EXPIRING
+	CONTRACT_EXPIRING,
+
+	/** NCL-09-CN-004: bien loi nhuan cua du an xuong duoi nguong toi thieu do Ban giam doc dat. */
+	NEGATIVE_MARGIN_ALERT
 }
