@@ -34,6 +34,7 @@ export type Tab =
   | 'UNSUBMITTED_TIMESHEETS'
   | 'EXPENSE_APPROVAL'
   | 'OVERHEAD_ALLOCATION'
+  | 'MARGIN_ALERT_THRESHOLD'
   | 'NOTIFICATIONS';
 
 export interface NavItem {
@@ -122,6 +123,14 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
     tab: 'OVERHEAD_ALLOCATION', icon: ICONS.chart, label: 'Phân bổ chi phí chung', requires: ['VT-05'],
     // NCL-08-CN-005: Kế toán chia tổng chi phí chung phát sinh trong kỳ (tháng) cho các
     // dự án theo tỷ trọng giờ công đã duyệt trong kỳ đó.
+  },
+  {
+    tab: 'MARGIN_ALERT_THRESHOLD', icon: ICONS.alertTriangle, label: 'Ngưỡng cảnh báo âm biên',
+    requires: ['VT-01', 'VT-02', 'VT-05'],
+    // NCL-09-CN-004: ngưỡng biên lợi nhuận tối thiểu toàn công ty — vượt ngưỡng thì hệ
+    // thống tự gửi thông báo cho quản lý dự án + Ban giám đốc mỗi khi tính lại biên lợi
+    // nhuận (NCL-09-CN-003). Chỉ Ban giám đốc (VT-01) được đặt/đổi (TC-03); VT-02/VT-05
+    // chỉ xem được ngưỡng hiện hành.
   },
   { tab: 'OPPORTUNITY_DETAIL', icon: ICONS.building, label: 'Cơ hộp', requires: ['VT-04'] },
 ];

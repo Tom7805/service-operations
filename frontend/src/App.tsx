@@ -29,6 +29,7 @@ import TimesheetPeriodPage from './modules/timesheets/pages/TimesheetPeriodPage'
 import UnsubmittedTimesheetsPage from './modules/timesheets/pages/UnsubmittedTimesheetsPage';
 import ExpenseApprovalPage from './modules/expenses/pages/ExpenseApprovalPage';
 import OverheadAllocationPage from './modules/expenses/pages/OverheadAllocationPage';
+import MarginAlertThresholdPage from './modules/profitability/pages/MarginAlertThresholdPage';
 import NotificationCenterPage from './modules/notifications/pages/NotificationCenterPage';
 import NotificationList from './modules/notifications/components/NotificationList';
 import { getNotifications, getUnreadCount, markNotificationsRead } from './modules/notifications/api/notificationsApi';
@@ -460,6 +461,8 @@ export default function App() {
             <ExpenseApprovalPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'OVERHEAD_ALLOCATION' ? (
             <OverheadAllocationPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+          ) : activeTab === 'MARGIN_ALERT_THRESHOLD' ? (
+            <MarginAlertThresholdPage currentUserRoles={currentRoles} />
           ) : activeTab === 'CUSTOMERS' ? (
             <CustomerListPage
               currentUserRoles={currentRoles}
