@@ -22,8 +22,9 @@ import TaskBudgetModal from './TaskBudgetModal';
 import TaskAssignModal from './TaskAssignModal';
 import ProjectMilestoneTimeline from './ProjectMilestoneTimeline';
 import ProjectRiskPage from '../pages/ProjectRiskPage';
+import ExpenseListPage from '../../expenses/pages/ExpenseListPage';
 
-type WbsSection = 'WBS' | 'MILESTONES' | 'RISKS';
+type WbsSection = 'WBS' | 'MILESTONES' | 'RISKS' | 'EXPENSES';
 
 export interface ProjectWbsModalProps {
   isOpen: boolean;
@@ -326,6 +327,18 @@ export default function ProjectWbsModal({
                   >
                     {ICONS.alertTriangle} Rủi ro
                   </button>
+                  {(currentUserRoles.includes('VT-02') || currentUserRoles.includes('VT-03')) && (
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeSection === 'EXPENSES'}
+                      className={`btn btn-xs ${activeSection === 'EXPENSES' ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => setActiveSection('EXPENSES')}
+                      data-testid="wbs-tab-expenses"
+                    >
+                      {ICONS.receipt} Chi phí
+                    </button>
+                  )}
                 </div>
 
                 {canClose && (
@@ -380,12 +393,14 @@ export default function ProjectWbsModal({
                   isProjectOpen={isProjectOpen}
                   onNotify={showToast}
                 />
-              ) : (
+              ) : activeSection === 'RISKS' ? (
                 <ProjectRiskPage
                   projectId={projectId}
                   currentUserRoles={currentUserRoles}
                   initialProject={project ?? undefined}
                 />
+              ) : (
+                <ExpenseListPage projectId={projectId} currentUserRoles={currentUserRoles} />
               )}
             </>
           )}

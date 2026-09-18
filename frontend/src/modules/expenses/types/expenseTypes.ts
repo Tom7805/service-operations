@@ -39,9 +39,31 @@ export interface ExpenseRejectReq {
   reason: string;
 }
 
+/**
+ * Payload đánh dấu/bỏ đánh dấu tính lại chi phí cho khách hàng (NCL-08-CN-003).
+ * PUT /expenses/{expenseId}/billable
+ */
+export interface ExpenseBillableReq {
+  billable: boolean;
+}
+
 /** Nhãn hiển thị cho từng loại chi phí (`ExpenseType`). */
 export const EXPENSE_TYPE_LABELS: Record<ExpenseType, string> = {
   TRAVEL: 'Đi lại',
   TOOLS: 'Công cụ, dụng cụ',
   OTHER: 'Khác',
+};
+
+/** Nhãn hiển thị cho từng trạng thái phiếu chi phí (`ExpenseStatus`). */
+export const EXPENSE_STATUS_LABELS: Record<ExpenseStatus, string> = {
+  SUBMITTED: 'Chờ duyệt',
+  APPROVED: 'Đã duyệt',
+  REJECTED: 'Từ chối',
+};
+
+/** Class badge trạng thái tương ứng, dùng chung style `status-pill` của hệ thống. */
+export const EXPENSE_STATUS_PILL_CLASS: Record<ExpenseStatus, string> = {
+  SUBMITTED: 'status-pill--inactive',
+  APPROVED: 'status-pill--active',
+  REJECTED: 'status-pill--locked',
 };
