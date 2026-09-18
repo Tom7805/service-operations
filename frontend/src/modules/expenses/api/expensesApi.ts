@@ -171,6 +171,42 @@ export async function getProjectSubcontractorExpenses(projectId: number): Promis
 }
 
 /**
+ * NCL-08-CN-002: hàng chờ duyệt chi phí thuê ngoài của Kế toán (VT-05) — CN-004 (ghi nhận
+ * chi phí thuê ngoài) phụ thuộc trực tiếp vào story này để đưa phiếu vào giá vốn dự án, nên
+ * cùng dùng chung màn "Duyệt chi phí dự án" với chi phí nội bộ.
+ * GET /subcontractor-expenses/pending
+ */
+export async function getPendingSubcontractorExpenses(): Promise<SubcontractorExpenseRes[]> {
+  return requestBackend<SubcontractorExpenseRes[]>(`${API_BASE_URL}/subcontractor-expenses/pending`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * NCL-08-CN-002: duyệt một phiếu chi phí thuê ngoài đang `SUBMITTED`. Không cần request body.
+ * POST /subcontractor-expenses/{expenseId}/approve
+ */
+export async function approveSubcontractorExpense(expenseId: number): Promise<SubcontractorExpenseRes> {
+  return requestBackend<SubcontractorExpenseRes>(`${API_BASE_URL}/subcontractor-expenses/${expenseId}/approve`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * NCL-08-CN-002: từ chối một phiếu chi phí thuê ngoài đang `SUBMITTED` — `reason` bắt buộc.
+ * POST /subcontractor-expenses/{expenseId}/reject
+ */
+export async function rejectSubcontractorExpense(
+  expenseId: number,
+  payload: ExpenseRejectReq
+): Promise<SubcontractorExpenseRes> {
+  return requestBackend<SubcontractorExpenseRes>(`${API_BASE_URL}/subcontractor-expenses/${expenseId}/reject`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
  * NCL-08-CN-005: chạy phân bổ chi phí chung cho kỳ (tháng) theo tỷ trọng giờ công đã duyệt
  * của từng dự án trong kỳ. Chỉ Kế toán (VT-05). Mỗi kỳ chỉ được phân bổ một lần — chạy lại
  * cho kỳ đã phân bổ nhận `400 DUPLICATE_DATA`; kỳ chưa có giờ công nào được duyệt nhận
