@@ -64,6 +64,7 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'CUSTOMERS',
       'OPPORTUNITIES',
       'PROJECT_LABOR_COST',
+      'PROJECT_MARGIN',
     ]);
   });
 
@@ -92,6 +93,7 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'OVERHEAD_ALLOCATION',
       'PROJECT_LABOR_COST',
       'PROJECT_RECOGNIZED_REVENUE',
+      'PROJECT_MARGIN',
     ]);
   });
 
@@ -164,6 +166,7 @@ describe('navGroupsFor — bỏ qua nhóm không có mục hiển thị', () => 
       'OVERHEAD_ALLOCATION',
       'PROJECT_LABOR_COST',
       'PROJECT_RECOGNIZED_REVENUE',
+      'PROJECT_MARGIN',
     ]);
   });
 

@@ -1,4 +1,4 @@
-import type { ProjectLaborCostRes, RecognizedRevenueRes } from '../types/profitabilityTypes';
+import type { ProjectLaborCostRes, ProjectMarginRes, RecognizedRevenueRes } from '../types/profitabilityTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -83,6 +83,26 @@ export async function getProjectLaborCost(projectId: number): Promise<ProjectLab
 export async function getProjectRecognizedRevenue(projectId: number): Promise<RecognizedRevenueRes> {
   return requestBackend<RecognizedRevenueRes>(
     `${API_BASE_URL}/projects/${projectId}/profitability/revenue`,
+    {
+      method: 'GET',
+    }
+  );
+}
+
+/**
+ * NCL-09-CN-003: Hiển thị biên lợi nhuận gộp thời gian thực của một dự án.
+ *
+ * Cho phép VT-01 (Ban giám đốc), VT-02 (Quản lý dự án), VT-05 (Kế toán).
+ * GET /projects/{projectId}/profitability/margin
+ *
+ * `hourlyRate`/`laborCost` trong từng dòng của `laborCostLines` được backend đánh dấu
+ * `@MaskSensitive(COST)` — người có quyền xem dữ liệu lương (VT-01, VT-05, VT-06) nhận
+ * giá trị thực; người không có quyền (VT-02) nhận giá trị đã mã hoá. Các trường tổng hợp
+ * (doanh thu, chi phí, lợi nhuận gộp, tỷ suất) không bị che.
+ */
+export async function getProjectMargin(projectId: number): Promise<ProjectMarginRes> {
+  return requestBackend<ProjectMarginRes>(
+    `${API_BASE_URL}/projects/${projectId}/profitability/margin`,
     {
       method: 'GET',
     }

@@ -5,6 +5,35 @@ export type ContractType = 'TIME_AND_MATERIAL' | 'FIXED_PRICE' | 'MAINTENANCE' |
 export type RecognitionMethod = 'HOURLY' | 'PERCENTAGE_OF_COMPLETION';
 
 /**
+ * Một dòng giá vốn giờ công của một nhân sự trong dự án (NCL-09-CN-001).
+ * Khớp `LaborCostLineRes` phía backend — `hourlyRate` và `laborCost` được đánh dấu
+ * `@MaskSensitive(MaskingLevel.COST)` nên backend tự masking khi người gọi không có
+ * quyền xem dữ liệu lương/giá vốn. Frontend dùng `canViewSensitiveData` để quyết định
+ * hiển thị giá trị thực hay ẩn bằng MaskedCell.
+ */
+export interface LaborCostLineRes {
+  timeEntryId: number;
+  employeeId: number;
+  workDate: string; // YYYY-MM-DD (LocalDate)
+  hours: number; // BigDecimal → number
+  hourlyRate: number; // @MaskSensitive COST
+  laborCost: number; // @MaskSensitive COST
+  missingCostData: boolean;
+}
+
+/**
+ * Tổng hợp giá vốn giờ công của một dự án (NCL-09-CN-001).
+ * Khớp `ProjectLaborCostRes` phía backend.
+ */
+export interface ProjectLaborCostRes {
+  projectId: number;
+  totalApprovedHours: number; // BigDecimal
+  totalLaborCost: number; // BigDecimal
+  missingCostEntryCount: number;
+  lines: LaborCostLineRes[];
+}
+
+/**
  * Một dòng doanh thu ghi nhận từ dòng giờ công đã duyệt của hợp đồng theo giờ
  * (NCL-09-CN-002, phương thức `HOURLY`). Khớp `RevenueLineRes` phía backend.
  */
@@ -43,30 +72,28 @@ export interface RecognizedRevenueRes {
 }
 
 /**
- * Một dòng giá vốn giờ công của một nhân sự trong dự án (NCL-09-CN-001).
- * Khớp `LaborCostLineRes` phía backend — `hourlyRate` và `laborCost` được đánh dấu
- * `@MaskSensitive(MaskingLevel.COST)` nên backend tự masquing khi người gọi không có
- * quyền xem dữ liệu lương/giá vốn. Frontend dùng `canViewSensitiveData` để quyết định
- * hiển thị giá trị thực hay ẩn bằng MaskedCell.
+ * Biên lợi nhuận gộp của dự án (NCL-09-CN-003), tính động từ doanh thu ghi nhận và
+ * toàn bộ chi phí đã duyệt tại thời điểm đọc. Khớp `ProjectMarginRes` phía backend.
+ *
+ * `totalCost = laborCost + projectExpenseCost + subcontractorCost`,
+ * `grossProfit = recognizedRevenue - totalCost`,
+ * `marginRate = grossProfit / recognizedRevenue` (`null` khi `recognizedRevenue = 0`).
+ *
+ * Không trường tổng hợp nào ở đây bị `@MaskSensitive` — chỉ `hourlyRate`/`laborCost`
+ * bên trong từng dòng của `laborCostLines` mới bị che (QTN-02), để Quản lý dự án
+ * (VT-02) vẫn xem được bức tranh doanh thu/chi phí/lợi nhuận tổng quát của dự án.
  */
-export interface LaborCostLineRes {
-  timeEntryId: number;
-  employeeId: number;
-  workDate: string; // YYYY-MM-DD (LocalDate)
-  hours: number; // BigDecimal → number
-  hourlyRate: number; // @MaskSensitive COST
-  laborCost: number; // @MaskSensitive COST
-  missingCostData: boolean;
-}
-
-/**
- * Tổng hợp giá vốn giờ công của một dự án (NCL-09-CN-001).
- * Khớp `ProjectLaborCostRes` phía backend.
- */
-export interface ProjectLaborCostRes {
+export interface ProjectMarginRes {
   projectId: number;
-  totalApprovedHours: number; // BigDecimal
-  totalLaborCost: number; // BigDecimal
+  recognizedRevenue: number; // BigDecimal
+  laborCost: number; // BigDecimal
+  projectExpenseCost: number; // BigDecimal
+  subcontractorCost: number; // BigDecimal
+  totalCost: number; // BigDecimal
+  grossProfit: number; // BigDecimal
+  marginRate: number | null; // BigDecimal, null khi recognizedRevenue = 0
   missingCostEntryCount: number;
-  lines: LaborCostLineRes[];
+  missingRateEntryCount: number;
+  laborCostLines: LaborCostLineRes[];
+  revenueLines: RevenueLineRes[];
 }

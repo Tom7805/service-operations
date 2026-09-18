@@ -36,6 +36,7 @@ export type Tab =
   | 'OVERHEAD_ALLOCATION'
   | 'PROJECT_LABOR_COST'
   | 'PROJECT_RECOGNIZED_REVENUE'
+  | 'PROJECT_MARGIN'
   | 'NOTIFICATIONS';
 
 export interface NavItem {
@@ -137,6 +138,12 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
     // NCL-09-CN-002: tính động doanh thu ghi nhận của dự án theo đúng loại hợp đồng
     // (giờ công đã duyệt × đơn giá, hoặc giá trị hợp đồng × tỷ lệ hoàn thành). Chỉ
     // Ban giám đốc (VT-01) và Kế toán (VT-05) xem được — khớp @PreAuthorize backend.
+  },
+  {
+    tab: 'PROJECT_MARGIN', icon: ICONS.chart, label: 'Biên lợi nhuận', requires: ['VT-01', 'VT-02', 'VT-05'],
+    // NCL-09-CN-003: biên lợi nhuận gộp thời gian thực của dự án (doanh thu ghi nhận
+    // trừ toàn bộ chi phí đã duyệt). Chỉ dữ liệu chi phí từng dòng (hourlyRate/laborCost)
+    // bị che với VT-02 theo QTN-02 — số tổng hợp hiển thị cho cả ba vai trò.
   },
   { tab: 'OPPORTUNITY_DETAIL', icon: ICONS.building, label: 'Cơ hộp', requires: ['VT-04'] },
 ];
