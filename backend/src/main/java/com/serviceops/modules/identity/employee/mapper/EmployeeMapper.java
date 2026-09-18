@@ -23,7 +23,8 @@ public class EmployeeMapper {
                 employee.getProfessionalRole(),
                 employee.getStandardHoursPerWeek(),
                 employee.getHireDate(),
-                employee.getEndDate());
+                employee.getEndDate(),
+                employee.getLevel());
     }
 
     public EmployeeDetailRes toDetailResponse(Employee employee, List<EmploymentContractRes> contracts) {
@@ -40,7 +41,8 @@ public class EmployeeMapper {
                 employee.getEndDate(),
                 employee.getCreatedAt(),
                 employee.getUpdatedAt(),
-                contracts);
+                contracts,
+                employee.getLevel());
     }
 
     public EmploymentContractRes toContractResponse(EmploymentContract contract) {
