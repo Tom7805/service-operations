@@ -16,4 +16,18 @@ public interface RateResolutionService {
 	 * chua co don gia nao (chung hoac rieng hop dong) hieu luc truoc hoac dung ngay cong.</p>
 	 */
 	ResolvedRateRes resolveForTimeEntry(Long timeEntryId, RateLookupReq request);
+
+	/**
+	 * Tu dong tra don gia ap dung cho dong gio cong {@code timeEntryId} — dung cho cac luong
+	 * tinh toan hang loat khong co nguoi dung ngoi nhap {@code level} tung dong (vi du
+	 * NCL-09-CN-002, tinh doanh thu ghi nhan cho ca du an).
+	 *
+	 * <p>Khac voi {@link #resolveForTimeEntry(Long, RateLookupReq)} (NCL-07-CN-005, tra cuu
+	 * don le tren man hinh Ke toan, {@code level} do Frontend nhap tay vi luc do ho so nhan
+	 * su chua luu cap bac) — phuong thuc nay lay {@code level} truc tiep tu
+	 * {@code Employee.level} (bo sung rieng cho muc tu dong hoa nay). Nem
+	 * {@code VALIDATION_ERROR} neu nhan su thuc hien dong gio cong do chua duoc khai bao
+	 * cap bac trong ho so nhan su.</p>
+	 */
+	ResolvedRateRes resolveForTimeEntry(Long timeEntryId);
 }

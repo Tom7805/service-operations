@@ -3,8 +3,13 @@ package com.serviceops.modules.profitability.controller;
 import com.serviceops.common.api.BaseRes;
 import com.serviceops.modules.profitability.dto.response.PlannedVsActualMarginRes;
 import com.serviceops.modules.profitability.dto.response.ProjectLaborCostRes;
+import com.serviceops.modules.profitability.dto.response.ProjectMarginRes;
+import com.serviceops.modules.profitability.dto.response.RecognizedRevenueRes;
 import com.serviceops.modules.profitability.service.LaborCostService;
+import com.serviceops.modules.profitability.service.MarginAlertService;
 import com.serviceops.modules.profitability.service.MarginComparisonService;
+import com.serviceops.modules.profitability.service.ProjectMarginService;
+import com.serviceops.modules.profitability.service.RevenueRecognitionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +24,9 @@ public class ProjectProfitabilityController {
 
 	private final LaborCostService laborCostService;
 	private final MarginComparisonService marginComparisonService;
+	private final ProjectMarginService projectMarginService;
+	private final RevenueRecognitionService revenueRecognitionService;
+	private final MarginAlertService marginAlertService;
 
 	@GetMapping("/labor-cost")
 	@PreAuthorize("hasAnyRole('VT-01', 'VT-02', 'VT-05')")
@@ -35,5 +43,22 @@ public class ProjectProfitabilityController {
 	@PreAuthorize("hasRole('VT-02')")
 	public BaseRes<PlannedVsActualMarginRes> getPlannedVsActualMargin(@PathVariable Long projectId) {
 		return BaseRes.ok(marginComparisonService.compare(projectId));
+	}
+
+	/** NCL-09-CN-002: TC-04 gioi han chi Ke toan (VT-05) va Ban giam doc (VT-01) duoc xem. */
+	@GetMapping("/revenue")
+	@PreAuthorize("hasAnyRole('VT-01', 'VT-05')")
+	public BaseRes<RecognizedRevenueRes> getRecognizedRevenue(@PathVariable Long projectId) {
+		return BaseRes.ok(revenueRecognitionService.calculateRecognizedRevenue(projectId));
+	}
+
+	/** NCL-09-CN-003: PM, Ke toan va Ban giam doc xem bien loi nhuan thoi gian thuc. */
+	@GetMapping("/margin")
+	@PreAuthorize("hasAnyRole('VT-01', 'VT-02', 'VT-05')")
+	public BaseRes<ProjectMarginRes> getProjectMargin(@PathVariable Long projectId) {
+		ProjectMarginRes margin = projectMarginService.calculateProjectMargin(projectId);
+		// NCL-09-CN-004 (TC-01): moi lan tinh lai bien loi nhuan la moi lan danh gia canh bao am bien.
+		marginAlertService.evaluateAndAlert(projectId, margin);
+		return BaseRes.ok(margin);
 	}
 }

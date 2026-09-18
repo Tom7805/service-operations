@@ -5,7 +5,10 @@ import com.serviceops.modules.profitability.controller.ProjectProfitabilityContr
 import com.serviceops.modules.profitability.dto.response.PlannedVsActualMarginRes;
 import com.serviceops.modules.profitability.dto.response.ProjectLaborCostRes;
 import com.serviceops.modules.profitability.service.LaborCostService;
+import com.serviceops.modules.profitability.service.MarginAlertService;
 import com.serviceops.modules.profitability.service.MarginComparisonService;
+import com.serviceops.modules.profitability.service.ProjectMarginService;
+import com.serviceops.modules.profitability.service.RevenueRecognitionService;
 import com.serviceops.security.CustomUserDetailsService;
 import com.serviceops.security.JwtAuthFilter;
 import com.serviceops.security.JwtAuthenticationEntryPoint;
@@ -38,6 +41,15 @@ class LaborCostControllerIT {
 
 	@MockBean
 	private MarginComparisonService marginComparisonService;
+
+	@MockBean
+	private RevenueRecognitionService revenueRecognitionService;
+
+	@MockBean
+	private ProjectMarginService projectMarginService;
+
+	@MockBean
+	private MarginAlertService marginAlertService;
 
 	@MockBean
 	private JwtProvider jwtProvider;

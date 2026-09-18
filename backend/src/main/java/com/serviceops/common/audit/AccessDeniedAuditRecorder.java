@@ -46,6 +46,7 @@ public class AccessDeniedAuditRecorder {
         FEATURES.put("/customers", new Feature(AuditTargetType.CUSTOMER, "Hồ sơ khách hàng"));
         FEATURES.put("/activities", new Feature(AuditTargetType.GENERAL, "Hoạt động chăm sóc cơ hội"));
         FEATURES.put("/quotes", new Feature(AuditTargetType.GENERAL, "Báo giá cơ hội"));
+        FEATURES.put("/margin-alert-threshold", new Feature(AuditTargetType.GENERAL, "Ngưỡng cảnh báo dự án âm biên"));
         FEATURES.put("/bill-rates", new Feature(AuditTargetType.GENERAL, "Khai báo bảng đơn giá theo vai trò"));
         FEATURES.put("/overhead-allocations", new Feature(AuditTargetType.EXPENSE, "Phân bổ chi phí chung cho dự án"));
         FEATURES.put("/timesheet-periods", new Feature(AuditTargetType.TIMESHEET, "Khóa kỳ chấm công"));
