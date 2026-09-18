@@ -1,4 +1,10 @@
-import type { ExpenseBillableReq, ExpenseRejectReq, ExpenseRes } from '../types/expenseTypes';
+import type {
+  ExpenseBillableReq,
+  ExpenseRejectReq,
+  ExpenseRes,
+  SubcontractorExpenseCreateReq,
+  SubcontractorExpenseRes,
+} from '../types/expenseTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -103,5 +109,33 @@ export async function updateExpenseBillable(expenseId: number, payload: ExpenseB
   return requestBackend<ExpenseRes>(`${API_BASE_URL}/expenses/${expenseId}/billable`, {
     method: 'PUT',
     body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * NCL-08-CN-004: ghi nhận một phiếu chi phí thuê ngoài (nhà thầu phụ) cho dự án. Chỉ Quản
+ * lý dự án (VT-02) và dự án phải đang `RUNNING` — nếu không, backend trả `400 INVALID_STATE`.
+ * Phiếu tạo mới luôn ở trạng thái `SUBMITTED`, chờ Kế toán duyệt.
+ * POST /projects/{projectId}/subcontractor-expenses
+ */
+export async function createSubcontractorExpense(
+  projectId: number,
+  payload: SubcontractorExpenseCreateReq
+): Promise<SubcontractorExpenseRes> {
+  return requestBackend<SubcontractorExpenseRes>(`${API_BASE_URL}/projects/${projectId}/subcontractor-expenses`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Danh sách chi phí thuê ngoài của một dự án — dành cho Quản lý dự án (VT-02) và Kế toán
+ * (VT-05). Dùng làm màn xem của Quản lý dự án (NCL-08-CN-004); duyệt/từ chối của Kế toán
+ * nằm ngoài phạm vi màn hình này.
+ * GET /projects/{projectId}/subcontractor-expenses
+ */
+export async function getProjectSubcontractorExpenses(projectId: number): Promise<SubcontractorExpenseRes[]> {
+  return requestBackend<SubcontractorExpenseRes[]>(`${API_BASE_URL}/projects/${projectId}/subcontractor-expenses`, {
+    method: 'GET',
   });
 }

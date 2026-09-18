@@ -67,3 +67,36 @@ export const EXPENSE_STATUS_PILL_CLASS: Record<ExpenseStatus, string> = {
   APPROVED: 'status-pill--active',
   REJECTED: 'status-pill--locked',
 };
+
+/**
+ * Một phiếu chi phí thuê ngoài (nhà thầu phụ) của dự án. Khớp `SubcontractorExpenseRes`
+ * (NCL-08-CN-004). Dùng chung `ExpenseStatus`/nhãn/badge với chi phí nội bộ — luồng
+ * duyệt/từ chối của Kế toán (VT-05) nằm ngoài phạm vi màn hình ghi nhận này.
+ */
+export interface SubcontractorExpenseRes {
+  id: number;
+  projectId: number;
+  userId: number;
+  contractorName: string;
+  workScope: string;
+  amount: number;
+  incurredPeriod: string; // YYYY-MM-DD
+  status: ExpenseStatus;
+  createdAt: string;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  rejectedBy: string | null;
+  rejectedAt: string | null;
+  rejectReason: string | null;
+}
+
+/**
+ * Payload ghi nhận chi phí thuê ngoài (NCL-08-CN-004).
+ * POST /projects/{projectId}/subcontractor-expenses
+ */
+export interface SubcontractorExpenseCreateReq {
+  contractorName: string;
+  workScope: string;
+  amount: number;
+  incurredPeriod: string; // YYYY-MM-DD
+}

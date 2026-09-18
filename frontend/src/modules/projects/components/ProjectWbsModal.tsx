@@ -23,8 +23,9 @@ import TaskAssignModal from './TaskAssignModal';
 import ProjectMilestoneTimeline from './ProjectMilestoneTimeline';
 import ProjectRiskPage from '../pages/ProjectRiskPage';
 import ExpenseListPage from '../../expenses/pages/ExpenseListPage';
+import SubcontractorExpenseListPage from '../../expenses/pages/SubcontractorExpenseListPage';
 
-type WbsSection = 'WBS' | 'MILESTONES' | 'RISKS' | 'EXPENSES';
+type WbsSection = 'WBS' | 'MILESTONES' | 'RISKS' | 'EXPENSES' | 'SUBCONTRACTOR';
 
 export interface ProjectWbsModalProps {
   isOpen: boolean;
@@ -339,6 +340,18 @@ export default function ProjectWbsModal({
                       {ICONS.receipt} Chi phí
                     </button>
                   )}
+                  {currentUserRoles.includes('VT-02') && (
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeSection === 'SUBCONTRACTOR'}
+                      className={`btn btn-xs ${activeSection === 'SUBCONTRACTOR' ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => setActiveSection('SUBCONTRACTOR')}
+                      data-testid="wbs-tab-subcontractor"
+                    >
+                      {ICONS.briefcase} Thuê ngoài
+                    </button>
+                  )}
                 </div>
 
                 {canClose && (
@@ -399,8 +412,14 @@ export default function ProjectWbsModal({
                   currentUserRoles={currentUserRoles}
                   initialProject={project ?? undefined}
                 />
-              ) : (
+              ) : activeSection === 'EXPENSES' ? (
                 <ExpenseListPage projectId={projectId} currentUserRoles={currentUserRoles} />
+              ) : (
+                <SubcontractorExpenseListPage
+                  projectId={projectId}
+                  currentUserRoles={currentUserRoles}
+                  initialProject={project ?? undefined}
+                />
               )}
             </>
           )}
