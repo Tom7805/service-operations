@@ -243,7 +243,7 @@ nằm trong kỳ `from`..`to`, theo hai chiều: khách hàng (qua dự án) và
 
 - **Giá vốn** (mọi dòng, kể cả không tính phí — `QTN-17`): `hours × chi phí giờ công của nhân sự hiệu lực tại workDate`.
 - **Doanh thu** (chỉ dòng `billable=true` — theo đúng quy tắc của `NCL-09-CN-002-TC-03`): `hours × (đơn giá ngày hiệu lực tại workDate × hệ số loại hình công việc ÷ 8)`, đơn giá ưu tiên đơn giá riêng hợp đồng rồi mới đến bảng giá chung (`QTN-15`/`QTN-16`).
-- Dòng thiếu chi phí giờ công hiệu lực bị loại khỏi giá vốn (đếm vào `missingCostEntryCount`); dòng có tính phí nhưng thiếu đơn giá bán hiệu lực (ở cấp bậc mặc định `"Chưa phân loại"` — hồ sơ nhân sự hiện chưa có cột cấp bậc riêng) bị loại khỏi doanh thu (đếm vào `missingRevenueEntryCount`). Hai trường hợp này **không** làm lỗi cả báo cáo.
+- Dòng thiếu chi phí giờ công hiệu lực bị loại khỏi giá vốn (đếm vào `missingCostEntryCount`); dòng có tính phí nhưng nhân sự chưa khai báo cấp bậc (`Employee.level`) hoặc thiếu đơn giá bán hiệu lực ở đúng cặp (vai trò, cấp bậc) đó bị loại khỏi doanh thu (đếm vào `missingRevenueEntryCount`). Hai trường hợp này **không** làm lỗi cả báo cáo.
 - `marginPercent` là `null` khi doanh thu bằng 0 (không chia được).
 
 **Quyền**: chỉ `VT-01` (Ban giám đốc) — vai trò khác bị từ chối `403 FORBIDDEN` và được ghi vào Nhật ký hệ thống (`QTN-01`/`QTN-03`). Mỗi lần xem thành công ghi một log truy cập dữ liệu `MARGIN`.
@@ -351,6 +351,66 @@ nên **không** áp dụng che dữ liệu `QTN-02` (PM là người dùng chín
   "message": "Du an chua co bao gia nao gan kem de so sanh bien du kien voi thuc te",
   "timestamp": "2026-09-18T10:00:00",
   "fieldErrors": null
+}
+```
+
+### `NCL-09-CN-007` — Dự báo lợi nhuận tới khi kết thúc dự án
+
+#### GET `/projects/{projectId}/profitability/profit-forecast`
+
+Ngoại suy lợi nhuận của dự án **tới khi hoàn thành**, từ dữ liệu giờ công/chi phí/doanh thu thực tế
+hiện hành (tái dùng `NCL-09-CN-001`/`NCL-09-CN-002`) và ngân sách giờ công của các công việc
+(`Task.budgetHours`, `NCL-05-CN-005`) — không lưu snapshot, cùng mô hình "tính động" với các báo cáo
+khác của Epic 9.
+
+- **`remainingHours`** (giờ còn lại): khi dự án **chưa** vượt ngân sách (`overBudget=false`, TC-01) =
+  `budgetHours - actualHours` (đúng phần ngân sách chưa dùng). Khi **đã** vượt ngân sách (TC-02), ngân
+  sách không còn là mốc tin cậy nên ngoại suy theo tốc độ tiêu hao thực tế:
+  `estimatedTotalHoursAtCompletion = actualHours / taskCompletionRate` (tỷ lệ hoàn thành = số công việc
+  `DONE` / tổng số công việc), rồi `remainingHours` là phần còn thiếu tới mốc đó. Dự án chưa khai báo
+  ngân sách giờ công cho công việc nào thì `remainingHours = 0` kèm cảnh báo trong `warnings`.
+- **`forecastCost`** = chi phí thực tế + `remainingHours × đơn giá vốn bình quân thực tế` (=
+  `actualCost / actualHours`).
+- **`forecastRevenue`**: hợp đồng trọn gói (`FIXED_PRICE`) là trọn giá trị hợp đồng (doanh thu ghi nhận
+  theo tỷ lệ hoàn thành công việc, không phụ thuộc số giờ); hợp đồng theo giờ
+  (`TIME_AND_MATERIAL`) = doanh thu thực tế + `remainingHours × đơn giá bán bình quân thực tế`.
+- `marginVariancePercentPoints` = `forecastMarginPercent - actualMarginPercent` (điểm phần trăm; `null`
+  nếu thiếu dữ liệu để tính 1 trong 2 vế). `riskOfLoss=true` khi `forecastMargin` âm — kèm cảnh báo
+  tương ứng trong `warnings` (cùng danh sách với cảnh báo vượt ngân sách/thiếu ngân sách giờ công).
+
+**Quyền**: chỉ `VT-02` (Quản lý dự án) — vai trò khác bị từ chối `403 FORBIDDEN` và được ghi vào Nhật ký
+hệ thống (`QTN-01`/`QTN-03`). Mỗi lần xem thành công ghi một log truy cập dữ liệu `MARGIN`. Cùng lý do
+với `planned-vs-actual-margin` (chỉ trả số liệu tổng hợp cấp dự án, PM là người dùng chính), endpoint
+này **không** áp dụng che dữ liệu `QTN-02`.
+
+**Response `200 OK` (TC-02, dự án đã vượt ngân sách giờ công):**
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "projectId": 42,
+    "budgetHours": 160.00,
+    "actualHours": 200.00,
+    "remainingHours": 40.00,
+    "overBudget": true,
+    "taskCompletionRate": 0.8000,
+    "estimatedTotalHoursAtCompletion": 240.00,
+    "actualRevenue": 80000000.00,
+    "actualCost": 60000000.00,
+    "actualMargin": 20000000.00,
+    "actualMarginPercent": 25.00,
+    "forecastRevenue": 96000000.00,
+    "forecastCost": 72000000.00,
+    "forecastMargin": 24000000.00,
+    "forecastMarginPercent": 25.00,
+    "marginVariancePercentPoints": 0.00,
+    "riskOfLoss": false,
+    "warnings": [
+      "Du an da vuot ngan sach gio cong (200.00/160.00 gio) - phan con lai duoc uoc tinh theo toc do tieu hao thuc te."
+    ]
+  }
 }
 ```
 
