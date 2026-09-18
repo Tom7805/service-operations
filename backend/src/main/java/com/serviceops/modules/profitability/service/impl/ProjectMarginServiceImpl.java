@@ -18,7 +18,10 @@ import java.math.RoundingMode;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+// Khong duoc readOnly: day la bien gioi hoi giao dich khi goi tu controller, va no goi
+// LaborCostService/RevenueRecognitionService - ca hai deu GHI audit log (sensitiveAccessLogger)
+// trong cung transaction (REQUIRED se nhap vao transaction readOnly cua chinh no neu de o day).
+@Transactional
 public class ProjectMarginServiceImpl implements ProjectMarginService {
 
 	private final LaborCostService laborCostService;

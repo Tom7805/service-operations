@@ -190,6 +190,52 @@ doanh thu bằng `0`, `marginRate` là `null` để tránh chia cho `0`. Hai dan
 **Response lỗi:** `403 FORBIDDEN` nếu không thuộc ba vai trò trên; `404 RESOURCE_NOT_FOUND` hoặc
 `400 INVALID_STATE` được truyền theo quy tắc của các phép tính doanh thu và giá vốn thành phần.
 
+### `NCL-09-CN-004` — Cảnh báo dự án âm biên
+
+Ngưỡng biên lợi nhuận tối thiểu là cấu hình **toàn công ty** (không theo từng dự án) do Ban giám đốc
+đặt. Mỗi lần `GET /projects/{projectId}/profitability/margin` được gọi (tức mỗi lần "tính lại" biên
+lợi nhuận, QTN-21), hệ thống tự động so `marginRate` với ngưỡng hiện hành và gửi thông báo trong ứng
+dụng cho **quản lý dự án** (`Project.projectManagerId`) và **toàn bộ Ban giám đốc** (`VT-01`) nếu thấp
+hơn. Dự án chưa phát sinh doanh thu (`marginRate = null`, xem `NCL-09-CN-003`) được bỏ qua thay vì báo
+âm biên. Mỗi dự án chỉ nhận tối đa một lượt cảnh báo mỗi ngày (chống spam khi được xem lại nhiều lần).
+
+#### `GET /profitability/margin-alert-threshold`
+
+Xem ngưỡng hiện hành. **Quyền**: `VT-01`, `VT-02`, `VT-05`.
+
+**Response `200 OK`:**
+```json
+{ "success": true, "data": { "minMarginRate": 0.1500, "updatedBy": "giamdoc", "updatedAt": "2026-09-18T17:03:56" } }
+```
+Các trường đều `null` nếu Ban giám đốc chưa từng đặt ngưỡng — khi đó hệ thống không cảnh báo cho bất kỳ
+dự án nào.
+
+#### `PUT /profitability/margin-alert-threshold`
+
+Đặt/đổi ngưỡng. **Quyền**: chỉ `VT-01` (TC-03) — vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký
+lần từ chối tự động.
+
+**Request:**
+```json
+{ "minMarginRate": 0.15 }
+```
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `minMarginRate` | number | có | Tỷ lệ dạng phân số (0.15 = 15%), cùng đơn vị với `marginRate` của `NCL-09-CN-003`. |
+
+**Response thành công:** cùng cấu trúc `GET` ở trên. Mỗi lần đặt/đổi ngưỡng thành công ghi một dòng vào
+Nhật ký hệ thống — người thực hiện, nội dung, thời điểm (TC-04).
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 403 | `FORBIDDEN` | Không phải Ban giám đốc (`VT-01`) — ghi nhật ký lần từ chối (TC-03) |
+| 400 | `VALIDATION_ERROR` | Thiếu `minMarginRate` hoặc ngoài khoảng `[-1.0, 1.0]` |
+
+**Lưu ý cho Frontend:** thông báo cảnh báo (`type = NEGATIVE_MARGIN_ALERT`) đọc qua API có sẵn của
+Epic thông báo (`GET /notifications`) — không có API riêng để "xem lịch sử cảnh báo".
+
 ## Epic `NCL-08` — Chi phí dự án
 
 ### `NCL-08-CN-001` — Ghi nhận chi phí phát sinh của dự án
