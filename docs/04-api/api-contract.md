@@ -147,6 +147,49 @@ Tính động doanh thu ghi nhận của dự án theo đúng loại hợp đồ
   tùy chọn) — nhân sự chưa khai báo cấp bậc sẽ khiến các dòng giờ công của người đó bị đánh dấu
   `missingRateData=true` thay vì chặn cả lượt tính doanh thu.
 
+### `NCL-09-CN-003` — Hiển thị biên lợi nhuận thời gian thực
+
+#### GET `/projects/{projectId}/profitability/margin`
+
+Tính động biên lợi nhuận gộp của dự án từ doanh thu ghi nhận và toàn bộ chi phí đã duyệt tại thời
+điểm đọc. Công thức: `totalCost = laborCost + projectExpenseCost + subcontractorCost`,
+`grossProfit = recognizedRevenue - totalCost`, `marginRate = grossProfit / recognizedRevenue`. Khi
+doanh thu bằng `0`, `marginRate` là `null` để tránh chia cho `0`. Hai danh sách
+`laborCostLines` và `revenueLines` cho phép truy ngược về các dòng cấu thành biên; dữ liệu giá vốn trong
+`laborCostLines` tiếp tục được che theo `QTN-02`.
+
+**Quyền**: `VT-01` (Ban giám đốc), `VT-02` (Quản lý dự án), `VT-05` (Kế toán).
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "projectId": 42,
+    "recognizedRevenue": 5000000.00,
+    "laborCost": 3000000.00,
+    "projectExpenseCost": 0.00,
+    "subcontractorCost": 0.00,
+    "totalCost": 3000000.00,
+    "grossProfit": 2000000.00,
+    "marginRate": 0.4000,
+    "missingCostEntryCount": 0,
+    "missingRateEntryCount": 0,
+    "laborCostLines": [],
+    "revenueLines": []
+  }
+}
+```
+
+`recognizedRevenue` dùng đúng quy tắc của `NCL-09-CN-002`; `laborCost` dùng đúng quy tắc của
+`NCL-09-CN-001`. Nếu thiếu đơn giá hoặc giá vốn, tổng chỉ cộng các dòng đủ dữ liệu và hai bộ đếm
+`missing*EntryCount` cho biết phần còn thiếu.
+
+**Response lỗi:** `403 FORBIDDEN` nếu không thuộc ba vai trò trên; `404 RESOURCE_NOT_FOUND` hoặc
+`400 INVALID_STATE` được truyền theo quy tắc của các phép tính doanh thu và giá vốn thành phần.
+
 ## Epic `NCL-08` — Chi phí dự án
 
 ### `NCL-08-CN-001` — Ghi nhận chi phí phát sinh của dự án

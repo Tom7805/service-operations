@@ -10,5 +10,8 @@ public interface SubcontractorExpenseRepository extends JpaRepository<Subcontrac
 
 	List<SubcontractorExpense> findByStatusOrderByIncurredPeriodAscIdAsc(ExpenseStatus status);
 
+	List<SubcontractorExpense> findByProjectIdAndStatusOrderByIncurredPeriodAscIdAsc(Long projectId,
+			ExpenseStatus status);
+
 	List<SubcontractorExpense> findByProjectIdOrderByIncurredPeriodDescIdDesc(Long projectId);
 }

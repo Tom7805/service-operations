@@ -2,7 +2,7 @@ package com.serviceops.modules.profitability;
 
 import com.serviceops.config.SecurityConfig;
 import com.serviceops.modules.profitability.controller.ProjectProfitabilityController;
-import com.serviceops.modules.profitability.dto.response.ProjectLaborCostRes;
+import com.serviceops.modules.profitability.dto.response.ProjectMarginRes;
 import com.serviceops.modules.profitability.service.LaborCostService;
 import com.serviceops.modules.profitability.service.ProjectMarginService;
 import com.serviceops.modules.profitability.service.RevenueRecognitionService;
@@ -28,44 +28,35 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = ProjectProfitabilityController.class)
 @Import({SecurityConfig.class, JwtAuthFilter.class, JwtAuthenticationEntryPoint.class})
-class LaborCostControllerIT {
+class ProjectMarginControllerIT {
 
-	@Autowired
-	private MockMvc mockMvc;
-
-	@MockBean
-	private LaborCostService laborCostService;
-
-	@MockBean
-	private RevenueRecognitionService revenueRecognitionService;
-
-	@MockBean
-	private ProjectMarginService projectMarginService;
-
-	@MockBean
-	private JwtProvider jwtProvider;
-
-	@MockBean
-	private CustomUserDetailsService customUserDetailsService;
+	@Autowired private MockMvc mockMvc;
+	@MockBean private ProjectMarginService projectMarginService;
+	@MockBean private LaborCostService laborCostService;
+	@MockBean private RevenueRecognitionService revenueRecognitionService;
+	@MockBean private JwtProvider jwtProvider;
+	@MockBean private CustomUserDetailsService customUserDetailsService;
 
 	@Test
-	@WithMockUser(authorities = "ROLE_VT-05")
-	void accountantCanReadProjectLaborCost() throws Exception {
-		when(laborCostService.calculateProjectLaborCost(42L)).thenReturn(
-				new ProjectLaborCostRes(42L, new BigDecimal("8.00"), new BigDecimal("2000000.00"), 0, List.of()));
+	@WithMockUser(authorities = "ROLE_VT-02")
+	void projectManagerCanReadProjectMargin() throws Exception {
+		when(projectMarginService.calculateProjectMargin(42L)).thenReturn(
+				new ProjectMarginRes(42L, new BigDecimal("5000000.00"), new BigDecimal("3000000.00"),
+						BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("3000000.00"), new BigDecimal("2000000.00"),
+						new BigDecimal("0.4000"), 0, 0, List.of(), List.of()));
 
-		mockMvc.perform(get("/projects/42/profitability/labor-cost"))
+		mockMvc.perform(get("/projects/42/profitability/margin"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.success").value(true))
 				.andExpect(jsonPath("$.data.projectId").value(42))
-				.andExpect(jsonPath("$.data.totalApprovedHours").value(8))
-				.andExpect(jsonPath("$.data.totalLaborCost").value(2000000));
+				.andExpect(jsonPath("$.data.grossProfit").value(2000000))
+				.andExpect(jsonPath("$.data.marginRate").value(0.4));
 	}
 
 	@Test
 	@WithMockUser(authorities = "ROLE_VT-03")
-	void specialistCannotReadProjectLaborCost() throws Exception {
-		mockMvc.perform(get("/projects/42/profitability/labor-cost"))
+	void specialistCannotReadProjectMargin() throws Exception {
+		mockMvc.perform(get("/projects/42/profitability/margin"))
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
 	}
