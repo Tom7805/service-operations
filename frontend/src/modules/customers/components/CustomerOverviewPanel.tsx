@@ -715,6 +715,7 @@ export default function CustomerOverviewPanel({
           projectCode={selectedProjectWbsTarget.code}
           projectName={selectedProjectWbsTarget.name}
           currentUserRoles={currentUserRoles}
+          currentUserId={currentUserId}
           onUpdated={() => {
             void loadOverview();
           }}

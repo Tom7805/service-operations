@@ -22,8 +22,10 @@ import TaskBudgetModal from './TaskBudgetModal';
 import TaskAssignModal from './TaskAssignModal';
 import ProjectMilestoneTimeline from './ProjectMilestoneTimeline';
 import ProjectRiskPage from '../pages/ProjectRiskPage';
+import ExpenseListPage from '../../expenses/pages/ExpenseListPage';
+import SubcontractorExpenseListPage from '../../expenses/pages/SubcontractorExpenseListPage';
 
-type WbsSection = 'WBS' | 'MILESTONES' | 'RISKS';
+type WbsSection = 'WBS' | 'MILESTONES' | 'RISKS' | 'EXPENSES' | 'SUBCONTRACTOR';
 
 export interface ProjectWbsModalProps {
   isOpen: boolean;
@@ -32,6 +34,9 @@ export interface ProjectWbsModalProps {
   projectCode?: string;
   projectName?: string;
   currentUserRoles?: string[];
+  /** Id tài khoản đang đăng nhập — dùng cho tab "Chi phí" (NCL-08-CN-001: chỉ chủ phiếu
+   * mới được sửa & nộp lại phiếu chi phí bị từ chối của chính mình). */
+  currentUserId?: number;
   onUpdated?: () => void;
 }
 
@@ -41,6 +46,7 @@ export default function ProjectWbsModal({
   projectId,
   projectCode,
   projectName,
+  currentUserId,
   currentUserRoles = ['VT-02'],
   onUpdated,
 }: ProjectWbsModalProps) {
@@ -326,6 +332,30 @@ export default function ProjectWbsModal({
                   >
                     {ICONS.alertTriangle} Rủi ro
                   </button>
+                  {(currentUserRoles.includes('VT-02') || currentUserRoles.includes('VT-03')) && (
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeSection === 'EXPENSES'}
+                      className={`btn btn-xs ${activeSection === 'EXPENSES' ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => setActiveSection('EXPENSES')}
+                      data-testid="wbs-tab-expenses"
+                    >
+                      {ICONS.receipt} Chi phí
+                    </button>
+                  )}
+                  {currentUserRoles.includes('VT-02') && (
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeSection === 'SUBCONTRACTOR'}
+                      className={`btn btn-xs ${activeSection === 'SUBCONTRACTOR' ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => setActiveSection('SUBCONTRACTOR')}
+                      data-testid="wbs-tab-subcontractor"
+                    >
+                      {ICONS.briefcase} Thuê ngoài
+                    </button>
+                  )}
                 </div>
 
                 {canClose && (
@@ -380,8 +410,21 @@ export default function ProjectWbsModal({
                   isProjectOpen={isProjectOpen}
                   onNotify={showToast}
                 />
-              ) : (
+              ) : activeSection === 'RISKS' ? (
                 <ProjectRiskPage
+                  projectId={projectId}
+                  currentUserRoles={currentUserRoles}
+                  initialProject={project ?? undefined}
+                />
+              ) : activeSection === 'EXPENSES' ? (
+                <ExpenseListPage
+                  projectId={projectId}
+                  currentUserRoles={currentUserRoles}
+                  currentUserId={currentUserId}
+                  initialProject={project ?? undefined}
+                />
+              ) : (
+                <SubcontractorExpenseListPage
                   projectId={projectId}
                   currentUserRoles={currentUserRoles}
                   initialProject={project ?? undefined}

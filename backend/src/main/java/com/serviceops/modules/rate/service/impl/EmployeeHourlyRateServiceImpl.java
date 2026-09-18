@@ -78,6 +78,7 @@ public class EmployeeHourlyRateServiceImpl implements EmployeeHourlyRateService 
 	}
 
 	@Override
+	@Transactional
 	public List<EmployeeHourlyRateRes> listByEmployee(Long employeeId) {
 		if (employeeId == null || !employeeRepository.existsById(employeeId)) {
 			throw new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy hồ sơ nhân sự với ID: " + employeeId);
