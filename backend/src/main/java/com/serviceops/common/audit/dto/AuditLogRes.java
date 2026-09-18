@@ -1,14 +1,11 @@
 package com.serviceops.common.audit.dto;
-
 import com.serviceops.common.audit.AuditTargetType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
 import java.time.LocalDateTime;
 
-/** Một bản ghi nhật ký thao tác tổng hợp trả về cho quản trị viên. */
 @Getter
 @Setter
 @NoArgsConstructor
@@ -18,7 +15,6 @@ public class AuditLogRes {
 	private Long id;
 	private Long actorUserId;
 	private String actorUsername;
-	/** Mã vai trò người thực hiện (VT-xx); null nếu không xác định. */
 	private String actorRole;
 	private String action;
 	private AuditTargetType targetType;

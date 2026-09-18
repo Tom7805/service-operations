@@ -105,6 +105,9 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
 	 */
 	List<TimeEntry> findByTaskIdInAndStatus(List<Long> taskIds, TimeEntryStatus status);
 
+	/** Cac dong gio cong theo trang thai cua mot nhom cong viec, sap theo ngay lam viec. */
+	List<TimeEntry> findByTaskIdInAndStatusOrderByWorkDateAscIdAsc(List<Long> taskIds, TimeEntryStatus status);
+
 	/**
 	 * Tong gio cong DA DUYET cua tung cong viec trong mot khoang ngay, nguon du lieu de
 	 * quy ve ty trong gio cong theo du an khi phan bo chi phi chung (NCL-08-CN-005 / QTN-29).
