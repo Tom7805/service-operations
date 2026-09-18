@@ -73,6 +73,58 @@ Tính động giá vốn nhân sự từ các dòng giờ công `APPROVED` của
 
 `hourlyRate` và `laborCost` ở từng dòng là dữ liệu nhạy cảm và được che tự động theo `QTN-02`; mỗi lần đọc endpoint ghi một log truy cập dữ liệu `COST`. Dòng đảo/correction đã duyệt được tính theo đúng số giờ mang dấu của bản ghi.
 
+### `NCL-09-CN-005` — Báo cáo biên lợi nhuận theo khách hàng và theo nhân sự
+
+Gộp doanh thu ghi nhận và giá vốn giờ công của mọi dòng giờ công **đã duyệt** (`APPROVED`) có `workDate`
+nằm trong kỳ `from`..`to`, theo hai chiều: khách hàng (qua dự án) và nhân sự thực hiện.
+
+- **Giá vốn** (mọi dòng, kể cả không tính phí — `QTN-17`): `hours × chi phí giờ công của nhân sự hiệu lực tại workDate`.
+- **Doanh thu** (chỉ dòng `billable=true` — theo đúng quy tắc của `NCL-09-CN-002-TC-03`): `hours × (đơn giá ngày hiệu lực tại workDate × hệ số loại hình công việc ÷ 8)`, đơn giá ưu tiên đơn giá riêng hợp đồng rồi mới đến bảng giá chung (`QTN-15`/`QTN-16`).
+- Dòng thiếu chi phí giờ công hiệu lực bị loại khỏi giá vốn (đếm vào `missingCostEntryCount`); dòng có tính phí nhưng thiếu đơn giá bán hiệu lực (ở cấp bậc mặc định `"Chưa phân loại"` — hồ sơ nhân sự hiện chưa có cột cấp bậc riêng) bị loại khỏi doanh thu (đếm vào `missingRevenueEntryCount`). Hai trường hợp này **không** làm lỗi cả báo cáo.
+- `marginPercent` là `null` khi doanh thu bằng 0 (không chia được).
+
+**Quyền**: chỉ `VT-01` (Ban giám đốc) — vai trò khác bị từ chối `403 FORBIDDEN` và được ghi vào Nhật ký hệ thống (`QTN-01`/`QTN-03`). Mỗi lần xem thành công ghi một log truy cập dữ liệu `MARGIN`.
+
+#### GET `/reports/margin/by-customer?from={yyyy-MM-dd}&to={yyyy-MM-dd}`
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "periodFrom": "2026-01-01",
+    "periodTo": "2026-01-31",
+    "totalRevenue": 6000000.00,
+    "totalCost": 2400000.00,
+    "totalMargin": 3600000.00,
+    "totalMarginPercent": 60.00,
+    "missingCostEntryCount": 0,
+    "missingRevenueEntryCount": 0,
+    "lines": [
+      {
+        "customerId": 1000,
+        "customerCode": "KH001",
+        "customerName": "Công ty A",
+        "approvedHours": 8.00,
+        "revenue": 4000000.00,
+        "cost": 1600000.00,
+        "margin": 2400000.00,
+        "marginPercent": 60.00
+      }
+    ]
+  }
+}
+```
+
+#### GET `/reports/margin/by-employee?from={yyyy-MM-dd}&to={yyyy-MM-dd}`
+
+Cùng khuôn dạng, `lines[]` gồm `employeeId`, `employeeName`, `professionalRole`, `approvedHours`, `revenue`,
+`cost`, `margin`, `marginPercent` thay cho các trường theo khách hàng.
+
+`from`/`to` là tham số bắt buộc (`GET` query) — thiếu tham số trả `400 VALIDATION_ERROR`; `from` sau `to` cũng trả `400 VALIDATION_ERROR`. Kỳ không phát sinh giờ công đã duyệt nào trả `lines: []` và các tổng bằng `0` (không phải lỗi). `totalCost`, `totalMargin`, `totalMarginPercent` và các trường `cost`/`margin`/`marginPercent` của từng dòng là dữ liệu nhạy cảm, được che tự động theo `QTN-02` với vai trò không đủ quyền (tuy endpoint đã giới hạn `VT-01` nên trong thực tế không phát sinh).
+
 ## Epic `NCL-08` — Chi phí dự án
 
 ### `NCL-08-CN-001` — Ghi nhận chi phí phát sinh của dự án
