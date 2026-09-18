@@ -1,4 +1,4 @@
-import type { ExpenseRejectReq, ExpenseRes } from '../types/expenseTypes';
+import type { ExpenseBillableReq, ExpenseRejectReq, ExpenseRes } from '../types/expenseTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -77,6 +77,31 @@ export async function approveExpense(expenseId: number): Promise<ExpenseRes> {
 export async function rejectExpense(expenseId: number, payload: ExpenseRejectReq): Promise<ExpenseRes> {
   return requestBackend<ExpenseRes>(`${API_BASE_URL}/expenses/${expenseId}/reject`, {
     method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Danh sách chi phí của một dự án — dành cho Quản lý dự án (VT-02), Nhân viên chuyên môn
+ * (VT-03) và Kế toán (VT-05). Dùng làm màn xem/đánh dấu tính lại cho khách hàng (NCL-08-CN-003).
+ * GET /projects/{projectId}/expenses
+ */
+export async function getProjectExpenses(projectId: number): Promise<ExpenseRes[]> {
+  return requestBackend<ExpenseRes[]>(`${API_BASE_URL}/projects/${projectId}/expenses`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * NCL-08-CN-003: đánh dấu/bỏ đánh dấu một phiếu chi phí `APPROVED` là tính lại cho khách
+ * hàng. Chỉ Quản lý dự án (VT-02). Idempotent — gửi lại cùng giá trị không tạo thêm thay đổi
+ * dữ liệu ngoài bản ghi audit. Backend trả `400 INVALID_STATE` nếu phiếu chưa duyệt hoặc nếu
+ * bỏ đánh dấu một phiếu đã nằm trong hóa đơn.
+ * PUT /expenses/{expenseId}/billable
+ */
+export async function updateExpenseBillable(expenseId: number, payload: ExpenseBillableReq): Promise<ExpenseRes> {
+  return requestBackend<ExpenseRes>(`${API_BASE_URL}/expenses/${expenseId}/billable`, {
+    method: 'PUT',
     body: JSON.stringify(payload),
   });
 }
