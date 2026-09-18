@@ -100,3 +100,36 @@ export interface SubcontractorExpenseCreateReq {
   amount: number;
   incurredPeriod: string; // YYYY-MM-DD
 }
+
+/**
+ * Phần chi phí chung mà một dự án nhận được trong một lần phân bổ (NCL-08-CN-005).
+ * Khớp `OverheadAllocationLineRes` — chỉ trả `projectId` (không có tên dự án); Kế toán
+ * (VT-05) không có quyền `GET /projects/{id}` nên màn hình hiển thị theo mã dự án.
+ */
+export interface OverheadAllocationLineRes {
+  projectId: number;
+  approvedHours: number;
+  allocatedAmount: number;
+}
+
+/**
+ * Kết quả một lần phân bổ chi phí chung (NCL-08-CN-005). Khớp `OverheadAllocationRes`.
+ */
+export interface OverheadAllocationRes {
+  id: number;
+  periodStart: string; // YYYY-MM-DD, luôn ngày đầu tháng
+  periodEnd: string; // YYYY-MM-DD, luôn ngày cuối tháng
+  totalAmount: number;
+  allocations: OverheadAllocationLineRes[];
+  createdAt: string;
+}
+
+/**
+ * Payload chạy phân bổ chi phí chung cho một kỳ (NCL-08-CN-005).
+ * POST /overhead-allocations/run
+ */
+export interface OverheadAllocationRunReq {
+  year: number;
+  month: number;
+  totalAmount: number;
+}

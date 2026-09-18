@@ -33,6 +33,7 @@ export type Tab =
   | 'TIMESHEET_PERIOD'
   | 'UNSUBMITTED_TIMESHEETS'
   | 'EXPENSE_APPROVAL'
+  | 'OVERHEAD_ALLOCATION'
   | 'NOTIFICATIONS';
 
 export interface NavItem {
@@ -116,6 +117,11 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
     tab: 'EXPENSE_APPROVAL', icon: ICONS.money, label: 'Duyệt chi phí dự án', requires: ['VT-05'],
     // NCL-08-CN-002: Kế toán xem hàng chờ duyệt và duyệt/từ chối từng phiếu chi phí dự
     // án (NCL-08-CN-001) trước khi phiếu được tính vào giá vốn dự án.
+  },
+  {
+    tab: 'OVERHEAD_ALLOCATION', icon: ICONS.chart, label: 'Phân bổ chi phí chung', requires: ['VT-05'],
+    // NCL-08-CN-005: Kế toán chia tổng chi phí chung phát sinh trong kỳ (tháng) cho các
+    // dự án theo tỷ trọng giờ công đã duyệt trong kỳ đó.
   },
   { tab: 'OPPORTUNITY_DETAIL', icon: ICONS.building, label: 'Cơ hộp', requires: ['VT-04'] },
 ];
