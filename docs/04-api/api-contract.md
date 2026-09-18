@@ -236,6 +236,124 @@ Nhật ký hệ thống — người thực hiện, nội dung, thời điểm (
 **Lưu ý cho Frontend:** thông báo cảnh báo (`type = NEGATIVE_MARGIN_ALERT`) đọc qua API có sẵn của
 Epic thông báo (`GET /notifications`) — không có API riêng để "xem lịch sử cảnh báo".
 
+### `NCL-09-CN-005` — Báo cáo biên lợi nhuận theo khách hàng và theo nhân sự
+
+Gộp doanh thu ghi nhận và giá vốn giờ công của mọi dòng giờ công **đã duyệt** (`APPROVED`) có `workDate`
+nằm trong kỳ `from`..`to`, theo hai chiều: khách hàng (qua dự án) và nhân sự thực hiện.
+
+- **Giá vốn** (mọi dòng, kể cả không tính phí — `QTN-17`): `hours × chi phí giờ công của nhân sự hiệu lực tại workDate`.
+- **Doanh thu** (chỉ dòng `billable=true` — theo đúng quy tắc của `NCL-09-CN-002-TC-03`): `hours × (đơn giá ngày hiệu lực tại workDate × hệ số loại hình công việc ÷ 8)`, đơn giá ưu tiên đơn giá riêng hợp đồng rồi mới đến bảng giá chung (`QTN-15`/`QTN-16`).
+- Dòng thiếu chi phí giờ công hiệu lực bị loại khỏi giá vốn (đếm vào `missingCostEntryCount`); dòng có tính phí nhưng thiếu đơn giá bán hiệu lực (ở cấp bậc mặc định `"Chưa phân loại"` — hồ sơ nhân sự hiện chưa có cột cấp bậc riêng) bị loại khỏi doanh thu (đếm vào `missingRevenueEntryCount`). Hai trường hợp này **không** làm lỗi cả báo cáo.
+- `marginPercent` là `null` khi doanh thu bằng 0 (không chia được).
+
+**Quyền**: chỉ `VT-01` (Ban giám đốc) — vai trò khác bị từ chối `403 FORBIDDEN` và được ghi vào Nhật ký hệ thống (`QTN-01`/`QTN-03`). Mỗi lần xem thành công ghi một log truy cập dữ liệu `MARGIN`.
+
+#### GET `/reports/margin/by-customer?from={yyyy-MM-dd}&to={yyyy-MM-dd}`
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "periodFrom": "2026-01-01",
+    "periodTo": "2026-01-31",
+    "totalRevenue": 6000000.00,
+    "totalCost": 2400000.00,
+    "totalMargin": 3600000.00,
+    "totalMarginPercent": 60.00,
+    "missingCostEntryCount": 0,
+    "missingRevenueEntryCount": 0,
+    "lines": [
+      {
+        "customerId": 1000,
+        "customerCode": "KH001",
+        "customerName": "Công ty A",
+        "approvedHours": 8.00,
+        "revenue": 4000000.00,
+        "cost": 1600000.00,
+        "margin": 2400000.00,
+        "marginPercent": 60.00
+      }
+    ]
+  }
+}
+```
+
+#### GET `/reports/margin/by-employee?from={yyyy-MM-dd}&to={yyyy-MM-dd}`
+
+Cùng khuôn dạng, `lines[]` gồm `employeeId`, `employeeName`, `professionalRole`, `approvedHours`, `revenue`,
+`cost`, `margin`, `marginPercent` thay cho các trường theo khách hàng.
+
+`from`/`to` là tham số bắt buộc (`GET` query) — thiếu tham số trả `400 VALIDATION_ERROR`; `from` sau `to` cũng trả `400 VALIDATION_ERROR`. Kỳ không phát sinh giờ công đã duyệt nào trả `lines: []` và các tổng bằng `0` (không phải lỗi). `totalCost`, `totalMargin`, `totalMarginPercent` và các trường `cost`/`margin`/`marginPercent` của từng dòng là dữ liệu nhạy cảm, được che tự động theo `QTN-02` với vai trò không đủ quyền (tuy endpoint đã giới hạn `VT-01` nên trong thực tế không phát sinh).
+
+### `NCL-09-CN-006` — So sánh biên lợi nhuận dự kiến với thực tế
+
+#### GET `/projects/{projectId}/profitability/planned-vs-actual-margin`
+
+So sánh biên lợi nhuận **dự kiến** (từ báo giá mới nhất đã dùng sẵn cho hợp đồng của dự án —
+`NCL-04-CN-001`) với biên lợi nhuận **thực tế** (từ mọi dòng giờ công **đã duyệt** của dự án tính đến
+hiện tại, cùng công thức QTN-15/16/17 với `NCL-09-CN-005`).
+
+- **Doanh thu dự kiến** = `totalAmount` của báo giá. **Chi phí dự kiến** ước tính theo từng dòng báo giá:
+  `số ngày công × 8 × chi phí giờ công bình quân của các nhân sự đang giữ cùng vai trò chuyên môn` (báo
+  giá lập trước khi giao việc cho người cụ thể nên chưa biết chính xác ai sẽ làm). Dòng báo giá có vai
+  trò chưa có nhân sự nào đảm nhiệm bị loại khỏi chi phí dự kiến, đếm vào `missingPlannedCostItemCount`.
+- **Doanh thu/chi phí thực tế**: tính như `NCL-09-CN-005` nhưng gộp toàn bộ dự án (không giới hạn kỳ).
+- `marginGapPercentPoints` = `actualMarginPercent - plannedMarginPercent` (điểm phần trăm; `null` nếu
+  thiếu dữ liệu để tính 1 trong 2 vế). `gapReasons` là danh sách diễn giải ngắn theo hai nguyên nhân:
+  giờ công thực tế vượt kế hoạch, và/hoặc chi phí giờ công bình quân thực tế cao hơn dự kiến.
+
+**Quyền**: chỉ `VT-02` (Quản lý dự án) — vai trò khác bị từ chối `403 FORBIDDEN` và được ghi vào Nhật ký
+hệ thống (`QTN-01`/`QTN-03`). Mỗi lần xem thành công ghi một log truy cập dữ liệu `MARGIN`. Khác với
+`labor-cost` (che chi phí/giờ công theo TỪNG nhân sự), endpoint này chỉ trả số liệu tổng hợp cấp dự án
+nên **không** áp dụng che dữ liệu `QTN-02` (PM là người dùng chính của báo cáo).
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "projectId": 42,
+    "quoteId": 7,
+    "quoteVersion": 2,
+    "plannedWorkDays": 20.00,
+    "plannedRevenue": 100000000.00,
+    "plannedCost": 70000000.00,
+    "plannedMargin": 30000000.00,
+    "plannedMarginPercent": 30.00,
+    "actualHours": 178.00,
+    "actualRevenue": 100000000.00,
+    "actualCost": 82000000.00,
+    "actualMargin": 18000000.00,
+    "actualMarginPercent": 18.00,
+    "marginGapPercentPoints": -12.00,
+    "hoursVarianceVsPlanned": 18.00,
+    "gapReasons": [
+      "Gio cong thuc te vuot ke hoach 18.00 gio (tuong duong 2.25 ngay cong).",
+      "Chi phi gio cong thuc te binh quan (460674.16/gio) cao hon du kien (437500.00/gio)."
+    ],
+    "missingPlannedCostItemCount": 0,
+    "missingActualCostEntryCount": 0,
+    "missingActualRevenueEntryCount": 0
+  }
+}
+```
+
+**Response lỗi — dự án chưa có báo giá nào gắn kèm (`404 RESOURCE_NOT_FOUND`, TC-02):**
+```json
+{
+  "success": false,
+  "errorCode": "RESOURCE_NOT_FOUND",
+  "message": "Du an chua co bao gia nao gan kem de so sanh bien du kien voi thuc te",
+  "timestamp": "2026-09-18T10:00:00",
+  "fieldErrors": null
+}
+```
+
 ## Epic `NCL-08` — Chi phí dự án
 
 ### `NCL-08-CN-001` — Ghi nhận chi phí phát sinh của dự án
@@ -644,7 +762,7 @@ GET /api/v1/sensitive-access-logs?userId=1&from=2026-08-01T00:00:00&to=2026-08-3
 ```
 
 - `action` nhận `VIEW` (xem), `EXPORT` (xuất), hoặc `DENIED` (bị từ chối).
-- `dataType` nhận `SALARY`, `COST`, `COST_OF_GOODS`, `MARGIN`, `REVENUE` (NCL-09-CN-002).
+- `dataType` nhận `SALARY`, `COST`, `COST_OF_GOODS`, `MARGIN`.
 - Khi không có bản ghi thỏa bộ lọc, `content` rỗng và `totalElements = 0` (TC-02).
 
 **Response lỗi:**
@@ -682,7 +800,6 @@ Danh sách hồ sơ nhân sự, cả hai tham số đều tùy chọn. `keyword`
       "departmentId": 2,
       "departmentName": "Phong ky thuat",
       "professionalRole": "Ky su phan mem",
-      "level": "Trung cap",
       "standardHoursPerWeek": 40.00,
       "hireDate": "2026-01-01",
       "endDate": null
@@ -703,7 +820,6 @@ Chi tiết một hồ sơ, kèm danh sách hợp đồng lao động (`contracts
   "userId": 5,
   "departmentId": 2,
   "professionalRole": "Ky su phan mem",
-  "level": "Trung cap",
   "hireDate": "2026-01-01",
   "endDate": null,
   "standardHoursPerWeek": 40.00
@@ -715,7 +831,6 @@ Chi tiết một hồ sơ, kèm danh sách hợp đồng lao động (`contracts
 | `userId` | number | có | Tài khoản phải tồn tại và **chưa có hồ sơ nhân sự nào khác** gắn với nó |
 | `departmentId` | number | không | |
 | `professionalRole` | string | không | Tối đa 255 ký tự |
-| `level` | string | không | Cấp bậc (NCL-09-CN-002) — tối đa 100 ký tự; dùng để tự động tra đơn giá theo hợp đồng khi tính doanh thu ghi nhận, thay vì phải nhập tay như `NCL-07-CN-005`. Bỏ trống nếu chưa xác định. |
 | `hireDate` | date (`yyyy-MM-dd`) | có | Ngày vào làm |
 | `endDate` | date | không | Phải **không sớm hơn** `hireDate`, nếu không hệ thống trả lỗi và không lưu (TC-03) |
 | `standardHoursPerWeek` | number | không | Bỏ trống → mặc định `40.00`; nếu truyền phải > 0 |

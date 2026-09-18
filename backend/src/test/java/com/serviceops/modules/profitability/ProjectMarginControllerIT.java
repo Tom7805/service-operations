@@ -36,6 +36,7 @@ class ProjectMarginControllerIT {
 	@MockBean private LaborCostService laborCostService;
 	@MockBean private RevenueRecognitionService revenueRecognitionService;
 	@MockBean private MarginAlertService marginAlertService;
+	@MockBean private com.serviceops.modules.profitability.service.MarginComparisonService marginComparisonService;
 	@MockBean private JwtProvider jwtProvider;
 	@MockBean private CustomUserDetailsService customUserDetailsService;
 

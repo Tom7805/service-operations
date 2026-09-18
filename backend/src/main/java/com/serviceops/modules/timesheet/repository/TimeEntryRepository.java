@@ -122,4 +122,12 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
 			GROUP BY e.taskId
 			""")
 	List<Object[]> sumApprovedHoursGroupByTaskIdBetween(@Param("from") LocalDate from, @Param("to") LocalDate to);
+
+	/**
+	 * Toan bo dong gio cong DA DUYET co ngay lam viec trong mot khoang ky — nguon du lieu cho bao cao
+	 * bien loi nhuan theo khach hang/nhan su (NCL-09-CN-005): moi dong deu da qua duyet (QTN-10) nen
+	 * dung duoc ngay cho ca giá von (moi dong) lan doanh thu (chi dong billable).
+	 */
+	List<TimeEntry> findByStatusAndWorkDateBetweenOrderByWorkDateAscIdAsc(
+			TimeEntryStatus status, LocalDate workDateFrom, LocalDate workDateTo);
 }
