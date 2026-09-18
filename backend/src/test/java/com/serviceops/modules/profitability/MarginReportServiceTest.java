@@ -10,6 +10,7 @@ import com.serviceops.modules.identity.user.entity.User;
 import com.serviceops.modules.profitability.dto.request.ProfitQueryReq;
 import com.serviceops.modules.profitability.dto.response.MarginByCustomerRes;
 import com.serviceops.modules.profitability.dto.response.MarginByEmployeeRes;
+import com.serviceops.modules.profitability.service.impl.EntryMarginCalculator;
 import com.serviceops.modules.profitability.service.impl.MarginReportServiceImpl;
 import com.serviceops.modules.project.entity.Project;
 import com.serviceops.modules.project.entity.Task;
@@ -59,9 +60,10 @@ class MarginReportServiceTest {
 
 	@BeforeEach
 	void setUp() {
+		EntryMarginCalculator calculator = new EntryMarginCalculator(
+				employeeHourlyRateService, contractBillRateService, workTypeRateService);
 		service = new MarginReportServiceImpl(timeEntryRepository, taskRepository, projectRepository,
-				customerRepository, employeeRepository, employeeHourlyRateService, contractBillRateService,
-				workTypeRateService, sensitiveAccessLogger);
+				customerRepository, employeeRepository, calculator, sensitiveAccessLogger);
 	}
 
 	/** NCL-09-CN-005-TC-01: ba khach hang mo phong, moi khach hang co doanh thu/gia von/bien rieng. */

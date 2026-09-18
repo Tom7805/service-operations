@@ -2,8 +2,10 @@ package com.serviceops.modules.profitability;
 
 import com.serviceops.config.SecurityConfig;
 import com.serviceops.modules.profitability.controller.ProjectProfitabilityController;
+import com.serviceops.modules.profitability.dto.response.PlannedVsActualMarginRes;
 import com.serviceops.modules.profitability.dto.response.ProjectLaborCostRes;
 import com.serviceops.modules.profitability.service.LaborCostService;
+import com.serviceops.modules.profitability.service.MarginComparisonService;
 import com.serviceops.security.CustomUserDetailsService;
 import com.serviceops.security.JwtAuthFilter;
 import com.serviceops.security.JwtAuthenticationEntryPoint;
@@ -35,6 +37,9 @@ class LaborCostControllerIT {
 	private LaborCostService laborCostService;
 
 	@MockBean
+	private MarginComparisonService marginComparisonService;
+
+	@MockBean
 	private JwtProvider jwtProvider;
 
 	@MockBean
@@ -58,6 +63,37 @@ class LaborCostControllerIT {
 	@WithMockUser(authorities = "ROLE_VT-03")
 	void specialistCannotReadProjectLaborCost() throws Exception {
 		mockMvc.perform(get("/projects/42/profitability/labor-cost"))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+	}
+
+	/** NCL-09-CN-006-TC-01: PM xem duoc so sanh bien du kien voi thuc te. */
+	@Test
+	@WithMockUser(authorities = "ROLE_VT-02")
+	void projectManagerCanReadPlannedVsActualMargin() throws Exception {
+		when(marginComparisonService.compare(42L)).thenReturn(new PlannedVsActualMarginRes(
+				42L, 7L, 2,
+				new BigDecimal("20.00"), new BigDecimal("100000000.00"), new BigDecimal("70000000.00"),
+				new BigDecimal("30000000.00"), new BigDecimal("30.00"),
+				new BigDecimal("178.00"), new BigDecimal("100000000.00"), new BigDecimal("82000000.00"),
+				new BigDecimal("18000000.00"), new BigDecimal("18.00"),
+				new BigDecimal("-12.00"), new BigDecimal("18.00"),
+				List.of("Gio cong thuc te vuot ke hoach 18.00 gio (tuong duong 2.25 ngay cong)."),
+				0, 0, 0));
+
+		mockMvc.perform(get("/projects/42/profitability/planned-vs-actual-margin"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.data.plannedMarginPercent").value(30.00))
+				.andExpect(jsonPath("$.data.actualMarginPercent").value(18.00))
+				.andExpect(jsonPath("$.data.marginGapPercentPoints").value(-12.00));
+	}
+
+	/** NCL-09-CN-006-TC-03: nguoi dung khong thuoc vai tro Quan ly du an bi tu choi. */
+	@Test
+	@WithMockUser(authorities = "ROLE_VT-05")
+	void accountantCannotReadPlannedVsActualMargin() throws Exception {
+		mockMvc.perform(get("/projects/42/profitability/planned-vs-actual-margin"))
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
 	}

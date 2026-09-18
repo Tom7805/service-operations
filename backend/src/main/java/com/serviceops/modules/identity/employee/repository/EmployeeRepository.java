@@ -17,6 +17,12 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     /** Tra nhieu ho so nhan su theo danh sach user id — dung khi tong hop bao cao theo lo (NCL-09-CN-005). */
     List<Employee> findByUser_IdIn(List<Long> userIds);
 
+    /**
+     * Nhan su dang giu mot vai tro chuyen mon — dung de uoc tinh chi phi gio cong binh quan cua vai tro
+     * do khi chua co nhan su cu the duoc giao viec (NCL-09-CN-006, so sanh bien du kien voi thuc te).
+     */
+    List<Employee> findByProfessionalRoleIgnoreCase(String professionalRole);
+
     @Query("select e.user.id from Employee e")
     List<Long> findAssignedUserIds();
 

@@ -73,6 +73,72 @@ Tính động giá vốn nhân sự từ các dòng giờ công `APPROVED` của
 
 `hourlyRate` và `laborCost` ở từng dòng là dữ liệu nhạy cảm và được che tự động theo `QTN-02`; mỗi lần đọc endpoint ghi một log truy cập dữ liệu `COST`. Dòng đảo/correction đã duyệt được tính theo đúng số giờ mang dấu của bản ghi.
 
+### `NCL-09-CN-006` — So sánh biên lợi nhuận dự kiến với thực tế
+
+#### GET `/projects/{projectId}/profitability/planned-vs-actual-margin`
+
+So sánh biên lợi nhuận **dự kiến** (từ báo giá mới nhất đã dùng sẵn cho hợp đồng của dự án —
+`NCL-04-CN-001`) với biên lợi nhuận **thực tế** (từ mọi dòng giờ công **đã duyệt** của dự án tính đến
+hiện tại, cùng công thức QTN-15/16/17 với `NCL-09-CN-005`).
+
+- **Doanh thu dự kiến** = `totalAmount` của báo giá. **Chi phí dự kiến** ước tính theo từng dòng báo giá:
+  `số ngày công × 8 × chi phí giờ công bình quân của các nhân sự đang giữ cùng vai trò chuyên môn` (báo
+  giá lập trước khi giao việc cho người cụ thể nên chưa biết chính xác ai sẽ làm). Dòng báo giá có vai
+  trò chưa có nhân sự nào đảm nhiệm bị loại khỏi chi phí dự kiến, đếm vào `missingPlannedCostItemCount`.
+- **Doanh thu/chi phí thực tế**: tính như `NCL-09-CN-005` nhưng gộp toàn bộ dự án (không giới hạn kỳ).
+- `marginGapPercentPoints` = `actualMarginPercent - plannedMarginPercent` (điểm phần trăm; `null` nếu
+  thiếu dữ liệu để tính 1 trong 2 vế). `gapReasons` là danh sách diễn giải ngắn theo hai nguyên nhân:
+  giờ công thực tế vượt kế hoạch, và/hoặc chi phí giờ công bình quân thực tế cao hơn dự kiến.
+
+**Quyền**: chỉ `VT-02` (Quản lý dự án) — vai trò khác bị từ chối `403 FORBIDDEN` và được ghi vào Nhật ký
+hệ thống (`QTN-01`/`QTN-03`). Mỗi lần xem thành công ghi một log truy cập dữ liệu `MARGIN`. Khác với
+`labor-cost` (che chi phí/giờ công theo TỪNG nhân sự), endpoint này chỉ trả số liệu tổng hợp cấp dự án
+nên **không** áp dụng che dữ liệu `QTN-02` (PM là người dùng chính của báo cáo).
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "projectId": 42,
+    "quoteId": 7,
+    "quoteVersion": 2,
+    "plannedWorkDays": 20.00,
+    "plannedRevenue": 100000000.00,
+    "plannedCost": 70000000.00,
+    "plannedMargin": 30000000.00,
+    "plannedMarginPercent": 30.00,
+    "actualHours": 178.00,
+    "actualRevenue": 100000000.00,
+    "actualCost": 82000000.00,
+    "actualMargin": 18000000.00,
+    "actualMarginPercent": 18.00,
+    "marginGapPercentPoints": -12.00,
+    "hoursVarianceVsPlanned": 18.00,
+    "gapReasons": [
+      "Gio cong thuc te vuot ke hoach 18.00 gio (tuong duong 2.25 ngay cong).",
+      "Chi phi gio cong thuc te binh quan (460674.16/gio) cao hon du kien (437500.00/gio)."
+    ],
+    "missingPlannedCostItemCount": 0,
+    "missingActualCostEntryCount": 0,
+    "missingActualRevenueEntryCount": 0
+  }
+}
+```
+
+**Response lỗi — dự án chưa có báo giá nào gắn kèm (`404 RESOURCE_NOT_FOUND`, TC-02):**
+```json
+{
+  "success": false,
+  "errorCode": "RESOURCE_NOT_FOUND",
+  "message": "Du an chua co bao gia nao gan kem de so sanh bien du kien voi thuc te",
+  "timestamp": "2026-09-18T10:00:00",
+  "fieldErrors": null
+}
+```
+
 ### `NCL-09-CN-005` — Báo cáo biên lợi nhuận theo khách hàng và theo nhân sự
 
 Gộp doanh thu ghi nhận và giá vốn giờ công của mọi dòng giờ công **đã duyệt** (`APPROVED`) có `workDate`
