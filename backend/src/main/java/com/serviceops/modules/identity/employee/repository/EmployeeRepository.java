@@ -14,6 +14,9 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     boolean existsByUser_Id(Long userId);
     List<Employee> findAllByOrderByHireDateDesc();
 
+    /** Tra nhieu ho so nhan su theo danh sach user id — dung khi tong hop bao cao theo lo (NCL-09-CN-005). */
+    List<Employee> findByUser_IdIn(List<Long> userIds);
+
     @Query("select e.user.id from Employee e")
     List<Long> findAssignedUserIds();
 
