@@ -13,5 +13,6 @@ public record EmployeeRes(
         String professionalRole,
         BigDecimal standardHoursPerWeek,
         LocalDate hireDate,
-        LocalDate endDate
+        LocalDate endDate,
+        String level
 ) {}

@@ -73,6 +73,80 @@ Tính động giá vốn nhân sự từ các dòng giờ công `APPROVED` của
 
 `hourlyRate` và `laborCost` ở từng dòng là dữ liệu nhạy cảm và được che tự động theo `QTN-02`; mỗi lần đọc endpoint ghi một log truy cập dữ liệu `COST`. Dòng đảo/correction đã duyệt được tính theo đúng số giờ mang dấu của bản ghi.
 
+### `NCL-09-CN-002` — Tính doanh thu ghi nhận của dự án
+
+#### GET `/projects/{projectId}/profitability/revenue`
+
+Tính động doanh thu ghi nhận của dự án theo đúng loại hợp đồng (`Contract.contractType`) — khác với tiền
+đã thu/đã xuất hoá đơn (QTN-15: đơn giá áp theo thời điểm phát sinh).
+
+- **`TIME_AND_MATERIAL`** (hợp đồng theo giờ) — phương thức `HOURLY`: với mỗi dòng giờ công `APPROVED`
+  của dự án, nếu `billable=true` thì tra đơn giá áp dụng tại đúng `workDate` của dòng đó (kế thừa
+  `NCL-07-CN-005`/QTN-16, đã nhân hệ số `workType` theo `NCL-07-CN-006`), quy đổi đơn giá/ngày sang
+  đơn giá/giờ (giả định **1 ngày công = 8 giờ**) rồi nhân với số giờ để ra doanh thu của dòng; cộng dồn
+  thành `totalRecognizedRevenue`. Dòng `billable=false` bị loại khỏi doanh thu (vẫn tính vào giá vốn ở
+  `NCL-09-CN-001`) — trả về với `billable=false`. Dòng chưa tra được đơn giá (chưa khai báo cấp bậc,
+  chưa có đơn giá hiệu lực...) trả về với `missingRateData=true`, không cộng vào tổng.
+- **`FIXED_PRICE`** (hợp đồng trọn gói) — phương thức `PERCENTAGE_OF_COMPLETION`: `totalRecognizedRevenue`
+  = `Contract.totalValue` nhân `completionRate` (= số `Task.status = DONE` / tổng số công việc của dự án,
+  làm tròn 4 chữ số thập phân).
+- **`MAINTENANCE`, `MILESTONE`**: chưa được hỗ trợ — trả lỗi `400 INVALID_STATE`.
+
+**Quyền**: `VT-01` (Ban giám đốc), `VT-05` (Kế toán) — vai trò khác nhận `403 FORBIDDEN`.
+
+**Response `200 OK` (hợp đồng theo giờ):**
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "projectId": 42,
+    "contractId": 5,
+    "contractType": "TIME_AND_MATERIAL",
+    "recognitionMethod": "HOURLY",
+    "totalRecognizedRevenue": 2400000.00,
+    "totalBillableHours": 8.00,
+    "excludedLineCount": 0,
+    "missingRateEntryCount": 0,
+    "completionRate": null,
+    "totalTaskCount": null,
+    "doneTaskCount": null,
+    "lines": [
+      {
+        "timeEntryId": 901,
+        "employeeId": 17,
+        "workDate": "2026-06-30",
+        "hours": 8.00,
+        "appliedRate": 300000.0000,
+        "lineRevenue": 2400000.00,
+        "billable": true,
+        "missingRateData": false
+      }
+    ]
+  }
+}
+```
+
+**Response `200 OK` (hợp đồng trọn gói):** `totalBillableHours`/`excludedLineCount`/`missingRateEntryCount`/
+`lines` rỗng hoặc `0`; `completionRate`, `totalTaskCount`, `doneTaskCount` có giá trị, ví dụ
+`{ "recognitionMethod": "PERCENTAGE_OF_COMPLETION", "totalRecognizedRevenue": 60000000.00, "completionRate": 0.6000, "totalTaskCount": 5, "doneTaskCount": 3 }`.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 403 | `FORBIDDEN` | Không phải `VT-01`/`VT-05` — ghi nhật ký lần từ chối (TC-04) |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy dự án hoặc hợp đồng |
+| 400 | `INVALID_STATE` | Loại hợp đồng `MAINTENANCE`/`MILESTONE`, chưa được hỗ trợ |
+
+**Lưu ý:**
+- Mỗi lần đọc endpoint ghi một log truy cập dữ liệu `REVENUE` (TC-05).
+- Để tự động tra đơn giá cho từng dòng giờ công (thay vì bắt Frontend nhập tay `level` như
+  `NCL-07-CN-005`), hồ sơ nhân sự (`GET/POST/PUT /employees`) nay có thêm trường `level` (cấp bậc,
+  tùy chọn) — nhân sự chưa khai báo cấp bậc sẽ khiến các dòng giờ công của người đó bị đánh dấu
+  `missingRateData=true` thay vì chặn cả lượt tính doanh thu.
+
 ## Epic `NCL-08` — Chi phí dự án
 
 ### `NCL-08-CN-001` — Ghi nhận chi phí phát sinh của dự án
@@ -481,7 +555,7 @@ GET /api/v1/sensitive-access-logs?userId=1&from=2026-08-01T00:00:00&to=2026-08-3
 ```
 
 - `action` nhận `VIEW` (xem), `EXPORT` (xuất), hoặc `DENIED` (bị từ chối).
-- `dataType` nhận `SALARY`, `COST`, `COST_OF_GOODS`, `MARGIN`.
+- `dataType` nhận `SALARY`, `COST`, `COST_OF_GOODS`, `MARGIN`, `REVENUE` (NCL-09-CN-002).
 - Khi không có bản ghi thỏa bộ lọc, `content` rỗng và `totalElements = 0` (TC-02).
 
 **Response lỗi:**
@@ -519,6 +593,7 @@ Danh sách hồ sơ nhân sự, cả hai tham số đều tùy chọn. `keyword`
       "departmentId": 2,
       "departmentName": "Phong ky thuat",
       "professionalRole": "Ky su phan mem",
+      "level": "Trung cap",
       "standardHoursPerWeek": 40.00,
       "hireDate": "2026-01-01",
       "endDate": null
@@ -539,6 +614,7 @@ Chi tiết một hồ sơ, kèm danh sách hợp đồng lao động (`contracts
   "userId": 5,
   "departmentId": 2,
   "professionalRole": "Ky su phan mem",
+  "level": "Trung cap",
   "hireDate": "2026-01-01",
   "endDate": null,
   "standardHoursPerWeek": 40.00
@@ -550,6 +626,7 @@ Chi tiết một hồ sơ, kèm danh sách hợp đồng lao động (`contracts
 | `userId` | number | có | Tài khoản phải tồn tại và **chưa có hồ sơ nhân sự nào khác** gắn với nó |
 | `departmentId` | number | không | |
 | `professionalRole` | string | không | Tối đa 255 ký tự |
+| `level` | string | không | Cấp bậc (NCL-09-CN-002) — tối đa 100 ký tự; dùng để tự động tra đơn giá theo hợp đồng khi tính doanh thu ghi nhận, thay vì phải nhập tay như `NCL-07-CN-005`. Bỏ trống nếu chưa xác định. |
 | `hireDate` | date (`yyyy-MM-dd`) | có | Ngày vào làm |
 | `endDate` | date | không | Phải **không sớm hơn** `hireDate`, nếu không hệ thống trả lỗi và không lưu (TC-03) |
 | `standardHoursPerWeek` | number | không | Bỏ trống → mặc định `40.00`; nếu truyền phải > 0 |
