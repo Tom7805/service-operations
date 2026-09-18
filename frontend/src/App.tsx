@@ -32,6 +32,7 @@ import OverheadAllocationPage from './modules/expenses/pages/OverheadAllocationP
 import ProjectLaborCostPage from './modules/profitability/pages/ProjectLaborCostPage';
 import ProjectRecognizedRevenuePage from './modules/profitability/pages/ProjectRecognizedRevenuePage';
 import ProjectMarginPage from './modules/profitability/pages/ProjectMarginPage';
+import MarginAlertThresholdPage from './modules/profitability/pages/MarginAlertThresholdPage';
 import NotificationCenterPage from './modules/notifications/pages/NotificationCenterPage';
 import NotificationList from './modules/notifications/components/NotificationList';
 import { getNotifications, getUnreadCount, markNotificationsRead } from './modules/notifications/api/notificationsApi';
@@ -559,6 +560,8 @@ export default function App() {
                 </select>
               </div>
             </div>
+          ) : activeTab === 'MARGIN_ALERT_THRESHOLD' ? (
+            <MarginAlertThresholdPage currentUserRoles={currentRoles} />
           ) : activeTab === 'CUSTOMERS' ? (
             <CustomerListPage
               currentUserRoles={currentRoles}

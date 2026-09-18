@@ -65,6 +65,7 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'OPPORTUNITIES',
       'PROJECT_LABOR_COST',
       'PROJECT_MARGIN',
+      'MARGIN_ALERT_THRESHOLD',
     ]);
   });
 
@@ -94,6 +95,7 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'PROJECT_LABOR_COST',
       'PROJECT_RECOGNIZED_REVENUE',
       'PROJECT_MARGIN',
+      'MARGIN_ALERT_THRESHOLD',
     ]);
   });
 
@@ -167,6 +169,7 @@ describe('navGroupsFor — bỏ qua nhóm không có mục hiển thị', () => 
       'PROJECT_LABOR_COST',
       'PROJECT_RECOGNIZED_REVENUE',
       'PROJECT_MARGIN',
+      'MARGIN_ALERT_THRESHOLD',
     ]);
   });
 

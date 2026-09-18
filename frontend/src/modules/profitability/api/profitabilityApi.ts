@@ -1,4 +1,10 @@
-import type { ProjectLaborCostRes, ProjectMarginRes, RecognizedRevenueRes } from '../types/profitabilityTypes';
+import type {
+  MarginAlertThresholdRes,
+  MarginThresholdReq,
+  ProjectLaborCostRes,
+  ProjectMarginRes,
+  RecognizedRevenueRes,
+} from '../types/profitabilityTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -107,4 +113,27 @@ export async function getProjectMargin(projectId: number): Promise<ProjectMargin
       method: 'GET',
     }
   );
+}
+
+/**
+ * NCL-09-CN-004: Xem ngưỡng cảnh báo âm biên hiện hành (cấu hình toàn công ty).
+ *
+ * Cho phép VT-01 (Ban giám đốc), VT-02 (Quản lý dự án), VT-05 (Kế toán).
+ * GET /profitability/margin-alert-threshold
+ */
+export async function getMarginAlertThreshold(): Promise<MarginAlertThresholdRes> {
+  return requestBackend<MarginAlertThresholdRes>(`${API_BASE_URL}/profitability/margin-alert-threshold`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * NCL-09-CN-004: Đặt/đổi ngưỡng cảnh báo âm biên (TC-03: chỉ VT-01, vai trò khác 403).
+ * PUT /profitability/margin-alert-threshold
+ */
+export async function setMarginAlertThreshold(payload: MarginThresholdReq): Promise<MarginAlertThresholdRes> {
+  return requestBackend<MarginAlertThresholdRes>(`${API_BASE_URL}/profitability/margin-alert-threshold`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
 }
