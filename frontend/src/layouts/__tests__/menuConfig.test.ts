@@ -63,6 +63,7 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'UNSUBMITTED_TIMESHEETS',
       'CUSTOMERS',
       'OPPORTUNITIES',
+      'PROJECT_MARGIN',
     ]);
   });
 
@@ -89,6 +90,7 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'RATE_HISTORY',
       'EXPENSE_APPROVAL',
       'OVERHEAD_ALLOCATION',
+      'PROJECT_MARGIN',
     ]);
   });
 
@@ -159,6 +161,7 @@ describe('navGroupsFor — bỏ qua nhóm không có mục hiển thị', () => 
       'RATE_HISTORY',
       'EXPENSE_APPROVAL',
       'OVERHEAD_ALLOCATION',
+      'PROJECT_MARGIN',
     ]);
   });
 

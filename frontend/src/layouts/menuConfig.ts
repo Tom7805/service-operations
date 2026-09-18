@@ -34,6 +34,7 @@ export type Tab =
   | 'UNSUBMITTED_TIMESHEETS'
   | 'EXPENSE_APPROVAL'
   | 'OVERHEAD_ALLOCATION'
+  | 'PROJECT_MARGIN'
   | 'NOTIFICATIONS';
 
 export interface NavItem {
@@ -122,6 +123,12 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
     tab: 'OVERHEAD_ALLOCATION', icon: ICONS.chart, label: 'Phân bổ chi phí chung', requires: ['VT-05'],
     // NCL-08-CN-005: Kế toán chia tổng chi phí chung phát sinh trong kỳ (tháng) cho các
     // dự án theo tỷ trọng giờ công đã duyệt trong kỳ đó.
+  },
+  {
+    tab: 'PROJECT_MARGIN', icon: ICONS.chart, label: 'Biên lợi nhuận', requires: ['VT-01', 'VT-02', 'VT-05'],
+    // NCL-09-CN-003: biên lợi nhuận gộp thời gian thực của dự án (doanh thu ghi nhận
+    // trừ toàn bộ chi phí đã duyệt). Chỉ dữ liệu chi phí từng dòng (hourlyRate/laborCost)
+    // bị che với VT-02 theo QTN-02 — số tổng hợp hiển thị cho cả ba vai trò.
   },
   { tab: 'OPPORTUNITY_DETAIL', icon: ICONS.building, label: 'Cơ hộp', requires: ['VT-04'] },
 ];
