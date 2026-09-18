@@ -47,6 +47,20 @@ export interface ExpenseBillableReq {
   billable: boolean;
 }
 
+/**
+ * Payload ghi nhận chi phí phát sinh của dự án (NCL-08-CN-001), dùng cả khi tạo mới
+ * (`POST /projects/{projectId}/expenses`) lẫn sửa và nộp lại phiếu bị từ chối
+ * (`PUT /expenses/{expenseId}`). Không có trường `billable` — việc đánh dấu tính lại cho
+ * khách hàng là thao tác riêng của Quản lý dự án (NCL-08-CN-003), không thuộc màn ghi nhận.
+ */
+export interface ExpenseCreateReq {
+  type: ExpenseType;
+  amount: number;
+  expenseDate: string; // YYYY-MM-DD
+  description: string;
+  receiptUrl: string | null;
+}
+
 /** Nhãn hiển thị cho từng loại chi phí (`ExpenseType`). */
 export const EXPENSE_TYPE_LABELS: Record<ExpenseType, string> = {
   TRAVEL: 'Đi lại',
