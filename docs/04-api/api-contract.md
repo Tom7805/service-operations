@@ -35,6 +35,44 @@ bổ sung thêm 1 mục theo đúng Epic/Story tương ứng bên dưới — Fr
 - **Swagger UI (tra cứu trực tiếp khi backend đang chạy):** `http://localhost:8080/api/v1/swagger-ui/index.html`
 - **OpenAPI JSON (import vào Postman/Insomnia):** `http://localhost:8080/api/v1/v3/api-docs`
 
+## Epic `NCL-09` — Biên lợi nhuận thực theo thời gian thực
+
+### `NCL-09-CN-001` — Tính giá vốn giờ công của dự án
+
+#### GET `/projects/{projectId}/profitability/labor-cost`
+
+Tính động giá vốn nhân sự từ các dòng giờ công `APPROVED` của dự án. Mỗi dòng được nhân với chi phí giờ công của nhân sự có `effectiveFrom` gần nhất nhưng không sau `workDate`; dòng chưa có chi phí hiệu lực vẫn được trả về với `missingCostData=true` và không cộng vào `totalLaborCost`.
+
+**Quyền**: `VT-01`, `VT-02`, `VT-05`.
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "projectId": 42,
+    "totalApprovedHours": 12.00,
+    "totalLaborCost": 3000000.00,
+    "missingCostEntryCount": 0,
+    "lines": [
+      {
+        "timeEntryId": 901,
+        "employeeId": 17,
+        "workDate": "2026-01-15",
+        "hours": 8.00,
+        "hourlyRate": 250000.00,
+        "laborCost": 2000000.00,
+        "missingCostData": false
+      }
+    ]
+  }
+}
+```
+
+`hourlyRate` và `laborCost` ở từng dòng là dữ liệu nhạy cảm và được che tự động theo `QTN-02`; mỗi lần đọc endpoint ghi một log truy cập dữ liệu `COST`. Dòng đảo/correction đã duyệt được tính theo đúng số giờ mang dấu của bản ghi.
+
 ## Epic `NCL-08` — Chi phí dự án
 
 ### `NCL-08-CN-001` — Ghi nhận chi phí phát sinh của dự án
