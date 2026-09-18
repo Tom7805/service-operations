@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import { roleLabels } from '../../../utils/roleLabel';
 import ExpenseApprovalActionBar from '../components/ExpenseApprovalActionBar';
-import { getPendingExpenses, ExpensesApiError } from '../api/expensesApi';
-import type { ExpenseRes } from '../types/expenseTypes';
+import SubcontractorExpenseApprovalActionBar from '../components/SubcontractorExpenseApprovalActionBar';
+import { getPendingExpenses, getPendingSubcontractorExpenses, ExpensesApiError } from '../api/expensesApi';
+import type { ExpenseRes, SubcontractorExpenseRes } from '../types/expenseTypes';
 import { EXPENSE_TYPE_LABELS } from '../types/expenseTypes';
 
 export interface ExpenseApprovalPageProps {
@@ -21,6 +22,11 @@ function formatAmount(amount: number): string {
  * vào giá vốn dự án; phiếu từ chối giữ nguyên dữ liệu gốc và lưu lý do để người tạo (NCL-08-
  * CN-001) sửa và nộp lại.
  *
+ * Gồm HAI hàng chờ riêng biệt vì backend tách hai loại chi phí thành hai thực thể độc lập:
+ * - Chi phí dự án nội bộ (`GET /expenses/pending`, đi lại/công cụ/khác — NCL-08-CN-001).
+ * - Chi phí thuê ngoài (`GET /subcontractor-expenses/pending` — NCL-08-CN-004, story này
+ *   khai "Phụ thuộc vào: NCL-08-CN-002" tức dùng chung đúng luồng duyệt ở màn này).
+ *
  * `GET /expenses/pending` trả về từng phiếu riêng lẻ (khác với hàng chờ duyệt bảng chấm
  * công), nên duyệt/từ chối luôn thao tác theo TỪNG PHIẾU một, không theo nhóm.
  */
@@ -32,6 +38,7 @@ export default function ExpenseApprovalPage({
   const isAllowed = currentUserRoles.includes('VT-05');
 
   const [pending, setPending] = useState<ExpenseRes[]>([]);
+  const [pendingSubcontractor, setPendingSubcontractor] = useState<SubcontractorExpenseRes[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -46,8 +53,12 @@ export default function ExpenseApprovalPage({
     setLoading(true);
     setError(null);
     try {
-      const data = await getPendingExpenses();
-      setPending(data);
+      const [expenseData, subcontractorData] = await Promise.all([
+        getPendingExpenses(),
+        getPendingSubcontractorExpenses(),
+      ]);
+      setPending(expenseData);
+      setPendingSubcontractor(subcontractorData);
     } catch (err) {
       const message =
         err instanceof ExpensesApiError || err instanceof Error
@@ -84,6 +95,7 @@ export default function ExpenseApprovalPage({
   }
 
   const totalPendingAmount = pending.reduce((sum, e) => sum + e.amount, 0);
+  const totalPendingSubcontractorAmount = pendingSubcontractor.reduce((sum, e) => sum + e.amount, 0);
 
   return (
     <div className="user-management-page" data-testid="expense-approval-page">
@@ -101,7 +113,8 @@ export default function ExpenseApprovalPage({
         <div>
           <h1 className="page-title">Duyệt chi phí dự án</h1>
           <p className="page-subtitle">
-            Các phiếu chi phí đang chờ bạn duyệt hoặc từ chối. Phiếu được duyệt sẽ được tính vào giá vốn dự án.
+            Các phiếu chi phí đang chờ bạn duyệt hoặc từ chối, gồm cả chi phí phát sinh nội bộ và chi phí
+            thuê ngoài. Phiếu được duyệt sẽ được tính vào giá vốn dự án.
           </p>
         </div>
         <div className="page-header-actions">
@@ -115,15 +128,29 @@ export default function ExpenseApprovalPage({
         <div className="stat-card">
           <div className="stat-card__icon stat-card__icon--blue">{ICONS.clipboardList}</div>
           <div>
-            <span className="stat-card__label">Phiếu đang chờ duyệt</span>
+            <span className="stat-card__label">Phiếu chi phí nội bộ đang chờ duyệt</span>
             <strong className="stat-card__value">{pending.length}</strong>
           </div>
         </div>
         <div className="stat-card">
           <div className="stat-card__icon stat-card__icon--amber">{ICONS.money}</div>
           <div>
-            <span className="stat-card__label">Tổng số tiền chờ duyệt</span>
+            <span className="stat-card__label">Tổng tiền chi phí nội bộ chờ duyệt</span>
             <strong className="stat-card__value">{formatAmount(totalPendingAmount)}</strong>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-card__icon stat-card__icon--blue">{ICONS.briefcase}</div>
+          <div>
+            <span className="stat-card__label">Phiếu chi phí thuê ngoài đang chờ duyệt</span>
+            <strong className="stat-card__value">{pendingSubcontractor.length}</strong>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-card__icon stat-card__icon--amber">{ICONS.money}</div>
+          <div>
+            <span className="stat-card__label">Tổng tiền chi phí thuê ngoài chờ duyệt</span>
+            <strong className="stat-card__value">{formatAmount(totalPendingSubcontractorAmount)}</strong>
           </div>
         </div>
       </div>
@@ -138,7 +165,8 @@ export default function ExpenseApprovalPage({
         </div>
       )}
 
-      <div className="user-table-card">
+      <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 700 }}>Chi phí phát sinh nội bộ</h3>
+      <div className="user-table-card" style={{ marginBottom: '24px' }}>
         <div className="table-responsive">
           <table className="user-data-table">
             <thead>
@@ -212,7 +240,76 @@ export default function ExpenseApprovalPage({
         </div>
 
         <div className="table-footer">
-          Hiển thị <strong>{pending.length}</strong> phiếu chi phí đang chờ duyệt
+          Hiển thị <strong>{pending.length}</strong> phiếu chi phí nội bộ đang chờ duyệt
+        </div>
+      </div>
+
+      <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 700 }}>Chi phí thuê ngoài</h3>
+      <div className="user-table-card">
+        <div className="table-responsive">
+          <table className="user-data-table">
+            <thead>
+              <tr>
+                <th>Mã phiếu</th>
+                <th>Dự án</th>
+                <th>Nhà thầu</th>
+                <th style={{ textAlign: 'right' }}>Số tiền</th>
+                <th>Kỳ phát sinh</th>
+                <th>Phạm vi công việc</th>
+                <th style={{ width: '220px' }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px' }}>
+                    Đang tải hàng chờ duyệt…
+                  </td>
+                </tr>
+              ) : pendingSubcontractor.length === 0 ? (
+                <tr>
+                  <td colSpan={7}>
+                    <div className="table-empty-state">
+                      <span className="empty-icon">{ICONS.checkCircle}</span>
+                      <h3>Không có phiếu chi phí thuê ngoài nào đang chờ duyệt</h3>
+                      <p>Khi quản lý dự án ghi nhận chi phí thuê ngoài, phiếu sẽ xuất hiện ở đây.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                pendingSubcontractor.map((expense) => (
+                  <tr key={expense.id} data-testid={`pending-subcontractor-row-${expense.id}`}>
+                    <td>#{expense.id}</td>
+                    <td>Dự án #{expense.projectId}</td>
+                    <td>{expense.contractorName}</td>
+                    <td style={{ textAlign: 'right' }}>
+                      <strong>{formatAmount(expense.amount)}</strong>
+                    </td>
+                    <td>{expense.incurredPeriod}</td>
+                    <td style={{ maxWidth: '260px', whiteSpace: 'normal' }}>{expense.workScope}</td>
+                    <td>
+                      <SubcontractorExpenseApprovalActionBar
+                        expense={expense}
+                        onApproved={(result) => {
+                          showToast(`Đã duyệt phiếu chi phí thuê ngoài #${result.id} thành công.`, 'success');
+                          setPendingSubcontractor((prev) => prev.filter((p) => p.id !== expense.id));
+                        }}
+                        onRejected={(result) => {
+                          showToast(`Đã từ chối phiếu chi phí thuê ngoài #${result.id}.`, 'success');
+                          setPendingSubcontractor((prev) => prev.filter((p) => p.id !== expense.id));
+                        }}
+                        onError={(message) => showToast(message, 'error')}
+                      />
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="table-footer">
+          Hiển thị <strong>{pendingSubcontractor.length}</strong> phiếu chi phí thuê ngoài đang chờ duyệt
         </div>
       </div>
     </div>

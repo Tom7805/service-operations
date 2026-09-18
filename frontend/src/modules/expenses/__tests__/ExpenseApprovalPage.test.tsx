@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ExpenseApprovalPage from '../pages/ExpenseApprovalPage';
 import * as expensesApi from '../api/expensesApi';
-import type { ExpenseRes } from '../types/expenseTypes';
+import type { ExpenseRes, SubcontractorExpenseRes } from '../types/expenseTypes';
 
 vi.mock('../api/expensesApi', () => {
   class MockExpensesApiError extends Error {
@@ -21,6 +21,9 @@ vi.mock('../api/expensesApi', () => {
     getPendingExpenses: vi.fn(),
     approveExpense: vi.fn(),
     rejectExpense: vi.fn(),
+    getPendingSubcontractorExpenses: vi.fn(),
+    approveSubcontractorExpense: vi.fn(),
+    rejectSubcontractorExpense: vi.fn(),
     ExpensesApiError: MockExpensesApiError,
   };
 });
@@ -63,9 +66,27 @@ const PENDING_2: ExpenseRes = {
   rejectReason: null,
 };
 
+const PENDING_SUBCONTRACTOR_1: SubcontractorExpenseRes = {
+  id: 50,
+  projectId: 1,
+  userId: 5,
+  contractorName: 'Cong ty TNHH ABC',
+  workScope: 'Trien khai module bao cao',
+  amount: 50000000,
+  incurredPeriod: '2026-09-01',
+  status: 'SUBMITTED',
+  createdAt: '2026-09-01T08:00:00',
+  approvedBy: null,
+  approvedAt: null,
+  rejectedBy: null,
+  rejectedAt: null,
+  rejectReason: null,
+};
+
 describe('ExpenseApprovalPage (NCL-08-CN-002 — Duyệt chi phí dự án)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(expensesApi.getPendingSubcontractorExpenses).mockResolvedValue([]);
   });
 
   it('từ chối truy cập cho vai trò khác VT-05', () => {
@@ -89,6 +110,7 @@ describe('ExpenseApprovalPage (NCL-08-CN-002 — Duyệt chi phí dự án)', ()
     render(<ExpenseApprovalPage currentUserRoles={['VT-05']} />);
 
     expect(await screen.findByText(/Không có phiếu chi phí nào đang chờ duyệt/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Không có phiếu chi phí thuê ngoài nào đang chờ duyệt/i)).toBeInTheDocument();
   });
 
   it('hiển thị lỗi khi tải hàng chờ duyệt thất bại', async () => {
@@ -171,5 +193,62 @@ describe('ExpenseApprovalPage (NCL-08-CN-002 — Duyệt chi phí dự án)', ()
 
     expect(await screen.findByText('Phieu chi phi khong o trang thai cho duyet')).toBeInTheDocument();
     expect(screen.getByTestId('pending-row-30')).toBeInTheDocument();
+  });
+
+  it('tải và hiển thị danh sách phiếu chi phí thuê ngoài đang chờ duyệt', async () => {
+    vi.mocked(expensesApi.getPendingExpenses).mockResolvedValue([]);
+    vi.mocked(expensesApi.getPendingSubcontractorExpenses).mockResolvedValue([PENDING_SUBCONTRACTOR_1]);
+
+    render(<ExpenseApprovalPage currentUserRoles={['VT-05']} />);
+
+    expect(await screen.findByTestId('pending-subcontractor-row-50')).toHaveTextContent('Cong ty TNHH ABC');
+  });
+
+  it('duyệt một phiếu chi phí thuê ngoài thành công thì gỡ khỏi danh sách và hiện toast', async () => {
+    vi.mocked(expensesApi.getPendingExpenses).mockResolvedValue([]);
+    vi.mocked(expensesApi.getPendingSubcontractorExpenses).mockResolvedValue([PENDING_SUBCONTRACTOR_1]);
+    vi.mocked(expensesApi.approveSubcontractorExpense).mockResolvedValue({
+      ...PENDING_SUBCONTRACTOR_1,
+      status: 'APPROVED',
+      approvedBy: 'accountant',
+      approvedAt: '2026-09-12T08:00:00',
+    });
+
+    render(<ExpenseApprovalPage currentUserRoles={['VT-05']} />);
+    await screen.findByTestId('pending-subcontractor-row-50');
+
+    fireEvent.click(screen.getByTestId('btn-approve-subcontractor-50'));
+    fireEvent.click(screen.getByTestId('btn-confirm-approve-subcontractor'));
+
+    await waitFor(() => expect(screen.queryByTestId('pending-subcontractor-row-50')).not.toBeInTheDocument());
+    expect(expensesApi.approveSubcontractorExpense).toHaveBeenCalledWith(50);
+    expect(screen.getByText(/Đã duyệt phiếu chi phí thuê ngoài #50 thành công/i)).toBeInTheDocument();
+  });
+
+  it('từ chối một phiếu chi phí thuê ngoài bắt buộc nhập lý do', async () => {
+    vi.mocked(expensesApi.getPendingExpenses).mockResolvedValue([]);
+    vi.mocked(expensesApi.getPendingSubcontractorExpenses).mockResolvedValue([PENDING_SUBCONTRACTOR_1]);
+    vi.mocked(expensesApi.rejectSubcontractorExpense).mockResolvedValue({
+      ...PENDING_SUBCONTRACTOR_1,
+      status: 'REJECTED',
+      rejectedBy: 'accountant',
+      rejectedAt: '2026-09-12T08:00:00',
+      rejectReason: 'Thieu hop dong',
+    });
+
+    render(<ExpenseApprovalPage currentUserRoles={['VT-05']} />);
+    await screen.findByTestId('pending-subcontractor-row-50');
+
+    fireEvent.click(screen.getByTestId('btn-reject-subcontractor-50'));
+    fireEvent.click(screen.getByTestId('btn-confirm-reject-subcontractor'));
+    expect(await screen.findByText(/Lý do từ chối không được để trống/i)).toBeInTheDocument();
+    expect(expensesApi.rejectSubcontractorExpense).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByTestId('reject-reason-subcontractor-input'), { target: { value: 'Thieu hop dong' } });
+    fireEvent.click(screen.getByTestId('btn-confirm-reject-subcontractor'));
+
+    await waitFor(() => expect(screen.queryByTestId('pending-subcontractor-row-50')).not.toBeInTheDocument());
+    expect(expensesApi.rejectSubcontractorExpense).toHaveBeenCalledWith(50, { reason: 'Thieu hop dong' });
+    expect(screen.getByText(/Đã từ chối phiếu chi phí thuê ngoài #50/i)).toBeInTheDocument();
   });
 });

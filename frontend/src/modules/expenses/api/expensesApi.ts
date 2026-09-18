@@ -1,5 +1,6 @@
 import type {
   ExpenseBillableReq,
+  ExpenseCreateReq,
   ExpenseRejectReq,
   ExpenseRes,
   OverheadAllocationRes,
@@ -53,6 +54,33 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
   }
 
   return payload.data as T;
+}
+
+/**
+ * NCL-08-CN-001: ghi nhận một phiếu chi phí phát sinh của dự án. Chỉ Nhân viên chuyên môn
+ * (VT-03) và dự án phải đang `RUNNING` — nếu không, backend trả `400 INVALID_STATE`. Phiếu
+ * tạo mới luôn ở trạng thái `SUBMITTED`, chờ Kế toán duyệt (NCL-08-CN-002).
+ * POST /projects/{projectId}/expenses
+ */
+export async function createExpense(projectId: number, payload: ExpenseCreateReq): Promise<ExpenseRes> {
+  return requestBackend<ExpenseRes>(`${API_BASE_URL}/projects/${projectId}/expenses`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * NCL-08-CN-001: sửa và nộp lại một phiếu chi phí đang ở trạng thái `REJECTED`. Chỉ người
+ * tạo phiếu (VT-03) mới được sửa — backend trả `403 FORBIDDEN` nếu không phải chủ phiếu và
+ * `400 INVALID_STATE` nếu phiếu không ở trạng thái `REJECTED`. Nộp lại chuyển phiếu về
+ * `SUBMITTED` và xóa thông tin từ chối cũ.
+ * PUT /expenses/{expenseId}
+ */
+export async function updateRejectedExpense(expenseId: number, payload: ExpenseCreateReq): Promise<ExpenseRes> {
+  return requestBackend<ExpenseRes>(`${API_BASE_URL}/expenses/${expenseId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
 }
 
 /**
@@ -139,6 +167,42 @@ export async function createSubcontractorExpense(
 export async function getProjectSubcontractorExpenses(projectId: number): Promise<SubcontractorExpenseRes[]> {
   return requestBackend<SubcontractorExpenseRes[]>(`${API_BASE_URL}/projects/${projectId}/subcontractor-expenses`, {
     method: 'GET',
+  });
+}
+
+/**
+ * NCL-08-CN-002: hàng chờ duyệt chi phí thuê ngoài của Kế toán (VT-05) — CN-004 (ghi nhận
+ * chi phí thuê ngoài) phụ thuộc trực tiếp vào story này để đưa phiếu vào giá vốn dự án, nên
+ * cùng dùng chung màn "Duyệt chi phí dự án" với chi phí nội bộ.
+ * GET /subcontractor-expenses/pending
+ */
+export async function getPendingSubcontractorExpenses(): Promise<SubcontractorExpenseRes[]> {
+  return requestBackend<SubcontractorExpenseRes[]>(`${API_BASE_URL}/subcontractor-expenses/pending`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * NCL-08-CN-002: duyệt một phiếu chi phí thuê ngoài đang `SUBMITTED`. Không cần request body.
+ * POST /subcontractor-expenses/{expenseId}/approve
+ */
+export async function approveSubcontractorExpense(expenseId: number): Promise<SubcontractorExpenseRes> {
+  return requestBackend<SubcontractorExpenseRes>(`${API_BASE_URL}/subcontractor-expenses/${expenseId}/approve`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * NCL-08-CN-002: từ chối một phiếu chi phí thuê ngoài đang `SUBMITTED` — `reason` bắt buộc.
+ * POST /subcontractor-expenses/{expenseId}/reject
+ */
+export async function rejectSubcontractorExpense(
+  expenseId: number,
+  payload: ExpenseRejectReq
+): Promise<SubcontractorExpenseRes> {
+  return requestBackend<SubcontractorExpenseRes>(`${API_BASE_URL}/subcontractor-expenses/${expenseId}/reject`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
   });
 }
 
