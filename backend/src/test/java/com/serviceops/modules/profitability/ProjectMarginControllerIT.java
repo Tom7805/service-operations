@@ -4,6 +4,7 @@ import com.serviceops.config.SecurityConfig;
 import com.serviceops.modules.profitability.controller.ProjectProfitabilityController;
 import com.serviceops.modules.profitability.dto.response.ProjectMarginRes;
 import com.serviceops.modules.profitability.service.LaborCostService;
+import com.serviceops.modules.profitability.service.MarginAlertService;
 import com.serviceops.modules.profitability.service.ProjectMarginService;
 import com.serviceops.modules.profitability.service.RevenueRecognitionService;
 import com.serviceops.security.CustomUserDetailsService;
@@ -34,6 +35,7 @@ class ProjectMarginControllerIT {
 	@MockBean private ProjectMarginService projectMarginService;
 	@MockBean private LaborCostService laborCostService;
 	@MockBean private RevenueRecognitionService revenueRecognitionService;
+	@MockBean private MarginAlertService marginAlertService;
 	@MockBean private JwtProvider jwtProvider;
 	@MockBean private CustomUserDetailsService customUserDetailsService;
 
