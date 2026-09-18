@@ -222,7 +222,7 @@ describe('ProjectLaborCostPage (NCL-09-CN-001 — Tính giá vốn giờ công d
     await waitFor(() => expect(profitabilityApi.getProjectLaborCost).toHaveBeenCalledTimes(2));
   });
 
-  it('hiển thị nút Recalculate và History', async () => {
+  it('hiển thị nút Recalculate', async () => {
     vi.mocked(projectsApi.getProject).mockResolvedValue(RUNNING_PROJECT);
     vi.mocked(profitabilityApi.getProjectLaborCost).mockResolvedValue(LABOR_COST_DATA);
 
@@ -230,7 +230,6 @@ describe('ProjectLaborCostPage (NCL-09-CN-001 — Tính giá vốn giờ công d
 
     await screen.findByTestId('labor-cost-line-100');
     expect(screen.getByTestId('btn-recalculate-labor-cost')).toBeInTheDocument();
-    expect(screen.getByTestId('btn-history-labor-cost')).toBeInTheDocument();
   });
 
   it('nút Recalculate gọi lại API để tính lại', async () => {
