@@ -42,7 +42,9 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+// Khong duoc readOnly: sensitiveAccessLogger.logView(...) GHI mot dong audit log trong
+// cung transaction nay (xem giai thich o LaborCostServiceImpl).
+@Transactional
 public class RevenueRecognitionServiceImpl implements RevenueRecognitionService {
 
 	/**
