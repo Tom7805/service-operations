@@ -34,6 +34,9 @@ export interface ProjectWbsModalProps {
   projectCode?: string;
   projectName?: string;
   currentUserRoles?: string[];
+  /** Id tài khoản đang đăng nhập — dùng cho tab "Chi phí" (NCL-08-CN-001: chỉ chủ phiếu
+   * mới được sửa & nộp lại phiếu chi phí bị từ chối của chính mình). */
+  currentUserId?: number;
   onUpdated?: () => void;
 }
 
@@ -43,6 +46,7 @@ export default function ProjectWbsModal({
   projectId,
   projectCode,
   projectName,
+  currentUserId,
   currentUserRoles = ['VT-02'],
   onUpdated,
 }: ProjectWbsModalProps) {
@@ -413,7 +417,12 @@ export default function ProjectWbsModal({
                   initialProject={project ?? undefined}
                 />
               ) : activeSection === 'EXPENSES' ? (
-                <ExpenseListPage projectId={projectId} currentUserRoles={currentUserRoles} />
+                <ExpenseListPage
+                  projectId={projectId}
+                  currentUserRoles={currentUserRoles}
+                  currentUserId={currentUserId}
+                  initialProject={project ?? undefined}
+                />
               ) : (
                 <SubcontractorExpenseListPage
                   projectId={projectId}

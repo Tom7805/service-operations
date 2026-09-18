@@ -11,6 +11,52 @@ export function validateExpenseRejectReason(reason: string): string | undefined 
 }
 
 /**
+ * Các lỗi validate form ghi nhận chi phí dự án (NCL-08-CN-001), khớp ràng buộc backend
+ * `ExpenseCreateReq` — dùng chung cho tạo mới và sửa/nộp lại phiếu bị từ chối.
+ */
+export interface ExpenseFormErrors {
+  type?: string;
+  amount?: string;
+  expenseDate?: string;
+  description?: string;
+  receiptUrl?: string;
+}
+
+export function validateExpenseForm(input: {
+  type: string;
+  amount: string;
+  expenseDate: string;
+  description: string;
+  receiptUrl: string;
+}): ExpenseFormErrors {
+  const errors: ExpenseFormErrors = {};
+
+  if (!input.type) errors.type = 'Loại chi phí không được để trống';
+
+  const amount = Number(input.amount);
+  if (!input.amount.trim() || Number.isNaN(amount)) errors.amount = 'Số tiền chi phí không được để trống';
+  else if (amount <= 0) errors.amount = 'Số tiền chi phí phải lớn hơn 0';
+
+  if (!input.expenseDate) {
+    errors.expenseDate = 'Ngày phát sinh không được để trống';
+  } else if (Number.isNaN(new Date(input.expenseDate).getTime())) {
+    errors.expenseDate = 'Ngày phát sinh không hợp lệ';
+  } else {
+    // So sánh chuỗi YYYY-MM-DD theo giờ địa phương, tránh lệch múi giờ so với UTC.
+    const todayIso = new Date().toLocaleDateString('en-CA');
+    if (input.expenseDate > todayIso) errors.expenseDate = 'Ngày phát sinh không được ở tương lai';
+  }
+
+  const description = input.description.trim();
+  if (!description) errors.description = 'Mô tả chi phí không được để trống';
+  else if (description.length > 1000) errors.description = 'Mô tả chi phí không được vượt 1000 ký tự';
+
+  if (input.receiptUrl.trim().length > 500) errors.receiptUrl = 'Đường dẫn chứng từ không được vượt 500 ký tự';
+
+  return errors;
+}
+
+/**
  * Các lỗi validate form ghi nhận chi phí thuê ngoài (NCL-08-CN-004), khớp ràng buộc backend
  * `SubcontractorExpenseReq` — kiểm tra trước khi gọi API để tránh round-trip cho lỗi rõ ràng.
  */

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  validateExpenseForm,
   validateExpenseRejectReason,
   validateOverheadAllocationForm,
   validateSubcontractorExpenseForm,
@@ -19,6 +20,57 @@ describe('validateExpenseRejectReason (NCL-08-CN-002)', () => {
   it('hợp lệ khi có lý do trong giới hạn', () => {
     expect(validateExpenseRejectReason('Thiếu chứng từ hợp lệ')).toBeUndefined();
     expect(validateExpenseRejectReason('a'.repeat(1000))).toBeUndefined();
+  });
+});
+
+describe('validateExpenseForm (NCL-08-CN-001)', () => {
+  const VALID_INPUT = {
+    type: 'TRAVEL',
+    amount: '2000000',
+    expenseDate: '2026-01-01',
+    description: 'Chi phi di lai gap khach hang',
+    receiptUrl: '',
+  };
+
+  it('hợp lệ khi đầy đủ dữ liệu đúng ràng buộc, kể cả không có chứng từ', () => {
+    expect(validateExpenseForm(VALID_INPUT)).toEqual({});
+  });
+
+  it('báo lỗi khi loại chi phí rỗng', () => {
+    expect(validateExpenseForm({ ...VALID_INPUT, type: '' }).type).toBe('Loại chi phí không được để trống');
+  });
+
+  it('báo lỗi khi số tiền rỗng, không phải số hoặc không dương', () => {
+    expect(validateExpenseForm({ ...VALID_INPUT, amount: '' }).amount).toBe('Số tiền chi phí không được để trống');
+    expect(validateExpenseForm({ ...VALID_INPUT, amount: 'abc' }).amount).toBe('Số tiền chi phí không được để trống');
+    expect(validateExpenseForm({ ...VALID_INPUT, amount: '0' }).amount).toBe('Số tiền chi phí phải lớn hơn 0');
+  });
+
+  it('báo lỗi khi ngày phát sinh rỗng hoặc ở tương lai', () => {
+    expect(validateExpenseForm({ ...VALID_INPUT, expenseDate: '' }).expenseDate).toBe(
+      'Ngày phát sinh không được để trống'
+    );
+    const future = new Date();
+    future.setDate(future.getDate() + 5);
+    const futureIso = future.toISOString().slice(0, 10);
+    expect(validateExpenseForm({ ...VALID_INPUT, expenseDate: futureIso }).expenseDate).toBe(
+      'Ngày phát sinh không được ở tương lai'
+    );
+  });
+
+  it('báo lỗi khi mô tả rỗng hoặc quá dài', () => {
+    expect(validateExpenseForm({ ...VALID_INPUT, description: '  ' }).description).toBe(
+      'Mô tả chi phí không được để trống'
+    );
+    expect(validateExpenseForm({ ...VALID_INPUT, description: 'a'.repeat(1001) }).description).toBe(
+      'Mô tả chi phí không được vượt 1000 ký tự'
+    );
+  });
+
+  it('báo lỗi khi đường dẫn chứng từ quá dài', () => {
+    expect(validateExpenseForm({ ...VALID_INPUT, receiptUrl: 'a'.repeat(501) }).receiptUrl).toBe(
+      'Đường dẫn chứng từ không được vượt 500 ký tự'
+    );
   });
 });
 

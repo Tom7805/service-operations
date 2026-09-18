@@ -1,5 +1,6 @@
 import type {
   ExpenseBillableReq,
+  ExpenseCreateReq,
   ExpenseRejectReq,
   ExpenseRes,
   OverheadAllocationRes,
@@ -53,6 +54,33 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
   }
 
   return payload.data as T;
+}
+
+/**
+ * NCL-08-CN-001: ghi nhận một phiếu chi phí phát sinh của dự án. Chỉ Nhân viên chuyên môn
+ * (VT-03) và dự án phải đang `RUNNING` — nếu không, backend trả `400 INVALID_STATE`. Phiếu
+ * tạo mới luôn ở trạng thái `SUBMITTED`, chờ Kế toán duyệt (NCL-08-CN-002).
+ * POST /projects/{projectId}/expenses
+ */
+export async function createExpense(projectId: number, payload: ExpenseCreateReq): Promise<ExpenseRes> {
+  return requestBackend<ExpenseRes>(`${API_BASE_URL}/projects/${projectId}/expenses`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * NCL-08-CN-001: sửa và nộp lại một phiếu chi phí đang ở trạng thái `REJECTED`. Chỉ người
+ * tạo phiếu (VT-03) mới được sửa — backend trả `403 FORBIDDEN` nếu không phải chủ phiếu và
+ * `400 INVALID_STATE` nếu phiếu không ở trạng thái `REJECTED`. Nộp lại chuyển phiếu về
+ * `SUBMITTED` và xóa thông tin từ chối cũ.
+ * PUT /expenses/{expenseId}
+ */
+export async function updateRejectedExpense(expenseId: number, payload: ExpenseCreateReq): Promise<ExpenseRes> {
+  return requestBackend<ExpenseRes>(`${API_BASE_URL}/expenses/${expenseId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
 }
 
 /**
