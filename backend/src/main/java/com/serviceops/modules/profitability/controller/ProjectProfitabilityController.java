@@ -5,6 +5,7 @@ import com.serviceops.modules.profitability.dto.response.ProjectLaborCostRes;
 import com.serviceops.modules.profitability.dto.response.ProjectMarginRes;
 import com.serviceops.modules.profitability.dto.response.RecognizedRevenueRes;
 import com.serviceops.modules.profitability.service.LaborCostService;
+import com.serviceops.modules.profitability.service.MarginAlertService;
 import com.serviceops.modules.profitability.service.ProjectMarginService;
 import com.serviceops.modules.profitability.service.RevenueRecognitionService;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class ProjectProfitabilityController {
 	private final LaborCostService laborCostService;
 	private final ProjectMarginService projectMarginService;
 	private final RevenueRecognitionService revenueRecognitionService;
+	private final MarginAlertService marginAlertService;
 
 	@GetMapping("/labor-cost")
 	@PreAuthorize("hasAnyRole('VT-01', 'VT-02', 'VT-05')")
@@ -40,6 +42,9 @@ public class ProjectProfitabilityController {
 	@GetMapping("/margin")
 	@PreAuthorize("hasAnyRole('VT-01', 'VT-02', 'VT-05')")
 	public BaseRes<ProjectMarginRes> getProjectMargin(@PathVariable Long projectId) {
-		return BaseRes.ok(projectMarginService.calculateProjectMargin(projectId));
+		ProjectMarginRes margin = projectMarginService.calculateProjectMargin(projectId);
+		// NCL-09-CN-004 (TC-01): moi lan tinh lai bien loi nhuan la moi lan danh gia canh bao am bien.
+		marginAlertService.evaluateAndAlert(projectId, margin);
+		return BaseRes.ok(margin);
 	}
 }
