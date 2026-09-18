@@ -1,4 +1,4 @@
-import type { ProjectLaborCostRes } from '../types/profitabilityTypes';
+import type { ProjectLaborCostRes, RecognizedRevenueRes } from '../types/profitabilityTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -65,6 +65,24 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
 export async function getProjectLaborCost(projectId: number): Promise<ProjectLaborCostRes> {
   return requestBackend<ProjectLaborCostRes>(
     `${API_BASE_URL}/projects/${projectId}/profitability/labor-cost`,
+    {
+      method: 'GET',
+    }
+  );
+}
+
+/**
+ * NCL-09-CN-002: Tính doanh thu ghi nhận của một dự án theo đúng loại hợp đồng.
+ *
+ * Cho phép VT-01 (Ban giám đốc), VT-05 (Kế toán) — vai trò khác nhận `403 FORBIDDEN`.
+ * GET /projects/{projectId}/profitability/revenue
+ *
+ * Hợp đồng `MAINTENANCE`/`MILESTONE` chưa được hỗ trợ, trả về `400 INVALID_STATE`
+ * (bắn `ProfitabilityApiError` với thông điệp lỗi từ backend).
+ */
+export async function getProjectRecognizedRevenue(projectId: number): Promise<RecognizedRevenueRes> {
+  return requestBackend<RecognizedRevenueRes>(
+    `${API_BASE_URL}/projects/${projectId}/profitability/revenue`,
     {
       method: 'GET',
     }

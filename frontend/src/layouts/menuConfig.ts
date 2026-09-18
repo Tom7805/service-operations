@@ -35,6 +35,7 @@ export type Tab =
   | 'EXPENSE_APPROVAL'
   | 'OVERHEAD_ALLOCATION'
   | 'PROJECT_LABOR_COST'
+  | 'PROJECT_RECOGNIZED_REVENUE'
   | 'NOTIFICATIONS';
 
 export interface NavItem {
@@ -130,6 +131,12 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
     // Hiển thị KPI tổng hợp + bảng chi tiết từng dòng. Dữ liệu nhạy cảm (đơn giá, giá vốn)
     // được backend masking; frontend dùng canViewSensitiveData để kiểm soát hiển thị.
     matches: ['PROJECT_LABOR_COST'],
+  },
+  {
+    tab: 'PROJECT_RECOGNIZED_REVENUE', icon: ICONS.chart, label: 'Doanh thu ghi nhận', requires: ['VT-01', 'VT-05'],
+    // NCL-09-CN-002: tính động doanh thu ghi nhận của dự án theo đúng loại hợp đồng
+    // (giờ công đã duyệt × đơn giá, hoặc giá trị hợp đồng × tỷ lệ hoàn thành). Chỉ
+    // Ban giám đốc (VT-01) và Kế toán (VT-05) xem được — khớp @PreAuthorize backend.
   },
   { tab: 'OPPORTUNITY_DETAIL', icon: ICONS.building, label: 'Cơ hộp', requires: ['VT-04'] },
 ];

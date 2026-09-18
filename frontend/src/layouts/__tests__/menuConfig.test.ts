@@ -91,6 +91,7 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'EXPENSE_APPROVAL',
       'OVERHEAD_ALLOCATION',
       'PROJECT_LABOR_COST',
+      'PROJECT_RECOGNIZED_REVENUE',
     ]);
   });
 
@@ -162,6 +163,7 @@ describe('navGroupsFor — bỏ qua nhóm không có mục hiển thị', () => 
       'EXPENSE_APPROVAL',
       'OVERHEAD_ALLOCATION',
       'PROJECT_LABOR_COST',
+      'PROJECT_RECOGNIZED_REVENUE',
     ]);
   });
 

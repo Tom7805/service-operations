@@ -30,6 +30,7 @@ import UnsubmittedTimesheetsPage from './modules/timesheets/pages/UnsubmittedTim
 import ExpenseApprovalPage from './modules/expenses/pages/ExpenseApprovalPage';
 import OverheadAllocationPage from './modules/expenses/pages/OverheadAllocationPage';
 import ProjectLaborCostPage from './modules/profitability/pages/ProjectLaborCostPage';
+import ProjectRecognizedRevenuePage from './modules/profitability/pages/ProjectRecognizedRevenuePage';
 import NotificationCenterPage from './modules/notifications/pages/NotificationCenterPage';
 import NotificationList from './modules/notifications/components/NotificationList';
 import { getNotifications, getUnreadCount, markNotificationsRead } from './modules/notifications/api/notificationsApi';
@@ -469,6 +470,50 @@ export default function App() {
             <ExpenseApprovalPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'OVERHEAD_ALLOCATION' ? (
             <OverheadAllocationPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+          ) : activeTab === 'PROJECT_RECOGNIZED_REVENUE' && selectedProjectId ? (
+            <ProjectRecognizedRevenuePage
+              projectId={selectedProjectId}
+              currentUserRoles={currentRoles}
+              onBack={() => { setSelectedProjectId(null); }}
+            />
+          ) : activeTab === 'PROJECT_RECOGNIZED_REVENUE' ? (
+            <div className="user-management-page">
+              <div className="page-header">
+                <div>
+                  <div className="page-header__kicker">
+                    <span className="page-header__tag">{ICONS.chart} DOANH THU GHI NHẬN</span>
+                    <span className="page-header__dot" />
+                    <span className="page-header__meta">CHƯA CHỌN DỰ ÁN</span>
+                  </div>
+                  <h1 className="page-title">Doanh thu ghi nhận dự án</h1>
+                  <p className="page-subtitle">
+                    Chọn một dự án để xem doanh thu ghi nhận.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ marginTop: '16px' }}>
+                <select
+                  className="form-select"
+                  style={{ padding: '8px 12px', fontSize: '14px', minWidth: '320px' }}
+                  value=""
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val) setSelectedProjectId(Number(val));
+                  }}
+                  data-testid="project-selector-dropdown"
+                >
+                  <option value="" disabled>
+                    -- Chọn dự án --
+                  </option>
+                  {mockProjects.map((proj) => (
+                    <option key={proj.id} value={proj.id}>
+                      {proj.projectCode} — {proj.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           ) : activeTab === 'CUSTOMERS' ? (
             <CustomerListPage
               currentUserRoles={currentRoles}
