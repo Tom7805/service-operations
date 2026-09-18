@@ -2,6 +2,8 @@ import type {
   ExpenseBillableReq,
   ExpenseRejectReq,
   ExpenseRes,
+  OverheadAllocationRes,
+  OverheadAllocationRunReq,
   SubcontractorExpenseCreateReq,
   SubcontractorExpenseRes,
 } from '../types/expenseTypes';
@@ -137,5 +139,20 @@ export async function createSubcontractorExpense(
 export async function getProjectSubcontractorExpenses(projectId: number): Promise<SubcontractorExpenseRes[]> {
   return requestBackend<SubcontractorExpenseRes[]>(`${API_BASE_URL}/projects/${projectId}/subcontractor-expenses`, {
     method: 'GET',
+  });
+}
+
+/**
+ * NCL-08-CN-005: chạy phân bổ chi phí chung cho kỳ (tháng) theo tỷ trọng giờ công đã duyệt
+ * của từng dự án trong kỳ. Chỉ Kế toán (VT-05). Mỗi kỳ chỉ được phân bổ một lần — chạy lại
+ * cho kỳ đã phân bổ nhận `400 DUPLICATE_DATA`; kỳ chưa có giờ công nào được duyệt nhận
+ * `400 INVALID_STATE`. Không có endpoint đọc lại lịch sử — kết quả chỉ trả về ngay sau khi
+ * chạy (đã được ghi Nhật ký hệ thống ở backend).
+ * POST /overhead-allocations/run
+ */
+export async function runOverheadAllocation(payload: OverheadAllocationRunReq): Promise<OverheadAllocationRes> {
+  return requestBackend<OverheadAllocationRes>(`${API_BASE_URL}/overhead-allocations/run`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
   });
 }

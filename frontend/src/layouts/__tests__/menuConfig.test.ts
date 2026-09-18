@@ -87,6 +87,8 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'OPPORTUNITIES',
       'BILL_RATES',
       'RATE_HISTORY',
+      'EXPENSE_APPROVAL',
+      'OVERHEAD_ALLOCATION',
     ]);
   });
 
@@ -155,6 +157,8 @@ describe('navGroupsFor — bỏ qua nhóm không có mục hiển thị', () => 
       'OPPORTUNITIES',
       'BILL_RATES',
       'RATE_HISTORY',
+      'EXPENSE_APPROVAL',
+      'OVERHEAD_ALLOCATION',
     ]);
   });
 

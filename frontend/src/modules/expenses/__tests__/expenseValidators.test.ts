@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { validateExpenseRejectReason, validateSubcontractorExpenseForm } from '../validators/expenseValidators';
+import {
+  validateExpenseRejectReason,
+  validateOverheadAllocationForm,
+  validateSubcontractorExpenseForm,
+} from '../validators/expenseValidators';
 
 describe('validateExpenseRejectReason (NCL-08-CN-002)', () => {
   it('báo lỗi khi lý do rỗng', () => {
@@ -72,6 +76,40 @@ describe('validateSubcontractorExpenseForm (NCL-08-CN-004)', () => {
     const futureIso = future.toISOString().slice(0, 10);
     expect(validateSubcontractorExpenseForm({ ...VALID_INPUT, incurredPeriod: futureIso }).incurredPeriod).toBe(
       'Kỳ phát sinh không được ở tương lai'
+    );
+  });
+});
+
+describe('validateOverheadAllocationForm (NCL-08-CN-005)', () => {
+  const VALID_INPUT = { year: '2026', month: '6', totalAmount: '50000000' };
+
+  it('hợp lệ khi đầy đủ dữ liệu đúng ràng buộc', () => {
+    expect(validateOverheadAllocationForm(VALID_INPUT)).toEqual({});
+  });
+
+  it('báo lỗi khi năm rỗng hoặc ngoài khoảng hợp lệ', () => {
+    expect(validateOverheadAllocationForm({ ...VALID_INPUT, year: '' }).year).toBe('Năm không được để trống');
+    expect(validateOverheadAllocationForm({ ...VALID_INPUT, year: '1999' }).year).toBe('Năm không hợp lệ');
+  });
+
+  it('báo lỗi khi tháng rỗng hoặc ngoài khoảng 1-12', () => {
+    expect(validateOverheadAllocationForm({ ...VALID_INPUT, month: '' }).month).toBe('Tháng không được để trống');
+    expect(validateOverheadAllocationForm({ ...VALID_INPUT, month: '0' }).month).toBe('Tháng phải từ 1 đến 12');
+    expect(validateOverheadAllocationForm({ ...VALID_INPUT, month: '13' }).month).toBe('Tháng phải từ 1 đến 12');
+  });
+
+  it('báo lỗi khi tổng chi phí chung rỗng, không phải số hoặc không dương', () => {
+    expect(validateOverheadAllocationForm({ ...VALID_INPUT, totalAmount: '' }).totalAmount).toBe(
+      'Tổng chi phí chung không được để trống'
+    );
+    expect(validateOverheadAllocationForm({ ...VALID_INPUT, totalAmount: 'abc' }).totalAmount).toBe(
+      'Tổng chi phí chung không được để trống'
+    );
+    expect(validateOverheadAllocationForm({ ...VALID_INPUT, totalAmount: '0' }).totalAmount).toBe(
+      'Tổng chi phí chung phải lớn hơn 0'
+    );
+    expect(validateOverheadAllocationForm({ ...VALID_INPUT, totalAmount: '-100' }).totalAmount).toBe(
+      'Tổng chi phí chung phải lớn hơn 0'
     );
   });
 });

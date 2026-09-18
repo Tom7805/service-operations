@@ -54,3 +54,39 @@ export function validateSubcontractorExpenseForm(input: {
 
   return errors;
 }
+
+/**
+ * Các lỗi validate form phân bổ chi phí chung (NCL-08-CN-005), khớp ràng buộc backend
+ * `OverheadAllocationRunReq`. Không giới hạn năm ở tương lai — Kế toán có thể cần khai
+ * báo trước cho kỳ sắp tới, backend tự từ chối nếu kỳ đó chưa có giờ công được duyệt.
+ */
+export interface OverheadAllocationFormErrors {
+  year?: string;
+  month?: string;
+  totalAmount?: string;
+}
+
+export function validateOverheadAllocationForm(input: {
+  year: string;
+  month: string;
+  totalAmount: string;
+}): OverheadAllocationFormErrors {
+  const errors: OverheadAllocationFormErrors = {};
+
+  const year = Number(input.year);
+  if (!input.year.trim() || !Number.isInteger(year)) errors.year = 'Năm không được để trống';
+  else if (year < 2000 || year > 2100) errors.year = 'Năm không hợp lệ';
+
+  const month = Number(input.month);
+  if (!input.month.trim() || !Number.isInteger(month)) errors.month = 'Tháng không được để trống';
+  else if (month < 1 || month > 12) errors.month = 'Tháng phải từ 1 đến 12';
+
+  const totalAmount = Number(input.totalAmount);
+  if (!input.totalAmount.trim() || Number.isNaN(totalAmount)) {
+    errors.totalAmount = 'Tổng chi phí chung không được để trống';
+  } else if (totalAmount <= 0) {
+    errors.totalAmount = 'Tổng chi phí chung phải lớn hơn 0';
+  }
+
+  return errors;
+}
