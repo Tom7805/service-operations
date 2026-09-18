@@ -6,6 +6,7 @@ import com.serviceops.modules.profitability.controller.ProjectProfitabilityContr
 import com.serviceops.modules.profitability.dto.response.RecognizedRevenueRes;
 import com.serviceops.modules.profitability.enums.RecognitionMethod;
 import com.serviceops.modules.profitability.service.LaborCostService;
+import com.serviceops.modules.profitability.service.ProjectMarginService;
 import com.serviceops.modules.profitability.service.RevenueRecognitionService;
 import com.serviceops.security.CustomUserDetailsService;
 import com.serviceops.security.JwtAuthFilter;
@@ -40,6 +41,9 @@ class RevenueRecognitionControllerIT {
 
 	@MockBean
 	private LaborCostService laborCostService;
+
+	@MockBean
+	private ProjectMarginService projectMarginService;
 
 	@MockBean
 	private JwtProvider jwtProvider;
