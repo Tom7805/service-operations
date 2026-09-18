@@ -53,6 +53,9 @@ class RevenueRecognitionControllerIT {
 	private com.serviceops.modules.profitability.service.MarginComparisonService marginComparisonService;
 
 	@MockBean
+	private com.serviceops.modules.profitability.service.ProfitForecastService profitForecastService;
+
+	@MockBean
 	private JwtProvider jwtProvider;
 
 	@MockBean
