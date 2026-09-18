@@ -34,6 +34,7 @@ export type Tab =
   | 'UNSUBMITTED_TIMESHEETS'
   | 'EXPENSE_APPROVAL'
   | 'OVERHEAD_ALLOCATION'
+  | 'PROJECT_RECOGNIZED_REVENUE'
   | 'NOTIFICATIONS';
 
 export interface NavItem {
@@ -122,6 +123,12 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
     tab: 'OVERHEAD_ALLOCATION', icon: ICONS.chart, label: 'Phân bổ chi phí chung', requires: ['VT-05'],
     // NCL-08-CN-005: Kế toán chia tổng chi phí chung phát sinh trong kỳ (tháng) cho các
     // dự án theo tỷ trọng giờ công đã duyệt trong kỳ đó.
+  },
+  {
+    tab: 'PROJECT_RECOGNIZED_REVENUE', icon: ICONS.chart, label: 'Doanh thu ghi nhận', requires: ['VT-01', 'VT-05'],
+    // NCL-09-CN-002: tính động doanh thu ghi nhận của dự án theo đúng loại hợp đồng
+    // (giờ công đã duyệt × đơn giá, hoặc giá trị hợp đồng × tỷ lệ hoàn thành). Chỉ
+    // Ban giám đốc (VT-01) và Kế toán (VT-05) xem được — khớp @PreAuthorize backend.
   },
   { tab: 'OPPORTUNITY_DETAIL', icon: ICONS.building, label: 'Cơ hộp', requires: ['VT-04'] },
 ];
