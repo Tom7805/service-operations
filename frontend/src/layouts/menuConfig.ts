@@ -33,9 +33,9 @@ export type Tab =
   | 'TIMESHEET_PERIOD'
   | 'UNSUBMITTED_TIMESHEETS'
   | 'EXPENSE_APPROVAL'
-   | 'OVERHEAD_ALLOCATION'
-   | 'PROJECT_LABOR_COST'
-   | 'NOTIFICATIONS';
+  | 'OVERHEAD_ALLOCATION'
+  | 'PROJECT_LABOR_COST'
+  | 'NOTIFICATIONS';
 
 export interface NavItem {
   tab: Tab;
