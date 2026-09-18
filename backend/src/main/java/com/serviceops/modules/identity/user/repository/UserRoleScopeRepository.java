@@ -15,4 +15,8 @@ public interface UserRoleScopeRepository extends JpaRepository<UserRoleScope, Lo
     List<String> findRoleCodesByUserId(@Param("userId") Long userId);
 
     List<UserRoleScope> findByUser_Id(Long userId);
+
+    /** NCL-09-CN-004: tim tat ca user dang giu mot vai tro (vd VT-01) de gui canh bao am bien. */
+    @Query("select distinct urs.user.id from UserRoleScope urs where urs.role.code = :roleCode")
+    List<Long> findUserIdsByRoleCode(@Param("roleCode") String roleCode);
 }
