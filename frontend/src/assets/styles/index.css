@@ -2299,8 +2299,8 @@ body { background: var(--canvas); }
 
 /* ---------- Xổ trang: các khối chính vào theo tầng ---------- */
 @keyframes block-in {
-  from { opacity: 0; transform: translate3d(0, 4px, 0); }
-  to   { opacity: 1; transform: none; }
+  from { opacity: 0; transform: translate3d(0, 4px, 0); will-change: opacity, transform; }
+  to   { opacity: 1; transform: none; will-change: auto; }
 }
 
 /* Mỗi khối trực tiếp của trang là một tầng. Dùng nth-child nên áp được cho cả 13
@@ -2323,9 +2323,15 @@ body { background: var(--canvas); }
 .user-management-page > .tree-content-wrapper,
 .user-management-page > .user-table-card { animation: none; }
 
-/* Chi promote lop cho cac khoi cap trang (it, va thuc su co hoat hinh).
-   taste-skill 6.A: will-change dung tiet che, chi tren phan tu that su se chay. */
-.user-management-page > *:not(.stats-grid):not(.user-table-card):not(.tree-content-wrapper) { will-change: opacity, transform; }
+/* will-change nay o trong @keyframes block-in (0%: bat, 100%: auto) chu KHONG
+   phai mot rule tinh gan vinh vien nhu truoc — gan vinh vien ep moi khoi con
+   thanh mot lop GPU rieng mai mai (khong chi luc chay hoat hinh), lam so
+   luong lop composite tich luy theo tung trang tang dan khong gioi han. Day
+   la nguyen nhan gay treo trang khi boi den van ban lap lai nhieu lan (mot
+   loi hiem cua Chromium khi vung chon van ban giao voi ranh gioi nhieu lop
+   composite will-change chong nhau) — bao cao thuc te tren build ngay
+   2026-09-20, tai hien on dinh bang: chon nhan su → chon dong gio cong → tra
+   don gia → boi den/bam ra cho trong lap lai vai lan tren trang Bang don gia. */
 .user-management-page > * { animation-fill-mode: both; }
 
 /* ---------- Khoang chỉ số: xổ lần lượt trái sang phải ---------- */

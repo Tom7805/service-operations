@@ -123,6 +123,19 @@ export default function App() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Chan hanh vi KEO van ban da boi den (mac dinh cua trinh duyet, khong can JS
+  // nao khoi tao) — ung dung khong dung drag-and-drop o dau ca nen chan an
+  // toan tuyet doi. Ly do them: nguoi dung boi den chu roi bam ra cho trong
+  // nhieu lan lam trang treo cung, khong bam duoc gi nua (ke ca F12), chi
+  // reload moi het — dung dau hieu cua mot phien keo-tha cap he dieu hanh
+  // (OLE drag) bi ket do tha khong dung vi tri hop le, thay vi mot loi
+  // JavaScript (ung dung khong co code nao lang nghe drag/selection ca).
+  useEffect(() => {
+    const preventTextDrag = (e: DragEvent) => e.preventDefault();
+    document.addEventListener('dragstart', preventTextDrag);
+    return () => document.removeEventListener('dragstart', preventTextDrag);
+  }, []);
+
   function persistSession(next: AuthSession) {
     localStorage.setItem('token', next.accessToken);
     localStorage.setItem('session', JSON.stringify(next));
@@ -151,7 +164,10 @@ export default function App() {
     const fetchUnread = async () => {
       try {
         const count = await getUnreadCount();
-        if (!cancelled) setUnreadCount(count);
+        // Chi set lai khi so thuc su doi — tranh re-render toan bo App (gom ca
+        // trang dang xem) moi 30s khi so chua doc khong doi, ly do khien vung
+        // van ban nguoi dung dang boi den bi DOM dung cham vo co dinh ky.
+        if (!cancelled) setUnreadCount((prev) => (prev === count ? prev : count));
       } catch {
         // Bỏ qua lỗi đếm chưa đọc — không làm gián đoạn trải nghiệm chính.
       }
