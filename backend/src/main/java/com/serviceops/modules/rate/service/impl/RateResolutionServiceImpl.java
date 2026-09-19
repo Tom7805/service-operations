@@ -4,6 +4,8 @@ import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.identity.employee.entity.Employee;
 import com.serviceops.modules.identity.employee.repository.EmployeeRepository;
+import com.serviceops.modules.identity.user.entity.User;
+import com.serviceops.modules.identity.user.repository.UserRepository;
 import com.serviceops.modules.project.entity.Project;
 import com.serviceops.modules.project.entity.Task;
 import com.serviceops.modules.project.repository.ProjectRepository;
@@ -11,15 +13,22 @@ import com.serviceops.modules.project.repository.TaskRepository;
 import com.serviceops.modules.rate.dto.request.RateLookupReq;
 import com.serviceops.modules.rate.dto.response.ResolvedContractBillRateRes;
 import com.serviceops.modules.rate.dto.response.ResolvedRateRes;
+import com.serviceops.modules.rate.dto.response.TimeEntryLookupCandidateRes;
+import com.serviceops.modules.rate.dto.response.TimeEntryLookupEmployeeRes;
 import com.serviceops.modules.rate.service.ContractBillRateService;
 import com.serviceops.modules.rate.service.RateResolutionService;
 import com.serviceops.modules.rate.service.WorkTypeRateService;
 import com.serviceops.modules.timesheet.entity.TimeEntry;
+import com.serviceops.modules.timesheet.enums.TimeEntryStatus;
 import com.serviceops.modules.timesheet.repository.TimeEntryRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.RoundingMode;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -29,6 +38,7 @@ public class RateResolutionServiceImpl implements RateResolutionService {
 	private final TaskRepository taskRepository;
 	private final ProjectRepository projectRepository;
 	private final EmployeeRepository employeeRepository;
+	private final UserRepository userRepository;
 	private final ContractBillRateService contractBillRateService;
 	private final WorkTypeRateService workTypeRateService;
 
@@ -36,12 +46,14 @@ public class RateResolutionServiceImpl implements RateResolutionService {
 									  TaskRepository taskRepository,
 									  ProjectRepository projectRepository,
 									  EmployeeRepository employeeRepository,
+									  UserRepository userRepository,
 									  ContractBillRateService contractBillRateService,
 									  WorkTypeRateService workTypeRateService) {
 		this.timeEntryRepository = timeEntryRepository;
 		this.taskRepository = taskRepository;
 		this.projectRepository = projectRepository;
 		this.employeeRepository = employeeRepository;
+		this.userRepository = userRepository;
 		this.contractBillRateService = contractBillRateService;
 		this.workTypeRateService = workTypeRateService;
 	}
@@ -137,5 +149,62 @@ public class RateResolutionServiceImpl implements RateResolutionService {
 				role, level, entry.getWorkDate(), entry.getHours(), entry.getWorkType(),
 				resolved.dailyRate(), resolved.effectiveFrom(), resolved.isContractSpecific(),
 				factor, appliedDailyRate);
+	}
+
+	@Override
+	public List<TimeEntryLookupEmployeeRes> findEmployeesWithApprovedEntries() {
+		List<Long> userIds = timeEntryRepository.findDistinctUserIdsWithApprovedEntries();
+		if (userIds.isEmpty()) {
+			return List.of();
+		}
+		Map<Long, User> userById = userRepository.findAllById(userIds).stream()
+				.collect(Collectors.toMap(User::getId, Function.identity()));
+		Map<Long, Employee> employeeByUserId = employeeRepository.findByUser_IdIn(userIds).stream()
+				.collect(Collectors.toMap(e -> e.getUser().getId(), Function.identity()));
+
+		return userIds.stream()
+				.map(userId -> {
+					User user = userById.get(userId);
+					Employee employee = employeeByUserId.get(userId);
+					String fullName = user == null ? "Nhan su #" + userId : user.getFullName();
+					String level = employee == null ? null : employee.getLevel();
+					return new TimeEntryLookupEmployeeRes(userId, fullName, level);
+				})
+				.sorted((a, b) -> a.fullName().compareToIgnoreCase(b.fullName()))
+				.toList();
+	}
+
+	@Override
+	public List<TimeEntryLookupCandidateRes> findLookupCandidates(Long userId) {
+		if (userId == null) {
+			throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR, "Phai chon nhan su truoc khi xem dong gio cong");
+		}
+		List<TimeEntry> entries = timeEntryRepository
+				.findByStatusAndUserIdOrderByWorkDateDescIdDesc(TimeEntryStatus.APPROVED, userId);
+		if (entries.isEmpty()) {
+			return List.of();
+		}
+
+		Map<Long, Task> taskById = taskRepository
+				.findAllById(entries.stream().map(TimeEntry::getTaskId).distinct().toList()).stream()
+				.collect(Collectors.toMap(Task::getId, Function.identity()));
+		Map<Long, Project> projectById = projectRepository
+				.findAllById(taskById.values().stream().map(Task::getProjectId).distinct().toList()).stream()
+				.collect(Collectors.toMap(Project::getId, Function.identity()));
+		User user = userRepository.findById(userId).orElse(null);
+		String userName = user == null ? "" : user.getFullName();
+
+		List<TimeEntryLookupCandidateRes> result = new java.util.ArrayList<>();
+		for (TimeEntry entry : entries) {
+			Task task = taskById.get(entry.getTaskId());
+			if (task == null) {
+				continue;
+			}
+			Project project = projectById.get(task.getProjectId());
+			result.add(new TimeEntryLookupCandidateRes(entry.getId(), entry.getWorkDate(), entry.getUserId(),
+					userName, project == null ? null : project.getId(), project == null ? "" : project.getName(),
+					task.getId(), task.getName(), entry.getHours()));
+		}
+		return result;
 	}
 }
