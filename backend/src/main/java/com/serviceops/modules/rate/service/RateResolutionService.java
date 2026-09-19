@@ -2,6 +2,10 @@ package com.serviceops.modules.rate.service;
 
 import com.serviceops.modules.rate.dto.request.RateLookupReq;
 import com.serviceops.modules.rate.dto.response.ResolvedRateRes;
+import com.serviceops.modules.rate.dto.response.TimeEntryLookupCandidateRes;
+import com.serviceops.modules.rate.dto.response.TimeEntryLookupEmployeeRes;
+
+import java.util.List;
 
 public interface RateResolutionService {
 
@@ -30,4 +34,19 @@ public interface RateResolutionService {
 	 * cap bac trong ho so nhan su.</p>
 	 */
 	ResolvedRateRes resolveForTimeEntry(Long timeEntryId);
+
+	/**
+	 * Danh sach nhan su DA TUNG co dong gio cong duoc duyet, sap theo ho ten — nguon danh sach
+	 * "Chon nhan su" khi Ke toan/Quan tri vien tra don gia (NCL-07-CN-005), thay vi phai tu
+	 * biet truoc "ID dong gio cong".
+	 */
+	List<TimeEntryLookupEmployeeRes> findEmployeesWithApprovedEntries();
+
+	/**
+	 * Danh sach dong gio cong DA DUYET cua MOT nhan su, moi nhat truoc — de Ke toan/Quan tri
+	 * vien chon truc tiep sau khi da chon nhan su o buoc tren (NCL-07-CN-005).
+	 *
+	 * @param userId ma nhan su can xem cac dong gio cong da duyet.
+	 */
+	List<TimeEntryLookupCandidateRes> findLookupCandidates(Long userId);
 }
