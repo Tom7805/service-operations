@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -43,6 +44,14 @@ public class InvoiceServiceImpl implements InvoiceService {
 				? EnumSet.allOf(InvoiceStatus.class)
 				: statuses;
 		return toResponses(invoiceRepository.search(contractId, filter));
+	}
+
+	@Override
+	public List<InvoiceDetailRes> listOverdue(LocalDate today, Long customerId) {
+		return toResponses(invoiceRepository.findOverdue(
+				EnumSet.of(InvoiceStatus.ISSUED, InvoiceStatus.PARTIALLY_PAID), today, customerId)).stream()
+				.filter(invoice -> invoice.remainingAmount().signum() > 0)
+				.toList();
 	}
 
 	@Override
@@ -91,8 +100,8 @@ public class InvoiceServiceImpl implements InvoiceService {
 			return new InvoiceDetailRes(invoice.getId(), invoice.getInvoiceCode(), invoice.getContractId(),
 					contract == null ? null : contract.getContractCode(), invoice.getCustomerId(),
 					customer == null ? null : customer.getName(), invoice.getStatus().name(), total, paid,
-					total.subtract(paid), invoice.getInvoiceDate(), invoice.getNote(), invoice.getCreatedBy(),
-					invoice.getCreatedAt());
+					total.subtract(paid), invoice.getInvoiceDate(), invoice.getDueDate(), invoice.getNote(),
+					invoice.getCreatedBy(), invoice.getCreatedAt());
 		}).toList();
 	}
 }
