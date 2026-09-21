@@ -4598,6 +4598,151 @@ GET /bill-rates/history?professionalRole=Lap+trinh+vien+cao+cap&level=Cao+cap
 
 ## Epic `NCL-10` — Hóa đơn và thanh toán
 
+### `NCL-10-CN-001` — Tạo đề nghị xuất hóa đơn từ giờ công đã duyệt
+
+Yêu cầu token của **Kế toán** (`VT-05`). Kế toán chọn một dự án và một kỳ (khoảng ngày công); hệ thống gom các
+dòng giờ công **đã duyệt**, **có tính phí** và **chưa từng nằm trong một đề nghị nào** của dự án đó thành một
+**đề nghị xuất hóa đơn** kèm danh sách dòng và tổng tiền (QTN-18). Chỉ áp dụng cho hợp đồng theo giờ
+(`TIME_AND_MATERIAL`) — hợp đồng trọn gói/theo mốc đi qua `NCL-10-CN-002`, hợp đồng duy trì đi qua `NCL-10-CN-005`.
+
+**Dòng nào được gom** — xét theo `workDate` nằm trong `periodFrom`..`periodTo` (gồm cả hai đầu):
+
+| Dòng giờ công | Xử lý | Đếm ở `skipped` |
+|---|---|---|
+| Đã duyệt (`APPROVED`), có tính phí, chưa vào đề nghị nào, tra được đơn giá | **Được gom** | — |
+| Chưa duyệt (nháp, chờ duyệt hoặc bị từ chối) | Bỏ qua (TC-02) | `notApprovedCount` |
+| Đã duyệt nhưng không tính phí (`billable=false`) | Bỏ qua | `nonBillableCount` |
+| Đã nằm trong một đề nghị trước đó (TC-03) | Bỏ qua | `alreadyProposedCount` |
+| Đã duyệt, có tính phí nhưng chưa tra được đơn giá bán (nhân sự chưa khai báo cấp bậc, chưa có đơn giá hiệu lực...) | Bỏ qua — **không** làm lỗi cả đề nghị | `missingRateCount` |
+
+**Thành tiền mỗi dòng giờ công** = `hours × unitRate`, trong đó `unitRate` = đơn giá **ngày** áp dụng tại đúng
+`workDate` của dòng ÷ 8 (1 ngày công = 8 giờ). Đơn giá ngày lấy từ cùng nguồn với doanh thu ghi nhận
+`NCL-09-CN-002`: ưu tiên đơn giá riêng của hợp đồng rồi mới đến bảng giá chung (QTN-16), có hiệu lực tại ngày công
+(QTN-15) và đã nhân hệ số loại hình công việc (`NCL-07-CN-006`) — nên số tiền trên đề nghị khớp với báo cáo doanh thu.
+Dòng đảo/điều chỉnh đã duyệt (bút toán đảo, QTN-11) mang giờ **âm** nên thành tiền **âm**; vì vậy `laborAmount` và
+`totalAmount` có thể nhỏ hơn tổng các dòng dương, và trong trường hợp kỳ chỉ còn dòng đảo có thể âm.
+
+**Phiếu chi phí tính lại cho khách hàng:** cùng lượt gom, các phiếu chi phí của dự án có `expenseDate` trong kỳ,
+đã được duyệt (`APPROVED`), đã được đánh dấu tính lại (`billable=true`, `NCL-08-CN-003`) và chưa nằm trong đề nghị
+nào (`invoiced=false`) cũng được đưa vào đề nghị dưới dạng dòng `EXPENSE` (thành tiền = số tiền phiếu). Các phiếu này
+được đặt `invoiced=true`, nên từ đó `PUT /expenses/{expenseId}/billable` với `billable=false` bị từ chối
+(`400 INVALID_STATE`, xem `NCL-08-CN-003`).
+
+**Chống gom trùng:** mỗi dòng giờ công và mỗi phiếu chi phí chỉ nằm được trong **một** đề nghị (ràng buộc `UNIQUE`
+ở cơ sở dữ liệu). Các lượt tạo đề nghị của cùng một hợp đồng được xếp hàng tuần tự (khoá ghi dòng hợp đồng) nên hai
+kế toán bấm cùng lúc không thể gom trùng một dòng — người bấm sau sẽ thấy các dòng đó ở `alreadyProposedCount`.
+
+Mỗi lần tạo thành công ghi Nhật ký hệ thống (`action` = "Tao de nghi xuat hoa don tu gio cong", `targetType` =
+`INVOICE`, `targetId` = id đề nghị; người thực hiện và vai trò do hệ thống tự điền từ phiên đăng nhập, nội dung nêu dự án, kỳ,
+số dòng, tổng tiền và số dòng bị bỏ qua — TC-05) và gửi **thông báo trong ứng dụng** (`type` = `INVOICE_PROPOSAL_CREATED`,
+`referenceType` = `InvoiceProposal`, `referenceId` = id đề nghị) cho quản lý dự án (`Project.projectManagerId`). Lần bị
+từ chối quyền ghi "Từ chối truy cập" — chức năng "Tạo đề nghị xuất hóa đơn từ giờ công" (TC-04).
+
+#### `POST /projects/{projectId}/invoice-proposals`
+
+**Request:**
+
+```json
+{
+  "periodFrom": "2026-09-01",
+  "periodTo": "2026-09-30",
+  "note": "Ky thang 9"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `projectId` | number | có | Lấy từ URL; dự án phải tồn tại. |
+| `periodFrom` | date (`yyyy-MM-dd`) | có | Ngày công đầu tiên của kỳ. |
+| `periodTo` | date (`yyyy-MM-dd`) | có | Ngày công cuối cùng của kỳ; không được trước `periodFrom`. |
+| `note` | string | không | Ghi chú, tối đa 1000 ký tự; khoảng trắng hai đầu bị cắt. |
+
+**Response thành công — `200 OK`** (ví dụ rút gọn: kỳ có 3 dòng giờ công đã duyệt và 5 dòng còn chờ duyệt — TC-02; mảng `laborLines` chỉ hiển thị 1 trong 3 dòng):
+
+```json
+{
+  "success": true,
+  "message": "Tao de nghi xuat hoa don thanh cong: bo qua 5 dong gio cong (5 chua duyet, 0 khong tinh phi, 0 da nam trong de nghi truoc, 0 chua co don gia)",
+  "data": {
+    "id": 100,
+    "proposalCode": "IP-20261001-A1B2C3",
+    "projectId": 1,
+    "contractId": 5,
+    "customerId": 9,
+    "periodFrom": "2026-09-01",
+    "periodTo": "2026-09-30",
+    "status": "PENDING",
+    "laborAmount": 7200000.00,
+    "expenseAmount": 2000000.00,
+    "totalAmount": 9200000.00,
+    "note": "Ky thang 9",
+    "laborLines": [
+      {
+        "id": 1001,
+        "lineType": "LABOR",
+        "timeEntryId": 11,
+        "projectExpenseId": null,
+        "lineDate": "2026-09-10",
+        "userId": 3,
+        "hours": 8.00,
+        "unitRate": 300000.0000,
+        "description": "Gio cong ngay 2026-09-10 - Phat trien API",
+        "amount": 2400000.00
+      }
+    ],
+    "expenseLines": [
+      {
+        "id": 1004,
+        "lineType": "EXPENSE",
+        "timeEntryId": null,
+        "projectExpenseId": 50,
+        "lineDate": "2026-09-12",
+        "userId": null,
+        "hours": null,
+        "unitRate": null,
+        "description": "Chi phi TRAVEL: Ve may bay cong tac",
+        "amount": 2000000.00
+      }
+    ],
+    "skipped": {
+      "notApprovedCount": 5,
+      "nonBillableCount": 0,
+      "alreadyProposedCount": 0,
+      "missingRateCount": 0
+    },
+    "createdBy": "ketoan01",
+    "createdAt": "2026-10-01T10:00:00"
+  }
+}
+```
+
+`laborLines` và `expenseLines` sắp theo ngày tăng dần; `laborAmount` = tổng `amount` của `laborLines`,
+`expenseAmount` = tổng `amount` của `expenseLines`, `totalAmount` = `laborAmount + expenseAmount`. `message` chỉ
+kèm phần "bo qua N dong gio cong (...)" khi có ít nhất một dòng bị bỏ qua; số chi tiết luôn có ở `data.skipped`.
+`status` của đề nghị mới luôn là `PENDING` (chờ lập hóa đơn).
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`); hệ thống ghi "Từ chối truy cập" (TC-04). |
+| 404 | `RESOURCE_NOT_FOUND` | Không có dự án `{projectId}` hoặc không tìm thấy hợp đồng của dự án. |
+| 400 | `INVALID_STATE` | Hợp đồng của dự án không phải `TIME_AND_MATERIAL`; hoặc kỳ **không có dòng giờ công/phiếu chi phí nào đủ điều kiện** (khi đó `message` nêu số dòng bị bỏ qua theo từng lý do và **không** tạo đề nghị rỗng). |
+| 400 | `VALIDATION_ERROR` | Thiếu `periodFrom`/`periodTo` (kèm `fieldErrors`), ngày sai định dạng hoặc không có body, `periodFrom` sau `periodTo`, hoặc `note` quá dài. |
+
+**Ghi chú cho Frontend:**
+- Sau khi tạo, nếu `skipped.total > 0` nên hiển thị cảnh báo "bỏ qua N dòng" kèm chi tiết từng lý do; với
+  `notApprovedCount > 0` gợi ý quản lý dự án duyệt nốt bảng chấm công rồi tạo lại đề nghị cho các dòng còn lại; với
+  `missingRateCount > 0` gợi ý bổ sung cấp bậc nhân sự / đơn giá (`NCL-07-CN-001`, `NCL-01-CN-007`).
+- Tạo lại đề nghị cho **cùng kỳ** là hợp lệ: các dòng đã vào đề nghị trước hiện ở `alreadyProposedCount`, chỉ các dòng
+  mới duyệt thêm được gom. Nếu không còn dòng nào, API trả `400 INVALID_STATE` (không phải đề nghị rỗng).
+- `totalAmount` có thể `<= 0` khi kỳ chỉ còn dòng đảo (QTN-11) — hiển thị số âm, không coi là lỗi.
+- Thông báo `INVOICE_PROPOSAL_CREATED` đọc qua `GET /notifications` như các thông báo khác; loại này chưa có biểu
+  tượng riêng ở màn hình Thông báo nên sẽ dùng biểu tượng chuông mặc định.
+- Chưa có API đọc/liệt kê đề nghị hoặc lập hóa đơn từ đề nghị (các story sau của Epic `NCL-10`); dùng `data` của response
+  trên để hiển thị.
+
 ### `NCL-10-CN-002` — Lập hóa đơn theo mốc hợp đồng
 
 Yêu cầu token của **Kế toán** (`VT-05`). Kế toán chọn một mốc thanh toán đã **đủ điều kiện lập hóa đơn**
