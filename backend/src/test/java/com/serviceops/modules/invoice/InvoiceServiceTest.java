@@ -135,6 +135,37 @@ class InvoiceServiceTest {
 		verify(paymentRepository, never()).findByInvoiceIdOrderByPaymentDateDescIdDesc(99L);
 	}
 
+	@Test
+	void listsOnlyOverdueInvoicesThatStillHaveAmountDue() {
+		LocalDate today = LocalDate.of(2026, 9, 21);
+		Invoice unpaid = invoice(9L, InvoiceStatus.ISSUED, "100000000.00");
+		Invoice settledButStillPartial = invoice(8L, InvoiceStatus.PARTIALLY_PAID, "50000000.00");
+		when(invoiceRepository.findOverdue(any(), eq(today), eq(3L)))
+				.thenReturn(List.of(unpaid, settledButStillPartial));
+		when(paymentRepository.sumAmountByInvoiceIdIn(any()))
+				.thenReturn(List.<Object[]>of(new Object[] {8L, new BigDecimal("50000000.00")}));
+		stubContractAndCustomer();
+
+		List<InvoiceDetailRes> res = service.listOverdue(today, 3L);
+
+		assertThat(res).extracting(InvoiceDetailRes::id).containsExactly(9L);
+		assertThat(res.get(0).dueDate()).isEqualTo(LocalDate.of(2026, 10, 21));
+
+		@SuppressWarnings("unchecked")
+		ArgumentCaptor<Collection<InvoiceStatus>> statuses = ArgumentCaptor.forClass(Collection.class);
+		verify(invoiceRepository).findOverdue(statuses.capture(), eq(today), eq(3L));
+		assertThat(statuses.getValue()).containsExactlyInAnyOrder(InvoiceStatus.ISSUED, InvoiceStatus.PARTIALLY_PAID);
+	}
+
+	@Test
+	void returnsEmptyListWithoutQueryingPaymentsWhenNothingIsOverdue() {
+		when(invoiceRepository.findOverdue(any(), any(), any())).thenReturn(List.of());
+
+		assertThat(service.listOverdue(LocalDate.of(2026, 9, 21), null)).isEmpty();
+
+		verify(paymentRepository, never()).sumAmountByInvoiceIdIn(any());
+	}
+
 	private void stubContractAndCustomer() {
 		Contract contract = new Contract();
 		contract.setId(5L);
@@ -155,6 +186,7 @@ class InvoiceServiceTest {
 		invoice.setStatus(status);
 		invoice.setTotalAmount(new BigDecimal(total));
 		invoice.setInvoiceDate(LocalDate.of(2026, 9, 21));
+		invoice.setDueDate(LocalDate.of(2026, 10, 21));
 		return invoice;
 	}
 }

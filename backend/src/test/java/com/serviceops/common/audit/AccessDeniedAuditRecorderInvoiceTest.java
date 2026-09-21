@@ -40,4 +40,12 @@ class AccessDeniedAuditRecorderInvoiceTest {
 		verify(auditLogService).record(eq("Từ chối truy cập"), eq(AuditTargetType.INVOICE), isNull(),
 				eq("Lập hóa đơn theo mốc hợp đồng"), org.mockito.ArgumentMatchers.anyString());
 	}
+
+	@Test
+	void labelsDeniedOverdueReceivablesRequestAsItsOwnFeature() {
+		new AccessDeniedAuditRecorder(auditLogService).record("GET", "/api/v1/receivables/overdue");
+
+		verify(auditLogService).record(eq("Từ chối truy cập"), eq(AuditTargetType.INVOICE), isNull(),
+				eq("Theo dõi công nợ quá hạn"), org.mockito.ArgumentMatchers.anyString());
+	}
 }

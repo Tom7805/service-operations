@@ -91,6 +91,48 @@ class InvoiceRepositoryTest {
 		assertThat(invoiceRepository.sumActiveTotalByContractId(1L)).isEqualByComparingTo("100.00");
 	}
 
+	@Test
+	void findsOnlyPayableInvoicesPastDueDateOldestDueFirstWithOptionalCustomerFilter() {
+		LocalDate today = LocalDate.of(2026, 9, 21);
+		Invoice due40 = saveDue(3L, "INV-A", InvoiceStatus.ISSUED, today.minusDays(40));
+		Invoice due5 = saveDue(3L, "INV-B", InvoiceStatus.PARTIALLY_PAID, today.minusDays(5));
+		saveDue(3L, "INV-C", InvoiceStatus.ISSUED, today);
+		saveDue(3L, "INV-D", InvoiceStatus.ISSUED, today.plusDays(10));
+		saveDue(3L, "INV-E", InvoiceStatus.PAID, today.minusDays(60));
+		saveDue(3L, "INV-F", InvoiceStatus.CANCELLED, today.minusDays(60));
+		saveDue(3L, "INV-G", InvoiceStatus.DRAFT, today.minusDays(60));
+		Invoice otherCustomer = saveDue(4L, "INV-H", InvoiceStatus.ISSUED, today.minusDays(20));
+		List<InvoiceStatus> payable = List.of(InvoiceStatus.ISSUED, InvoiceStatus.PARTIALLY_PAID);
+
+		List<Invoice> all = invoiceRepository.findOverdue(payable, today, null);
+		List<Invoice> customer3 = invoiceRepository.findOverdue(payable, today, 3L);
+
+		assertThat(all).extracting(Invoice::getId)
+				.containsExactly(due40.getId(), otherCustomer.getId(), due5.getId());
+		assertThat(customer3).extracting(Invoice::getId).containsExactly(due40.getId(), due5.getId());
+	}
+
+	@Test
+	void defaultsDueDateToThirtyDaysAfterInvoiceDateWhenNotSet() {
+		Invoice invoice = save(1L, "INV-A", InvoiceStatus.ISSUED, "100.00");
+
+		assertThat(invoice.getDueDate()).isEqualTo(LocalDate.of(2026, 10, 1));
+	}
+
+	private Invoice saveDue(Long customerId, String code, InvoiceStatus status, LocalDate dueDate) {
+		Invoice invoice = new Invoice();
+		invoice.setInvoiceCode(code);
+		invoice.setContractId(1L);
+		invoice.setCustomerId(customerId);
+		invoice.setStatus(status);
+		invoice.setTotalAmount(new BigDecimal("100.00"));
+		invoice.setInvoiceDate(dueDate.minusDays(30));
+		invoice.setDueDate(dueDate);
+		invoice.setCreatedAt(LocalDateTime.of(2026, 9, 1, 8, 0));
+		invoice.setUpdatedAt(LocalDateTime.of(2026, 9, 1, 8, 0));
+		return invoiceRepository.saveAndFlush(invoice);
+	}
+
 	private Invoice save(Long contractId, String code, InvoiceStatus status, String total) {
 		Invoice invoice = new Invoice();
 		invoice.setInvoiceCode(code);

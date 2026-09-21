@@ -83,7 +83,7 @@ class MilestoneInvoiceIntegrationTest {
 				ContractMilestoneStatus.READY_TO_INVOICE);
 
 		InvoiceRes res = service.createFromMilestone(contract.getId(), milestone.getId(),
-				new InvoiceFromMilestoneReq(LocalDate.of(2026, 9, 30), "  Dot 1  "));
+				new InvoiceFromMilestoneReq(LocalDate.of(2026, 9, 30), "  Dot 1  ", null));
 		em.flush();
 		em.clear();
 
