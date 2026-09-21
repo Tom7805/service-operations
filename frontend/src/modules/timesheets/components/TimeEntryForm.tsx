@@ -248,7 +248,7 @@ export default function TimeEntryForm({
                 </p>
               )}
               {errors.workDate && (
-                <p className="field-error" data-testid="error-time-entry-workdate" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                <p className="field-error" data-testid="error-time-entry-workdate" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                   {errors.workDate}
                 </p>
               )}
@@ -275,7 +275,7 @@ export default function TimeEntryForm({
                 style={{ maxWidth: '160px' }}
               />
               {errors.hours && (
-                <p className="field-error" data-testid="error-time-entry-hours" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                <p className="field-error" data-testid="error-time-entry-hours" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                   {errors.hours}
                 </p>
               )}
@@ -299,7 +299,7 @@ export default function TimeEntryForm({
                 disabled={submitting}
               />
               {errors.note && (
-                <p className="field-error" data-testid="error-time-entry-note" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                <p className="field-error" data-testid="error-time-entry-note" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                   {errors.note}
                 </p>
               )}

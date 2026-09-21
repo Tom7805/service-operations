@@ -172,7 +172,7 @@ export default function TaskAssignModal({
                   style={{
                     maxHeight: '220px',
                     overflowY: 'auto',
-                    border: '1px solid #E2E8F0',
+                    border: '1px solid var(--line)',
                     borderRadius: '8px',
                     padding: '8px 10px',
                   }}
@@ -208,11 +208,11 @@ export default function TaskAssignModal({
                   )}
                 </div>
                 {errors.userIds && (
-                  <p className="field-error" data-testid="error-task-assign-users" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                  <p className="field-error" data-testid="error-task-assign-users" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                     {errors.userIds}
                   </p>
                 )}
-                <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px', color: '#64748B' }}>
+                <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px', color: 'var(--ink-muted)' }}>
                   Danh sách người được chọn sẽ thay thế toàn bộ danh sách phân công hiện tại, không cộng dồn.
                   Có thể phân công cho bất kỳ vai trò nào đang hoạt động; người được giao sẽ tự cập nhật tiến độ công việc này sau khi đăng nhập.
                 </p>
@@ -236,7 +236,7 @@ export default function TaskAssignModal({
                     disabled={submitting}
                   />
                   {errors.expectedStartDate && (
-                    <p className="field-error" data-testid="error-task-assign-start-date" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                    <p className="field-error" data-testid="error-task-assign-start-date" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                       {errors.expectedStartDate}
                     </p>
                   )}
@@ -259,7 +259,7 @@ export default function TaskAssignModal({
                     disabled={submitting}
                   />
                   {errors.expectedEndDate && (
-                    <p className="field-error" data-testid="error-task-assign-end-date" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                    <p className="field-error" data-testid="error-task-assign-end-date" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                       {errors.expectedEndDate}
                     </p>
                   )}

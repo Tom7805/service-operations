@@ -322,7 +322,7 @@ export default function TimeEntryPage({
 
       <div className="user-table-card" style={{ padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1E293B' }}>Bản ghi giờ công trong tuần</h3>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>Bản ghi giờ công trong tuần</h3>
           <span className="field-hint" style={{ fontSize: '13px' }}>{entries.length} bản ghi</span>
         </div>
 
@@ -334,8 +334,8 @@ export default function TimeEntryPage({
         ) : entries.length === 0 ? (
           <div className="table-empty-state" data-testid="time-entry-empty">
             <div className="table-empty-state__icon">{ICONS.clock}</div>
-            <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: '#1E293B' }}>Chưa có bản ghi giờ công nào trong tuần này</h4>
-            <p style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }}>
+            <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>Chưa có bản ghi giờ công nào trong tuần này</h4>
+            <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
               {canLog
                 ? 'Hãy bấm nút "+ Ghi giờ công" ở trên để bắt đầu ghi nhận giờ làm việc cho công việc này.'
                 : 'Không có dữ liệu để hiển thị.'}

@@ -327,7 +327,7 @@ export default function ProjectDetailPage({
           <div className="project-preview-grid">
             <div className="project-preview-item">
               <span className="field-hint">Trạng thái:</span>
-              <strong style={{ color: isProjectOpen ? '#15803D' : '#64748B' }}>
+              <strong style={{ color: isProjectOpen ? 'var(--pale-green-fg)' : 'var(--ink-muted)' }}>
                 {project.status === 'RUNNING' ? 'RUNNING (Đang thực hiện)' : project.status}
               </strong>
             </div>
@@ -366,7 +366,7 @@ export default function ProjectDetailPage({
       {/* Cây phân rã công việc WBS */}
       <div className="user-table-card" style={{ padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1E293B' }}>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
             Cơ cấu hạng mục & công việc (WBS)
           </h3>
           <span className="field-hint" style={{ fontSize: '13px' }}>

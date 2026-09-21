@@ -310,7 +310,7 @@ export default function CreateProjectFromTemplateModal({
             <>
               {/* Thẻ xem trước kế thừa từ hợp đồng (TC-01) */}
               <div className="project-preview-card" style={{ marginBottom: '20px' }}>
-                <div style={{ marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                <div style={{ marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>
                   Thông tin kế thừa tự động từ hợp đồng:
                 </div>
                 <div className="project-preview-grid">
@@ -328,7 +328,7 @@ export default function CreateProjectFromTemplateModal({
                   </div>
                   <div className="project-preview-item">
                     <span className="field-hint">Trạng thái khởi tạo:</span>
-                    <strong style={{ color: '#15803D' }}>RUNNING (Đang thực hiện)</strong>
+                    <strong style={{ color: 'var(--pale-green-fg)' }}>RUNNING (Đang thực hiện)</strong>
                   </div>
                 </div>
               </div>
@@ -389,9 +389,9 @@ export default function CreateProjectFromTemplateModal({
                       style={{
                         marginTop: '8px',
                         padding: '10px 12px',
-                        background: '#F8FAFC',
+                        background: 'var(--surface-alt)',
                         borderRadius: '6px',
-                        border: '1px solid #E2E8F0',
+                        border: '1px solid var(--line)',
                         fontSize: '13px',
                       }}
                       data-testid="template-preview-info"
@@ -400,11 +400,11 @@ export default function CreateProjectFromTemplateModal({
                         <strong>Mã mẫu:</strong> <code>{selectedTemplate.code}</code> · <strong>Loại:</strong> {selectedTemplate.projectType}
                       </div>
                       {selectedTemplate.description && (
-                        <div style={{ marginTop: '4px', color: '#64748B' }}>
+                        <div style={{ marginTop: '4px', color: 'var(--ink-muted)' }}>
                           {selectedTemplate.description}
                         </div>
                       )}
-                      <div style={{ marginTop: '6px', color: '#0369A1', fontSize: '12px' }}>
+                      <div style={{ marginTop: '6px', color: 'var(--pale-blue-fg)', fontSize: '12px' }}>
                         {ICONS.info} Hệ thống sẽ tự động nhân bản toàn bộ cây hạng mục, công việc và ngân sách giờ từ mẫu này sang dự án mới (TC-01).
                       </div>
                     </div>
@@ -556,7 +556,7 @@ export default function CreateProjectFromTemplateModal({
                   )}
                 </div>
 
-                <div className="modal-footer" style={{ padding: '16px 0 0', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <div className="modal-footer" style={{ padding: '16px 0 0', borderTop: '1px solid var(--line)', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                   <button type="button" className="btn btn-secondary" onClick={onClose}>
                     Hủy bỏ
                   </button>
@@ -599,21 +599,21 @@ export default function CreateProjectFromTemplateModal({
 
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <h4 style={{ margin: 0, fontSize: '14.5px', color: '#1E293B' }}>
+                  <h4 style={{ margin: 0, fontSize: '14.5px', color: 'var(--ink-strong)' }}>
                     Cây cơ cấu công việc (WBS) của dự án mới tạo (TC-01):
                   </h4>
                   <span className="field-hint" style={{ fontSize: '12.5px' }}>
                     {wbs.length} hạng mục gốc
                   </span>
                 </div>
-                <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#64748B' }}>
+                <p style={{ margin: '0 0 12px', fontSize: '13px', color: 'var(--ink-muted)' }}>
                   <strong>Quy tắc độc lập mẫu (TC-02):</strong> Bạn có thể xóa các hạng mục không phù hợp trực tiếp trên dự án này mà không làm ảnh hưởng đến mẫu dự án gốc.
                 </p>
 
                 {loadingWbs ? (
                   <div className="field-hint">Đang tải cây WBS của dự án…</div>
                 ) : (
-                  <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', background: '#FFFFFF', maxHeight: '350px', overflowY: 'auto' }}>
+                  <div style={{ border: '1px solid var(--line)', borderRadius: '8px', background: '#FFFFFF', maxHeight: '350px', overflowY: 'auto' }}>
                     <WorkBreakdownTree
                       projectId={createdProject.id}
                       items={wbs}
@@ -625,7 +625,7 @@ export default function CreateProjectFromTemplateModal({
                 )}
               </div>
 
-              <div className="modal-footer" style={{ padding: '16px 0 0', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <div className="modal-footer" style={{ padding: '16px 0 0', borderTop: '1px solid var(--line)', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                 <button
                   type="button"
                   className="btn btn-primary"

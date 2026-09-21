@@ -20,11 +20,11 @@ export default function WeeklyTimesheetGrid({ weekFrom, weekTo, summaries }: Wee
   if (summaries.length === 0) {
     return (
       <div className="table-empty-state" data-testid="weekly-grid-empty" style={{ padding: '36px 20px', textAlign: 'center' }}>
-        <div className="table-empty-state__icon" style={{ fontSize: '36px', color: '#94A3B8', marginBottom: '8px' }}>
+        <div className="table-empty-state__icon" style={{ fontSize: '36px', color: 'var(--ink-faint)', marginBottom: '8px' }}>
           {ICONS.clock}
         </div>
-        <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: '#1E293B' }}>Chưa ghi giờ công nào trong tuần này</h4>
-        <p style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }}>
+        <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>Chưa ghi giờ công nào trong tuần này</h4>
+        <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
           Từ {weekFrom} đến {weekTo} — mở một công việc được giao trong dự án để bắt đầu ghi giờ công.
         </p>
       </div>
@@ -89,7 +89,7 @@ export default function WeeklyTimesheetGrid({ weekFrom, weekTo, summaries }: Wee
                         style={{
                           height: '6px',
                           borderRadius: '3px',
-                          background: '#E2E8F0',
+                          background: 'var(--line)',
                           overflow: 'hidden',
                           marginBottom: '4px',
                         }}
@@ -98,7 +98,7 @@ export default function WeeklyTimesheetGrid({ weekFrom, weekTo, summaries }: Wee
                           style={{
                             height: '100%',
                             width: `${Math.min(usagePercent ?? 0, 100)}%`,
-                            background: s.overBudgetWarning ? '#DC2626' : '#2563EB',
+                            background: s.overBudgetWarning ? 'var(--pale-red-fg)' : 'var(--pale-blue-fg)',
                           }}
                         />
                       </div>

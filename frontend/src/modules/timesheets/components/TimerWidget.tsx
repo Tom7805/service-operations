@@ -149,7 +149,7 @@ export default function TimerWidget({ projectId, taskId, canStart, onStopped, on
             </strong>
             <span className="field-hint">{timer.note}</span>
             {isNearAutoStop && (
-              <span className="field-hint" style={{ color: '#DC2626' }} data-testid="timer-near-autostop-warning">
+              <span className="field-hint" style={{ color: 'var(--pale-red-fg)' }} data-testid="timer-near-autostop-warning">
                 Sắp chạy quá 12 giờ — hệ thống sẽ tự huỷ, không tạo được dòng giờ công. Hãy dừng đồng hồ ngay.
               </span>
             )}

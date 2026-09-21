@@ -81,11 +81,11 @@ export default function WorkBreakdownTree({
   if (items.length === 0) {
     return (
       <div className="table-empty-state" data-testid="wbs-empty" style={{ padding: '36px 20px', textAlign: 'center' }}>
-        <div className="table-empty-state__icon" style={{ fontSize: '36px', color: '#94A3B8', marginBottom: '8px' }}>
+        <div className="table-empty-state__icon" style={{ fontSize: '36px', color: 'var(--ink-faint)', marginBottom: '8px' }}>
           {ICONS.folder}
         </div>
-        <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: '#1E293B' }}>Chưa có hạng mục công việc nào</h4>
-        <p style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }}>
+        <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>Chưa có hạng mục công việc nào</h4>
+        <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
           {canEdit && isProjectOpen
             ? 'Hãy bấm nút "+ Thêm hạng mục" ở trên để bắt đầu phân rã cấu trúc công việc (WBS).'
             : 'Dự án này chưa được phân rã hạng mục và công việc.'}
@@ -118,7 +118,7 @@ export default function WorkBreakdownTree({
           )}
 
           {task.budgetHours != null && (
-            <span className="wbs-task-budget" style={{ color: '#2563EB', fontWeight: 500 }}>
+            <span className="wbs-task-budget" style={{ color: 'var(--pale-blue-fg)', fontWeight: 500 }}>
               Ngân sách: {task.budgetHours} giờ
             </span>
           )}
