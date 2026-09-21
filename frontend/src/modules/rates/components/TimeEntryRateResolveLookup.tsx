@@ -193,9 +193,6 @@ export default function TimeEntryRateResolveLookup({ levelOptions }: Props) {
               </option>
             ))}
           </select>
-          {!employeesLoading && employees.length === 0 && !employeesError && (
-            <small className="field-hint">Chưa có nhân sự nào có dòng giờ công đã duyệt.</small>
-          )}
         </div>
 
         <div style={{ flex: '1.6 1 260px', minWidth: 0 }}>
@@ -256,6 +253,11 @@ export default function TimeEntryRateResolveLookup({ levelOptions }: Props) {
           </button>
         </div>
       </form>
+      {!employeesLoading && employees.length === 0 && !employeesError && (
+        <small className="field-hint" style={{ display: 'block', marginTop: '8px' }}>
+          Chưa có nhân sự nào có dòng giờ công đã duyệt.
+        </small>
+      )}
 
       {notFoundMessage && (
         <div
