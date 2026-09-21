@@ -31,6 +31,10 @@ import ExpenseApprovalPage from './modules/expenses/pages/ExpenseApprovalPage';
 import OverheadAllocationPage from './modules/expenses/pages/OverheadAllocationPage';
 import MarginByCustomerPage from './modules/profitability/pages/MarginByCustomerPage';
 import MarginByEmployeePage from './modules/profitability/pages/MarginByEmployeePage';
+import ProjectLaborCostPage from './modules/profitability/pages/ProjectLaborCostPage';
+import ProjectRecognizedRevenuePage from './modules/profitability/pages/ProjectRecognizedRevenuePage';
+import ProjectMarginPage from './modules/profitability/pages/ProjectMarginPage';
+import MarginAlertThresholdPage from './modules/profitability/pages/MarginAlertThresholdPage';
 import NotificationCenterPage from './modules/notifications/pages/NotificationCenterPage';
 import NotificationList from './modules/notifications/components/NotificationList';
 import { getNotifications, getUnreadCount, markNotificationsRead } from './modules/notifications/api/notificationsApi';
@@ -75,6 +79,14 @@ export default function App() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
   const [selectedOpportunityId, setSelectedOpportunityId] = useState<number | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+
+  // Mock danh sách dự án — thay thế bằng GET /projects khi có API danh sách dự án.
+  const mockProjects: { id: number; projectCode: string; name: string }[] = [
+    { id: 1, projectCode: 'PRJ-2026-001', name: 'Triển khai CRM cho Khách hàng Alpha' },
+    { id: 2, projectCode: 'PRJ-2026-002', name: 'Nâng cấp hệ thống ERP doanh thu' },
+    { id: 3, projectCode: 'PRJ-2026-003', name: 'Triển khai giải pháp thanh toán số' },
+  ];
   const [selectedOpportunityName, setSelectedOpportunityName] = useState<string | undefined>(undefined);
   /** Nhớ người dùng vào màn "Ghi nhận chăm sóc" từ đâu để nút quay lại trả về
    *  đúng chỗ: từ danh sách "Cơ hộp bán hàng" thì về lại danh sách, còn tự tìm
@@ -116,6 +128,19 @@ export default function App() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Chan hanh vi KEO van ban da boi den (mac dinh cua trinh duyet, khong can JS
+  // nao khoi tao) — ung dung khong dung drag-and-drop o dau ca nen chan an
+  // toan tuyet doi. Ly do them: nguoi dung boi den chu roi bam ra cho trong
+  // nhieu lan lam trang treo cung, khong bam duoc gi nua (ke ca F12), chi
+  // reload moi het — dung dau hieu cua mot phien keo-tha cap he dieu hanh
+  // (OLE drag) bi ket do tha khong dung vi tri hop le, thay vi mot loi
+  // JavaScript (ung dung khong co code nao lang nghe drag/selection ca).
+  useEffect(() => {
+    const preventTextDrag = (e: DragEvent) => e.preventDefault();
+    document.addEventListener('dragstart', preventTextDrag);
+    return () => document.removeEventListener('dragstart', preventTextDrag);
+  }, []);
+
   function persistSession(next: AuthSession) {
     localStorage.setItem('token', next.accessToken);
     localStorage.setItem('session', JSON.stringify(next));
@@ -144,7 +169,10 @@ export default function App() {
     const fetchUnread = async () => {
       try {
         const count = await getUnreadCount();
-        if (!cancelled) setUnreadCount(count);
+        // Chi set lai khi so thuc su doi — tranh re-render toan bo App (gom ca
+        // trang dang xem) moi 30s khi so chua doc khong doi, ly do khien vung
+        // van ban nguoi dung dang boi den bi DOM dung cham vo co dinh ky.
+        if (!cancelled) setUnreadCount((prev) => (prev === count ? prev : count));
       } catch {
         // Bỏ qua lỗi đếm chưa đọc — không làm gián đoạn trải nghiệm chính.
       }
@@ -466,6 +494,96 @@ export default function App() {
             <MarginByCustomerPage currentUserRoles={currentRoles} />
           ) : activeTab === 'MARGIN_BY_EMPLOYEE' ? (
             <MarginByEmployeePage currentUserRoles={currentRoles} />
+          ) : activeTab === 'PROJECT_RECOGNIZED_REVENUE' && selectedProjectId ? (
+            <ProjectRecognizedRevenuePage
+              projectId={selectedProjectId}
+              currentUserRoles={currentRoles}
+              onBack={() => { setSelectedProjectId(null); }}
+            />
+          ) : activeTab === 'PROJECT_RECOGNIZED_REVENUE' ? (
+            <div className="user-management-page">
+              <div className="page-header">
+                <div>
+                  <div className="page-header__kicker">
+                    <span className="page-header__tag">{ICONS.chart} DOANH THU GHI NHẬN</span>
+                    <span className="page-header__dot" />
+                    <span className="page-header__meta">CHƯA CHỌN DỰ ÁN</span>
+                  </div>
+                  <h1 className="page-title">Doanh thu ghi nhận dự án</h1>
+                  <p className="page-subtitle">
+                    Chọn một dự án để xem doanh thu ghi nhận.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ marginTop: '16px' }}>
+                <select
+                  className="form-select"
+                  style={{ padding: '8px 12px', fontSize: '14px', minWidth: '320px' }}
+                  value=""
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val) setSelectedProjectId(Number(val));
+                  }}
+                  data-testid="project-selector-dropdown"
+                >
+                  <option value="" disabled>
+                    -- Chọn dự án --
+                  </option>
+                  {mockProjects.map((proj) => (
+                    <option key={proj.id} value={proj.id}>
+                      {proj.projectCode} — {proj.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ) : activeTab === 'PROJECT_MARGIN' && selectedProjectId ? (
+            <ProjectMarginPage
+              projectId={selectedProjectId}
+              currentUserRoles={currentRoles}
+              onBack={() => { setSelectedProjectId(null); }}
+            />
+          ) : activeTab === 'PROJECT_MARGIN' ? (
+            <div className="user-management-page">
+              <div className="page-header">
+                <div>
+                  <div className="page-header__kicker">
+                    <span className="page-header__tag">{ICONS.chart} BIÊN LỢI NHUẬN</span>
+                    <span className="page-header__dot" />
+                    <span className="page-header__meta">CHƯA CHỌN DỰ ÁN</span>
+                  </div>
+                  <h1 className="page-title">Biên lợi nhuận thời gian thực</h1>
+                  <p className="page-subtitle">
+                    Chọn một dự án để xem biên lợi nhuận.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ marginTop: '16px' }}>
+                <select
+                  className="form-select"
+                  style={{ padding: '8px 12px', fontSize: '14px', minWidth: '320px' }}
+                  value=""
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val) setSelectedProjectId(Number(val));
+                  }}
+                  data-testid="project-selector-dropdown"
+                >
+                  <option value="" disabled>
+                    -- Chọn dự án --
+                  </option>
+                  {mockProjects.map((proj) => (
+                    <option key={proj.id} value={proj.id}>
+                      {proj.projectCode} — {proj.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ) : activeTab === 'MARGIN_ALERT_THRESHOLD' ? (
+            <MarginAlertThresholdPage currentUserRoles={currentRoles} />
           ) : activeTab === 'CUSTOMERS' ? (
             <CustomerListPage
               currentUserRoles={currentRoles}
@@ -574,6 +692,50 @@ export default function App() {
                 setActiveTab('EMPLOYEE_DETAIL');
               }}
             />
+            ) : activeTab === 'PROJECT_LABOR_COST' && selectedProjectId ? (
+            <ProjectLaborCostPage
+              projectId={selectedProjectId}
+              currentUserRoles={currentRoles}
+              onBack={() => { setSelectedProjectId(null); }}
+            />
+          ) : activeTab === 'PROJECT_LABOR_COST' ? (
+            <div className="user-management-page">
+              <div className="page-header">
+                <div>
+                  <div className="page-header__kicker">
+                    <span className="page-header__tag">{ICONS.money} GIÁ VỐN GIỜ CÔNG</span>
+                    <span className="page-header__dot" />
+                    <span className="page-header__meta">CHƯA CHỌN DỰ ÁN</span>
+                  </div>
+                  <h1 className="page-title">Giá vốn giờ công dự án</h1>
+                  <p className="page-subtitle">
+                    Chọn một dự án để xem giá vốn giờ công.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ marginTop: '16px' }}>
+                <select
+                  className="form-select"
+                  style={{ padding: '8px 12px', fontSize: '14px', minWidth: '320px' }}
+                  value=""
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val) setSelectedProjectId(Number(val));
+                  }}
+                  data-testid="project-selector-dropdown"
+                >
+                  <option value="" disabled>
+                    -- Chọn dự án --
+                  </option>
+                  {mockProjects.map((proj) => (
+                    <option key={proj.id} value={proj.id}>
+                      {proj.projectCode} — {proj.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           ) : activeTab === 'OPPORTUNITY_DETAIL' ? (
             selectedOpportunityId ? (
               <OpportunityDetailPage

@@ -4,7 +4,8 @@ export type NotificationType =
   | 'TIMESHEET_REMINDER'
   | 'EXPENSE_SUBMITTED'
   | 'PROJECT_MILESTONE_DUE'
-  | 'CONTRACT_EXPIRING';
+  | 'CONTRACT_EXPIRING'
+  | 'NEGATIVE_MARGIN_ALERT';
 
 /** Khớp enum NotificationChannel phía backend — hiện chỉ IN_APP thực sự gửi được. */
 export type NotificationChannel = 'IN_APP' | 'EMAIL' | 'SMS' | 'PUSH';

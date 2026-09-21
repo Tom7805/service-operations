@@ -1,13 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { ICONS } from '../../../components/common/icons';
-import { resolveTimeEntryBillRate, RatesApiError } from '../api/ratesApi';
-import type { ResolvedTimeEntryRateRes } from '../types/rateTypes';
-import { WORK_TYPE_LABELS } from '../types/rateTypes';
 import {
-  validateTimeEntryRateLookupForm,
-  type TimeEntryRateLookupFormValues,
-} from '../validators/rateValidators';
+  fetchTimeEntryLookupCandidates,
+  fetchTimeEntryLookupEmployees,
+  resolveTimeEntryBillRate,
+  RatesApiError,
+} from '../api/ratesApi';
+import type {
+  ResolvedTimeEntryRateRes,
+  TimeEntryLookupCandidateRes,
+  TimeEntryLookupEmployeeRes,
+} from '../types/rateTypes';
+import { WORK_TYPE_LABELS } from '../types/rateTypes';
+import { validateTimeEntryRateLookupForm, type TimeEntryRateLookupFormValues } from '../validators/rateValidators';
 
 const EMPTY_FORM: TimeEntryRateLookupFormValues = {
   entryId: '',
@@ -31,12 +37,13 @@ function formatDate(value: string): string {
 }
 
 /**
- * NCL-07-CN-005 — Tra cứu đơn giá áp dụng cho một dòng giờ công. Endpoint
- * tổng hợp: chỉ cần nhập `entryId` (ID dòng giờ công) và `level` (cấp bậc,
- * không tự suy ra được từ hồ sơ nhân sự) — không cần tự tra vai trò/hợp đồng
- * rồi gọi tiếp endpoint khác. Hiển thị `appliedDailyRate` (đơn giá CUỐI CÙNG,
- * đã nhân hệ số loại hình công việc — NCL-07-CN-006) làm trọng tâm, `dailyRate`
- * chỉ để đối chiếu.
+ * NCL-07-CN-005 — Tra cứu đơn giá áp dụng cho một dòng giờ công.
+ *
+ * Luồng chọn: Chọn nhân sự → hệ thống tự đổ ra các dòng giờ công đã duyệt của người đó để
+ * chọn, đồng thời tự điền sẵn "Cấp bậc" theo hồ sơ nhân sự (vẫn sửa được nếu cấp bậc lúc phát
+ * sinh dòng giờ công khác với hồ sơ hiện tại). Không còn phải tự biết trước "ID dòng giờ công"
+ * — con số trước đây chỉ hiện ở màn hình "Điều chỉnh giờ công đã duyệt" dành riêng cho Quản lý
+ * dự án (VT-02), khác vai trò với Kế toán/Quản trị viên đang cần tra cứu ở đây.
  */
 export default function TimeEntryRateResolveLookup({ levelOptions }: Props) {
   const [values, setValues] = useState<TimeEntryRateLookupFormValues>(EMPTY_FORM);
@@ -45,6 +52,63 @@ export default function TimeEntryRateResolveLookup({ levelOptions }: Props) {
   const [result, setResult] = useState<ResolvedTimeEntryRateRes | null>(null);
   const [notFoundMessage, setNotFoundMessage] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
+
+  const [employees, setEmployees] = useState<TimeEntryLookupEmployeeRes[]>([]);
+  const [employeesLoading, setEmployeesLoading] = useState(true);
+  const [employeesError, setEmployeesError] = useState<string | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState('');
+
+  const [candidates, setCandidates] = useState<TimeEntryLookupCandidateRes[]>([]);
+  const [candidatesLoading, setCandidatesLoading] = useState(false);
+  const [candidatesError, setCandidatesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      setEmployeesLoading(true);
+      setEmployeesError(null);
+      try {
+        const rows = await fetchTimeEntryLookupEmployees();
+        setEmployees(rows);
+      } catch (err) {
+        setEmployeesError(
+          err instanceof RatesApiError ? err.message : 'Không tải được danh sách nhân sự. Vui lòng thử lại.'
+        );
+      } finally {
+        setEmployeesLoading(false);
+      }
+    })();
+  }, []);
+
+  const handleSelectEmployee = async (userId: string) => {
+    setSelectedUserId(userId);
+    setValues({ entryId: '', level: '' });
+    setErrors({});
+    setResult(null);
+    setNotFoundMessage(null);
+    setServerError(null);
+    setCandidates([]);
+    setCandidatesError(null);
+
+    if (userId === '') return;
+
+    // Tu dien san Cap bac theo ho so nhan su — nguoi dung van sua duoc neu can mot moc khac.
+    const employee = employees.find((e) => String(e.userId) === userId);
+    if (employee?.level) {
+      setValues((v) => ({ ...v, level: employee.level as string }));
+    }
+
+    setCandidatesLoading(true);
+    try {
+      const rows = await fetchTimeEntryLookupCandidates(Number(userId));
+      setCandidates(rows);
+    } catch (err) {
+      setCandidatesError(
+        err instanceof RatesApiError ? err.message : 'Không tải được danh sách giờ công của nhân sự này.'
+      );
+    } finally {
+      setCandidatesLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -83,10 +147,16 @@ export default function TimeEntryRateResolveLookup({ levelOptions }: Props) {
         <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Tra đơn giá áp dụng cho một dòng giờ công</h2>
       </div>
       <p className="field-hint" style={{ marginBottom: '14px' }}>
-        Chỉ cần ID dòng giờ công và cấp bậc của người thực hiện — hệ thống tự suy ra vai trò, hợp đồng và
-        ngày phát sinh để tra đúng đơn giá đang dùng để tính doanh thu cho dòng đó. Lấy "ID dòng giờ công" ở
-        trang "Điều chỉnh giờ công đã duyệt" — mỗi dòng có ghi ID ngay dưới ngày công.
+        Chọn nhân sự, hệ thống tự đổ ra các dòng giờ công đã duyệt của người đó để chọn và tự điền sẵn cấp
+        bậc theo hồ sơ nhân sự — hệ thống tự suy ra vai trò, hợp đồng và ngày phát sinh để tra đúng đơn giá
+        đang dùng để tính doanh thu cho dòng đó.
       </p>
+
+      {employeesError && (
+        <div className="alert-box alert-box--danger" role="alert" style={{ marginBottom: '14px' }}>
+          {employeesError}
+        </div>
+      )}
 
       {serverError && (
         <div className="alert-box alert-box--danger" role="alert">
@@ -94,30 +164,79 @@ export default function TimeEntryRateResolveLookup({ levelOptions }: Props) {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'flex-end' }}>
-        <div style={{ minWidth: '160px' }}>
-          <label className="form-label" htmlFor="time-entry-resolve-id">
-            ID dòng giờ công
+      <form
+        onSubmit={handleSubmit}
+        noValidate
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '12px',
+          alignItems: 'flex-end',
+        }}
+      >
+        <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+          <label className="form-label" htmlFor="time-entry-resolve-employee">
+            Nhân sự
           </label>
-          <input
-            id="time-entry-resolve-id"
-            type="number"
-            min={1}
-            className={`form-input ${errors.entryId ? 'form-input--error' : ''}`}
-            placeholder="Ví dụ: 100"
-            value={values.entryId}
-            onChange={(e) => setValues((v) => ({ ...v, entryId: e.target.value }))}
-          />
-          {errors.entryId && <small className="field-error">{errors.entryId}</small>}
+          <select
+            id="time-entry-resolve-employee"
+            className="form-input"
+            style={{ width: '100%' }}
+            value={selectedUserId}
+            onChange={(e) => void handleSelectEmployee(e.target.value)}
+            disabled={employeesLoading}
+          >
+            <option value="">{employeesLoading ? 'Đang tải…' : '-- Chọn nhân sự --'}</option>
+            {employees.map((employee) => (
+              <option key={employee.userId} value={employee.userId}>
+                {employee.fullName}
+              </option>
+            ))}
+          </select>
+          {!employeesLoading && employees.length === 0 && !employeesError && (
+            <small className="field-hint">Chưa có nhân sự nào có dòng giờ công đã duyệt.</small>
+          )}
         </div>
 
-        <div style={{ minWidth: '160px' }}>
+        <div style={{ flex: '1.6 1 260px', minWidth: 0 }}>
+          <label className="form-label" htmlFor="time-entry-resolve-id">
+            Dòng giờ công
+          </label>
+          <select
+            id="time-entry-resolve-id"
+            className={`form-input ${errors.entryId ? 'form-input--error' : ''}`}
+            style={{ width: '100%' }}
+            value={values.entryId}
+            onChange={(e) => setValues((v) => ({ ...v, entryId: e.target.value }))}
+            disabled={selectedUserId === '' || candidatesLoading}
+          >
+            <option value="">
+              {selectedUserId === ''
+                ? '-- Chọn nhân sự trước --'
+                : candidatesLoading
+                  ? 'Đang tải…'
+                  : candidates.length === 0
+                    ? 'Không có dòng giờ công đã duyệt'
+                    : '-- Chọn dòng giờ công --'}
+            </option>
+            {candidates.map((row) => (
+              <option key={row.entryId} value={row.entryId}>
+                {formatDate(row.workDate)} · {row.projectName} · {row.taskName} · {row.hours} giờ
+              </option>
+            ))}
+          </select>
+          {errors.entryId && <small className="field-error">{errors.entryId}</small>}
+          {candidatesError && <small className="field-error">{candidatesError}</small>}
+        </div>
+
+        <div style={{ flex: '1 1 160px', minWidth: 0 }}>
           <label className="form-label" htmlFor="time-entry-resolve-level">
             Cấp bậc
           </label>
           <select
             id="time-entry-resolve-level"
             className={`form-input ${errors.level ? 'form-input--error' : ''}`}
+            style={{ width: '100%' }}
             value={values.level}
             onChange={(e) => setValues((v) => ({ ...v, level: e.target.value }))}
           >

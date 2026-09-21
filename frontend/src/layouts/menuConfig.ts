@@ -36,6 +36,10 @@ export type Tab =
   | 'OVERHEAD_ALLOCATION'
   | 'MARGIN_BY_CUSTOMER'
   | 'MARGIN_BY_EMPLOYEE'
+  | 'PROJECT_LABOR_COST'
+  | 'PROJECT_RECOGNIZED_REVENUE'
+  | 'PROJECT_MARGIN'
+  | 'MARGIN_ALERT_THRESHOLD'
   | 'NOTIFICATIONS';
 
 export interface NavItem {
@@ -134,6 +138,33 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
     tab: 'MARGIN_BY_EMPLOYEE', icon: ICONS.users, label: 'Biên LN theo nhân sự', requires: ['VT-01'],
     // NCL-09-CN-005 (TC-02): cùng phép tính nhưng gộp theo từng nhân sự thực hiện — nhạy
     // cảm hơn báo cáo theo khách hàng nên cũng chỉ Ban giám đốc (VT-01) xem được.
+  },
+  {
+    tab: 'PROJECT_LABOR_COST', icon: ICONS.money, label: 'Giá vốn giờ công', requires: ['VT-01', 'VT-02', 'VT-05'],
+    // NCL-09-CN-001: Tính giá vốn giờ công dự án (số giờ đã duyệt × đơn giá/chi phí giờ).
+    // Hiển thị KPI tổng hợp + bảng chi tiết từng dòng. Dữ liệu nhạy cảm (đơn giá, giá vốn)
+    // được backend masking; frontend dùng canViewSensitiveData để kiểm soát hiển thị.
+    matches: ['PROJECT_LABOR_COST'],
+  },
+  {
+    tab: 'PROJECT_RECOGNIZED_REVENUE', icon: ICONS.chart, label: 'Doanh thu ghi nhận', requires: ['VT-01', 'VT-05'],
+    // NCL-09-CN-002: tính động doanh thu ghi nhận của dự án theo đúng loại hợp đồng
+    // (giờ công đã duyệt × đơn giá, hoặc giá trị hợp đồng × tỷ lệ hoàn thành). Chỉ
+    // Ban giám đốc (VT-01) và Kế toán (VT-05) xem được — khớp @PreAuthorize backend.
+  },
+  {
+    tab: 'PROJECT_MARGIN', icon: ICONS.chart, label: 'Biên lợi nhuận', requires: ['VT-01', 'VT-02', 'VT-05'],
+    // NCL-09-CN-003: biên lợi nhuận gộp thời gian thực của dự án (doanh thu ghi nhận
+    // trừ toàn bộ chi phí đã duyệt). Chỉ dữ liệu chi phí từng dòng (hourlyRate/laborCost)
+    // bị che với VT-02 theo QTN-02 — số tổng hợp hiển thị cho cả ba vai trò.
+  },
+  {
+    tab: 'MARGIN_ALERT_THRESHOLD', icon: ICONS.alertTriangle, label: 'Ngưỡng cảnh báo âm biên',
+    requires: ['VT-01', 'VT-02', 'VT-05'],
+    // NCL-09-CN-004: ngưỡng biên lợi nhuận tối thiểu toàn công ty — vượt ngưỡng thì hệ
+    // thống tự gửi thông báo cho quản lý dự án + Ban giám đốc mỗi khi tính lại biên lợi
+    // nhuận (NCL-09-CN-003). Chỉ Ban giám đốc (VT-01) được đặt/đổi (TC-03); VT-02/VT-05
+    // chỉ xem được ngưỡng hiện hành.
   },
   { tab: 'OPPORTUNITY_DETAIL', icon: ICONS.building, label: 'Cơ hộp', requires: ['VT-04'] },
 ];

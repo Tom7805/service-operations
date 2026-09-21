@@ -29,7 +29,10 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+// Khong duoc readOnly: sensitiveAccessLogger.logView(...) ben duoi GHI mot dong audit log
+// (INSERT) trong cung transaction nay - MySQL tu choi ghi tren connection read-only (QTN-03:
+// ghi log that bai phai lam rollback ca thao tac, nen khong dung REQUIRES_NEW o day).
+@Transactional
 public class LaborCostServiceImpl implements LaborCostService {
 
 	private final ProjectRepository projectRepository;

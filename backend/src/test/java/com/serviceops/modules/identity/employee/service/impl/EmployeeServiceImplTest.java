@@ -82,7 +82,7 @@ class EmployeeServiceImplTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
         EmployeeCreateReq req = new EmployeeCreateReq(1L, null, "Ky su phan mem",
-                LocalDate.of(2026, 1, 1), null, new BigDecimal("40.00"));
+                LocalDate.of(2026, 1, 1), null, new BigDecimal("40.00"), null);
 
         EmployeeDetailRes result = service.create(req);
 
@@ -97,7 +97,7 @@ class EmployeeServiceImplTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
         EmployeeCreateReq req = new EmployeeCreateReq(1L, null, "Ke toan",
-                LocalDate.of(2026, 1, 1), null, new BigDecimal("20.00"));
+                LocalDate.of(2026, 1, 1), null, new BigDecimal("20.00"), null);
 
         EmployeeDetailRes result = service.create(req);
 
@@ -111,7 +111,7 @@ class EmployeeServiceImplTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
         EmployeeCreateReq req = new EmployeeCreateReq(1L, null, null,
-                LocalDate.of(2026, 1, 1), null, null);
+                LocalDate.of(2026, 1, 1), null, null, null);
 
         EmployeeDetailRes result = service.create(req);
 
@@ -122,7 +122,7 @@ class EmployeeServiceImplTest {
     @DisplayName("TC-03: ngay ket thuc som hon ngay vao lam thi bao loi va khong luu")
     void rejectsEndDateBeforeHireDate() {
         EmployeeCreateReq req = new EmployeeCreateReq(1L, null, null,
-                LocalDate.of(2026, 3, 1), LocalDate.of(2026, 1, 1), null);
+                LocalDate.of(2026, 3, 1), LocalDate.of(2026, 1, 1), null, null);
 
         assertThatThrownBy(() -> service.create(req))
                 .isInstanceOf(BusinessRuleException.class)
@@ -137,7 +137,7 @@ class EmployeeServiceImplTest {
     void rejectsDuplicateEmployeeProfileForSameUser() {
         when(employeeRepository.existsByUser_Id(1L)).thenReturn(true);
 
-        EmployeeCreateReq req = new EmployeeCreateReq(1L, null, null, LocalDate.of(2026, 1, 1), null, null);
+        EmployeeCreateReq req = new EmployeeCreateReq(1L, null, null, LocalDate.of(2026, 1, 1), null, null, null);
 
         assertThatThrownBy(() -> service.create(req))
                 .isInstanceOf(BusinessRuleException.class)
@@ -151,7 +151,7 @@ class EmployeeServiceImplTest {
         when(employeeRepository.existsByUser_Id(99L)).thenReturn(false);
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        EmployeeCreateReq req = new EmployeeCreateReq(99L, null, null, LocalDate.of(2026, 1, 1), null, null);
+        EmployeeCreateReq req = new EmployeeCreateReq(99L, null, null, LocalDate.of(2026, 1, 1), null, null, null);
 
         assertThatThrownBy(() -> service.create(req))
                 .isInstanceOf(BusinessRuleException.class)
@@ -170,7 +170,7 @@ class EmployeeServiceImplTest {
         when(employeeRepository.findById(5L)).thenReturn(Optional.of(existing));
 
         EmployeeUpdateReq req = new EmployeeUpdateReq(null, null,
-                LocalDate.of(2026, 5, 1), LocalDate.of(2026, 4, 1), null);
+                LocalDate.of(2026, 5, 1), LocalDate.of(2026, 4, 1), null, null);
 
         assertThatThrownBy(() -> service.update(5L, req))
                 .isInstanceOf(BusinessRuleException.class)

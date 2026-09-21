@@ -10,6 +10,7 @@ import com.serviceops.modules.identity.user.entity.User;
 import com.serviceops.modules.profitability.dto.request.ProfitQueryReq;
 import com.serviceops.modules.profitability.dto.response.MarginByCustomerRes;
 import com.serviceops.modules.profitability.dto.response.MarginByEmployeeRes;
+import com.serviceops.modules.profitability.service.impl.EntryMarginCalculator;
 import com.serviceops.modules.profitability.service.impl.MarginReportServiceImpl;
 import com.serviceops.modules.project.entity.Project;
 import com.serviceops.modules.project.entity.Task;
@@ -59,9 +60,10 @@ class MarginReportServiceTest {
 
 	@BeforeEach
 	void setUp() {
+		EntryMarginCalculator calculator = new EntryMarginCalculator(
+				employeeHourlyRateService, contractBillRateService, workTypeRateService);
 		service = new MarginReportServiceImpl(timeEntryRepository, taskRepository, projectRepository,
-				customerRepository, employeeRepository, employeeHourlyRateService, contractBillRateService,
-				workTypeRateService, sensitiveAccessLogger);
+				customerRepository, employeeRepository, calculator, sensitiveAccessLogger);
 	}
 
 	/** NCL-09-CN-005-TC-01: ba khach hang mo phong, moi khach hang co doanh thu/gia von/bien rieng. */
@@ -90,9 +92,9 @@ class MarginReportServiceTest {
 		when(employeeHourlyRateService.resolve(1L, entry2.getWorkDate()))
 				.thenReturn(new ResolvedEmployeeHourlyRateRes(1L, new BigDecimal("200000.00"), FROM, false));
 
-		when(contractBillRateService.resolve(5000L, "Lap trinh vien", "Chưa phân loại", entry1.getWorkDate()))
+		when(contractBillRateService.resolve(5000L, "Lap trinh vien", "Senior", entry1.getWorkDate()))
 				.thenReturn(new ResolvedContractBillRateRes(new BigDecimal("4000000.00"), FROM, true));
-		when(contractBillRateService.resolve(5001L, "Lap trinh vien", "Chưa phân loại", entry2.getWorkDate()))
+		when(contractBillRateService.resolve(5001L, "Lap trinh vien", "Senior", entry2.getWorkDate()))
 				.thenReturn(new ResolvedContractBillRateRes(new BigDecimal("4000000.00"), FROM, true));
 		when(workTypeRateService.resolveFactor(WorkType.NORMAL)).thenReturn(BigDecimal.ONE);
 
@@ -162,7 +164,7 @@ class MarginReportServiceTest {
 		when(employeeRepository.findByUser_IdIn(List.of(200L))).thenReturn(List.of(employee));
 		when(employeeHourlyRateService.resolve(1L, entry.getWorkDate()))
 				.thenReturn(new ResolvedEmployeeHourlyRateRes(1L, new BigDecimal("150000.00"), FROM, false));
-		when(contractBillRateService.resolve(5000L, "Lap trinh vien", "Chưa phân loại", entry.getWorkDate()))
+		when(contractBillRateService.resolve(5000L, "Lap trinh vien", "Senior", entry.getWorkDate()))
 				.thenThrow(new BusinessRuleException(com.serviceops.common.exception.ErrorCode.RESOURCE_NOT_FOUND,
 						"Chua khai bao don gia"));
 
@@ -171,6 +173,32 @@ class MarginReportServiceTest {
 		assertThat(result.missingRevenueEntryCount()).isEqualTo(1);
 		assertThat(result.lines().get(0).revenue()).isEqualByComparingTo("0.00");
 		assertThat(result.lines().get(0).cost()).isEqualByComparingTo("750000.00");
+	}
+
+	/** Nhan su chua khai bao cap bac (Employee.level) -> loai khoi doanh thu, khong goi tra don gia. */
+	@Test
+	void marginByCustomer_countsMissingRevenueWhenEmployeeHasNoLevel() {
+		Task task = task(10L, 100L);
+		Project project = project(100L, 1000L, 5000L);
+		Customer customer = customer(1000L, "KH001", "Cong ty A");
+		Employee employee = employee(1L, 200L, "Lap trinh vien");
+		employee.setLevel(null);
+		TimeEntry entry = timeEntry(1L, 200L, 10L, new BigDecimal("5.00"), true, FROM);
+
+		when(timeEntryRepository.findByStatusAndWorkDateBetweenOrderByWorkDateAscIdAsc(TimeEntryStatus.APPROVED, FROM, TO))
+				.thenReturn(List.of(entry));
+		when(taskRepository.findAllById(List.of(10L))).thenReturn(List.of(task));
+		when(projectRepository.findAllById(List.of(100L))).thenReturn(List.of(project));
+		when(customerRepository.findAllById(List.of(1000L))).thenReturn(List.of(customer));
+		when(employeeRepository.findByUser_IdIn(List.of(200L))).thenReturn(List.of(employee));
+		when(employeeHourlyRateService.resolve(1L, entry.getWorkDate()))
+				.thenReturn(new ResolvedEmployeeHourlyRateRes(1L, new BigDecimal("150000.00"), FROM, false));
+
+		MarginByCustomerRes result = service.marginByCustomer(new ProfitQueryReq(FROM, TO));
+
+		assertThat(result.missingRevenueEntryCount()).isEqualTo(1);
+		assertThat(result.lines().get(0).revenue()).isEqualByComparingTo("0.00");
+		verifyNoInteractions(contractBillRateService);
 	}
 
 	@Test
@@ -227,6 +255,7 @@ class MarginReportServiceTest {
 		Employee employee = new Employee();
 		employee.setId(employeeId);
 		employee.setProfessionalRole(role);
+		employee.setLevel("Senior");
 		User user = new User();
 		user.setId(userId);
 		user.setFullName("Nguyen Van " + userId);

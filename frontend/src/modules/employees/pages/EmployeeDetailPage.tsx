@@ -40,6 +40,12 @@ function formatDate(value: string): string {
   return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString('vi-VN');
 }
 
+/** Hiển thị số nhập liệu có dấu chấm phân cách hàng nghìn (VD: 1400000 -> "1.400.000"). */
+function formatThousands(digitsOnly: string): string {
+  if (!digitsOnly) return '';
+  return new Intl.NumberFormat('vi-VN').format(Number(digitsOnly));
+}
+
 export default function EmployeeDetailPage({ employeeId, onBack, currentUserRoles = [] }: EmployeeDetailPageProps) {
   const canViewHourlyRate = HOURLY_RATE_VIEW_ROLES.some((r) => currentUserRoles.includes(r));
   const canDeclareHourlyRate = HOURLY_RATE_DECLARE_ROLES.some((r) => currentUserRoles.includes(r));
@@ -90,6 +96,15 @@ export default function EmployeeDetailPage({ employeeId, onBack, currentUserRole
     void loadHourlyRates();
   }, [loadHourlyRates]);
 
+  // Mặc định "Ngày hiệu lực" bằng ngày vào làm của nhân sự (NCL-07-CN-004) —
+  // vẫn cho phép người dùng sửa tay, chỉ set khi ô còn trống để không ghi đè lựa chọn thủ công.
+  useEffect(() => {
+    if (employee?.hireDate && newEffectiveFrom === '') {
+      setNewEffectiveFrom(employee.hireDate);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employee?.hireDate]);
+
   const handleAddHourlyRate = async (e: FormEvent) => {
     e.preventDefault();
     if (!canDeclareHourlyRate) return;
@@ -108,7 +123,7 @@ export default function EmployeeDetailPage({ employeeId, onBack, currentUserRole
       });
       setHourlyRates((prev) => [created, ...prev]);
       setNewHourlyRate('');
-      setNewEffectiveFrom('');
+      setNewEffectiveFrom(employee?.hireDate ?? '');
       setHourlyRateErrors({});
     } catch (err) {
       setHourlyRateServerError(
@@ -430,12 +445,13 @@ export default function EmployeeDetailPage({ employeeId, onBack, currentUserRole
                     </label>
                     <input
                       id="hourly-rate-input"
-                      type="number"
-                      min={0}
+                      type="text"
+                      inputMode="numeric"
                       className={`form-input ${hourlyRateErrors.hourlyRate ? 'form-input--error' : ''}`}
-                      value={newHourlyRate}
+                      value={formatThousands(newHourlyRate)}
                       onChange={(e) => {
-                        setNewHourlyRate(e.target.value);
+                        const digitsOnly = e.target.value.replace(/\D/g, '');
+                        setNewHourlyRate(digitsOnly);
                         if (hourlyRateErrors.hourlyRate) setHourlyRateErrors({ ...hourlyRateErrors, hourlyRate: undefined });
                       }}
                       disabled={submittingHourlyRate}
@@ -459,6 +475,7 @@ export default function EmployeeDetailPage({ employeeId, onBack, currentUserRole
                       disabled={submittingHourlyRate}
                     />
                     {hourlyRateErrors.effectiveFrom && <span className="field-error">{hourlyRateErrors.effectiveFrom}</span>}
+                    <span className="field-hint">Mặc định theo ngày vào làm, có thể chỉnh sửa nếu cần mốc khác.</span>
                   </div>
 
                   <div className="form-field form-field--full" style={{ display: 'flex', justifyContent: 'flex-end' }}>

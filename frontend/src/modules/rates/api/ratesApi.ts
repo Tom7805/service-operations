@@ -8,6 +8,8 @@ import type {
   ResolveContractBillRateQuery,
   ResolvedContractBillRateRes,
   ResolvedTimeEntryRateRes,
+  TimeEntryLookupCandidateRes,
+  TimeEntryLookupEmployeeRes,
   WorkTypeRateFactorPayload,
   WorkTypeRateFactorRes,
 } from '../types/rateTypes';
@@ -165,6 +167,27 @@ export async function resolveTimeEntryBillRate(entryId: number, level: string): 
   const url = new URL(`${API_BASE_URL}/timesheet-entries/${entryId}/bill-rate/resolve`);
   url.searchParams.set('level', level);
   return requestBackend<ResolvedTimeEntryRateRes>(url.toString(), { method: 'GET' });
+}
+
+/**
+ * GET /timesheet-entries/lookup-employees — danh sách nhân sự đã từng có dòng giờ công được
+ * duyệt, để chọn trước khi xem các dòng giờ công của người đó (NCL-07-CN-005) — thay vì phải
+ * tự biết trước "ID dòng giờ công".
+ */
+export async function fetchTimeEntryLookupEmployees(): Promise<TimeEntryLookupEmployeeRes[]> {
+  return requestBackend<TimeEntryLookupEmployeeRes[]>(`${API_BASE_URL}/timesheet-entries/lookup-employees`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * GET /timesheet-entries/lookup-candidates?userId — danh sách dòng giờ công đã duyệt của một
+ * nhân sự đã chọn, để chọn trực tiếp trước khi tra đơn giá (NCL-07-CN-005).
+ */
+export async function fetchTimeEntryLookupCandidates(userId: number): Promise<TimeEntryLookupCandidateRes[]> {
+  const url = new URL(`${API_BASE_URL}/timesheet-entries/lookup-candidates`);
+  url.searchParams.set('userId', String(userId));
+  return requestBackend<TimeEntryLookupCandidateRes[]>(url.toString(), { method: 'GET' });
 }
 
 /**

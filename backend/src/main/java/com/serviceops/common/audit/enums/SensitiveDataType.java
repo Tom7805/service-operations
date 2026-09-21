@@ -4,5 +4,6 @@ public enum SensitiveDataType {
     SALARY,
     COST,
     COST_OF_GOODS,
-    MARGIN
+    MARGIN,
+    REVENUE
 }

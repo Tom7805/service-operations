@@ -130,4 +130,24 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
 	 */
 	List<TimeEntry> findByStatusAndWorkDateBetweenOrderByWorkDateAscIdAsc(
 			TimeEntryStatus status, LocalDate workDateFrom, LocalDate workDateTo);
+
+	/**
+	 * Danh sach ID nhan su DA TUNG co dong gio cong duoc duyet — nguon danh sach "Chon nhan su"
+	 * cho Ke toan/Quan tri vien khi tra don gia (NCL-07-CN-005): chi hien nguoi thuc su co du
+	 * lieu de tra, thay vi liet ke toan bo nhan su cong ty.
+	 */
+	@Query("""
+			SELECT DISTINCT e.userId
+			FROM TimeEntry e
+			WHERE e.status = com.serviceops.modules.timesheet.enums.TimeEntryStatus.APPROVED
+			""")
+	List<Long> findDistinctUserIdsWithApprovedEntries();
+
+	/**
+	 * Cac dong gio cong DA DUYET cua MOT nhan su, moi nhat truoc — nguon danh sach de Ke
+	 * toan/Quan tri vien CHON TRUC TIEP khi tra don gia (NCL-07-CN-005) thay vi phai tu biet
+	 * truoc "ID dong gio cong", con so ma truoc gio chi hien o man hinh danh cho PM
+	 * (NCL-06-CN-005, {@link #findApprovedOriginalEntriesByTaskIdIn}).
+	 */
+	List<TimeEntry> findByStatusAndUserIdOrderByWorkDateDescIdDesc(TimeEntryStatus status, Long userId);
 }
