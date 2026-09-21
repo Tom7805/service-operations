@@ -4674,6 +4674,83 @@ invoicedTotal` là phần còn có thể lập.
   (`400 INVALID_STATE`) khi hợp đồng đã có mốc `INVOICED` — ẩn nút "Khai báo lại mốc" trong trường hợp này.
 - Chưa có API đọc/liệt kê hóa đơn (các story sau của Epic `NCL-10`); dùng `data` của response trên để hiển thị.
 
+### `NCL-10-CN-003` — Ghi nhận thanh toán của khách hàng
+
+Yêu cầu token của **Kế toán** (`VT-05`). Kế toán ghi nhận một lần khách hàng trả tiền cho một hóa đơn (số tiền,
+ngày, hình thức); hệ thống cập nhật **số đã thu**, **số còn phải thu** và **trạng thái hóa đơn** trong cùng
+giao dịch: thu đủ → `PAID`, còn thiếu → `PARTIALLY_PAID`. Số đã thu = tổng các lần thanh toán của hóa đơn (không
+lưu cột riêng trên hóa đơn). Các lần ghi thanh toán của cùng một hóa đơn được xếp hàng tuần tự (khoá ghi dòng
+hóa đơn) nên hai kế toán ghi cùng lúc không thể cùng làm hóa đơn bị thu thừa.
+
+Chỉ hóa đơn `ISSUED` hoặc `PARTIALLY_PAID` nhận thanh toán. Mỗi lần ghi thành công ghi Nhật ký hệ thống
+(`action` = "Ghi nhan thanh toan cua khach hang", `targetType` = `INVOICE`, `targetId` = id hóa đơn); lần bị từ
+chối quyền ghi "Từ chối truy cập" — chức năng "Ghi nhận thanh toán của khách hàng" (TC-04).
+
+#### `POST /invoices/{invoiceId}/payments`
+
+**Request:**
+
+```json
+{
+  "amount": 60000000,
+  "paymentDate": "2026-09-20",
+  "method": "BANK_TRANSFER",
+  "note": "Khach chuyen khoan dot 1"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `amount` | number | có | Lớn hơn `0`, tối đa 2 chữ số thập phân; không được lớn hơn số còn phải thu của hóa đơn (TC-03). |
+| `paymentDate` | date | có | Không được ở tương lai (được phép trùng hoặc trước ngày hóa đơn — khách trả trước). |
+| `method` | string | có | `BANK_TRANSFER` (chuyển khoản) · `CASH` (tiền mặt) · `OTHER` (khác). |
+| `note` | string | không | Tối đa 1000 ký tự. |
+
+**Response thành công — `200 OK`** (TC-02: trả 60 triệu trên hóa đơn 100 triệu):
+
+```json
+{
+  "success": true,
+  "message": "Ghi nhan thanh toan cua khach hang thanh cong",
+  "data": {
+    "id": 500,
+    "invoiceId": 9,
+    "invoiceCode": "INV-20260921-A1B2C3",
+    "amount": 60000000.00,
+    "paymentDate": "2026-09-20",
+    "method": "BANK_TRANSFER",
+    "note": "Khach chuyen khoan dot 1",
+    "totalAmount": 100000000.00,
+    "paidAmount": 60000000.00,
+    "remainingAmount": 40000000.00,
+    "invoiceStatus": "PARTIALLY_PAID",
+    "createdBy": "ketoan01",
+    "createdAt": "2026-09-21T10:00:00"
+  }
+}
+```
+
+`paidAmount` và `remainingAmount` là số **sau khi tính lần thanh toán này**; `invoiceStatus` là trạng thái mới
+của hóa đơn (`PAID` khi `remainingAmount = 0`, TC-01).
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`); hệ thống ghi "Từ chối truy cập" (TC-04). |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hóa đơn `{invoiceId}`. |
+| 400 | `INVALID_STATE` | Hóa đơn còn nháp (`DRAFT`), đã `PAID` hoặc đã `CANCELLED`. |
+| 400 | `VALIDATION_ERROR` | Thiếu/sai `amount`, `paymentDate`, `method`; `amount` ≤ 0; ngày thanh toán ở tương lai; hoặc `amount` lớn hơn số còn phải thu (TC-03). |
+
+**Ghi chú cho Frontend:**
+- Hiển thị đúng `message` backend trả về khi `VALIDATION_ERROR` do vượt số còn phải thu.
+- Sau khi ghi thành công, dùng `remainingAmount`/`invoiceStatus` trong response để cập nhật màn hình, không cần
+  gọi lại API khác.
+- **Chưa có API liệt kê hóa đơn hay lịch sử thanh toán** (chưa thuộc story nào của Epic `NCL-10` trong
+  tài liệu này); `invoiceId` lấy từ `data.id` của `POST /contracts/{contractId}/milestones/{milestoneId}/invoice`
+  (`NCL-10-CN-002`).
+
 ## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)
 
 
