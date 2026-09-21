@@ -6,6 +6,8 @@ import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.config.SecurityConfig;
 import com.serviceops.modules.invoice.controller.PaymentController;
 import com.serviceops.modules.invoice.dto.response.PaymentRes;
+import com.serviceops.modules.invoice.dto.response.PaymentItemRes;
+import com.serviceops.modules.invoice.service.InvoiceService;
 import com.serviceops.modules.invoice.service.PaymentService;
 import com.serviceops.security.CustomUserDetailsService;
 import com.serviceops.security.JwtAuthFilter;
@@ -23,6 +25,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.contains;
@@ -30,6 +33,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -52,6 +56,9 @@ class PaymentControllerTest {
 
 	@MockBean
 	private PaymentService paymentService;
+
+	@MockBean
+	private InvoiceService invoiceService;
 
 	@MockBean
 	private AccessDeniedAuditRecorder accessDeniedAuditRecorder;
@@ -122,5 +129,41 @@ class PaymentControllerTest {
 		mockMvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON).content(BODY))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.errorCode").value("RESOURCE_NOT_FOUND"));
+	}
+
+	@Test
+	@WithMockUser(authorities = "ROLE_VT-05")
+	void listsPaymentHistoryOfInvoice() throws Exception {
+		when(invoiceService.listPayments(9L)).thenReturn(List.of(
+				new PaymentItemRes(501L, new BigDecimal("40000000.00"), LocalDate.of(2026, 9, 21), "CASH", null,
+						"ketoan01", LocalDateTime.of(2026, 9, 21, 10, 0)),
+				new PaymentItemRes(500L, new BigDecimal("60000000.00"), LocalDate.of(2026, 9, 20), "BANK_TRANSFER",
+						"Dot 1", "ketoan01", LocalDateTime.of(2026, 9, 20, 10, 0))));
+
+		mockMvc.perform(get(URL))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.length()").value(2))
+				.andExpect(jsonPath("$.data[0].method").value("CASH"))
+				.andExpect(jsonPath("$.data[1].amount").value(60000000.00));
+	}
+
+	@Test
+	@WithMockUser(authorities = "ROLE_VT-05")
+	void mapsPaymentHistoryOfMissingInvoiceTo404() throws Exception {
+		when(invoiceService.listPayments(9L))
+				.thenThrow(new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Khong tim thay hoa don"));
+
+		mockMvc.perform(get(URL))
+				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	@WithMockUser(authorities = "ROLE_VT-03")
+	void deniesPaymentHistoryForOtherRolesAndLogsAsPaymentFeature() throws Exception {
+		mockMvc.perform(get(URL))
+				.andExpect(status().isForbidden());
+
+		verify(accessDeniedAuditRecorder).record(eq("GET"), contains("/payments"));
+		verify(invoiceService, never()).listPayments(any());
 	}
 }
