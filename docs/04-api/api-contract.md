@@ -2650,6 +2650,35 @@ trúc từng phần tử như response của `GET`.
 | 400 | `VALIDATION_ERROR` | Mảng rỗng, thiếu tỷ lệ/số tiền, số tiền không hợp lệ, tỷ lệ không khớp số tiền hoặc tổng mốc khác `totalValue`. |
 | 400 | `INVALID_STATE` | Hợp đồng đã có mốc `INVOICED` (đã lập hóa đơn, `NCL-10-CN-002`) — không được khai báo lại danh sách mốc. |
 
+#### `PATCH /contracts/{contractId}/milestones/{milestoneId}/status`
+
+Đổi trạng thái một mốc. Chỉ đi **đúng một bước tiến** theo trình tự `PENDING` → `READY_TO_INVOICE` →
+`INVOICED`; không nhảy cóc, không lùi. Cho tới khi story nghiệm thu (`NCL-12-CN-003`) tự động mở mốc, đây là
+cách duy nhất đưa mốc sang `READY_TO_INVOICE` để `NCL-10-CN-002` lập được hóa đơn (QTN-25).
+
+**Trạng thái `INVOICED` không đặt được qua endpoint này** — nó chỉ do
+`POST /contracts/{contractId}/milestones/{milestoneId}/invoice` (`NCL-10-CN-002`) đặt, để mốc `INVOICED` luôn đi
+kèm một hóa đơn thật.
+
+**Request:**
+
+```json
+{ "status": "READY_TO_INVOICE" }
+```
+
+**Response thành công — `200 OK`:** `data` là mốc sau khi cập nhật (cùng cấu trúc phần tử của `GET`). Ghi
+`MILESTONE_STATUS_UPDATE` vào `contract_audit_logs`.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`); hệ thống ghi `DENIED_ACCESS`. |
+| 404 | `RESOURCE_NOT_FOUND` | Không có hợp đồng `{contractId}`, không có mốc `{milestoneId}` hoặc mốc không thuộc hợp đồng. |
+| 400 | `VALIDATION_ERROR` | Thiếu `status` hoặc giá trị không thuộc `PENDING`/`READY_TO_INVOICE`/`INVOICED`. |
+| 400 | `INVALID_STATE` | `status` = `INVOICED` (phải lập hóa đơn qua `NCL-10-CN-002`); hoặc chuyển nhảy cóc/lùi/giữ nguyên trạng thái. |
+
 ### `NCL-04-CN-004` — Lập phụ lục điều chỉnh hợp đồng
 
 Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`). Phụ lục chỉ được lập cho hợp đồng đang hiệu lực
@@ -4815,6 +4844,9 @@ invoicedTotal` là phần còn có thể lập.
 **Ghi chú cho Frontend:**
 - Với lỗi `VALIDATION_ERROR` do QTN-19, hiển thị đúng `message` backend trả về và gợi ý lối đi tới
   `POST /contracts/{contractId}/appendices` (`NCL-04-CN-004`, vai trò `VT-04`).
+- Muốn lập hóa đơn, mốc phải là `READY_TO_INVOICE`: mốc `PENDING` bị chặn (`400 INVALID_STATE`, QTN-25). Đưa mốc sang
+  `READY_TO_INVOICE` bằng `PATCH /contracts/{contractId}/milestones/{milestoneId}/status` (`NCL-04-CN-003`); không
+  có cách đặt `INVOICED` thủ công — ẩn lựa chọn này khỏi màn hình đổi trạng thái mốc.
 - Sau khi lập hóa đơn, mốc đã là `INVOICED`. `PUT /contracts/{contractId}/milestones` **bị từ chối**
   (`400 INVALID_STATE`) khi hợp đồng đã có mốc `INVOICED` — ẩn nút "Khai báo lại mốc" trong trường hợp này.
 - Danh sách và chi tiết hóa đơn đọc qua `GET /invoices` và `GET /invoices/{id}` (mục `NCL-10-CN-003` bên dưới).
