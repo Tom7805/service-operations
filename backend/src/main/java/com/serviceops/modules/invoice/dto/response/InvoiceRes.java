@@ -19,6 +19,7 @@ public record InvoiceRes(
 		String status,
 		BigDecimal totalAmount,
 		LocalDate invoiceDate,
+		LocalDate dueDate,
 		String note,
 		BigDecimal contractValue,
 		BigDecimal invoicedTotal,
