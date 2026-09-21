@@ -221,3 +221,46 @@ export interface MarginAlertThresholdRes {
 export interface MarginThresholdReq {
   minMarginRate: number; // dạng phân số (0.15 = 15%), trong khoảng [-1.0, 1.0]
 }
+
+/**
+ * Dự báo lợi nhuận của dự án tới khi kết thúc (NCL-09-CN-007). Khớp `ProfitForecastRes` phía backend.
+ *
+ * Ngoại suy từ giờ công/chi phí/doanh thu thực tế hiện hành và ngân sách giờ công của các công việc
+ * (NCL-05-CN-005) — tính động, không lưu snapshot. Chỉ trả số liệu tổng hợp cấp dự án nên
+ * **không** áp dụng che dữ liệu QTN-02 (giống `PlannedVsActualMarginRes`).
+ *
+ * Các trường `*Percent` / `marginVariancePercentPoints` có thể `null` khi doanh thu bằng 0 hoặc thiếu
+ * dữ liệu để tính; `taskCompletionRate` là `null` khi dự án chưa có công việc nào.
+ */
+export interface ProfitForecastRes {
+  projectId: number;
+
+  /** Tổng ngân sách giờ công của các công việc (`Task.budgetHours`). */
+  budgetHours: number;
+  actualHours: number;
+  /** Số giờ còn lại ước tính tới khi hoàn thành. */
+  remainingHours: number;
+  /** true khi giờ công đã duyệt vượt ngân sách (TC-02) — phần còn lại ngoại suy theo tốc độ tiêu hao thực tế. */
+  overBudget: boolean;
+  /** Số công việc DONE / tổng số công việc, dạng phân số (0.8 = 80%); null nếu chưa có công việc nào. */
+  taskCompletionRate: number | null;
+  /** actualHours + remainingHours. */
+  estimatedTotalHoursAtCompletion: number;
+
+  actualRevenue: number;
+  actualCost: number;
+  actualMargin: number;
+  actualMarginPercent: number | null;
+
+  forecastRevenue: number;
+  forecastCost: number;
+  forecastMargin: number;
+  forecastMarginPercent: number | null;
+
+  /** forecastMarginPercent - actualMarginPercent (điểm phần trăm); null nếu thiếu 1 trong 2 vế. */
+  marginVariancePercentPoints: number | null;
+  /** true khi biên lợi nhuận dự báo khi kết thúc bị âm. */
+  riskOfLoss: boolean;
+  /** Diễn giải cảnh báo (vượt ngân sách, nguy cơ lỗ, thiếu ngân sách giờ công...). */
+  warnings: string[];
+}

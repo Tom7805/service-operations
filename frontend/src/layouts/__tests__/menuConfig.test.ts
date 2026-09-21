@@ -65,6 +65,7 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'OPPORTUNITIES',
       'PROJECT_LABOR_COST',
       'PLANNED_VS_ACTUAL',
+      'PROFIT_FORECAST',
       'PROJECT_MARGIN',
       'MARGIN_ALERT_THRESHOLD',
     ]);

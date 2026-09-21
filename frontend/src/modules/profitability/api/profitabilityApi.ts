@@ -4,6 +4,7 @@ import type {
   MarginByEmployeeRes,
   MarginThresholdReq,
   PlannedVsActualMarginRes,
+  ProfitForecastRes,
   ProjectLaborCostRes,
   ProjectMarginRes,
   RecognizedRevenueRes,
@@ -186,4 +187,21 @@ export async function getMarginByEmployee(from: string, to: string): Promise<Mar
   return requestBackend<MarginByEmployeeRes>(`${API_BASE_URL}/reports/margin/by-employee?${params.toString()}`, {
     method: 'GET',
   });
+}
+
+/**
+ * NCL-09-CN-007: Dự báo lợi nhuận của dự án tới khi kết thúc.
+ *
+ * GET /projects/{projectId}/profitability/profit-forecast
+ *
+ * Chỉ VT-02 (Quản lý dự án) — vai trò khác nhận `403 FORBIDDEN` (đồng thời backend ghi nhật ký từ chối).
+ * Chỉ trả số liệu tổng hợp cấp dự án nên không áp dụng che dữ liệu QTN-02.
+ */
+export async function getProfitForecast(projectId: number): Promise<ProfitForecastRes> {
+  return requestBackend<ProfitForecastRes>(
+    `${API_BASE_URL}/projects/${projectId}/profitability/profit-forecast`,
+    {
+      method: 'GET',
+    }
+  );
 }
