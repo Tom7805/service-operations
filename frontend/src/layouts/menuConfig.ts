@@ -38,6 +38,7 @@ export type Tab =
   | 'MARGIN_BY_EMPLOYEE'
   | 'PROJECT_LABOR_COST'
   | 'PLANNED_VS_ACTUAL'
+  | 'PROFIT_FORECAST'
   | 'PROJECT_RECOGNIZED_REVENUE'
   | 'PROJECT_MARGIN'
   | 'MARGIN_ALERT_THRESHOLD'
@@ -152,6 +153,12 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
     // NCL-09-CN-006: So sánh biên lợi nhuận dự kiến (báo giá) với thực tế (giờ công đã duyệt).
     // Chỉ VT-02 (Quản lý dự án) được xem — khác với labor-cost (VT-01/VT-02/VT-05); response
     // là số liệu tổng hợp cấp dự án nên không che dữ liệu QTN-02.
+  },
+  {
+    tab: 'PROFIT_FORECAST', icon: ICONS.chart, label: 'Dự báo lợi nhuận khi kết thúc', requires: ['VT-02'],
+    // NCL-09-CN-007: ngoại suy giá vốn/biên lợi nhuận tới khi dự án kết thúc từ giờ công thực tế và ngân sách giờ
+    // (phần giờ còn lại; vượt ngân sách thì theo tốc độ tiêu hao thực tế). Chỉ VT-02 (Quản lý dự án) xem được —
+    // khớp @PreAuthorize backend; số liệu tổng hợp cấp dự án nên không che dữ liệu QTN-02.
   },
   {
     tab: 'PROJECT_RECOGNIZED_REVENUE', icon: ICONS.chart, label: 'Doanh thu ghi nhận', requires: ['VT-01', 'VT-05'],
