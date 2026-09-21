@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -89,6 +90,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest()
                 .body(ErrorResponse.of(ErrorCode.VALIDATION_ERROR.name(),
                         "Tham so " + ex.getName() + " khong dung dinh dang"));
+    }
+
+    // Body thieu, JSON hong hoac sai dinh dang (vd ngay "2026-13-45") — truoc day roi xuong handleUnexpected() va
+    // tra nham 500 INTERNAL_ERROR trong khi day la loi do du lieu nguoi dung gui.
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadableBody(HttpMessageNotReadableException ex) {
+        return ResponseEntity.badRequest()
+                .body(ErrorResponse.of(ErrorCode.VALIDATION_ERROR.name(),
+                        "Du lieu gui len thieu hoac sai dinh dang"));
     }
 
     @ExceptionHandler(Exception.class)
