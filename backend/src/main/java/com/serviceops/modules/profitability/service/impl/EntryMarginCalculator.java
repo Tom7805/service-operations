@@ -19,17 +19,15 @@ import java.math.RoundingMode;
  * mọi báo cáo biên lợi nhuận đọc trực tiếp từ {@code TimeEntry} (NCL-09-CN-005, NCL-09-CN-006) thay vì
  * mỗi nơi tự lặp lại công thức, tránh hai báo cáo lệch số với nhau.
  *
- * <p><b>Giới hạn đã biết:</b> {@code BillRate}/{@code ContractBillRate} định giá theo cặp
- * (vai trò, cấp bậc) nhưng hồ sơ nhân sự ({@code Employee}) hiện chỉ lưu vai trò chuyên môn, chưa có
- * cột cấp bậc (xem {@code RateLookupReq}). Ở đây dùng cấp bậc mặc định {@link #DEFAULT_LEVEL} — đúng
- * bằng giá trị backfill của migration {@code V64} — cho tới khi hồ sơ nhân sự có cột cấp bậc riêng.</p>
+ * <p>Cấp bậc dùng để tra đơn giá bán ({@code BillRate}/{@code ContractBillRate}, khóa theo cặp vai
+ * trò + cấp bậc) lấy trực tiếp từ {@code Employee.level} — cùng nguồn với
+ * {@code RateResolutionService#resolveForTimeEntry(Long)} (NCL-09-CN-002) để không lệch công thức
+ * giữa các báo cáo của Epic 9. Nhân sự chưa khai báo cấp bậc bị loại khỏi doanh thu (vẫn tính vào giá
+ * vốn), đếm vào {@code missingRevenue} thay vì làm hỏng cả báo cáo.</p>
  */
 @Component
 @RequiredArgsConstructor
 public class EntryMarginCalculator {
-
-	/** Trùng giá trị backfill của migration V64__add_level_to_bill_rates.sql. */
-	public static final String DEFAULT_LEVEL = "Chưa phân loại";
 
 	/** 40 giờ chuẩn/tuần (QTN-23) chia 5 ngày làm việc — quy đổi đơn giá theo ngày sang theo giờ. */
 	public static final BigDecimal STANDARD_HOURS_PER_DAY = new BigDecimal("8");
@@ -57,18 +55,19 @@ public class EntryMarginCalculator {
 		boolean missingRevenue = false;
 		if (Boolean.TRUE.equals(entry.getBillable())) {
 			String role = employee.getProfessionalRole() == null ? "" : employee.getProfessionalRole().trim();
-			if (role.isBlank() || contractId == null) {
+			String level = employee.getLevel() == null ? "" : employee.getLevel().trim();
+			if (role.isBlank() || level.isBlank() || contractId == null) {
 				missingRevenue = true;
 			} else {
 				try {
 					ResolvedContractBillRateRes billRate = contractBillRateService.resolve(
-							contractId, role, DEFAULT_LEVEL, entry.getWorkDate());
+							contractId, role, level, entry.getWorkDate());
 					BigDecimal factor = workTypeRateService.resolveFactor(entry.getWorkType());
 					BigDecimal hourlyRevenueRate = billRate.dailyRate().multiply(factor)
 							.divide(STANDARD_HOURS_PER_DAY, 4, RoundingMode.HALF_UP);
 					revenue = entry.getHours().multiply(hourlyRevenueRate).setScale(2, RoundingMode.HALF_UP);
 				} catch (BusinessRuleException missingRate) {
-					// Chua khai bao don gia ban / he so loai hinh cong viec o cap bac mac dinh —
+					// Chua khai bao don gia ban / he so loai hinh cong viec o cap bac cua nhan su nay —
 					// loai dong nay khoi doanh thu thay vi lam hong ca bao cao (van tinh vao gia von o tren).
 					missingRevenue = true;
 				}

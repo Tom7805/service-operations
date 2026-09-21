@@ -2,9 +2,11 @@ package com.serviceops.modules.profitability;
 
 import com.serviceops.config.SecurityConfig;
 import com.serviceops.modules.profitability.controller.ProjectProfitabilityController;
-import com.serviceops.modules.profitability.dto.response.ProjectMarginRes;
+import com.serviceops.modules.profitability.dto.response.ProfitForecastRes;
 import com.serviceops.modules.profitability.service.LaborCostService;
 import com.serviceops.modules.profitability.service.MarginAlertService;
+import com.serviceops.modules.profitability.service.MarginComparisonService;
+import com.serviceops.modules.profitability.service.ProfitForecastService;
 import com.serviceops.modules.profitability.service.ProjectMarginService;
 import com.serviceops.modules.profitability.service.RevenueRecognitionService;
 import com.serviceops.security.CustomUserDetailsService;
@@ -29,38 +31,43 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = ProjectProfitabilityController.class)
 @Import({SecurityConfig.class, JwtAuthFilter.class, JwtAuthenticationEntryPoint.class})
-class ProjectMarginControllerIT {
+class ProfitForecastControllerIT {
 
 	@Autowired private MockMvc mockMvc;
+	@MockBean private ProfitForecastService profitForecastService;
 	@MockBean private ProjectMarginService projectMarginService;
 	@MockBean private LaborCostService laborCostService;
 	@MockBean private RevenueRecognitionService revenueRecognitionService;
 	@MockBean private MarginAlertService marginAlertService;
-	@MockBean private com.serviceops.modules.profitability.service.MarginComparisonService marginComparisonService;
-	@MockBean private com.serviceops.modules.profitability.service.ProfitForecastService profitForecastService;
+	@MockBean private MarginComparisonService marginComparisonService;
 	@MockBean private JwtProvider jwtProvider;
 	@MockBean private CustomUserDetailsService customUserDetailsService;
 
+	/** NCL-09-CN-007-TC-03: Quan ly du an (VT-02) xem duoc du bao loi nhuan toi khi ket thuc du an. */
 	@Test
 	@WithMockUser(authorities = "ROLE_VT-02")
-	void projectManagerCanReadProjectMargin() throws Exception {
-		when(projectMarginService.calculateProjectMargin(42L)).thenReturn(
-				new ProjectMarginRes(42L, new BigDecimal("5000000.00"), new BigDecimal("3000000.00"),
-						BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("3000000.00"), new BigDecimal("2000000.00"),
-						new BigDecimal("0.4000"), 0, 0, List.of(), List.of()));
+	void projectManagerCanReadProfitForecast() throws Exception {
+		when(profitForecastService.forecast(42L)).thenReturn(new ProfitForecastRes(42L,
+				new BigDecimal("1000.00"), new BigDecimal("600.00"), new BigDecimal("400.00"), false,
+				null, new BigDecimal("1000.00"),
+				new BigDecimal("90000000.00"), new BigDecimal("60000000.00"), new BigDecimal("30000000.00"), new BigDecimal("33.33"),
+				new BigDecimal("150000000.00"), new BigDecimal("100000000.00"), new BigDecimal("50000000.00"), new BigDecimal("33.33"),
+				BigDecimal.ZERO, false, List.of()));
 
-		mockMvc.perform(get("/projects/42/profitability/margin"))
+		mockMvc.perform(get("/projects/42/profitability/profit-forecast"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.success").value(true))
 				.andExpect(jsonPath("$.data.projectId").value(42))
-				.andExpect(jsonPath("$.data.grossProfit").value(2000000))
-				.andExpect(jsonPath("$.data.marginRate").value(0.4));
+				.andExpect(jsonPath("$.data.remainingHours").value(400))
+				.andExpect(jsonPath("$.data.forecastMargin").value(50000000))
+				.andExpect(jsonPath("$.data.riskOfLoss").value(false));
 	}
 
+	/** NCL-09-CN-007-TC-03: vai tro khac VT-02 bi tu choi truy cap. */
 	@Test
-	@WithMockUser(authorities = "ROLE_VT-03")
-	void specialistCannotReadProjectMargin() throws Exception {
-		mockMvc.perform(get("/projects/42/profitability/margin"))
+	@WithMockUser(authorities = "ROLE_VT-05")
+	void accountantCannotReadProfitForecast() throws Exception {
+		mockMvc.perform(get("/projects/42/profitability/profit-forecast"))
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
 	}

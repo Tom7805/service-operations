@@ -93,28 +93,16 @@ export default function ProjectLaborCostPage({
     })();
   }, [projectId, initialLaborCost]);
 
-  // Handler tính lại giá vốn — gọi API backend khi có endpoint (TODO).
+  // Backend tính động giá vốn từ các dòng giờ công APPROVED mỗi lần gọi GET, nên "tính lại"
+  // tương đương gọi lại API để lấy kết quả mới nhất (không có endpoint recalculate riêng).
   const handleRecalculate = useCallback(async () => {
     setRecalculating(true);
     try {
-      console.log('[NCL-09-CN-001] Yêu cầu tính lại giá vốn cho projectId:', projectId);
-      // TODO: Gọi POST /projects/{projectId}/profitability/labor-cost/recalculate khi backend hỗ trợ.
-      await new Promise((r) => setTimeout(r, 500));
       await loadData();
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Không thể tính lại giá vốn giờ công.';
-      setError(message);
     } finally {
       setRecalculating(false);
     }
-  }, [projectId, loadData]);
-
-  // Handler xem lịch sử thay đổi — mở modal hoặc chuyển trang khi có route (TODO).
-  const handleHistoryClick = useCallback(() => {
-    console.log('[NCL-09-CN-001] Mở lịch sử thay đổi giá vốn cho projectId:', projectId);
-    // TODO: Mở modal lịch sử hoặc navigate('/projects/:projectId/labor-cost/history').
-  }, [projectId]);
+  }, [loadData]);
 
   if (!canViewScreen) {
     return (
@@ -172,18 +160,10 @@ export default function ProjectLaborCostPage({
             type="button"
             className="btn btn-primary btn-sm"
             onClick={handleRecalculate}
-            disabled={recalculating || !laborCost}
+            disabled={recalculating || loading}
             data-testid="btn-recalculate-labor-cost"
           >
             {ICONS.wrench} {recalculating ? 'Đang tính...' : 'Tính lại'}
-          </button>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={handleHistoryClick}
-            data-testid="btn-history-labor-cost"
-          >
-            {ICONS.history} Lịch sử
           </button>
         </div>
       </div>

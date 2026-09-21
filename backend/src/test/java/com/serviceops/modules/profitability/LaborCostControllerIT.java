@@ -7,6 +7,7 @@ import com.serviceops.modules.profitability.dto.response.ProjectLaborCostRes;
 import com.serviceops.modules.profitability.service.LaborCostService;
 import com.serviceops.modules.profitability.service.MarginAlertService;
 import com.serviceops.modules.profitability.service.MarginComparisonService;
+import com.serviceops.modules.profitability.service.ProfitForecastService;
 import com.serviceops.modules.profitability.service.ProjectMarginService;
 import com.serviceops.modules.profitability.service.RevenueRecognitionService;
 import com.serviceops.security.CustomUserDetailsService;
@@ -50,6 +51,9 @@ class LaborCostControllerIT {
 
 	@MockBean
 	private MarginAlertService marginAlertService;
+
+	@MockBean
+	private ProfitForecastService profitForecastService;
 
 	@MockBean
 	private JwtProvider jwtProvider;

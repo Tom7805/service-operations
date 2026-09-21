@@ -2,12 +2,14 @@ package com.serviceops.modules.profitability.controller;
 
 import com.serviceops.common.api.BaseRes;
 import com.serviceops.modules.profitability.dto.response.PlannedVsActualMarginRes;
+import com.serviceops.modules.profitability.dto.response.ProfitForecastRes;
 import com.serviceops.modules.profitability.dto.response.ProjectLaborCostRes;
 import com.serviceops.modules.profitability.dto.response.ProjectMarginRes;
 import com.serviceops.modules.profitability.dto.response.RecognizedRevenueRes;
 import com.serviceops.modules.profitability.service.LaborCostService;
 import com.serviceops.modules.profitability.service.MarginAlertService;
 import com.serviceops.modules.profitability.service.MarginComparisonService;
+import com.serviceops.modules.profitability.service.ProfitForecastService;
 import com.serviceops.modules.profitability.service.ProjectMarginService;
 import com.serviceops.modules.profitability.service.RevenueRecognitionService;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,7 @@ public class ProjectProfitabilityController {
 	private final ProjectMarginService projectMarginService;
 	private final RevenueRecognitionService revenueRecognitionService;
 	private final MarginAlertService marginAlertService;
+	private final ProfitForecastService profitForecastService;
 
 	@GetMapping("/labor-cost")
 	@PreAuthorize("hasAnyRole('VT-01', 'VT-02', 'VT-05')")
@@ -60,5 +63,12 @@ public class ProjectProfitabilityController {
 		// NCL-09-CN-004 (TC-01): moi lan tinh lai bien loi nhuan la moi lan danh gia canh bao am bien.
 		marginAlertService.evaluateAndAlert(projectId, margin);
 		return BaseRes.ok(margin);
+	}
+
+	/** NCL-09-CN-007: chi Quan ly du an (VT-02) duoc xem, dung vai tro cua user story. */
+	@GetMapping("/profit-forecast")
+	@PreAuthorize("hasRole('VT-02')")
+	public BaseRes<ProfitForecastRes> getProfitForecast(@PathVariable Long projectId) {
+		return BaseRes.ok(profitForecastService.forecast(projectId));
 	}
 }
