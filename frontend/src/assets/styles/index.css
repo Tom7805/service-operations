@@ -3298,13 +3298,12 @@ body { background: var(--canvas); }
 
 .wbs-task-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 6px;
   padding: 10px 14px;
   border: 1px solid var(--line, #E2E8F0);
   border-radius: var(--radius-sm, 6px);
   background: var(--surface, #FFFFFF);
-  gap: 12px;
   transition: background var(--dur-fast, 0.15s) ease;
 }
 
@@ -3318,12 +3317,42 @@ body { background: var(--canvas); }
   border-left: 2px solid #94A3B8;
 }
 
-.wbs-task-main {
+.wbs-task-top {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
+}
+
+.wbs-task-bullet {
+  flex-shrink: 0;
+  color: var(--ink-muted, #64748B);
+  font-size: 10px;
+}
+
+.wbs-task-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-strong, #0F172A);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.wbs-task-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.wbs-task-desc {
+  font-size: 13px;
+  color: var(--ink-muted, #64748B);
+  padding-left: 18px;
 }
 
 .wbs-task-title {
@@ -3338,10 +3367,35 @@ body { background: var(--canvas); }
 .wbs-task-meta {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   font-size: 12.5px;
   color: var(--ink-muted, #64748B);
   flex-wrap: wrap;
+  padding-left: 18px;
+}
+
+.wbs-task-date,
+.wbs-task-budget,
+.wbs-task-assignees {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.wbs-task-budget {
+  color: #2563EB;
+  font-weight: 500;
+}
+
+.wbs-task-assignees {
+  color: #15803D;
+  font-weight: 500;
+}
+
+.wbs-task-assignees--empty {
+  color: var(--ink-muted, #64748B);
+  font-weight: 400;
+  font-style: italic;
 }
 
 .wbs-task-right {

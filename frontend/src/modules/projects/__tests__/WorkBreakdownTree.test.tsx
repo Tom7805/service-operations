@@ -147,7 +147,7 @@ describe('WorkBreakdownTree Component (NCL-05-CN-002)', () => {
     );
 
     expect(screen.queryByLabelText(/Thao tác hạng mục/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /\+ Việc con/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Thao tác công việc/i)).not.toBeInTheDocument();
   });
 
   it('hides modification buttons when isProjectOpen is false (closed project)', () => {
@@ -161,10 +161,10 @@ describe('WorkBreakdownTree Component (NCL-05-CN-002)', () => {
     );
 
     expect(screen.queryByLabelText(/Thao tác hạng mục/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /\+ Việc con/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Thao tác công việc/i)).not.toBeInTheDocument();
   });
 
-  it('calls onAddTask when clicking + Việc con on a task', () => {
+  it('calls onAddTask when clicking "Thêm việc con" on a task (thao tác nay gom trong menu kebab)', () => {
     const onAddTask = vi.fn();
 
     render(
@@ -177,9 +177,10 @@ describe('WorkBreakdownTree Component (NCL-05-CN-002)', () => {
       />
     );
 
-    const addSubTaskButtons = screen.getAllByRole('button', { name: /\+ Việc con/i });
-    expect(addSubTaskButtons.length).toBeGreaterThan(0);
-    fireEvent.click(addSubTaskButtons[0]);
+    const taskMenuButtons = screen.getAllByLabelText(/Thao tác công việc/i);
+    expect(taskMenuButtons.length).toBeGreaterThan(0);
+    fireEvent.click(taskMenuButtons[0]);
+    fireEvent.click(screen.getByText('Thêm việc con'));
     expect(onAddTask).toHaveBeenCalled();
   });
 

@@ -70,6 +70,11 @@ public class TaskServiceImpl implements TaskService {
 
 		List<User> users = request.userIds().stream().map(this::requireAssignableUser).toList();
 		assignmentRepository.deleteByTaskId(task.getId());
+		// Ep flush ngay: Hibernate mac dinh flush INSERT truoc DELETE trong cung 1 transaction
+		// (theo thu tu action-queue, khong theo thu tu code) - neu khong flush o day, insert ben
+		// duoi co the chay truoc lenh xoa vua goi va vi pham unique constraint (task_id, user_id)
+		// khi phan cong lai voi mot nguoi da tung duoc giao truoc do.
+		assignmentRepository.flush();
 		List<TaskAssignment> assignments = users.stream().map(user -> {
 			TaskAssignment assignment = new TaskAssignment();
 			assignment.setTaskId(task.getId());
@@ -159,9 +164,11 @@ public class TaskServiceImpl implements TaskService {
 	}
 
 	private TaskRes toResponse(Task task) {
+		List<TaskAssignmentRes> assignments = assignmentRepository.findByTaskIdOrderByIdAsc(task.getId()).stream()
+				.map(this::toResponse).toList();
 		return new TaskRes(task.getId(), task.getProjectId(), task.getWorkPackageId(), task.getParentTaskId(),
 				task.getName(), task.getDescription(), task.getExpectedStartDate(), task.getExpectedEndDate(),
-				task.getStatus(), task.getBudgetHours());
+				task.getStatus(), task.getBudgetHours(), assignments);
 	}
 
 	private User requireAssignableUser(Long userId) {

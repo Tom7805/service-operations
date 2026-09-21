@@ -8,6 +8,8 @@ import java.util.List;
 public interface TaskAssignmentRepository extends JpaRepository<TaskAssignment, Long> {
 	List<TaskAssignment> findByTaskIdOrderByIdAsc(Long taskId);
 
+	List<TaskAssignment> findByTaskIdInOrderByIdAsc(List<Long> taskIds);
+
 	List<TaskAssignment> findByUserIdOrderByIdAsc(Long userId);
 
 	boolean existsByTaskIdAndUserId(Long taskId, Long userId);
