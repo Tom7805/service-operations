@@ -150,9 +150,6 @@ export default function MarginAlertThresholdPage({
             </button>
           )}
           <div>
-            <div className="page-header__kicker">
-              <span className="page-header__tag">{ICONS.alertTriangle} CẢNH BÁO ÂM BIÊN</span>
-            </div>
             <h1 className="page-title" style={{ margin: '4px 0' }}>
               Ngưỡng cảnh báo dự án âm biên
             </h1>
@@ -186,10 +183,10 @@ export default function MarginAlertThresholdPage({
       )}
 
       {loading ? (
-        <div className="table-loading-state" data-testid="margin-threshold-loading">
-          <span className="spinner-lg" />
-          <p style={{ marginTop: '10px' }}>Đang tải ngưỡng cảnh báo...</p>
-        </div>
+        <div data-testid="margin-threshold-loading" role="status" aria-label="Đang tải ngưỡng cảnh báo...">
+            <div className="skeleton" style={{ height: '88px', marginBottom: '24px' }} />
+            <div className="skeleton" style={{ height: '240px' }} />
+          </div>
       ) : (
         <div className="user-table-card" style={{ padding: '20px', maxWidth: '520px' }}>
           {threshold && threshold.minMarginRate !== null ? (

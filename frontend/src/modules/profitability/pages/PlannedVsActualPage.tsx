@@ -343,12 +343,8 @@ export default function PlannedVsActualPage({
             </button>
           )}
           <div>
-            <div className="page-header__kicker">
-              <span className="page-header__tag">{ICONS.chart} SO SÁNH BIÊN LỢI NHUẬN</span>
-              <span className="page-header__dot" />
-              <span className="page-header__meta">{project?.projectCode || `Mã: ${projectId}`}</span>
-            </div>
             <h1 className="page-title" style={{ margin: '4px 0' }}>Biên lợi nhuận dự kiến vs thực tế</h1>
+            <p className="page-subtitle" data-testid="project-code">{project?.projectCode || `Mã: ${projectId}`}</p>
             {project?.name && (
               <p className="page-subtitle" style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
                 {project.name}
@@ -382,10 +378,10 @@ export default function PlannedVsActualPage({
       )}
 
       {loading ? (
-        <div className="table-loading-state" data-testid="planned-vs-actual-loading">
-          <span className="spinner-lg" />
-          <p style={{ marginTop: '10px' }}>Đang tải so sánh biên lợi nhuận...</p>
-        </div>
+        <div data-testid="planned-vs-actual-loading" role="status" aria-label="Đang tải so sánh biên lợi nhuận...">
+            <div className="skeleton" style={{ height: '88px', marginBottom: '24px' }} />
+            <div className="skeleton" style={{ height: '240px' }} />
+          </div>
       ) : notFound ? (
         <div className="table-empty-state" data-testid="planned-vs-actual-not-found" style={{ padding: '32px' }}>
           <div className="table-empty-state__icon">{ICONS.info}</div>

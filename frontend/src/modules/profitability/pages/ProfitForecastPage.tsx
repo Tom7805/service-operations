@@ -256,12 +256,8 @@ export default function ProfitForecastPage({
             </button>
           )}
           <div>
-            <div className="page-header__kicker">
-              <span className="page-header__tag">{ICONS.chart} DỰ BÁO LỢI NHUẬN</span>
-              <span className="page-header__dot" />
-              <span className="page-header__meta">{project?.projectCode || `Mã: ${projectId}`}</span>
-            </div>
             <h1 className="page-title" style={{ margin: '4px 0' }}>Dự báo lợi nhuận tới khi kết thúc dự án</h1>
+            <p className="page-subtitle" data-testid="project-code">{project?.projectCode || `Mã: ${projectId}`}</p>
             {project?.name && (
               <p className="page-subtitle" style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
                 {project.name}
@@ -290,10 +286,10 @@ export default function ProfitForecastPage({
       )}
 
       {loading ? (
-        <div className="table-loading-state" data-testid="profit-forecast-loading">
-          <span className="spinner-lg" />
-          <p style={{ marginTop: '10px' }}>Đang tải dự báo lợi nhuận...</p>
-        </div>
+        <div data-testid="profit-forecast-loading" role="status" aria-label="Đang tải dự báo lợi nhuận...">
+            <div className="skeleton" style={{ height: '88px', marginBottom: '24px' }} />
+            <div className="skeleton" style={{ height: '240px' }} />
+          </div>
       ) : !data ? (
         !error && (
           <div className="table-empty-state" data-testid="profit-forecast-empty" style={{ padding: '32px' }}>

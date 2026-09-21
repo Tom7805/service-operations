@@ -146,14 +146,10 @@ export default function ProjectMarginPage({
             </button>
           )}
           <div>
-            <div className="page-header__kicker">
-              <span className="page-header__tag">{ICONS.chart} BIÊN LỢI NHUẬN</span>
-              <span className="page-header__dot" />
-              <span className="page-header__meta">{project?.projectCode || `Mã: ${projectId}`}</span>
-            </div>
             <h1 className="page-title" style={{ margin: '4px 0' }}>
               Biên lợi nhuận thời gian thực
             </h1>
+            <p className="page-subtitle" data-testid="project-code">{project?.projectCode || `Mã: ${projectId}`}</p>
           </div>
         </div>
 
@@ -191,10 +187,10 @@ export default function ProjectMarginPage({
       )}
 
       {loading ? (
-        <div className="table-loading-state" data-testid="margin-loading">
-          <span className="spinner-lg" />
-          <p style={{ marginTop: '10px' }}>Đang tải biên lợi nhuận...</p>
-        </div>
+        <div data-testid="margin-loading" role="status" aria-label="Đang tải biên lợi nhuận...">
+            <div className="skeleton" style={{ height: '88px', marginBottom: '24px' }} />
+            <div className="skeleton" style={{ height: '240px' }} />
+          </div>
       ) : !margin ? (
         !error && (
           <div className="table-empty-state" data-testid="margin-empty">

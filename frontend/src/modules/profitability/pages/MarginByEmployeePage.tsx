@@ -123,9 +123,6 @@ export default function MarginByEmployeePage({
             </button>
           )}
           <div>
-            <div className="page-header__kicker">
-              <span className="page-header__tag">{ICONS.users} BIÊN LỢI NHUẬN THEO NHÂN SỰ</span>
-            </div>
             <h1 className="page-title" style={{ margin: '4px 0' }}>
               Báo cáo biên lợi nhuận theo nhân sự
             </h1>
@@ -187,10 +184,10 @@ export default function MarginByEmployeePage({
       )}
 
       {loading ? (
-        <div className="table-loading-state" data-testid="margin-by-employee-loading">
-          <span className="spinner-lg" />
-          <p style={{ marginTop: '10px' }}>Đang tải báo cáo...</p>
-        </div>
+        <div data-testid="margin-by-employee-loading" role="status" aria-label="Đang tải báo cáo...">
+            <div className="skeleton" style={{ height: '88px', marginBottom: '24px' }} />
+            <div className="skeleton" style={{ height: '240px' }} />
+          </div>
       ) : !hasSearched ? (
         !error && (
           <div className="table-empty-state" data-testid="margin-by-employee-prompt">

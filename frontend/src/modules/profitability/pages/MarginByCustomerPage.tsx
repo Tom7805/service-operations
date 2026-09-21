@@ -121,9 +121,6 @@ export default function MarginByCustomerPage({
             </button>
           )}
           <div>
-            <div className="page-header__kicker">
-              <span className="page-header__tag">{ICONS.building} BIÊN LỢI NHUẬN THEO KHÁCH HÀNG</span>
-            </div>
             <h1 className="page-title" style={{ margin: '4px 0' }}>
               Báo cáo biên lợi nhuận theo khách hàng
             </h1>
@@ -185,10 +182,10 @@ export default function MarginByCustomerPage({
       )}
 
       {loading ? (
-        <div className="table-loading-state" data-testid="margin-by-customer-loading">
-          <span className="spinner-lg" />
-          <p style={{ marginTop: '10px' }}>Đang tải báo cáo...</p>
-        </div>
+        <div data-testid="margin-by-customer-loading" role="status" aria-label="Đang tải báo cáo...">
+            <div className="skeleton" style={{ height: '88px', marginBottom: '24px' }} />
+            <div className="skeleton" style={{ height: '240px' }} />
+          </div>
       ) : !hasSearched ? (
         !error && (
           <div className="table-empty-state" data-testid="margin-by-customer-prompt">

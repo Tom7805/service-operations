@@ -135,14 +135,10 @@ export default function ProjectLaborCostPage({
             </button>
           )}
           <div>
-            <div className="page-header__kicker">
-              <span className="page-header__tag">{ICONS.money} GIÁ VỐN GIỜ CÔNG</span>
-              <span className="page-header__dot" />
-              <span className="page-header__meta">{project?.projectCode || `Mã: ${projectId}`}</span>
-            </div>
             <h1 className="page-title" style={{ margin: '4px 0' }}>
               Giá vốn giờ công dự án
             </h1>
+            <p className="page-subtitle" data-testid="project-code">{project?.projectCode || `Mã: ${projectId}`}</p>
           </div>
         </div>
 
@@ -180,10 +176,10 @@ export default function ProjectLaborCostPage({
       )}
 
       {loading ? (
-        <div className="table-loading-state" data-testid="labor-cost-loading">
-          <span className="spinner-lg" />
-          <p style={{ marginTop: '10px' }}>Đang tải giá vốn giờ công...</p>
-        </div>
+        <div data-testid="labor-cost-loading" role="status" aria-label="Đang tải giá vốn giờ công...">
+            <div className="skeleton" style={{ height: '88px', marginBottom: '24px' }} />
+            <div className="skeleton" style={{ height: '240px' }} />
+          </div>
       ) : !laborCost || laborCost.lines.length === 0 ? (
         <div className="table-empty-state" data-testid="labor-cost-empty">
           <div className="table-empty-state__icon">{ICONS.money}</div>

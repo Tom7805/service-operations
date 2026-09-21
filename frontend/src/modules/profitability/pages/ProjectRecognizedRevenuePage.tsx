@@ -153,14 +153,10 @@ export default function ProjectRecognizedRevenuePage({
             </button>
           )}
           <div>
-            <div className="page-header__kicker">
-              <span className="page-header__tag">{ICONS.chart} DOANH THU GHI NHẬN</span>
-              <span className="page-header__dot" />
-              <span className="page-header__meta">{project?.projectCode || `Mã: ${projectId}`}</span>
-            </div>
             <h1 className="page-title" style={{ margin: '4px 0' }}>
               Doanh thu ghi nhận dự án
             </h1>
+            <p className="page-subtitle" data-testid="project-code">{project?.projectCode || `Mã: ${projectId}`}</p>
           </div>
         </div>
 
@@ -198,10 +194,10 @@ export default function ProjectRecognizedRevenuePage({
       )}
 
       {loading ? (
-        <div className="table-loading-state" data-testid="revenue-loading">
-          <span className="spinner-lg" />
-          <p style={{ marginTop: '10px' }}>Đang tải doanh thu ghi nhận...</p>
-        </div>
+        <div data-testid="revenue-loading" role="status" aria-label="Đang tải doanh thu ghi nhận...">
+            <div className="skeleton" style={{ height: '88px', marginBottom: '24px' }} />
+            <div className="skeleton" style={{ height: '240px' }} />
+          </div>
       ) : !revenue ? (
         !error && (
           <div className="table-empty-state" data-testid="revenue-empty">
