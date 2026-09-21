@@ -2648,6 +2648,7 @@ trúc từng phần tử như response của `GET`.
 | 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`); hệ thống ghi `DENIED_ACCESS`. |
 | 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng với `{contractId}`. |
 | 400 | `VALIDATION_ERROR` | Mảng rỗng, thiếu tỷ lệ/số tiền, số tiền không hợp lệ, tỷ lệ không khớp số tiền hoặc tổng mốc khác `totalValue`. |
+| 400 | `INVALID_STATE` | Hợp đồng đã có mốc `INVOICED` (đã lập hóa đơn, `NCL-10-CN-002`) — không được khai báo lại danh sách mốc. |
 
 ### `NCL-04-CN-004` — Lập phụ lục điều chỉnh hợp đồng
 
@@ -4594,6 +4595,84 @@ GET /bill-rates/history?professionalRole=Lap+trinh+vien+cao+cap&level=Cao+cap
   nên phân biệt với trường hợp "có 1 mốc" (vẫn trả `200` kèm `everChanged: false`).
 
 ---
+
+## Epic `NCL-10` — Hóa đơn và thanh toán
+
+### `NCL-10-CN-002` — Lập hóa đơn theo mốc hợp đồng
+
+Yêu cầu token của **Kế toán** (`VT-05`). Kế toán chọn một mốc thanh toán đã **đủ điều kiện lập hóa đơn**
+(`READY_TO_INVOICE`, xem `NCL-04-CN-003`) và hệ thống lập hóa đơn có giá trị **đúng bằng giá trị mốc**; mốc
+chuyển sang `INVOICED` trong cùng giao dịch. Chỉ áp dụng cho hợp đồng `FIXED_PRICE` (trọn gói) hoặc
+`MILESTONE` (theo mốc) — hợp đồng theo giờ đi qua `NCL-10-CN-001`, hợp đồng duy trì đi qua `NCL-10-CN-005`.
+
+**QTN-19:** tổng hóa đơn **chưa huỷ** đã lập của hợp đồng cộng hóa đơn mới không được vượt `totalValue`
+(đã gồm phụ lục, `NCL-04-CN-004`) — và không vượt `limitValue` nếu hợp đồng có đặt hạn mức. Vượt thì bị chặn
+với thông báo yêu cầu lập phụ lục điều chỉnh trước. Các lượt lập hóa đơn của cùng một hợp đồng được xếp hàng
+tuần tự (khoá ghi dòng hợp đồng) nên hai kế toán bấm cùng lúc không thể lập trùng mốc hay cùng vượt giá trị.
+
+Mỗi lần lập thành công ghi Nhật ký hệ thống (`action` = "Lập hóa đơn theo mốc hợp đồng", `targetType` =
+`INVOICE`, `targetId` = id hóa đơn) và `MILESTONE_STATUS_UPDATE` vào `contract_audit_logs`. Lần bị từ chối
+quyền ghi "Từ chối truy cập" — chức năng "Lập hóa đơn theo mốc hợp đồng" (TC-03).
+
+#### `POST /contracts/{contractId}/milestones/{milestoneId}/invoice`
+
+**Request** — toàn bộ body là tùy chọn (có thể không gửi body):
+
+```json
+{
+  "invoiceDate": "2026-09-30",
+  "note": "Thanh toan dot 1"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `invoiceDate` | date | không | Ngày hóa đơn; mặc định là ngày hôm nay. |
+| `note` | string | không | Ghi chú, tối đa 1000 ký tự. |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Lap hoa don theo moc hop dong thanh cong",
+  "data": {
+    "id": 100,
+    "invoiceCode": "INV-20260921-A1B2C3",
+    "contractId": 5,
+    "milestoneId": 101,
+    "milestoneName": "Nghiem thu giai doan 1",
+    "status": "ISSUED",
+    "totalAmount": 300000000.00,
+    "invoiceDate": "2026-09-21",
+    "note": null,
+    "contractValue": 1000000000.00,
+    "invoicedTotal": 300000000.00,
+    "createdBy": "ketoan01",
+    "createdAt": "2026-09-21T10:00:00"
+  }
+}
+```
+
+`invoicedTotal` là tổng đã xuất hóa đơn của hợp đồng **sau khi tính hóa đơn này**; `contractValue -
+invoicedTotal` là phần còn có thể lập.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`); hệ thống ghi "Từ chối truy cập" (TC-03). |
+| 404 | `RESOURCE_NOT_FOUND` | Không có hợp đồng `{contractId}`, không có mốc `{milestoneId}`, hoặc mốc không thuộc hợp đồng này. |
+| 400 | `INVALID_STATE` | Loại hợp đồng không phải `FIXED_PRICE`/`MILESTONE`; mốc còn `PENDING` (chưa nghiệm thu, QTN-25) hoặc đã `INVOICED`. |
+| 400 | `VALIDATION_ERROR` | Tổng hóa đơn lũy kế vượt giá trị hợp đồng hoặc hạn mức (TC-02, QTN-19) — `message` yêu cầu lập phụ lục trước; hoặc `note` quá dài. |
+
+**Ghi chú cho Frontend:**
+- Với lỗi `VALIDATION_ERROR` do QTN-19, hiển thị đúng `message` backend trả về và gợi ý lối đi tới
+  `POST /contracts/{contractId}/appendices` (`NCL-04-CN-004`, vai trò `VT-04`).
+- Sau khi lập hóa đơn, mốc đã là `INVOICED`. `PUT /contracts/{contractId}/milestones` **bị từ chối**
+  (`400 INVALID_STATE`) khi hợp đồng đã có mốc `INVOICED` — ẩn nút "Khai báo lại mốc" trong trường hợp này.
+- Chưa có API đọc/liệt kê hóa đơn (các story sau của Epic `NCL-10`); dùng `data` của response trên để hiển thị.
 
 ## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)
 
