@@ -70,7 +70,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Chay {@link InvoiceProposalServiceImpl} tren JPA THAT (H2) cung chuoi tra don gia that — cac unit test dung mock
- * repository nen chua bao gio thuc thi truy van JPA va rang buoc UNIQUE cua bang moi (V77). Phu cac tieu chi cua
+ * repository nen chua bao gio thuc thi truy van JPA va rang buoc UNIQUE cua bang moi (V78). Phu cac tieu chi cua
  * NCL-10-CN-001 voi so luong dong dung nhu backlog (TC-01: 20 dong, TC-02: 5 dong cho duyet, TC-03: dong da xuat),
  * cot moc chong gom trung o DB va kich ban nhieu ke toan bam cung luc.
  */
