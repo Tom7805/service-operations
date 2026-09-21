@@ -6,6 +6,9 @@ import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.config.SecurityConfig;
 import com.serviceops.modules.invoice.controller.InvoiceController;
 import com.serviceops.modules.invoice.dto.response.InvoiceRes;
+import com.serviceops.modules.invoice.dto.response.InvoiceDetailRes;
+import com.serviceops.modules.invoice.enums.InvoiceStatus;
+import com.serviceops.modules.invoice.service.InvoiceService;
 import com.serviceops.modules.invoice.service.MilestoneInvoiceService;
 import com.serviceops.security.CustomUserDetailsService;
 import com.serviceops.security.JwtAuthFilter;
@@ -22,13 +25,16 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -48,6 +54,9 @@ class InvoiceControllerTest {
 
 	@MockBean
 	private MilestoneInvoiceService milestoneInvoiceService;
+
+	@MockBean
+	private InvoiceService invoiceService;
 
 	@MockBean
 	private AccessDeniedAuditRecorder accessDeniedAuditRecorder;
@@ -106,5 +115,73 @@ class InvoiceControllerTest {
 		mockMvc.perform(post(URL))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.errorCode").value("RESOURCE_NOT_FOUND"));
+	}
+
+	@Test
+	@WithMockUser(authorities = "ROLE_VT-05")
+	void listsInvoicesWithRepeatedStatusFilterAndDebtFigures() throws Exception {
+		when(invoiceService.list(eq(5L), eq(List.of(InvoiceStatus.ISSUED, InvoiceStatus.PARTIALLY_PAID))))
+				.thenReturn(List.of(detail()));
+
+		mockMvc.perform(get("/invoices").param("contractId", "5")
+						.param("status", "ISSUED").param("status", "PARTIALLY_PAID"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data[0].invoiceCode").value("INV-20260921-ABC123"))
+				.andExpect(jsonPath("$.data[0].paidAmount").value(60000000.00))
+				.andExpect(jsonPath("$.data[0].remainingAmount").value(40000000.00));
+	}
+
+	@Test
+	@WithMockUser(authorities = "ROLE_VT-05")
+	void listsInvoicesWithoutFiltersPassingNulls() throws Exception {
+		when(invoiceService.list(null, null)).thenReturn(List.of());
+
+		mockMvc.perform(get("/invoices"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data").isEmpty());
+	}
+
+	@Test
+	@WithMockUser(authorities = "ROLE_VT-05")
+	void rejectsUnknownStatusFilterWith400() throws Exception {
+		mockMvc.perform(get("/invoices").param("status", "NOT_A_STATUS"))
+				.andExpect(status().isBadRequest());
+
+		verify(invoiceService, never()).list(any(), any());
+	}
+
+	@Test
+	@WithMockUser(authorities = "ROLE_VT-05")
+	void returnsInvoiceDetailAnd404WhenMissing() throws Exception {
+		when(invoiceService.get(9L)).thenReturn(detail());
+		when(invoiceService.get(99L))
+				.thenThrow(new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Khong tim thay hoa don"));
+
+		mockMvc.perform(get("/invoices/9"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.customerName").value("Cong ty A"));
+		mockMvc.perform(get("/invoices/99"))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.errorCode").value("RESOURCE_NOT_FOUND"));
+	}
+
+	@Test
+	@WithMockUser(authorities = "ROLE_VT-02")
+	void deniesInvoiceLookupForOtherRolesAndLogsDeniedAccess() throws Exception {
+		mockMvc.perform(get("/invoices"))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+		mockMvc.perform(get("/invoices/9"))
+				.andExpect(status().isForbidden());
+
+		verify(accessDeniedAuditRecorder, times(2)).record(eq("GET"), contains("/invoices"));
+		verify(invoiceService, never()).list(any(), any());
+		verify(invoiceService, never()).get(any());
+	}
+
+	private InvoiceDetailRes detail() {
+		return new InvoiceDetailRes(9L, "INV-20260921-ABC123", 5L, "HD-TEST", 3L, "Cong ty A", "PARTIALLY_PAID",
+				new BigDecimal("100000000.00"), new BigDecimal("60000000.00"), new BigDecimal("40000000.00"),
+				LocalDate.of(2026, 9, 21), null, "ketoan01", LocalDateTime.of(2026, 9, 21, 10, 0));
 	}
 }
