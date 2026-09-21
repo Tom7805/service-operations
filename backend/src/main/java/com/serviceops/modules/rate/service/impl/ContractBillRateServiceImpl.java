@@ -21,7 +21,9 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Service
-@Transactional(readOnly = true)
+// noRollbackFor: xem RateResolutionServiceImpl - nguoi goi (bao cao Epic 9) co the bat BusinessRuleException cua
+// resolve(...) de danh dau "thieu don gia"; cac ham ghi ben duoi co @Transactional rieng nen khong bi anh huong.
+@Transactional(readOnly = true, noRollbackFor = BusinessRuleException.class)
 public class ContractBillRateServiceImpl implements ContractBillRateService {
 
 	private final ContractBillRateRepository contractBillRateRepository;
