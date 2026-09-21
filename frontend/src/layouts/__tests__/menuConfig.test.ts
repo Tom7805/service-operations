@@ -64,6 +64,7 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'CUSTOMERS',
       'OPPORTUNITIES',
       'PROJECT_LABOR_COST',
+      'PLANNED_VS_ACTUAL',
       'PROJECT_MARGIN',
       'MARGIN_ALERT_THRESHOLD',
     ]);

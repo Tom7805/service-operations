@@ -37,6 +37,7 @@ export type Tab =
   | 'MARGIN_BY_CUSTOMER'
   | 'MARGIN_BY_EMPLOYEE'
   | 'PROJECT_LABOR_COST'
+  | 'PLANNED_VS_ACTUAL'
   | 'PROJECT_RECOGNIZED_REVENUE'
   | 'PROJECT_MARGIN'
   | 'MARGIN_ALERT_THRESHOLD'
@@ -145,6 +146,12 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
     // Hiển thị KPI tổng hợp + bảng chi tiết từng dòng. Dữ liệu nhạy cảm (đơn giá, giá vốn)
     // được backend masking; frontend dùng canViewSensitiveData để kiểm soát hiển thị.
     matches: ['PROJECT_LABOR_COST'],
+  },
+  {
+    tab: 'PLANNED_VS_ACTUAL', icon: ICONS.chart, label: 'Biên lợi nhuận dự kiến vs thực tế', requires: ['VT-02'],
+    // NCL-09-CN-006: So sánh biên lợi nhuận dự kiến (báo giá) với thực tế (giờ công đã duyệt).
+    // Chỉ VT-02 (Quản lý dự án) được xem — khác với labor-cost (VT-01/VT-02/VT-05); response
+    // là số liệu tổng hợp cấp dự án nên không che dữ liệu QTN-02.
   },
   {
     tab: 'PROJECT_RECOGNIZED_REVENUE', icon: ICONS.chart, label: 'Doanh thu ghi nhận', requires: ['VT-01', 'VT-05'],

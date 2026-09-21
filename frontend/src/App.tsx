@@ -32,6 +32,7 @@ import OverheadAllocationPage from './modules/expenses/pages/OverheadAllocationP
 import MarginByCustomerPage from './modules/profitability/pages/MarginByCustomerPage';
 import MarginByEmployeePage from './modules/profitability/pages/MarginByEmployeePage';
 import ProjectLaborCostPage from './modules/profitability/pages/ProjectLaborCostPage';
+import PlannedVsActualPage from './modules/profitability/pages/PlannedVsActualPage';
 import ProjectRecognizedRevenuePage from './modules/profitability/pages/ProjectRecognizedRevenuePage';
 import ProjectMarginPage from './modules/profitability/pages/ProjectMarginPage';
 import MarginAlertThresholdPage from './modules/profitability/pages/MarginAlertThresholdPage';
@@ -724,6 +725,50 @@ export default function App() {
                     if (val) setSelectedProjectId(Number(val));
                   }}
                   data-testid="project-selector-dropdown"
+                >
+                  <option value="" disabled>
+                    -- Chọn dự án --
+                  </option>
+                  {mockProjects.map((proj) => (
+                    <option key={proj.id} value={proj.id}>
+                      {proj.projectCode} — {proj.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ) : activeTab === 'PLANNED_VS_ACTUAL' && selectedProjectId ? (
+            <PlannedVsActualPage
+              projectId={selectedProjectId}
+              currentUserRoles={currentRoles}
+              onBack={() => { setSelectedProjectId(null); }}
+            />
+          ) : activeTab === 'PLANNED_VS_ACTUAL' ? (
+            <div className="user-management-page">
+              <div className="page-header">
+                <div>
+                  <div className="page-header__kicker">
+                    <span className="page-header__tag">{ICONS.chart} SO SÁNH BIÊN LỢI NHUẬN</span>
+                    <span className="page-header__dot" />
+                    <span className="page-header__meta">CHƯA CHỌN DỰ ÁN</span>
+                  </div>
+                  <h1 className="page-title">Biên lợi nhuận dự kiến vs thực tế</h1>
+                  <p className="page-subtitle">
+                    Chọn một dự án để so sánh biên lợi nhuận dự kiến với thực tế.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ marginTop: '16px' }}>
+                <select
+                  className="form-select"
+                  style={{ padding: '8px 12px', fontSize: '14px', minWidth: '320px' }}
+                  value=""
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val) setSelectedProjectId(Number(val));
+                  }}
+                  data-testid="project-selector-dropdown-planned-vs-actual"
                 >
                   <option value="" disabled>
                     -- Chọn dự án --
