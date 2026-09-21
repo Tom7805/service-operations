@@ -389,30 +389,36 @@ export default function OpportunityListPage({
       {selectedOpportunity && (
         <div>
           <div
+            className="opp-stage-bar"
             style={{
               display: 'flex',
+              flexWrap: 'wrap',
               justifyContent: 'space-between',
               alignItems: 'center',
-              marginBottom: '10px',
+              gap: '10px',
+              marginBottom: '14px',
             }}
           >
             <span style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--ink-soft)' }}>
               Đang điều khiển: <strong style={{ color: 'var(--ink-strong)' }}>{selectedOpportunity.name}</strong>
               {selectedOpportunity.customerName && ` (${selectedOpportunity.customerName})`}
             </span>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {onOpenActivities && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => onOpenActivities(selectedOpportunity.id, selectedOpportunity.name)}
+                >
+                  <span className="icon-sm">{ICONS.clock}</span>
+                  <span>Ghi nhận chăm sóc</span>
+                </button>
+              )}
               {isAllowed && (
                 <button
                   type="button"
                   className="btn btn-secondary"
                   onClick={() => setQuoteTargetOpportunity(selectedOpportunity)}
-                  style={{
-                    padding: '2px 8px',
-                    fontSize: '13px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
                 >
                   <span className="icon-sm">{ICONS.receipt}</span>
                   <span>
@@ -422,30 +428,27 @@ export default function OpportunityListPage({
                   </span>
                 </button>
               )}
-              {onOpenActivities && (
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => onOpenActivities(selectedOpportunity.id, selectedOpportunity.name)}
-                  style={{
-                    padding: '2px 8px',
-                    fontSize: '13px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <span className="icon-sm">{ICONS.clock}</span>
-                  <span>Ghi nhận chăm sóc</span>
-                </button>
-              )}
+              {/* Chi la mot dieu khien HIEN THI (thu/mo panel), khong phai hanh dong
+                  nghiep vu — tach rieng bang duong ke doc va dung nut icon nhat de
+                  khong canh tranh trong luong voi hai nut hanh dong that o tren. */}
+              <span aria-hidden="true" style={{ width: '1px', height: '22px', background: 'var(--line)' }} />
               <button
                 type="button"
-                className="btn btn-secondary"
+                className="icon-btn"
                 onClick={() => setIsProgressPanelCollapsed((v) => !v)}
-                style={{ padding: '2px 8px', fontSize: '13px' }}
+                aria-label={isProgressPanelCollapsed ? 'Mở rộng thanh tiến trình' : 'Thu gọn thanh tiến trình'}
+                title={isProgressPanelCollapsed ? 'Mở rộng thanh tiến trình' : 'Thu gọn thanh tiến trình'}
+                aria-expanded={!isProgressPanelCollapsed}
               >
-                {isProgressPanelCollapsed ? 'Mở rộng thanh tiến trình' : 'Thu gọn thanh tiến trình'}
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    transform: isProgressPanelCollapsed ? 'rotate(-90deg)' : 'none',
+                    transition: 'transform var(--dur-base) var(--ease-out)',
+                  }}
+                >
+                  {ICONS.chevronDown}
+                </span>
               </button>
             </div>
           </div>
