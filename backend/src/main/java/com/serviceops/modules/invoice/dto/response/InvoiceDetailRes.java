@@ -23,6 +23,7 @@ public record InvoiceDetailRes(
 		BigDecimal paidAmount,
 		BigDecimal remainingAmount,
 		LocalDate invoiceDate,
+		LocalDate dueDate,
 		String note,
 		String createdBy,
 		LocalDateTime createdAt

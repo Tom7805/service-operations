@@ -88,13 +88,22 @@ public class MilestoneInvoiceServiceImpl implements MilestoneInvoiceService {
 
 		LocalDate today = LocalDate.now(clock);
 		LocalDateTime now = LocalDateTime.now(clock);
+		LocalDate invoiceDate = request != null && request.invoiceDate() != null ? request.invoiceDate() : today;
+		LocalDate dueDate = request != null && request.dueDate() != null
+				? request.dueDate()
+				: invoiceDate.plusDays(Invoice.DEFAULT_PAYMENT_TERM_DAYS);
+		if (dueDate.isBefore(invoiceDate)) {
+			throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR,
+					"Han thanh toan (" + dueDate + ") khong duoc truoc ngay hoa don (" + invoiceDate + ")");
+		}
 		Invoice invoice = new Invoice();
 		invoice.setInvoiceCode(generateInvoiceCode(today));
 		invoice.setContractId(contractId);
 		invoice.setCustomerId(contract.getCustomerId());
 		invoice.setStatus(InvoiceStatus.ISSUED);
 		invoice.setTotalAmount(amount);
-		invoice.setInvoiceDate(request != null && request.invoiceDate() != null ? request.invoiceDate() : today);
+		invoice.setInvoiceDate(invoiceDate);
+		invoice.setDueDate(dueDate);
 		invoice.setNote(request == null ? null : blankToNull(request.note()));
 		invoice.setCreatedBy(currentUsername());
 		invoice.setCreatedAt(now);
@@ -120,7 +129,7 @@ public class MilestoneInvoiceServiceImpl implements MilestoneInvoiceService {
 
 		return new InvoiceRes(invoice.getId(), invoice.getInvoiceCode(), contractId, milestoneId,
 				milestone.getName(), invoice.getStatus().name(), amount, invoice.getInvoiceDate(),
-				invoice.getNote(), contract.getTotalValue(), alreadyInvoiced.add(amount),
+				invoice.getDueDate(), invoice.getNote(), contract.getTotalValue(), alreadyInvoiced.add(amount),
 				invoice.getCreatedBy(), invoice.getCreatedAt());
 	}
 
