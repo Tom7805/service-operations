@@ -29,7 +29,11 @@ import TimesheetPeriodPage from './modules/timesheets/pages/TimesheetPeriodPage'
 import UnsubmittedTimesheetsPage from './modules/timesheets/pages/UnsubmittedTimesheetsPage';
 import ExpenseApprovalPage from './modules/expenses/pages/ExpenseApprovalPage';
 import OverheadAllocationPage from './modules/expenses/pages/OverheadAllocationPage';
+import MarginByCustomerPage from './modules/profitability/pages/MarginByCustomerPage';
+import MarginByEmployeePage from './modules/profitability/pages/MarginByEmployeePage';
 import ProjectLaborCostPage from './modules/profitability/pages/ProjectLaborCostPage';
+import PlannedVsActualPage from './modules/profitability/pages/PlannedVsActualPage';
+import ProfitForecastPage from './modules/profitability/pages/ProfitForecastPage';
 import ProjectRecognizedRevenuePage from './modules/profitability/pages/ProjectRecognizedRevenuePage';
 import ProjectMarginPage from './modules/profitability/pages/ProjectMarginPage';
 import MarginAlertThresholdPage from './modules/profitability/pages/MarginAlertThresholdPage';
@@ -87,11 +91,11 @@ export default function App() {
   ];
   const [selectedOpportunityName, setSelectedOpportunityName] = useState<string | undefined>(undefined);
   /** Nhớ người dùng vào màn "Ghi nhận chăm sóc" từ đâu để nút quay lại trả về
-   *  đúng chỗ: từ danh sách "Cơ hộp bán hàng" thì về lại danh sách, còn tự tìm
-   *  trực tiếp trong tab "Cơ hộp" thì quay về ô tìm kiếm. */
+   *  đúng chỗ: từ danh sách "Cơ hội bán hàng" thì về lại danh sách, còn tự tìm
+   *  trực tiếp trong tab "Cơ hội" thì quay về ô tìm kiếm. */
   const [activityOrigin, setActivityOrigin] = useState<'LIST' | 'PICKER' | null>(null);
-  /** Từ báo cáo đường ống, bấm vào một cơ hộp đọng lâu thì nhảy sang "Cơ hộp
-   *  bán hàng" và tự mở đúng cơ hộp đó lên để xử lý ngay (chuyển giai đoạn/
+  /** Từ báo cáo đường ống, bấm vào một cơ hội đọng lâu thì nhảy sang "Cơ hội
+   *  bán hàng" và tự mở đúng cơ hội đó lên để xử lý ngay (chuyển giai đoạn/
    *  chốt kết quả), thay vì chỉ biết mỗi con số ID không thao tác được gì. */
   const [focusOpportunityId, setFocusOpportunityId] = useState<number | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -488,6 +492,10 @@ export default function App() {
             <ExpenseApprovalPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'OVERHEAD_ALLOCATION' ? (
             <OverheadAllocationPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+          ) : activeTab === 'MARGIN_BY_CUSTOMER' ? (
+            <MarginByCustomerPage currentUserRoles={currentRoles} />
+          ) : activeTab === 'MARGIN_BY_EMPLOYEE' ? (
+            <MarginByEmployeePage currentUserRoles={currentRoles} />
           ) : activeTab === 'PROJECT_RECOGNIZED_REVENUE' && selectedProjectId ? (
             <ProjectRecognizedRevenuePage
               projectId={selectedProjectId}
@@ -634,8 +642,8 @@ export default function App() {
                   <span className="report-card__body">
                     <span className="report-card__title">Đường ống bán hàng theo giai đoạn</span>
                     <span className="report-card__desc">
-                      Số cơ hộp, giá trị dự kiến và số ngày trung bình đứng ở mỗi giai đoạn — kèm
-                      cảnh báo cơ hộp đọng lâu bất thường.
+                      Số cơ hội, giá trị dự kiến và số ngày trung bình đứng ở mỗi giai đoạn — kèm
+                      cảnh báo cơ hội đọng lâu bất thường.
                     </span>
                   </span>
                   <span className="report-card__arrow">{ICONS.arrowRight}</span>
@@ -730,6 +738,94 @@ export default function App() {
                 </select>
               </div>
             </div>
+          ) : activeTab === 'PLANNED_VS_ACTUAL' && selectedProjectId ? (
+            <PlannedVsActualPage
+              projectId={selectedProjectId}
+              currentUserRoles={currentRoles}
+              onBack={() => { setSelectedProjectId(null); }}
+            />
+          ) : activeTab === 'PLANNED_VS_ACTUAL' ? (
+            <div className="user-management-page">
+              <div className="page-header">
+                <div>
+                  <div className="page-header__kicker">
+                    <span className="page-header__tag">{ICONS.chart} SO SÁNH BIÊN LỢI NHUẬN</span>
+                    <span className="page-header__dot" />
+                    <span className="page-header__meta">CHƯA CHỌN DỰ ÁN</span>
+                  </div>
+                  <h1 className="page-title">Biên lợi nhuận dự kiến vs thực tế</h1>
+                  <p className="page-subtitle">
+                    Chọn một dự án để so sánh biên lợi nhuận dự kiến với thực tế.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ marginTop: '16px' }}>
+                <select
+                  className="form-select"
+                  style={{ padding: '8px 12px', fontSize: '14px', minWidth: '320px' }}
+                  value=""
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val) setSelectedProjectId(Number(val));
+                  }}
+                  data-testid="project-selector-dropdown-planned-vs-actual"
+                >
+                  <option value="" disabled>
+                    -- Chọn dự án --
+                  </option>
+                  {mockProjects.map((proj) => (
+                    <option key={proj.id} value={proj.id}>
+                      {proj.projectCode} — {proj.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ) : activeTab === 'PROFIT_FORECAST' && selectedProjectId ? (
+            <ProfitForecastPage
+              projectId={selectedProjectId}
+              currentUserRoles={currentRoles}
+              onBack={() => { setSelectedProjectId(null); }}
+            />
+          ) : activeTab === 'PROFIT_FORECAST' ? (
+            <div className="user-management-page">
+              <div className="page-header">
+                <div>
+                  <div className="page-header__kicker">
+                    <span className="page-header__tag">{ICONS.chart} DỰ BÁO LỢI NHUẬN</span>
+                    <span className="page-header__dot" />
+                    <span className="page-header__meta">CHƯA CHỌN DỰ ÁN</span>
+                  </div>
+                  <h1 className="page-title">Dự báo lợi nhuận tới khi kết thúc dự án</h1>
+                  <p className="page-subtitle">
+                    Chọn một dự án để xem dự báo lợi nhuận tới khi kết thúc.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ marginTop: '16px' }}>
+                <select
+                  className="form-select"
+                  style={{ padding: '8px 12px', fontSize: '14px', minWidth: '320px' }}
+                  value=""
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val) setSelectedProjectId(Number(val));
+                  }}
+                  data-testid="project-selector-dropdown-profit-forecast"
+                >
+                  <option value="" disabled>
+                    -- Chọn dự án --
+                  </option>
+                  {mockProjects.map((proj) => (
+                    <option key={proj.id} value={proj.id}>
+                      {proj.projectCode} — {proj.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           ) : activeTab === 'OPPORTUNITY_DETAIL' ? (
             selectedOpportunityId ? (
               <OpportunityDetailPage
@@ -737,12 +833,12 @@ export default function App() {
                 opportunityName={selectedOpportunityName}
                 currentUserRoles={currentRoles}
                 currentUserName={session.fullName}
-                backLabel={activityOrigin === 'LIST' ? 'Quay lại Cơ hộp bán hàng' : 'Tìm cơ hộp khác'}
+                backLabel={activityOrigin === 'LIST' ? 'Quay lại Cơ hội bán hàng' : 'Tìm cơ hội khác'}
                 onBack={() => {
                   // Tab đổi làm OpportunityListPage bị remount hoàn toàn (xem key={activeTab}
                   // ở <main>), nên panel "Đang điều khiển" đang mở sẽ mất theo. Nhờ lại cơ chế
                   // focusOpportunityId (vốn dùng khi nhảy tới từ Báo cáo đường ống) để trang tự
-                  // mở lại đúng cơ hộp vừa xem, khỏi bắt người dùng bấm "Chọn" lại từ đầu.
+                  // mở lại đúng cơ hội vừa xem, khỏi bắt người dùng bấm "Chọn" lại từ đầu.
                   if (activityOrigin === 'LIST' && selectedOpportunityId) {
                     setFocusOpportunityId(selectedOpportunityId);
                   }
@@ -761,11 +857,11 @@ export default function App() {
                       <span className="page-header__dot" />
                       <span className="page-header__meta">CHĂM SÓC CƠ HỘI</span>
                     </div>
-                    <h1 className="page-title">Ghi nhận hoạt động chăm sóc cơ hộp</h1>
+                    <h1 className="page-title">Ghi nhận hoạt động chăm sóc cơ hội</h1>
                     <p className="page-subtitle">
                       Đây là màn hình xem lại lịch sử chăm sóc và ghi nhận cuộc gọi, email hoặc buổi gặp mới cho
-                      một cơ hộp cụ thể — tìm bằng tên cơ hộp hoặc tên khách hàng bên dưới. Cách nhanh hơn: mở{' '}
-                      <strong>"Cơ hộp bán hàng"</strong>, chọn một cơ hộp rồi bấm <strong>"Ghi nhận chăm sóc"</strong>.
+                      một cơ hội cụ thể — tìm bằng tên cơ hội hoặc tên khách hàng bên dưới. Cách nhanh hơn: mở{' '}
+                      <strong>"Cơ hội bán hàng"</strong>, chọn một cơ hội rồi bấm <strong>"Ghi nhận chăm sóc"</strong>.
                     </p>
                   </div>
                 </div>

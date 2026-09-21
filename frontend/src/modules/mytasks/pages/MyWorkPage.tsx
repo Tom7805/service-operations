@@ -236,7 +236,7 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
       )}
 
       <div className="user-table-card" style={{ padding: '20px', marginBottom: '16px' }}>
-        <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 700, color: '#1E293B' }}>
+        <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
           Công việc đang được giao
         </h3>
 
@@ -248,8 +248,8 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
         ) : tasks.length === 0 ? (
           <div className="table-empty-state" data-testid="my-tasks-empty">
             <div className="table-empty-state__icon">{ICONS.folder}</div>
-            <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: '#1E293B' }}>Chưa được giao công việc nào</h4>
-            <p style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }}>
+            <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>Chưa được giao công việc nào</h4>
+            <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
               Khi Quản lý dự án phân công cho bạn, công việc sẽ xuất hiện ở đây.
             </p>
           </div>
@@ -274,10 +274,10 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
                     <tr key={task.taskId} data-testid={`my-task-row-${task.taskId}`}>
                       <td>
                         <div style={{ fontWeight: 500 }}>{task.projectName}</div>
-                        <div style={{ fontSize: '12px', color: '#64748B' }}>{task.projectCode}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--ink-muted)' }}>{task.projectCode}</div>
                       </td>
                       <td>{task.taskName}</td>
-                      <td style={{ whiteSpace: 'nowrap', fontSize: '13px', color: '#475569' }}>
+                      <td style={{ whiteSpace: 'nowrap', fontSize: '13px', color: 'var(--ink-muted)' }}>
                         {formatDate(task.assignmentStartDate ?? task.expectedStartDate)}
                         {' ➔ '}
                         {formatDate(task.assignmentEndDate ?? task.expectedEndDate)}

@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
@@ -97,8 +98,8 @@ public class MarginAlertServiceImpl implements MarginAlertService {
 		String content = String.format(
 				"Du an #%d dang co bien loi nhuan %s%%, thap hon nguong toi thieu %s%%.",
 				projectId,
-				margin.marginRate().multiply(BigDecimal.valueOf(100)),
-				setting.getMinMarginRate().multiply(BigDecimal.valueOf(100)));
+				toPercentText(margin.marginRate()),
+				toPercentText(setting.getMinMarginRate()));
 		// Bucket theo ngay de khong gui lai nhieu lan trong cung mot ngay du bien loi nhuan
 		// duoc doc lai nhieu lan (moi lan GET /margin la mot lan "tinh lai").
 		String referenceType = "NegativeMarginAlert:" + projectId + ":" + LocalDate.now();
@@ -120,6 +121,11 @@ public class MarginAlertServiceImpl implements MarginAlertService {
 				.map(Project::getProjectManagerId)
 				.ifPresent(recipients::add);
 		return List.copyOf(recipients);
+	}
+
+	/** Ty le dang phan so (0.1500) -> "15.00" de thong bao khong hien "15.0000%". */
+	private static String toPercentText(BigDecimal ratio) {
+		return ratio.multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP).toPlainString();
 	}
 
 	private String currentUsername() {

@@ -17,7 +17,8 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @Service
-@Transactional(readOnly = true)
+// noRollbackFor: xem RateResolutionServiceImpl - resolveFactor(...) duoc goi trong luong tra don gia cua bao cao Epic 9.
+@Transactional(readOnly = true, noRollbackFor = BusinessRuleException.class)
 public class WorkTypeRateServiceImpl implements WorkTypeRateService {
 
 	private final WorkTypeRateFactorRepository workTypeRateFactorRepository;

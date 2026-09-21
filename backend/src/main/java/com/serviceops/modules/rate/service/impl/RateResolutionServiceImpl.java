@@ -31,7 +31,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
-@Transactional(readOnly = true)
+// noRollbackFor: cac bao cao Epic 9 (NCL-09-CN-002/003) bat BusinessRuleException cua luong tra don gia de
+// danh dau dong "thieu don gia" thay vi loi ca bao cao; service chi doc nen khong co gi de rollback, va neu
+// khong co noRollbackFor thi transaction cua nguoi goi bi danh dau rollback-only -> UnexpectedRollbackException.
+@Transactional(readOnly = true, noRollbackFor = BusinessRuleException.class)
 public class RateResolutionServiceImpl implements RateResolutionService {
 
 	private final TimeEntryRepository timeEntryRepository;

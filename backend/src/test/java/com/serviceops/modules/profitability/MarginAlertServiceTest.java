@@ -135,9 +135,12 @@ class MarginAlertServiceTest {
 		service.evaluateAndAlert(42L, marginOf(new BigDecimal("-0.0500")));
 
 		ArgumentCaptor<String> titleCaptor = ArgumentCaptor.forClass(String.class);
+		ArgumentCaptor<String> contentCaptor = ArgumentCaptor.forClass(String.class);
 		verify(notificationService).sendInAppNotification(eq(1L), eq(NotificationType.NEGATIVE_MARGIN_ALERT),
-				titleCaptor.capture(), any(), eq(42L), any());
+				titleCaptor.capture(), contentCaptor.capture(), eq(42L), any());
 		assertThat(titleCaptor.getValue()).contains("am bien");
+		// Ty le hien thi 2 chu so thap phan (-5.00% / 15.00%), khong phai -5.0000% / 15.0000%.
+		assertThat(contentCaptor.getValue()).contains("-5.00%").contains("15.00%");
 	}
 
 	@Test

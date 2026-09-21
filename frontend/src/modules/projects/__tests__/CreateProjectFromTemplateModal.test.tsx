@@ -4,7 +4,6 @@ import CreateProjectFromTemplateModal from '../components/CreateProjectFromTempl
 import * as projectsApi from '../api/projectsApi';
 import * as usersApi from '../../users/api/usersApi';
 import type {
-  AssignableProjectManager,
   ContractTargetForProject,
   ProjectRes,
   ProjectTemplateRes,
@@ -37,12 +36,6 @@ vi.mock('../api/projectsApi', () => {
     ProjectsApiError: MockProjectsApiError,
   };
 });
-
-const mockManagers: AssignableProjectManager[] = [
-  { id: 7, username: 'pm01', fullName: 'Nguyễn Văn A' },
-  { id: 12, username: 'pm02', fullName: 'Trần Thị B' },
-  { id: 99, username: 'boss', fullName: 'Người dùng đang đăng nhập' },
-];
 
 const mockContract: ContractTargetForProject = {
   id: 1,

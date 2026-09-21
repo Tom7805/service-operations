@@ -156,7 +156,7 @@ export default function TaskFormModal({
                 autoFocus
               />
               {errors.name && (
-                <p className="field-error" data-testid="error-task-name" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                <p className="field-error" data-testid="error-task-name" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                   {errors.name}
                 </p>
               )}
@@ -213,7 +213,7 @@ export default function TaskFormModal({
                   disabled={submitting}
                 />
                 {errors.expectedEndDate && (
-                  <p className="field-error" data-testid="error-task-end-date" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                  <p className="field-error" data-testid="error-task-end-date" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                     {errors.expectedEndDate}
                   </p>
                 )}

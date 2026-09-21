@@ -258,7 +258,7 @@ export default function ContractExpiryReminderModal({
                     /* Trạng thái không có hợp đồng nào sắp hết hạn trong khung đã chọn */
                     <div className="expiry-empty-state" data-testid="expiry-empty-state">
                       <span className="expiry-empty-state__icon">{ICONS.checkCircle}</span>
-                      <p style={{ fontWeight: 600, color: '#2E7D32', margin: '4px 0' }}>
+                      <p style={{ fontWeight: 600, color: 'var(--pale-green-fg)', margin: '4px 0' }}>
                         Không có hợp đồng nào sắp hết hiệu lực trong vòng {days} ngày tới.
                       </p>
                       <p style={{ fontSize: '13px', color: '#6B6966', margin: 0 }}>

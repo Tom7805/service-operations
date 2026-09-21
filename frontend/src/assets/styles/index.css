@@ -392,6 +392,8 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
   line-height: 1; letter-spacing: var(--track-4xl); font-variant-numeric: tabular-nums;
   display: block;
 }
+/* Biến thể cho số tiền dài (vd. 1.500.000.000 ₫): cỡ 24px thuộc thang cỡ chữ và vừa ô 172px, không tràn. */
+.stat-card__value--md { font-size: 24px; letter-spacing: var(--track-2xl); overflow-wrap: anywhere; }
 .text-success { color: #346538 !important; } .text-danger { color: #9F2F2D !important; } .text-warning { color: #956400 !important; } .text-ink-strong { color: var(--ink-strong) !important; }
 
 /* TẦNG NỘI DUNG — tấm ĐỤC. Đây là ranh giới quan trọng nhất của hệ: kính chỉ ở tầng chức năng,
@@ -3383,12 +3385,12 @@ body { background: var(--canvas); }
 }
 
 .wbs-task-budget {
-  color: #2563EB;
+  color: var(--pale-blue-fg);
   font-weight: 500;
 }
 
 .wbs-task-assignees {
-  color: #15803D;
+  color: var(--pale-green-fg);
   font-weight: 500;
 }
 

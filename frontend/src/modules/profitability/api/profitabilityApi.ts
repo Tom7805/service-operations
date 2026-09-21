@@ -1,6 +1,10 @@
 import type {
   MarginAlertThresholdRes,
+  MarginByCustomerRes,
+  MarginByEmployeeRes,
   MarginThresholdReq,
+  PlannedVsActualMarginRes,
+  ProfitForecastRes,
   ProjectLaborCostRes,
   ProjectMarginRes,
   RecognizedRevenueRes,
@@ -78,6 +82,27 @@ export async function getProjectLaborCost(projectId: number): Promise<ProjectLab
 }
 
 /**
+ * NCL-09-CN-006: So sánh biên lợi nhuận dự kiến (từ báo giá) với thực tế (từ giờ công đã duyệt).
+ *
+ * GET /projects/{projectId}/profitability/planned-vs-actual-margin
+ *
+ * Chỉ VT-02 (Quản lý dự án) được truy cập — backend trả `403 FORBIDDEN` cho vai trò khác.
+ * Dự án chưa gắn báo giá nào (qua hợp đồng) backend trả `404 RESOURCE_NOT_FOUND`; frontend dùng
+ * `ProfitabilityApiError.code === 'RESOURCE_NOT_FOUND'` để hiển thị trạng thái "chưa có báo giá".
+ *
+ * Khác với `labor-cost` (che chi phí/giờ công theo TỪNG nhân sự qua QTN-02), endpoint này chỉ
+ * trả số liệu tổng hợp cấp dự án nên **không** áp dụng masking — frontend hiển thị trực tiếp.
+ */
+export async function getPlannedVsActualMargin(projectId: number): Promise<PlannedVsActualMarginRes> {
+  return requestBackend<PlannedVsActualMarginRes>(
+    `${API_BASE_URL}/projects/${projectId}/profitability/planned-vs-actual-margin`,
+    {
+      method: 'GET',
+    }
+  );
+}
+
+/**
  * NCL-09-CN-002: Tính doanh thu ghi nhận của một dự án theo đúng loại hợp đồng.
  *
  * Cho phép VT-01 (Ban giám đốc), VT-05 (Kế toán) — vai trò khác nhận `403 FORBIDDEN`.
@@ -136,4 +161,47 @@ export async function setMarginAlertThreshold(payload: MarginThresholdReq): Prom
     method: 'PUT',
     body: JSON.stringify(payload),
   });
+}
+
+/**
+ * NCL-09-CN-005 (TC-01): Báo cáo biên lợi nhuận theo khách hàng trong một kỳ.
+ *
+ * Chỉ VT-01 (Ban giám đốc) — vai trò khác nhận `403 FORBIDDEN`.
+ * GET /reports/margin/by-customer?from={yyyy-MM-dd}&to={yyyy-MM-dd}
+ */
+export async function getMarginByCustomer(from: string, to: string): Promise<MarginByCustomerRes> {
+  const params = new URLSearchParams({ from, to });
+  return requestBackend<MarginByCustomerRes>(`${API_BASE_URL}/reports/margin/by-customer?${params.toString()}`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * NCL-09-CN-005 (TC-02): Báo cáo biên lợi nhuận theo nhân sự trong một kỳ.
+ *
+ * Chỉ VT-01 (Ban giám đốc) — vai trò khác nhận `403 FORBIDDEN`.
+ * GET /reports/margin/by-employee?from={yyyy-MM-dd}&to={yyyy-MM-dd}
+ */
+export async function getMarginByEmployee(from: string, to: string): Promise<MarginByEmployeeRes> {
+  const params = new URLSearchParams({ from, to });
+  return requestBackend<MarginByEmployeeRes>(`${API_BASE_URL}/reports/margin/by-employee?${params.toString()}`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * NCL-09-CN-007: Dự báo lợi nhuận của dự án tới khi kết thúc.
+ *
+ * GET /projects/{projectId}/profitability/profit-forecast
+ *
+ * Chỉ VT-02 (Quản lý dự án) — vai trò khác nhận `403 FORBIDDEN` (đồng thời backend ghi nhật ký từ chối).
+ * Chỉ trả số liệu tổng hợp cấp dự án nên không áp dụng che dữ liệu QTN-02.
+ */
+export async function getProfitForecast(projectId: number): Promise<ProfitForecastRes> {
+  return requestBackend<ProfitForecastRes>(
+    `${API_BASE_URL}/projects/${projectId}/profitability/profit-forecast`,
+    {
+      method: 'GET',
+    }
+  );
 }

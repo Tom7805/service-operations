@@ -153,14 +153,10 @@ export default function ProjectRecognizedRevenuePage({
             </button>
           )}
           <div>
-            <div className="page-header__kicker">
-              <span className="page-header__tag">{ICONS.chart} DOANH THU GHI NHẬN</span>
-              <span className="page-header__dot" />
-              <span className="page-header__meta">{project?.projectCode || `Mã: ${projectId}`}</span>
-            </div>
             <h1 className="page-title" style={{ margin: '4px 0' }}>
               Doanh thu ghi nhận dự án
             </h1>
+            <p className="page-subtitle" data-testid="project-code">{project?.projectCode || `Mã: ${projectId}`}</p>
           </div>
         </div>
 
@@ -198,16 +194,16 @@ export default function ProjectRecognizedRevenuePage({
       )}
 
       {loading ? (
-        <div className="table-loading-state" data-testid="revenue-loading">
-          <span className="spinner-lg" />
-          <p style={{ marginTop: '10px' }}>Đang tải doanh thu ghi nhận...</p>
-        </div>
+        <div data-testid="revenue-loading" role="status" aria-label="Đang tải doanh thu ghi nhận...">
+            <div className="skeleton" style={{ height: '88px', marginBottom: '24px' }} />
+            <div className="skeleton" style={{ height: '240px' }} />
+          </div>
       ) : !revenue ? (
         !error && (
           <div className="table-empty-state" data-testid="revenue-empty">
             <div className="table-empty-state__icon">{ICONS.chart}</div>
-            <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: '#1E293B' }}>Không có dữ liệu</h4>
-            <p style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }}>
+            <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>Không có dữ liệu</h4>
+            <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
               Dự án này chưa có dữ liệu để tính doanh thu ghi nhận.
             </p>
           </div>
@@ -221,7 +217,7 @@ export default function ProjectRecognizedRevenuePage({
             data-testid="revenue-contract-info"
           >
             <strong>Loại hợp đồng:</strong> {CONTRACT_TYPE_LABELS[revenue.contractType]}
-            <span style={{ margin: '0 10px', color: '#94A3B8' }}>·</span>
+            <span style={{ margin: '0 10px', color: 'var(--ink-faint)' }}>·</span>
             <strong>Phương thức ghi nhận:</strong> {RECOGNITION_METHOD_LABELS[revenue.recognitionMethod]}
           </div>
 
@@ -237,102 +233,44 @@ export default function ProjectRecognizedRevenuePage({
             </div>
           )}
 
-          <div
-            className="kpi-row"
-            style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}
-          >
-            <div
-              className="kpi-card"
-              style={{
-                flex: '1',
-                minWidth: '200px',
-                padding: '20px',
-                border: '1px solid #E2E8F0',
-                borderRadius: '8px',
-                background: '#FFF',
-              }}
-              data-testid="kpi-total-revenue"
-            >
-              <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>Tổng doanh thu ghi nhận</div>
-              <div style={{ fontSize: '28px', fontWeight: 700, color: '#1E293B' }}>
+          <div className="stats-grid">
+            <div className="stat-card" data-testid="kpi-total-revenue">
+              <span className="stat-card__label">Tổng doanh thu ghi nhận</span>
+              <strong className="stat-card__value stat-card__value--md">
                 {formatCurrency(revenue.totalRecognizedRevenue)}
-              </div>
+              </strong>
             </div>
 
             {isHourly && (
               <>
-                <div
-                  className="kpi-card"
-                  style={{
-                    flex: '1',
-                    minWidth: '180px',
-                    padding: '20px',
-                    border: '1px solid #E2E8F0',
-                    borderRadius: '8px',
-                    background: '#FFF',
-                  }}
-                  data-testid="kpi-total-hours"
-                >
-                  <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>Tổng giờ tính phí</div>
-                  <div style={{ fontSize: '28px', fontWeight: 700, color: '#1E293B' }}>
+                <div className="stat-card" data-testid="kpi-total-hours">
+                  <span className="stat-card__label">Tổng giờ tính phí</span>
+                  <strong className="stat-card__value">
                     {formatHours(revenue.totalBillableHours ?? 0)}
-                  </div>
+                  </strong>
                 </div>
-                <div
-                  className="kpi-card"
-                  style={{
-                    flex: '1',
-                    minWidth: '180px',
-                    padding: '20px',
-                    border: '1px solid #E2E8F0',
-                    borderRadius: '8px',
-                    background: '#FFF',
-                  }}
-                  data-testid="kpi-excluded-lines"
-                >
-                  <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>Dòng không tính phí</div>
-                  <div style={{ fontSize: '28px', fontWeight: 700, color: '#1E293B' }}>
+                <div className="stat-card" data-testid="kpi-excluded-lines">
+                  <span className="stat-card__label">Dòng không tính phí</span>
+                  <strong className="stat-card__value">
                     {revenue.excludedLineCount}
-                  </div>
+                  </strong>
                 </div>
               </>
             )}
 
             {isCompletion && (
               <>
-                <div
-                  className="kpi-card"
-                  style={{
-                    flex: '1',
-                    minWidth: '180px',
-                    padding: '20px',
-                    border: '1px solid #E2E8F0',
-                    borderRadius: '8px',
-                    background: '#FFF',
-                  }}
-                  data-testid="kpi-completion-rate"
-                >
-                  <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>Tỷ lệ hoàn thành</div>
-                  <div style={{ fontSize: '28px', fontWeight: 700, color: '#1E293B' }}>
+                <div className="stat-card" data-testid="kpi-completion-rate">
+                  <span className="stat-card__label">Tỷ lệ hoàn thành</span>
+                  <strong className="stat-card__value">
                     {formatPercent(revenue.completionRate ?? 0)}
-                  </div>
+                  </strong>
                 </div>
-                <div
-                  className="kpi-card"
-                  style={{
-                    flex: '1',
-                    minWidth: '180px',
-                    padding: '20px',
-                    border: '1px solid #E2E8F0',
-                    borderRadius: '8px',
-                    background: '#FFF',
-                  }}
-                  data-testid="kpi-tasks"
-                >
-                  <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>Công việc hoàn thành</div>
-                  <div style={{ fontSize: '28px', fontWeight: 700, color: '#1E293B' }}>
+                <div className="stat-card" data-testid="kpi-tasks">
+                  <span className="stat-card__label">Công việc hoàn thành</span>
+                  <strong className="stat-card__value">
                     {revenue.doneTaskCount ?? 0}/{revenue.totalTaskCount ?? 0}
-                  </div>
+                  </strong>
                 </div>
               </>
             )}
@@ -341,13 +279,13 @@ export default function ProjectRecognizedRevenuePage({
           {isHourly && (
             <div className="user-table-card" style={{ padding: '20px' }} data-testid="revenue-detail-table">
               <div style={{ marginBottom: '16px' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1E293B' }}>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
                   Chi tiết từng dòng giờ công
                 </h3>
               </div>
 
               {revenue.lines.length === 0 ? (
-                <p style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }} data-testid="revenue-lines-empty">
+                <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }} data-testid="revenue-lines-empty">
                   Dự án này chưa có giờ công đã duyệt để tính doanh thu.
                 </p>
               ) : (

@@ -144,12 +144,12 @@ export default function TaskBudgetModal({
                 style={{ maxWidth: '160px' }}
               />
               {errors.budgetHours && (
-                <p className="field-error" data-testid="error-task-budget-hours" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                <p className="field-error" data-testid="error-task-budget-hours" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                   {errors.budgetHours}
                 </p>
               )}
               {isEditing && (
-                <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px', color: '#64748B' }}>
+                <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px', color: 'var(--ink-muted)' }}>
                   Gọi lại sẽ ghi đè ngân sách hiện tại ({currentBudgetHours} giờ), không cộng dồn.
                 </p>
               )}

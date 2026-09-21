@@ -117,7 +117,7 @@ export default function ProjectMilestoneTimeline({
           gap: '8px',
         }}
       >
-        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1E293B' }}>
+        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
           Mốc tiến độ dự án
         </h3>
         {canCreate && (
@@ -170,10 +170,10 @@ export default function ProjectMilestoneTimeline({
       ) : milestones.length === 0 ? (
         <div className="table-empty-state" data-testid="milestone-empty">
           <div className="table-empty-state__icon">{ICONS.calendar}</div>
-          <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: '#1E293B' }}>
+          <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>
             Chưa có mốc tiến độ nào
           </h4>
-          <p style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }}>
+          <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
             {canCreate
               ? 'Hãy bấm nút "+ Thêm mốc tiến độ" ở trên để bắt đầu theo dõi tiến độ dự án.'
               : 'Dự án này chưa khai báo mốc tiến độ nào.'}

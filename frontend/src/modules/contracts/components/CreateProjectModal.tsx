@@ -8,8 +8,6 @@ import type {
   ProjectRes,
 } from '../types/contractTypes';
 import { createProjectFromContract, ProjectsApiError } from '../api/contractsApi';
-import { fetchAssignableProjectManagers } from '../../projects/api/projectsApi';
-import type { AssignableProjectManager } from '../../projects/types/projectTypes';
 import { validateProjectCreateForm } from '../../projects/validators/projectValidators';
 
 export type {
@@ -203,7 +201,7 @@ export default function CreateProjectModal({
             </h3>
             <p className="field-hint">
               {contract.contractCode} · {contract.name} · Trạng thái:{' '}
-              <strong style={{ color: isActive ? '#15803D' : '#DC2626' }}>{contract.status}</strong>
+              <strong style={{ color: isActive ? 'var(--pale-green-fg)' : 'var(--pale-red-fg)' }}>{contract.status}</strong>
             </p>
           </div>
           <button
@@ -243,7 +241,7 @@ export default function CreateProjectModal({
             <form onSubmit={handleSubmit} noValidate data-testid="create-project-form">
               {/* Thẻ xem trước kế thừa thông tin từ hợp đồng */}
               <div className="project-preview-card" style={{ marginBottom: '16px' }}>
-                <div style={{ fontWeight: 600, marginBottom: '8px', color: '#1E293B' }}>
+                <div style={{ fontWeight: 600, marginBottom: '8px', color: 'var(--ink-strong)' }}>
                   Thông tin kế thừa từ hợp đồng
                 </div>
                 <div className="project-preview-grid">
@@ -267,7 +265,7 @@ export default function CreateProjectModal({
                   </div>
                   <div className="project-preview-item">
                     <span className="field-hint">Trạng thái khởi tạo:</span>
-                    <strong style={{ color: '#15803D' }}>RUNNING (Đang triển khai)</strong>
+                    <strong style={{ color: 'var(--pale-green-fg)' }}>RUNNING (Đang triển khai)</strong>
                   </div>
                 </div>
               </div>
@@ -292,7 +290,7 @@ export default function CreateProjectModal({
                   autoFocus
                 />
                 {errors.name && (
-                  <p className="field-error" data-testid="error-name" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                  <p className="field-error" data-testid="error-name" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                     {errors.name}
                   </p>
                 )}
@@ -317,7 +315,7 @@ export default function CreateProjectModal({
                     disabled={submitting}
                   />
                   {errors.startDate && (
-                    <p className="field-error" data-testid="error-start-date" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                    <p className="field-error" data-testid="error-start-date" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                       {errors.startDate}
                     </p>
                   )}
@@ -340,7 +338,7 @@ export default function CreateProjectModal({
                     disabled={submitting}
                   />
                   {errors.expectedEndDate && (
-                    <p className="field-error" data-testid="error-expected-end-date" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                    <p className="field-error" data-testid="error-expected-end-date" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                       {errors.expectedEndDate}
                     </p>
                   )}
@@ -383,16 +381,16 @@ export default function CreateProjectModal({
                   ))}
                 </select>
                 {managerLoadError ? (
-                  <p className="field-error" style={{ fontSize: '12px', marginTop: '4px', color: '#DC2626' }}>
+                  <p className="field-error" style={{ fontSize: '12px', marginTop: '4px', color: 'var(--pale-red-fg)' }}>
                     {managerLoadError}
                   </p>
                 ) : (
-                  <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px', color: '#64748B' }}>
+                  <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px', color: 'var(--ink-muted)' }}>
                     Chỉ hiện người dùng đang hoạt động (ACTIVE) trong hệ thống.
                   </p>
                 )}
                 {errors.projectManagerId && (
-                  <p className="field-error" data-testid="error-project-manager" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                  <p className="field-error" data-testid="error-project-manager" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                     {errors.projectManagerId}
                   </p>
                 )}

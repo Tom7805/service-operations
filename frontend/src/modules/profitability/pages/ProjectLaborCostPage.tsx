@@ -135,14 +135,10 @@ export default function ProjectLaborCostPage({
             </button>
           )}
           <div>
-            <div className="page-header__kicker">
-              <span className="page-header__tag">{ICONS.money} GIÁ VỐN GIỜ CÔNG</span>
-              <span className="page-header__dot" />
-              <span className="page-header__meta">{project?.projectCode || `Mã: ${projectId}`}</span>
-            </div>
             <h1 className="page-title" style={{ margin: '4px 0' }}>
               Giá vốn giờ công dự án
             </h1>
+            <p className="page-subtitle" data-testid="project-code">{project?.projectCode || `Mã: ${projectId}`}</p>
           </div>
         </div>
 
@@ -180,15 +176,15 @@ export default function ProjectLaborCostPage({
       )}
 
       {loading ? (
-        <div className="table-loading-state" data-testid="labor-cost-loading">
-          <span className="spinner-lg" />
-          <p style={{ marginTop: '10px' }}>Đang tải giá vốn giờ công...</p>
-        </div>
+        <div data-testid="labor-cost-loading" role="status" aria-label="Đang tải giá vốn giờ công...">
+            <div className="skeleton" style={{ height: '88px', marginBottom: '24px' }} />
+            <div className="skeleton" style={{ height: '240px' }} />
+          </div>
       ) : !laborCost || laborCost.lines.length === 0 ? (
         <div className="table-empty-state" data-testid="labor-cost-empty">
           <div className="table-empty-state__icon">{ICONS.money}</div>
-          <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: '#1E293B' }}>Không có dữ liệu</h4>
-          <p style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }}>
+          <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>Không có dữ liệu</h4>
+          <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
             Dự án này chưa có giờ công đã duyệt để tính giá vốn.
           </p>
         </div>
@@ -207,62 +203,26 @@ export default function ProjectLaborCostPage({
           )}
 
           {/* Summary Card: luôn hiển thị cho cả VT-01, VT-02, VT-05 */}
-          <div
-            className="kpi-row"
-            style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}
-          >
-            <div
-              className="kpi-card"
-              style={{
-                flex: '1',
-                minWidth: '180px',
-                padding: '20px',
-                border: '1px solid #E2E8F0',
-                borderRadius: '8px',
-                background: '#FFF',
-              }}
-              data-testid="kpi-total-hours"
-            >
-              <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>Tổng giờ đã duyệt</div>
-              <div style={{ fontSize: '28px', fontWeight: 700, color: '#1E293B' }}>
+          <div className="stats-grid">
+            <div className="stat-card" data-testid="kpi-total-hours">
+              <span className="stat-card__label">Tổng giờ đã duyệt</span>
+              <strong className="stat-card__value">
                 {formatHours(laborCost.totalApprovedHours)}
-              </div>
+              </strong>
             </div>
-            <div
-              className="kpi-card"
-              style={{
-                flex: '1',
-                minWidth: '180px',
-                padding: '20px',
-                border: '1px solid #E2E8F0',
-                borderRadius: '8px',
-                background: '#FFF',
-              }}
-              data-testid="kpi-total-cost"
-            >
-              <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>Tổng giá vốn</div>
-              <div style={{ fontSize: '28px', fontWeight: 700, color: '#1E293B' }}>
+            <div className="stat-card" data-testid="kpi-total-cost">
+              <span className="stat-card__label">Tổng giá vốn</span>
+              <strong className="stat-card__value stat-card__value--md">
                 <MaskedCell canView={sensitive} maskedText="••••••••">
                   {formatCurrency(laborCost.totalLaborCost)}
                 </MaskedCell>
-              </div>
+              </strong>
             </div>
-            <div
-              className="kpi-card"
-              style={{
-                flex: '1',
-                minWidth: '180px',
-                padding: '20px',
-                border: '1px solid #E2E8F0',
-                borderRadius: '8px',
-                background: '#FFF',
-              }}
-              data-testid="kpi-lines-count"
-            >
-              <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>Số dòng giờ công</div>
-              <div style={{ fontSize: '28px', fontWeight: 700, color: '#1E293B' }}>
+            <div className="stat-card" data-testid="kpi-lines-count">
+              <span className="stat-card__label">Số dòng giờ công</span>
+              <strong className="stat-card__value">
                 {laborCost.lines.length}
-              </div>
+              </strong>
             </div>
           </div>
 
@@ -277,7 +237,7 @@ export default function ProjectLaborCostPage({
           {canViewTableDetail && (
             <div className="user-table-card" style={{ padding: '20px' }} data-testid="labor-cost-detail-table">
               <div style={{ marginBottom: '16px' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1E293B' }}>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
                   Chi tiết từng dòng giờ công
                 </h3>
               </div>

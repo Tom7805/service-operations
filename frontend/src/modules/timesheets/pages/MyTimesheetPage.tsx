@@ -188,7 +188,7 @@ export default function MyTimesheetPage({ currentUserRoles = ['VT-03'] }: MyTime
       )}
 
       <div className="user-table-card" style={{ padding: '20px', marginBottom: '16px' }}>
-        <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 700, color: '#1E293B' }}>
+        <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
           Công việc đang được giao
         </h3>
 
@@ -200,10 +200,10 @@ export default function MyTimesheetPage({ currentUserRoles = ['VT-03'] }: MyTime
         ) : tasks.length === 0 ? (
           <div className="table-empty-state" data-testid="my-tasks-empty">
             <div className="table-empty-state__icon">{ICONS.clock}</div>
-            <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: '#1E293B' }}>
+            <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>
               Chưa được giao công việc nào trong dự án đang chạy
             </h4>
-            <p style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }}>
+            <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
               Liên hệ Quản lý dự án để được giao công việc trước khi ghi giờ công.
             </p>
           </div>
