@@ -1,4 +1,4 @@
-import type { ProjectLaborCostRes } from '../types/profitabilityTypes';
+import type { PlannedVsActualMarginRes, ProjectLaborCostRes } from '../types/profitabilityTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -65,6 +65,27 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
 export async function getProjectLaborCost(projectId: number): Promise<ProjectLaborCostRes> {
   return requestBackend<ProjectLaborCostRes>(
     `${API_BASE_URL}/projects/${projectId}/profitability/labor-cost`,
+    {
+      method: 'GET',
+    }
+  );
+}
+
+/**
+ * NCL-09-CN-006: So sánh biên lợi nhuận dự kiến (từ báo giá) với thực tế (từ giờ công đã duyệt).
+ *
+ * GET /projects/{projectId}/profitability/planned-vs-actual-margin
+ *
+ * Chỉ VT-02 (Quản lý dự án) được truy cập — backend trả `403 FORBIDDEN` cho vai trò khác.
+ * Dự án chưa gắn báo giá nào (qua hợp đồng) backend trả `404 RESOURCE_NOT_FOUND`; frontend dùng
+ * `ProfitabilityApiError.code === 'RESOURCE_NOT_FOUND'` để hiển thị trạng thái "chưa có báo giá".
+ *
+ * Khác với `labor-cost` (che chi phí/giờ công theo TỪNG nhân sự qua QTN-02), endpoint này chỉ
+ * trả số liệu tổng hợp cấp dự án nên **không** áp dụng masking — frontend hiển thị trực tiếp.
+ */
+export async function getPlannedVsActualMargin(projectId: number): Promise<PlannedVsActualMarginRes> {
+  return requestBackend<PlannedVsActualMarginRes>(
+    `${API_BASE_URL}/projects/${projectId}/profitability/planned-vs-actual-margin`,
     {
       method: 'GET',
     }
