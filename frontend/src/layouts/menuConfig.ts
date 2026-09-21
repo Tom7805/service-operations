@@ -34,6 +34,8 @@ export type Tab =
   | 'UNSUBMITTED_TIMESHEETS'
   | 'EXPENSE_APPROVAL'
   | 'OVERHEAD_ALLOCATION'
+  | 'MARGIN_BY_CUSTOMER'
+  | 'MARGIN_BY_EMPLOYEE'
   | 'PROJECT_LABOR_COST'
   | 'PROJECT_RECOGNIZED_REVENUE'
   | 'PROJECT_MARGIN'
@@ -126,6 +128,16 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
     tab: 'OVERHEAD_ALLOCATION', icon: ICONS.chart, label: 'Phân bổ chi phí chung', requires: ['VT-05'],
     // NCL-08-CN-005: Kế toán chia tổng chi phí chung phát sinh trong kỳ (tháng) cho các
     // dự án theo tỷ trọng giờ công đã duyệt trong kỳ đó.
+  },
+  {
+    tab: 'MARGIN_BY_CUSTOMER', icon: ICONS.building, label: 'Biên LN theo khách hàng', requires: ['VT-01'],
+    // NCL-09-CN-005 (TC-01): gộp doanh thu ghi nhận + giá vốn giờ công đã duyệt theo từng
+    // khách hàng trong kỳ. Chỉ Ban giám đốc (VT-01) xem được — khớp @PreAuthorize backend.
+  },
+  {
+    tab: 'MARGIN_BY_EMPLOYEE', icon: ICONS.users, label: 'Biên LN theo nhân sự', requires: ['VT-01'],
+    // NCL-09-CN-005 (TC-02): cùng phép tính nhưng gộp theo từng nhân sự thực hiện — nhạy
+    // cảm hơn báo cáo theo khách hàng nên cũng chỉ Ban giám đốc (VT-01) xem được.
   },
   {
     tab: 'PROJECT_LABOR_COST', icon: ICONS.money, label: 'Giá vốn giờ công', requires: ['VT-01', 'VT-02', 'VT-05'],

@@ -1,5 +1,7 @@
 import type {
   MarginAlertThresholdRes,
+  MarginByCustomerRes,
+  MarginByEmployeeRes,
   MarginThresholdReq,
   ProjectLaborCostRes,
   ProjectMarginRes,
@@ -135,5 +137,31 @@ export async function setMarginAlertThreshold(payload: MarginThresholdReq): Prom
   return requestBackend<MarginAlertThresholdRes>(`${API_BASE_URL}/profitability/margin-alert-threshold`, {
     method: 'PUT',
     body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * NCL-09-CN-005 (TC-01): Báo cáo biên lợi nhuận theo khách hàng trong một kỳ.
+ *
+ * Chỉ VT-01 (Ban giám đốc) — vai trò khác nhận `403 FORBIDDEN`.
+ * GET /reports/margin/by-customer?from={yyyy-MM-dd}&to={yyyy-MM-dd}
+ */
+export async function getMarginByCustomer(from: string, to: string): Promise<MarginByCustomerRes> {
+  const params = new URLSearchParams({ from, to });
+  return requestBackend<MarginByCustomerRes>(`${API_BASE_URL}/reports/margin/by-customer?${params.toString()}`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * NCL-09-CN-005 (TC-02): Báo cáo biên lợi nhuận theo nhân sự trong một kỳ.
+ *
+ * Chỉ VT-01 (Ban giám đốc) — vai trò khác nhận `403 FORBIDDEN`.
+ * GET /reports/margin/by-employee?from={yyyy-MM-dd}&to={yyyy-MM-dd}
+ */
+export async function getMarginByEmployee(from: string, to: string): Promise<MarginByEmployeeRes> {
+  const params = new URLSearchParams({ from, to });
+  return requestBackend<MarginByEmployeeRes>(`${API_BASE_URL}/reports/margin/by-employee?${params.toString()}`, {
+    method: 'GET',
   });
 }
