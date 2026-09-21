@@ -38,6 +38,11 @@ public class AccessDeniedAuditRecorder {
     static {
         // Phải đứng trước "/invoice": "/invoice-proposals" cũng chứa chuỗi "/invoice".
         FEATURES.put("/invoice-proposals", new Feature(AuditTargetType.INVOICE, "Tạo đề nghị xuất hóa đơn từ giờ công"));
+        // "/payments" phải đứng trước "/invoice": đường dẫn /invoices/{id}/payments chứa cả hai chuỗi này.
+        FEATURES.put("/payments", new Feature(AuditTargetType.INVOICE, "Ghi nhận thanh toán của khách hàng"));
+        // "/invoices" (tra cứu) phải đứng trước "/invoice": "/invoice" là tiền tố của "/invoices" nên nếu đảo thứ tự,
+        // lượt bị từ chối khi tra cứu hóa đơn sẽ bị gắn nhãn "Lập hóa đơn theo mốc hợp đồng".
+        FEATURES.put("/invoices", new Feature(AuditTargetType.INVOICE, "Tra cứu hóa đơn và công nợ"));
         // Phải đứng trước "/milestones" và "/contracts": đường dẫn lập hóa đơn theo mốc chứa cả hai chuỗi này.
         FEATURES.put("/invoice",new Feature(AuditTargetType.INVOICE, "Lập hóa đơn theo mốc hợp đồng"));
         FEATURES.put("/reports/margin/by-customer", new Feature(AuditTargetType.GENERAL, "Báo cáo biên lợi nhuận theo khách hàng"));
