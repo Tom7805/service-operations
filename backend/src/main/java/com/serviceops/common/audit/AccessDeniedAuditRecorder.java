@@ -36,6 +36,8 @@ public class AccessDeniedAuditRecorder {
     private static final Map<String, Feature> FEATURES = new LinkedHashMap<>();
 
     static {
+        // Phải đứng trước "/milestones" và "/contracts": đường dẫn lập hóa đơn theo mốc chứa cả hai chuỗi này.
+        FEATURES.put("/invoice", new Feature(AuditTargetType.INVOICE, "Lập hóa đơn theo mốc hợp đồng"));
         FEATURES.put("/reports/margin/by-customer", new Feature(AuditTargetType.GENERAL, "Báo cáo biên lợi nhuận theo khách hàng"));
         FEATURES.put("/reports/margin/by-employee", new Feature(AuditTargetType.GENERAL, "Báo cáo biên lợi nhuận theo nhân sự"));
         FEATURES.put("/milestones", new Feature(AuditTargetType.GENERAL, "Quản lý mốc tiến độ dự án"));

@@ -140,6 +140,24 @@ class ContractMilestoneServiceTest {
 				.hasMessageContaining("khong thuoc hop dong");
 	}
 
+	@Test
+	void rejectsRedeclaringMilestonesWhenOneIsAlreadyInvoiced() {
+		Contract contract = contract(5L, "1000000000.00");
+		when(contractRepository.findById(5L)).thenReturn(Optional.of(contract));
+		ContractMilestone invoiced = milestone(7L, 5L, "Tam ung");
+		invoiced.setStatus(com.serviceops.modules.contract.enums.ContractMilestoneStatus.INVOICED);
+		when(milestoneRepository.findByContractIdOrderByExpectedDateAscIdAsc(5L)).thenReturn(List.of(invoiced));
+
+		assertThatThrownBy(() -> service.replace(5L, List.of(
+				request("Giai doan 1", "50", null),
+				request("Giai doan 2", "50", null))))
+				.isInstanceOf(BusinessRuleException.class)
+				.hasMessageContaining("da xuat hoa don");
+
+		verify(milestoneRepository, never()).deleteByContractId(any());
+		verify(milestoneRepository, never()).saveAll(any());
+	}
+
 	private ContractMilestone milestone(Long id, Long contractId, String name) {
 		ContractMilestone milestone = new ContractMilestone();
 		milestone.setId(id);
