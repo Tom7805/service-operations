@@ -4672,7 +4672,7 @@ invoicedTotal` là phần còn có thể lập.
   `POST /contracts/{contractId}/appendices` (`NCL-04-CN-004`, vai trò `VT-04`).
 - Sau khi lập hóa đơn, mốc đã là `INVOICED`. `PUT /contracts/{contractId}/milestones` **bị từ chối**
   (`400 INVALID_STATE`) khi hợp đồng đã có mốc `INVOICED` — ẩn nút "Khai báo lại mốc" trong trường hợp này.
-- Chưa có API đọc/liệt kê hóa đơn (các story sau của Epic `NCL-10`); dùng `data` của response trên để hiển thị.
+- Danh sách và chi tiết hóa đơn đọc qua `GET /invoices` và `GET /invoices/{id}` (mục `NCL-10-CN-003` bên dưới).
 
 ### `NCL-10-CN-003` — Ghi nhận thanh toán của khách hàng
 
@@ -4747,9 +4747,81 @@ của hóa đơn (`PAID` khi `remainingAmount = 0`, TC-01).
 - Hiển thị đúng `message` backend trả về khi `VALIDATION_ERROR` do vượt số còn phải thu.
 - Sau khi ghi thành công, dùng `remainingAmount`/`invoiceStatus` trong response để cập nhật màn hình, không cần
   gọi lại API khác.
-- **Chưa có API liệt kê hóa đơn hay lịch sử thanh toán** (chưa thuộc story nào của Epic `NCL-10` trong
-  tài liệu này); `invoiceId` lấy từ `data.id` của `POST /contracts/{contractId}/milestones/{milestoneId}/invoice`
+- Để chọn hóa đơn cần ghi thanh toán, gọi `GET /invoices?status=ISSUED&status=PARTIALLY_PAID` (bên dưới);
+  `invoiceId` cũng lấy được từ `data.id` của `POST /contracts/{contractId}/milestones/{milestoneId}/invoice`
   (`NCL-10-CN-002`).
+
+#### `GET /invoices`
+
+Danh sách hóa đơn kèm **số đã thu / còn phải thu**, hóa đơn mới nhất trước. Chỉ `VT-05`. Không phân trang.
+
+| Query param | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `contractId` | number | không | Chỉ lấy hóa đơn của hợp đồng này. |
+| `status` | string, lặp lại được | không | `DRAFT` · `ISSUED` · `PARTIALLY_PAID` · `PAID` · `CANCELLED`. Bỏ trống = mọi trạng thái. Để chọn hóa đơn cần thu tiền dùng `?status=ISSUED&status=PARTIALLY_PAID`. |
+
+**Response thành công — `200 OK`** (danh sách rỗng khi không có hóa đơn nào khớp):
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": 9,
+      "invoiceCode": "INV-20260921-A1B2C3",
+      "contractId": 5,
+      "contractCode": "HD-LK3F9A",
+      "customerId": 3,
+      "customerName": "Cong ty A",
+      "status": "PARTIALLY_PAID",
+      "totalAmount": 100000000.00,
+      "paidAmount": 60000000.00,
+      "remainingAmount": 40000000.00,
+      "invoiceDate": "2026-09-21",
+      "note": null,
+      "createdBy": "ketoan01",
+      "createdAt": "2026-09-21T10:00:00"
+    }
+  ]
+}
+```
+
+#### `GET /invoices/{invoiceId}`
+
+Một hóa đơn với cùng cấu trúc như phần tử của `GET /invoices`. Chỉ `VT-05`.
+
+#### `GET /invoices/{invoiceId}/payments`
+
+Lịch sử các lần thanh toán của hóa đơn, `paymentDate` mới nhất trước (cùng ngày thì lần ghi sau đứng trước).
+Chỉ `VT-05`. Hóa đơn chưa có lần thanh toán nào trả `data: []`.
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": 501,
+      "amount": 40000000.00,
+      "paymentDate": "2026-09-21",
+      "method": "CASH",
+      "note": null,
+      "createdBy": "ketoan01",
+      "createdAt": "2026-09-21T10:00:00"
+    }
+  ]
+}
+```
+
+**Response lỗi cho cả ba API đọc:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`); hệ thống ghi "Từ chối truy cập" (chức năng "Tra cứu hóa đơn và công nợ" hoặc "Ghi nhận thanh toán của khách hàng"). |
+| 404 | `RESOURCE_NOT_FOUND` | (`GET /invoices/{id}` và `.../payments`) không tồn tại hóa đơn `{invoiceId}`. |
+| 400 | — | `status` không thuộc danh sách trên (lỗi kiểu tham số của framework). |
 
 ## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)
 
