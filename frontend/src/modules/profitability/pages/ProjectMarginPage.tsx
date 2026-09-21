@@ -1,4 +1,3 @@
-import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import MaskedCell from '../../../components/common/MaskedCell';
@@ -27,17 +26,6 @@ function formatPercent(ratio: number): string {
   return new Intl.NumberFormat('vi-VN', { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
     ratio
   );
-}
-
-function kpiCardStyle(): CSSProperties {
-  return {
-    flex: '1',
-    minWidth: '180px',
-    padding: '20px',
-    border: '1px solid #E2E8F0',
-    borderRadius: '8px',
-    background: '#FFF',
-  };
 }
 
 /**
@@ -141,7 +129,7 @@ export default function ProjectMarginPage({
     );
   }
 
-  const grossProfitColor = margin && margin.grossProfit < 0 ? '#B91C1C' : '#15803D';
+  const grossProfitClass = margin && margin.grossProfit < 0 ? 'text-danger' : 'text-success';
 
   return (
     <div className="user-management-page" data-testid="margin-page">
@@ -211,8 +199,8 @@ export default function ProjectMarginPage({
         !error && (
           <div className="table-empty-state" data-testid="margin-empty">
             <div className="table-empty-state__icon">{ICONS.chart}</div>
-            <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: '#1E293B' }}>Không có dữ liệu</h4>
-            <p style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }}>
+            <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>Không có dữ liệu</h4>
+            <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
               Dự án này chưa có đủ dữ liệu để tính biên lợi nhuận.
             </p>
           </div>
@@ -237,72 +225,55 @@ export default function ProjectMarginPage({
             </div>
           )}
 
-          {/* Hàng KPI doanh thu & chi phí thành phần — hiển thị cho mọi vai trò xem được màn hình. */}
-          <div
-            className="kpi-row"
-            style={{ display: 'flex', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}
-          >
-            <div className="kpi-card" style={kpiCardStyle()} data-testid="kpi-revenue">
-              <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>Doanh thu ghi nhận</div>
-              <div style={{ fontSize: '24px', fontWeight: 700, color: '#1E293B' }}>
-                {formatCurrency(margin.recognizedRevenue)}
-              </div>
+          {/* Bảng chỉ số doanh thu & chi phí thành phần — hiển thị cho mọi vai trò xem được màn hình. */}
+          <div className="stats-grid">
+            <div className="stat-card" data-testid="kpi-revenue">
+              <span className="stat-card__label">Doanh thu ghi nhận</span>
+              <strong className="stat-card__value stat-card__value--md">{formatCurrency(margin.recognizedRevenue)}</strong>
             </div>
-            <div className="kpi-card" style={kpiCardStyle()} data-testid="kpi-labor-cost">
-              <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>Giá vốn giờ công</div>
-              <div style={{ fontSize: '24px', fontWeight: 700, color: '#1E293B' }}>
-                {formatCurrency(margin.laborCost)}
-              </div>
+            <div className="stat-card" data-testid="kpi-labor-cost">
+              <span className="stat-card__label">Giá vốn giờ công</span>
+              <strong className="stat-card__value stat-card__value--md">{formatCurrency(margin.laborCost)}</strong>
             </div>
-            <div className="kpi-card" style={kpiCardStyle()} data-testid="kpi-project-expense">
-              <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>Chi phí dự án</div>
-              <div style={{ fontSize: '24px', fontWeight: 700, color: '#1E293B' }}>
-                {formatCurrency(margin.projectExpenseCost)}
-              </div>
+            <div className="stat-card" data-testid="kpi-project-expense">
+              <span className="stat-card__label">Chi phí dự án</span>
+              <strong className="stat-card__value stat-card__value--md">{formatCurrency(margin.projectExpenseCost)}</strong>
             </div>
-            <div className="kpi-card" style={kpiCardStyle()} data-testid="kpi-subcontractor-cost">
-              <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>Chi phí thuê ngoài</div>
-              <div style={{ fontSize: '24px', fontWeight: 700, color: '#1E293B' }}>
-                {formatCurrency(margin.subcontractorCost)}
-              </div>
+            <div className="stat-card" data-testid="kpi-subcontractor-cost">
+              <span className="stat-card__label">Chi phí thuê ngoài</span>
+              <strong className="stat-card__value stat-card__value--md">{formatCurrency(margin.subcontractorCost)}</strong>
             </div>
-            <div className="kpi-card" style={kpiCardStyle()} data-testid="kpi-total-cost">
-              <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>Tổng chi phí</div>
-              <div style={{ fontSize: '24px', fontWeight: 700, color: '#1E293B' }}>
-                {formatCurrency(margin.totalCost)}
-              </div>
+            <div className="stat-card" data-testid="kpi-total-cost">
+              <span className="stat-card__label">Tổng chi phí</span>
+              <strong className="stat-card__value stat-card__value--md">{formatCurrency(margin.totalCost)}</strong>
             </div>
           </div>
 
-          {/* Kết quả — lợi nhuận gộp & tỷ suất, nhấn mạnh bằng cỡ chữ lớn hơn và màu theo dấu. */}
-          <div
-            className="kpi-row"
-            style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}
-          >
-            <div className="kpi-card" style={kpiCardStyle()} data-testid="kpi-gross-profit">
-              <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>Lợi nhuận gộp</div>
-              <div style={{ fontSize: '28px', fontWeight: 700, color: grossProfitColor }}>
+          {/* Kết quả — lợi nhuận gộp & tỷ suất, màu ngữ nghĩa theo dấu (xanh lãi / đỏ lỗ). */}
+          <div className="stats-grid">
+            <div className="stat-card" data-testid="kpi-gross-profit">
+              <span className="stat-card__label">Lợi nhuận gộp</span>
+              <strong className={`stat-card__value stat-card__value--md ${grossProfitClass}`}>
                 {formatCurrency(margin.grossProfit)}
-              </div>
+              </strong>
             </div>
-            <div className="kpi-card" style={kpiCardStyle()} data-testid="kpi-margin-rate">
-              <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>Tỷ suất lợi nhuận</div>
-              <div style={{ fontSize: '28px', fontWeight: 700, color: grossProfitColor }}>
+            <div className="stat-card" data-testid="kpi-margin-rate">
+              <span className="stat-card__label">Tỷ suất lợi nhuận</span>
+              <strong className={`stat-card__value ${grossProfitClass}`}>
                 {margin.marginRate === null ? '—' : formatPercent(margin.marginRate)}
-              </div>
+              </strong>
             </div>
           </div>
-
           {/* Chi tiết giá vốn giờ công — hourlyRate/laborCost bị che với VT-02 (QTN-02). */}
           <div className="user-table-card" style={{ padding: '20px', marginBottom: '20px' }} data-testid="margin-labor-cost-table">
             <div style={{ marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1E293B' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
                 Chi tiết giá vốn giờ công
               </h3>
             </div>
 
             {margin.laborCostLines.length === 0 ? (
-              <p style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }} data-testid="margin-labor-cost-empty">
+              <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }} data-testid="margin-labor-cost-empty">
                 Dự án này chưa có giờ công đã duyệt để tính giá vốn.
               </p>
             ) : (
@@ -356,13 +327,13 @@ export default function ProjectMarginPage({
           {/* Chi tiết doanh thu ghi nhận — không có trường nào bị che ở đây. */}
           <div className="user-table-card" style={{ padding: '20px' }} data-testid="margin-revenue-table">
             <div style={{ marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1E293B' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
                 Chi tiết doanh thu ghi nhận
               </h3>
             </div>
 
             {margin.revenueLines.length === 0 ? (
-              <p style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }} data-testid="margin-revenue-empty">
+              <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }} data-testid="margin-revenue-empty">
                 Dự án này chưa có giờ công đã duyệt và tính phí để ghi nhận doanh thu.
               </p>
             ) : (

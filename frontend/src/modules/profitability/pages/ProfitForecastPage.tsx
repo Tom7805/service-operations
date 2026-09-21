@@ -41,22 +41,18 @@ interface ComparisonCardProps {
 }
 
 /** Thẻ so sánh một cặp giá trị Hiện tại vs Dự báo khi kết thúc. */
-function ComparisonCard({ label, actual, forecast, testId, forecastColor = '#0EA5E9' }: ComparisonCardProps) {
+function ComparisonCard({ label, actual, forecast, testId, forecastColor = 'var(--pale-blue-fg)' }: ComparisonCardProps) {
   return (
-    <div
-      className="kpi-card"
-      style={{ flex: '1', minWidth: '180px', padding: '20px', border: '1px solid #E2E8F0', borderRadius: '8px', background: '#FFF' }}
-      data-testid={testId}
-    >
-      <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '12px', fontWeight: 600 }}>{label}</div>
+    <div className="stat-card" data-testid={testId}>
+      <span className="stat-card__label">{label}</span>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '12px', color: '#94A3B8' }}>Hiện tại</span>
-          <span style={{ fontSize: '14px', fontWeight: 600, color: '#1E293B' }}>{actual}</span>
+          <span style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>Hiện tại</span>
+          <span style={{ fontSize: '14.5px', fontWeight: 600, color: 'var(--ink-strong)' }}>{actual}</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '12px', color: '#94A3B8' }}>Dự báo khi kết thúc</span>
-          <span style={{ fontSize: '14px', fontWeight: 600, color: forecastColor }}>{forecast}</span>
+          <span style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>Dự báo khi kết thúc</span>
+          <span style={{ fontSize: '14.5px', fontWeight: 600, color: forecastColor }}>{forecast}</span>
         </div>
       </div>
     </div>
@@ -67,8 +63,8 @@ function ComparisonCard({ label, actual, forecast, testId, forecastColor = '#0EA
 function ProfitForecastContent({ data }: { data: ProfitForecastRes }) {
   const usedPercent = data.budgetHours > 0 ? (data.actualHours / data.budgetHours) * 100 : null;
   const forecastNegative = data.forecastMargin < 0;
-  const gapColor =
-    data.marginVariancePercentPoints == null ? '#1E293B' : data.marginVariancePercentPoints >= 0 ? '#16A34A' : '#DC2626';
+  const gapClass =
+    data.marginVariancePercentPoints == null ? '' : data.marginVariancePercentPoints >= 0 ? 'text-success' : 'text-danger';
 
   return (
     <>
@@ -103,40 +99,40 @@ function ProfitForecastContent({ data }: { data: ProfitForecastRes }) {
 
       {/* Giờ công: ngân sách / đã dùng / còn lại */}
       <div className="user-table-card" style={{ padding: '20px', marginBottom: '24px' }} data-testid="hours-forecast">
-        <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700, color: '#1E293B' }}>Giờ công đến khi kết thúc</h3>
+        <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700, color: 'var(--ink-strong)' }}>Giờ công đến khi kết thúc</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '16px' }}>
           <div data-testid="budget-hours">
-            <div style={{ fontSize: '12px', color: '#94A3B8' }}>Ngân sách giờ</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: '#1E293B' }}>{formatNumber(data.budgetHours)} giờ</div>
+            <div style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>Ngân sách giờ</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ink-strong)' }}>{formatNumber(data.budgetHours)} giờ</div>
           </div>
           <div data-testid="actual-hours">
-            <div style={{ fontSize: '12px', color: '#94A3B8' }}>Đã dùng</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: data.overBudget ? '#DC2626' : '#1E293B' }}>
+            <div style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>Đã dùng</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: data.overBudget ? 'var(--pale-red-fg)' : 'var(--ink-strong)' }}>
               {formatNumber(data.actualHours)} giờ
             </div>
           </div>
           <div data-testid="remaining-hours">
-            <div style={{ fontSize: '12px', color: '#94A3B8' }}>Còn lại (ước tính)</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: '#0EA5E9' }}>{formatNumber(data.remainingHours)} giờ</div>
+            <div style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>Còn lại (ước tính)</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--pale-blue-fg)' }}>{formatNumber(data.remainingHours)} giờ</div>
           </div>
           <div data-testid="estimated-total-hours">
-            <div style={{ fontSize: '12px', color: '#94A3B8' }}>Tổng giờ khi kết thúc</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: '#1E293B' }}>
+            <div style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>Tổng giờ khi kết thúc</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ink-strong)' }}>
               {formatNumber(data.estimatedTotalHoursAtCompletion)} giờ
             </div>
           </div>
         </div>
         {usedPercent != null && (
           <div style={{ marginTop: '16px' }} data-testid="budget-usage">
-            <div style={{ fontSize: '12px', color: '#94A3B8', marginBottom: '6px' }}>
+            <div style={{ fontSize: '12.5px', color: 'var(--ink-faint)', marginBottom: '6px' }}>
               Đã dùng {formatNumber(usedPercent)} % ngân sách giờ
             </div>
-            <div style={{ height: '8px', borderRadius: '4px', background: '#E2E8F0', overflow: 'hidden' }}>
+            <div style={{ height: '8px', borderRadius: 'var(--radius-sm)', background: 'var(--line)', overflow: 'hidden' }}>
               <div
                 style={{
                   width: `${Math.min(usedPercent, 100)}%`,
                   height: '100%',
-                  background: data.overBudget ? '#DC2626' : '#0EA5E9',
+                  background: data.overBudget ? 'var(--pale-red-fg)' : 'var(--pale-blue-fg)',
                 }}
               />
             </div>
@@ -145,10 +141,7 @@ function ProfitForecastContent({ data }: { data: ProfitForecastRes }) {
       </div>
 
       {/* Doanh thu / chi phí / lợi nhuận / biên: hiện tại vs dự báo */}
-      <div
-        data-testid="forecast-kpis"
-        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}
-      >
+      <div className="stats-grid" data-testid="forecast-kpis">
         <ComparisonCard label="Doanh thu" actual={formatCurrency(data.actualRevenue)} forecast={formatCurrency(data.forecastRevenue)} testId="kpi-revenue" />
         <ComparisonCard label="Giá vốn" actual={formatCurrency(data.actualCost)} forecast={formatCurrency(data.forecastCost)} testId="kpi-cost" />
         <ComparisonCard
@@ -156,28 +149,24 @@ function ProfitForecastContent({ data }: { data: ProfitForecastRes }) {
           actual={formatCurrency(data.actualMargin)}
           forecast={formatCurrency(data.forecastMargin)}
           testId="kpi-margin"
-          forecastColor={forecastNegative ? '#DC2626' : '#16A34A'}
+          forecastColor={forecastNegative ? 'var(--pale-red-fg)' : 'var(--pale-green-fg)'}
         />
         <ComparisonCard
           label="Biên lợi nhuận"
           actual={formatPercent(data.actualMarginPercent)}
           forecast={formatPercent(data.forecastMarginPercent)}
           testId="kpi-margin-percent"
-          forecastColor={forecastNegative ? '#DC2626' : '#16A34A'}
+          forecastColor={forecastNegative ? 'var(--pale-red-fg)' : 'var(--pale-green-fg)'}
         />
       </div>
 
       {/* Chênh lệch giữa biên dự báo và biên hiện tại */}
-      <div
-        className="kpi-card"
-        style={{ padding: '20px', border: '1px solid #E2E8F0', borderRadius: '8px', background: '#FFF', marginBottom: '16px' }}
-        data-testid="margin-variance"
-      >
-        <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px', fontWeight: 600 }}>
-          Biên dự báo so với biên hiện tại
+      <div className="stats-grid">
+        <div className="stat-card" data-testid="margin-variance">
+          <span className="stat-card__label">Biên dự báo so với biên hiện tại</span>
+          <strong className={`stat-card__value ${gapClass}`}>{formatPercentSigned(data.marginVariancePercentPoints)}</strong>
+          <span className="field-hint">(dự báo − hiện tại, tính bằng điểm phần trăm)</span>
         </div>
-        <div style={{ fontSize: '28px', fontWeight: 700, color: gapColor }}>{formatPercentSigned(data.marginVariancePercentPoints)}</div>
-        <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '4px' }}>(dự báo − hiện tại, tính bằng điểm phần trăm)</div>
       </div>
     </>
   );
@@ -274,7 +263,7 @@ export default function ProfitForecastPage({
             </div>
             <h1 className="page-title" style={{ margin: '4px 0' }}>Dự báo lợi nhuận tới khi kết thúc dự án</h1>
             {project?.name && (
-              <p className="page-subtitle" style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }}>
+              <p className="page-subtitle" style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
                 {project.name}
               </p>
             )}
@@ -309,8 +298,8 @@ export default function ProfitForecastPage({
         !error && (
           <div className="table-empty-state" data-testid="profit-forecast-empty" style={{ padding: '32px' }}>
             <div className="table-empty-state__icon">{ICONS.chart}</div>
-            <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: '#1E293B' }}>Không có dữ liệu</h4>
-            <p style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }}>Dự án này chưa có dữ liệu để dự báo lợi nhuận.</p>
+            <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>Không có dữ liệu</h4>
+            <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>Dự án này chưa có dữ liệu để dự báo lợi nhuận.</p>
           </div>
         )
       ) : (

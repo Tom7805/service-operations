@@ -194,12 +194,12 @@ export default function MarginAlertThresholdPage({
         <div className="user-table-card" style={{ padding: '20px', maxWidth: '520px' }}>
           {threshold && threshold.minMarginRate !== null ? (
             <div style={{ marginBottom: '20px' }} data-testid="margin-threshold-current">
-              <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>Ngưỡng hiện hành</div>
-              <div style={{ fontSize: '28px', fontWeight: 700, color: '#1E293B' }}>
+              <div style={{ fontSize: '13.5px', color: 'var(--ink-muted)', marginBottom: '8px' }}>Ngưỡng hiện hành</div>
+              <div style={{ fontSize: '28px', fontWeight: 700, color: 'var(--ink-strong)' }}>
                 {formatPercent(threshold.minMarginRate)}
               </div>
               {threshold.updatedBy && threshold.updatedAt && (
-                <p style={{ margin: '6px 0 0', color: '#64748B', fontSize: '13px' }}>
+                <p style={{ margin: '6px 0 0', color: 'var(--ink-muted)', fontSize: '13.5px' }}>
                   Cập nhật lần cuối bởi <strong>{threshold.updatedBy}</strong> lúc{' '}
                   {formatDateTime(threshold.updatedAt)}
                 </p>
@@ -253,7 +253,7 @@ export default function MarginAlertThresholdPage({
                 <p
                   className="field-error"
                   data-testid="error-margin-threshold"
-                  style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}
+                  style={{ color: 'var(--pale-red-fg)', fontSize: '13.5px', marginTop: '4px' }}
                 >
                   {fieldError}
                 </p>

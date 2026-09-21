@@ -172,7 +172,7 @@ export default function MarginByCustomerPage({
           </button>
         </div>
         {fieldError && (
-          <p className="field-error" data-testid="error-margin-by-customer" style={{ color: '#DC2626', fontSize: '13px', marginTop: '8px' }}>
+          <p className="field-error" data-testid="error-margin-by-customer" style={{ color: 'var(--pale-red-fg)', fontSize: '13.5px', marginTop: '8px' }}>
             {fieldError}
           </p>
         )}
@@ -193,7 +193,7 @@ export default function MarginByCustomerPage({
         !error && (
           <div className="table-empty-state" data-testid="margin-by-customer-prompt">
             <div className="table-empty-state__icon">{ICONS.building}</div>
-            <p style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }}>
+            <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
               Chọn khoảng thời gian rồi bấm "Xem báo cáo" để xem biên lợi nhuận theo khách hàng.
             </p>
           </div>
@@ -210,32 +210,32 @@ export default function MarginByCustomerPage({
               </div>
             )}
 
-            <div className="kpi-row" style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
-              <div className="kpi-card" style={{ flex: '1', minWidth: '180px', padding: '20px', border: '1px solid #E2E8F0', borderRadius: '8px', background: '#FFF' }} data-testid="kpi-total-revenue">
-                <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>Tổng doanh thu</div>
-                <div style={{ fontSize: '24px', fontWeight: 700, color: '#1E293B' }}>{formatCurrency(report.totalRevenue)}</div>
+            <div className="stats-grid">
+              <div className="stat-card" data-testid="kpi-total-revenue">
+                <span className="stat-card__label">Tổng doanh thu</span>
+                <strong className="stat-card__value stat-card__value--md">{formatCurrency(report.totalRevenue)}</strong>
               </div>
-              <div className="kpi-card" style={{ flex: '1', minWidth: '180px', padding: '20px', border: '1px solid #E2E8F0', borderRadius: '8px', background: '#FFF' }} data-testid="kpi-total-cost">
-                <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>Tổng giá vốn</div>
-                <div style={{ fontSize: '24px', fontWeight: 700, color: '#1E293B' }}>{formatCurrency(report.totalCost)}</div>
+              <div className="stat-card" data-testid="kpi-total-cost">
+                <span className="stat-card__label">Tổng giá vốn</span>
+                <strong className="stat-card__value stat-card__value--md">{formatCurrency(report.totalCost)}</strong>
               </div>
-              <div className="kpi-card" style={{ flex: '1', minWidth: '180px', padding: '20px', border: '1px solid #E2E8F0', borderRadius: '8px', background: '#FFF' }} data-testid="kpi-total-margin">
-                <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>Tổng biên lợi nhuận</div>
-                <div style={{ fontSize: '24px', fontWeight: 700, color: report.totalMargin < 0 ? '#B91C1C' : '#15803D' }}>{formatCurrency(report.totalMargin)}</div>
+              <div className="stat-card" data-testid="kpi-total-margin">
+                <span className="stat-card__label">Tổng biên lợi nhuận</span>
+                <strong className={`stat-card__value stat-card__value--md ${report.totalMargin < 0 ? 'text-danger' : 'text-success'}`}>{formatCurrency(report.totalMargin)}</strong>
               </div>
-              <div className="kpi-card" style={{ flex: '1', minWidth: '180px', padding: '20px', border: '1px solid #E2E8F0', borderRadius: '8px', background: '#FFF' }} data-testid="kpi-total-margin-percent">
-                <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px' }}>Tỷ suất lợi nhuận</div>
-                <div style={{ fontSize: '24px', fontWeight: 700, color: report.totalMargin < 0 ? '#B91C1C' : '#15803D' }}>{formatMarginPercent(report.totalMarginPercent)}</div>
+              <div className="stat-card" data-testid="kpi-total-margin-percent">
+                <span className="stat-card__label">Tỷ suất lợi nhuận</span>
+                <strong className={`stat-card__value ${report.totalMargin < 0 ? 'text-danger' : 'text-success'}`}>{formatMarginPercent(report.totalMarginPercent)}</strong>
               </div>
             </div>
 
             <div className="user-table-card" style={{ padding: '20px' }} data-testid="margin-by-customer-table">
               <div style={{ marginBottom: '16px' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1E293B' }}>Chi tiết theo khách hàng</h3>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>Chi tiết theo khách hàng</h3>
               </div>
 
               {report.lines.length === 0 ? (
-                <p style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }} data-testid="margin-by-customer-empty">
+                <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }} data-testid="margin-by-customer-empty">
                   Không có giờ công đã duyệt nào trong kỳ đã chọn.
                 </p>
               ) : (
@@ -256,12 +256,12 @@ export default function MarginByCustomerPage({
                         <tr key={line.customerId} data-testid={`margin-by-customer-line-${line.customerId}`}>
                           <td>
                             {line.customerName}
-                            <div style={{ color: '#94A3B8', fontSize: '12.5px' }}>{line.customerCode}</div>
+                            <div style={{ color: 'var(--ink-faint)', fontSize: '12.5px' }}>{line.customerCode}</div>
                           </td>
                           <td style={{ textAlign: 'right' }}>{formatHours(line.approvedHours)}</td>
                           <td style={{ textAlign: 'right' }}>{formatCurrency(line.revenue)}</td>
                           <td style={{ textAlign: 'right' }}>{formatCurrency(line.cost)}</td>
-                          <td style={{ textAlign: 'right', color: line.margin < 0 ? '#B91C1C' : '#1E293B' }}>{formatCurrency(line.margin)}</td>
+                          <td style={{ textAlign: 'right', color: line.margin < 0 ? 'var(--pale-red-fg)' : 'var(--ink-strong)' }}>{formatCurrency(line.margin)}</td>
                           <td style={{ textAlign: 'right' }}>{formatMarginPercent(line.marginPercent)}</td>
                         </tr>
                       ))}

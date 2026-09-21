@@ -54,27 +54,16 @@ interface ComparisonCardProps {
  */
 function ComparisonCard({ label, planned, actual, testId }: ComparisonCardProps) {
   return (
-    <div
-      className="kpi-card"
-      style={{
-        flex: '1',
-        minWidth: '180px',
-        padding: '20px',
-        border: '1px solid #E2E8F0',
-        borderRadius: '8px',
-        background: '#FFF',
-      }}
-      data-testid={testId}
-    >
-      <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '12px', fontWeight: 600 }}>{label}</div>
+    <div className="stat-card" data-testid={testId}>
+      <span className="stat-card__label">{label}</span>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '12px', color: '#94A3B8' }}>Dự kiến</span>
-          <span style={{ fontSize: '14px', fontWeight: 600, color: '#0EA5E9' }}>{planned}</span>
+          <span style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>Dự kiến</span>
+          <span style={{ fontSize: '14.5px', fontWeight: 600, color: 'var(--pale-blue-fg)' }}>{planned}</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '12px', color: '#94A3B8' }}>Thực tế</span>
-          <span style={{ fontSize: '14px', fontWeight: 600, color: '#1E293B' }}>{actual}</span>
+          <span style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>Thực tế</span>
+          <span style={{ fontSize: '14.5px', fontWeight: 600, color: 'var(--ink-strong)' }}>{actual}</span>
         </div>
       </div>
     </div>
@@ -137,15 +126,7 @@ function PlannedVsActualContent({ data }: { data: PlannedVsActualMarginRes }) {
       )}
 
       {/* So sánh KPI: doanh thu / chi phí / lợi nhuận / biên % */}
-      <div
-        data-testid="margin-comparison-kpis"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '16px',
-          marginBottom: '24px',
-        }}
-      >
+      <div className="stats-grid" data-testid="margin-comparison-kpis">
         <ComparisonCard
           label="Doanh thu"
           planned={formatCurrency(data.plannedRevenue)}
@@ -173,36 +154,21 @@ function PlannedVsActualContent({ data }: { data: PlannedVsActualMarginRes }) {
       </div>
 
       {/* Chênh lệch biên lợi nhuận (điểm phần trăm) */}
-      <div
-        className="kpi-card"
-        style={{
-          padding: '20px',
-          border: '1px solid #E2E8F0',
-          borderRadius: '8px',
-          background: '#FFF',
-          marginBottom: '24px',
-        }}
-        data-testid="margin-gap"
-      >
-        <div style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px', fontWeight: 600 }}>
-          Chênh lệch so với dự kiến
-        </div>
-        <div
-          style={{
-            fontSize: '28px',
-            fontWeight: 700,
-            color:
+      <div className="stats-grid">
+        <div className="stat-card" data-testid="margin-gap">
+          <span className="stat-card__label">Chênh lệch so với dự kiến</span>
+          <strong
+            className={`stat-card__value ${
               data.marginGapPercentPoints == null
-                ? '#1E293B'
+                ? ''
                 : data.marginGapPercentPoints >= 0
-                  ? '#16A34A'
-                  : '#DC2626',
-          }}
-        >
-          {formatPercentSigned(data.marginGapPercentPoints)}
-        </div>
-        <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '4px' }}>
-          (thực tế − dự kiến, tính bằng điểm phần trăm)
+                  ? 'text-success'
+                  : 'text-danger'
+            }`}
+          >
+            {formatPercentSigned(data.marginGapPercentPoints)}
+          </strong>
+          <span className="field-hint">(thực tế − dự kiến, tính bằng điểm phần trăm)</span>
         </div>
       </div>
 
@@ -212,7 +178,7 @@ function PlannedVsActualContent({ data }: { data: PlannedVsActualMarginRes }) {
         style={{ padding: '20px', marginBottom: '24px' }}
         data-testid="hours-comparison"
       >
-        <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700, color: '#1E293B' }}>
+        <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700, color: 'var(--ink-strong)' }}>
           So sánh số giờ công và chi phí giờ
         </h3>
         <div
@@ -223,24 +189,24 @@ function PlannedVsActualContent({ data }: { data: PlannedVsActualMarginRes }) {
           }}
         >
           <div data-testid="planned-hours">
-            <div style={{ fontSize: '12px', color: '#94A3B8' }}>Dự kiến</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: '#0EA5E9' }}>
+            <div style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>Dự kiến</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--pale-blue-fg)' }}>
               {formatNumber(plannedHours)} giờ ({formatNumber(data.plannedWorkDays)} ngày)
             </div>
           </div>
           <div data-testid="actual-hours">
-            <div style={{ fontSize: '12px', color: '#94A3B8' }}>Thực tế</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: '#1E293B' }}>
+            <div style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>Thực tế</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ink-strong)' }}>
               {formatNumber(data.actualHours)} giờ
             </div>
           </div>
           <div data-testid="hours-variance">
-            <div style={{ fontSize: '12px', color: '#94A3B8' }}>Chênh lệch</div>
+            <div style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>Chênh lệch</div>
             <div
               style={{
                 fontSize: '16px',
                 fontWeight: 600,
-                color: data.hoursVarianceVsPlanned >= 0 ? '#DC2626' : '#16A34A',
+                color: data.hoursVarianceVsPlanned >= 0 ? 'var(--pale-red-fg)' : 'var(--pale-green-fg)',
               }}
             >
               {formatHoursSigned(data.hoursVarianceVsPlanned)} giờ
@@ -256,10 +222,10 @@ function PlannedVsActualContent({ data }: { data: PlannedVsActualMarginRes }) {
           style={{ padding: '20px', marginBottom: '16px' }}
           data-testid="gap-reasons"
         >
-          <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700, color: '#1E293B' }}>
+          <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700, color: 'var(--ink-strong)' }}>
             Nguyên nhân chênh lệch
           </h3>
-          <ul style={{ margin: 0, paddingLeft: '20px', color: '#1E293B', fontSize: '13.5px' }}>
+          <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--ink-strong)', fontSize: '13.5px' }}>
             {data.gapReasons.map((reason, index) => (
               <li key={index} style={{ marginBottom: '4px' }} data-testid={`gap-reason-${index}`}>
                 {reason}
@@ -384,7 +350,7 @@ export default function PlannedVsActualPage({
             </div>
             <h1 className="page-title" style={{ margin: '4px 0' }}>Biên lợi nhuận dự kiến vs thực tế</h1>
             {project?.name && (
-              <p className="page-subtitle" style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }}>
+              <p className="page-subtitle" style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
                 {project.name}
               </p>
             )}
@@ -423,16 +389,16 @@ export default function PlannedVsActualPage({
       ) : notFound ? (
         <div className="table-empty-state" data-testid="planned-vs-actual-not-found" style={{ padding: '32px' }}>
           <div className="table-empty-state__icon">{ICONS.info}</div>
-          <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: '#1E293B' }}>Chưa có báo giá gắn dự án</h4>
-          <p style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }}>
+          <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>Chưa có báo giá gắn dự án</h4>
+          <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
             Dự án chưa có báo giá nào gắn kèm (qua hợp đồng) để so sánh biên lợi nhuận dự kiến với thực tế.
           </p>
         </div>
       ) : !data ? (
         <div className="table-empty-state" data-testid="planned-vs-actual-empty" style={{ padding: '32px' }}>
           <div className="table-empty-state__icon">{ICONS.chart}</div>
-          <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: '#1E293B' }}>Không có dữ liệu</h4>
-          <p style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }}>
+          <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>Không có dữ liệu</h4>
+          <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
             Dự án này chưa có dữ liệu biên lợi nhuận để so sánh.
           </p>
         </div>

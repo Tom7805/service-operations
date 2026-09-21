@@ -175,7 +175,19 @@ describe('ProjectMarginPage (NCL-09-CN-003 — Biên lợi nhuận thời gian t
 
     const el = await screen.findByTestId('kpi-gross-profit');
     expect(el).toHaveTextContent('-500.000');
-    expect(el.querySelector('div:last-child')).toHaveStyle({ color: '#B91C1C' });
+    // Màu ngữ nghĩa lấy từ class của hệ thiết kế (đỏ khi lỗ), không phải màu cứng inline.
+    expect(el.querySelector('.stat-card__value')).toHaveClass('text-danger');
+    expect(screen.getByTestId('kpi-margin-rate').querySelector('.stat-card__value')).toHaveClass('text-danger');
+  });
+
+  it('hiển thị lợi nhuận gộp dương bằng màu thành công (xanh)', async () => {
+    vi.mocked(projectsApi.getProject).mockResolvedValue(RUNNING_PROJECT);
+    vi.mocked(profitabilityApi.getProjectMargin).mockResolvedValue(MARGIN_DATA);
+
+    render(<ProjectMarginPage projectId={1} currentUserRoles={['VT-01']} />);
+
+    const el = await screen.findByTestId('kpi-gross-profit');
+    expect(el.querySelector('.stat-card__value')).toHaveClass('text-success');
   });
 
   it('hiển thị "—" khi marginRate là null (doanh thu bằng 0)', async () => {
