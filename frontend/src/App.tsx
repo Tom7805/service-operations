@@ -91,11 +91,11 @@ export default function App() {
   ];
   const [selectedOpportunityName, setSelectedOpportunityName] = useState<string | undefined>(undefined);
   /** Nhớ người dùng vào màn "Ghi nhận chăm sóc" từ đâu để nút quay lại trả về
-   *  đúng chỗ: từ danh sách "Cơ hộp bán hàng" thì về lại danh sách, còn tự tìm
-   *  trực tiếp trong tab "Cơ hộp" thì quay về ô tìm kiếm. */
+   *  đúng chỗ: từ danh sách "Cơ hội bán hàng" thì về lại danh sách, còn tự tìm
+   *  trực tiếp trong tab "Cơ hội" thì quay về ô tìm kiếm. */
   const [activityOrigin, setActivityOrigin] = useState<'LIST' | 'PICKER' | null>(null);
-  /** Từ báo cáo đường ống, bấm vào một cơ hộp đọng lâu thì nhảy sang "Cơ hộp
-   *  bán hàng" và tự mở đúng cơ hộp đó lên để xử lý ngay (chuyển giai đoạn/
+  /** Từ báo cáo đường ống, bấm vào một cơ hội đọng lâu thì nhảy sang "Cơ hội
+   *  bán hàng" và tự mở đúng cơ hội đó lên để xử lý ngay (chuyển giai đoạn/
    *  chốt kết quả), thay vì chỉ biết mỗi con số ID không thao tác được gì. */
   const [focusOpportunityId, setFocusOpportunityId] = useState<number | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -642,8 +642,8 @@ export default function App() {
                   <span className="report-card__body">
                     <span className="report-card__title">Đường ống bán hàng theo giai đoạn</span>
                     <span className="report-card__desc">
-                      Số cơ hộp, giá trị dự kiến và số ngày trung bình đứng ở mỗi giai đoạn — kèm
-                      cảnh báo cơ hộp đọng lâu bất thường.
+                      Số cơ hội, giá trị dự kiến và số ngày trung bình đứng ở mỗi giai đoạn — kèm
+                      cảnh báo cơ hội đọng lâu bất thường.
                     </span>
                   </span>
                   <span className="report-card__arrow">{ICONS.arrowRight}</span>
@@ -833,12 +833,12 @@ export default function App() {
                 opportunityName={selectedOpportunityName}
                 currentUserRoles={currentRoles}
                 currentUserName={session.fullName}
-                backLabel={activityOrigin === 'LIST' ? 'Quay lại Cơ hộp bán hàng' : 'Tìm cơ hộp khác'}
+                backLabel={activityOrigin === 'LIST' ? 'Quay lại Cơ hội bán hàng' : 'Tìm cơ hội khác'}
                 onBack={() => {
                   // Tab đổi làm OpportunityListPage bị remount hoàn toàn (xem key={activeTab}
                   // ở <main>), nên panel "Đang điều khiển" đang mở sẽ mất theo. Nhờ lại cơ chế
                   // focusOpportunityId (vốn dùng khi nhảy tới từ Báo cáo đường ống) để trang tự
-                  // mở lại đúng cơ hộp vừa xem, khỏi bắt người dùng bấm "Chọn" lại từ đầu.
+                  // mở lại đúng cơ hội vừa xem, khỏi bắt người dùng bấm "Chọn" lại từ đầu.
                   if (activityOrigin === 'LIST' && selectedOpportunityId) {
                     setFocusOpportunityId(selectedOpportunityId);
                   }
@@ -857,11 +857,11 @@ export default function App() {
                       <span className="page-header__dot" />
                       <span className="page-header__meta">CHĂM SÓC CƠ HỘI</span>
                     </div>
-                    <h1 className="page-title">Ghi nhận hoạt động chăm sóc cơ hộp</h1>
+                    <h1 className="page-title">Ghi nhận hoạt động chăm sóc cơ hội</h1>
                     <p className="page-subtitle">
                       Đây là màn hình xem lại lịch sử chăm sóc và ghi nhận cuộc gọi, email hoặc buổi gặp mới cho
-                      một cơ hộp cụ thể — tìm bằng tên cơ hộp hoặc tên khách hàng bên dưới. Cách nhanh hơn: mở{' '}
-                      <strong>"Cơ hộp bán hàng"</strong>, chọn một cơ hộp rồi bấm <strong>"Ghi nhận chăm sóc"</strong>.
+                      một cơ hội cụ thể — tìm bằng tên cơ hội hoặc tên khách hàng bên dưới. Cách nhanh hơn: mở{' '}
+                      <strong>"Cơ hội bán hàng"</strong>, chọn một cơ hội rồi bấm <strong>"Ghi nhận chăm sóc"</strong>.
                     </p>
                   </div>
                 </div>

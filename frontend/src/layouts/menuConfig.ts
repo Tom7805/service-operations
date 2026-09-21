@@ -58,7 +58,7 @@ export interface NavItem {
   requires?: string[];
   /**
    * Đặt khi trang KHÔNG chặn hẳn người thiếu `requires` mà chỉ hạ xuống chế độ
-   * xem (ví dụ "Cơ hộp bán hàng": ai cũng xem được đường ống, chỉ riêng thao
+   * xem (ví dụ "Cơ hội bán hàng": ai cũng xem được đường ống, chỉ riêng thao
    * tác tạo/chuyển giai đoạn mới cần đúng vai trò). Nếu để trống, mặc định coi
    * là chặn hẳn (mục bị ẩn khỏi thanh điều hướng nếu không có vai trò).
    */
@@ -90,7 +90,7 @@ export const TIMESHEET_NAV_ITEMS: NavItem[] = [
   { tab: 'UNSUBMITTED_TIMESHEETS', icon: ICONS.clock, label: 'Nhân sự chưa nộp', requires: ['VT-02', 'VT-03'] },
 ];
 
-/** Kinh doanh — khách hàng, hợp đồng, cơ hộp bán hàng, doanh thu, báo cáo. */
+/** Kinh doanh — khách hàng, hợp đồng, cơ hội bán hàng, doanh thu, báo cáo. */
 export const BUSINESS_NAV_ITEMS: NavItem[] = [
   { tab: 'CUSTOMERS', icon: ICONS.building, label: 'Khách hàng', requires: ['VT-04', 'VT-02'] },
   {
@@ -101,11 +101,11 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
     // (chỉ VT-04/VT-02) — đây là lối vào thay thế.
   },
   {
-    tab: 'OPPORTUNITIES', icon: ICONS.target, label: 'Cơ hộp bán hàng', requires: ['VT-01', 'VT-02', 'VT-04'],
+    tab: 'OPPORTUNITIES', icon: ICONS.target, label: 'Cơ hội bán hàng', requires: ['VT-01', 'VT-02', 'VT-04'],
     // OpportunityListPage cho MỌI vai trò xem đường ống bán hàng — chỉ chặn
     // thao tác tạo/chuyển giai đoạn nếu thiếu vai trò Nhân viên kinh doanh
     // (VT-04). Không phải màn hình chặn hẳn như các mục khác.
-    viewOnlyHint: 'Cơ hộp bán hàng — chế độ chỉ xem, cần vai trò Nhân viên kinh doanh để tạo hoặc chuyển giai đoạn',
+    viewOnlyHint: 'Cơ hội bán hàng — chế độ chỉ xem, cần vai trò Nhân viên kinh doanh để tạo hoặc chuyển giai đoạn',
   },
   { tab: 'REVENUE_FORECAST', icon: ICONS.chart, label: 'Dự báo doanh thu', requires: ['VT-01', 'VT-04'] },
   { tab: 'REPORTS', icon: ICONS.document, label: 'Báo cáo', matches: ['PIPELINE_REPORT'], requires: ['VT-01', 'VT-04'] },
@@ -180,7 +180,7 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
     // nhuận (NCL-09-CN-003). Chỉ Ban giám đốc (VT-01) được đặt/đổi (TC-03); VT-02/VT-05
     // chỉ xem được ngưỡng hiện hành.
   },
-  { tab: 'OPPORTUNITY_DETAIL', icon: ICONS.building, label: 'Cơ hộp', requires: ['VT-04'] },
+  { tab: 'OPPORTUNITY_DETAIL', icon: ICONS.building, label: 'Cơ hội', requires: ['VT-04'] },
 ];
 
 /** Quản trị & Tổ chức — cơ cấu tổ chức, tài khoản, nhân sự, phân quyền. Tách
