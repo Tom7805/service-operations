@@ -4,7 +4,6 @@ import CreateProjectModal from '../components/CreateProjectModal';
 import * as contractsApi from '../api/contractsApi';
 import * as usersApi from '../../users/api/usersApi';
 import type { ContractTargetForProject, ProjectRes } from '../types/contractTypes';
-import type { AssignableProjectManager } from '../../projects/types/projectTypes';
 
 vi.mock('../../users/api/usersApi', () => ({
   getActiveUsersLookup: vi.fn(),
@@ -28,11 +27,6 @@ vi.mock('../api/contractsApi', () => ({
 vi.mock('../../projects/api/projectsApi', () => ({
   fetchAssignableProjectManagers: vi.fn(),
 }));
-
-const mockManagers: AssignableProjectManager[] = [
-  { id: 7, username: 'pm01', fullName: 'Nguyễn Văn A' },
-  { id: 42, username: 'pm02', fullName: 'Người dùng đang đăng nhập' },
-];
 
 const activeContract: ContractTargetForProject = {
   id: 5,

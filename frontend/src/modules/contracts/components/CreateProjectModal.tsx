@@ -8,8 +8,6 @@ import type {
   ProjectRes,
 } from '../types/contractTypes';
 import { createProjectFromContract, ProjectsApiError } from '../api/contractsApi';
-import { fetchAssignableProjectManagers } from '../../projects/api/projectsApi';
-import type { AssignableProjectManager } from '../../projects/types/projectTypes';
 import { validateProjectCreateForm } from '../../projects/validators/projectValidators';
 
 export type {

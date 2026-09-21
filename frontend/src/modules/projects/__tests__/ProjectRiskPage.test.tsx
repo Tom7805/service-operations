@@ -33,11 +33,6 @@ vi.mock('../api/projectsApi', () => {
   };
 });
 
-const mockWatchers = [
-  { id: 7, username: 'pm01', fullName: 'Nguyễn Văn A' },
-  { id: 9, username: 'pm.lead', fullName: 'Trần Thu Hà' },
-];
-
 const mockProjectRunning: ProjectRes = {
   id: 1,
   projectCode: 'PRJ-2026-001',
