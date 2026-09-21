@@ -20,5 +20,8 @@ public enum NotificationType {
 	CONTRACT_EXPIRING,
 
 	/** NCL-09-CN-004: bien loi nhuan cua du an xuong duoi nguong toi thieu do Ban giam doc dat. */
-	NEGATIVE_MARGIN_ALERT
+	NEGATIVE_MARGIN_ALERT,
+
+	/** NCL-10-CN-001: ke toan vua tao de nghi xuat hoa don tu gio cong cua du an do minh quan ly. */
+	INVOICE_PROPOSAL_CREATED
 }
