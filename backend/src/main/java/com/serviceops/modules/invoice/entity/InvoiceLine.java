@@ -22,7 +22,8 @@ public class InvoiceLine extends BaseEntity {
 	@Column(name = "invoice_id", nullable = false)
 	private Long invoiceId;
 
-	@Column(name = "contract_milestone_id")
+	/** UNIQUE khop {@code uk_invoice_lines_milestone} (V76): mot moc chi nam trong mot hoa don. */
+	@Column(name = "contract_milestone_id", unique = true)
 	private Long contractMilestoneId;
 
 	@Column(nullable = false, length = 500)
