@@ -142,8 +142,7 @@ describe('ProjectMilestoneTimeline (NCL-05-CN-008 — Quản lý mốc tiến đ
     });
 
     expect(screen.queryByTestId('btn-add-milestone')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('btn-edit-milestone-21')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('btn-delete-milestone-21')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Thao tác mốc tiến độ/i)).not.toBeInTheDocument();
   });
 
   it('vô hiệu hóa nút "+ Thêm mốc tiến độ" khi dự án chưa có công việc nào trong cây công việc', async () => {
@@ -170,7 +169,7 @@ describe('ProjectMilestoneTimeline (NCL-05-CN-008 — Quản lý mốc tiến đ
 
     expect(screen.getByText(/Dự án đã đóng — không thể thêm, sửa hoặc xóa mốc tiến độ/i)).toBeInTheDocument();
     expect(screen.queryByTestId('btn-add-milestone')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('btn-edit-milestone-21')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Thao tác mốc tiến độ/i)).not.toBeInTheDocument();
   });
 
   it('TC-01: mở form, chọn hạng mục và tạo mốc tiến độ mới thành công', async () => {
@@ -249,6 +248,7 @@ describe('ProjectMilestoneTimeline (NCL-05-CN-008 — Quản lý mốc tiến đ
       expect(screen.getByText('Bàn giao giai đoạn một')).toBeInTheDocument();
     });
 
+    fireEvent.click(screen.getByLabelText('Thao tác mốc tiến độ Bàn giao giai đoạn một'));
     fireEvent.click(screen.getByTestId('btn-edit-milestone-21'));
 
     const nameInput = screen.getByLabelText(/Tên mốc tiến độ/i) as HTMLInputElement;
@@ -283,9 +283,12 @@ describe('ProjectMilestoneTimeline (NCL-05-CN-008 — Quản lý mốc tiến đ
       expect(screen.getByText('Bàn giao giai đoạn một')).toBeInTheDocument();
     });
 
-    expect(screen.getByTestId('btn-complete-milestone-21')).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Thao tác mốc tiến độ Khởi tạo dự án'));
     expect(screen.queryByTestId('btn-complete-milestone-23')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Thao tác mốc tiến độ Khởi tạo dự án')); // đóng menu vừa mở
 
+    fireEvent.click(screen.getByLabelText('Thao tác mốc tiến độ Bàn giao giai đoạn một'));
+    expect(screen.getByTestId('btn-complete-milestone-21')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('btn-complete-milestone-21'));
     expect(screen.getByTestId('milestone-complete-form')).toBeInTheDocument();
 
@@ -309,10 +312,12 @@ describe('ProjectMilestoneTimeline (NCL-05-CN-008 — Quản lý mốc tiến đ
       expect(screen.getByText('Bàn giao giai đoạn một')).toBeInTheDocument();
     });
 
+    fireEvent.click(screen.getByLabelText('Thao tác mốc tiến độ Bàn giao giai đoạn một'));
     fireEvent.click(screen.getByTestId('btn-delete-milestone-21'));
     expect(projectsApi.deleteMilestone).not.toHaveBeenCalled();
 
     confirmSpy.mockReturnValue(true);
+    fireEvent.click(screen.getByLabelText('Thao tác mốc tiến độ Bàn giao giai đoạn một'));
     fireEvent.click(screen.getByTestId('btn-delete-milestone-21'));
 
     await waitFor(() => {
