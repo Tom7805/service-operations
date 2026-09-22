@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import { roleLabels } from '../../../utils/roleLabel';
 import type { ContractRes } from '../../contracts/types/contractTypes';
-import { fetchContracts, ContractsApiError } from '../../contracts/api/contractsApi';
+import { fetchContracts } from '../../contracts/api/contractsApi';
 import { fetchProjectsByContract, ProjectsApiError } from '../../projects/api/projectsApi';
 import type { ProjectRes } from '../../projects/types/projectTypes';
 import type { InvoiceProposalRes } from '../types/invoiceTypes';

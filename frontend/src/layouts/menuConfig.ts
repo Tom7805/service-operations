@@ -36,6 +36,7 @@ export type Tab =
   | 'UNSUBMITTED_TIMESHEETS'
   | 'EXPENSE_APPROVAL'
   | 'OVERHEAD_ALLOCATION'
+  | 'INVOICE_PROPOSAL'
   | 'MARGIN_BY_CUSTOMER'
   | 'MARGIN_BY_EMPLOYEE'
   | 'PROJECT_LABOR_COST'
@@ -139,6 +140,12 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
     tab: 'OVERHEAD_ALLOCATION', icon: ICONS.chart, label: 'Phân bổ chi phí chung', requires: ['VT-05'],
     // NCL-08-CN-005: Kế toán chia tổng chi phí chung phát sinh trong kỳ (tháng) cho các
     // dự án theo tỷ trọng giờ công đã duyệt trong kỳ đó.
+  },
+  {
+    tab: 'INVOICE_PROPOSAL', icon: ICONS.receipt, label: 'Đề nghị xuất hóa đơn', requires: ['VT-05'],
+    // NCL-10-CN-001: Kế toán chọn dự án + kỳ, hệ thống gom giờ công đã duyệt và chi phí đã
+    // đánh dấu tính lại cho khách hàng thành đề nghị xuất hóa đơn. Chỉ áp dụng hợp đồng theo
+    // giờ (TIME_AND_MATERIAL) — hợp đồng khác đi qua NCL-10-CN-002/NCL-10-CN-005.
   },
   {
     tab: 'MARGIN_BY_CUSTOMER', icon: ICONS.building, label: 'Biên LN theo khách hàng', requires: ['VT-01'],
