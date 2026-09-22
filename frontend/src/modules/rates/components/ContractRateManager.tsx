@@ -32,14 +32,12 @@ function formatDate(value: string): string {
  * trị viên (VT-07) chọn hợp đồng để xem/khai báo mức giá đàm phán riêng cho
  * hợp đồng đó, ưu tiên hơn bảng đơn giá chung khi tính doanh thu (QTN-16).
  *
- * `GET /contracts` (danh sách theo tên) chỉ mở cho Kế toán (VT-05) — Quản trị
- * viên (VT-07) được phép quản lý đơn giá riêng theo hợp đồng nhưng KHÔNG có
- * quyền liệt kê hợp đồng, nên với vai trò này vẫn phải nhập ID hợp đồng trực
- * tiếp (xem trang Hợp đồng, cột "Mã hợp đồng" có ghi kèm ID), khớp đúng nhóm
- * quyền của chính các endpoint `/contracts/{contractId}/bill-rates*`.
+ * `GET /contracts` (danh sách theo tên) mở cho Kế toán (VT-05) và Quản trị
+ * viên (VT-07, từ 2026-09-22 — trước đó VT-07 quản lý được đơn giá riêng theo
+ * hợp đồng nhưng không liệt kê được hợp đồng theo tên, phải nhập ID thủ công).
  */
 export default function ContractRateManager({ currentUserRoles = [], roleOptions, levelsByRole }: Props) {
-  const canListContracts = currentUserRoles.includes('VT-05');
+  const canListContracts = currentUserRoles.includes('VT-05') || currentUserRoles.includes('VT-07');
   const [contracts, setContracts] = useState<ContractRes[]>([]);
   const [contractsLoadError, setContractsLoadError] = useState<string | null>(null);
   const [contractIdInput, setContractIdInput] = useState('');

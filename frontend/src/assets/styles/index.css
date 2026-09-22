@@ -631,6 +631,11 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
 .modal-title__icon { display: flex; flex-shrink: 0; }
 .modal-title__icon svg { width: 18px; height: 18px; }
 .modal-body { padding: 20px 24px; overflow-y: auto; flex: 1; min-height: 0; }
+/* Vài trang (Rủi ro/Chi phí/Thuê ngoài dự án) dùng chung .page-title vì cũng được mở như
+   trang riêng — nhưng khi nhúng làm một tab trong modal "Quản lý dự án", cỡ chữ kiến trúc
+   30-42px của tiêu đề trang đầy đủ trở nên quá khổ so với khung modal vốn đã có tiêu đề
+   riêng ở .modal-title. Thu nhỏ lại cho vừa ngữ cảnh, không đổi khi dùng như trang độc lập. */
+.modal-body .page-title { font-size: 20px; line-height: 1.3; margin: 2px 0 8px; }
 .modal-footer { padding: 16px 24px; border-top: 1px solid var(--overlay-hairline); background: var(--surface-alt); display: flex; justify-content: flex-end; gap: 12px; flex-shrink: 0; }
 
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -726,6 +731,14 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
 
 .btn-danger { background: var(--pale-red-fg) !important; border-color: var(--pale-red-fg) !important; color: #FFFFFF !important; }
 .btn-success { background: var(--pale-green-fg) !important; border-color: var(--pale-green-fg) !important; color: #FFFFFF !important; }
+
+/* Hành động nguy hiểm nhưng không tức thời (cần xác nhận riêng qua hộp thoại, VD "Đóng dự án"):
+   giữ dáng btn-secondary trung tính lúc nghỉ — không "hét" màu đỏ ngay khi vừa mở màn hình — chỉ
+   ngả sang đỏ nhạt khi hover/focus, đúng lúc người dùng thực sự sắp bấm. */
+.project-close-btn:hover, .project-close-btn:focus-visible {
+  background: var(--pale-red-bg); border-color: var(--pale-red-fg); color: var(--pale-red-fg);
+}
+.project-close-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .alert { padding: 12px 16px; border-radius: var(--radius-md); display: flex; gap: 12px; align-items: flex-start; font-size: 14.5px; margin-bottom: 16px; }
 /* Utility còn thiếu — dùng khắp nơi để đẩy nút "Thử lại" sang phải trong banner lỗi, nhưng chưa
@@ -2697,6 +2710,31 @@ body { background: var(--canvas); }
   color: var(--ink-faint);
 }
 
+/* Nhãn "Công việc" ngay trên tên công việc ở trang Ghi giờ công (TimeEntryPage): trước đây
+   tên công việc được đặt thẳng vào .page-title (cỡ chữ kiến trúc 30-42px) trông y hệt một
+   tiêu đề trang thông thường, dễ nhầm với chính "Công việc và giờ công" ở đầu layout — không
+   rõ đâu là tên trang, đâu là dữ liệu (tên công việc cụ thể). Nhãn nhỏ này tách bạch hai vai
+   trò: kicker phía trên nói "bạn đang ở đâu" (Ghi giờ công · dự án nào), nhãn "Công việc" nói
+   rõ khối chữ lớn ngay dưới là GÌ, trước khi mắt chạm vào tên thật. */
+.task-title-eyebrow {
+  display: block; font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--ink-muted);
+}
+
+/* Tiêu đề trang chi tiết một công việc (TimeEntryPage): trước đây nút "Quay lại" đứng
+   ngang hàng flex với cả khối kicker+eyebrow+tiêu đề (3 dòng), align-items: center kéo
+   nó xuống lửng lơ giữa khối cao đó — trông như bị đặt sai chỗ. Tách thành 2 hàng riêng:
+   hàng trên gọn (nút quay lại + breadcrumb ngữ cảnh, cùng chiều cao nên căn giữa tự
+   nhiên); hàng dưới là tiêu đề thật cùng các nút hành động, canh theo baseline của tiêu
+   đề chứ không phải theo cả khối. */
+.task-page-header { margin-bottom: 18px; }
+.task-page-header__top {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap;
+}
+.task-page-header__main {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+}
+
 /* Nút "X cơ hội mở" chuyển thành nút bấm để bung/thu danh sách cơ hội cấu
    thành con số của tháng đó — thay thế .badge--blue (màu xanh dương quá nổi
    so với tổng thể đơn sắc của trang) bằng tông trung tính hơn, chỉ đổi màu khi
@@ -3443,6 +3481,41 @@ body { background: var(--canvas); }
   color: #15803D;
   border: 1px solid #BBF7D0;
 }
+
+/* Ô đổi trạng thái công việc ("Công việc và giờ công" — trang của nhân viên): trước đây
+   đứng cạnh một badge hiển thị đúng giá trị đang chọn, lặp lại thông tin hai lần trên
+   cùng một hàng. Tô màu viền/nền theo đúng trạng thái hiện tại để ô select tự đóng vai
+   trò "vừa hiển thị vừa cho sửa", không cần thêm badge riêng nữa. */
+.status-select { font-weight: 600; font-size: 12.5px; cursor: pointer; }
+.status-select--todo { background: #F1F5F9; color: #475569; border-color: #CBD5E1 !important; }
+.status-select--progress { background: #EFF6FF; color: #1D4ED8; border-color: #BFDBFE !important; }
+.status-select--review { background: #FFFBEB; color: #B45309; border-color: #FDE68A !important; }
+.status-select--done { background: #F0FDF4; color: #15803D; border-color: #BBF7D0 !important; }
+
+/* Thanh chuyển tuần chấm công ("Công việc và giờ công"): trước đây là 3 nút chữ rời
+   ("← Tuần trước" / "Tuần sau →" / "Tuần này") xếp cạnh nhãn ngày — đọc chậm vì phải
+   ghép chữ trong nút với mũi tên unicode. Đổi thành mẫu "bộ chuyển hướng" quen thuộc:
+   hai nút mũi tên icon áp sát nhãn khoảng ngày ở giữa, nút "Về tuần hiện tại" chỉ hiện
+   khi đang không ở tuần hiện tại (đỡ một nút luôn nằm đó dù chẳng để làm gì phần lớn
+   thời gian). */
+.week-nav {
+  padding: 14px 20px; margin-bottom: 16px;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
+}
+.week-nav__switcher { display: flex; align-items: center; gap: 4px; }
+.week-nav__label {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 168px; padding: 0 6px;
+}
+.week-nav__range { font-weight: 700; font-size: 14.5px; color: var(--ink-strong); white-space: nowrap; }
+.week-nav__hint { font-size: 11.5px; color: var(--ink-muted); }
+.week-nav__today-link {
+  background: none; border: none; padding: 0; font-size: 11.5px; color: var(--ink-muted);
+  text-decoration: underline; cursor: pointer;
+}
+.week-nav__today-link:hover { color: var(--ink-strong); }
+.week-nav__summary { display: flex; align-items: center; gap: 12px; }
+.week-nav__total { font-size: 13.5px; color: var(--ink-muted); }
+.week-nav__total strong { color: var(--ink-strong); font-size: 15px; }
 
 .wbs-empty-hint {
   padding: 12px 16px;

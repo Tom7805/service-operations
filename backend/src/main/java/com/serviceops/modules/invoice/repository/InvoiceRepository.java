@@ -9,17 +9,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
 
-	/**
-	 * Doc hoa don kem khoa ghi (SELECT ... FOR UPDATE) — dung khi ghi nhan thanh toan
-	 * (NCL-10-CN-003) de hai luot ghi cung luc cho mot hoa don xep hang tuan tu, khong
-	 * cung doc "so con phai thu" cu roi cung vuot tong hoa don.
-	 */
 	/**
 	 * Tim hoa don theo hop dong (tuy chon) va tap trang thai, moi nhat truoc (NCL-10-CN-003).
 	 * {@code statuses} khong duoc rong — noi goi truyen day du cac trang thai khi khong loc.
@@ -33,6 +29,26 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
 	List<Invoice> search(@Param("contractId") Long contractId,
 			@Param("statuses") Collection<InvoiceStatus> statuses);
 
+	/**
+	 * Hoa don da qua han thanh toan tai {@code today} (NCL-10-CN-004): han thanh toan TRUOC {@code today}
+	 * va thuoc tap trang thai con phai thu; hoa don qua han lau nhat truoc. So "con phai thu &gt; 0" do
+	 * tang service loc, vi so da thu nam o bang thanh toan.
+	 */
+	@Query("""
+			SELECT i FROM Invoice i
+			WHERE i.status IN :statuses
+			AND i.dueDate < :today
+			AND (:customerId IS NULL OR i.customerId = :customerId)
+			ORDER BY i.dueDate ASC, i.id ASC
+			""")
+	List<Invoice> findOverdue(@Param("statuses") Collection<InvoiceStatus> statuses,
+			@Param("today") LocalDate today, @Param("customerId") Long customerId);
+
+	/**
+	 * Doc hoa don kem khoa ghi (SELECT ... FOR UPDATE) — dung khi ghi nhan thanh toan
+	 * (NCL-10-CN-003) de hai luot ghi cung luc cho mot hoa don xep hang tuan tu, khong
+	 * cung doc "so con phai thu" cu roi cung vuot tong hoa don.
+	 */
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("SELECT i FROM Invoice i WHERE i.id = :id")
 	Optional<Invoice> findByIdForUpdate(@Param("id") Long id);

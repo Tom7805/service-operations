@@ -72,7 +72,7 @@ class InvoiceControllerTest {
 	void allowsAccountantToInvoiceMilestoneWithoutRequestBody() throws Exception {
 		when(milestoneInvoiceService.createFromMilestone(eq(5L), eq(7L), any()))
 				.thenReturn(new InvoiceRes(100L, "INV-20260921-ABC123", 5L, 7L, "Giai doan 1", "ISSUED",
-						new BigDecimal("300000000.00"), LocalDate.of(2026, 9, 21), null,
+						new BigDecimal("300000000.00"), LocalDate.of(2026, 9, 21), LocalDate.of(2026, 10, 21), null,
 						new BigDecimal("1000000000.00"), new BigDecimal("300000000.00"), "ketoan01",
 						LocalDateTime.of(2026, 9, 21, 10, 0)));
 
@@ -182,6 +182,7 @@ class InvoiceControllerTest {
 	private InvoiceDetailRes detail() {
 		return new InvoiceDetailRes(9L, "INV-20260921-ABC123", 5L, "HD-TEST", 3L, "Cong ty A", "PARTIALLY_PAID",
 				new BigDecimal("100000000.00"), new BigDecimal("60000000.00"), new BigDecimal("40000000.00"),
-				LocalDate.of(2026, 9, 21), null, "ketoan01", LocalDateTime.of(2026, 9, 21, 10, 0));
+				LocalDate.of(2026, 9, 21), LocalDate.of(2026, 10, 21), null, "ketoan01",
+				LocalDateTime.of(2026, 9, 21, 10, 0));
 	}
 }

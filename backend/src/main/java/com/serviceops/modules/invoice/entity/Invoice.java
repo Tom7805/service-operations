@@ -6,6 +6,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -42,8 +43,18 @@ public class Invoice extends BaseEntity {
 	@Column(name = "total_amount", nullable = false, precision = 18, scale = 2)
 	private BigDecimal totalAmount;
 
+	/** So ngay thanh toan mac dinh khi hoa don khong khai bao han thanh toan (khop V79). */
+	public static final int DEFAULT_PAYMENT_TERM_DAYS = 30;
+
 	@Column(name = "invoice_date", nullable = false)
 	private LocalDate invoiceDate;
+
+	/**
+	 * Han thanh toan (NCL-10-CN-004): qua ngay nay ma con so con phai thu thi hoa don bi tinh la cong no
+	 * qua han. Neu noi tao khong dat thi mac dinh {@code invoiceDate + 30 ngay}.
+	 */
+	@Column(name = "due_date", nullable = false)
+	private LocalDate dueDate;
 
 	@Column(length = 1000)
 	private String note;
@@ -56,4 +67,11 @@ public class Invoice extends BaseEntity {
 
 	@Column(name = "updated_at", nullable = false)
 	private LocalDateTime updatedAt;
+
+	@PrePersist
+	void applyDefaultDueDate() {
+		if (dueDate == null && invoiceDate != null) {
+			dueDate = invoiceDate.plusDays(DEFAULT_PAYMENT_TERM_DAYS);
+		}
+	}
 }

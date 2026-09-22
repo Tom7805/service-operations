@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
+import RowActionsMenu from '../../../components/common/RowActionsMenu';
 import type { ProjectMilestoneRes, WorkBreakdownRes } from '../types/projectTypes';
 import { deleteMilestone, getMilestones, ProjectsApiError } from '../api/projectsApi';
 import MilestoneFormModal from './MilestoneFormModal';
@@ -189,7 +190,7 @@ export default function ProjectMilestoneTimeline({
                 <th style={{ width: '130px' }}>Ngày kế hoạch</th>
                 <th style={{ width: '130px' }}>Ngày thực tế</th>
                 <th style={{ width: '170px' }}>Trạng thái</th>
-                {canEdit && <th style={{ width: '190px' }}></th>}
+                {canEdit && <th style={{ width: '48px' }}></th>}
               </tr>
             </thead>
             <tbody>
@@ -226,35 +227,38 @@ export default function ProjectMilestoneTimeline({
                     {canEdit && (
                       <td>
                         {isProjectOpen && (
-                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                            <button
-                              type="button"
-                              className="btn btn-secondary btn-xs"
-                              onClick={() => openEditForm(m)}
-                              data-testid={`btn-edit-milestone-${m.id}`}
-                            >
-                              Sửa
-                            </button>
-                            {m.status !== 'DONE' && (
-                              <button
-                                type="button"
-                                className="btn btn-secondary btn-xs"
-                                onClick={() => setCompletingMilestone(m)}
-                                data-testid={`btn-complete-milestone-${m.id}`}
-                              >
-                                Hoàn thành
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              className="btn btn-danger btn-xs"
-                              onClick={() => void handleDelete(m)}
-                              disabled={deletingId === m.id}
-                              data-testid={`btn-delete-milestone-${m.id}`}
-                            >
-                              Xóa
-                            </button>
-                          </div>
+                          <RowActionsMenu
+                            ariaLabel={`Thao tác mốc tiến độ ${m.name}`}
+                            actions={[
+                              {
+                                key: 'edit',
+                                label: 'Sửa',
+                                icon: ICONS.edit,
+                                onClick: () => openEditForm(m),
+                                testId: `btn-edit-milestone-${m.id}`,
+                              },
+                              ...(m.status !== 'DONE'
+                                ? [
+                                    {
+                                      key: 'complete',
+                                      label: 'Hoàn thành',
+                                      icon: ICONS.check,
+                                      onClick: () => setCompletingMilestone(m),
+                                      testId: `btn-complete-milestone-${m.id}`,
+                                    },
+                                  ]
+                                : []),
+                              {
+                                key: 'delete',
+                                label: 'Xóa',
+                                icon: ICONS.trash,
+                                tone: 'danger',
+                                onClick: () => void handleDelete(m),
+                                disabled: deletingId === m.id,
+                                testId: `btn-delete-milestone-${m.id}`,
+                              },
+                            ]}
+                          />
                         )}
                       </td>
                     )}

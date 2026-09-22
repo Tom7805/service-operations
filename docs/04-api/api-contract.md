@@ -2650,6 +2650,35 @@ trúc từng phần tử như response của `GET`.
 | 400 | `VALIDATION_ERROR` | Mảng rỗng, thiếu tỷ lệ/số tiền, số tiền không hợp lệ, tỷ lệ không khớp số tiền hoặc tổng mốc khác `totalValue`. |
 | 400 | `INVALID_STATE` | Hợp đồng đã có mốc `INVOICED` (đã lập hóa đơn, `NCL-10-CN-002`) — không được khai báo lại danh sách mốc. |
 
+#### `PATCH /contracts/{contractId}/milestones/{milestoneId}/status`
+
+Đổi trạng thái một mốc. Chỉ đi **đúng một bước tiến** theo trình tự `PENDING` → `READY_TO_INVOICE` →
+`INVOICED`; không nhảy cóc, không lùi. Cho tới khi story nghiệm thu (`NCL-12-CN-003`) tự động mở mốc, đây là
+cách duy nhất đưa mốc sang `READY_TO_INVOICE` để `NCL-10-CN-002` lập được hóa đơn (QTN-25).
+
+**Trạng thái `INVOICED` không đặt được qua endpoint này** — nó chỉ do
+`POST /contracts/{contractId}/milestones/{milestoneId}/invoice` (`NCL-10-CN-002`) đặt, để mốc `INVOICED` luôn đi
+kèm một hóa đơn thật.
+
+**Request:**
+
+```json
+{ "status": "READY_TO_INVOICE" }
+```
+
+**Response thành công — `200 OK`:** `data` là mốc sau khi cập nhật (cùng cấu trúc phần tử của `GET`). Ghi
+`MILESTONE_STATUS_UPDATE` vào `contract_audit_logs`.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`); hệ thống ghi `DENIED_ACCESS`. |
+| 404 | `RESOURCE_NOT_FOUND` | Không có hợp đồng `{contractId}`, không có mốc `{milestoneId}` hoặc mốc không thuộc hợp đồng. |
+| 400 | `VALIDATION_ERROR` | Thiếu `status` hoặc giá trị không thuộc `PENDING`/`READY_TO_INVOICE`/`INVOICED`. |
+| 400 | `INVALID_STATE` | `status` = `INVOICED` (phải lập hóa đơn qua `NCL-10-CN-002`); hoặc chuyển nhảy cóc/lùi/giữ nguyên trạng thái. |
+
 ### `NCL-04-CN-004` — Lập phụ lục điều chỉnh hợp đồng
 
 Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`). Phụ lục chỉ được lập cho hợp đồng đang hiệu lực
@@ -4766,6 +4795,7 @@ quyền ghi "Từ chối truy cập" — chức năng "Lập hóa đơn theo m�
 ```json
 {
   "invoiceDate": "2026-09-30",
+  "dueDate": "2026-10-30",
   "note": "Thanh toan dot 1"
 }
 ```
@@ -4773,6 +4803,7 @@ quyền ghi "Từ chối truy cập" — chức năng "Lập hóa đơn theo m�
 | Trường | Kiểu | Bắt buộc | Ghi chú |
 |---|---|---|---|
 | `invoiceDate` | date | không | Ngày hóa đơn; mặc định là ngày hôm nay. |
+| `dueDate` | date | không | Hạn thanh toán (`NCL-10-CN-004` dựa vào đây để tính công nợ quá hạn); mặc định `invoiceDate` + 30 ngày; không được trước `invoiceDate`. |
 | `note` | string | không | Ghi chú, tối đa 1000 ký tự. |
 
 **Response thành công — `200 OK`:**
@@ -4790,6 +4821,7 @@ quyền ghi "Từ chối truy cập" — chức năng "Lập hóa đơn theo m�
     "status": "ISSUED",
     "totalAmount": 300000000.00,
     "invoiceDate": "2026-09-21",
+    "dueDate": "2026-10-21",
     "note": null,
     "contractValue": 1000000000.00,
     "invoicedTotal": 300000000.00,
@@ -4810,11 +4842,14 @@ invoicedTotal` là phần còn có thể lập.
 | 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`); hệ thống ghi "Từ chối truy cập" (TC-03). |
 | 404 | `RESOURCE_NOT_FOUND` | Không có hợp đồng `{contractId}`, không có mốc `{milestoneId}`, hoặc mốc không thuộc hợp đồng này. |
 | 400 | `INVALID_STATE` | Loại hợp đồng không phải `FIXED_PRICE`/`MILESTONE`; mốc còn `PENDING` (chưa nghiệm thu, QTN-25) hoặc đã `INVOICED`. |
-| 400 | `VALIDATION_ERROR` | Tổng hóa đơn lũy kế vượt giá trị hợp đồng hoặc hạn mức (TC-02, QTN-19) — `message` yêu cầu lập phụ lục trước; hoặc `note` quá dài. |
+| 400 | `VALIDATION_ERROR` | Tổng hóa đơn lũy kế vượt giá trị hợp đồng hoặc hạn mức (TC-02, QTN-19) — `message` yêu cầu lập phụ lục trước; hoặc `dueDate` trước `invoiceDate`; hoặc `note` quá dài. |
 
 **Ghi chú cho Frontend:**
 - Với lỗi `VALIDATION_ERROR` do QTN-19, hiển thị đúng `message` backend trả về và gợi ý lối đi tới
   `POST /contracts/{contractId}/appendices` (`NCL-04-CN-004`, vai trò `VT-04`).
+- Muốn lập hóa đơn, mốc phải là `READY_TO_INVOICE`: mốc `PENDING` bị chặn (`400 INVALID_STATE`, QTN-25). Đưa mốc sang
+  `READY_TO_INVOICE` bằng `PATCH /contracts/{contractId}/milestones/{milestoneId}/status` (`NCL-04-CN-003`); không
+  có cách đặt `INVOICED` thủ công — ẩn lựa chọn này khỏi màn hình đổi trạng thái mốc.
 - Sau khi lập hóa đơn, mốc đã là `INVOICED`. `PUT /contracts/{contractId}/milestones` **bị từ chối**
   (`400 INVALID_STATE`) khi hợp đồng đã có mốc `INVOICED` — ẩn nút "Khai báo lại mốc" trong trường hợp này.
 - Danh sách và chi tiết hóa đơn đọc qua `GET /invoices` và `GET /invoices/{id}` (mục `NCL-10-CN-003` bên dưới).
@@ -4924,6 +4959,7 @@ Danh sách hóa đơn kèm **số đã thu / còn phải thu**, hóa đơn mới
       "paidAmount": 60000000.00,
       "remainingAmount": 40000000.00,
       "invoiceDate": "2026-09-21",
+      "dueDate": "2026-10-21",
       "note": null,
       "createdBy": "ketoan01",
       "createdAt": "2026-09-21T10:00:00"
@@ -4967,6 +5003,370 @@ Chỉ `VT-05`. Hóa đơn chưa có lần thanh toán nào trả `data: []`.
 | 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`); hệ thống ghi "Từ chối truy cập" (chức năng "Tra cứu hóa đơn và công nợ" hoặc "Ghi nhận thanh toán của khách hàng"). |
 | 404 | `RESOURCE_NOT_FOUND` | (`GET /invoices/{id}` và `.../payments`) không tồn tại hóa đơn `{invoiceId}`. |
 | 400 | — | `status` không thuộc danh sách trên (lỗi kiểu tham số của framework). |
+
+### `NCL-10-CN-004` — Theo dõi công nợ quá hạn
+
+Yêu cầu token của **Kế toán** (`VT-05`). Hệ thống liệt kê các hóa đơn **quá hạn thanh toán** tại ngày hôm nay,
+phân nhóm theo **số ngày quá hạn** kèm khách hàng và **số tiền còn lại**, để Kế toán nhắc khách hàng kịp thời.
+Chỉ đọc — không đổi dữ liệu.
+
+**Hóa đơn nào bị coi là quá hạn:** trạng thái `ISSUED` hoặc `PARTIALLY_PAID`, `dueDate` **trước** hôm nay
+và số còn phải thu (`totalAmount − paidAmount`) lớn hơn `0`. Hóa đơn `DRAFT`, `PAID`, `CANCELLED` và hóa đơn chưa
+tới hạn (kể cả đúng ngày `dueDate`) không có mặt. Hóa đơn quá hạn từ ngày kế tiếp `dueDate`, nên
+`daysOverdue` nhỏ nhất là `1`; ghi nhận thanh toán đủ (`NCL-10-CN-003`) làm hóa đơn tự rời khỏi danh sách.
+
+**Hạn thanh toán (`dueDate`):** lấy từ hóa đơn — do Kế toán nhập khi lập hóa đơn theo mốc
+(`NCL-10-CN-002`, trường `dueDate`), mặc định `invoiceDate` + 30 ngày. Hóa đơn lập trước khi có trường này được
+điền `invoiceDate` + 30 ngày (migration `V79`).
+
+**Nhóm tuổi nợ** (luôn trả đủ bốn nhóm, theo thứ tự dưới đây):
+
+| `bucket` | `label` | `fromDays` | `toDays` |
+|---|---|---|---|
+| `DAYS_1_30` | Qua han 1-30 ngay | 1 | 30 |
+| `DAYS_31_60` | Qua han 31-60 ngay | 31 | 60 |
+| `DAYS_61_90` | Qua han 61-90 ngay | 61 | 90 |
+| `OVER_90` | Qua han tren 90 ngay | 91 | `null` |
+
+Hóa đơn quá hạn **trên 30 ngày** nằm ở `DAYS_31_60` trở đi — ví dụ hóa đơn quá hạn 40 ngày nằm ở `DAYS_31_60`
+(TC-01). Trong mỗi nhóm, hóa đơn quá hạn lâu nhất đứng trước.
+
+Lần bị từ chối quyền ghi Nhật ký hệ thống "Từ chối truy cập" — chức năng "Theo dõi công nợ quá hạn" (TC-03).
+Endpoint chỉ đọc nên chỉ ghi nhật ký lần bị từ chối, không ghi lượt xem thành công (giống `GET /invoices`).
+
+#### `GET /receivables/overdue`
+
+| Query param | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `customerId` | number | không | Chỉ lấy hóa đơn của khách hàng này. |
+| `bucket` | string | không | `DAYS_1_30` · `DAYS_31_60` · `DAYS_61_90` · `OVER_90`. Chỉ giữ hóa đơn thuộc nhóm này; `totalInvoiceCount`/`totalRemainingAmount` tính theo bộ lọc, các nhóm còn lại vẫn có mặt nhưng rỗng. |
+
+**Response thành công — `200 OK`** (ví dụ rút gọn: một hóa đơn 100 triệu, đã thu 40 triệu, quá hạn 40 ngày — TC-01):
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "asOfDate": "2026-09-21",
+    "totalInvoiceCount": 1,
+    "totalRemainingAmount": 60000000.00,
+    "buckets": [
+      { "bucket": "DAYS_1_30", "label": "Qua han 1-30 ngay", "fromDays": 1, "toDays": 30,
+        "invoiceCount": 0, "remainingAmount": 0.00, "invoices": [] },
+      {
+        "bucket": "DAYS_31_60", "label": "Qua han 31-60 ngay", "fromDays": 31, "toDays": 60,
+        "invoiceCount": 1,
+        "remainingAmount": 60000000.00,
+        "invoices": [
+          {
+            "id": 9,
+            "invoiceCode": "INV-20260713-A1B2C3",
+            "contractId": 5,
+            "contractCode": "HD-LK3F9A",
+            "customerId": 3,
+            "customerName": "Cong ty A",
+            "status": "PARTIALLY_PAID",
+            "totalAmount": 100000000.00,
+            "paidAmount": 40000000.00,
+            "remainingAmount": 60000000.00,
+            "invoiceDate": "2026-07-13",
+            "dueDate": "2026-08-12",
+            "daysOverdue": 40
+          }
+        ]
+      },
+      { "bucket": "DAYS_61_90", "label": "Qua han 61-90 ngay", "fromDays": 61, "toDays": 90,
+        "invoiceCount": 0, "remainingAmount": 0.00, "invoices": [] },
+      { "bucket": "OVER_90", "label": "Qua han tren 90 ngay", "fromDays": 91, "toDays": null,
+        "invoiceCount": 0, "remainingAmount": 0.00, "invoices": [] }
+    ]
+  }
+}
+```
+
+`daysOverdue` = số ngày từ `dueDate` tới `asOfDate` (luôn `>= 1`); `remainingAmount` của nhóm = tổng
+`remainingAmount` các hóa đơn trong nhóm; `totalRemainingAmount` = tổng cả bốn nhóm.
+
+**Không có công nợ quá hạn — vẫn `200 OK`** (TC-02): `totalInvoiceCount` = `0`, `totalRemainingAmount` = `0.00`,
+bốn nhóm đều `invoiceCount` = `0` và `invoices` = `[]`, và `message` = `"Khong co cong no qua han"`:
+
+```json
+{
+  "success": true,
+  "message": "Khong co cong no qua han",
+  "data": { "asOfDate": "2026-09-21", "totalInvoiceCount": 0, "totalRemainingAmount": 0.00, "buckets": [ "..." ] }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`); hệ thống ghi "Từ chối truy cập" — chức năng "Theo dõi công nợ quá hạn" (TC-03). |
+| 400 | `VALIDATION_ERROR` | `bucket` không thuộc bốn giá trị trên hoặc `customerId` không phải số (lỗi kiểu tham số của framework, không có `fieldErrors`). |
+
+**Ghi chú cho Frontend:**
+- Khi `data.totalInvoiceCount = 0` hiển thị `message` ("không có công nợ quá hạn") thay vì bảng trống; bốn nhóm vẫn
+  có mặt để dựng sẵn các thẻ tổng hợp bằng `0`.
+- Mỗi nhóm dùng `label`, `fromDays`, `toDays` để hiển thị khoảng — không tự suy ngưỡng ở phía Frontend.
+- Bấm một hóa đơn mở `GET /invoices/{id}` và `GET /invoices/{id}/payments` (`NCL-10-CN-003`); để thu tiền dùng
+  `POST /invoices/{invoiceId}/payments`. Sau khi ghi thanh toán đủ, tải lại danh sách để hóa đơn biến mất.
+- `dueDate` cũng có trong `GET /invoices` và `GET /invoices/{id}` (`NCL-10-CN-003`) và trong response lập hóa đơn
+  theo mốc (`NCL-10-CN-002`); màn hình lập hóa đơn nên cho nhập `dueDate` (mặc định gợi ý `invoiceDate` + 30 ngày).
+- Chưa có nhắc nợ tự động — thuộc `NCL-10-CN-006`.
+
+### `NCL-10-CN-005` — Hóa đơn định kỳ cho hợp đồng duy trì
+
+Toàn bộ endpoint dưới đây chỉ dành cho Kế toán (`VT-05`) — vai trò khác nhận `403 FORBIDDEN` và bị ghi
+Nhật ký hệ thống lần từ chối (TC-03). Story này tạo bản ghi trên cùng bảng `invoices` dùng chung của
+Epic `NCL-10` (không có cột riêng để phân biệt nguồn phát sinh): hóa đơn định kỳ dùng chung tiền tố mã
+`INV-` với hóa đơn theo mốc (`NCL-10-CN-002`) và ghi rõ kỳ trong `note`.
+
+#### `POST /contracts/{contractId}/recurring-invoice-schedule`
+
+Khai báo điều khoản lập hóa đơn định kỳ cho một hợp đồng duy trì. Chỉ hợp đồng loại
+`MAINTENANCE` mới khai báo được; mỗi hợp đồng tối đa một điều khoản đang hiệu lực.
+
+**Request:**
+```json
+{
+  "billingDayOfMonth": 5,
+  "amount": 10000000,
+  "notes": "Phi bao tri hang thang goi Chuan"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `contractId` | number | có | Lấy từ URL. Phải là hợp đồng loại `MAINTENANCE`. |
+| `billingDayOfMonth` | number | có | Từ `1` đến `28` (tránh các tháng không có ngày 29-31). |
+| `amount` | number | có | Lớn hơn `0`, giá trị hóa đơn mỗi kỳ. |
+| `notes` | string | không | Tối đa 500 ký tự. |
+| `active` | boolean | không | Mặc định `true` khi tạo mới. |
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Khai bao dieu khoan lap hoa don dinh ky thanh cong",
+  "data": {
+    "id": 1,
+    "contractId": 1,
+    "billingDayOfMonth": 5,
+    "amount": 10000000.00,
+    "active": true,
+    "lastGeneratedPeriod": null,
+    "notes": "Phi bao tri hang thang goi Chuan",
+    "createdAt": "2026-09-01T08:00:00",
+    "updatedAt": null
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | `billingDayOfMonth` ngoài khoảng 1-28, hoặc `amount` không dương/để trống. |
+| 400 | `INVALID_STATE` | Hợp đồng không phải loại `MAINTENANCE`. |
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-05`. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy hợp đồng. |
+| 409 | `DUPLICATE_DATA` | Hợp đồng đã có điều khoản lập hóa đơn định kỳ. |
+
+Mỗi lần khai báo đều ghi Nhật ký hệ thống (TC-04).
+
+#### `PUT /contracts/{contractId}/recurring-invoice-schedule`
+
+Cập nhật điều khoản đã khai báo (ngày lập, giá trị, ghi chú, bật/tắt qua `active`). Cùng khuôn dạng
+request/response với endpoint tạo. Trả `404 RESOURCE_NOT_FOUND` nếu hợp đồng chưa có điều khoản nào.
+Ghi Nhật ký hệ thống mỗi lần cập nhật (TC-04).
+
+#### `GET /contracts/{contractId}/recurring-invoice-schedule`
+
+Xem điều khoản lập hóa đơn định kỳ hiện hành của một hợp đồng. Trả `404 RESOURCE_NOT_FOUND` nếu chưa
+khai báo.
+
+#### `POST /recurring-invoices/run`
+
+Chạy rà soát toàn bộ điều khoản đang bật (`active = true`): điều khoản nào có `billingDayOfMonth` trùng
+ngày rà soát **và** chưa sinh hóa đơn cho kỳ (tháng) đó thì tạo một hóa đơn nháp (`status = "DRAFT"`)
+đúng giá trị điều khoản (TC-01). Hệ thống tự chạy hằng ngày lúc 06:00 (giờ server); endpoint này cho phép
+Kế toán chạy thủ công hoặc mô phỏng một ngày cụ thể qua `asOf` khi kiểm thử.
+
+**Request** (tùy chọn, có thể gửi body rỗng `{}`):
+```json
+{
+  "asOf": "2026-09-05"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `asOf` | date | không | Định dạng `YYYY-MM-DD`. Để trống = lấy ngày hệ thống hôm nay. |
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Ra soat lap hoa don dinh ky thanh cong",
+  "data": {
+    "asOf": "2026-09-05",
+    "created": [
+      {
+        "id": 500,
+        "invoiceCode": "INV-20260905-4F2A9C",
+        "contractId": 1,
+        "customerId": 100,
+        "periodStart": "2026-09-01",
+        "periodEnd": "2026-09-30",
+        "invoiceDate": "2026-09-05",
+        "amount": 10000000.00,
+        "status": "DRAFT"
+      }
+    ],
+    "skipped": [
+      {
+        "contractId": 2,
+        "reason": "Hợp đồng HD-0002 đã hết hiệu lực (trạng thái ACTIVE, ngày kết thúc 2026-08-31), cần kiểm tra việc gia hạn trước khi lập hóa đơn"
+      }
+    ]
+  }
+}
+```
+
+Ý nghĩa từng trường hợp trong `skipped` (TC-02 và QTN-19):
+- Hợp đồng đã hết hiệu lực tại ngày rà soát (`endDate` đã qua, hoặc trạng thái `TERMINATED`/`COMPLETED`) →
+  không tạo hóa đơn, nhắc kiểm tra gia hạn.
+- Tổng giá trị đã lập hóa đơn (dùng chung phép kiểm tra với `NCL-10-CN-002`, `ContractValueLimitValidator`)
+  cộng thêm hóa đơn kỳ này vượt hạn mức/giá trị hợp đồng → không tạo hóa đơn, nhắc lập phụ lục điều chỉnh
+  (QTN-19).
+
+Điều khoản chưa tới ngày lập trong tháng, hoặc đã sinh hóa đơn cho kỳ hiện tại rồi, không xuất hiện ở cả
+`created` lẫn `skipped` (không phải trường hợp cần Kế toán xử lý). Hóa đơn tạo ra có `dueDate` mặc định
+`invoiceDate + 30 ngày`, cùng quy ước với hóa đơn theo mốc (`Invoice.DEFAULT_PAYMENT_TERM_DAYS`).
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-05`. |
+| 400 | `VALIDATION_ERROR` | `asOf` sai định dạng hoặc không đọc được body. |
+
+Mỗi hóa đơn được tạo đều ghi Nhật ký hệ thống riêng (TC-04), kèm mã hóa đơn và giá trị, **và** gửi
+thông báo trong ứng dụng (`type` = `RECURRING_INVOICE_GENERATED`, `referenceType` = `Invoice`,
+`referenceId` = id hóa đơn) cho toàn bộ Kế toán (vai trò `VT-05`) — đây là phần "báo cho kế toán" của
+TC-01, tách khỏi Nhật ký hệ thống (Nhật ký chỉ tra cứu được, không chủ động báo ai). Đọc qua
+`GET /notifications` như các thông báo khác.
+
+### `NCL-10-CN-006` — Nhắc thu nợ tự động
+
+Toàn bộ endpoint dưới đây chỉ dành cho Kế toán (`VT-05`) — vai trò khác nhận `403 FORBIDDEN` và bị ghi
+Nhật ký hệ thống lần từ chối (TC-03). Áp dụng cho mọi hóa đơn còn công nợ (`status` là `ISSUED` hoặc
+`PARTIALLY_PAID` và còn phải thu `> 0`), theo ba mốc:
+
+- **Trước hạn 3 ngày** (`UPCOMING_3_DAYS`): `dueDate` còn đúng 3 ngày nữa.
+- **Đúng hạn** (`DUE_TODAY`): `dueDate` là hôm nay.
+- **Sau hạn theo chu kỳ 7 ngày** (`OVERDUE`): số ngày quá hạn là bội số của 7 (7, 14, 21…) — lặp lại
+  đều đặn cho tới khi hóa đơn được thanh toán đủ, không giới hạn số lần.
+
+Người nhận mỗi lần nhắc: toàn bộ Kế toán (vai trò `VT-05`) và người phụ trách khách hàng của hóa đơn đó
+(`Customer.ownerId`, nhân viên kinh doanh), không trùng lặp.
+
+#### `POST /dunning/run`
+
+Chạy rà soát toàn bộ hóa đơn còn công nợ: hóa đơn nào đang ở đúng một mốc (TC-01) **và** mốc đó
+chưa từng được nhắc thì gửi thông báo trong hệ thống cho từng người nhận và ghi một dòng lịch sử nhắc
+nợ. Hệ thống tự chạy hằng ngày lúc 07:00 (giờ server, sau giờ chạy hóa đơn định kỳ lúc 06:00); endpoint
+này cho phép Kế toán chạy thủ công hoặc mô phỏng một ngày cụ thể qua `asOf` khi kiểm thử.
+
+**Request** (tùy chọn, có thể gửi body rỗng `{}`):
+```json
+{
+  "asOf": "2026-09-21"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `asOf` | date | không | Định dạng `YYYY-MM-DD`. Để trống = lấy ngày hệ thống hôm nay. |
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Ra soat nhac thu no thanh cong",
+  "data": {
+    "asOf": "2026-09-21",
+    "sent": [
+      {
+        "id": 500,
+        "invoiceId": 9,
+        "stage": "UPCOMING_3_DAYS",
+        "referenceDate": "2026-09-24",
+        "daysOverdue": null,
+        "remainingAmount": 40000000.00,
+        "recipientIds": [1, 2, 3],
+        "sentAt": "2026-09-21T07:00:00"
+      }
+    ],
+    "skippedAlreadySentCount": 2
+  }
+}
+```
+
+| Trường | Ghi chú |
+|---|---|
+| `sent[].stage` | `UPCOMING_3_DAYS`, `DUE_TODAY` hoặc `OVERDUE`. |
+| `sent[].referenceDate` | Mốc gắn với lần nhắc: hạn thanh toán (`UPCOMING_3_DAYS`/`DUE_TODAY`) hoặc ngày ứng với mốc 7 ngày quá hạn (`OVERDUE`). |
+| `sent[].daysOverdue` | `null` với `UPCOMING_3_DAYS`; `0` với `DUE_TODAY`; bội số của 7 với `OVERDUE`. |
+| `skippedAlreadySentCount` | Số hóa đơn đang ở đúng một mốc nhưng mốc đó **đã được nhắc trước đó** (TC-02) — chạy lại trong cùng ngày sẽ không tăng thêm `sent`. |
+
+Hóa đơn chưa tới mốc nào (còn hơn 3 ngày, hoặc quá hạn nhưng chưa đúng bội số 7 ngày) không xuất hiện ở
+cả `sent` lẫn không tính vào `skippedAlreadySentCount`.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-05`. |
+| 400 | `VALIDATION_ERROR` | `asOf` sai định dạng hoặc không đọc được body. |
+
+Có gửi nhắc thì ghi một dòng Nhật ký hệ thống tổng hợp cho cả lượt chạy (TC-04).
+
+#### `GET /invoices/{invoiceId}/dunning-logs`
+
+Lịch sử nhắc thu nợ của một hóa đơn, mới nhất trước.
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": 500,
+      "invoiceId": 9,
+      "stage": "UPCOMING_3_DAYS",
+      "referenceDate": "2026-09-24",
+      "daysOverdue": null,
+      "remainingAmount": 40000000.00,
+      "recipientIds": [1, 2, 3],
+      "sentAt": "2026-09-21T07:00:00"
+    }
+  ]
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-05`. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy hóa đơn `{invoiceId}`. |
+
+---
 
 ## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)
 

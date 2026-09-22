@@ -114,7 +114,7 @@ class MilestoneInvoiceServiceTest {
 		when(invoiceRepository.sumActiveTotalByContractId(5L)).thenReturn(BigDecimal.ZERO);
 		stubSave();
 
-		service.createFromMilestone(5L, 7L, new InvoiceFromMilestoneReq(LocalDate.of(2026, 9, 30), "  Dot 1  "));
+		service.createFromMilestone(5L, 7L, new InvoiceFromMilestoneReq(LocalDate.of(2026, 9, 30), "  Dot 1  ", null));
 
 		ArgumentCaptor<String> detail = ArgumentCaptor.forClass(String.class);
 		verify(auditLogService).record(eq("Lap hoa don theo moc hop dong"), eq(AuditTargetType.INVOICE),
@@ -124,6 +124,51 @@ class MilestoneInvoiceServiceTest {
 		verify(invoiceRepository).save(invoice.capture());
 		assertThat(invoice.getValue().getInvoiceDate()).isEqualTo(LocalDate.of(2026, 9, 30));
 		assertThat(invoice.getValue().getNote()).isEqualTo("Dot 1");
+	}
+
+	@Test
+	void defaultsDueDateToThirtyDaysAfterInvoiceDate() {
+		stubContract(ContractType.FIXED_PRICE, "1000000000.00", null);
+		stubMilestone(ContractMilestoneStatus.READY_TO_INVOICE, "300000000.00");
+		when(invoiceRepository.sumActiveTotalByContractId(5L)).thenReturn(BigDecimal.ZERO);
+		stubSave();
+
+		InvoiceRes res = service.createFromMilestone(5L, 7L, null);
+
+		assertThat(res.invoiceDate()).isEqualTo(LocalDate.of(2026, 9, 21));
+		assertThat(res.dueDate()).isEqualTo(LocalDate.of(2026, 10, 21));
+	}
+
+	@Test
+	void usesExplicitDueDateFromRequest() {
+		stubContract(ContractType.FIXED_PRICE, "1000000000.00", null);
+		stubMilestone(ContractMilestoneStatus.READY_TO_INVOICE, "300000000.00");
+		when(invoiceRepository.sumActiveTotalByContractId(5L)).thenReturn(BigDecimal.ZERO);
+		stubSave();
+
+		InvoiceRes res = service.createFromMilestone(5L, 7L,
+				new InvoiceFromMilestoneReq(LocalDate.of(2026, 9, 30), null, LocalDate.of(2026, 10, 15)));
+
+		assertThat(res.dueDate()).isEqualTo(LocalDate.of(2026, 10, 15));
+		ArgumentCaptor<Invoice> invoice = ArgumentCaptor.forClass(Invoice.class);
+		verify(invoiceRepository).save(invoice.capture());
+		assertThat(invoice.getValue().getDueDate()).isEqualTo(LocalDate.of(2026, 10, 15));
+	}
+
+	@Test
+	void rejectsDueDateBeforeInvoiceDateWithoutWritingAnything() {
+		stubContract(ContractType.FIXED_PRICE, "1000000000.00", null);
+		stubMilestone(ContractMilestoneStatus.READY_TO_INVOICE, "300000000.00");
+		when(invoiceRepository.sumActiveTotalByContractId(5L)).thenReturn(BigDecimal.ZERO);
+
+		assertThatThrownBy(() -> service.createFromMilestone(5L, 7L,
+				new InvoiceFromMilestoneReq(LocalDate.of(2026, 9, 30), null, LocalDate.of(2026, 9, 29))))
+				.isInstanceOfSatisfying(BusinessRuleException.class, ex -> {
+					assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.VALIDATION_ERROR);
+					assertThat(ex.getMessage()).contains("Han thanh toan");
+				});
+
+		assertNothingWritten();
 	}
 
 	@Test

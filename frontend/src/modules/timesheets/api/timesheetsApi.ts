@@ -10,6 +10,7 @@ import type {
   TimeEntryUpdateReq,
   TimerRes,
   TimerStartReq,
+  TimesheetApprovalHistoryRes,
   TimesheetApprovalRes,
   TimesheetApproveReq,
   TimesheetPeriodRes,
@@ -195,6 +196,19 @@ export async function rejectTimesheet(
     method: 'POST',
     body: JSON.stringify(payload),
   });
+}
+
+/**
+ * NCL-06-CN-003/CN-004: các lần duyệt/từ chối GẦN NHẤT do chính PM hiện tại thực hiện, mới
+ * nhất trước — để tra lại sau khi bảng đã rời khỏi hàng chờ duyệt ở trên (không phải bị mất
+ * dữ liệu, chỉ là đã có quyết định).
+ * GET /timesheets/approval-history
+ */
+export async function getMyApprovalHistory(size = 20): Promise<TimesheetApprovalHistoryRes[]> {
+  return requestBackend<TimesheetApprovalHistoryRes[]>(
+    `${API_BASE_URL}/timesheets/approval-history?size=${size}`,
+    { method: 'GET' }
+  );
 }
 
 /**

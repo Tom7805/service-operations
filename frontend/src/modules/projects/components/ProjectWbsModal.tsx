@@ -361,11 +361,12 @@ export default function ProjectWbsModal({
                 {canClose && (
                   <button
                     type="button"
-                    className="btn btn-danger btn-xs"
+                    className="btn btn-secondary btn-xs project-close-btn"
                     onClick={handleCloseProject}
                     disabled={closing}
                     data-testid="modal-btn-close-project"
                   >
+                    <span className="icon-xs">{ICONS.lock}</span>
                     {closing ? 'Đang đóng…' : 'Đóng dự án'}
                   </button>
                 )}

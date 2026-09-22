@@ -34,9 +34,11 @@ export interface ContractRes {
 }
 
 /** Khớp đúng ContractMilestoneStatus (backend enum). Chuyển tuần tự
- *  PENDING → READY_TO_INVOICE → INVOICED qua `PATCH /contracts/{id}/milestones/{milestoneId}/status`
- *  (NCL-04-CN-003) — không nhảy cóc, không lùi lại. `INVOICED` là dữ liệu đầu vào
- *  cho cảnh báo hạn mức ở NCL-04-CN-005. */
+ *  PENDING → READY_TO_INVOICE → INVOICED, không nhảy cóc, không lùi lại. Chỉ bước đầu
+ *  (PENDING → READY_TO_INVOICE) đổi được qua `PATCH /contracts/{id}/milestones/{milestoneId}/status`
+ *  (NCL-04-CN-003); bước sau backend CHẶN đặt tay — `INVOICED` chỉ do
+ *  `POST /contracts/{id}/milestones/{milestoneId}/invoice` (NCL-10-CN-002) đặt, khi mốc thật sự có
+ *  một hóa đơn. `INVOICED` là dữ liệu đầu vào cho cảnh báo hạn mức ở NCL-04-CN-005. */
 export type ContractMilestoneStatus = 'PENDING' | 'READY_TO_INVOICE' | 'INVOICED';
 
 /** Khớp ContractMilestoneRes (backend). */
