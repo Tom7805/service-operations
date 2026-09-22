@@ -13,6 +13,8 @@ export type Tab =
   | 'CUSTOMER_MERGE'
   | 'BILL_RATES'
   | 'RATE_HISTORY'
+  | 'INVOICES'
+  | 'INVOICE_DETAIL'
   | 'DEPARTMENTS'
   | 'PERMISSIONS'
   | 'USERS'
@@ -120,6 +122,13 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
     // NCL-07-CN-007: toàn bộ các mốc đơn giá đã từng khai báo cho một (vai trò, cấp
     // bậc) — giải thích chênh lệch doanh thu giữa hai kỳ. Tách khỏi "Bảng đơn giá" vì
     // đây là tra cứu độc lập theo cặp cụ thể, không phải quản lý toàn bộ bảng giá.
+  },
+  {
+    tab: 'INVOICES', icon: ICONS.receipt, label: 'Hóa đơn', matches: ['INVOICE_DETAIL'], requires: ['VT-05'],
+    // NCL-10-CN-001..006: gộp cả 4 chức năng con (danh sách/chi tiết hóa đơn, đề xuất
+    // hóa đơn, hóa đơn định kỳ, báo cáo tuổi nợ) vào MỘT trang (InvoicesPage) — điều
+    // hướng bằng dải nút bên trong trang, không phải 4 mục sidebar riêng — theo đúng
+    // mẫu BillRatePage đang bó nhiều story con vào một trang. Chỉ Kế toán (VT-05).
   },
   {
     tab: 'EXPENSE_APPROVAL', icon: ICONS.money, label: 'Duyệt chi phí dự án', requires: ['VT-05'],

@@ -14,6 +14,8 @@ import TwoFactorSetupPage from './modules/auth/pages/TwoFactorSetupPage';
 import CustomerListPage from './modules/customers/pages/CustomerListPage';
 import CustomerMergePage from './modules/customers/pages/CustomerMergePage';
 import ContractListPage from './modules/contracts/pages/ContractListPage';
+import InvoicesPage from './modules/invoices/pages/InvoicesPage';
+import InvoiceDetailPage from './modules/invoices/pages/InvoiceDetailPage';
 import BillRatePage from './modules/rates/pages/BillRatePage';
 import RateHistoryPage from './modules/rates/pages/RateHistoryPage';
 import OpportunityDetailPage from './modules/opportunities/pages/OpportunityDetailPage';
@@ -82,6 +84,7 @@ export default function App() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
   const [selectedOpportunityId, setSelectedOpportunityId] = useState<number | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
 
   // Mock danh sách dự án — thay thế bằng GET /projects khi có API danh sách dự án.
   const mockProjects: { id: number; projectCode: string; name: string }[] = [
@@ -669,6 +672,22 @@ export default function App() {
             <BillRatePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'RATE_HISTORY' ? (
             <RateHistoryPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+          ) : activeTab === 'INVOICES' ? (
+            <InvoicesPage
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+              onOpenInvoice={(id) => {
+                setSelectedInvoiceId(id);
+                setActiveTab('INVOICE_DETAIL');
+              }}
+            />
+          ) : activeTab === 'INVOICE_DETAIL' && selectedInvoiceId ? (
+            <InvoiceDetailPage
+              invoiceId={selectedInvoiceId}
+              onBack={() => setActiveTab('INVOICES')}
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+            />
           ) : activeTab === 'DEPARTMENTS' ? (
             <DepartmentTreePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'PERMISSIONS' ? (
