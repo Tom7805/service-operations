@@ -48,4 +48,37 @@ class AccessDeniedAuditRecorderInvoiceTest {
 		verify(auditLogService).record(eq("Từ chối truy cập"), eq(AuditTargetType.INVOICE), isNull(),
 				eq("Theo dõi công nợ quá hạn"), org.mockito.ArgumentMatchers.anyString());
 	}
+
+	@Test
+	void labelsDeniedRecurringInvoiceScheduleRequestAsItsOwnFeatureNotContractCreation() {
+		new AccessDeniedAuditRecorder(auditLogService)
+				.record("POST", "/api/v1/contracts/5/recurring-invoice-schedule");
+
+		verify(auditLogService).record(eq("Từ chối truy cập"), eq(AuditTargetType.INVOICE), isNull(),
+				eq("Hóa đơn định kỳ cho hợp đồng duy trì"), org.mockito.ArgumentMatchers.anyString());
+	}
+
+	@Test
+	void labelsDeniedRecurringInvoiceRunRequestAsItsOwnFeature() {
+		new AccessDeniedAuditRecorder(auditLogService).record("POST", "/api/v1/recurring-invoices/run");
+
+		verify(auditLogService).record(eq("Từ chối truy cập"), eq(AuditTargetType.INVOICE), isNull(),
+				eq("Hóa đơn định kỳ cho hợp đồng duy trì"), org.mockito.ArgumentMatchers.anyString());
+	}
+
+	@Test
+	void labelsDeniedDunningRunRequestAsItsOwnFeatureNotInvoiceLookup() {
+		new AccessDeniedAuditRecorder(auditLogService).record("POST", "/api/v1/dunning/run");
+
+		verify(auditLogService).record(eq("Từ chối truy cập"), eq(AuditTargetType.INVOICE), isNull(),
+				eq("Nhắc thu nợ tự động"), org.mockito.ArgumentMatchers.anyString());
+	}
+
+	@Test
+	void labelsDeniedDunningHistoryRequestAsDunningFeatureNotInvoiceLookup() {
+		new AccessDeniedAuditRecorder(auditLogService).record("GET", "/api/v1/invoices/9/dunning-logs");
+
+		verify(auditLogService).record(eq("Từ chối truy cập"), eq(AuditTargetType.INVOICE), isNull(),
+				eq("Nhắc thu nợ tự động"), org.mockito.ArgumentMatchers.anyString());
+	}
 }
