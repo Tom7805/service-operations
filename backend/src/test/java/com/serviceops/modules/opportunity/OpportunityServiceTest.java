@@ -4,6 +4,7 @@ import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.customer.entity.Customer;
 import com.serviceops.modules.customer.repository.CustomerRepository;
+import com.serviceops.modules.identity.user.repository.UserRepository;
 import com.serviceops.modules.opportunity.dto.request.OpportunityCreateReq;
 import com.serviceops.modules.opportunity.dto.response.OpportunityRes;
 import com.serviceops.modules.opportunity.entity.Opportunity;
@@ -16,6 +17,8 @@ import com.serviceops.modules.opportunity.service.impl.OpportunityServiceImpl;
 import com.serviceops.modules.opportunity.service.impl.OpportunityStageDurationCalculator;
 import com.serviceops.modules.opportunity.validator.StageTransitionValidator;
 import com.serviceops.security.scope.CurrentUserScopeProvider;
+import com.serviceops.security.scope.DataScopeType;
+import com.serviceops.security.scope.UserScope;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -51,6 +54,9 @@ class OpportunityServiceTest {
 	private CustomerRepository customerRepository;
 
 	@Mock
+	private UserRepository userRepository;
+
+	@Mock
 	private OpportunityAuditLogger auditLogger;
 
 	@Mock
@@ -67,8 +73,9 @@ class OpportunityServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		service = new OpportunityServiceImpl(opportunityRepository, customerRepository, opportunityMapper,
-				auditLogger, stageTransitionValidator, currentUserScopeProvider, stageDurationCalculator);
+		service = new OpportunityServiceImpl(opportunityRepository, customerRepository, userRepository,
+				opportunityMapper, auditLogger, stageTransitionValidator, currentUserScopeProvider,
+				stageDurationCalculator);
 
 		lenient().when(opportunityRepository.save(any(Opportunity.class))).thenAnswer(inv -> {
 			Opportunity opportunity = inv.getArgument(0);
@@ -187,6 +194,46 @@ class OpportunityServiceTest {
 		OpportunityRes result = service.create(req);
 
 		assertThat(result.ownerId()).isEqualTo(7L);
+	}
+
+	private Opportunity existingOpportunity(long id, long customerId, Long ownerId) {
+		Opportunity opportunity = new Opportunity();
+		opportunity.setId(id);
+		opportunity.setName("Co hoi #" + id);
+		opportunity.setCustomerId(customerId);
+		opportunity.setOwnerId(ownerId);
+		return opportunity;
+	}
+
+	@Test
+	@DisplayName("QTN-01: pham vi SELF chi thay co hoi do chinh minh phu trach")
+	void listFiltersBySelfScope() {
+		when(opportunityRepository.findAllByOrderByCreatedAtDesc()).thenReturn(java.util.List.of(
+				existingOpportunity(1L, 10L, 42L),
+				existingOpportunity(2L, 10L, 99L)));
+		when(currentUserScopeProvider.currentScope())
+				.thenReturn(new UserScope(DataScopeType.SELF, java.util.Set.of()));
+		when(currentUserScopeProvider.currentUserId()).thenReturn(42L);
+		when(customerRepository.findAllById(any())).thenReturn(java.util.List.of(existingCustomer(10L)));
+
+		java.util.List<OpportunityRes> result = service.list();
+
+		assertThat(result).hasSize(1);
+		assertThat(result.get(0).id()).isEqualTo(1L);
+	}
+
+	@Test
+	@DisplayName("QTN-01: pham vi COMPANY thay toan bo co hoi, khong loc theo owner")
+	void listShowsAllOpportunitiesForCompanyScope() {
+		when(opportunityRepository.findAllByOrderByCreatedAtDesc()).thenReturn(java.util.List.of(
+				existingOpportunity(1L, 10L, 42L),
+				existingOpportunity(2L, 10L, 99L)));
+		when(currentUserScopeProvider.currentScope()).thenReturn(UserScope.company());
+		when(customerRepository.findAllById(any())).thenReturn(java.util.List.of(existingCustomer(10L)));
+
+		java.util.List<OpportunityRes> result = service.list();
+
+		assertThat(result).hasSize(2);
 	}
 
 	@Test
