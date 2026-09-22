@@ -29,6 +29,8 @@ import TimesheetPeriodPage from './modules/timesheets/pages/TimesheetPeriodPage'
 import UnsubmittedTimesheetsPage from './modules/timesheets/pages/UnsubmittedTimesheetsPage';
 import ExpenseApprovalPage from './modules/expenses/pages/ExpenseApprovalPage';
 import OverheadAllocationPage from './modules/expenses/pages/OverheadAllocationPage';
+import InvoiceListPage from './modules/invoices/pages/InvoiceListPage';
+import InvoiceDetailPage from './modules/invoices/pages/InvoiceDetailPage';
 import MarginByCustomerPage from './modules/profitability/pages/MarginByCustomerPage';
 import MarginByEmployeePage from './modules/profitability/pages/MarginByEmployeePage';
 import ProjectLaborCostPage from './modules/profitability/pages/ProjectLaborCostPage';
@@ -82,6 +84,7 @@ export default function App() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
   const [selectedOpportunityId, setSelectedOpportunityId] = useState<number | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
 
   // Mock danh sách dự án — thay thế bằng GET /projects khi có API danh sách dự án.
   const mockProjects: { id: number; projectCode: string; name: string }[] = [
@@ -496,6 +499,22 @@ export default function App() {
             <ExpenseApprovalPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'OVERHEAD_ALLOCATION' ? (
             <OverheadAllocationPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+          ) : activeTab === 'INVOICES' ? (
+            <InvoiceListPage
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+              onOpenInvoice={(id) => {
+                setSelectedInvoiceId(id);
+                setActiveTab('INVOICE_DETAIL');
+              }}
+            />
+          ) : activeTab === 'INVOICE_DETAIL' && selectedInvoiceId ? (
+            <InvoiceDetailPage
+              invoiceId={selectedInvoiceId}
+              onBack={() => setActiveTab('INVOICES')}
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+            />
           ) : activeTab === 'MARGIN_BY_CUSTOMER' ? (
             <MarginByCustomerPage currentUserRoles={currentRoles} />
           ) : activeTab === 'MARGIN_BY_EMPLOYEE' ? (
