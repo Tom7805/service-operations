@@ -9,7 +9,6 @@ public record RecurringScheduleRes(
 		Long contractId,
 		Integer billingDayOfMonth,
 		BigDecimal amount,
-		String currency,
 		Boolean active,
 		String lastGeneratedPeriod,
 		String notes,

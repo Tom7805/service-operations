@@ -17,6 +17,7 @@ import com.serviceops.modules.invoice.entity.RecurringInvoiceSchedule;
 import com.serviceops.modules.invoice.repository.InvoiceRepository;
 import com.serviceops.modules.invoice.repository.RecurringInvoiceScheduleRepository;
 import com.serviceops.modules.invoice.service.impl.RecurringInvoiceServiceImpl;
+import com.serviceops.modules.invoice.validator.ContractValueLimitValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -65,7 +66,7 @@ class RecurringInvoiceServiceTest {
 	void setUp() {
 		Clock clock = Clock.fixed(Instant.parse("2026-09-05T06:00:00Z"), ZoneId.of("UTC"));
 		service = new RecurringInvoiceServiceImpl(scheduleRepository, invoiceRepository, contractRepository,
-				auditLogService, clock);
+				new ContractValueLimitValidator(), auditLogService, clock);
 	}
 
 	private Contract maintenanceContract(Long id, String code, LocalDate endDate) {
@@ -86,7 +87,6 @@ class RecurringInvoiceServiceTest {
 		schedule.setContractId(contractId);
 		schedule.setBillingDayOfMonth(day);
 		schedule.setAmount(amount);
-		schedule.setCurrency("VND");
 		schedule.setActive(true);
 		schedule.setLastGeneratedPeriod(lastPeriod);
 		return schedule;
@@ -99,9 +99,8 @@ class RecurringInvoiceServiceTest {
 		RecurringInvoiceSchedule sched = schedule(1L, 5, new BigDecimal("10000000"), "2026-08");
 
 		when(scheduleRepository.findByActiveTrue()).thenReturn(List.of(sched));
-		when(contractRepository.findById(1L)).thenReturn(Optional.of(contract));
-		when(invoiceRepository.sumAmountByContractId(1L)).thenReturn(BigDecimal.ZERO);
-		when(invoiceRepository.countByInvoiceNumberStartingWith("HD-202609-")).thenReturn(0L);
+		when(contractRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(contract));
+		when(invoiceRepository.sumActiveTotalByContractId(1L)).thenReturn(BigDecimal.ZERO);
 		when(invoiceRepository.save(any(Invoice.class))).thenAnswer(invocation -> {
 			Invoice invoice = invocation.getArgument(0);
 			invoice.setId(500L);
@@ -112,9 +111,9 @@ class RecurringInvoiceServiceTest {
 
 		assertEquals(1, result.created().size());
 		assertTrue(result.skipped().isEmpty());
-		assertEquals("HD-202609-0001", result.created().get(0).invoiceNumber());
+		assertTrue(result.created().get(0).invoiceCode().startsWith("INV-20260905-"));
 		assertEquals("DRAFT", result.created().get(0).status());
-		assertEquals(new BigDecimal("10000000"), result.created().get(0).amount());
+		assertEquals(new BigDecimal("10000000.00"), result.created().get(0).amount());
 		assertEquals("2026-09", sched.getLastGeneratedPeriod());
 		verify(scheduleRepository).save(sched);
 		verify(auditLogService).record(eq("Lập hóa đơn định kỳ"), eq(AuditTargetType.INVOICE), eq(500L), any(), any());
@@ -127,7 +126,7 @@ class RecurringInvoiceServiceTest {
 		RecurringInvoiceSchedule sched = schedule(2L, 5, new BigDecimal("5000000"), null);
 
 		when(scheduleRepository.findByActiveTrue()).thenReturn(List.of(sched));
-		when(contractRepository.findById(2L)).thenReturn(Optional.of(contract));
+		when(contractRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(contract));
 
 		RecurringInvoiceRunRes result = service.run(new RecurringInvoiceRunReq(null));
 
@@ -146,7 +145,7 @@ class RecurringInvoiceServiceTest {
 		RecurringInvoiceSchedule sched = schedule(3L, 5, new BigDecimal("5000000"), null);
 
 		when(scheduleRepository.findByActiveTrue()).thenReturn(List.of(sched));
-		when(contractRepository.findById(3L)).thenReturn(Optional.of(contract));
+		when(contractRepository.findByIdForUpdate(3L)).thenReturn(Optional.of(contract));
 
 		RecurringInvoiceRunRes result = service.run(new RecurringInvoiceRunReq(null));
 
@@ -163,7 +162,7 @@ class RecurringInvoiceServiceTest {
 
 		assertTrue(result.created().isEmpty());
 		assertTrue(result.skipped().isEmpty());
-		verify(contractRepository, never()).findById(anyLong());
+		verify(contractRepository, never()).findByIdForUpdate(anyLong());
 	}
 
 	@Test
@@ -175,7 +174,7 @@ class RecurringInvoiceServiceTest {
 
 		assertTrue(result.created().isEmpty());
 		assertTrue(result.skipped().isEmpty());
-		verify(contractRepository, never()).findById(anyLong());
+		verify(contractRepository, never()).findByIdForUpdate(anyLong());
 	}
 
 	// QTN-19: vuot gia tri hop dong -> bo qua kem ly do thay vi tao hoa don.
@@ -186,14 +185,14 @@ class RecurringInvoiceServiceTest {
 		RecurringInvoiceSchedule sched = schedule(6L, 5, new BigDecimal("5000000"), "2026-08");
 
 		when(scheduleRepository.findByActiveTrue()).thenReturn(List.of(sched));
-		when(contractRepository.findById(6L)).thenReturn(Optional.of(contract));
-		when(invoiceRepository.sumAmountByContractId(6L)).thenReturn(new BigDecimal("10000000"));
+		when(contractRepository.findByIdForUpdate(6L)).thenReturn(Optional.of(contract));
+		when(invoiceRepository.sumActiveTotalByContractId(6L)).thenReturn(new BigDecimal("10000000"));
 
 		RecurringInvoiceRunRes result = service.run(new RecurringInvoiceRunReq(null));
 
 		assertTrue(result.created().isEmpty());
 		assertEquals(1, result.skipped().size());
-		assertTrue(result.skipped().get(0).reason().contains("Vượt giá trị hợp đồng"));
+		assertTrue(result.skipped().get(0).reason().contains("vuot gia tri hop dong"));
 		verify(invoiceRepository, never()).save(any(Invoice.class));
 	}
 
@@ -203,7 +202,7 @@ class RecurringInvoiceServiceTest {
 		contract.setContractType(ContractType.TIME_AND_MATERIAL);
 		when(contractRepository.findById(7L)).thenReturn(Optional.of(contract));
 
-		RecurringScheduleReq request = new RecurringScheduleReq(5, new BigDecimal("1000000"), "VND", null, null);
+		RecurringScheduleReq request = new RecurringScheduleReq(5, new BigDecimal("1000000"), null, null);
 		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
 				() -> service.createSchedule(7L, request));
 
@@ -217,7 +216,7 @@ class RecurringInvoiceServiceTest {
 		when(contractRepository.findById(8L)).thenReturn(Optional.of(contract));
 		when(scheduleRepository.findByContractId(8L)).thenReturn(Optional.of(schedule(8L, 5, BigDecimal.TEN, null)));
 
-		RecurringScheduleReq request = new RecurringScheduleReq(5, new BigDecimal("1000000"), "VND", null, null);
+		RecurringScheduleReq request = new RecurringScheduleReq(5, new BigDecimal("1000000"), null, null);
 		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
 				() -> service.createSchedule(8L, request));
 
@@ -235,7 +234,7 @@ class RecurringInvoiceServiceTest {
 			return s;
 		});
 
-		RecurringScheduleReq request = new RecurringScheduleReq(10, new BigDecimal("2000000"), "VND", "Ghi chu", null);
+		RecurringScheduleReq request = new RecurringScheduleReq(10, new BigDecimal("2000000"), "Ghi chu", null);
 		RecurringScheduleRes res = service.createSchedule(9L, request);
 
 		assertEquals(42L, res.id());
@@ -249,7 +248,7 @@ class RecurringInvoiceServiceTest {
 	@Test
 	void rejectsScheduleForUnknownContract() {
 		when(contractRepository.findById(99L)).thenReturn(Optional.empty());
-		RecurringScheduleReq request = new RecurringScheduleReq(5, BigDecimal.TEN, "VND", null, null);
+		RecurringScheduleReq request = new RecurringScheduleReq(5, BigDecimal.TEN, null, null);
 
 		BusinessRuleException exception = assertThrows(BusinessRuleException.class,
 				() -> service.createSchedule(99L, request));

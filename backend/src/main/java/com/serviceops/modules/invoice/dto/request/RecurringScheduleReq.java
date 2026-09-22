@@ -20,8 +20,6 @@ public record RecurringScheduleReq(
 		@DecimalMin(value = "0.01", message = "Gia tri hoa don phai lon hon 0")
 		BigDecimal amount,
 
-		String currency,
-
 		String notes,
 
 		/** Bat/tat dieu khoan; de trong khi tao moi = bat (true). */

@@ -14,9 +14,9 @@ public interface ContractMilestoneService {
 
     /**
      * Doi trang thai mot moc thanh toan theo dung trinh tu PENDING -&gt;
-     * READY_TO_INVOICE -&gt; INVOICED (NCL-04-CN-003), dung de danh dau moc
-     * da duoc xuat hoa don khi he thong chua co module hoa don rieng (Epic
-     * NCL-10) — day cung la du lieu ma NCL-04-CN-005 dua vao de tinh muc do
+     * READY_TO_INVOICE -&gt; INVOICED (NCL-04-CN-003). Buoc sang INVOICED chi duoc
+     * {@code MilestoneInvoiceService} (NCL-10-CN-002) goi khi lap hoa don — API cong khai
+     * chan dat tay INVOICED. Day cung la du lieu ma NCL-04-CN-005 dua vao de tinh muc do
      * da su dung han muc tran cua hop dong.
      *
      * @param contractId  hop dong so huu moc thanh toan

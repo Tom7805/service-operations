@@ -66,12 +66,12 @@ class RecurringInvoiceControllerTest {
 	@WithMockUser(authorities = "ROLE_VT-05")
 	void accountantCanCreateSchedule() throws Exception {
 		when(recurringInvoiceService.createSchedule(eq(1L), any())).thenReturn(
-				new RecurringScheduleRes(1L, 1L, 5, new BigDecimal("10000000"), "VND", true, null, null,
+				new RecurringScheduleRes(1L, 1L, 5, new BigDecimal("10000000"), true, null, null,
 						LocalDateTime.of(2026, 9, 1, 8, 0), null));
 
 		mockMvc.perform(post("/contracts/1/recurring-invoice-schedule")
 						.contentType("application/json")
-						.content("{\"billingDayOfMonth\":5,\"amount\":10000000,\"currency\":\"VND\"}"))
+						.content("{\"billingDayOfMonth\":5,\"amount\":10000000}"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.success").value(true))
 				.andExpect(jsonPath("$.data.billingDayOfMonth").value(5))
@@ -83,7 +83,7 @@ class RecurringInvoiceControllerTest {
 	void deniesCreateScheduleForOtherRolesAndLogsDeniedAccess() throws Exception {
 		mockMvc.perform(post("/contracts/1/recurring-invoice-schedule")
 						.contentType("application/json")
-						.content("{\"billingDayOfMonth\":5,\"amount\":10000000,\"currency\":\"VND\"}"))
+						.content("{\"billingDayOfMonth\":5,\"amount\":10000000}"))
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
 
@@ -95,7 +95,7 @@ class RecurringInvoiceControllerTest {
 	void rejectsScheduleWithDayOutOfRange() throws Exception {
 		mockMvc.perform(post("/contracts/1/recurring-invoice-schedule")
 						.contentType("application/json")
-						.content("{\"billingDayOfMonth\":31,\"amount\":10000000,\"currency\":\"VND\"}"))
+						.content("{\"billingDayOfMonth\":31,\"amount\":10000000}"))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.errorCode").value("VALIDATION_ERROR"));
 	}
@@ -109,7 +109,7 @@ class RecurringInvoiceControllerTest {
 
 		mockMvc.perform(post("/contracts/2/recurring-invoice-schedule")
 						.contentType("application/json")
-						.content("{\"billingDayOfMonth\":5,\"amount\":10000000,\"currency\":\"VND\"}"))
+						.content("{\"billingDayOfMonth\":5,\"amount\":10000000}"))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.errorCode").value("INVALID_STATE"));
 	}
@@ -117,9 +117,9 @@ class RecurringInvoiceControllerTest {
 	@Test
 	@WithMockUser(authorities = "ROLE_VT-05")
 	void accountantCanRunRecurringInvoices() throws Exception {
-		RecurringInvoiceRes created = new RecurringInvoiceRes(500L, "HD-202609-0001", 1L, 100L,
+		RecurringInvoiceRes created = new RecurringInvoiceRes(500L, "INV-20260905-ABCDEF", 1L, 100L,
 				LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30), LocalDate.of(2026, 9, 5),
-				new BigDecimal("10000000"), "VND", "DRAFT");
+				new BigDecimal("10000000"), "DRAFT");
 		RecurringInvoiceSkipRes skipped = new RecurringInvoiceSkipRes(2L, "Hợp đồng đã hết hiệu lực");
 		when(recurringInvoiceService.run(any())).thenReturn(
 				new RecurringInvoiceRunRes(LocalDate.of(2026, 9, 5), List.of(created), List.of(skipped)));
@@ -128,7 +128,7 @@ class RecurringInvoiceControllerTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.success").value(true))
 				.andExpect(jsonPath("$.data.created", org.hamcrest.Matchers.hasSize(1)))
-				.andExpect(jsonPath("$.data.created[0].invoiceNumber").value("HD-202609-0001"))
+				.andExpect(jsonPath("$.data.created[0].invoiceCode").value("INV-20260905-ABCDEF"))
 				.andExpect(jsonPath("$.data.skipped", org.hamcrest.Matchers.hasSize(1)))
 				.andExpect(jsonPath("$.data.skipped[0].contractId").value(2));
 	}
@@ -145,7 +145,7 @@ class RecurringInvoiceControllerTest {
 	@WithMockUser(authorities = "ROLE_VT-05")
 	void accountantCanGetSchedule() throws Exception {
 		when(recurringInvoiceService.getSchedule(1L)).thenReturn(
-				new RecurringScheduleRes(1L, 1L, 5, new BigDecimal("10000000"), "VND", true, "2026-08", null,
+				new RecurringScheduleRes(1L, 1L, 5, new BigDecimal("10000000"), true, "2026-08", null,
 						LocalDateTime.of(2026, 8, 1, 8, 0), null));
 
 		mockMvc.perform(get("/contracts/1/recurring-invoice-schedule"))

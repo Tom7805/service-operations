@@ -1,12 +1,12 @@
 package com.serviceops.modules.invoice.entity;
 
 import com.serviceops.common.entity.BaseEntity;
-import com.serviceops.modules.invoice.enums.InvoiceSource;
 import com.serviceops.modules.invoice.enums.InvoiceStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -16,9 +16,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * Hoa don (Epic NCL-10). Bang dung chung cho moi nguon phat sinh hoa don; hien tai chi
- * {@link InvoiceSource#RECURRING} (NCL-10-CN-005) tao ban ghi o day, cac nguon con lai
- * (NCL-10-CN-001/002) se bo sung o cac story sau ma khong doi cau truc bang.
+ * Hoa don gui khach hang (Epic NCL-10). Tong tien cac hoa don chua huy cua mot
+ * hop dong la "tong da xuat hoa don" ma QTN-19 so voi gia tri hop dong.
  */
 @Getter
 @Setter
@@ -26,9 +25,9 @@ import java.time.LocalDateTime;
 @Table(name = "invoices")
 public class Invoice extends BaseEntity {
 
-	/** Ma hoa don duy nhat (HD-yyyyMM-xxxx), sinh tu dong o tang service. */
-	@Column(name = "invoice_number", nullable = false, unique = true, length = 50)
-	private String invoiceNumber;
+	/** Ma hoa don duy nhat (INV-yyyyMMdd-xxxxxx), sinh o tang service. */
+	@Column(name = "invoice_code", nullable = false, unique = true, length = 50)
+	private String invoiceCode;
 
 	@Column(name = "contract_id", nullable = false)
 	private Long contractId;
@@ -36,43 +35,43 @@ public class Invoice extends BaseEntity {
 	@Column(name = "customer_id", nullable = false)
 	private Long customerId;
 
-	/** Du an lien quan, NULL voi hoa don dinh ky khong gan mot du an cu the. */
-	@Column(name = "project_id")
-	private Long projectId;
-
+	/** columnDefinition khai tuong minh de Hibernate khong suy ra kieu ENUM cua MySQL (cung quy uoc Contract.status). */
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, columnDefinition = "VARCHAR(30)")
-	private InvoiceSource source;
+	private InvoiceStatus status = InvoiceStatus.ISSUED;
 
-	/** Ky ma hoa don dinh ky ghi nhan doanh thu (thang lap hoa don). NULL neu khong ap dung. */
-	@Column(name = "period_start")
-	private LocalDate periodStart;
+	@Column(name = "total_amount", nullable = false, precision = 18, scale = 2)
+	private BigDecimal totalAmount;
 
-	@Column(name = "period_end")
-	private LocalDate periodEnd;
+	/** So ngay thanh toan mac dinh khi hoa don khong khai bao han thanh toan (khop V79). */
+	public static final int DEFAULT_PAYMENT_TERM_DAYS = 30;
 
-	@Column(name = "issue_date", nullable = false)
-	private LocalDate issueDate;
+	@Column(name = "invoice_date", nullable = false)
+	private LocalDate invoiceDate;
 
-	@Column(name = "due_date")
+	/**
+	 * Han thanh toan (NCL-10-CN-004): qua ngay nay ma con so con phai thu thi hoa don bi tinh la cong no
+	 * qua han. Neu noi tao khong dat thi mac dinh {@code invoiceDate + 30 ngay}.
+	 */
+	@Column(name = "due_date", nullable = false)
 	private LocalDate dueDate;
 
-	@Column(nullable = false, precision = 18, scale = 2)
-	private BigDecimal amount;
-
-	@Column(nullable = false, length = 10)
-	private String currency = "VND";
-
-	@Enumerated(EnumType.STRING)
-	@Column(nullable = false, columnDefinition = "VARCHAR(30)")
-	private InvoiceStatus status = InvoiceStatus.DRAFT;
-
-	@Column(length = 500)
-	private String notes;
+	@Column(length = 1000)
+	private String note;
 
 	@Column(name = "created_by", length = 100)
 	private String createdBy;
 
 	@Column(name = "created_at", nullable = false)
 	private LocalDateTime createdAt;
+
+	@Column(name = "updated_at", nullable = false)
+	private LocalDateTime updatedAt;
+
+	@PrePersist
+	void applyDefaultDueDate() {
+		if (dueDate == null && invoiceDate != null) {
+			dueDate = invoiceDate.plusDays(DEFAULT_PAYMENT_TERM_DAYS);
+		}
+	}
 }

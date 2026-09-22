@@ -17,6 +17,6 @@ public enum AuditTargetType {
 	/** Chi phi du an va chi phi chung (NCL-08-CN-005). */
 	EXPENSE,
 
-	/** Hoa don (Epic NCL-10), bao gom hoa don dinh ky (NCL-10-CN-005). */
+	/** Hoa don va thanh toan (Epic NCL-10). */
 	INVOICE
 }

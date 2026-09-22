@@ -6,13 +6,12 @@ import java.time.LocalDate;
 /** NCL-10-CN-005: hoa don nhap vua duoc sinh tu dieu khoan lap hoa don dinh ky. */
 public record RecurringInvoiceRes(
 		Long id,
-		String invoiceNumber,
+		String invoiceCode,
 		Long contractId,
 		Long customerId,
 		LocalDate periodStart,
 		LocalDate periodEnd,
-		LocalDate issueDate,
+		LocalDate invoiceDate,
 		BigDecimal amount,
-		String currency,
 		String status) {
 }

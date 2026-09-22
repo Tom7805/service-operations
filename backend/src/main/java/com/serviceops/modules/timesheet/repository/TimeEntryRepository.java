@@ -109,6 +109,13 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
 	List<TimeEntry> findByTaskIdInAndStatusOrderByWorkDateAscIdAsc(List<Long> taskIds, TimeEntryStatus status);
 
 	/**
+	 * MOI dong gio cong (moi trang thai) cua mot nhom cong viec co ngay lam viec trong khoang — nguon du lieu tao
+	 * de nghi xuat hoa don (NCL-10-CN-001): can ca dong chua duyet de dem "so dong bi bo qua" (QTN-18).
+	 */
+	List<TimeEntry> findByTaskIdInAndWorkDateBetweenOrderByWorkDateAscIdAsc(
+			List<Long> taskIds, LocalDate workDateFrom, LocalDate workDateTo);
+
+	/**
 	 * Tong gio cong DA DUYET cua tung cong viec trong mot khoang ngay, nguon du lieu de
 	 * quy ve ty trong gio cong theo du an khi phan bo chi phi chung (NCL-08-CN-005 / QTN-29).
 	 * Tra ve mang {@code [taskId, tongGio]}; khong dung entity Task o day de tranh phu thuoc
