@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { ICONS } from '../../../components/common/icons';
 import InvoiceListPage from './InvoiceListPage';
 import InvoiceProposalPage from './InvoiceProposalPage';
 import RecurringInvoicePage from './RecurringInvoicePage';
@@ -13,11 +12,11 @@ interface Props {
 
 type Section = 'LIST' | 'PROPOSALS' | 'RECURRING' | 'AGING';
 
-const SECTIONS: Array<{ key: Section; label: string; icon: keyof typeof ICONS }> = [
-  { key: 'LIST', label: 'Danh sách hóa đơn', icon: 'receipt' },
-  { key: 'PROPOSALS', label: 'Đề xuất hóa đơn', icon: 'document' },
-  { key: 'RECURRING', label: 'Hóa đơn định kỳ', icon: 'clock' },
-  { key: 'AGING', label: 'Báo cáo tuổi nợ', icon: 'chart' },
+const SECTIONS: Array<{ key: Section; label: string }> = [
+  { key: 'LIST', label: 'Danh sách hóa đơn' },
+  { key: 'PROPOSALS', label: 'Đề xuất hóa đơn' },
+  { key: 'RECURRING', label: 'Hóa đơn định kỳ' },
+  { key: 'AGING', label: 'Báo cáo tuổi nợ' },
 ];
 
 /**
@@ -52,9 +51,8 @@ export default function InvoicesPage({ currentUserRoles = [], currentUserName = 
             aria-selected={section === s.key}
             className={section === s.key ? 'btn-primary' : 'btn btn-secondary'}
             onClick={() => setSection(s.key)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
           >
-            <span className="icon-xs">{ICONS[s.icon]}</span> {s.label}
+            {s.label}
           </button>
         ))}
       </div>
