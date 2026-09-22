@@ -223,6 +223,26 @@ describe('ContractMilestonesModal (NCL-04-CN-003)', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it('mốc đã "Sẵn sàng xuất hóa đơn" không còn nút tự đổi sang "Đã xuất hóa đơn" (backend đã chặn PATCH INVOICED, phải lập hóa đơn)', async () => {
+    vi.mocked(contractsApi.fetchMilestones).mockResolvedValue([
+      { ...existingMilestones[0], status: 'READY_TO_INVOICE' },
+      existingMilestones[1],
+    ]);
+
+    render(
+      <ContractMilestonesModal contract={contract} isOpen onClose={vi.fn()} currentUserRoles={['VT-05']} />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Nghiệm thu giai đoạn 1')).toBeInTheDocument();
+    });
+
+    expect(
+      screen.queryByRole('button', { name: /Chuyển mốc Nghiệm thu giai đoạn 1 sang trạng thái/i })
+    ).not.toBeInTheDocument();
+    expect(contractsApi.updateMilestoneStatus).not.toHaveBeenCalled();
+  });
+
   it('hiển thị lỗi khi tải danh sách mốc thất bại', async () => {
     vi.mocked(contractsApi.fetchMilestones).mockRejectedValue(
       new contractsApi.ContractsApiError('RESOURCE_NOT_FOUND', 'Không tìm thấy hợp đồng.', 404)
