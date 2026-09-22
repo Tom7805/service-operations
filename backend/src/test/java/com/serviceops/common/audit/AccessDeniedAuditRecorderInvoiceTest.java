@@ -81,4 +81,46 @@ class AccessDeniedAuditRecorderInvoiceTest {
 		verify(auditLogService).record(eq("Từ chối truy cập"), eq(AuditTargetType.INVOICE), isNull(),
 				eq("Nhắc thu nợ tự động"), org.mockito.ArgumentMatchers.anyString());
 	}
+
+	/**
+	 * Cả "/contracts/{id}/milestones" (NCL-04-CN-003, mốc thanh toán hợp đồng) lẫn
+	 * "/projects/{id}/milestones" (NCL-05-CN-008, mốc tiến độ dự án) đều chứa chuỗi con
+	 * "/milestones" nhưng là hai chức năng khác nhau — không được dùng chung một nhãn.
+	 */
+	@Test
+	void labelsDeniedContractPaymentMilestoneRequestDifferentlyFromProjectMilestone() {
+		new AccessDeniedAuditRecorder(auditLogService).record("GET", "/api/v1/contracts/5/milestones");
+
+		verify(auditLogService).record(eq("Từ chối truy cập"), eq(AuditTargetType.GENERAL), isNull(),
+				eq("Quản lý mốc thanh toán của hợp đồng"), org.mockito.ArgumentMatchers.anyString());
+	}
+
+	@Test
+	void labelsDeniedContractMilestoneStatusPatchAsContractPaymentMilestoneFeature() {
+		new AccessDeniedAuditRecorder(auditLogService).record("PATCH", "/api/v1/contracts/5/milestones/7/status");
+
+		verify(auditLogService).record(eq("Từ chối truy cập"), eq(AuditTargetType.GENERAL), isNull(),
+				eq("Quản lý mốc thanh toán của hợp đồng"), org.mockito.ArgumentMatchers.anyString());
+	}
+
+	@Test
+	void stillLabelsDeniedProjectMilestoneRequestAsProjectMilestoneFeature() {
+		new AccessDeniedAuditRecorder(auditLogService).record("POST", "/api/v1/projects/5/milestones");
+
+		verify(auditLogService).record(eq("Từ chối truy cập"), eq(AuditTargetType.GENERAL), isNull(),
+				eq("Quản lý mốc tiến độ dự án"), org.mockito.ArgumentMatchers.anyString());
+	}
+
+	/**
+	 * "/contracts/{id}/milestones/{id}/invoice" chứa cả "/contracts/", "/milestones" LẪN "/invoice" —
+	 * phải vẫn được nhận ra là NCL-10-CN-002 (quy tắc "/invoice" đứng trước quy tắc mốc hợp đồng),
+	 * không bị quy tắc mốc hợp đồng mới thêm nuốt mất.
+	 */
+	@Test
+	void milestoneInvoiceCreationStillWinsOverContractPaymentMilestoneRule() {
+		new AccessDeniedAuditRecorder(auditLogService).record("POST", "/api/v1/contracts/5/milestones/7/invoice");
+
+		verify(auditLogService).record(eq("Từ chối truy cập"), eq(AuditTargetType.INVOICE), isNull(),
+				eq("Lập hóa đơn theo mốc hợp đồng"), org.mockito.ArgumentMatchers.anyString());
+	}
 }
