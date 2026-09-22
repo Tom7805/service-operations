@@ -5117,6 +5117,146 @@ bốn nhóm đều `invoiceCount` = `0` và `invoices` = `[]`, và `message` = `
   theo mốc (`NCL-10-CN-002`); màn hình lập hóa đơn nên cho nhập `dueDate` (mặc định gợi ý `invoiceDate` + 30 ngày).
 - Chưa có nhắc nợ tự động — thuộc `NCL-10-CN-006`.
 
+### `NCL-10-CN-005` — Hóa đơn định kỳ cho hợp đồng duy trì
+
+Toàn bộ endpoint dưới đây chỉ dành cho Kế toán (`VT-05`) — vai trò khác nhận `403 FORBIDDEN` và bị ghi
+Nhật ký hệ thống lần từ chối (TC-03). Story này tạo bản ghi trên cùng bảng `invoices` dùng chung của
+Epic `NCL-10` (không có cột riêng để phân biệt nguồn phát sinh): hóa đơn định kỳ dùng chung tiền tố mã
+`INV-` với hóa đơn theo mốc (`NCL-10-CN-002`) và ghi rõ kỳ trong `note`.
+
+#### `POST /contracts/{contractId}/recurring-invoice-schedule`
+
+Khai báo điều khoản lập hóa đơn định kỳ cho một hợp đồng duy trì. Chỉ hợp đồng loại
+`MAINTENANCE` mới khai báo được; mỗi hợp đồng tối đa một điều khoản đang hiệu lực.
+
+**Request:**
+```json
+{
+  "billingDayOfMonth": 5,
+  "amount": 10000000,
+  "notes": "Phi bao tri hang thang goi Chuan"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `contractId` | number | có | Lấy từ URL. Phải là hợp đồng loại `MAINTENANCE`. |
+| `billingDayOfMonth` | number | có | Từ `1` đến `28` (tránh các tháng không có ngày 29-31). |
+| `amount` | number | có | Lớn hơn `0`, giá trị hóa đơn mỗi kỳ. |
+| `notes` | string | không | Tối đa 500 ký tự. |
+| `active` | boolean | không | Mặc định `true` khi tạo mới. |
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Khai bao dieu khoan lap hoa don dinh ky thanh cong",
+  "data": {
+    "id": 1,
+    "contractId": 1,
+    "billingDayOfMonth": 5,
+    "amount": 10000000.00,
+    "active": true,
+    "lastGeneratedPeriod": null,
+    "notes": "Phi bao tri hang thang goi Chuan",
+    "createdAt": "2026-09-01T08:00:00",
+    "updatedAt": null
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | `billingDayOfMonth` ngoài khoảng 1-28, hoặc `amount` không dương/để trống. |
+| 400 | `INVALID_STATE` | Hợp đồng không phải loại `MAINTENANCE`. |
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-05`. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy hợp đồng. |
+| 409 | `DUPLICATE_DATA` | Hợp đồng đã có điều khoản lập hóa đơn định kỳ. |
+
+Mỗi lần khai báo đều ghi Nhật ký hệ thống (TC-04).
+
+#### `PUT /contracts/{contractId}/recurring-invoice-schedule`
+
+Cập nhật điều khoản đã khai báo (ngày lập, giá trị, ghi chú, bật/tắt qua `active`). Cùng khuôn dạng
+request/response với endpoint tạo. Trả `404 RESOURCE_NOT_FOUND` nếu hợp đồng chưa có điều khoản nào.
+Ghi Nhật ký hệ thống mỗi lần cập nhật (TC-04).
+
+#### `GET /contracts/{contractId}/recurring-invoice-schedule`
+
+Xem điều khoản lập hóa đơn định kỳ hiện hành của một hợp đồng. Trả `404 RESOURCE_NOT_FOUND` nếu chưa
+khai báo.
+
+#### `POST /recurring-invoices/run`
+
+Chạy rà soát toàn bộ điều khoản đang bật (`active = true`): điều khoản nào có `billingDayOfMonth` trùng
+ngày rà soát **và** chưa sinh hóa đơn cho kỳ (tháng) đó thì tạo một hóa đơn nháp (`status = "DRAFT"`)
+đúng giá trị điều khoản (TC-01). Hệ thống tự chạy hằng ngày lúc 06:00 (giờ server); endpoint này cho phép
+Kế toán chạy thủ công hoặc mô phỏng một ngày cụ thể qua `asOf` khi kiểm thử.
+
+**Request** (tùy chọn, có thể gửi body rỗng `{}`):
+```json
+{
+  "asOf": "2026-09-05"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `asOf` | date | không | Định dạng `YYYY-MM-DD`. Để trống = lấy ngày hệ thống hôm nay. |
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Ra soat lap hoa don dinh ky thanh cong",
+  "data": {
+    "asOf": "2026-09-05",
+    "created": [
+      {
+        "id": 500,
+        "invoiceCode": "INV-20260905-4F2A9C",
+        "contractId": 1,
+        "customerId": 100,
+        "periodStart": "2026-09-01",
+        "periodEnd": "2026-09-30",
+        "invoiceDate": "2026-09-05",
+        "amount": 10000000.00,
+        "status": "DRAFT"
+      }
+    ],
+    "skipped": [
+      {
+        "contractId": 2,
+        "reason": "Hợp đồng HD-0002 đã hết hiệu lực (trạng thái ACTIVE, ngày kết thúc 2026-08-31), cần kiểm tra việc gia hạn trước khi lập hóa đơn"
+      }
+    ]
+  }
+}
+```
+
+Ý nghĩa từng trường hợp trong `skipped` (TC-02 và QTN-19):
+- Hợp đồng đã hết hiệu lực tại ngày rà soát (`endDate` đã qua, hoặc trạng thái `TERMINATED`/`COMPLETED`) →
+  không tạo hóa đơn, nhắc kiểm tra gia hạn.
+- Tổng giá trị đã lập hóa đơn (dùng chung phép kiểm tra với `NCL-10-CN-002`, `ContractValueLimitValidator`)
+  cộng thêm hóa đơn kỳ này vượt hạn mức/giá trị hợp đồng → không tạo hóa đơn, nhắc lập phụ lục điều chỉnh
+  (QTN-19).
+
+Điều khoản chưa tới ngày lập trong tháng, hoặc đã sinh hóa đơn cho kỳ hiện tại rồi, không xuất hiện ở cả
+`created` lẫn `skipped` (không phải trường hợp cần Kế toán xử lý). Hóa đơn tạo ra có `dueDate` mặc định
+`invoiceDate + 30 ngày`, cùng quy ước với hóa đơn theo mốc (`Invoice.DEFAULT_PAYMENT_TERM_DAYS`).
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-05`. |
+
+Mỗi hóa đơn được tạo đều ghi Nhật ký hệ thống riêng (TC-04), kèm mã hóa đơn và giá trị.
+
+---
+
 ## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)
 
 
