@@ -5255,6 +5255,111 @@ Kế toán chạy thủ công hoặc mô phỏng một ngày cụ thể qua `asO
 
 Mỗi hóa đơn được tạo đều ghi Nhật ký hệ thống riêng (TC-04), kèm mã hóa đơn và giá trị.
 
+### `NCL-10-CN-006` — Nhắc thu nợ tự động
+
+Toàn bộ endpoint dưới đây chỉ dành cho Kế toán (`VT-05`) — vai trò khác nhận `403 FORBIDDEN` và bị ghi
+Nhật ký hệ thống lần từ chối (TC-03). Áp dụng cho mọi hóa đơn còn công nợ (`status` là `ISSUED` hoặc
+`PARTIALLY_PAID` và còn phải thu `> 0`), theo ba mốc:
+
+- **Trước hạn 3 ngày** (`UPCOMING_3_DAYS`): `dueDate` còn đúng 3 ngày nữa.
+- **Đúng hạn** (`DUE_TODAY`): `dueDate` là hôm nay.
+- **Sau hạn theo chu kỳ 7 ngày** (`OVERDUE`): số ngày quá hạn là bội số của 7 (7, 14, 21…) — lặp lại
+  đều đặn cho tới khi hóa đơn được thanh toán đủ, không giới hạn số lần.
+
+Người nhận mỗi lần nhắc: toàn bộ Kế toán (vai trò `VT-05`) và người phụ trách khách hàng của hóa đơn đó
+(`Customer.ownerId`, nhân viên kinh doanh), không trùng lặp.
+
+#### `POST /dunning/run`
+
+Chạy rà soát toàn bộ hóa đơn còn công nợ: hóa đơn nào đang ở đúng một mốc (TC-01) **và** mốc đó
+chưa từng được nhắc thì gửi thông báo trong hệ thống cho từng người nhận và ghi một dòng lịch sử nhắc
+nợ. Hệ thống tự chạy hằng ngày lúc 07:00 (giờ server, sau giờ chạy hóa đơn định kỳ lúc 06:00); endpoint
+này cho phép Kế toán chạy thủ công hoặc mô phỏng một ngày cụ thể qua `asOf` khi kiểm thử.
+
+**Request** (tùy chọn, có thể gửi body rỗng `{}`):
+```json
+{
+  "asOf": "2026-09-21"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `asOf` | date | không | Định dạng `YYYY-MM-DD`. Để trống = lấy ngày hệ thống hôm nay. |
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Ra soat nhac thu no thanh cong",
+  "data": {
+    "asOf": "2026-09-21",
+    "sent": [
+      {
+        "id": 500,
+        "invoiceId": 9,
+        "stage": "UPCOMING_3_DAYS",
+        "referenceDate": "2026-09-24",
+        "daysOverdue": null,
+        "remainingAmount": 40000000.00,
+        "recipientIds": [1, 2, 3],
+        "sentAt": "2026-09-21T07:00:00"
+      }
+    ],
+    "skippedAlreadySentCount": 2
+  }
+}
+```
+
+| Trường | Ghi chú |
+|---|---|
+| `sent[].stage` | `UPCOMING_3_DAYS`, `DUE_TODAY` hoặc `OVERDUE`. |
+| `sent[].referenceDate` | Mốc gắn với lần nhắc: hạn thanh toán (`UPCOMING_3_DAYS`/`DUE_TODAY`) hoặc ngày ứng với mốc 7 ngày quá hạn (`OVERDUE`). |
+| `sent[].daysOverdue` | `null` với `UPCOMING_3_DAYS`; `0` với `DUE_TODAY`; bội số của 7 với `OVERDUE`. |
+| `skippedAlreadySentCount` | Số hóa đơn đang ở đúng một mốc nhưng mốc đó **đã được nhắc trước đó** (TC-02) — chạy lại trong cùng ngày sẽ không tăng thêm `sent`. |
+
+Hóa đơn chưa tới mốc nào (còn hơn 3 ngày, hoặc quá hạn nhưng chưa đúng bội số 7 ngày) không xuất hiện ở
+cả `sent` lẫn không tính vào `skippedAlreadySentCount`.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-05`. |
+
+Có gửi nhắc thì ghi một dòng Nhật ký hệ thống tổng hợp cho cả lượt chạy (TC-04).
+
+#### `GET /invoices/{invoiceId}/dunning-logs`
+
+Lịch sử nhắc thu nợ của một hóa đơn, mới nhất trước.
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": 500,
+      "invoiceId": 9,
+      "stage": "UPCOMING_3_DAYS",
+      "referenceDate": "2026-09-24",
+      "daysOverdue": null,
+      "remainingAmount": 40000000.00,
+      "recipientIds": [1, 2, 3],
+      "sentAt": "2026-09-21T07:00:00"
+    }
+  ]
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-05`. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy hóa đơn `{invoiceId}`. |
+
 ---
 
 ## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)
