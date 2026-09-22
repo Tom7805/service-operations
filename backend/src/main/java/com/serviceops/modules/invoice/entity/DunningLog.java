@@ -7,6 +7,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -23,7 +24,9 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Entity
-@Table(name = "dunning_logs")
+@Table(name = "dunning_logs",
+		uniqueConstraints = @UniqueConstraint(name = "uq_dunning_logs_cycle",
+				columnNames = {"invoice_id", "stage", "reference_date"}))
 public class DunningLog extends BaseEntity {
 
 	@Column(name = "invoice_id", nullable = false)

@@ -21,6 +21,7 @@ import com.serviceops.modules.invoice.service.InvoiceService;
 import com.serviceops.modules.notification.enums.NotificationType;
 import com.serviceops.modules.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -92,8 +93,16 @@ public class DunningServiceImpl implements DunningService {
 				continue;
 			}
 
-			DunningLogRes logRes = sendReminder(invoice, plan, asOf);
-			sent.add(logRes);
+			try {
+				DunningLogRes logRes = sendReminder(invoice, plan, asOf);
+				sent.add(logRes);
+			} catch (DataIntegrityViolationException concurrentDuplicate) {
+				// Chot chan cuoi cua QTN-27: lan ra soat khac (chay tay dung luc cron chay) da ghi
+				// dung moc nay giua khi kiem tra existsBy... va luc save() cua lan nay. Vi cot id sinh
+				// theo IDENTITY nen save() thuc thi INSERT ngay, khong doi den cuoi giao dich moi bao loi -
+				// bo qua rieng hoa don nay, khong lam hong cac dong da ghi thanh cong truoc do trong lan chay.
+				skipped++;
+			}
 		}
 
 		if (!sent.isEmpty()) {
