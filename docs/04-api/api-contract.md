@@ -5252,8 +5252,13 @@ Kế toán chạy thủ công hoặc mô phỏng một ngày cụ thể qua `asO
 | HTTP | `errorCode` | Khi nào xảy ra |
 |---|---|---|
 | 403 | `FORBIDDEN` | Token không có vai trò `VT-05`. |
+| 400 | `VALIDATION_ERROR` | `asOf` sai định dạng hoặc không đọc được body. |
 
-Mỗi hóa đơn được tạo đều ghi Nhật ký hệ thống riêng (TC-04), kèm mã hóa đơn và giá trị.
+Mỗi hóa đơn được tạo đều ghi Nhật ký hệ thống riêng (TC-04), kèm mã hóa đơn và giá trị, **và** gửi
+thông báo trong ứng dụng (`type` = `RECURRING_INVOICE_GENERATED`, `referenceType` = `Invoice`,
+`referenceId` = id hóa đơn) cho toàn bộ Kế toán (vai trò `VT-05`) — đây là phần "báo cho kế toán" của
+TC-01, tách khỏi Nhật ký hệ thống (Nhật ký chỉ tra cứu được, không chủ động báo ai). Đọc qua
+`GET /notifications` như các thông báo khác.
 
 ### `NCL-10-CN-006` — Nhắc thu nợ tự động
 
@@ -5326,6 +5331,7 @@ cả `sent` lẫn không tính vào `skippedAlreadySentCount`.
 | HTTP | `errorCode` | Khi nào xảy ra |
 |---|---|---|
 | 403 | `FORBIDDEN` | Token không có vai trò `VT-05`. |
+| 400 | `VALIDATION_ERROR` | `asOf` sai định dạng hoặc không đọc được body. |
 
 Có gửi nhắc thì ghi một dòng Nhật ký hệ thống tổng hợp cho cả lượt chạy (TC-04).
 

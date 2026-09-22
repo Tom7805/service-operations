@@ -30,13 +30,22 @@ const STATUS_LABEL: Record<ContractMilestoneRes['status'], string> = {
   INVOICED: 'Đã xuất hóa đơn',
 };
 
-/** Trạng thái kế tiếp theo đúng trình tự PENDING → READY_TO_INVOICE → INVOICED
- *  mà backend cho phép (NCL-04-CN-003) — null nếu đã ở bước cuối. */
+/**
+ * Trạng thái kế tiếp mà nút "→" trong modal này được phép tự đổi qua PATCH .../status.
+ * Chỉ còn PENDING → READY_TO_INVOICE: bước READY_TO_INVOICE → INVOICED backend đã CHẶN
+ * đặt tay từ khi có NCL-10-CN-002 — mốc chỉ chuyển INVOICED khi thật sự có một hóa đơn
+ * được lập qua POST /contracts/{id}/milestones/{id}/invoice, để không có mốc "đã xuất hóa
+ * đơn" mà không có hóa đơn nào đứng sau nó. Màn lập hóa đơn theo mốc chưa có ở Frontend,
+ * nên tạm ẩn nút ở bước cuối thay vì để người dùng bấm rồi luôn nhận lỗi.
+ */
 const NEXT_STATUS: Record<ContractMilestoneRes['status'], ContractMilestoneRes['status'] | null> = {
   PENDING: 'READY_TO_INVOICE',
-  READY_TO_INVOICE: 'INVOICED',
+  READY_TO_INVOICE: null,
   INVOICED: null,
 };
+
+/** Gợi ý hiển thị khi mốc đã sẵn sàng nhưng phải lập hóa đơn ở màn khác mới chuyển tiếp được. */
+const AWAITING_INVOICE_HINT = 'Lập hóa đơn cho mốc này để chuyển sang "Đã xuất hóa đơn".';
 
 /** Mốc khai theo % phải luôn phản ánh đúng giá trị hợp đồng HIỆN TẠI — giá trị
  *  hợp đồng có thể đã tăng/giảm qua phụ lục sau khi mốc này được lưu, nên không
@@ -261,6 +270,11 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
                                 >
                                   {statusUpdatingKey === row.key ? '…' : ICONS.arrowRight}
                                 </button>
+                              )}
+                              {row.status === 'READY_TO_INVOICE' && (
+                                <span className="field-hint" title={AWAITING_INVOICE_HINT}>
+                                  {AWAITING_INVOICE_HINT}
+                                </span>
                               )}
                             </>
                           ) : (

@@ -59,6 +59,10 @@ class RecurringInvoiceServiceTest {
 	private ContractRepository contractRepository;
 	@Mock
 	private AuditLogService auditLogService;
+	@Mock
+	private com.serviceops.modules.identity.user.repository.UserRoleScopeRepository userRoleScopeRepository;
+	@Mock
+	private com.serviceops.modules.notification.service.NotificationService notificationService;
 
 	private RecurringInvoiceServiceImpl service;
 
@@ -66,7 +70,8 @@ class RecurringInvoiceServiceTest {
 	void setUp() {
 		Clock clock = Clock.fixed(Instant.parse("2026-09-05T06:00:00Z"), ZoneId.of("UTC"));
 		service = new RecurringInvoiceServiceImpl(scheduleRepository, invoiceRepository, contractRepository,
-				new ContractValueLimitValidator(), auditLogService, clock);
+				new ContractValueLimitValidator(), auditLogService, userRoleScopeRepository, notificationService,
+				clock);
 	}
 
 	private Contract maintenanceContract(Long id, String code, LocalDate endDate) {
@@ -117,6 +122,31 @@ class RecurringInvoiceServiceTest {
 		assertEquals("2026-09", sched.getLastGeneratedPeriod());
 		verify(scheduleRepository).save(sched);
 		verify(auditLogService).record(eq("Lập hóa đơn định kỳ"), eq(AuditTargetType.INVOICE), eq(500L), any(), any());
+	}
+
+	// TC-01: "bao cho ke toan" — hoa don dinh ky vua tao phai bao cho tung Ke toan (VT-05), khong chi ghi nhat ky.
+	@Test
+	void notifiesEveryAccountantWhenARecurringInvoiceIsGenerated() {
+		Contract contract = maintenanceContract(1L, "HD-0001", LocalDate.of(2027, 1, 1));
+		RecurringInvoiceSchedule sched = schedule(1L, 5, new BigDecimal("10000000"), "2026-08");
+		when(scheduleRepository.findByActiveTrue()).thenReturn(List.of(sched));
+		when(contractRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(contract));
+		when(invoiceRepository.sumActiveTotalByContractId(1L)).thenReturn(BigDecimal.ZERO);
+		when(invoiceRepository.save(any(Invoice.class))).thenAnswer(invocation -> {
+			Invoice invoice = invocation.getArgument(0);
+			invoice.setId(500L);
+			return invoice;
+		});
+		when(userRoleScopeRepository.findUserIdsByRoleCode("VT-05")).thenReturn(List.of(11L, 12L));
+
+		service.run(new RecurringInvoiceRunReq(null));
+
+		verify(notificationService).sendInAppNotification(eq(11L),
+				eq(com.serviceops.modules.notification.enums.NotificationType.RECURRING_INVOICE_GENERATED), any(),
+				any(), eq(500L), any());
+		verify(notificationService).sendInAppNotification(eq(12L),
+				eq(com.serviceops.modules.notification.enums.NotificationType.RECURRING_INVOICE_GENERATED), any(),
+				any(), eq(500L), any());
 	}
 
 	// TC-02: hop dong da het hieu luc truoc ngay lap -> khong tao hoa don, bao ly do.

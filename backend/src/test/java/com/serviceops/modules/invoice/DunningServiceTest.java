@@ -197,6 +197,27 @@ class DunningServiceTest {
 	}
 
 	@Test
+	@DisplayName("QTN-27: chay trung luc voi lan khac (exists-check qua nhung save() vi pham UNIQUE) -> bo qua, khong lam hong ca luot chay")
+	void treatsConcurrentDuplicateInsertAsAlreadySentInsteadOfFailingTheWholeRun() {
+		stubCommonRecipients();
+		InvoiceDetailRes first = invoice(20L, TODAY, "1000000.00");
+		InvoiceDetailRes second = invoice(21L, TODAY, "2000000.00");
+		when(invoiceService.list(null, EnumSet.of(InvoiceStatus.ISSUED, InvoiceStatus.PARTIALLY_PAID)))
+				.thenReturn(List.of(first, second));
+		when(dunningLogRepository.existsByInvoiceIdAndStageAndReferenceDate(any(), eq(DunningStage.DUE_TODAY),
+				eq(TODAY))).thenReturn(false);
+		when(dunningLogRepository.save(any()))
+				.thenThrow(new org.springframework.dao.DataIntegrityViolationException("uq_dunning_logs_cycle"))
+				.thenAnswer(invocation -> invocation.getArgument(0));
+
+		DunningRunRes result = service.run(new DunningRunReq(null));
+
+		assertThat(result.skippedAlreadySentCount()).isEqualTo(1);
+		assertThat(result.sent()).hasSize(1);
+		assertThat(result.sent().get(0).invoiceId()).isEqualTo(21L);
+	}
+
+	@Test
 	@DisplayName("Hoa don khong o moc nao ca ba stage -> bi bo qua hoan toan, khong tinh vao skipped")
 	void ignoresInvoicesNotAtAnyMilestone() {
 		InvoiceDetailRes inv = invoice(14L, TODAY.plusDays(10), "5000000.00");

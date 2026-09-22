@@ -26,5 +26,8 @@ public enum NotificationType {
 	INVOICE_PROPOSAL_CREATED,
 
 	/** NCL-10-CN-006: nhac hoa don sap toi han, dung han hoac da qua han thanh toan. */
-	DUNNING_REMINDER
+	DUNNING_REMINDER,
+
+	/** NCL-10-CN-005: rao soat dinh ky vua tu tao mot hoa don nhap tu dieu khoan hop dong duy tri. */
+	RECURRING_INVOICE_GENERATED
 }

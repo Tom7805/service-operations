@@ -21,6 +21,9 @@ import com.serviceops.modules.invoice.repository.InvoiceRepository;
 import com.serviceops.modules.invoice.repository.RecurringInvoiceScheduleRepository;
 import com.serviceops.modules.invoice.service.RecurringInvoiceService;
 import com.serviceops.modules.invoice.validator.ContractValueLimitValidator;
+import com.serviceops.modules.identity.user.repository.UserRoleScopeRepository;
+import com.serviceops.modules.notification.enums.NotificationType;
+import com.serviceops.modules.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -35,7 +38,9 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -66,12 +71,15 @@ public class RecurringInvoiceServiceImpl implements RecurringInvoiceService {
 
 	private static final DateTimeFormatter PERIOD_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM");
 	private static final DateTimeFormatter CODE_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
+	private static final String ACCOUNTANT_ROLE_CODE = "VT-05";
 
 	private final RecurringInvoiceScheduleRepository scheduleRepository;
 	private final InvoiceRepository invoiceRepository;
 	private final ContractRepository contractRepository;
 	private final ContractValueLimitValidator limitValidator;
 	private final AuditLogService auditLogService;
+	private final UserRoleScopeRepository userRoleScopeRepository;
+	private final NotificationService notificationService;
 	private final Clock clock;
 
 	@Override
@@ -185,6 +193,7 @@ public class RecurringInvoiceServiceImpl implements RecurringInvoiceService {
 					"Hợp đồng " + contract.getContractCode() + ": hóa đơn " + invoice.getInvoiceCode()
 							+ " kỳ " + currentPeriod + ", giá trị " + invoice.getTotalAmount().toPlainString()
 							+ " (tổng đã xuất " + alreadyInvoiced + " -> " + alreadyInvoiced.add(amount) + ")");
+			notifyAccountants(contract, invoice, currentPeriod);
 
 			created.add(toInvoiceRes(invoice, asOf));
 		}
@@ -209,6 +218,24 @@ public class RecurringInvoiceServiceImpl implements RecurringInvoiceService {
 		invoice.setCreatedAt(now);
 		invoice.setUpdatedAt(now);
 		return invoiceRepository.save(invoice);
+	}
+
+	/**
+	 * TC-01: "bao cho ke toan" — gui thong bao trong ung dung cho toan bo Ke toan (VT-05) khi mot hoa don
+	 * dinh ky vua duoc tu dong tao, cung mau voi NCL-10-CN-001 (INVOICE_PROPOSAL_CREATED) va NCL-10-CN-006
+	 * (DUNNING_REMINDER). Rieng voi ban ghi nhat ky he thong (chi tra cuu duoc, khong chu dong bao ai).
+	 */
+	private void notifyAccountants(Contract contract, Invoice invoice, String period) {
+		Set<Long> accountants = new LinkedHashSet<>(
+				userRoleScopeRepository.findUserIdsByRoleCode(ACCOUNTANT_ROLE_CODE));
+		String title = "Hóa đơn định kỳ vừa được lập";
+		String content = "Hợp đồng " + contract.getContractCode() + " kỳ " + period + ": hóa đơn nháp "
+				+ invoice.getInvoiceCode() + " giá trị " + invoice.getTotalAmount().toPlainString()
+				+ " đang chờ soát và phát hành.";
+		for (Long accountantId : accountants) {
+			notificationService.sendInAppNotification(accountantId, NotificationType.RECURRING_INVOICE_GENERATED,
+					title, content, invoice.getId(), "Invoice");
+		}
 	}
 
 	/** INV-yyyyMMdd-XXXXXX, cung quy uoc voi hoa don theo moc (NCL-10-CN-002); UNIQUE(invoice_code) chan trung. */

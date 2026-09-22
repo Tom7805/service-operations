@@ -39,6 +39,9 @@ public class AccessDeniedAuditRecorder {
         // Phải đứng trước "/invoice": "/invoice-proposals" cũng chứa chuỗi "/invoice".
         FEATURES.put("/invoice-proposals", new Feature(AuditTargetType.INVOICE, "Tạo đề nghị xuất hóa đơn từ giờ công"));
         FEATURES.put("/receivables", new Feature(AuditTargetType.INVOICE, "Theo dõi công nợ quá hạn"));
+        // Phải đứng trước "/contracts": "/contracts/{id}/recurring-invoice-schedule" chứa cả hai chuỗi này.
+        // Bắt cả "/recurring-invoice-schedule" (CRUD điều khoản) lẫn "/recurring-invoices/run" (rà soát).
+        FEATURES.put("/recurring-invoice", new Feature(AuditTargetType.INVOICE, "Hóa đơn định kỳ cho hợp đồng duy trì"));
         // "/dunning" khớp cả "/dunning/run" lẫn "/invoices/{id}/dunning-logs" (chuỗi con) nên phải đứng
         // trước "/invoices" ở dưới, tránh bị nhãn "Tra cứu hóa đơn và công nợ" khi tra lịch sử nhắc nợ.
         FEATURES.put("/dunning", new Feature(AuditTargetType.INVOICE, "Nhắc thu nợ tự động"));
