@@ -34,6 +34,7 @@ export type Tab =
   | 'UNSUBMITTED_TIMESHEETS'
   | 'EXPENSE_APPROVAL'
   | 'OVERHEAD_ALLOCATION'
+  | 'RECURRING_INVOICE'
   | 'MARGIN_BY_CUSTOMER'
   | 'MARGIN_BY_EMPLOYEE'
   | 'PROJECT_LABOR_COST'
@@ -130,6 +131,12 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
     tab: 'OVERHEAD_ALLOCATION', icon: ICONS.chart, label: 'Phân bổ chi phí chung', requires: ['VT-05'],
     // NCL-08-CN-005: Kế toán chia tổng chi phí chung phát sinh trong kỳ (tháng) cho các
     // dự án theo tỷ trọng giờ công đã duyệt trong kỳ đó.
+  },
+  {
+    tab: 'RECURRING_INVOICE', icon: ICONS.receipt, label: 'Hóa đơn định kỳ', requires: ['VT-05'],
+    // NCL-10-CN-005: Kế toán khai báo lịch lập hóa đơn hàng tháng (ngày trong tháng + số
+    // tiền cố định) cho hợp đồng duy trì (MAINTENANCE); job nền tự tạo hóa đơn nháp đúng
+    // ngày đã khai, không có nút chạy tay ở màn này.
   },
   {
     tab: 'MARGIN_BY_CUSTOMER', icon: ICONS.building, label: 'Biên LN theo khách hàng', requires: ['VT-01'],
