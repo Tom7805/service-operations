@@ -202,12 +202,29 @@ void allowsAccountingRoleToListContracts() throws Exception {
 }
 
 @Test
-@DisplayName("NCL-04-CN-002: vai tro khac Ke toan bi tu choi 403 khi goi GET /contracts")
+@DisplayName("NCL-04-CN-002: vai tro khac Ke toan/Quan tri vien bi tu choi 403 khi goi GET /contracts")
 @WithMockUser(authorities = "ROLE_VT-04")
 void deniesNonAccountingRoleFromListingContracts() throws Exception {
 	mockMvc.perform(get("/contracts"))
 			.andExpect(status().isForbidden())
 			.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+}
+
+@Test
+@DisplayName("NCL-07-CN-003: Quan tri vien (VT-07) cung xem duoc danh sach hop dong de chon ten thay vi go ID")
+@WithMockUser(authorities = "ROLE_VT-07")
+void allowsAdminRoleToListContracts() throws Exception {
+	when(contractService.listAll()).thenReturn(java.util.List.of(new ContractRes(
+			5L, "HD-4K7X2Q9", "Hop dong ERP", 1L, 1L, "Cong ty TNHH ABC", 30L,
+			"TIME_AND_MATERIAL", new BigDecimal("500000000"), new BigDecimal("600000000"),
+			LocalDate.of(2026, 10, 1), LocalDate.of(2027, 9, 30), "DRAFT",
+			null, "ketoan01", LocalDateTime.now())));
+
+	mockMvc.perform(get("/contracts"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data[0].contractCode").value("HD-4K7X2Q9"));
+
+	verify(contractService).listAll();
 }
 
 @Test

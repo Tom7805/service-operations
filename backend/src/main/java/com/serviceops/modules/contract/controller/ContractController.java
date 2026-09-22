@@ -72,11 +72,17 @@ public BaseRes<List<ContractAppendixRes>> listAppendices(@PathVariable Long cont
 /**
  * Danh sach hop dong cho man hinh "Hop dong" danh rieng cho Ke toan (VT-05) -
  * loi vao de khai bao loai/han muc, moc thanh toan, kich hoat ma khong phai mo
- * ho so tong hop khach hang (chi VT-04/VT-02 vao duoc). Chi Ke toan (VT-05);
- * vai tro khac nhan 403 va bi ghi nhat ky tu choi boi {@code ContractAccessDeniedAspect}.
+ * ho so tong hop khach hang (chi VT-04/VT-02 vao duoc). Quan tri vien (VT-07)
+ * cung duoc mo endpoint nay tu 2026-09-22: VT-07 da co quyen quan ly don gia
+ * rieng theo hop dong (NCL-07-CN-003, xem ContractBillRateController) nhung
+ * truoc do khong liet ke duoc hop dong theo ten, phai go tay ID hop dong o
+ * ContractRateManager.tsx — nhat quan voi cac endpoint don gia khac
+ * (BillRateController/ContractBillRateController/RateLookupController) da
+ * cho ca VT-05 va VT-07. Vai tro khac van nhan 403 va bi ghi nhat ky tu choi
+ * boi {@code ContractAccessDeniedAspect}.
  */
 @GetMapping
-@PreAuthorize("hasRole('VT-05')")
+@PreAuthorize("hasRole('VT-05') or hasRole('VT-07')")
 public BaseRes<List<ContractRes>> listContracts() {
 	return BaseRes.ok(contractService.listAll());
 }
