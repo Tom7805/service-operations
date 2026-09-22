@@ -21,40 +21,37 @@ const SECTIONS: Array<{ key: Section; label: string }> = [
 
 /**
  * Gộp 4 chức năng của Epic 10 (danh sách/chi tiết hóa đơn, đề xuất hóa đơn, hóa đơn
- * định kỳ, báo cáo tuổi nợ) vào MỘT mục sidebar duy nhất — trước đây mỗi chức năng
- * một mục riêng khiến sidebar phình thêm 4 dòng cùng lúc, đồng đội không theo kịp.
- * Theo đúng mẫu BillRatePage đang bó nhiều story con vào một trang; điều hướng giữa
- * các phần bằng dải nút đơn giản, không thêm route/tab cấp App.tsx nào khác ngoài
- * "Hóa đơn" (INVOICE_DETAIL vẫn là tab con riêng vì đó là màn "đào sâu" một hóa đơn
- * cụ thể, không phải một chế độ xem ngang hàng).
+ * định kỳ, báo cáo tuổi nợ) vào MỘT mục sidebar duy nhất — theo đúng mẫu
+ * BillRatePage đang bó nhiều story con vào một trang. Điều hướng giữa các phần dùng
+ * đúng segmented control `.status-tabs`/`.status-tab` mà RolePermissionPage/
+ * DepartmentTreePage đang dùng, không tự chế nút bấm rời để tránh lệch phong cách.
  */
 export default function InvoicesPage({ currentUserRoles = [], currentUserName = 'Người dùng', onOpenInvoice }: Props) {
   const [section, setSection] = useState<Section>('LIST');
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          gap: '8px',
-          flexWrap: 'wrap',
-          padding: '16px 16px 0',
-        }}
-        role="tablist"
-        aria-label="Chức năng Hóa đơn"
-      >
-        {SECTIONS.map((s) => (
-          <button
-            key={s.key}
-            type="button"
-            role="tab"
-            aria-selected={section === s.key}
-            className={section === s.key ? 'btn-primary' : 'btn btn-secondary'}
-            onClick={() => setSection(s.key)}
-          >
-            {s.label}
-          </button>
-        ))}
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Hóa đơn</h1>
+        </div>
+      </div>
+
+      <div className="user-table-toolbar" style={{ padding: '0 16px 16px' }}>
+        <div className="status-tabs" role="tablist" aria-label="Chức năng Hóa đơn">
+          {SECTIONS.map((s) => (
+            <button
+              key={s.key}
+              type="button"
+              role="tab"
+              aria-selected={section === s.key}
+              className={`status-tab ${section === s.key ? 'status-tab--active' : ''}`}
+              onClick={() => setSection(s.key)}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {section === 'LIST' && (

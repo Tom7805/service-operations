@@ -171,14 +171,9 @@ export default function RecurringInvoicePage({ currentUserRoles = [], currentUse
         </div>
       )}
 
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Hóa đơn định kỳ</h1>
-          <p className="page-subtitle">
-            Khai báo lịch lập hóa đơn hàng tháng cho hợp đồng bảo trì (Maintenance), và chạy thử job sinh hóa đơn.
-          </p>
-        </div>
-      </div>
+      <p className="page-subtitle" style={{ marginBottom: '16px' }}>
+        Khai báo lịch lập hóa đơn hàng tháng cho hợp đồng bảo trì (Maintenance), và chạy thử job sinh hóa đơn.
+      </p>
 
       <div className="user-table-card" style={{ padding: '20px', marginBottom: '16px' }}>
         {contractsLoadError && (

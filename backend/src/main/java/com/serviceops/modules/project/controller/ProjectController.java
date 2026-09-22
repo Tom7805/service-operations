@@ -30,9 +30,14 @@ public class ProjectController {
 				projectService.createFromContract(contractId, request));
 	}
 
-	/** Danh sach du an cua hop dong — dieu huong tu man hinh hop dong sang du an. */
+	/**
+	 * Danh sach du an cua hop dong — dieu huong tu man hinh hop dong sang du an.
+	 * VT-05 (Ke toan) cung duoc mo tu 2026-09-22: can chon du an theo TEN khi tao
+	 * de xuat hoa don (NCL-10-CN-001, InvoiceProposalPage) — truoc do phai go tay
+	 * ID du an vi khong liet ke duoc.
+	 */
 	@GetMapping
-	@PreAuthorize("hasRole('VT-01') or hasRole('VT-02') or hasRole('VT-03')")
+	@PreAuthorize("hasRole('VT-01') or hasRole('VT-02') or hasRole('VT-03') or hasRole('VT-05')")
 	public BaseRes<List<ProjectRes>> listByContract(@PathVariable Long contractId) {
 		return BaseRes.ok(projectService.listByContract(contractId));
 	}

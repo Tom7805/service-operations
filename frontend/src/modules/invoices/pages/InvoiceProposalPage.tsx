@@ -1,7 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import { roleLabels } from '../../../utils/roleLabel';
+import type { ContractRes } from '../../contracts/types/contractTypes';
+import { fetchContracts, ContractsApiError } from '../../contracts/api/contractsApi';
+import { fetchProjectsByContract, ProjectsApiError } from '../../projects/api/projectsApi';
+import type { ProjectRes } from '../../projects/types/projectTypes';
 import type { InvoiceProposalRes } from '../types/invoiceTypes';
 import { createInvoiceProposal, InvoicesApiError } from '../api/invoicesApi';
 import { validateProposalForm } from '../validators/invoiceValidators';
@@ -29,14 +33,21 @@ function formatDate(value?: string | null): string {
  * thật (bước lập hóa đơn thật từ đề xuất là story tương lai của Epic 10 — trang này
  * dừng ở bước tạo & xem đề xuất, đúng phạm vi API đã có).
  *
- * Không có API liệt kê toàn bộ dự án cho Kế toán, nên nhập trực tiếp ID dự án
- * (xem cột "ID" ở trang chi tiết dự án) — cùng cách ContractRateManager từng làm
- * với hợp đồng trước khi mở GET /contracts cho VT-07.
+ * Chọn dự án theo TÊN (hợp đồng → dự án của hợp đồng đó), không gõ tay ID — GET
+ * /contracts/{id}/projects đã mở cho VT-05 từ 2026-09-22 đúng cho màn này.
  */
 export default function InvoiceProposalPage({ currentUserRoles = [], currentUserName = 'Người dùng' }: Props) {
   const isAllowed = currentUserRoles.includes('VT-05');
 
-  const [projectId, setProjectId] = useState('');
+  const [contracts, setContracts] = useState<ContractRes[]>([]);
+  const [contractsError, setContractsError] = useState<string | null>(null);
+  const [selectedContractId, setSelectedContractId] = useState('');
+
+  const [projects, setProjects] = useState<ProjectRes[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+  const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
+
   const [periodFrom, setPeriodFrom] = useState('');
   const [periodTo, setPeriodTo] = useState('');
   const [note, setNote] = useState('');
@@ -44,6 +55,32 @@ export default function InvoiceProposalPage({ currentUserRoles = [], currentUser
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<InvoiceProposalRes | null>(null);
+
+  useEffect(() => {
+    if (!isAllowed) return;
+    fetchContracts()
+      .then(setContracts)
+      .catch(() => setContractsError('Không tải được danh sách hợp đồng.'));
+  }, [isAllowed]);
+
+  const handleSelectContract = (value: string) => {
+    setSelectedContractId(value);
+    setSelectedProjectId('');
+    setProjects([]);
+    setProjectsError(null);
+    setResult(null);
+    if (!value) return;
+
+    setProjectsLoading(true);
+    fetchProjectsByContract(Number(value))
+      .then(setProjects)
+      .catch((err) => {
+        setProjectsError(
+          err instanceof ProjectsApiError ? err.message : 'Không tải được danh sách dự án của hợp đồng này.'
+        );
+      })
+      .finally(() => setProjectsLoading(false));
+  };
 
   if (!isAllowed) {
     return (
@@ -69,16 +106,19 @@ export default function InvoiceProposalPage({ currentUserRoles = [], currentUser
     setSubmitError(null);
     setResult(null);
 
-    const id = Number(projectId);
     const formErrors: Record<string, string> = {};
-    if (!Number.isFinite(id) || id <= 0) formErrors.projectId = 'Nhập đúng ID dự án (số nguyên dương)';
+    if (!selectedProjectId) formErrors.projectId = 'Chọn hợp đồng và dự án trước';
     const periodResult = validateProposalForm({ periodFrom, periodTo });
     setErrors({ ...formErrors, ...periodResult.errors });
     if (Object.keys(formErrors).length > 0 || !periodResult.isValid) return;
 
     setSubmitting(true);
     try {
-      const proposal = await createInvoiceProposal(id, { periodFrom, periodTo, note: note.trim() || null });
+      const proposal = await createInvoiceProposal(Number(selectedProjectId), {
+        periodFrom,
+        periodTo,
+        note: note.trim() || null,
+      });
       setResult(proposal);
     } catch (err) {
       setSubmitError(err instanceof InvoicesApiError ? err.message : 'Không tạo được đề xuất hóa đơn. Vui lòng thử lại.');
@@ -89,17 +129,15 @@ export default function InvoiceProposalPage({ currentUserRoles = [], currentUser
 
   return (
     <div className="user-management-page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Đề xuất hóa đơn</h1>
-          <p className="page-subtitle">
-            Gom giờ công và chi phí đã duyệt, chưa từng đề xuất, phát sinh trong một kỳ của một dự án
-            (chỉ áp dụng hợp đồng Time &amp; Material).
-          </p>
-        </div>
-      </div>
+      <p className="page-subtitle" style={{ marginBottom: '16px' }}>
+        Gom giờ công và chi phí đã duyệt, chưa từng đề xuất, phát sinh trong một kỳ của một dự án
+        (chỉ áp dụng hợp đồng Time &amp; Material).
+      </p>
 
       <div className="user-table-card" style={{ padding: '20px' }}>
+        {contractsError && (
+          <div className="alert-box alert-box--danger" style={{ marginBottom: '12px' }}>{contractsError}</div>
+        )}
         {submitError && (
           <div className="alert-box alert-box--danger" role="alert" style={{ marginBottom: '14px' }}>
             {submitError}
@@ -107,18 +145,49 @@ export default function InvoiceProposalPage({ currentUserRoles = [], currentUser
         )}
 
         <form onSubmit={(e) => void handleSubmit(e)} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div className="milestone-field" style={{ minWidth: '160px' }}>
-            <label className="form-label" htmlFor="proposal-project-id">ID dự án</label>
-            <input
-              id="proposal-project-id"
-              type="number"
-              className={`form-input ${errors.projectId ? 'form-input--error' : ''}`}
-              value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
-              min={1}
-            />
-            {errors.projectId && <span className="field-error">{errors.projectId}</span>}
+          <div className="milestone-field" style={{ minWidth: '240px' }}>
+            <label className="form-label" htmlFor="proposal-contract">Hợp đồng</label>
+            <select
+              id="proposal-contract"
+              className="form-input"
+              value={selectedContractId}
+              onChange={(e) => handleSelectContract(e.target.value)}
+            >
+              <option value="">-- Chọn hợp đồng --</option>
+              {contracts.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.contractCode} — {c.name}{c.customerName ? ` (${c.customerName})` : ''}
+                </option>
+              ))}
+            </select>
           </div>
+
+          <div className="milestone-field" style={{ minWidth: '240px' }}>
+            <label className="form-label" htmlFor="proposal-project">Dự án</label>
+            <select
+              id="proposal-project"
+              className={`form-input ${errors.projectId ? 'form-input--error' : ''}`}
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              disabled={!selectedContractId || projectsLoading}
+            >
+              <option value="">
+                {!selectedContractId
+                  ? '-- Chọn hợp đồng trước --'
+                  : projectsLoading
+                    ? 'Đang tải…'
+                    : projects.length === 0
+                      ? 'Hợp đồng chưa có dự án'
+                      : '-- Chọn dự án --'}
+              </option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.projectCode} — {p.name}</option>
+              ))}
+            </select>
+            {errors.projectId && <span className="field-error">{errors.projectId}</span>}
+            {projectsError && <span className="field-error">{projectsError}</span>}
+          </div>
+
           <div className="milestone-field" style={{ minWidth: '160px' }}>
             <label className="form-label" htmlFor="proposal-from">Từ ngày</label>
             <input

@@ -81,11 +81,8 @@ export default function ReceivableAgingPage({ currentUserRoles = [], currentUser
 
   return (
     <div className="user-management-page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Báo cáo tuổi nợ</h1>
-          <p className="page-subtitle">Hóa đơn quá hạn thanh toán, gộp theo số ngày quá hạn.</p>
-        </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '16px' }}>
+        <p className="page-subtitle" style={{ margin: 0 }}>Hóa đơn quá hạn thanh toán, gộp theo số ngày quá hạn.</p>
         <button type="button" className="btn-icon-refresh" onClick={() => void load()} title="Tải lại" aria-label="Tải lại báo cáo tuổi nợ">
           {ICONS.refresh}
         </button>

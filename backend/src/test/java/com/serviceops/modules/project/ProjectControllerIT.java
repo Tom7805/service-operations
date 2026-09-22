@@ -78,6 +78,17 @@ class ProjectControllerIT {
 	}
 
 	@Test
+	@DisplayName("Ke toan (VT-05) cung liet ke duoc du an cua hop dong (chon du an theo ten khi de xuat hoa don)")
+	void accountantCanListContractProjects() throws Exception {
+		when(projectService.listByContract(eq(5L))).thenReturn(List.of(sample()));
+
+		mockMvc.perform(get("/contracts/5/projects")
+						.with(SecurityMockMvcRequestPostProcessors.user("ketoan01").roles("VT-05")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data[0].id").value(20));
+	}
+
+	@Test
 	@DisplayName("Khong co token -> 401")
 	void anonymousRejected() throws Exception {
 		mockMvc.perform(get("/projects/20")).andExpect(status().isUnauthorized());

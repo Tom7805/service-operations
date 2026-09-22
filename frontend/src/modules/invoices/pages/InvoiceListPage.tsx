@@ -159,14 +159,9 @@ export default function InvoiceListPage({
 
   return (
     <div className="user-management-page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Hóa đơn</h1>
-          <p className="page-subtitle">
-            Toàn bộ hóa đơn đã lập từ mốc thanh toán hợp đồng, đề xuất hóa đơn hoặc lịch định kỳ.
-          </p>
-        </div>
-      </div>
+      <p className="page-subtitle" style={{ marginBottom: '16px' }}>
+        Toàn bộ hóa đơn đã lập từ mốc thanh toán hợp đồng, đề xuất hóa đơn hoặc lịch định kỳ.
+      </p>
 
       <div className="stats-grid">
         <div className="stat-card">
