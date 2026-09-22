@@ -15,5 +15,8 @@ public enum AuditTargetType {
 	TIMESHEET,
 
 	/** Chi phi du an va chi phi chung (NCL-08-CN-005). */
-	EXPENSE
+	EXPENSE,
+
+	/** Hoa don (Epic NCL-10), bao gom hoa don dinh ky (NCL-10-CN-005). */
+	INVOICE
 }
