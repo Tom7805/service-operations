@@ -1,6 +1,8 @@
 package com.serviceops.modules.contract.controller;
 
 import com.serviceops.common.api.BaseRes;
+import com.serviceops.common.exception.BusinessRuleException;
+import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.contract.dto.request.ContractAppendixCreateReq;
 import com.serviceops.modules.contract.dto.request.ContractTypeLimitReq;
 import com.serviceops.modules.contract.dto.request.ContractMilestoneReq;
@@ -12,6 +14,7 @@ import com.serviceops.modules.contract.dto.response.ContractMilestoneRes;
 import com.serviceops.modules.contract.dto.response.ContractRes;
 import com.serviceops.modules.contract.dto.response.ContractUsageRes;
 import com.serviceops.modules.contract.dto.response.RenewalRes;
+import com.serviceops.modules.contract.enums.ContractMilestoneStatus;
 import com.serviceops.modules.contract.service.ContractExpiryReminderService;
 import com.serviceops.modules.contract.service.ContractLimitService;
 import com.serviceops.modules.contract.service.ContractMilestoneService;
@@ -122,15 +125,20 @@ contractMilestoneService.replace(contractId, requests));
 }
 
 /**
- * NCL-04-CN-003: doi trang thai mot moc thanh toan (PENDING -> READY_TO_INVOICE
- * -> INVOICED). Dung de danh dau moc da duoc xuat hoa don khi he thong chua co
- * module hoa don rieng (Epic NCL-10) - so lieu nay la dau vao truc tiep cho
- * canh bao han muc o NCL-04-CN-005.
+ * NCL-04-CN-003: doi trang thai mot moc thanh toan (PENDING -> READY_TO_INVOICE).
+ * Trang thai INVOICED chi duoc dat boi {@code POST /contracts/{id}/milestones/{id}/invoice}
+ * (NCL-10-CN-002) de moc INVOICED luon di kem mot hoa don that; dat tay se lam mat kha nang
+ * lap hoa don cua moc do va sai lech so lieu han muc (NCL-04-CN-005).
  */
 @PatchMapping("/{contractId}/milestones/{milestoneId}/status")
 @PreAuthorize("hasRole('VT-05')")
 public BaseRes<ContractMilestoneRes> updateMilestoneStatus(@PathVariable Long contractId,
 		@PathVariable Long milestoneId, @Valid @RequestBody ContractMilestoneStatusReq request) {
+	if (request.status() == ContractMilestoneStatus.INVOICED) {
+		throw new BusinessRuleException(ErrorCode.INVALID_STATE,
+				"Khong the dat trang thai INVOICED thu cong; hay lap hoa don cho moc qua "
+						+ "POST /contracts/{contractId}/milestones/{milestoneId}/invoice (NCL-10-CN-002)");
+	}
 	return BaseRes.ok("Cap nhat trang thai moc thanh toan thanh cong",
 			contractMilestoneService.updateStatus(contractId, milestoneId, request.status()));
 }
