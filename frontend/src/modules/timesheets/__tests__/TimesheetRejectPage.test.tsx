@@ -146,6 +146,9 @@ describe('TimesheetRejectPage (NCL-06-CN-004 — Từ chối bảng chấm công
     vi.mocked(timesheetsApi.getMyApprovalHistory).mockResolvedValue([historyRow]);
 
     render(<TimesheetRejectPage currentUserRoles={['VT-02']} />);
+    await waitFor(() => expect(timesheetsApi.getMyApprovalHistory).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole('button', { name: /Lịch sử từ chối/i }));
 
     expect(await screen.findByTestId('rejected-row-50')).toHaveTextContent('Nguyen Van A');
     expect(screen.getByTestId('rejected-row-50')).toHaveTextContent('Sai du an');
@@ -168,6 +171,9 @@ describe('TimesheetRejectPage (NCL-06-CN-004 — Từ chối bảng chấm công
     ]);
 
     render(<TimesheetRejectPage currentUserRoles={['VT-02']} />);
+    await waitFor(() => expect(timesheetsApi.getMyApprovalHistory).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole('button', { name: /Lịch sử từ chối/i }));
 
     expect(await screen.findByText(/Chưa từ chối bảng nào/i)).toBeInTheDocument();
     expect(screen.queryByTestId('rejected-row-60')).not.toBeInTheDocument();

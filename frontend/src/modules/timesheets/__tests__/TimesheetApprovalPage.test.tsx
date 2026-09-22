@@ -136,6 +136,9 @@ describe('TimesheetApprovalPage (NCL-06-CN-003 — Duyệt bảng chấm công)'
     vi.mocked(timesheetsApi.getMyApprovalHistory).mockResolvedValue([historyRow]);
 
     render(<TimesheetApprovalPage currentUserRoles={['VT-02']} />);
+    await waitFor(() => expect(timesheetsApi.getMyApprovalHistory).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole('button', { name: /Giờ công đã duyệt/i }));
 
     expect(await screen.findByTestId('history-row-1')).toHaveTextContent('Nguyen Van A');
     expect(screen.getByTestId('history-row-1')).toHaveTextContent('Đã duyệt');

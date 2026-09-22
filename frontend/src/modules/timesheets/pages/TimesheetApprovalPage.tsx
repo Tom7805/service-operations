@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
+import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import { roleLabels } from '../../../utils/roleLabel';
 import ApprovalActionBar from '../components/ApprovalActionBar';
 import { getMyApprovalHistory, getPendingTimesheets, TimesheetsApiError } from '../api/timesheetsApi';
@@ -40,6 +42,8 @@ export default function TimesheetApprovalPage({
   const [history, setHistory] = useState<TimesheetApprovalHistoryRes[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const historyBackdrop = useBackdropClick(() => setHistoryOpen(false));
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setToast({ text, type });
@@ -130,6 +134,9 @@ export default function TimesheetApprovalPage({
           </p>
         </div>
         <div className="page-header-actions">
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setHistoryOpen(true)}>
+            <span className="icon-xs">{ICONS.history}</span> Giờ công đã duyệt
+          </button>
           <button
             type="button"
             className="btn-icon-refresh"
@@ -259,94 +266,118 @@ export default function TimesheetApprovalPage({
         </div>
       </div>
 
-      <div className="user-table-card" style={{ marginTop: '20px' }}>
-        <div className="page-header" style={{ padding: '16px 20px 0' }}>
-          <div>
-            <h2 className="page-title" style={{ fontSize: '18px' }}>
-              Đã xử lý gần đây
-            </h2>
-            <p className="page-subtitle">
-              Các bảng bạn vừa duyệt hoặc từ chối — mất khỏi hàng chờ ở trên vì đã có quyết định, không phải bị xóa;
-              tra lại được ở đây kể cả sau khi tải lại trang.
-              {onNavigateToAdjustment && (
-                <>
-                  {' '}
-                  Muốn xem đầy đủ từng dòng giờ công đã duyệt để đối chiếu hoặc sửa lại, dùng{' '}
-                  <button type="button" className="btn-link" onClick={onNavigateToAdjustment}>
-                    Điều chỉnh giờ công đã duyệt
-                  </button>
-                  .
-                </>
-              )}
-            </p>
-          </div>
-        </div>
+      {historyOpen && (
+        <ModalPortal>
+          <div
+            className="modal-backdrop"
+            onMouseDown={historyBackdrop.onMouseDown}
+            onClick={historyBackdrop.onClick}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="modal-card" style={{ maxWidth: '800px' }}>
+              <div className="modal-header">
+                <div className="modal-header__title-wrap">
+                  <h3 className="modal-title">
+                    <span className="modal-title__icon">{ICONS.history}</span>
+                    Giờ công đã duyệt
+                  </h3>
+                  <p className="field-hint">
+                    Các bảng bạn vừa duyệt hoặc từ chối — mất khỏi hàng chờ ở trên vì đã có quyết định, không
+                    phải bị xóa; tra lại được ở đây kể cả sau khi tải lại trang.
+                    {onNavigateToAdjustment && (
+                      <>
+                        {' '}
+                        Muốn xem đầy đủ từng dòng giờ công đã duyệt để đối chiếu hoặc sửa lại, dùng{' '}
+                        <button
+                          type="button"
+                          className="btn-link"
+                          onClick={() => {
+                            setHistoryOpen(false);
+                            onNavigateToAdjustment();
+                          }}
+                        >
+                          Điều chỉnh giờ công đã duyệt
+                        </button>
+                        .
+                      </>
+                    )}
+                  </p>
+                </div>
+                <button type="button" className="modal-close" onClick={() => setHistoryOpen(false)} aria-label="Đóng">
+                  {ICONS.close}
+                </button>
+              </div>
+              <div className="modal-body">
+                {historyError && (
+                  <div className="alert alert--error mb-4" role="alert">
+                    <span className="alert__icon">{ICONS.alertTriangle}</span>
+                    <span>{historyError}</span>
+                    <button type="button" className="btn-link text-white ml-auto" onClick={fetchHistory}>
+                      Thử lại
+                    </button>
+                  </div>
+                )}
 
-        {historyError && (
-          <div className="alert alert--error" style={{ margin: '0 20px 16px' }} role="alert">
-            <span className="alert__icon">{ICONS.alertTriangle}</span>
-            <span>{historyError}</span>
-            <button type="button" className="btn-link text-white ml-auto" onClick={fetchHistory}>
-              Thử lại
-            </button>
-          </div>
-        )}
+                <div className="table-responsive">
+                  <table className="user-data-table">
+                    <thead>
+                      <tr>
+                        <th>Nhân sự</th>
+                        <th>Tuần chấm công</th>
+                        <th>Trạng thái</th>
+                        <th>Ghi chú</th>
+                        <th>Thời điểm xử lý</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {historyLoading ? (
+                        <tr>
+                          <td colSpan={5} style={{ textAlign: 'center', padding: '40px' }}>
+                            Đang tải lịch sử xử lý…
+                          </td>
+                        </tr>
+                      ) : history.length === 0 ? (
+                        <tr>
+                          <td colSpan={5}>
+                            <div className="table-empty-state">
+                              <span className="empty-icon">{ICONS.history}</span>
+                              <h3>Chưa có bảng chấm công nào bạn đã xử lý</h3>
+                              <p>Sau khi bạn duyệt hoặc từ chối một bảng ở trên, kết quả sẽ hiện tại đây để đối chiếu lại.</p>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        history.map((h) => (
+                          <tr key={h.auditLogId} data-testid={`history-row-${h.auditLogId}`}>
+                            <td>{h.userName ?? `Nhân sự #${h.userId}`}</td>
+                            <td>
+                              {formatIsoDate(h.weekStartDate)} → {formatIsoDate(h.weekEndDate)}
+                            </td>
+                            <td>
+                              <span className={`badge ${h.action === 'APPROVED' ? 'badge--green' : 'badge--red'}`}>
+                                {h.action === 'APPROVED' ? 'Đã duyệt' : 'Đã từ chối'}
+                              </span>
+                            </td>
+                            <td style={{ fontSize: '12.5px', color: 'var(--ink-muted)' }}>{h.detail}</td>
+                            <td>{new Date(h.performedAt).toLocaleString('vi-VN')}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
 
-        <div className="table-responsive">
-          <table className="user-data-table">
-            <thead>
-              <tr>
-                <th>Nhân sự</th>
-                <th>Tuần chấm công</th>
-                <th>Trạng thái</th>
-                <th>Ghi chú</th>
-                <th>Thời điểm xử lý</th>
-              </tr>
-            </thead>
-            <tbody>
-              {historyLoading ? (
-                <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: '40px' }}>
-                    Đang tải lịch sử xử lý…
-                  </td>
-                </tr>
-              ) : history.length === 0 ? (
-                <tr>
-                  <td colSpan={5}>
-                    <div className="table-empty-state">
-                      <span className="empty-icon">{ICONS.history}</span>
-                      <h3>Chưa có bảng chấm công nào bạn đã xử lý</h3>
-                      <p>Sau khi bạn duyệt hoặc từ chối một bảng ở trên, kết quả sẽ hiện tại đây để đối chiếu lại.</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                history.map((h) => (
-                  <tr key={h.auditLogId} data-testid={`history-row-${h.auditLogId}`}>
-                    <td>{h.userName ?? `Nhân sự #${h.userId}`}</td>
-                    <td>
-                      {formatIsoDate(h.weekStartDate)} → {formatIsoDate(h.weekEndDate)}
-                    </td>
-                    <td>
-                      <span className={`badge ${h.action === 'APPROVED' ? 'badge--green' : 'badge--red'}`}>
-                        {h.action === 'APPROVED' ? 'Đã duyệt' : 'Đã từ chối'}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: '12.5px', color: 'var(--ink-muted)' }}>{h.detail}</td>
-                    <td>{new Date(h.performedAt).toLocaleString('vi-VN')}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {history.length > 0 && (
-          <div className="table-footer">
-            Hiển thị <strong>{history.length}</strong> lần xử lý gần nhất
+                {history.length > 0 && (
+                  <div className="table-footer">
+                    Hiển thị <strong>{history.length}</strong> lần xử lý gần nhất
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+        </ModalPortal>
+      )}
     </div>
   );
 }
