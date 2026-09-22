@@ -5,6 +5,7 @@ import com.serviceops.modules.timesheet.dto.request.TimesheetApproveReq;
 import com.serviceops.modules.timesheet.dto.request.TimesheetRejectReq;
 import com.serviceops.modules.timesheet.dto.response.AdjustableEntryRes;
 import com.serviceops.modules.timesheet.dto.response.PendingTimesheetRes;
+import com.serviceops.modules.timesheet.dto.response.TimesheetApprovalHistoryRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetApprovalRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetRejectRes;
 import com.serviceops.modules.timesheet.service.TimesheetAdjustmentService;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -52,6 +54,17 @@ public class TimesheetApprovalController {
 	@PreAuthorize("hasRole('VT-02')")
 	public BaseRes<List<AdjustableEntryRes>> findAdjustableEntries() {
 		return BaseRes.ok(timesheetAdjustmentService.findAdjustableEntries());
+	}
+
+	/**
+	 * NCL-06-CN-003/CN-004: cac lan duyet/tu choi GAN NHAT do chinh PM hien tai thuc hien, moi
+	 * nhat truoc — de PM tra lai sau khi bang da roi khoi hang cho duyet o tren.
+	 */
+	@GetMapping("/timesheets/approval-history")
+	@PreAuthorize("hasRole('VT-02')")
+	public BaseRes<List<TimesheetApprovalHistoryRes>> findApprovalHistory(
+			@RequestParam(defaultValue = "20") int size) {
+		return BaseRes.ok(timesheetApprovalService.findMyApprovalHistory(size));
 	}
 
 	/** Duyet nguyen bang (khong truyen entryIds) hoac tung dong (truyen entryIds). */

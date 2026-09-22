@@ -479,7 +479,11 @@ export default function App() {
           ) : activeTab === 'MY_WORK' ? (
             <MyWorkPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'TIMESHEET_APPROVAL' ? (
-            <TimesheetApprovalPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+            <TimesheetApprovalPage
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+              onNavigateToAdjustment={() => setActiveTab('TIMESHEET_ADJUSTMENT')}
+            />
           ) : activeTab === 'TIMESHEET_REJECT' ? (
             <TimesheetRejectPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'TIMESHEET_ADJUSTMENT' ? (

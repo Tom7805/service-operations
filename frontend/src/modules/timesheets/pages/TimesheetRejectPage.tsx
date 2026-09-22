@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import { roleLabels } from '../../../utils/roleLabel';
 import RejectActionButton from '../components/RejectActionButton';
-import { getPendingTimesheets, TimesheetsApiError } from '../api/timesheetsApi';
-import type { PendingTimesheetRes } from '../types/timesheetTypes';
+import { getMyApprovalHistory, getPendingTimesheets, TimesheetsApiError } from '../api/timesheetsApi';
+import type { PendingTimesheetRes, TimesheetApprovalHistoryRes } from '../types/timesheetTypes';
 import { formatIsoDate } from '../utils/weekRange';
 
 export interface TimesheetRejectPageProps {
@@ -32,6 +32,12 @@ export default function TimesheetRejectPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  // Lịch sử các lần từ chối gần nhất của chính PM này — lấy từ máy chủ
+  // (`GET /timesheets/approval-history`, lọc còn REJECTED), không chỉ trong phiên làm việc
+  // hiện tại, để PM vẫn tra lại được ngay cả sau khi tải lại trang hoặc đổi thiết bị.
+  const [rejected, setRejected] = useState<TimesheetApprovalHistoryRes[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState<string | null>(null);
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setToast({ text, type });
@@ -56,9 +62,28 @@ export default function TimesheetRejectPage({
     }
   }, [isAllowed]);
 
+  const fetchHistory = useCallback(async () => {
+    if (!isAllowed) return;
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const data = await getMyApprovalHistory();
+      setRejected(data.filter((h) => h.action === 'REJECTED'));
+    } catch (err) {
+      const message =
+        err instanceof TimesheetsApiError || err instanceof Error
+          ? err.message
+          : 'Không thể tải lịch sử từ chối.';
+      setHistoryError(message);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [isAllowed]);
+
   useEffect(() => {
     void fetchPending();
-  }, [fetchPending]);
+    void fetchHistory();
+  }, [fetchPending, fetchHistory]);
 
   if (!isAllowed) {
     return (
@@ -104,7 +129,17 @@ export default function TimesheetRejectPage({
           </p>
         </div>
         <div className="page-header-actions">
-          <button type="button" className="btn-icon-refresh" onClick={fetchPending} title="Tải lại" aria-label="Tải lại" disabled={loading}>
+          <button
+            type="button"
+            className="btn-icon-refresh"
+            onClick={() => {
+              void fetchPending();
+              void fetchHistory();
+            }}
+            title="Tải lại"
+            aria-label="Tải lại"
+            disabled={loading}
+          >
             {ICONS.refresh}
           </button>
         </div>
@@ -192,11 +227,10 @@ export default function TimesheetRejectPage({
                       <RejectActionButton
                         timesheet={t}
                         onRejected={(result) => {
-                          showToast(
-                            `Đã từ chối ${result.rejectedEntries} dòng giờ công của ${t.userName ?? `Nhân sự #${t.userId}`} — đã quay về nhập.`,
-                            'success'
-                          );
+                          const label = t.userName ?? `Nhân sự #${t.userId}`;
+                          showToast(`Đã từ chối ${result.rejectedEntries} dòng giờ công của ${label} — đã quay về nhập.`, 'success');
                           setPending((prev) => prev.filter((p) => p.timesheetId !== t.timesheetId));
+                          void fetchHistory();
                         }}
                         onError={(message) => showToast(message, 'error')}
                       />
@@ -211,6 +245,80 @@ export default function TimesheetRejectPage({
         <div className="table-footer">
           Hiển thị <strong>{pending.length}</strong> bảng chấm công đang chờ duyệt
         </div>
+      </div>
+
+      <div className="user-table-card" style={{ marginTop: '20px' }}>
+        <div className="page-header" style={{ padding: '16px 20px 0' }}>
+          <div>
+            <h2 className="page-title" style={{ fontSize: '18px' }}>
+              Đã từ chối gần đây
+            </h2>
+            <p className="page-subtitle">
+              Các bảng bạn đã từ chối — mất khỏi hàng chờ ở trên vì đã có quyết định, không phải bị xóa; tra
+              lại được ở đây kể cả sau khi tải lại trang. Nhân viên đã nhận lại bảng ở trạng thái nhập để sửa
+              và nộp lại.
+            </p>
+          </div>
+        </div>
+
+        {historyError && (
+          <div className="alert alert--error" style={{ margin: '0 20px 16px' }} role="alert">
+            <span className="alert__icon">{ICONS.alertTriangle}</span>
+            <span>{historyError}</span>
+            <button type="button" className="btn-link text-white ml-auto" onClick={fetchHistory}>
+              Thử lại
+            </button>
+          </div>
+        )}
+
+        <div className="table-responsive">
+          <table className="user-data-table">
+            <thead>
+              <tr>
+                <th>Nhân sự</th>
+                <th>Tuần chấm công</th>
+                <th>Lý do / ghi chú</th>
+                <th>Thời điểm xử lý</th>
+              </tr>
+            </thead>
+            <tbody>
+              {historyLoading ? (
+                <tr>
+                  <td colSpan={4} style={{ textAlign: 'center', padding: '40px' }}>
+                    Đang tải lịch sử từ chối…
+                  </td>
+                </tr>
+              ) : rejected.length === 0 ? (
+                <tr>
+                  <td colSpan={4}>
+                    <div className="table-empty-state">
+                      <span className="empty-icon">{ICONS.history}</span>
+                      <h3>Chưa từ chối bảng nào</h3>
+                      <p>Sau khi bạn từ chối một bảng ở trên, kết quả sẽ hiện tại đây để đối chiếu lại.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                rejected.map((r) => (
+                  <tr key={r.auditLogId} data-testid={`rejected-row-${r.timesheetId}`}>
+                    <td>{r.userName ?? `Nhân sự #${r.userId}`}</td>
+                    <td>
+                      {formatIsoDate(r.weekStartDate)} → {formatIsoDate(r.weekEndDate)}
+                    </td>
+                    <td style={{ fontSize: '12.5px', color: 'var(--ink-muted)' }}>{r.detail}</td>
+                    <td>{new Date(r.performedAt).toLocaleString('vi-VN')}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {rejected.length > 0 && (
+          <div className="table-footer">
+            Hiển thị <strong>{rejected.length}</strong> lần từ chối gần nhất
+          </div>
+        )}
       </div>
     </div>
   );

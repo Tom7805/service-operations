@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import TimesheetRejectPage from '../pages/TimesheetRejectPage';
 import * as timesheetsApi from '../api/timesheetsApi';
-import type { PendingTimesheetRes } from '../types/timesheetTypes';
+import type { PendingTimesheetRes, TimesheetApprovalHistoryRes } from '../types/timesheetTypes';
 
 vi.mock('../api/timesheetsApi', () => {
   class MockTimesheetsApiError extends Error {
@@ -19,6 +19,7 @@ vi.mock('../api/timesheetsApi', () => {
 
   return {
     getPendingTimesheets: vi.fn(),
+    getMyApprovalHistory: vi.fn(),
     rejectTimesheet: vi.fn(),
     TimesheetsApiError: MockTimesheetsApiError,
   };
@@ -51,6 +52,7 @@ const PENDING_2: PendingTimesheetRes = {
 describe('TimesheetRejectPage (NCL-06-CN-004 — Từ chối bảng chấm công)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(timesheetsApi.getMyApprovalHistory).mockResolvedValue([]);
   });
 
   it('từ chối truy cập cho vai trò khác VT-02', () => {
@@ -125,5 +127,76 @@ describe('TimesheetRejectPage (NCL-06-CN-004 — Từ chối bảng chấm công
     fireEvent.click(screen.getByTitle('Tải lại'));
 
     await waitFor(() => expect(timesheetsApi.getPendingTimesheets).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(timesheetsApi.getMyApprovalHistory).toHaveBeenCalledTimes(2));
+  });
+
+  it('tải và hiển thị lịch sử từ chối đã lưu ở máy chủ, kể cả sau khi tải lại trang', async () => {
+    vi.mocked(timesheetsApi.getPendingTimesheets).mockResolvedValue([]);
+    const historyRow: TimesheetApprovalHistoryRes = {
+      auditLogId: 1,
+      timesheetId: 50,
+      userId: 7,
+      userName: 'Nguyen Van A',
+      weekStartDate: '2026-09-07',
+      weekEndDate: '2026-09-13',
+      action: 'REJECTED',
+      detail: 'Sai du an',
+      performedAt: '2026-09-13T12:00:00',
+    };
+    vi.mocked(timesheetsApi.getMyApprovalHistory).mockResolvedValue([historyRow]);
+
+    render(<TimesheetRejectPage currentUserRoles={['VT-02']} />);
+
+    expect(await screen.findByTestId('rejected-row-50')).toHaveTextContent('Nguyen Van A');
+    expect(screen.getByTestId('rejected-row-50')).toHaveTextContent('Sai du an');
+  });
+
+  it('chỉ hiện các lần APPROVED trong lịch sử duyệt bị lọc bỏ, không lẫn vào bảng từ chối', async () => {
+    vi.mocked(timesheetsApi.getPendingTimesheets).mockResolvedValue([]);
+    vi.mocked(timesheetsApi.getMyApprovalHistory).mockResolvedValue([
+      {
+        auditLogId: 2,
+        timesheetId: 60,
+        userId: 9,
+        userName: 'Le Van C',
+        weekStartDate: '2026-09-07',
+        weekEndDate: '2026-09-13',
+        action: 'APPROVED',
+        detail: 'Duyet 2 dong',
+        performedAt: '2026-09-13T12:00:00',
+      },
+    ]);
+
+    render(<TimesheetRejectPage currentUserRoles={['VT-02']} />);
+
+    expect(await screen.findByText(/Chưa từ chối bảng nào/i)).toBeInTheDocument();
+    expect(screen.queryByTestId('rejected-row-60')).not.toBeInTheDocument();
+  });
+
+  it('từ chối thành công thì nạp lại lịch sử từ máy chủ (không phụ thuộc bộ nhớ tạm)', async () => {
+    vi.mocked(timesheetsApi.getPendingTimesheets).mockResolvedValue([PENDING_1]);
+    vi.mocked(timesheetsApi.rejectTimesheet).mockResolvedValue({
+      timesheet: {
+        id: 50,
+        userId: 7,
+        weekStartDate: '2026-09-07',
+        weekEndDate: '2026-09-13',
+        status: 'REJECTED',
+        totalHours: 10,
+        submittedBy: 'nv01',
+        submittedAt: '2026-09-13T10:00:00',
+      },
+      rejectedEntries: 1,
+    });
+
+    render(<TimesheetRejectPage currentUserRoles={['VT-02']} />);
+    await screen.findByTestId('pending-row-50');
+    await waitFor(() => expect(timesheetsApi.getMyApprovalHistory).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByTestId('btn-reject-50'));
+    fireEvent.change(screen.getByTestId('reject-reason-input'), { target: { value: 'Sai du an' } });
+    fireEvent.click(screen.getByTestId('btn-confirm-reject'));
+
+    await waitFor(() => expect(timesheetsApi.getMyApprovalHistory).toHaveBeenCalledTimes(2));
   });
 });

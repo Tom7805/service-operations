@@ -1,6 +1,7 @@
 package com.serviceops.modules.timesheet;
 
 import com.serviceops.common.audit.AuditTargetType;
+import com.serviceops.common.audit.repository.AuditLogRepository;
 import com.serviceops.common.audit.service.AuditLogService;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
@@ -75,6 +76,8 @@ class TimesheetApprovalServiceTest {
 	@Mock
 	private AuditLogService auditLogService;
 	@Mock
+	private AuditLogRepository auditLogRepository;
+	@Mock
 	private NotificationService notificationService;
 	@Mock
 	private UserRepository userRepository;
@@ -86,8 +89,8 @@ class TimesheetApprovalServiceTest {
 	void setUp() {
 		Clock clock = Clock.fixed(Instant.parse("2026-09-14T10:00:00Z"), ZoneId.of("UTC"));
 		service = new TimesheetApprovalServiceImpl(timeEntryRepository, timesheetRepository, taskRepository,
-				projectRepository, currentUserScopeProvider, auditLogService, new TimesheetMapper(),
-				notificationService, userRepository, clock);
+				projectRepository, currentUserScopeProvider, auditLogService, auditLogRepository,
+				new TimesheetMapper(), notificationService, userRepository, clock);
 
 		timesheet = new Timesheet();
 		timesheet.setId(50L);
@@ -396,5 +399,68 @@ class TimesheetApprovalServiceTest {
 
 		verify(auditLogService).record(eq("Tu choi bang cham cong"), eq(AuditTargetType.GENERAL), eq(50L),
 				eq("Bang cham cong tuan"), contains("ly do: Thieu mo ta chi tiet"));
+	}
+
+	// ==================== Lich su duyet/tu choi (NCL-06-CN-003/CN-004) ====================
+
+	@Test
+	void findMyApprovalHistoryReturnsRecentActionsInLogOrder() {
+		when(currentUserScopeProvider.currentUserId()).thenReturn(PM_ONE);
+		com.serviceops.common.audit.entity.AuditLog approveLog = auditLog(1L, 50L, "Duyet bang cham cong",
+				"Tuan 2026-09-07 - 2026-09-13: duyet 1 dong (5 gio)",
+				java.time.LocalDateTime.of(2026, 9, 14, 9, 0));
+		com.serviceops.common.audit.entity.AuditLog rejectLog = auditLog(2L, 51L, "Tu choi bang cham cong",
+				"Tuan 2026-09-07 - 2026-09-13: tu choi 1 dong (3 gio) — ly do: Sai du an",
+				java.time.LocalDateTime.of(2026, 9, 14, 8, 0));
+		when(auditLogRepository.findByActorUserIdAndActionInOrderByPerformedAtDesc(eq(PM_ONE),
+				eq(List.of("Duyet bang cham cong", "Tu choi bang cham cong")), any()))
+				.thenReturn(List.of(approveLog, rejectLog));
+
+		Timesheet rejectedTimesheet = new Timesheet();
+		rejectedTimesheet.setId(51L);
+		rejectedTimesheet.setUserId(MEMBER);
+		rejectedTimesheet.setWeekStartDate(WEEK_FROM);
+		rejectedTimesheet.setWeekEndDate(WEEK_TO);
+		when(timesheetRepository.findAllById(List.of(50L, 51L))).thenReturn(List.of(timesheet, rejectedTimesheet));
+		User member = new User();
+		member.setId(MEMBER);
+		member.setFullName("Nguyen Van A");
+		when(userRepository.findAllById(List.of(MEMBER))).thenReturn(List.of(member));
+
+		List<com.serviceops.modules.timesheet.dto.response.TimesheetApprovalHistoryRes> history =
+				service.findMyApprovalHistory(20);
+
+		assertEquals(2, history.size());
+		assertEquals("APPROVED", history.get(0).action());
+		assertEquals(50L, history.get(0).timesheetId());
+		assertEquals("REJECTED", history.get(1).action());
+		assertEquals(51L, history.get(1).timesheetId());
+		assertEquals("Nguyen Van A", history.get(1).userName());
+	}
+
+	@Test
+	void findMyApprovalHistorySkipsLogsWhoseTimesheetWasDeleted() {
+		when(currentUserScopeProvider.currentUserId()).thenReturn(PM_ONE);
+		com.serviceops.common.audit.entity.AuditLog orphanLog = auditLog(3L, 999L, "Duyet bang cham cong",
+				"da bi xoa", java.time.LocalDateTime.of(2026, 9, 14, 9, 0));
+		when(auditLogRepository.findByActorUserIdAndActionInOrderByPerformedAtDesc(eq(PM_ONE), anyList(), any()))
+				.thenReturn(List.of(orphanLog));
+		when(timesheetRepository.findAllById(List.of(999L))).thenReturn(List.of());
+
+		List<com.serviceops.modules.timesheet.dto.response.TimesheetApprovalHistoryRes> history =
+				service.findMyApprovalHistory(20);
+
+		assertTrue(history.isEmpty());
+	}
+
+	private com.serviceops.common.audit.entity.AuditLog auditLog(Long id, Long targetId, String action,
+			String detail, java.time.LocalDateTime performedAt) {
+		com.serviceops.common.audit.entity.AuditLog log = new com.serviceops.common.audit.entity.AuditLog();
+		log.setId(id);
+		log.setTargetId(targetId);
+		log.setAction(action);
+		log.setDetail(detail);
+		log.setPerformedAt(performedAt);
+		return log;
 	}
 }
