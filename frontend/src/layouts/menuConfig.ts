@@ -34,6 +34,7 @@ export type Tab =
   | 'UNSUBMITTED_TIMESHEETS'
   | 'EXPENSE_APPROVAL'
   | 'OVERHEAD_ALLOCATION'
+  | 'RECEIVABLE_AGING'
   | 'MARGIN_BY_CUSTOMER'
   | 'MARGIN_BY_EMPLOYEE'
   | 'PROJECT_LABOR_COST'
@@ -130,6 +131,11 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
     tab: 'OVERHEAD_ALLOCATION', icon: ICONS.chart, label: 'Phân bổ chi phí chung', requires: ['VT-05'],
     // NCL-08-CN-005: Kế toán chia tổng chi phí chung phát sinh trong kỳ (tháng) cho các
     // dự án theo tỷ trọng giờ công đã duyệt trong kỳ đó.
+  },
+  {
+    tab: 'RECEIVABLE_AGING', icon: ICONS.alertTriangle, label: 'Báo cáo tuổi nợ', requires: ['VT-05'],
+    // NCL-10-CN-004: Kế toán xem hóa đơn quá hạn thanh toán (ISSUED/PARTIALLY_PAID, dueDate
+    // đã qua và còn phải thu > 0), gộp theo 4 nhóm số ngày quá hạn để nhắc khách hàng kịp thời.
   },
   {
     tab: 'MARGIN_BY_CUSTOMER', icon: ICONS.building, label: 'Biên LN theo khách hàng', requires: ['VT-01'],
