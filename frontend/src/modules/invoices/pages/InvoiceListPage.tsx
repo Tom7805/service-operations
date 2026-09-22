@@ -122,16 +122,6 @@ export default function InvoiceListPage({
     });
   }, [invoices, searchTerm, statusFilter]);
 
-  const stats = useMemo(
-    () => ({
-      total: invoices.length,
-      unpaid: invoices.filter((i) => i.status === 'ISSUED' || i.status === 'PARTIALLY_PAID').length,
-      paid: invoices.filter((i) => i.status === 'PAID').length,
-      remainingTotal: invoices.reduce((sum, i) => sum + (i.remainingAmount ?? 0), 0),
-    }),
-    [invoices]
-  );
-
   if (!isAllowed) {
     return (
       <div className="access-denied-container" data-testid="invoice-access-denied">
@@ -162,37 +152,6 @@ export default function InvoiceListPage({
       <p className="page-subtitle" style={{ marginBottom: '16px' }}>
         Toàn bộ hóa đơn đã lập từ mốc thanh toán hợp đồng, đề xuất hóa đơn hoặc lịch định kỳ.
       </p>
-
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--purple">{ICONS.receipt}</div>
-          <div>
-            <span className="stat-card__label">Tổng hóa đơn</span>
-            <div className="stat-card__value">{stats.total}</div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--amber">{ICONS.clock}</div>
-          <div>
-            <span className="stat-card__label">Chưa thu đủ</span>
-            <div className="stat-card__value">{stats.unpaid}</div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--green">{ICONS.checkCircle}</div>
-          <div>
-            <span className="stat-card__label">Đã thanh toán</span>
-            <div className="stat-card__value">{stats.paid}</div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--blue">{ICONS.money}</div>
-          <div>
-            <span className="stat-card__label">Tổng còn phải thu</span>
-            <div className="stat-card__value">{formatAmount(stats.remainingTotal)}</div>
-          </div>
-        </div>
-      </div>
 
       <div className="user-table-card">
         <div className="user-table-toolbar">

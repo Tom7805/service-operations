@@ -104,23 +104,6 @@ export default function ReceivableAgingPage({ currentUserRoles = [], currentUser
         </div>
       ) : aging ? (
         <>
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-card__icon stat-card__icon--purple">{ICONS.receipt}</div>
-              <div>
-                <span className="stat-card__label">Tổng hóa đơn quá hạn</span>
-                <div className="stat-card__value">{aging.totalInvoiceCount}</div>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-card__icon stat-card__icon--red">{ICONS.money}</div>
-              <div>
-                <span className="stat-card__label">Tổng công nợ quá hạn</span>
-                <div className="stat-card__value">{formatAmount(aging.totalRemainingAmount)}</div>
-              </div>
-            </div>
-          </div>
-
           {aging.buckets.map((bucket) => (
             <div key={bucket.bucket} className="user-table-card" style={{ marginBottom: '16px' }}>
               <div className="page-header" style={{ padding: '16px 16px 0' }}>
