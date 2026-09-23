@@ -1162,6 +1162,14 @@ body { background: var(--canvas); }
 .confirm-note-box__icon { flex-shrink: 0; display: flex; margin-top: 1px; }
 .confirm-note-box__icon svg { width: 14px; height: 14px; }
 
+/* Confirmation Summary List — số liệu tóm tắt trong modal xác nhận (VD số dòng/tổng giờ
+   trước khi nộp bảng chấm công), thay cho việc nhồi số liệu vào một câu văn dài. */
+.confirm-summary-list { background: var(--surface-alt); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 4px 14px; }
+.confirm-summary-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; font-size: 13.5px; }
+.confirm-summary-row + .confirm-summary-row { border-top: 1px solid var(--line); }
+.confirm-summary-row__label { color: var(--ink-muted); }
+.confirm-summary-row__value { font-weight: 700; color: var(--ink-strong); font-family: var(--font-mono); }
+
 /* User Detail Page Styling */
 .user-detail-page { max-width: 900px; margin: 0 auto; padding: 28px 24px; }
 .detail-card { background: #ffffff; border: 1px solid #EAEAEA; border-radius: var(--radius-lg); padding: 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
@@ -1533,6 +1541,10 @@ body { background: var(--canvas); }
 }
 .char-counter--overflow {
   color: #9F2F2D !important;
+  font-weight: 700;
+}
+.char-counter--complete {
+  color: var(--pale-green-fg) !important;
   font-weight: 700;
 }
 

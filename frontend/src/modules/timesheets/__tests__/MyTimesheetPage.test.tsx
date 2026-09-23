@@ -218,7 +218,6 @@ describe('MyTimesheetPage (NCL-06-CN-001 — Giờ công của tôi)', () => {
 describe('Nộp bảng chấm công tuần (NCL-06-CN-002)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
   });
 
   it('hiện nút "Nộp bảng chấm công" khi tuần có dòng DRAFT', async () => {
@@ -257,20 +256,33 @@ describe('Nộp bảng chấm công tuần (NCL-06-CN-002)', () => {
     render(<MyTimesheetPage currentUserRoles={['VT-03']} />);
     fireEvent.click(await screen.findByTestId('btn-submit-week'));
 
+    // Bấm nút nộp mở hộp thoại xác nhận tuỳ biến (không còn window.confirm mặc định của trình
+    // duyệt) — tóm tắt tuần, số dòng và tổng giờ trước khi gọi API thật.
+    const modal = await screen.findByTestId('submit-week-confirm-modal');
+    expect(modal).toHaveTextContent('1');
+    expect(timesheetsApi.submitWeek).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId('btn-confirm-submit-week'));
+
     await waitFor(() => expect(timesheetsApi.submitWeek).toHaveBeenCalledWith(CURRENT_WEEK_FROM));
     expect(await screen.findByTestId('submit-week-toast')).toHaveTextContent('thành công');
     // Nộp xong phải nạp lại dữ liệu tuần để lưới cập nhật trạng thái mới.
     expect(timesheetsApi.getMyWeekTimeEntries).toHaveBeenCalledTimes(2);
+    // Và phải tự đóng hộp thoại xác nhận sau khi nộp thành công.
+    expect(screen.queryByTestId('submit-week-confirm-modal')).not.toBeInTheDocument();
   });
 
   it('huỷ hộp thoại xác nhận thì không gọi submitWeek', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
     vi.mocked(timesheetsApi.getMyRunningTasks).mockResolvedValue([myTask]);
     vi.mocked(timesheetsApi.getMyWeekTimeEntries).mockResolvedValue([summaryTask20]);
 
     render(<MyTimesheetPage currentUserRoles={['VT-03']} />);
     fireEvent.click(await screen.findByTestId('btn-submit-week'));
+    await screen.findByTestId('submit-week-confirm-modal');
 
+    fireEvent.click(screen.getByTestId('btn-cancel-submit-week'));
+
+    expect(screen.queryByTestId('submit-week-confirm-modal')).not.toBeInTheDocument();
     expect(timesheetsApi.submitWeek).not.toHaveBeenCalled();
   });
 
@@ -283,8 +295,11 @@ describe('Nộp bảng chấm công tuần (NCL-06-CN-002)', () => {
 
     render(<MyTimesheetPage currentUserRoles={['VT-03']} />);
     fireEvent.click(await screen.findByTestId('btn-submit-week'));
+    fireEvent.click(await screen.findByTestId('btn-confirm-submit-week'));
 
     expect(await screen.findByTestId('submit-week-toast')).toHaveTextContent('Vuot gioi han 12 gio/ngay');
+    // Nộp lỗi thì giữ nguyên hộp thoại để người dùng thử lại ngay, không phải mở lại từ đầu.
+    expect(screen.getByTestId('submit-week-confirm-modal')).toBeInTheDocument();
   });
 
   it('hiện banner "đang chờ duyệt" khi mọi dòng trong tuần đã SUBMITTED (không còn DRAFT)', async () => {
