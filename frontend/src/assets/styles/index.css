@@ -1535,6 +1535,10 @@ body { background: var(--canvas); }
   color: #9F2F2D !important;
   font-weight: 700;
 }
+.char-counter--complete {
+  color: var(--pale-green-fg) !important;
+  font-weight: 700;
+}
 
 .form-label-row {
   display: flex;
