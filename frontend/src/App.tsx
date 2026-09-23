@@ -31,7 +31,6 @@ import TimesheetPeriodPage from './modules/timesheets/pages/TimesheetPeriodPage'
 import UnsubmittedTimesheetsPage from './modules/timesheets/pages/UnsubmittedTimesheetsPage';
 import ExpenseApprovalPage from './modules/expenses/pages/ExpenseApprovalPage';
 import OverheadAllocationPage from './modules/expenses/pages/OverheadAllocationPage';
-import InvoiceProposalPage from './modules/invoices/pages/InvoiceProposalPage';
 import MarginByCustomerPage from './modules/profitability/pages/MarginByCustomerPage';
 import MarginByEmployeePage from './modules/profitability/pages/MarginByEmployeePage';
 import ProjectLaborCostPage from './modules/profitability/pages/ProjectLaborCostPage';
@@ -500,8 +499,6 @@ export default function App() {
             <ExpenseApprovalPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'OVERHEAD_ALLOCATION' ? (
             <OverheadAllocationPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
-          ) : activeTab === 'INVOICE_PROPOSAL' ? (
-            <InvoiceProposalPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'MARGIN_BY_CUSTOMER' ? (
             <MarginByCustomerPage currentUserRoles={currentRoles} />
           ) : activeTab === 'MARGIN_BY_EMPLOYEE' ? (
