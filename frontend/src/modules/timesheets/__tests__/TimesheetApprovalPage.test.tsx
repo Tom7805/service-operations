@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import TimesheetApprovalPage from '../pages/TimesheetApprovalPage';
 import * as timesheetsApi from '../api/timesheetsApi';
-import type { PendingTimesheetRes } from '../types/timesheetTypes';
+import type { PendingTimesheetRes, TimesheetApprovalHistoryRes } from '../types/timesheetTypes';
 
 vi.mock('../api/timesheetsApi', () => {
   class MockTimesheetsApiError extends Error {
@@ -19,6 +19,7 @@ vi.mock('../api/timesheetsApi', () => {
 
   return {
     getPendingTimesheets: vi.fn(),
+    getMyApprovalHistory: vi.fn(),
     approveTimesheet: vi.fn(),
     rejectTimesheet: vi.fn(),
     TimesheetsApiError: MockTimesheetsApiError,
@@ -53,6 +54,8 @@ describe('TimesheetApprovalPage (NCL-06-CN-003 — Duyệt bảng chấm công)'
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(window, 'confirm').mockReturnValue(true);
+    // Mặc định không có lịch sử — từng test chỉ override khi cần kiểm tra nội dung lịch sử.
+    vi.mocked(timesheetsApi.getMyApprovalHistory).mockResolvedValue([]);
   });
 
   it('từ chối truy cập cho vai trò khác VT-02', () => {
@@ -113,6 +116,32 @@ describe('TimesheetApprovalPage (NCL-06-CN-003 — Duyệt bảng chấm công)'
     await waitFor(() => expect(screen.queryByTestId('pending-row-50')).not.toBeInTheDocument());
     expect(screen.getByTestId('pending-row-51')).toBeInTheDocument();
     expect(screen.getByText(/Đã duyệt bảng chấm công của Nguyen Van A thành công/i)).toBeInTheDocument();
+    // Sau khi duyệt xong phải tải lại lịch sử từ máy chủ (không tự dựng dữ liệu ở client).
+    await waitFor(() => expect(timesheetsApi.getMyApprovalHistory).toHaveBeenCalledTimes(2));
+  });
+
+  it('hiển thị lịch sử duyệt/từ chối lấy từ máy chủ để tra lại sau khi bảng đã rời hàng chờ', async () => {
+    vi.mocked(timesheetsApi.getPendingTimesheets).mockResolvedValue([]);
+    const historyRow: TimesheetApprovalHistoryRes = {
+      auditLogId: 1,
+      timesheetId: 50,
+      userId: 7,
+      userName: 'Nguyen Van A',
+      weekStartDate: '2026-09-07',
+      weekEndDate: '2026-09-13',
+      action: 'APPROVED',
+      detail: 'Khong co canh bao vuot ngan sach.',
+      performedAt: '2026-09-14T09:00:00',
+    };
+    vi.mocked(timesheetsApi.getMyApprovalHistory).mockResolvedValue([historyRow]);
+
+    render(<TimesheetApprovalPage currentUserRoles={['VT-02']} />);
+    await waitFor(() => expect(timesheetsApi.getMyApprovalHistory).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole('button', { name: /Giờ công đã duyệt/i }));
+
+    expect(await screen.findByTestId('history-row-1')).toHaveTextContent('Nguyen Van A');
+    expect(screen.getByTestId('history-row-1')).toHaveTextContent('Đã duyệt');
   });
 
   it('duyệt thành công kèm cảnh báo vượt ngân sách vẫn hiện toast với nội dung cảnh báo', async () => {
@@ -137,7 +166,7 @@ describe('TimesheetApprovalPage (NCL-06-CN-003 — Duyệt bảng chấm công)'
     fireEvent.click(screen.getByTestId('btn-approve-50'));
     fireEvent.click(screen.getByTestId('btn-confirm-approve'));
 
-    expect(await screen.findByText(/da vuot nguong 80% ngan sach/i)).toBeInTheDocument();
+    expect(await screen.findAllByText(/da vuot nguong 80% ngan sach/i)).not.toHaveLength(0);
   });
 
   it('từ chối một bảng thành công thì gỡ khỏi danh sách và hiện toast', async () => {

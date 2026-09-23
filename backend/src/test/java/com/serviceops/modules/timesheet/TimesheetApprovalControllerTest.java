@@ -6,6 +6,7 @@ import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.config.SecurityConfig;
 import com.serviceops.modules.timesheet.controller.TimesheetApprovalController;
 import com.serviceops.modules.timesheet.dto.response.PendingTimesheetRes;
+import com.serviceops.modules.timesheet.dto.response.TimesheetApprovalHistoryRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetApprovalRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetRejectRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetRes;
@@ -90,6 +91,32 @@ class TimesheetApprovalControllerTest {
 				.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
 
 		verify(accessDeniedAuditRecorder).record(eq("GET"), contains("/timesheets/pending"));
+	}
+
+	// ==================== Lich su duyet/tu choi (NCL-06-CN-003/CN-004) ====================
+
+	@Test
+	@WithMockUser(authorities = "ROLE_VT-02")
+	void allowsProjectManagerToViewApprovalHistory() throws Exception {
+		when(timesheetApprovalService.findMyApprovalHistory(20)).thenReturn(List.of(
+				new TimesheetApprovalHistoryRes(1L, 50L, 7L, "Nguyen Van A", LocalDate.of(2026, 9, 7),
+						LocalDate.of(2026, 9, 13), "APPROVED", "Tuan 2026-09-07 - 2026-09-13: duyet 1 dong (5 gio)",
+						LocalDateTime.of(2026, 9, 14, 9, 0))));
+
+		mockMvc.perform(get("/timesheets/approval-history"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data[0].timesheetId").value(50))
+				.andExpect(jsonPath("$.data[0].action").value("APPROVED"));
+	}
+
+	@Test
+	@WithMockUser(authorities = "ROLE_VT-03")
+	void deniesApprovalHistoryForOtherRolesAndLogsDeniedAccess() throws Exception {
+		mockMvc.perform(get("/timesheets/approval-history"))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+
+		verify(accessDeniedAuditRecorder).record(eq("GET"), contains("/timesheets/approval-history"));
 	}
 
 	@Test

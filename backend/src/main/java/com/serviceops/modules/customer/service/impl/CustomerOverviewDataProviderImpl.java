@@ -65,18 +65,18 @@ public class CustomerOverviewDataProviderImpl implements CustomerOverviewDataPro
 	/** Co hoi khong co ma rieng (chi hop dong moi co contractCode) nen code = null. */
 	private CustomerOverviewItemRes toItem(Opportunity opportunity) {
 		return new CustomerOverviewItemRes(opportunity.getId(), null, opportunity.getName(),
-				opportunity.getStage().name(), opportunity.getExpectedValue(), opportunity.getExpectedCloseDate(), null);
+				opportunity.getStage().name(), opportunity.getExpectedValue(), opportunity.getExpectedCloseDate(), null, null);
 	}
 
 	private CustomerOverviewItemRes toItem(Contract contract) {
 		return new CustomerOverviewItemRes(contract.getId(), contract.getContractCode(), contract.getName(),
 				contract.getStatus().name(), contract.getTotalValue(), contract.getStartDate(),
-				contract.getContractType() == null ? null : contract.getContractType().name());
+				contract.getContractType() == null ? null : contract.getContractType().name(), contract.getEndDate());
 	}
 
 	/** Du an khong co "gia tri hop dong" rieng nen dung han muc ke thua (limitValue) cho cot Gia tri. */
 	private CustomerOverviewItemRes toItem(Project project) {
 		return new CustomerOverviewItemRes(project.getId(), project.getProjectCode(), project.getName(),
-				project.getStatus().name(), project.getLimitValue(), project.getStartDate(), null);
+				project.getStatus().name(), project.getLimitValue(), project.getStartDate(), null, null);
 	}
 }

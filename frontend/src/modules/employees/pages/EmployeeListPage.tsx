@@ -121,7 +121,7 @@ export default function EmployeeListPage({
           <h1 className="page-title">Hồ sơ nhân sự & giờ làm việc</h1>
           <p className="page-subtitle">Quản lý hồ sơ, hợp đồng lao động và giờ làm chuẩn.</p>
         </div>
-        <div className="page-header-actions">
+        <div className="page-header__actions">
           <button type="button" className="btn-primary btn-lg" onClick={handleOpenCreateModal}>
             <span className="btn-icon">+</span> Thêm hồ sơ nhân sự
           </button>

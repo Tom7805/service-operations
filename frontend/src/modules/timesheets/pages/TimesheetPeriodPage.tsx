@@ -188,7 +188,7 @@ export default function TimesheetPeriodPage({
             giờ công có ngày làm việc rơi vào kỳ đó đều bị chặn.
           </p>
         </div>
-        <div className="page-header-actions">
+        <div className="page-header__actions">
           <button type="button" className="btn-icon-refresh" onClick={fetchPeriods} title="Tải lại" aria-label="Tải lại" disabled={loading}>
             {ICONS.refresh}
           </button>

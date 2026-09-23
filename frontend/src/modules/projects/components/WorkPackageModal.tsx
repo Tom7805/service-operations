@@ -143,7 +143,7 @@ export default function WorkPackageModal({
                 autoFocus
               />
               {errors.name && (
-                <p className="field-error" data-testid="error-wp-name" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                <p className="field-error" data-testid="error-wp-name" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                   {errors.name}
                 </p>
               )}
@@ -178,7 +178,7 @@ export default function WorkPackageModal({
                 disabled={submitting}
                 style={{ maxWidth: '140px' }}
               />
-              <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px', color: '#64748B' }}>
+              <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px', color: 'var(--ink-muted)' }}>
                 Số nhỏ hơn sẽ hiển thị trước trên cây cơ cấu công việc.
               </p>
             </div>

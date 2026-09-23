@@ -144,25 +144,29 @@ SET d.manager_id = u.id;
 --     KHÔNG tạo cho `admin` (tài khoản hệ thống) và `khachhang01` (bên ngoài).
 --     `dev02` làm bán thời gian: 20h/tuần — phục vụ NCL-01-CN-007-TC-02.
 --     department_id lấy đúng theo phòng của tài khoản.
+--     `level` (cấp bậc, V73__add_level_to_employees.sql) khớp đúng các giá trị
+--     đã dùng ở R__seed_bill_rates.sql (Quản lý / Cao cấp / Trung cấp) để tính
+--     năng "tự điền cấp bậc theo hồ sơ nhân sự" (NCL-07-CN-005) có dữ liệu chạy
+--     thử ngay, không rơi vào NULL.
 -- ----------------------------------------------------------------------------
-INSERT INTO employees (user_id, department_id, professional_role, standard_hours_per_week, hire_date)
-SELECT u.id, u.department_id, s.professional_role, s.hours, s.hire_date
+INSERT INTO employees (user_id, department_id, professional_role, standard_hours_per_week, hire_date, level)
+SELECT u.id, u.department_id, s.professional_role, s.hours, s.hire_date, s.level
 FROM (
-              SELECT 'giamdoc'     AS username, 'Tổng giám đốc'                        AS professional_role, 40.00 AS hours, '2023-01-02' AS hire_date
-    UNION ALL SELECT 'pm.lead',      'Trưởng phòng Quản lý dự án',            40.00, '2023-02-01'
-    UNION ALL SELECT 'tcn.director',  'Giám đốc Trung tâm Công nghệ & Giải pháp', 40.00, '2023-02-15'
-    UNION ALL SELECT 'ketoan.lead',   'Kế toán trưởng',                       40.00, '2023-03-01'
-    UNION ALL SELECT 'sale.lead',     'Trưởng phòng Kinh doanh',              40.00, '2023-03-15'
-    UNION ALL SELECT 'nhansu',        'Trưởng phòng Nhân sự',                 40.00, '2023-04-03'
-    UNION ALL SELECT 'dev.lead',      'Trưởng nhóm Phát triển phần mềm',      40.00, '2023-06-01'
-    UNION ALL SELECT 'consult.lead',  'Trưởng nhóm Tư vấn giải pháp',         40.00, '2023-06-15'
-    UNION ALL SELECT 'qa.lead',       'Trưởng nhóm Kiểm thử & QA',            40.00, '2023-07-03'
-    UNION ALL SELECT 'ketoan01',      'Kế toán viên',                        40.00, '2024-01-08'
-    UNION ALL SELECT 'hr01',          'Chuyên viên nhân sự',                 40.00, '2024-02-05'
-    UNION ALL SELECT 'pm01',          'Quản lý dự án',                       40.00, '2024-03-04'
-    UNION ALL SELECT 'sale01',        'Nhân viên kinh doanh',                40.00, '2024-09-02'
-    UNION ALL SELECT 'dev01',         'Kỹ sư phần mềm',                       40.00, '2024-10-01'
-    UNION ALL SELECT 'dev02',         'Kỹ sư phần mềm (bán thời gian)',       20.00, '2025-02-03'
+              SELECT 'giamdoc'     AS username, 'Tổng giám đốc'                        AS professional_role, 40.00 AS hours, '2023-01-02' AS hire_date, 'Quản lý'   AS level
+    UNION ALL SELECT 'pm.lead',      'Trưởng phòng Quản lý dự án',            40.00, '2023-02-01', 'Quản lý'
+    UNION ALL SELECT 'tcn.director',  'Giám đốc Trung tâm Công nghệ & Giải pháp', 40.00, '2023-02-15', 'Quản lý'
+    UNION ALL SELECT 'ketoan.lead',   'Kế toán trưởng',                       40.00, '2023-03-01', 'Quản lý'
+    UNION ALL SELECT 'sale.lead',     'Trưởng phòng Kinh doanh',              40.00, '2023-03-15', 'Quản lý'
+    UNION ALL SELECT 'nhansu',        'Trưởng phòng Nhân sự',                 40.00, '2023-04-03', 'Quản lý'
+    UNION ALL SELECT 'dev.lead',      'Trưởng nhóm Phát triển phần mềm',      40.00, '2023-06-01', 'Cao cấp'
+    UNION ALL SELECT 'consult.lead',  'Trưởng nhóm Tư vấn giải pháp',         40.00, '2023-06-15', 'Cao cấp'
+    UNION ALL SELECT 'qa.lead',       'Trưởng nhóm Kiểm thử & QA',            40.00, '2023-07-03', 'Cao cấp'
+    UNION ALL SELECT 'ketoan01',      'Kế toán viên',                        40.00, '2024-01-08', 'Trung cấp'
+    UNION ALL SELECT 'hr01',          'Chuyên viên nhân sự',                 40.00, '2024-02-05', 'Trung cấp'
+    UNION ALL SELECT 'pm01',          'Quản lý dự án',                       40.00, '2024-03-04', 'Quản lý'
+    UNION ALL SELECT 'sale01',        'Nhân viên kinh doanh',                40.00, '2024-09-02', 'Trung cấp'
+    UNION ALL SELECT 'dev01',         'Kỹ sư phần mềm',                       40.00, '2024-10-01', 'Trung cấp'
+    UNION ALL SELECT 'dev02',         'Kỹ sư phần mềm (bán thời gian)',       20.00, '2025-02-03', 'Trung cấp'
 ) s
 JOIN users u ON u.username = s.username
 WHERE NOT EXISTS (SELECT 1 FROM employees e WHERE e.user_id = u.id);

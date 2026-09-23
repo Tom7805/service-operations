@@ -1,6 +1,8 @@
 package com.serviceops.modules.timesheet.service.impl;
 
 import com.serviceops.common.audit.AuditTargetType;
+import com.serviceops.common.audit.entity.AuditLog;
+import com.serviceops.common.audit.repository.AuditLogRepository;
 import com.serviceops.common.audit.service.AuditLogService;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
@@ -11,6 +13,7 @@ import com.serviceops.modules.project.repository.TaskRepository;
 import com.serviceops.modules.timesheet.dto.request.TimesheetApproveReq;
 import com.serviceops.modules.timesheet.dto.request.TimesheetRejectReq;
 import com.serviceops.modules.timesheet.dto.response.PendingTimesheetRes;
+import com.serviceops.modules.timesheet.dto.response.TimesheetApprovalHistoryRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetApprovalRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetRejectRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetRes;
@@ -24,9 +27,11 @@ import com.serviceops.modules.timesheet.repository.TimesheetRepository;
 import com.serviceops.modules.timesheet.service.TimesheetApprovalService;
 import com.serviceops.modules.notification.enums.NotificationType;
 import com.serviceops.modules.notification.service.NotificationService;
+import com.serviceops.modules.identity.user.entity.User;
 import com.serviceops.modules.identity.user.repository.UserRepository;
 import com.serviceops.security.scope.CurrentUserScopeProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -42,7 +47,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -52,6 +56,8 @@ import java.util.stream.Collectors;
 public class TimesheetApprovalServiceImpl implements TimesheetApprovalService {
 
 	private static final String TIMESHEET_LABEL = "Bang cham cong tuan";
+	private static final String ACTION_APPROVE = "Duyet bang cham cong";
+	private static final String ACTION_REJECT = "Tu choi bang cham cong";
 
 	private final TimeEntryRepository timeEntryRepository;
 	private final TimesheetRepository timesheetRepository;
@@ -59,6 +65,7 @@ public class TimesheetApprovalServiceImpl implements TimesheetApprovalService {
 	private final ProjectRepository projectRepository;
 	private final CurrentUserScopeProvider currentUserScopeProvider;
 	private final AuditLogService auditLogService;
+	private final AuditLogRepository auditLogRepository;
 	private final TimesheetMapper timesheetMapper;
 	private final NotificationService notificationService;
 	private final UserRepository userRepository;
@@ -128,7 +135,7 @@ public class TimesheetApprovalServiceImpl implements TimesheetApprovalService {
 
 		// TC-04: ghi nhat ky nguoi duyet, noi dung, thoi diem (actor tu SecurityContextHolder).
 		String note = request == null ? null : request.note();
-		auditLogService.record("Duyet bang cham cong", AuditTargetType.GENERAL, timesheet.getId(),
+		auditLogService.record(ACTION_APPROVE, AuditTargetType.GENERAL, timesheet.getId(),
 				TIMESHEET_LABEL, "Tuan " + timesheet.getWeekStartDate() + " - " + timesheet.getWeekEndDate()
 						+ ": duyet " + targets.size() + " dong ("
 						+ sumHours(targets) + " gio)" + (anyPendingLeft ? " — con phan cho PM khac duyet" : "")
@@ -194,7 +201,7 @@ public class TimesheetApprovalServiceImpl implements TimesheetApprovalService {
 		}
 
 		// TC-04: ghi nhat ky nguoi tu choi, noi dung (kem ly do), thoi diem.
-		auditLogService.record("Tu choi bang cham cong", AuditTargetType.GENERAL, timesheet.getId(),
+		auditLogService.record(ACTION_REJECT, AuditTargetType.GENERAL, timesheet.getId(),
 				TIMESHEET_LABEL, "Tuan " + timesheet.getWeekStartDate() + " - " + timesheet.getWeekEndDate()
 						+ ": tu choi " + targets.size() + " dong (" + sumHours(targets) + " gio)"
 						+ (anyPendingLeft ? " — con phan cho PM khac xu ly" : "") + " — ly do: " + reason);
@@ -203,6 +210,50 @@ public class TimesheetApprovalServiceImpl implements TimesheetApprovalService {
 		notifyRejectedSubmitter(timesheet, targets, reason);
 
 		return timesheetMapper.toRejectResponse(timesheet, targets.size());
+	}
+
+	/**
+	 * NCL-06-CN-003/CN-004: lich su cac lan duyet/tu choi GAN NHAT do chinh PM hien tai thuc hien.
+	 *
+	 * <p>Man hinh "Duyet bang cham cong" chi hien hang cho duyet — sau khi xu ly xong, bang bien
+	 * khoi hang cho vi da co quyet dinh chu khong phai mat du lieu. Thay vi them mot bang du lieu
+	 * rieng chi de luu lai dieu nay, ham nay doc lai chinh {@code audit_logs} da duoc ghi san
+	 * trong cung transaction voi {@link #approve} / {@link #reject} — moi lan duyet/tu choi la
+	 * mot dong lich su rieng (mot bang co the xuat hien nhieu lan neu duoc xu ly nhieu dot boi
+	 * cac PM khac nhau phu trach cac du an khac nhau trong cung bang).</p>
+	 */
+	@Override
+	@Transactional(readOnly = true)
+	public List<TimesheetApprovalHistoryRes> findMyApprovalHistory(int limit) {
+		Long pmId = requireCurrentManager();
+		int size = Math.min(Math.max(limit, 1), 100);
+		List<AuditLog> logs = auditLogRepository.findByActorUserIdAndActionInOrderByPerformedAtDesc(
+				pmId, List.of(ACTION_APPROVE, ACTION_REJECT), PageRequest.of(0, size));
+		if (logs.isEmpty()) {
+			return List.of();
+		}
+
+		List<Long> timesheetIds = logs.stream().map(AuditLog::getTargetId).distinct().toList();
+		Map<Long, Timesheet> timesheetsById = timesheetRepository.findAllById(timesheetIds).stream()
+				.collect(Collectors.toMap(Timesheet::getId, Function.identity()));
+		Map<Long, String> namesByUserId = userRepository
+				.findAllById(timesheetsById.values().stream().map(Timesheet::getUserId).distinct().toList())
+				.stream()
+				.collect(Collectors.toMap(User::getId, u -> u.getFullName() == null ? "" : u.getFullName()));
+
+		List<TimesheetApprovalHistoryRes> history = new ArrayList<>();
+		for (AuditLog log : logs) {
+			Timesheet timesheet = timesheetsById.get(log.getTargetId());
+			if (timesheet == null) {
+				// Bang cham cong da bi xoa khoi he thong — bo qua dong nhat ky mo coi nay thay vi loi.
+				continue;
+			}
+			String action = ACTION_APPROVE.equals(log.getAction()) ? "APPROVED" : "REJECTED";
+			history.add(new TimesheetApprovalHistoryRes(log.getId(), timesheet.getId(), timesheet.getUserId(),
+					namesByUserId.get(timesheet.getUserId()), timesheet.getWeekStartDate(),
+					timesheet.getWeekEndDate(), action, log.getDetail(), log.getPerformedAt()));
+		}
+		return history;
 	}
 
 	/** TC-02: bulk = tu choi cac dong thuoc du an cua PM; rieng le = theo entryIds, sai quyen tu choi. */

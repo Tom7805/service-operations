@@ -94,6 +94,28 @@ export async function createProjectFromContract(
 }
 
 /**
+ * Danh sách dự án của một hợp đồng — dùng để chọn dự án theo tên thay vì gõ tay ID
+ * (VD ở InvoiceProposalPage). Cho phép VT-01, VT-02, VT-03, VT-05.
+ * GET /contracts/{contractId}/projects
+ */
+export async function fetchProjectsByContract(contractId: number): Promise<ProjectRes[]> {
+  return requestBackend<ProjectRes[]>(`${API_BASE_URL}/contracts/${contractId}/projects`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * Toàn bộ dự án trong hệ thống — phục vụ các ô chọn dự án dạng dropdown ở màn hình
+ * Giá vốn/Biên lợi nhuận (NCL-09). Cho phép VT-01, VT-02, VT-03, VT-05.
+ * GET /projects
+ */
+export async function getAllProjects(): Promise<ProjectRes[]> {
+  return requestBackend<ProjectRes[]>(`${API_BASE_URL}/projects`, {
+    method: 'GET',
+  });
+}
+
+/**
  * Đọc thông tin chi tiết dự án.
  * Cho phép VT-01, VT-02, VT-03.
  * GET /projects/{projectId}

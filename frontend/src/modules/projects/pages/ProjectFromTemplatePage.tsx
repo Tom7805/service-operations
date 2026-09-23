@@ -90,10 +90,10 @@ export default function ProjectFromTemplatePage({
       </div>
 
       <div className="user-table-card" style={{ padding: '24px' }}>
-        <h3 style={{ margin: '0 0 8px', fontSize: '16px', color: '#1E293B' }}>
+        <h3 style={{ margin: '0 0 8px', fontSize: '16px', color: 'var(--ink-strong)' }}>
           Ngữ cảnh hợp đồng khởi tạo
         </h3>
-        <p style={{ margin: '0 0 16px', color: '#64748B', fontSize: '13.5px' }}>
+        <p style={{ margin: '0 0 16px', color: 'var(--ink-muted)', fontSize: '13.5px' }}>
           Chọn hợp đồng đang có hiệu lực (ACTIVE) để nhân bản cấu trúc công việc từ mẫu sang dự án mới.
         </p>
 

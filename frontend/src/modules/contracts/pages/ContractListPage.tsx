@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import RowActionsMenu, { type RowAction } from '../../../components/common/RowActionsMenu';
 import { roleLabels } from '../../../utils/roleLabel';
-import type { ContractRes, ContractStatus } from '../types/contractTypes';
+import { CONTRACT_TYPE_LABEL, type ContractRes, type ContractStatus } from '../types/contractTypes';
 import {
   fetchContracts,
   getContract,
@@ -20,14 +20,9 @@ interface ContractListPageProps {
   currentUserName?: string;
   /** Cho phép nạp sẵn dữ liệu trong test/SSR để bỏ qua bước gọi API. */
   initialContracts?: ContractRes[];
+  /** Mở trang chi tiết hợp đồng (gộp loại/hạn mức, mốc/đề xuất/định kỳ theo loại, hóa đơn, cảnh báo, gia hạn). */
+  onOpenDetail?: (contractId: number) => void;
 }
-
-const CONTRACT_TYPE_LABEL: Record<string, string> = {
-  TIME_AND_MATERIAL: 'Time & Material',
-  FIXED_PRICE: 'Fixed Price',
-  MAINTENANCE: 'Maintenance',
-  MILESTONE: 'Milestone',
-};
 
 const STATUS_META: Record<ContractStatus, { label: string; badge: string }> = {
   DRAFT: { label: 'Nháp', badge: 'badge--gold' },
@@ -79,6 +74,7 @@ export default function ContractListPage({
   currentUserRoles = [],
   currentUserName = 'Người dùng',
   initialContracts,
+  onOpenDetail,
 }: ContractListPageProps) {
   const isAllowed = currentUserRoles.includes('VT-05');
 
@@ -177,6 +173,13 @@ export default function ContractListPage({
   // (DESIGN.md § Components). Dãy 3-4 nút rời vừa tốn cột ngang vừa rối mắt.
   const rowActions = (c: ContractRes, busy: boolean): RowAction[] => {
     const actions: RowAction[] = [
+      {
+        key: 'view-detail',
+        label: 'Xem chi tiết & lập hóa đơn',
+        icon: ICONS.receipt,
+        onClick: () => onOpenDetail?.(c.id),
+        testId: `contract-action-detail-${c.id}`,
+      },
       {
         key: 'type-limit',
         label: 'Khai báo loại & hạn mức',
@@ -448,7 +451,19 @@ export default function ContractListPage({
                   return (
                     <tr key={c.id}>
                       <td style={{ fontFamily: 'var(--font-mono, monospace)', fontWeight: 600 }} title={`ID hợp đồng: ${c.id}`}>
-                        {c.contractCode}
+                        {onOpenDetail ? (
+                          <button
+                            type="button"
+                            className="link-button"
+                            style={{ font: 'inherit', fontWeight: 600, color: 'var(--ink-strong)', background: 'none', border: 0, padding: 0, cursor: 'pointer', textDecoration: 'underline' }}
+                            onClick={() => onOpenDetail(c.id)}
+                            data-testid={`contract-code-link-${c.id}`}
+                          >
+                            {c.contractCode}
+                          </button>
+                        ) : (
+                          c.contractCode
+                        )}
                         <div className="cell-muted" style={{ fontWeight: 400, fontSize: '11px' }}>ID: {c.id}</div>
                       </td>
                       <td>{c.name || '—'}</td>

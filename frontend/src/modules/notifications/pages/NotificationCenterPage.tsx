@@ -69,7 +69,7 @@ export default function NotificationCenterPage() {
           <h1 className="page-title">Thông báo</h1>
           <p className="page-subtitle">Toàn bộ thông báo in-app của bạn, mới nhất trước.</p>
         </div>
-        <div className="page-header-actions">
+        <div className="page-header__actions">
           <button
             type="button"
             className="btn-secondary"

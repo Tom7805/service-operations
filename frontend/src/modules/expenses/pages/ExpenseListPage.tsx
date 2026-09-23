@@ -205,7 +205,7 @@ export default function ExpenseListPage({
 
       <div className="user-table-card" style={{ padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1E293B' }}>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
             Danh sách phiếu chi phí
           </h3>
           <span className="field-hint" style={{ fontSize: '13px' }}>
@@ -221,8 +221,8 @@ export default function ExpenseListPage({
         ) : expenses.length === 0 ? (
           <div className="table-empty-state" data-testid="expense-list-empty">
             <div className="table-empty-state__icon">{ICONS.receipt}</div>
-            <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: '#1E293B' }}>Chưa có chi phí nào</h4>
-            <p style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }}>
+            <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>Chưa có chi phí nào</h4>
+            <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
               {canOpenCreateForm
                 ? 'Hãy bấm nút "+ Ghi nhận chi phí" ở trên để bắt đầu.'
                 : 'Dự án này chưa ghi nhận phiếu chi phí nào.'}

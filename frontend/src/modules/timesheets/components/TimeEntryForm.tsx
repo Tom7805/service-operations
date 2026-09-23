@@ -20,6 +20,12 @@ export interface TimeEntryFormProps {
    * đợi round-trip API mới báo lỗi.
    */
   existingEntries?: TimeEntryRes[];
+  /**
+   * Tổng giờ đã ghi theo từng ngày (yyyy-MM-dd), gộp mọi công việc trong tuần — dùng để cảnh
+   * báo trước khi chọn ngày, vì trần "không quá 12 giờ/ngày" tính trên toàn bộ công việc chứ
+   * không chỉ riêng công việc đang ghi (NCL-06-CN-001).
+   */
+  dailyHoursMap?: Record<string, number>;
   onSaved?: (entry: TimeEntryRes) => void;
   /**
    * Thứ Hai/Chủ nhật của tuần đang xem trên bảng lưới phía sau modal — dùng để chọn sẵn một
@@ -67,6 +73,7 @@ export default function TimeEntryForm({
   taskName,
   entry = null,
   existingEntries = [],
+  dailyHoursMap = {},
   onSaved,
   weekFrom,
   weekTo,
@@ -247,8 +254,31 @@ export default function TimeEntryForm({
                   ghi mới.
                 </p>
               )}
+              {!isEdit && workDate && (dailyHoursMap[workDate] ?? 0) > 0 && (
+                <p
+                  className="field-hint"
+                  data-testid="time-entry-day-hours-hint"
+                  style={{
+                    fontSize: '12px',
+                    marginTop: '4px',
+                    color: (dailyHoursMap[workDate] ?? 0) >= 12 ? 'var(--pale-red-fg)' : 'var(--ink-muted)',
+                  }}
+                >
+                  Ngày {workDate} đã ghi {dailyHoursMap[workDate]} giờ (mọi công việc) — còn tối đa{' '}
+                  {Math.max(0, 12 - (dailyHoursMap[workDate] ?? 0))} giờ để ghi thêm.
+                </p>
+              )}
+              {!isEdit && Object.keys(dailyHoursMap).length > 0 && (
+                <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px' }}>
+                  Các ngày trong tuần đã có giờ công:{' '}
+                  {Object.entries(dailyHoursMap)
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .map(([date, hrs]) => `${date} (${hrs}h)`)
+                    .join(', ')}
+                </p>
+              )}
               {errors.workDate && (
-                <p className="field-error" data-testid="error-time-entry-workdate" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                <p className="field-error" data-testid="error-time-entry-workdate" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                   {errors.workDate}
                 </p>
               )}
@@ -275,7 +305,7 @@ export default function TimeEntryForm({
                 style={{ maxWidth: '160px' }}
               />
               {errors.hours && (
-                <p className="field-error" data-testid="error-time-entry-hours" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                <p className="field-error" data-testid="error-time-entry-hours" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                   {errors.hours}
                 </p>
               )}
@@ -299,7 +329,7 @@ export default function TimeEntryForm({
                 disabled={submitting}
               />
               {errors.note && (
-                <p className="field-error" data-testid="error-time-entry-note" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                <p className="field-error" data-testid="error-time-entry-note" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                   {errors.note}
                 </p>
               )}

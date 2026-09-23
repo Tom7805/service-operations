@@ -101,6 +101,14 @@ public class ProjectServiceImpl implements ProjectService {
 				.map(this::toResponse).toList();
 	}
 
+	@Override
+	@Transactional(readOnly = true)
+	public List<ProjectRes> listAll() {
+		return projectRepository.findAll(org.springframework.data.domain.Sort.by(
+				org.springframework.data.domain.Sort.Direction.DESC, "id")).stream()
+				.map(this::toResponse).toList();
+	}
+
 	private ProjectRes toResponse(Project project) {
 		return new ProjectRes(project.getId(), project.getProjectCode(), project.getName(), project.getContractId(),
 				project.getCustomerId(), project.getProjectType(), project.getLimitValue(), project.getStartDate(),

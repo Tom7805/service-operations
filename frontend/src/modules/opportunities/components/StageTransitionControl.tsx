@@ -9,10 +9,7 @@ import {
   ACTIVE_STAGES_ORDER,
   LOSS_REASON_OPTIONS,
 } from '../types/opportunityTypes';
-import {
-  canTransitionStage,
-  getNextAllowedStages,
-} from '../validators/opportunityValidators';
+import { canTransitionStage } from '../validators/opportunityValidators';
 import {
   changeOpportunityStage,
   fetchOpportunityStageHistory,
@@ -109,8 +106,6 @@ export default function StageTransitionControl({
       setLoading(false);
     }
   };
-
-  const nextStages = getNextAllowedStages(opportunity.stage, opportunity.status);
 
   const formatDateTime = (dateStr: string) => {
     try {

@@ -10,18 +10,25 @@ import type { TimesheetSummaryRes } from '../../timesheets/types/timesheetTypes'
 import { getMyWeekTimeEntries, submitWeek, TimesheetsApiError } from '../../timesheets/api/timesheetsApi';
 import WeeklyTimesheetGrid from '../../timesheets/components/WeeklyTimesheetGrid';
 import TimeEntryPage from '../../timesheets/pages/TimeEntryPage';
+import ExpenseListPage from '../../expenses/pages/ExpenseListPage';
 import { addDays, formatIsoDate, getMondayOf } from '../../timesheets/utils/weekRange';
 import { canSubmitWeek, countDraftEntries } from '../../timesheets/validators/timesheetValidators';
 
 export interface MyWorkPageProps {
   currentUserRoles?: string[];
   currentUserName?: string;
+  currentUserId?: number;
 }
 
 interface SelectedTask {
   projectId: number;
   taskId: number;
   taskName: string;
+}
+
+interface SelectedExpenseProject {
+  projectId: number;
+  projectName: string;
 }
 
 const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
@@ -52,8 +59,13 @@ function formatDate(dateStr: string | null): string {
  * chỉ dành cho Nhân viên chuyên môn VT-03 vì backend TimeEntryController chỉ mở
  * cho vai trò này). Một điểm vào duy nhất thay vì hai màn rời rạc và trùng lặp.
  */
-export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'Người dùng' }: MyWorkPageProps) {
+export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'Người dùng', currentUserId }: MyWorkPageProps) {
   const canLogTime = currentUserRoles.includes('VT-03');
+  // NCL-08-CN-001: Nhân viên chuyên môn ghi nhận chi phí dự án — nhưng modal "Quản lý dự
+  // án" (nơi có tab Chi phí) chỉ mở được từ menu "Khách hàng", vốn không dành cho VT-03.
+  // Route riêng ngay tại đây (trang họ đang đứng) để VT-03 có lối vào, thay vì đi qua
+  // "Quản lý dự án" đủ mọi tab như PM.
+  const [selectedExpenseProject, setSelectedExpenseProject] = useState<SelectedExpenseProject | null>(null);
 
   // ----- Công việc được giao (mọi vai trò) -----
   const [tasks, setTasks] = useState<MyTaskRes[]>([]);
@@ -105,6 +117,7 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
   // ----- Giờ công tuần (chỉ VT-03) -----
   const [weekFrom, setWeekFrom] = useState<string>(() => getMondayOf());
   const weekTo = addDays(weekFrom, 6);
+  const isCurrentWeek = weekFrom === getMondayOf();
   const [summaries, setSummaries] = useState<TimesheetSummaryRes[]>([]);
   const [weekLoading, setWeekLoading] = useState(false);
   const [weekError, setWeekError] = useState<string | null>(null);
@@ -181,8 +194,18 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
     }
   };
 
-  const projectStatusByTaskId = new Map(tasks.map((t) => [t.taskId, t.projectStatus]));
   const confirmBackdrop = useBackdropClick(() => setConfirmSubmit(false), submitting);
+
+  if (selectedExpenseProject) {
+    return (
+      <ExpenseListPage
+        projectId={selectedExpenseProject.projectId}
+        currentUserRoles={currentUserRoles}
+        currentUserId={currentUserId}
+        onBack={() => setSelectedExpenseProject(null)}
+      />
+    );
+  }
 
   if (selectedTask) {
     return (
@@ -204,10 +227,14 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
     <div className="user-management-page" data-testid="my-work-page">
       <div className="page-header" style={{ marginBottom: '16px' }}>
         <div>
-          <h1 className="page-title">Công việc và giờ công</h1>
+          {/* Menu bên trái và thanh trên cùng của layout đã hiện đúng chữ "Công việc và giờ
+              công" rồi — lặp lại y hệt làm tiêu đề trang thứ hai chỉ gây rối mắt. Tiêu đề ở
+              đây nói rõ hơn NỘI DUNG cụ thể của trang (giống "Hồ sơ khách hàng" dưới menu
+              "Khách hàng"), không nhắc lại tên menu. */}
+          <h1 className="page-title">Việc được giao &amp; giờ công tuần</h1>
           <p className="page-subtitle">
-            {currentUserName} — công việc đang được giao trên tất cả dự án, đổi trạng thái ngay tại đây
-            {canLogTime ? '; bên dưới là bảng giờ công tuần để ghi và nộp.' : '.'}
+            {currentUserName} — đổi trạng thái công việc ngay tại đây
+            {canLogTime ? '; bảng giờ công tuần để ghi và nộp ở bên dưới.' : '.'}
           </p>
         </div>
         <button
@@ -236,7 +263,7 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
       )}
 
       <div className="user-table-card" style={{ padding: '20px', marginBottom: '16px' }}>
-        <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 700, color: '#1E293B' }}>
+        <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
           Công việc đang được giao
         </h3>
 
@@ -248,8 +275,8 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
         ) : tasks.length === 0 ? (
           <div className="table-empty-state" data-testid="my-tasks-empty">
             <div className="table-empty-state__icon">{ICONS.folder}</div>
-            <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: '#1E293B' }}>Chưa được giao công việc nào</h4>
-            <p style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }}>
+            <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>Chưa được giao công việc nào</h4>
+            <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
               Khi Quản lý dự án phân công cho bạn, công việc sẽ xuất hiện ở đây.
             </p>
           </div>
@@ -262,8 +289,8 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
                   <th>Công việc</th>
                   <th>Khung ngày dự kiến</th>
                   <th>Trạng thái</th>
-                  <th>Cập nhật</th>
                   {canLogTime && <th>Giờ công</th>}
+                  {canLogTime && <th>Chi phí</th>}
                 </tr>
               </thead>
               <tbody>
@@ -274,26 +301,21 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
                     <tr key={task.taskId} data-testid={`my-task-row-${task.taskId}`}>
                       <td>
                         <div style={{ fontWeight: 500 }}>{task.projectName}</div>
-                        <div style={{ fontSize: '12px', color: '#64748B' }}>{task.projectCode}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--ink-muted)' }}>{task.projectCode}</div>
                       </td>
                       <td>{task.taskName}</td>
-                      <td style={{ whiteSpace: 'nowrap', fontSize: '13px', color: '#475569' }}>
+                      <td style={{ whiteSpace: 'nowrap', fontSize: '13px', color: 'var(--ink-muted)' }}>
                         {formatDate(task.assignmentStartDate ?? task.expectedStartDate)}
                         {' ➔ '}
                         {formatDate(task.assignmentEndDate ?? task.expectedEndDate)}
                       </td>
                       <td>
-                        <span className={`wbs-badge ${badge.className}`}>{badge.label}</span>
-                      </td>
-                      <td>
                         {isClosedProject ? (
-                          <span className="field-hint" style={{ fontSize: '12px' }}>
-                            Dự án đã đóng
-                          </span>
+                          <span className={`wbs-badge ${badge.className}`}>{badge.label}</span>
                         ) : (
                           <select
-                            className="form-input"
-                            style={{ maxWidth: '180px' }}
+                            className={`form-input status-select status-select--${badge.className.replace('wbs-badge--', '')}`}
+                            style={{ width: 'auto', minWidth: '150px' }}
                             value={task.taskStatus}
                             disabled={updatingTaskId === task.taskId}
                             onChange={(e) => void handleStatusChange(task, e.target.value as TaskStatus)}
@@ -327,6 +349,18 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
                           )}
                         </td>
                       )}
+                      {canLogTime && (
+                        <td>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-xs"
+                            onClick={() => setSelectedExpenseProject({ projectId: task.projectId, projectName: task.projectName })}
+                            data-testid={`btn-project-expenses-${task.projectId}`}
+                          >
+                            {ICONS.receipt} Chi phí dự án
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -344,31 +378,48 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
             </div>
           )}
 
-          <div
-            className="user-table-card"
-            style={{ padding: '16px 20px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <button type="button" className="btn btn-secondary btn-xs" onClick={() => setWeekFrom((prev) => addDays(prev, -7))} data-testid="btn-week-prev">
-                ← Tuần trước
+          <div className="user-table-card week-nav">
+            <div className="week-nav__switcher">
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={() => setWeekFrom((prev) => addDays(prev, -7))}
+                aria-label="Tuần trước"
+                title="Tuần trước"
+                data-testid="btn-week-prev"
+              >
+                {ICONS.arrowLeft}
               </button>
-              <span data-testid="my-timesheet-week-label" style={{ fontWeight: 600, fontSize: '13.5px' }}>
-                Tuần {formatIsoDate(weekFrom)} → {formatIsoDate(weekTo)}
-              </span>
-              <button type="button" className="btn btn-secondary btn-xs" onClick={() => setWeekFrom((prev) => addDays(prev, 7))} data-testid="btn-week-next">
-                Tuần sau →
-              </button>
-              <button type="button" className="btn btn-secondary btn-xs" onClick={() => setWeekFrom(getMondayOf())} data-testid="btn-week-current">
-                Tuần này
+              <div className="week-nav__label">
+                <span className="week-nav__range" data-testid="my-timesheet-week-label">
+                  {formatIsoDate(weekFrom)} → {formatIsoDate(weekTo)}
+                </span>
+                {isCurrentWeek ? (
+                  <span className="week-nav__hint">Tuần hiện tại</span>
+                ) : (
+                  <button type="button" className="week-nav__today-link" onClick={() => setWeekFrom(getMondayOf())} data-testid="btn-week-current">
+                    Về tuần hiện tại
+                  </button>
+                )}
+              </div>
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={() => setWeekFrom((prev) => addDays(prev, 7))}
+                aria-label="Tuần sau"
+                title="Tuần sau"
+                data-testid="btn-week-next"
+              >
+                {ICONS.arrowRight}
               </button>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '13.5px' }}>
-                Tổng giờ tuần: <strong data-testid="grand-total-hours">{grandTotal}</strong>
+            <div className="week-nav__summary">
+              <span className="week-nav__total">
+                Tổng giờ tuần <strong data-testid="grand-total-hours">{grandTotal}</strong>
               </span>
               {hasDraft && (
-                <button type="button" className="btn-primary" onClick={() => setConfirmSubmit(true)} disabled={submitting} data-testid="btn-submit-week">
+                <button type="button" className="btn-primary btn-sm" onClick={() => setConfirmSubmit(true)} disabled={submitting} data-testid="btn-submit-week">
                   {ICONS.checkCircle} {submitting ? 'Đang nộp…' : `Nộp bảng chấm công (${draftCount} dòng)`}
                 </button>
               )}
@@ -389,29 +440,9 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
                 <p style={{ marginTop: '10px' }}>Đang nạp bảng giờ công...</p>
               </div>
             ) : (
-              <>
-                <WeeklyTimesheetGrid weekFrom={weekFrom} weekTo={weekTo} summaries={summaries} />
-                {summaries.length > 0 && (
-                  <div style={{ marginTop: '14px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {summaries.map((s) => {
-                      const projectStatus = projectStatusByTaskId.get(s.taskId);
-                      const task = tasks.find((t) => t.taskId === s.taskId);
-                      if (!task || projectStatus === 'CLOSED') return null;
-                      return (
-                        <button
-                          key={s.taskId}
-                          type="button"
-                          className="btn btn-secondary btn-xs"
-                          onClick={() => setSelectedTask({ projectId: task.projectId, taskId: s.taskId, taskName: s.taskName ?? task.taskName })}
-                          data-testid={`btn-open-task-${s.taskId}`}
-                        >
-                          Xem/sửa "{s.taskName || task.taskName}"
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
+              // Mở lại một dòng giờ công cụ thể để sửa: dùng đúng nút "Ghi giờ công" ở bảng
+              // công việc phía trên, không lặp lại một lối vào thứ hai cho cùng một việc.
+              <WeeklyTimesheetGrid weekFrom={weekFrom} weekTo={weekTo} summaries={summaries} />
             )}
           </div>
         </>

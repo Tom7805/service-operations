@@ -17,5 +17,17 @@ public enum NotificationType {
 
 	PROJECT_MILESTONE_DUE,
 
-	CONTRACT_EXPIRING
+	CONTRACT_EXPIRING,
+
+	/** NCL-09-CN-004: bien loi nhuan cua du an xuong duoi nguong toi thieu do Ban giam doc dat. */
+	NEGATIVE_MARGIN_ALERT,
+
+	/** NCL-10-CN-001: ke toan vua tao de nghi xuat hoa don tu gio cong cua du an do minh quan ly. */
+	INVOICE_PROPOSAL_CREATED,
+
+	/** NCL-10-CN-006: nhac hoa don sap toi han, dung han hoac da qua han thanh toan. */
+	DUNNING_REMINDER,
+
+	/** NCL-10-CN-005: rao soat dinh ky vua tu tao mot hoa don nhap tu dieu khoan hop dong duy tri. */
+	RECURRING_INVOICE_GENERATED
 }

@@ -250,7 +250,7 @@ export default function ProjectWbsModal({
               {project && (
                 <>
                   {' · '}Trạng thái:{' '}
-                  <strong style={{ color: isProjectOpen ? '#15803D' : '#64748B' }}>
+                  <strong style={{ color: isProjectOpen ? 'var(--pale-green-fg)' : 'var(--ink-muted)' }}>
                     {project.status}
                   </strong>
                 </>
@@ -297,7 +297,7 @@ export default function ProjectWbsModal({
                   marginBottom: '14px',
                   gap: '10px',
                   flexWrap: 'wrap',
-                  borderBottom: '1px solid #E2E8F0',
+                  borderBottom: '1px solid var(--line)',
                   paddingBottom: '10px',
                 }}
               >
@@ -361,11 +361,12 @@ export default function ProjectWbsModal({
                 {canClose && (
                   <button
                     type="button"
-                    className="btn btn-danger btn-xs"
+                    className="btn btn-secondary btn-xs project-close-btn"
                     onClick={handleCloseProject}
                     disabled={closing}
                     data-testid="modal-btn-close-project"
                   >
+                    <span className="icon-xs">{ICONS.lock}</span>
                     {closing ? 'Đang đóng…' : 'Đóng dự án'}
                   </button>
                 )}

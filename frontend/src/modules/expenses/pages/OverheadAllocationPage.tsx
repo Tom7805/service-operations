@@ -156,7 +156,7 @@ export default function OverheadAllocationPage({
               data-testid="overhead-year-input"
             />
             {errors.year && (
-              <p className="field-error" data-testid="error-overhead-year" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+              <p className="field-error" data-testid="error-overhead-year" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                 {errors.year}
               </p>
             )}
@@ -203,7 +203,7 @@ export default function OverheadAllocationPage({
               data-testid="overhead-amount-input"
             />
             {errors.totalAmount && (
-              <p className="field-error" data-testid="error-overhead-amount" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+              <p className="field-error" data-testid="error-overhead-amount" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                 {errors.totalAmount}
               </p>
             )}
@@ -227,7 +227,7 @@ export default function OverheadAllocationPage({
 
       <div className="user-table-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px 0' }}>
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1E293B' }}>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
             Kết quả các lần đã chạy trong phiên này
           </h3>
         </div>
@@ -244,7 +244,7 @@ export default function OverheadAllocationPage({
               <div
                 key={result.id}
                 className="user-table-card"
-                style={{ padding: '16px', marginBottom: '16px', border: '1px solid #E2E8F0' }}
+                style={{ padding: '16px', marginBottom: '16px', border: '1px solid var(--line)' }}
                 data-testid={`overhead-allocation-result-${result.id}`}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>

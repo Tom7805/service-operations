@@ -4,6 +4,7 @@ import ModalPortal from '../../../components/common/ModalPortal';
 import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import type { ContractMilestoneInput, ContractMilestoneRes, ContractRes } from '../types/contractTypes';
 import { fetchMilestones, replaceMilestones, updateMilestoneStatus, ContractsApiError } from '../api/contractsApi';
+import InvoiceFormModal from '../../invoices/components/InvoiceFormModal';
 
 interface Props {
   contract: ContractRes;
@@ -30,13 +31,20 @@ const STATUS_LABEL: Record<ContractMilestoneRes['status'], string> = {
   INVOICED: 'Đã xuất hóa đơn',
 };
 
-/** Trạng thái kế tiếp theo đúng trình tự PENDING → READY_TO_INVOICE → INVOICED
- *  mà backend cho phép (NCL-04-CN-003) — null nếu đã ở bước cuối. */
+/**
+ * Trạng thái kế tiếp mà nút "→" trong modal này được phép tự đổi qua PATCH .../status.
+ * Chỉ PENDING → READY_TO_INVOICE đi qua đây: bước READY_TO_INVOICE → INVOICED backend
+ * CHẶN đặt tay từ khi có NCL-10-CN-002 — mốc chỉ chuyển INVOICED khi thật sự có một hóa
+ * đơn được lập qua POST /contracts/{id}/milestones/{id}/invoice, để không có mốc "đã xuất
+ * hóa đơn" mà không có hóa đơn nào đứng sau nó. Bước này có nút "Lập hóa đơn" riêng (mở
+ * InvoiceFormModal) thay vì đi qua NEXT_STATUS/"→" như bước đầu.
+ */
 const NEXT_STATUS: Record<ContractMilestoneRes['status'], ContractMilestoneRes['status'] | null> = {
   PENDING: 'READY_TO_INVOICE',
-  READY_TO_INVOICE: 'INVOICED',
+  READY_TO_INVOICE: null,
   INVOICED: null,
 };
+
 
 /** Mốc khai theo % phải luôn phản ánh đúng giá trị hợp đồng HIỆN TẠI — giá trị
  *  hợp đồng có thể đã tăng/giảm qua phụ lục sau khi mốc này được lưu, nên không
@@ -81,6 +89,7 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
   const [submitting, setSubmitting] = useState(false);
   const [statusUpdatingKey, setStatusUpdatingKey] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [invoicingRow, setInvoicingRow] = useState<DraftRow | null>(null);
 
   useEffect(() => {
     if (!isOpen || !isAllowed) return;
@@ -262,6 +271,17 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
                                   {statusUpdatingKey === row.key ? '…' : ICONS.arrowRight}
                                 </button>
                               )}
+                              {row.status === 'READY_TO_INVOICE' && row.id && (
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  style={{ padding: '4px 10px', fontSize: '12.5px' }}
+                                  onClick={() => setInvoicingRow(row)}
+                                  disabled={submitting}
+                                >
+                                  <span className="icon-xs">{ICONS.receipt}</span> Lập hóa đơn
+                                </button>
+                              )}
                             </>
                           ) : (
                             <span className="status-pill status-pill--milestone-new">Mốc mới</span>
@@ -387,6 +407,21 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
         </div>
       </div>
       </div>
+
+      {invoicingRow && invoicingRow.id && (
+        <InvoiceFormModal
+          isOpen
+          onClose={() => setInvoicingRow(null)}
+          contractId={contract.id}
+          milestoneId={invoicingRow.id}
+          milestoneName={invoicingRow.name}
+          currentUserRoles={currentUserRoles}
+          onSaved={() => {
+            updateRow(invoicingRow.key, { status: 'INVOICED' });
+            setInvoicingRow(null);
+          }}
+        />
+      )}
     </ModalPortal>
   );
 }

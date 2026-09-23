@@ -13,6 +13,7 @@ const TYPE_ICON: Record<NotificationType, ReactNode> = {
   EXPENSE_SUBMITTED: ICONS.money,
   PROJECT_MILESTONE_DUE: ICONS.target,
   CONTRACT_EXPIRING: ICONS.receipt,
+  NEGATIVE_MARGIN_ALERT: ICONS.alertTriangle,
 };
 
 /** Hiển thị tương đối kiểu "5 phút trước" / "Hôm qua" cho gần, còn lại dùng ngày giờ đầy đủ. */

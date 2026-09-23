@@ -3,6 +3,7 @@ package com.serviceops.modules.timesheet.service;
 import com.serviceops.modules.timesheet.dto.request.TimesheetApproveReq;
 import com.serviceops.modules.timesheet.dto.request.TimesheetRejectReq;
 import com.serviceops.modules.timesheet.dto.response.PendingTimesheetRes;
+import com.serviceops.modules.timesheet.dto.response.TimesheetApprovalHistoryRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetApprovalRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetRejectRes;
 
@@ -33,4 +34,14 @@ public interface TimesheetApprovalService {
 	 * {@code REJECTED} khi khong con dong SUBMITTED nao (cua bat ky PM nao) sau thao tac nay.
 	 */
 	TimesheetRejectRes reject(Long timesheetId, TimesheetRejectReq request);
+
+	/**
+	 * Lich su cac lan duyet/tu choi GAN NHAT do chinh PM hien tai thuc hien, moi nhat truoc —
+	 * lay tu nhat ky thao tac da ghi san khi goi {@link #approve} / {@link #reject}, khong dung
+	 * bang du lieu rieng. Dung de PM tra lai "minh vua xu ly cai gi" sau khi bang da roi khoi
+	 * hang cho duyet (NCL-06-CN-003/CN-004).
+	 *
+	 * @param limit so dong toi da tra ve (bi chan trong khoang 1..100).
+	 */
+	List<TimesheetApprovalHistoryRes> findMyApprovalHistory(int limit);
 }

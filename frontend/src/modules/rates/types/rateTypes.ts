@@ -117,6 +117,35 @@ export interface ResolvedTimeEntryRateRes {
 }
 
 /**
+ * Một dòng giờ công đã duyệt trong khoảng ngày tìm kiếm, để Kế toán/Quản trị viên chọn trực
+ * tiếp thay vì phải tự biết trước "ID dòng giờ công" (NCL-07-CN-005) — con số vốn chỉ hiện ở
+ * màn hình "Điều chỉnh giờ công đã duyệt" dành riêng cho Quản lý dự án.
+ */
+export interface TimeEntryLookupCandidateRes {
+  entryId: number;
+  /** `yyyy-MM-dd` */
+  workDate: string;
+  userId: number;
+  userName: string;
+  projectId: number | null;
+  projectName: string;
+  taskId: number;
+  taskName: string;
+  hours: number;
+}
+
+/**
+ * Một nhân sự có ít nhất một dòng giờ công đã duyệt — nguồn danh sách "Chọn nhân sự" khi tra
+ * đơn giá cho một dòng giờ công (NCL-07-CN-005). `level` (nếu có) dùng để tự điền sẵn ô "Cấp
+ * bậc" ngay khi chọn, không cần người dùng tự tra lại hồ sơ nhân sự.
+ */
+export interface TimeEntryLookupEmployeeRes {
+  userId: number;
+  fullName: string;
+  level: string | null;
+}
+
+/**
  * NCL-07-CN-006 — Đơn giá theo loại hình công việc. Hệ số nhân áp lên đơn giá
  * theo vai trò/cấp bậc để ra đơn giá cuối cùng cho một dòng giờ công
  * (`NCL-07-CN-005`). `POST /work-type-rates` luôn GHI ĐÈ hệ số cũ (không giữ

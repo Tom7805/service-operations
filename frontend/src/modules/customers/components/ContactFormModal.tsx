@@ -12,6 +12,15 @@ interface ContactFormModalProps {
   onSubmit: (payload: CustomerContactPayload) => Promise<void>;
 }
 
+/** Số di động VN đủ 10 chữ số; số cố định (đầu 02) có thể tới 11 chữ số — xem PHONE_PATTERN. */
+const PHONE_DIGIT_TARGET = 10;
+const PHONE_DIGIT_MAX = 11;
+
+/** Đếm riêng chữ số, bỏ qua khoảng trắng/dấu gạch người dùng gõ xen kẽ (VD "0912 345 678"). */
+function countPhoneDigits(value: string): number {
+  return value.replace(/\D/g, '').length;
+}
+
 export default function ContactFormModal({
   isOpen,
   customerName,
@@ -171,9 +180,24 @@ export default function ContactFormModal({
 
               {/* Số điện thoại */}
               <div className="form-field">
-                <label htmlFor="contact-phone" className="form-label">
-                  Số điện thoại liên lạc
-                </label>
+                <div className="form-label-row">
+                  <label htmlFor="contact-phone" className="form-label">
+                    Số điện thoại liên lạc
+                  </label>
+                  <span
+                    className={`char-counter ${
+                      countPhoneDigits(formData.phone || '') > PHONE_DIGIT_MAX
+                        ? 'char-counter--overflow'
+                        : countPhoneDigits(formData.phone || '') >= PHONE_DIGIT_TARGET
+                          ? 'char-counter--complete'
+                          : ''
+                    }`}
+                    aria-live="polite"
+                    data-testid="contact-phone-digit-counter"
+                  >
+                    {countPhoneDigits(formData.phone || '')}/{PHONE_DIGIT_TARGET}
+                  </span>
+                </div>
                 <input
                   id="contact-phone"
                   type="tel"
@@ -188,6 +212,9 @@ export default function ContactFormModal({
                     {errors.phone}
                   </span>
                 )}
+                <span className="field-hint">
+                  Di động đủ {PHONE_DIGIT_TARGET} chữ số; số cố định (đầu 02) có thể tới {PHONE_DIGIT_MAX} chữ số.
+                </span>
               </div>
 
               {/* Thư điện tử (Email) */}

@@ -16,6 +16,9 @@ export interface TaskRes {
   status: TaskStatus;
   /** Ngân sách giờ công của task, dùng khi tạo dự án từ mẫu (NCL-05-CN-007). */
   budgetHours?: number | null;
+  /** Danh sách nhân sự đang được phân công cho task này, để hiển thị ngay trên cây WBS
+   * thay vì PM phải mở lại modal "Phân công" mới biết đã giao cho ai, lúc nào. */
+  assignments?: TaskAssignmentRes[];
 }
 
 /**

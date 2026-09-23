@@ -3,7 +3,7 @@ import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
 import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import type { Opportunity, QuoteRes } from '../types/opportunityTypes';
-import type { ContractCreateFromOpportunityReq, ContractRes } from '../../contracts/types/contractTypes';
+import { CONTRACT_TYPE_LABEL, type ContractCreateFromOpportunityReq, type ContractRes } from '../../contracts/types/contractTypes';
 import { createContractFromOpportunity } from '../api/opportunitiesApi';
 import { fetchOpportunityQuoteHistory } from '../api/quotesApi';
 
@@ -22,9 +22,9 @@ interface Props {
 }
 
 const CONTRACT_TYPE_OPTIONS: { value: ContractCreateFromOpportunityReq['contractType']; label: string }[] = [
-  { value: 'TIME_AND_MATERIAL', label: 'Time & Material' },
-  { value: 'FIXED_PRICE', label: 'Fixed Price' },
-  { value: 'MAINTENANCE', label: 'Maintenance' },
+  { value: 'TIME_AND_MATERIAL', label: CONTRACT_TYPE_LABEL.TIME_AND_MATERIAL },
+  { value: 'FIXED_PRICE', label: CONTRACT_TYPE_LABEL.FIXED_PRICE },
+  { value: 'MAINTENANCE', label: CONTRACT_TYPE_LABEL.MAINTENANCE },
 ];
 
 export default function CreateContractModal({

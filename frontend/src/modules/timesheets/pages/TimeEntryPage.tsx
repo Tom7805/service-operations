@@ -52,6 +52,7 @@ export default function TimeEntryPage({
 
   const [weekFrom, setWeekFrom] = useState<string>(() => getMondayOf());
   const weekTo = addDays(weekFrom, 6);
+  const isCurrentWeek = weekFrom === getMondayOf();
 
   const [project, setProject] = useState<ProjectRes | null>(initialProject ?? null);
   const [summary, setSummary] = useState<TimesheetSummaryRes | null>(null);
@@ -104,6 +105,17 @@ export default function TimeEntryPage({
   }, [loadData]);
 
   const entries = summary?.entries ?? [];
+
+  // Tổng giờ đã ghi theo từng ngày, gộp TẤT CẢ công việc trong tuần — dùng để cảnh báo trước
+  // khi chọn ngày, vì trần "không quá 12 giờ/ngày" tính trên toàn bộ công việc, không chỉ riêng
+  // công việc đang xem (khác với việc phát hiện trùng ngày, chỉ xét trong cùng công việc).
+  const dailyHoursMap = weekSummaries
+    .flatMap((s) => s.entries)
+    .filter((e) => e.status !== 'REJECTED')
+    .reduce<Record<string, number>>((acc, e) => {
+      acc[e.workDate] = (acc[e.workDate] ?? 0) + e.hours;
+      return acc;
+    }, {});
 
   const draftEntriesInWeek = weekSummaries.flatMap((s) => s.entries.filter((e) => e.status === 'DRAFT'));
   const draftCountInWeek = draftEntriesInWeek.length;
@@ -188,8 +200,8 @@ export default function TimeEntryPage({
         </div>
       )}
 
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div className="task-page-header">
+        <div className="task-page-header__top">
           {onBack && (
             <button
               type="button"
@@ -200,88 +212,99 @@ export default function TimeEntryPage({
               {ICONS.arrowLeft} Quay lại
             </button>
           )}
-          <div>
-            <div className="page-header__kicker">
-              <span className="page-header__tag">{ICONS.clock} GIỜ CÔNG</span>
-              <span className="page-header__dot" />
-              <span className="page-header__meta">{project?.projectCode || `Dự án #${projectId}`}</span>
-            </div>
-            <h1 className="page-title" style={{ margin: '4px 0' }}>
-              {taskName || summary?.taskName || `Công việc #${taskId}`}
-            </h1>
+          <div className="page-header__kicker" style={{ margin: 0 }}>
+            <span className="page-header__tag">{ICONS.clock} GHI GIỜ CÔNG</span>
+            <span className="page-header__dot" />
+            <span className="page-header__meta">
+              {project?.name || `Dự án #${projectId}`} · {project?.projectCode || `#${projectId}`}
+            </span>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={loadData}
-            disabled={loading}
-            data-testid="btn-reload-time-entries"
-          >
-            {ICONS.refresh} Tải lại
-          </button>
-          {canView && draftCountInWeek > 0 && (
+        <div className="task-page-header__main">
+          <div>
+            <span className="task-title-eyebrow">Công việc</span>
+            <h1 className="page-title task-title" style={{ margin: '2px 0 0' }}>
+              {taskName || summary?.taskName || `Công việc #${taskId}`}
+            </h1>
+          </div>
+
+          <div className="page-header__actions">
             <button
               type="button"
-              className="btn btn-primary btn-sm"
-              onClick={handleSubmitWeek}
-              disabled={submitting}
-              data-testid="btn-submit-week-from-task"
-              title="Nộp toàn bộ giờ công Nháp của tuần này (mọi công việc), không chỉ riêng công việc đang xem"
+              className="btn btn-secondary btn-sm"
+              onClick={loadData}
+              disabled={loading}
+              data-testid="btn-reload-time-entries"
             >
-              {ICONS.checkCircle} {submitting ? 'Đang nộp…' : `Nộp bảng chấm công (${draftCountInWeek} dòng)`}
+              {ICONS.refresh} Tải lại
             </button>
-          )}
-          {canLog && (
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              onClick={openCreateForm}
-              data-testid="btn-add-time-entry"
-            >
-              + Ghi giờ công
-            </button>
-          )}
+            {canView && draftCountInWeek > 0 && (
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={handleSubmitWeek}
+                disabled={submitting}
+                data-testid="btn-submit-week-from-task"
+                title="Nộp toàn bộ giờ công Nháp của tuần này (mọi công việc), không chỉ riêng công việc đang xem"
+              >
+                {ICONS.checkCircle} {submitting ? 'Đang nộp…' : `Nộp bảng chấm công (${draftCountInWeek} dòng)`}
+              </button>
+            )}
+            {canLog && (
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={openCreateForm}
+                data-testid="btn-add-time-entry"
+              >
+                + Ghi giờ công
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="user-table-card" style={{ padding: '16px 20px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className="user-table-card week-nav">
+        <div className="week-nav__switcher">
           <button
             type="button"
-            className="btn btn-secondary btn-xs"
+            className="icon-btn"
             onClick={() => setWeekFrom((prev) => addDays(prev, -7))}
+            aria-label="Tuần trước"
+            title="Tuần trước"
             data-testid="btn-week-prev"
           >
-            ← Tuần trước
+            {ICONS.arrowLeft}
           </button>
-          <span data-testid="week-range-label" style={{ fontWeight: 600, fontSize: '13.5px' }}>
-            Tuần {formatIsoDate(weekFrom)} → {formatIsoDate(weekTo)}
-          </span>
+          <div className="week-nav__label">
+            <span className="week-nav__range" data-testid="week-range-label">
+              {formatIsoDate(weekFrom)} → {formatIsoDate(weekTo)}
+            </span>
+            {isCurrentWeek ? (
+              <span className="week-nav__hint">Tuần hiện tại</span>
+            ) : (
+              <button type="button" className="week-nav__today-link" onClick={() => setWeekFrom(getMondayOf())} data-testid="btn-week-current">
+                Về tuần hiện tại
+              </button>
+            )}
+          </div>
           <button
             type="button"
-            className="btn btn-secondary btn-xs"
+            className="icon-btn"
             onClick={() => setWeekFrom((prev) => addDays(prev, 7))}
+            aria-label="Tuần sau"
+            title="Tuần sau"
             data-testid="btn-week-next"
           >
-            Tuần sau →
-          </button>
-          <button
-            type="button"
-            className="btn btn-secondary btn-xs"
-            onClick={() => setWeekFrom(getMondayOf())}
-            data-testid="btn-week-current"
-          >
-            Tuần này
+            {ICONS.arrowRight}
           </button>
         </div>
 
         {summary && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px' }} data-testid="time-entry-budget-summary">
-            <span>
-              Tổng giờ tuần: <strong>{summary.totalHours}</strong>
+          <div className="week-nav__summary" data-testid="time-entry-budget-summary">
+            <span className="week-nav__total">
+              Tổng giờ tuần <strong>{summary.totalHours}</strong>
             </span>
             {summary.budgetHours != null && (
               <span className={`badge ${summary.overBudgetWarning ? 'badge--pink' : 'badge--green'}`} data-testid="time-entry-usage-badge">
@@ -322,7 +345,7 @@ export default function TimeEntryPage({
 
       <div className="user-table-card" style={{ padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1E293B' }}>Bản ghi giờ công trong tuần</h3>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>Bản ghi giờ công trong tuần</h3>
           <span className="field-hint" style={{ fontSize: '13px' }}>{entries.length} bản ghi</span>
         </div>
 
@@ -334,8 +357,8 @@ export default function TimeEntryPage({
         ) : entries.length === 0 ? (
           <div className="table-empty-state" data-testid="time-entry-empty">
             <div className="table-empty-state__icon">{ICONS.clock}</div>
-            <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: '#1E293B' }}>Chưa có bản ghi giờ công nào trong tuần này</h4>
-            <p style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }}>
+            <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>Chưa có bản ghi giờ công nào trong tuần này</h4>
+            <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
               {canLog
                 ? 'Hãy bấm nút "+ Ghi giờ công" ở trên để bắt đầu ghi nhận giờ làm việc cho công việc này.'
                 : 'Không có dữ liệu để hiển thị.'}
@@ -414,6 +437,7 @@ export default function TimeEntryPage({
         taskName={taskName || summary?.taskName || undefined}
         entry={editingEntry}
         existingEntries={entries}
+        dailyHoursMap={dailyHoursMap}
         weekFrom={weekFrom}
         weekTo={weekTo}
         onSaved={() => {

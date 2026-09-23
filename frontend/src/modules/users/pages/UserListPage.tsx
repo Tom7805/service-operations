@@ -186,7 +186,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
           <h1 className="page-title">Quản lý tài khoản người dùng</h1>
           <p className="page-subtitle">Tạo mới, phân quyền và theo dõi trạng thái tài khoản.</p>
         </div>
-        <div className="page-header-actions">
+        <div className="page-header__actions">
           <button type="button" className="btn-primary btn-lg" onClick={handleOpenCreateModal}>
             <span className="btn-icon">+</span> Thêm tài khoản mới
           </button>

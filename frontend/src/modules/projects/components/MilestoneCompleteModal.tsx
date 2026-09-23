@@ -135,7 +135,7 @@ export default function MilestoneCompleteModal({
                 <p
                   className="field-error"
                   data-testid="error-milestone-actual-date"
-                  style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}
+                  style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}
                 >
                   {errors.actualDate}
                 </p>

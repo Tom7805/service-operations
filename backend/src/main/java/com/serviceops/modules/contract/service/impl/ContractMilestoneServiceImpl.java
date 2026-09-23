@@ -64,6 +64,16 @@ public class ContractMilestoneServiceImpl implements ContractMilestoneService {
                     "Tong cac moc thanh toan phai bang gia tri hop dong (tong hien tai=" + total + ")");
         }
 
+        // Da co moc xuat hoa don thi khong duoc khai bao lai: deleteByContractId + tao moi (PENDING)
+        // se lam mat moc do va hoa don gan voi no (NCL-10-CN-002), cho phep lap trung hoa don.
+        boolean hasInvoicedMilestone = milestoneRepository.findByContractIdOrderByExpectedDateAscIdAsc(contractId)
+                .stream()
+                .anyMatch(m -> m.getStatus() == ContractMilestoneStatus.INVOICED);
+        if (hasInvoicedMilestone) {
+            throw new BusinessRuleException(ErrorCode.INVALID_STATE,
+                    "Hop dong da co moc thanh toan da xuat hoa don, khong the khai bao lai danh sach moc");
+        }
+
         milestoneRepository.deleteByContractId(contractId);
         List<ContractMilestone> saved = milestoneRepository.saveAll(milestones);
         auditLogger.record(contractId, ContractAuditAction.MILESTONE_UPDATE,

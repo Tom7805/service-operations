@@ -91,6 +91,12 @@ class RateResolutionServiceTest {
 		return emp;
 	}
 
+	private Employee employee(String role, String level) {
+		Employee emp = employee(role);
+		emp.setLevel(level);
+		return emp;
+	}
+
 	@Test
 	@DisplayName("TC-01: Tra dung don gia (uu tien hop dong) tai ngay cong cua dong gio cong")
 	void resolvesRateForTimeEntry() {
@@ -192,6 +198,53 @@ class RateResolutionServiceTest {
 				.thenThrow(new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Khong tim thay don gia"));
 
 		assertThatThrownBy(() -> service.resolveForTimeEntry(100L, new RateLookupReq("Cao cấp")))
+				.isInstanceOf(BusinessRuleException.class)
+				.extracting(e -> ((BusinessRuleException) e).getErrorCode())
+				.isEqualTo(ErrorCode.RESOURCE_NOT_FOUND);
+	}
+
+	@Test
+	@DisplayName("NCL-09-CN-002: Tu dong tra don gia tu Employee.level, khong can Frontend nhap tay")
+	void resolvesRateAutomaticallyFromEmployeeLevel() {
+		when(timeEntryRepository.findById(100L))
+				.thenReturn(Optional.of(entry(100L, 5L, 7L, LocalDate.of(2026, 6, 30), new BigDecimal("8.00"))));
+		when(taskRepository.findById(5L)).thenReturn(Optional.of(task(5L, 2L)));
+		when(projectRepository.findById(2L)).thenReturn(Optional.of(project(2L, 1L)));
+		when(employeeRepository.findByUser_Id(7L)).thenReturn(Optional.of(employee("Lập trình viên", "Cao cấp")));
+
+		ResolvedContractBillRateRes resolved = new ResolvedContractBillRateRes(
+				new BigDecimal("3000000"), LocalDate.of(2026, 1, 1), true);
+		when(contractBillRateService.resolve(1L, "Lập trình viên", "Cao cấp", LocalDate.of(2026, 6, 30)))
+				.thenReturn(resolved);
+		when(workTypeRateService.resolveFactor(WorkType.NORMAL)).thenReturn(new BigDecimal("1.00"));
+
+		ResolvedRateRes result = service.resolveForTimeEntry(100L);
+
+		assertThat(result.level()).isEqualTo("Cao cấp");
+		assertThat(result.appliedDailyRate()).isEqualByComparingTo("3000000.00");
+	}
+
+	@Test
+	@DisplayName("NCL-09-CN-002: Nhan su chua khai bao cap bac thi bao VALIDATION_ERROR")
+	void rejectsAutoResolveWhenEmployeeLevelMissing() {
+		when(timeEntryRepository.findById(100L))
+				.thenReturn(Optional.of(entry(100L, 5L, 7L, LocalDate.of(2026, 6, 30), new BigDecimal("8.00"))));
+		when(taskRepository.findById(5L)).thenReturn(Optional.of(task(5L, 2L)));
+		when(projectRepository.findById(2L)).thenReturn(Optional.of(project(2L, 1L)));
+		when(employeeRepository.findByUser_Id(7L)).thenReturn(Optional.of(employee("Lập trình viên", null)));
+
+		assertThatThrownBy(() -> service.resolveForTimeEntry(100L))
+				.isInstanceOf(BusinessRuleException.class)
+				.extracting(e -> ((BusinessRuleException) e).getErrorCode())
+				.isEqualTo(ErrorCode.VALIDATION_ERROR);
+	}
+
+	@Test
+	@DisplayName("NCL-09-CN-002: Khong tim thay dong gio cong khi tu dong tra don gia thi bao RESOURCE_NOT_FOUND")
+	void rejectsAutoResolveForUnknownTimeEntry() {
+		when(timeEntryRepository.findById(999L)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> service.resolveForTimeEntry(999L))
 				.isInstanceOf(BusinessRuleException.class)
 				.extracting(e -> ((BusinessRuleException) e).getErrorCode())
 				.isEqualTo(ErrorCode.RESOURCE_NOT_FOUND);

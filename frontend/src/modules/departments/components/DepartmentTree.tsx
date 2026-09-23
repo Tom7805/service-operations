@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import type { Department, DepartmentTreeNode } from '../types/departmentTypes';
 import { getUnitTypeLabel, getUnitTypeMonogram } from '../constants/departmentUnitTypes';
 import { ICONS } from '../../../components/common/icons';

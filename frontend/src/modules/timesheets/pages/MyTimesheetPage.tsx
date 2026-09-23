@@ -3,6 +3,7 @@ import { ICONS } from '../../../components/common/icons';
 import type { TimeEntryTaskRes, TimesheetSummaryRes } from '../types/timesheetTypes';
 import { getMyRunningTasks, getMyWeekTimeEntries, submitWeek, TimesheetsApiError } from '../api/timesheetsApi';
 import WeeklyTimesheetGrid from '../components/WeeklyTimesheetGrid';
+import SubmitWeekConfirmModal from '../components/SubmitWeekConfirmModal';
 import TimeEntryPage from './TimeEntryPage';
 import { addDays, formatIsoDate, getMondayOf } from '../utils/weekRange';
 import { canSubmitWeek, countDraftEntries } from '../validators/timesheetValidators';
@@ -37,6 +38,7 @@ export default function MyTimesheetPage({ currentUserRoles = ['VT-03'] }: MyTime
   const [error, setError] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<SelectedTask | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [isSubmitConfirmOpen, setIsSubmitConfirmOpen] = useState(false);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
@@ -91,22 +93,17 @@ export default function MyTimesheetPage({ currentUserRoles = ['VT-03'] }: MyTime
     return { tone: 'rejected', text: 'Bảng chấm công tuần này bị từ chối. Hãy chỉnh sửa giờ công rồi nộp lại.' };
   })();
 
-  const handleSubmitWeek = async () => {
-    if (!hasDraft || submitting) return;
-    const totalDraftHours = summaries.reduce(
-      (sum, s) => sum + s.entries.filter((e) => e.status === 'DRAFT').reduce((h, e) => h + e.hours, 0),
-      0
-    );
-    const confirmed = window.confirm(
-      `Nộp bảng chấm công tuần ${formatIsoDate(weekFrom)} → ${formatIsoDate(weekTo)} với ${draftCount} `
-        + `dòng giờ công (tổng ${totalDraftHours} giờ)?\n\n`
-        + 'Sau khi nộp, bạn sẽ không sửa hoặc xóa được các dòng giờ công của tuần này cho đến khi được duyệt.'
-    );
-    if (!confirmed) return;
+  const totalDraftHours = summaries.reduce(
+    (sum, s) => sum + s.entries.filter((e) => e.status === 'DRAFT').reduce((h, e) => h + e.hours, 0),
+    0
+  );
 
+  const handleConfirmSubmitWeek = async () => {
+    if (!hasDraft || submitting) return;
     setSubmitting(true);
     try {
       const result = await submitWeek(weekFrom);
+      setIsSubmitConfirmOpen(false);
       showToast(`Đã nộp bảng chấm công tuần thành công — tổng ${result.totalHours} giờ, đang chờ duyệt.`, 'success');
       await loadData();
     } catch (err: unknown) {
@@ -188,7 +185,7 @@ export default function MyTimesheetPage({ currentUserRoles = ['VT-03'] }: MyTime
       )}
 
       <div className="user-table-card" style={{ padding: '20px', marginBottom: '16px' }}>
-        <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 700, color: '#1E293B' }}>
+        <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
           Công việc đang được giao
         </h3>
 
@@ -200,10 +197,10 @@ export default function MyTimesheetPage({ currentUserRoles = ['VT-03'] }: MyTime
         ) : tasks.length === 0 ? (
           <div className="table-empty-state" data-testid="my-tasks-empty">
             <div className="table-empty-state__icon">{ICONS.clock}</div>
-            <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: '#1E293B' }}>
+            <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>
               Chưa được giao công việc nào trong dự án đang chạy
             </h4>
-            <p style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }}>
+            <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
               Liên hệ Quản lý dự án để được giao công việc trước khi ghi giờ công.
             </p>
           </div>
@@ -281,7 +278,7 @@ export default function MyTimesheetPage({ currentUserRoles = ['VT-03'] }: MyTime
             <button
               type="button"
               className="btn-primary"
-              onClick={handleSubmitWeek}
+              onClick={() => setIsSubmitConfirmOpen(true)}
               disabled={submitting}
               data-testid="btn-submit-week"
             >
@@ -335,6 +332,17 @@ export default function MyTimesheetPage({ currentUserRoles = ['VT-03'] }: MyTime
           </>
         )}
       </div>
+
+      <SubmitWeekConfirmModal
+        isOpen={isSubmitConfirmOpen}
+        weekFromLabel={formatIsoDate(weekFrom)}
+        weekToLabel={formatIsoDate(weekTo)}
+        draftCount={draftCount}
+        totalHours={totalDraftHours}
+        submitting={submitting}
+        onConfirm={() => void handleConfirmSubmitWeek()}
+        onCancel={() => setIsSubmitConfirmOpen(false)}
+      />
     </div>
   );
 }

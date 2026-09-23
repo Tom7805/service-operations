@@ -105,6 +105,16 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
 	 */
 	List<TimeEntry> findByTaskIdInAndStatus(List<Long> taskIds, TimeEntryStatus status);
 
+	/** Cac dong gio cong theo trang thai cua mot nhom cong viec, sap theo ngay lam viec. */
+	List<TimeEntry> findByTaskIdInAndStatusOrderByWorkDateAscIdAsc(List<Long> taskIds, TimeEntryStatus status);
+
+	/**
+	 * MOI dong gio cong (moi trang thai) cua mot nhom cong viec co ngay lam viec trong khoang — nguon du lieu tao
+	 * de nghi xuat hoa don (NCL-10-CN-001): can ca dong chua duyet de dem "so dong bi bo qua" (QTN-18).
+	 */
+	List<TimeEntry> findByTaskIdInAndWorkDateBetweenOrderByWorkDateAscIdAsc(
+			List<Long> taskIds, LocalDate workDateFrom, LocalDate workDateTo);
+
 	/**
 	 * Tong gio cong DA DUYET cua tung cong viec trong mot khoang ngay, nguon du lieu de
 	 * quy ve ty trong gio cong theo du an khi phan bo chi phi chung (NCL-08-CN-005 / QTN-29).
@@ -119,4 +129,32 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
 			GROUP BY e.taskId
 			""")
 	List<Object[]> sumApprovedHoursGroupByTaskIdBetween(@Param("from") LocalDate from, @Param("to") LocalDate to);
+
+	/**
+	 * Toan bo dong gio cong DA DUYET co ngay lam viec trong mot khoang ky — nguon du lieu cho bao cao
+	 * bien loi nhuan theo khach hang/nhan su (NCL-09-CN-005): moi dong deu da qua duyet (QTN-10) nen
+	 * dung duoc ngay cho ca giá von (moi dong) lan doanh thu (chi dong billable).
+	 */
+	List<TimeEntry> findByStatusAndWorkDateBetweenOrderByWorkDateAscIdAsc(
+			TimeEntryStatus status, LocalDate workDateFrom, LocalDate workDateTo);
+
+	/**
+	 * Danh sach ID nhan su DA TUNG co dong gio cong duoc duyet — nguon danh sach "Chon nhan su"
+	 * cho Ke toan/Quan tri vien khi tra don gia (NCL-07-CN-005): chi hien nguoi thuc su co du
+	 * lieu de tra, thay vi liet ke toan bo nhan su cong ty.
+	 */
+	@Query("""
+			SELECT DISTINCT e.userId
+			FROM TimeEntry e
+			WHERE e.status = com.serviceops.modules.timesheet.enums.TimeEntryStatus.APPROVED
+			""")
+	List<Long> findDistinctUserIdsWithApprovedEntries();
+
+	/**
+	 * Cac dong gio cong DA DUYET cua MOT nhan su, moi nhat truoc — nguon danh sach de Ke
+	 * toan/Quan tri vien CHON TRUC TIEP khi tra don gia (NCL-07-CN-005) thay vi phai tu biet
+	 * truoc "ID dong gio cong", con so ma truoc gio chi hien o man hinh danh cho PM
+	 * (NCL-06-CN-005, {@link #findApprovedOriginalEntriesByTaskIdIn}).
+	 */
+	List<TimeEntry> findByStatusAndUserIdOrderByWorkDateDescIdDesc(TimeEntryStatus status, Long userId);
 }

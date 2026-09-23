@@ -20,7 +20,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
-@Transactional(readOnly = true)
+// noRollbackFor: xem RateResolutionServiceImpl - resolve(...) duoc goi long trong luong tra don gia cua bao cao Epic 9.
+@Transactional(readOnly = true, noRollbackFor = BusinessRuleException.class)
 public class BillRateServiceImpl implements BillRateService {
 
 	private final BillRateRepository billRateRepository;

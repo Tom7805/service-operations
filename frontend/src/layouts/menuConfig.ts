@@ -8,11 +8,14 @@ import { ICONS } from '../components/common/icons';
 export type Tab =
   | 'CUSTOMERS'
   | 'CONTRACTS'
+  | 'CONTRACT_DETAIL'
   | 'OPPORTUNITIES'
   | 'REVENUE_FORECAST'
   | 'CUSTOMER_MERGE'
   | 'BILL_RATES'
   | 'RATE_HISTORY'
+  | 'INVOICES'
+  | 'INVOICE_DETAIL'
   | 'DEPARTMENTS'
   | 'PERMISSIONS'
   | 'USERS'
@@ -34,6 +37,14 @@ export type Tab =
   | 'UNSUBMITTED_TIMESHEETS'
   | 'EXPENSE_APPROVAL'
   | 'OVERHEAD_ALLOCATION'
+  | 'MARGIN_BY_CUSTOMER'
+  | 'MARGIN_BY_EMPLOYEE'
+  | 'PROJECT_LABOR_COST'
+  | 'PLANNED_VS_ACTUAL'
+  | 'PROFIT_FORECAST'
+  | 'PROJECT_RECOGNIZED_REVENUE'
+  | 'PROJECT_MARGIN'
+  | 'MARGIN_ALERT_THRESHOLD'
   | 'NOTIFICATIONS';
 
 export interface NavItem {
@@ -50,7 +61,7 @@ export interface NavItem {
   requires?: string[];
   /**
    * Đặt khi trang KHÔNG chặn hẳn người thiếu `requires` mà chỉ hạ xuống chế độ
-   * xem (ví dụ "Cơ hộp bán hàng": ai cũng xem được đường ống, chỉ riêng thao
+   * xem (ví dụ "Cơ hội bán hàng": ai cũng xem được đường ống, chỉ riêng thao
    * tác tạo/chuyển giai đoạn mới cần đúng vai trò). Nếu để trống, mặc định coi
    * là chặn hẳn (mục bị ẩn khỏi thanh điều hướng nếu không có vai trò).
    */
@@ -82,22 +93,23 @@ export const TIMESHEET_NAV_ITEMS: NavItem[] = [
   { tab: 'UNSUBMITTED_TIMESHEETS', icon: ICONS.clock, label: 'Nhân sự chưa nộp', requires: ['VT-02', 'VT-03'] },
 ];
 
-/** Kinh doanh — khách hàng, hợp đồng, cơ hộp bán hàng, doanh thu, báo cáo. */
+/** Kinh doanh — khách hàng, hợp đồng, cơ hội bán hàng, doanh thu, báo cáo. */
 export const BUSINESS_NAV_ITEMS: NavItem[] = [
   { tab: 'CUSTOMERS', icon: ICONS.building, label: 'Khách hàng', requires: ['VT-04', 'VT-02'] },
   {
     tab: 'CONTRACTS', icon: ICONS.receipt, label: 'Hợp đồng', requires: ['VT-05'],
+    matches: ['CONTRACT_DETAIL'],
     // Màn hình lấy hợp đồng làm trung tâm cho Kế toán (VT-05): khai báo loại &
     // hạn mức, mốc thanh toán, kích hoạt, nhắc gia hạn. Các nghiệp vụ này chỉ
     // VT-05 thao tác được nhưng Kế toán KHÔNG vào được hồ sơ khách hàng
     // (chỉ VT-04/VT-02) — đây là lối vào thay thế.
   },
   {
-    tab: 'OPPORTUNITIES', icon: ICONS.target, label: 'Cơ hộp bán hàng', requires: ['VT-01', 'VT-02', 'VT-04'],
+    tab: 'OPPORTUNITIES', icon: ICONS.target, label: 'Cơ hội bán hàng', requires: ['VT-01', 'VT-02', 'VT-04'],
     // OpportunityListPage cho MỌI vai trò xem đường ống bán hàng — chỉ chặn
     // thao tác tạo/chuyển giai đoạn nếu thiếu vai trò Nhân viên kinh doanh
     // (VT-04). Không phải màn hình chặn hẳn như các mục khác.
-    viewOnlyHint: 'Cơ hộp bán hàng — chế độ chỉ xem, cần vai trò Nhân viên kinh doanh để tạo hoặc chuyển giai đoạn',
+    viewOnlyHint: 'Cơ hội bán hàng — chế độ chỉ xem, cần vai trò Nhân viên kinh doanh để tạo hoặc chuyển giai đoạn',
   },
   { tab: 'REVENUE_FORECAST', icon: ICONS.chart, label: 'Dự báo doanh thu', requires: ['VT-01', 'VT-04'] },
   { tab: 'REPORTS', icon: ICONS.document, label: 'Báo cáo', matches: ['PIPELINE_REPORT'], requires: ['VT-01', 'VT-04'] },
@@ -114,6 +126,14 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
     // đây là tra cứu độc lập theo cặp cụ thể, không phải quản lý toàn bộ bảng giá.
   },
   {
+    tab: 'INVOICES', icon: ICONS.receipt, label: 'Hóa đơn', matches: ['INVOICE_DETAIL'], requires: ['VT-05'],
+    // NCL-10-CN-004/006: gộp danh sách/chi tiết hóa đơn + báo cáo tuổi nợ vào MỘT
+    // trang (InvoicesPage) — hai thứ này nhìn theo TOÀN CÔNG TY, không gắn 1 hợp
+    // đồng cụ thể nên không đưa được vào trang chi tiết hợp đồng. Đề xuất hóa đơn
+    // (T&M) và lịch hóa đơn định kỳ (Maintenance) đã chuyển hẳn vào ContractDetailPage
+    // (nhúng sẵn, hợp đồng chọn sẵn) — không còn là tab riêng ở đây. Chỉ Kế toán (VT-05).
+  },
+  {
     tab: 'EXPENSE_APPROVAL', icon: ICONS.money, label: 'Duyệt chi phí dự án', requires: ['VT-05'],
     // NCL-08-CN-002: Kế toán xem hàng chờ duyệt và duyệt/từ chối từng phiếu chi phí dự
     // án (NCL-08-CN-001) trước khi phiếu được tính vào giá vốn dự án.
@@ -123,7 +143,56 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
     // NCL-08-CN-005: Kế toán chia tổng chi phí chung phát sinh trong kỳ (tháng) cho các
     // dự án theo tỷ trọng giờ công đã duyệt trong kỳ đó.
   },
-  { tab: 'OPPORTUNITY_DETAIL', icon: ICONS.building, label: 'Cơ hộp', requires: ['VT-04'] },
+  {
+    tab: 'MARGIN_BY_CUSTOMER', icon: ICONS.building, label: 'Biên LN theo khách hàng', requires: ['VT-01'],
+    // NCL-09-CN-005 (TC-01): gộp doanh thu ghi nhận + giá vốn giờ công đã duyệt theo từng
+    // khách hàng trong kỳ. Chỉ Ban giám đốc (VT-01) xem được — khớp @PreAuthorize backend.
+  },
+  {
+    tab: 'MARGIN_BY_EMPLOYEE', icon: ICONS.users, label: 'Biên LN theo nhân sự', requires: ['VT-01'],
+    // NCL-09-CN-005 (TC-02): cùng phép tính nhưng gộp theo từng nhân sự thực hiện — nhạy
+    // cảm hơn báo cáo theo khách hàng nên cũng chỉ Ban giám đốc (VT-01) xem được.
+  },
+  {
+    tab: 'PROJECT_LABOR_COST', icon: ICONS.money, label: 'Giá vốn giờ công', requires: ['VT-01', 'VT-02', 'VT-05'],
+    // NCL-09-CN-001: Tính giá vốn giờ công dự án (số giờ đã duyệt × đơn giá/chi phí giờ).
+    // Hiển thị KPI tổng hợp + bảng chi tiết từng dòng. Dữ liệu nhạy cảm (đơn giá, giá vốn)
+    // được backend masking; frontend dùng canViewSensitiveData để kiểm soát hiển thị.
+    matches: ['PROJECT_LABOR_COST'],
+  },
+  {
+    tab: 'PLANNED_VS_ACTUAL', icon: ICONS.chart, label: 'Biên lợi nhuận dự kiến vs thực tế', requires: ['VT-02'],
+    // NCL-09-CN-006: So sánh biên lợi nhuận dự kiến (báo giá) với thực tế (giờ công đã duyệt).
+    // Chỉ VT-02 (Quản lý dự án) được xem — khác với labor-cost (VT-01/VT-02/VT-05); response
+    // là số liệu tổng hợp cấp dự án nên không che dữ liệu QTN-02.
+  },
+  {
+    tab: 'PROFIT_FORECAST', icon: ICONS.chart, label: 'Dự báo lợi nhuận khi kết thúc', requires: ['VT-02'],
+    // NCL-09-CN-007: ngoại suy giá vốn/biên lợi nhuận tới khi dự án kết thúc từ giờ công thực tế và ngân sách giờ
+    // (phần giờ còn lại; vượt ngân sách thì theo tốc độ tiêu hao thực tế). Chỉ VT-02 (Quản lý dự án) xem được —
+    // khớp @PreAuthorize backend; số liệu tổng hợp cấp dự án nên không che dữ liệu QTN-02.
+  },
+  {
+    tab: 'PROJECT_RECOGNIZED_REVENUE', icon: ICONS.chart, label: 'Doanh thu ghi nhận', requires: ['VT-01', 'VT-05'],
+    // NCL-09-CN-002: tính động doanh thu ghi nhận của dự án theo đúng loại hợp đồng
+    // (giờ công đã duyệt × đơn giá, hoặc giá trị hợp đồng × tỷ lệ hoàn thành). Chỉ
+    // Ban giám đốc (VT-01) và Kế toán (VT-05) xem được — khớp @PreAuthorize backend.
+  },
+  {
+    tab: 'PROJECT_MARGIN', icon: ICONS.chart, label: 'Biên lợi nhuận', requires: ['VT-01', 'VT-02', 'VT-05'],
+    // NCL-09-CN-003: biên lợi nhuận gộp thời gian thực của dự án (doanh thu ghi nhận
+    // trừ toàn bộ chi phí đã duyệt). Chỉ dữ liệu chi phí từng dòng (hourlyRate/laborCost)
+    // bị che với VT-02 theo QTN-02 — số tổng hợp hiển thị cho cả ba vai trò.
+  },
+  {
+    tab: 'MARGIN_ALERT_THRESHOLD', icon: ICONS.alertTriangle, label: 'Ngưỡng cảnh báo âm biên',
+    requires: ['VT-01', 'VT-02', 'VT-05'],
+    // NCL-09-CN-004: ngưỡng biên lợi nhuận tối thiểu toàn công ty — vượt ngưỡng thì hệ
+    // thống tự gửi thông báo cho quản lý dự án + Ban giám đốc mỗi khi tính lại biên lợi
+    // nhuận (NCL-09-CN-003). Chỉ Ban giám đốc (VT-01) được đặt/đổi (TC-03); VT-02/VT-05
+    // chỉ xem được ngưỡng hiện hành.
+  },
+  { tab: 'OPPORTUNITY_DETAIL', icon: ICONS.building, label: 'Cơ hội', requires: ['VT-04'] },
 ];
 
 /** Quản trị & Tổ chức — cơ cấu tổ chức, tài khoản, nhân sự, phân quyền. Tách

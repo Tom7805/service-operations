@@ -142,7 +142,7 @@ export default function SubcontractorExpenseFormModal({
                   autoFocus
                 />
                 {errors.contractorName && (
-                  <p className="field-error" data-testid="error-contractor-name" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                  <p className="field-error" data-testid="error-contractor-name" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                     {errors.contractorName}
                   </p>
                 )}
@@ -167,7 +167,7 @@ export default function SubcontractorExpenseFormModal({
                   disabled={submitting}
                 />
                 {errors.workScope && (
-                  <p className="field-error" data-testid="error-work-scope" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                  <p className="field-error" data-testid="error-work-scope" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                     {errors.workScope}
                   </p>
                 )}
@@ -194,7 +194,7 @@ export default function SubcontractorExpenseFormModal({
                     disabled={submitting}
                   />
                   {errors.amount && (
-                    <p className="field-error" data-testid="error-amount" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                    <p className="field-error" data-testid="error-amount" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                       {errors.amount}
                     </p>
                   )}
@@ -218,7 +218,7 @@ export default function SubcontractorExpenseFormModal({
                     disabled={submitting}
                   />
                   {errors.incurredPeriod && (
-                    <p className="field-error" data-testid="error-incurred-period" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                    <p className="field-error" data-testid="error-incurred-period" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                       {errors.incurredPeriod}
                     </p>
                   )}

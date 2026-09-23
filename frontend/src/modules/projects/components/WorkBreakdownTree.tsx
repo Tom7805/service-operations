@@ -81,11 +81,11 @@ export default function WorkBreakdownTree({
   if (items.length === 0) {
     return (
       <div className="table-empty-state" data-testid="wbs-empty" style={{ padding: '36px 20px', textAlign: 'center' }}>
-        <div className="table-empty-state__icon" style={{ fontSize: '36px', color: '#94A3B8', marginBottom: '8px' }}>
+        <div className="table-empty-state__icon" style={{ fontSize: '36px', color: 'var(--ink-faint)', marginBottom: '8px' }}>
           {ICONS.folder}
         </div>
-        <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: '#1E293B' }}>Chưa có hạng mục công việc nào</h4>
-        <p style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }}>
+        <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>Chưa có hạng mục công việc nào</h4>
+        <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
           {canEdit && isProjectOpen
             ? 'Hãy bấm nút "+ Thêm hạng mục" ở trên để bắt đầu phân rã cấu trúc công việc (WBS).'
             : 'Dự án này chưa được phân rã hạng mục và công việc.'}
@@ -97,77 +97,83 @@ export default function WorkBreakdownTree({
   const renderTaskNode = (node: TaskNode, wp: WorkBreakdownRes, level = 0) => {
     const { task, children } = node;
     const badge = statusBadgeConfig[task.status] || { label: task.status, className: 'wbs-badge--todo' };
+    const assignments = task.assignments || [];
+    const isAssigned = assignments.length > 0;
+
+    const menuActions = canEdit && isProjectOpen
+      ? [
+          {
+            key: 'assign',
+            label: isAssigned ? 'Đổi phân công' : 'Phân công',
+            icon: ICONS.users,
+            onClick: () => onAssign?.(task),
+            testId: `assign-task-btn-${task.id}`,
+          },
+          {
+            key: 'budget',
+            label: task.budgetHours != null ? 'Đổi ngân sách' : 'Đặt ngân sách',
+            icon: ICONS.receipt,
+            onClick: () => onSetBudget?.(task),
+            testId: `set-budget-btn-${task.id}`,
+          },
+          {
+            key: 'add-subtask',
+            label: 'Thêm việc con',
+            icon: ICONS.plus,
+            onClick: () => onAddTask?.(wp, task),
+            testId: `add-subtask-btn-${task.id}`,
+          },
+        ]
+      : [];
 
     return (
       <div key={task.id} className="wbs-task-row" style={{ marginLeft: `${level * 20}px` }} data-testid={`task-row-${task.id}`}>
-        <div className="wbs-task-main">
+        <div className="wbs-task-top">
           <span className="wbs-task-bullet">▪</span>
-          <div className="wbs-task-info">
-            <span className="wbs-task-name">{task.name}</span>
-            {task.description && <span className="wbs-task-desc">{task.description}</span>}
+          <span className="wbs-task-name" title={task.name}>{task.name}</span>
+          <span className={`wbs-badge ${badge.className}`}>{badge.label}</span>
+
+          <div className="wbs-task-top-actions">
+            {canLogTime && isProjectOpen && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-xs"
+                onClick={() => onLogTime?.(task)}
+                title="Ghi giờ công cho công việc này"
+                data-testid={`log-time-btn-${task.id}`}
+              >
+                {ICONS.clock} Ghi giờ công
+              </button>
+            )}
+            {menuActions.length > 0 && (
+              <RowActionsMenu ariaLabel={`Thao tác công việc ${task.name}`} actions={menuActions} />
+            )}
           </div>
         </div>
+
+        {task.description && <div className="wbs-task-desc">{task.description}</div>}
 
         <div className="wbs-task-meta">
           {(task.expectedStartDate || task.expectedEndDate) && (
             <span className="wbs-task-date">
-              {formatDate(task.expectedStartDate)}
-              {task.expectedStartDate && task.expectedEndDate && ' ➔ '}
+              {ICONS.calendar} {formatDate(task.expectedStartDate)}
+              {task.expectedStartDate && task.expectedEndDate && ' → '}
               {formatDate(task.expectedEndDate)}
             </span>
           )}
 
           {task.budgetHours != null && (
-            <span className="wbs-task-budget" style={{ color: '#2563EB', fontWeight: 500 }}>
+            <span className="wbs-task-budget">
               Ngân sách: {task.budgetHours} giờ
             </span>
           )}
 
-          <span className={`wbs-badge ${badge.className}`}>{badge.label}</span>
-
-          {canLogTime && isProjectOpen && (
-            <button
-              type="button"
-              className="btn btn-secondary btn-xs"
-              onClick={() => onLogTime?.(task)}
-              title="Ghi giờ công cho công việc này"
-              data-testid={`log-time-btn-${task.id}`}
-            >
-              {ICONS.clock} Ghi giờ công
-            </button>
-          )}
-
-          {canEdit && isProjectOpen && (
-            <>
-              <button
-                type="button"
-                className="btn btn-secondary btn-xs"
-                onClick={() => onAssign?.(task)}
-                title="Phân công nhân sự"
-                data-testid={`assign-task-btn-${task.id}`}
-              >
-                {ICONS.users} Phân công
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary btn-xs"
-                onClick={() => onSetBudget?.(task)}
-                title="Đặt ngân sách giờ công"
-                data-testid={`set-budget-btn-${task.id}`}
-              >
-                {task.budgetHours != null ? 'Đổi ngân sách' : '+ Ngân sách'}
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary btn-xs"
-                onClick={() => onAddTask?.(wp, task)}
-                title="Thêm công việc con"
-                data-testid={`add-subtask-btn-${task.id}`}
-              >
-                + Việc con
-              </button>
-            </>
-          )}
+          <span className={`wbs-task-assignees ${isAssigned ? '' : 'wbs-task-assignees--empty'}`}>
+            {ICONS.users}{' '}
+            {isAssigned
+              ? `Đã giao: ${assignments.map((a) => a.fullName).join(', ')} (${formatDate(assignments[0].expectedStartDate)} → ${formatDate(assignments[0].expectedEndDate)})`
+              : 'Chưa phân công'}
+          </span>
         </div>
 
         {children.length > 0 && (

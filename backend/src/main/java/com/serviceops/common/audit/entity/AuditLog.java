@@ -1,5 +1,4 @@
 package com.serviceops.common.audit.entity;
-
 import com.serviceops.common.audit.AuditTargetType;
 import com.serviceops.common.entity.BaseEntity;
 import jakarta.persistence.Column;
@@ -9,7 +8,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
-
 import java.time.LocalDateTime;
 
 /**
@@ -31,11 +29,9 @@ public class AuditLog extends BaseEntity {
 	@Column(name = "actor_username", length = 100)
 	private String actorUsername;
 
-	/** Mã vai trò (VT-xx) của người thực hiện tại thời điểm ghi log; NULL nếu không xác định. */
 	@Column(name = "actor_role", length = 20)
 	private String actorRole;
 
-	/** Hành động, dạng chữ dễ đọc (VD: "Tạo tài khoản", "Cấu hình phân quyền"). */
 	@Column(nullable = false, length = 100)
 	private String action;
 
@@ -46,7 +42,6 @@ public class AuditLog extends BaseEntity {
 	@Column(name = "target_id")
 	private Long targetId;
 
-	/** Tên/nhãn hiển thị của đối tượng bị tác động (VD: tên tài khoản, tên bộ phận). */
 	@Column(name = "target_label", length = 255)
 	private String targetLabel;
 

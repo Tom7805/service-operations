@@ -90,7 +90,7 @@ describe('ContractRateManager (NCL-07-CN-003 — Khai báo đơn giá riêng the
 
     render(<ContractRateManager currentUserRoles={['VT-07']} roleOptions={ROLE_OPTIONS} levelsByRole={LEVELS_BY_ROLE} />);
 
-    fireEvent.change(screen.getByLabelText('ID hợp đồng'), { target: { value: '7' } });
+    fireEvent.change(await screen.findByLabelText('ID hợp đồng'), { target: { value: '7' } });
     fireEvent.click(screen.getByRole('button', { name: 'Mở đơn giá hợp đồng' }));
 
     await waitFor(() => expect(screen.getByTestId('contract-rate-empty')).toBeInTheDocument());
@@ -131,7 +131,7 @@ describe('ContractRateManager (NCL-07-CN-003 — Khai báo đơn giá riêng the
     // roleOptions/levelsByRole (bảng đơn giá CHUNG) không hề có "Chuyên viên vận hành".
     render(<ContractRateManager currentUserRoles={['VT-07']} roleOptions={ROLE_OPTIONS} levelsByRole={LEVELS_BY_ROLE} />);
 
-    fireEvent.change(screen.getByLabelText('ID hợp đồng'), { target: { value: '7' } });
+    fireEvent.change(await screen.findByLabelText('ID hợp đồng'), { target: { value: '7' } });
     fireEvent.click(screen.getByRole('button', { name: 'Mở đơn giá hợp đồng' }));
     await waitFor(() => expect(screen.getByTestId('contract-rate-empty')).toBeInTheDocument());
 

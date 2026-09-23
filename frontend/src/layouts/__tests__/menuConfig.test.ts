@@ -63,6 +63,11 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'UNSUBMITTED_TIMESHEETS',
       'CUSTOMERS',
       'OPPORTUNITIES',
+      'PROJECT_LABOR_COST',
+      'PLANNED_VS_ACTUAL',
+      'PROFIT_FORECAST',
+      'PROJECT_MARGIN',
+      'MARGIN_ALERT_THRESHOLD',
     ]);
   });
 
@@ -79,7 +84,7 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
     expect(visible).not.toContain('BILL_RATES');
   });
 
-  it('Kế toán (VT-05) thấy chấm công + hợp đồng + đơn giá (và Cơ hộp chỉ xem)', () => {
+  it('Kế toán (VT-05) thấy chấm công + hợp đồng + đơn giá (và Cơ hội chỉ xem)', () => {
     expect(tabsFor(['VT-05'])).toEqual([
       'MY_WORK',
       'TIMESHEET_PERIOD',
@@ -87,8 +92,13 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'OPPORTUNITIES',
       'BILL_RATES',
       'RATE_HISTORY',
+      'INVOICES',
       'EXPENSE_APPROVAL',
       'OVERHEAD_ALLOCATION',
+      'PROJECT_LABOR_COST',
+      'PROJECT_RECOGNIZED_REVENUE',
+      'PROJECT_MARGIN',
+      'MARGIN_ALERT_THRESHOLD',
     ]);
   });
 
@@ -127,15 +137,15 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
     ]);
   });
 
-  it('Nhân viên công ty (VT-08) chỉ thấy Công việc + Cơ hộp (chỉ xem)', () => {
+  it('Nhân viên công ty (VT-08) chỉ thấy Công việc + Cơ hội (chỉ xem)', () => {
     expect(tabsFor(['VT-08'])).toEqual(['MY_WORK', 'OPPORTUNITIES']);
   });
 
-  it('Khách hàng (VT-09) chỉ thấy Công việc + Cơ hộp (chỉ xem)', () => {
+  it('Khách hàng (VT-09) chỉ thấy Công việc + Cơ hội (chỉ xem)', () => {
     expect(tabsFor(['VT-09'])).toEqual(['MY_WORK', 'OPPORTUNITIES']);
   });
 
-  it('Tài khoản không vai trò nào vẫn thấy Công việc + Cơ hộp (chỉ xem)', () => {
+  it('Tài khoản không vai trò nào vẫn thấy Công việc + Cơ hội (chỉ xem)', () => {
     expect(tabsFor([])).toEqual(['MY_WORK', 'OPPORTUNITIES']);
   });
 });
@@ -157,8 +167,13 @@ describe('navGroupsFor — bỏ qua nhóm không có mục hiển thị', () => 
       'OPPORTUNITIES',
       'BILL_RATES',
       'RATE_HISTORY',
+      'INVOICES',
       'EXPENSE_APPROVAL',
       'OVERHEAD_ALLOCATION',
+      'PROJECT_LABOR_COST',
+      'PROJECT_RECOGNIZED_REVENUE',
+      'PROJECT_MARGIN',
+      'MARGIN_ALERT_THRESHOLD',
     ]);
   });
 

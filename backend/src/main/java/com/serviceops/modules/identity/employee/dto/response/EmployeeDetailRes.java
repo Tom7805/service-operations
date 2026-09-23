@@ -18,5 +18,6 @@ public record EmployeeDetailRes(
         LocalDate endDate,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
-        List<EmploymentContractRes> contracts
+        List<EmploymentContractRes> contracts,
+        String level
 ) {}

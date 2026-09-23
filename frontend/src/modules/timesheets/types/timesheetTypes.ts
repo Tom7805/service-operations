@@ -113,6 +113,23 @@ export interface PendingTimesheetRes {
 }
 
 /**
+ * Một dòng lịch sử duyệt/từ chối CỦA CHÍNH PM ĐANG XEM (NCL-06-CN-003/CN-004).
+ * Khớp TimesheetApprovalHistoryRes — lấy lại từ nhật ký thao tác đã ghi sẵn khi PM duyệt/từ
+ * chối, để tra cứu lại sau khi bảng đã rời khỏi hàng chờ duyệt (không phải bị mất dữ liệu).
+ */
+export interface TimesheetApprovalHistoryRes {
+  auditLogId: number;
+  timesheetId: number;
+  userId: number;
+  userName: string | null;
+  weekStartDate: string; // YYYY-MM-DD
+  weekEndDate: string; // YYYY-MM-DD
+  action: 'APPROVED' | 'REJECTED';
+  detail: string | null;
+  performedAt: string;
+}
+
+/**
  * Payload duyệt bảng chấm công (NCL-06-CN-003).
  * POST /timesheets/{timesheetId}/approve
  *

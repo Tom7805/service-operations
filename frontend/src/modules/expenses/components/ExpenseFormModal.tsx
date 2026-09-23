@@ -21,6 +21,14 @@ function todayIso(): string {
   return new Date().toLocaleDateString('en-CA');
 }
 
+// Số tiền gõ liền không dấu tách rất dễ đọc nhầm/đếm nhầm số 0 (1000000 vs 10000000) —
+// hiển thị có dấu chấm ngăn cách hàng nghìn kiểu vi-VN khi gõ, vẫn lưu chuỗi chỉ-số vào
+// state (khớp validator hiện có) và gửi lên server dạng number thường.
+function formatVnAmount(rawDigits: string): string {
+  if (!rawDigits) return '';
+  return Number(rawDigits).toLocaleString('vi-VN');
+}
+
 /**
  * Form ghi nhận chi phí phát sinh của dự án (NCL-08-CN-001). Dùng chung cho hai luồng:
  * - Ghi nhận mới (`expense` để trống): `POST /projects/{projectId}/expenses`.
@@ -158,7 +166,7 @@ export default function ExpenseFormModal({ isOpen, onClose, projectId, expense =
                     ))}
                   </select>
                   {errors.type && (
-                    <p className="field-error" data-testid="error-expense-type" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                    <p className="field-error" data-testid="error-expense-type" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                       {errors.type}
                     </p>
                   )}
@@ -170,13 +178,12 @@ export default function ExpenseFormModal({ isOpen, onClose, projectId, expense =
                   </label>
                   <input
                     id="expense-amount"
-                    type="number"
-                    min="0.01"
-                    step="0.01"
+                    type="text"
+                    inputMode="numeric"
                     className={`form-input ${errors.amount ? 'form-input--error' : ''}`}
-                    value={amount}
+                    value={formatVnAmount(amount)}
                     onChange={(e) => {
-                      setAmount(e.target.value);
+                      setAmount(e.target.value.replace(/\D/g, ''));
                       setErrors((prev) => ({ ...prev, amount: undefined }));
                       setServerError(null);
                     }}
@@ -184,7 +191,7 @@ export default function ExpenseFormModal({ isOpen, onClose, projectId, expense =
                     disabled={submitting}
                   />
                   {errors.amount && (
-                    <p className="field-error" data-testid="error-expense-amount" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                    <p className="field-error" data-testid="error-expense-amount" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                       {errors.amount}
                     </p>
                   )}
@@ -209,7 +216,7 @@ export default function ExpenseFormModal({ isOpen, onClose, projectId, expense =
                   disabled={submitting}
                 />
                 {errors.expenseDate && (
-                  <p className="field-error" data-testid="error-expense-date" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                  <p className="field-error" data-testid="error-expense-date" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                     {errors.expenseDate}
                   </p>
                 )}
@@ -234,7 +241,7 @@ export default function ExpenseFormModal({ isOpen, onClose, projectId, expense =
                   disabled={submitting}
                 />
                 {errors.description && (
-                  <p className="field-error" data-testid="error-expense-description" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                  <p className="field-error" data-testid="error-expense-description" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                     {errors.description}
                   </p>
                 )}
@@ -259,7 +266,7 @@ export default function ExpenseFormModal({ isOpen, onClose, projectId, expense =
                   disabled={submitting}
                 />
                 {errors.receiptUrl && (
-                  <p className="field-error" data-testid="error-expense-receipt-url" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                  <p className="field-error" data-testid="error-expense-receipt-url" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                     {errors.receiptUrl}
                   </p>
                 )}

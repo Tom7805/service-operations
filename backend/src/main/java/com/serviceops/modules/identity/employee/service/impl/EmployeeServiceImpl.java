@@ -108,6 +108,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         employee.setUser(getUser(request.userId()));
         employee.setDepartment(findDepartment(request.departmentId()));
         employee.setProfessionalRole(normalize(request.professionalRole()));
+        employee.setLevel(normalize(request.level()));
         employee.setHireDate(request.hireDate());
         employee.setEndDate(request.endDate());
         employee.setStandardHoursPerWeek(resolveStandardHours(request.standardHoursPerWeek()));
@@ -125,6 +126,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
         employee.setDepartment(findDepartment(request.departmentId()));
         employee.setProfessionalRole(normalize(request.professionalRole()));
+        employee.setLevel(normalize(request.level()));
         employee.setHireDate(request.hireDate());
         employee.setEndDate(request.endDate());
         employee.setStandardHoursPerWeek(resolveStandardHours(request.standardHoursPerWeek()));

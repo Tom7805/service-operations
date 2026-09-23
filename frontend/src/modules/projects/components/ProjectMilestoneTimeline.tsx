@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
+import RowActionsMenu from '../../../components/common/RowActionsMenu';
 import type { ProjectMilestoneRes, WorkBreakdownRes } from '../types/projectTypes';
 import { deleteMilestone, getMilestones, ProjectsApiError } from '../api/projectsApi';
 import MilestoneFormModal from './MilestoneFormModal';
@@ -117,7 +118,7 @@ export default function ProjectMilestoneTimeline({
           gap: '8px',
         }}
       >
-        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1E293B' }}>
+        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
           Mốc tiến độ dự án
         </h3>
         {canCreate && (
@@ -170,10 +171,10 @@ export default function ProjectMilestoneTimeline({
       ) : milestones.length === 0 ? (
         <div className="table-empty-state" data-testid="milestone-empty">
           <div className="table-empty-state__icon">{ICONS.calendar}</div>
-          <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: '#1E293B' }}>
+          <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>
             Chưa có mốc tiến độ nào
           </h4>
-          <p style={{ margin: 0, color: '#64748B', fontSize: '13.5px' }}>
+          <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
             {canCreate
               ? 'Hãy bấm nút "+ Thêm mốc tiến độ" ở trên để bắt đầu theo dõi tiến độ dự án.'
               : 'Dự án này chưa khai báo mốc tiến độ nào.'}
@@ -189,7 +190,7 @@ export default function ProjectMilestoneTimeline({
                 <th style={{ width: '130px' }}>Ngày kế hoạch</th>
                 <th style={{ width: '130px' }}>Ngày thực tế</th>
                 <th style={{ width: '170px' }}>Trạng thái</th>
-                {canEdit && <th style={{ width: '190px' }}></th>}
+                {canEdit && <th style={{ width: '48px' }}></th>}
               </tr>
             </thead>
             <tbody>
@@ -226,35 +227,38 @@ export default function ProjectMilestoneTimeline({
                     {canEdit && (
                       <td>
                         {isProjectOpen && (
-                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                            <button
-                              type="button"
-                              className="btn btn-secondary btn-xs"
-                              onClick={() => openEditForm(m)}
-                              data-testid={`btn-edit-milestone-${m.id}`}
-                            >
-                              Sửa
-                            </button>
-                            {m.status !== 'DONE' && (
-                              <button
-                                type="button"
-                                className="btn btn-secondary btn-xs"
-                                onClick={() => setCompletingMilestone(m)}
-                                data-testid={`btn-complete-milestone-${m.id}`}
-                              >
-                                Hoàn thành
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              className="btn btn-danger btn-xs"
-                              onClick={() => void handleDelete(m)}
-                              disabled={deletingId === m.id}
-                              data-testid={`btn-delete-milestone-${m.id}`}
-                            >
-                              Xóa
-                            </button>
-                          </div>
+                          <RowActionsMenu
+                            ariaLabel={`Thao tác mốc tiến độ ${m.name}`}
+                            actions={[
+                              {
+                                key: 'edit',
+                                label: 'Sửa',
+                                icon: ICONS.edit,
+                                onClick: () => openEditForm(m),
+                                testId: `btn-edit-milestone-${m.id}`,
+                              },
+                              ...(m.status !== 'DONE'
+                                ? [
+                                    {
+                                      key: 'complete',
+                                      label: 'Hoàn thành',
+                                      icon: ICONS.check,
+                                      onClick: () => setCompletingMilestone(m),
+                                      testId: `btn-complete-milestone-${m.id}`,
+                                    },
+                                  ]
+                                : []),
+                              {
+                                key: 'delete',
+                                label: 'Xóa',
+                                icon: ICONS.trash,
+                                tone: 'danger',
+                                onClick: () => void handleDelete(m),
+                                disabled: deletingId === m.id,
+                                testId: `btn-delete-milestone-${m.id}`,
+                              },
+                            ]}
+                          />
                         )}
                       </td>
                     )}

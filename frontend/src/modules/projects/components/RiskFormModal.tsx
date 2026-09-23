@@ -166,7 +166,7 @@ export default function RiskFormModal({
                 <p
                   className="field-error"
                   data-testid="error-risk-description"
-                  style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}
+                  style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}
                 >
                   {errors.description}
                 </p>
@@ -200,7 +200,7 @@ export default function RiskFormModal({
                   <p
                     className="field-error"
                     data-testid="error-risk-impact"
-                    style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}
+                    style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}
                   >
                     {errors.impact}
                   </p>
@@ -233,7 +233,7 @@ export default function RiskFormModal({
                   <p
                     className="field-error"
                     data-testid="error-risk-likelihood"
-                    style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}
+                    style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}
                   >
                     {errors.likelihood}
                   </p>
@@ -300,7 +300,7 @@ export default function RiskFormModal({
                 <p
                   className="field-error"
                   data-testid="error-risk-watcher-id"
-                  style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}
+                  style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}
                 >
                   {errors.watcherId}
                 </p>
