@@ -13,10 +13,10 @@ export interface ProjectRecognizedRevenuePageProps {
 }
 
 const CONTRACT_TYPE_LABELS: Record<ContractType, string> = {
-  TIME_AND_MATERIAL: 'Theo giờ (Time & Material)',
-  FIXED_PRICE: 'Trọn gói (Fixed Price)',
+  TIME_AND_MATERIAL: 'Theo giờ công & vật tư',
+  FIXED_PRICE: 'Trọn gói (giá cố định)',
   MAINTENANCE: 'Bảo trì định kỳ',
-  MILESTONE: 'Theo cột mốc',
+  MILESTONE: 'Theo mốc thanh toán',
 };
 
 const RECOGNITION_METHOD_LABELS: Record<RecognitionMethod, string> = {

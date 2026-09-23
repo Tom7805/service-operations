@@ -132,7 +132,7 @@ export default function TimesheetRejectPage({
             hợp lệ để nhân viên sửa lại và nộp lại.
           </p>
         </div>
-        <div className="page-header-actions">
+        <div className="page-header__actions">
           <button type="button" className="btn btn-secondary btn-sm" onClick={() => setHistoryOpen(true)}>
             <span className="icon-xs">{ICONS.history}</span> Lịch sử từ chối
           </button>

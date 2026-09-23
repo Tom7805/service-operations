@@ -20,6 +20,12 @@ export interface TimeEntryFormProps {
    * đợi round-trip API mới báo lỗi.
    */
   existingEntries?: TimeEntryRes[];
+  /**
+   * Tổng giờ đã ghi theo từng ngày (yyyy-MM-dd), gộp mọi công việc trong tuần — dùng để cảnh
+   * báo trước khi chọn ngày, vì trần "không quá 12 giờ/ngày" tính trên toàn bộ công việc chứ
+   * không chỉ riêng công việc đang ghi (NCL-06-CN-001).
+   */
+  dailyHoursMap?: Record<string, number>;
   onSaved?: (entry: TimeEntryRes) => void;
   /**
    * Thứ Hai/Chủ nhật của tuần đang xem trên bảng lưới phía sau modal — dùng để chọn sẵn một
@@ -67,6 +73,7 @@ export default function TimeEntryForm({
   taskName,
   entry = null,
   existingEntries = [],
+  dailyHoursMap = {},
   onSaved,
   weekFrom,
   weekTo,
@@ -245,6 +252,29 @@ export default function TimeEntryForm({
                 <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px' }}>
                   Không đổi được ngày làm việc của bản ghi đã có — muốn đổi ngày thì xoá bản ghi này rồi ghi bản
                   ghi mới.
+                </p>
+              )}
+              {!isEdit && workDate && (dailyHoursMap[workDate] ?? 0) > 0 && (
+                <p
+                  className="field-hint"
+                  data-testid="time-entry-day-hours-hint"
+                  style={{
+                    fontSize: '12px',
+                    marginTop: '4px',
+                    color: (dailyHoursMap[workDate] ?? 0) >= 12 ? 'var(--pale-red-fg)' : 'var(--ink-muted)',
+                  }}
+                >
+                  Ngày {workDate} đã ghi {dailyHoursMap[workDate]} giờ (mọi công việc) — còn tối đa{' '}
+                  {Math.max(0, 12 - (dailyHoursMap[workDate] ?? 0))} giờ để ghi thêm.
+                </p>
+              )}
+              {!isEdit && Object.keys(dailyHoursMap).length > 0 && (
+                <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px' }}>
+                  Các ngày trong tuần đã có giờ công:{' '}
+                  {Object.entries(dailyHoursMap)
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .map(([date, hrs]) => `${date} (${hrs}h)`)
+                    .join(', ')}
                 </p>
               )}
               {errors.workDate && (

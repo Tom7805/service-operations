@@ -182,7 +182,7 @@ describe('CreateProjectFromTemplateModal Component (NCL-05-CN-007)', () => {
 
     expect(screen.getByText(/Thông tin kế thừa tự động từ hợp đồng/i)).toBeInTheDocument();
     expect(screen.getByText('Công ty Cổ phần Alpha')).toBeInTheDocument();
-    expect(screen.getByText('Fixed Price')).toBeInTheDocument();
+    expect(screen.getByText('Trọn gói (giá cố định)')).toBeInTheDocument();
     expect(screen.getByText('RUNNING (Đang thực hiện)')).toBeInTheDocument();
 
     await waitFor(() => {

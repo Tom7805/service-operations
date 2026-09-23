@@ -3,7 +3,7 @@ import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
 import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import { t } from '../../../i18n';
-import type { ContractRes } from '../types/contractTypes';
+import { CONTRACT_TYPE_LABEL, type ContractRes } from '../types/contractTypes';
 import { updateTypeAndLimit } from '../api/contractsApi';
 
 interface Props {
@@ -15,10 +15,10 @@ interface Props {
 }
 
 const CONTRACT_TYPE_OPTIONS = [
-  { value: 'TIME_AND_MATERIAL', label: 'Time & Material' },
-  { value: 'FIXED_PRICE', label: 'Fixed Price' },
-  { value: 'MAINTENANCE', label: 'Maintenance' },
-  { value: 'MILESTONE', label: 'Milestone' },
+  { value: 'TIME_AND_MATERIAL', label: CONTRACT_TYPE_LABEL.TIME_AND_MATERIAL },
+  { value: 'FIXED_PRICE', label: CONTRACT_TYPE_LABEL.FIXED_PRICE },
+  { value: 'MAINTENANCE', label: CONTRACT_TYPE_LABEL.MAINTENANCE },
+  { value: 'MILESTONE', label: CONTRACT_TYPE_LABEL.MILESTONE },
 ] as const;
 
 // Số tiền gõ liền không dấu tách rất dễ đọc nhầm/đếm nhầm số 0 (98000000 vs

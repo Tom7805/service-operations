@@ -133,7 +133,7 @@ export default function TimesheetApprovalPage({
             Các bảng chấm công tuần đang chờ bạn duyệt hoặc từ chối, thuộc những dự án bạn quản lý.
           </p>
         </div>
-        <div className="page-header-actions">
+        <div className="page-header__actions">
           <button type="button" className="btn btn-secondary btn-sm" onClick={() => setHistoryOpen(true)}>
             <span className="icon-xs">{ICONS.history}</span> Giờ công đã duyệt
           </button>

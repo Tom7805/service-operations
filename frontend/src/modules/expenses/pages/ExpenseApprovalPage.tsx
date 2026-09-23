@@ -117,7 +117,7 @@ export default function ExpenseApprovalPage({
             thuê ngoài. Phiếu được duyệt sẽ được tính vào giá vốn dự án.
           </p>
         </div>
-        <div className="page-header-actions">
+        <div className="page-header__actions">
           <button type="button" className="btn-icon-refresh" onClick={fetchPending} title="Tải lại" aria-label="Tải lại" disabled={loading}>
             {ICONS.refresh}
           </button>

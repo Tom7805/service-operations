@@ -202,7 +202,8 @@ export default function ProjectLaborCostPage({
             </div>
           )}
 
-          {/* Summary Card: luôn hiển thị cho cả VT-01, VT-02, VT-05 */}
+          {/* Summary Card: 3 ô luôn hiển thị cho VT-01/VT-02/VT-05, nhưng riêng ô "Tổng giá vốn"
+              (tiền) vẫn bị MaskedCell ẩn với VT-02 — chỉ số giờ/số dòng là hiện thật với VT-02. */}
           <div className="stats-grid">
             <div className="stat-card" data-testid="kpi-total-hours">
               <span className="stat-card__label">Tổng giờ đã duyệt</span>
@@ -229,8 +230,9 @@ export default function ProjectLaborCostPage({
           {/* RBAC: Ẩn bảng chi tiết cho Project Manager (VT-02) không có VT-01 */}
           {!canViewTableDetail && (
             <div className="alert-box alert-box--info" role="alert" style={{ marginBottom: '16px' }} data-testid="table-hidden-notice">
-              <strong>Thông báo:</strong> Vai trò Quản lý dự án (VT-02) chỉ được xem tổng hợp giá vốn.
-              Bảng chi tiết từng nhân sự được ẩn theo phân quyền.
+              <strong>Thông báo:</strong> Vai trò Quản lý dự án (VT-02) chỉ được xem tổng số giờ và số dòng giờ
+              công. Số tiền giá vốn (đơn giá/giờ, tổng giá vốn) và bảng chi tiết từng nhân sự bị ẩn theo phân
+              quyền — chỉ Ban giám đốc (VT-01), Kế toán (VT-05) và Nhân sự (VT-06) được xem số tiền này.
             </div>
           )}
 

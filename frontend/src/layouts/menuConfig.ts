@@ -8,6 +8,7 @@ import { ICONS } from '../components/common/icons';
 export type Tab =
   | 'CUSTOMERS'
   | 'CONTRACTS'
+  | 'CONTRACT_DETAIL'
   | 'OPPORTUNITIES'
   | 'REVENUE_FORECAST'
   | 'CUSTOMER_MERGE'
@@ -97,6 +98,7 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
   { tab: 'CUSTOMERS', icon: ICONS.building, label: 'Khách hàng', requires: ['VT-04', 'VT-02'] },
   {
     tab: 'CONTRACTS', icon: ICONS.receipt, label: 'Hợp đồng', requires: ['VT-05'],
+    matches: ['CONTRACT_DETAIL'],
     // Màn hình lấy hợp đồng làm trung tâm cho Kế toán (VT-05): khai báo loại &
     // hạn mức, mốc thanh toán, kích hoạt, nhắc gia hạn. Các nghiệp vụ này chỉ
     // VT-05 thao tác được nhưng Kế toán KHÔNG vào được hồ sơ khách hàng
@@ -125,10 +127,11 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
   },
   {
     tab: 'INVOICES', icon: ICONS.receipt, label: 'Hóa đơn', matches: ['INVOICE_DETAIL'], requires: ['VT-05'],
-    // NCL-10-CN-001..006: gộp cả 4 chức năng con (danh sách/chi tiết hóa đơn, đề xuất
-    // hóa đơn, hóa đơn định kỳ, báo cáo tuổi nợ) vào MỘT trang (InvoicesPage) — điều
-    // hướng bằng dải nút bên trong trang, không phải 4 mục sidebar riêng — theo đúng
-    // mẫu BillRatePage đang bó nhiều story con vào một trang. Chỉ Kế toán (VT-05).
+    // NCL-10-CN-004/006: gộp danh sách/chi tiết hóa đơn + báo cáo tuổi nợ vào MỘT
+    // trang (InvoicesPage) — hai thứ này nhìn theo TOÀN CÔNG TY, không gắn 1 hợp
+    // đồng cụ thể nên không đưa được vào trang chi tiết hợp đồng. Đề xuất hóa đơn
+    // (T&M) và lịch hóa đơn định kỳ (Maintenance) đã chuyển hẳn vào ContractDetailPage
+    // (nhúng sẵn, hợp đồng chọn sẵn) — không còn là tab riêng ở đây. Chỉ Kế toán (VT-05).
   },
   {
     tab: 'EXPENSE_APPROVAL', icon: ICONS.money, label: 'Duyệt chi phí dự án', requires: ['VT-05'],

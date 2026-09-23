@@ -14,6 +14,7 @@ import TwoFactorSetupPage from './modules/auth/pages/TwoFactorSetupPage';
 import CustomerListPage from './modules/customers/pages/CustomerListPage';
 import CustomerMergePage from './modules/customers/pages/CustomerMergePage';
 import ContractListPage from './modules/contracts/pages/ContractListPage';
+import ContractDetailPage from './modules/contracts/pages/ContractDetailPage';
 import InvoicesPage from './modules/invoices/pages/InvoicesPage';
 import InvoiceDetailPage from './modules/invoices/pages/InvoiceDetailPage';
 import BillRatePage from './modules/rates/pages/BillRatePage';
@@ -43,6 +44,8 @@ import NotificationCenterPage from './modules/notifications/pages/NotificationCe
 import NotificationList from './modules/notifications/components/NotificationList';
 import { getNotifications, getUnreadCount, markNotificationsRead } from './modules/notifications/api/notificationsApi';
 import type { NotificationRes } from './modules/notifications/types/notificationTypes';
+import { getAllProjects } from './modules/projects/api/projectsApi';
+import type { ProjectRes } from './modules/projects/types/projectTypes';
 import { ICONS } from './components/common/icons';
 import CommandPalette from './components/common/CommandPalette';
 import useScrollReveal from './hooks/useScrollReveal';
@@ -83,15 +86,13 @@ export default function App() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
   const [selectedOpportunityId, setSelectedOpportunityId] = useState<number | null>(null);
+  const [selectedContractId, setSelectedContractId] = useState<number | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
 
-  // Mock danh sách dự án — thay thế bằng GET /projects khi có API danh sách dự án.
-  const mockProjects: { id: number; projectCode: string; name: string }[] = [
-    { id: 1, projectCode: 'PRJ-2026-001', name: 'Triển khai CRM cho Khách hàng Alpha' },
-    { id: 2, projectCode: 'PRJ-2026-002', name: 'Nâng cấp hệ thống ERP doanh thu' },
-    { id: 3, projectCode: 'PRJ-2026-003', name: 'Triển khai giải pháp thanh toán số' },
-  ];
+  // Danh sách dự án dùng cho các ô chọn dạng dropdown ở màn hình Giá vốn/Biên lợi nhuận
+  // (NCL-09) — nạp một lần từ GET /projects khi đăng nhập.
+  const [allProjects, setAllProjects] = useState<ProjectRes[]>([]);
   const [selectedOpportunityName, setSelectedOpportunityName] = useState<string | undefined>(undefined);
   /** Nhớ người dùng vào màn "Ghi nhận chăm sóc" từ đâu để nút quay lại trả về
    *  đúng chỗ: từ danh sách "Cơ hội bán hàng" thì về lại danh sách, còn tự tìm
@@ -165,6 +166,24 @@ export default function App() {
   // NCL-01-CN-004 TC-03: admin đổi vai trò ở tab/máy khác → phiên này áp dụng ngay
   // (làm mới khi focus lại + poll 30s), không bắt đăng nhập lại; 401 thì đăng xuất.
   useSessionSync({ session, onRefresh: persistSession, onExpired: handleLogout });
+
+  // Nạp danh sách dự án cho các ô chọn dropdown (Giá vốn/Biên lợi nhuận) ngay khi đăng nhập —
+  // trước đây các trang này dùng tạm mảng dữ liệu mẫu cố định nên không bao giờ thấy dự án thật.
+  useEffect(() => {
+    if (!session) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const projects = await getAllProjects();
+        if (!cancelled) setAllProjects(projects);
+      } catch {
+        // Bỏ qua lỗi nạp danh sách dự án — các trang liên quan vẫn hoạt động, chỉ thiếu dropdown.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
 
   // NCL-06-CN-009: chấm đỏ trên chuông thông báo phản ánh đúng số chưa đọc thật (gồm cả
   // TIMESHEET_REMINDER) — nạp ngay khi đăng nhập rồi làm mới định kỳ mỗi 30 giây.
@@ -480,7 +499,7 @@ export default function App() {
           ) : activeTab === 'NOTIFICATIONS' ? (
             <NotificationCenterPage />
           ) : activeTab === 'MY_WORK' ? (
-            <MyWorkPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+            <MyWorkPage currentUserRoles={currentRoles} currentUserName={session.fullName} currentUserId={session.userId} />
           ) : activeTab === 'TIMESHEET_APPROVAL' ? (
             <TimesheetApprovalPage
               currentUserRoles={currentRoles}
@@ -539,7 +558,7 @@ export default function App() {
                   <option value="" disabled>
                     -- Chọn dự án --
                   </option>
-                  {mockProjects.map((proj) => (
+                  {allProjects.map((proj) => (
                     <option key={proj.id} value={proj.id}>
                       {proj.projectCode} — {proj.name}
                     </option>
@@ -583,7 +602,7 @@ export default function App() {
                   <option value="" disabled>
                     -- Chọn dự án --
                   </option>
-                  {mockProjects.map((proj) => (
+                  {allProjects.map((proj) => (
                     <option key={proj.id} value={proj.id}>
                       {proj.projectCode} — {proj.name}
                     </option>
@@ -601,6 +620,33 @@ export default function App() {
             />
           ) : activeTab === 'CONTRACTS' ? (
             <ContractListPage
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+              onOpenDetail={(id) => {
+                setSelectedContractId(id);
+                setActiveTab('CONTRACT_DETAIL');
+              }}
+            />
+          ) : activeTab === 'CONTRACT_DETAIL' && selectedContractId ? (
+            <ContractDetailPage
+              contractId={selectedContractId}
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+              onBack={() => setActiveTab('CONTRACTS')}
+            />
+          ) : activeTab === 'INVOICES' ? (
+            <InvoicesPage
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+              onOpenInvoice={(id) => {
+                setSelectedInvoiceId(id);
+                setActiveTab('INVOICE_DETAIL');
+              }}
+            />
+          ) : activeTab === 'INVOICE_DETAIL' && selectedInvoiceId ? (
+            <InvoiceDetailPage
+              invoiceId={selectedInvoiceId}
+              onBack={() => setActiveTab('INVOICES')}
               currentUserRoles={currentRoles}
               currentUserName={session.fullName}
             />
@@ -672,22 +718,6 @@ export default function App() {
             <BillRatePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'RATE_HISTORY' ? (
             <RateHistoryPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
-          ) : activeTab === 'INVOICES' ? (
-            <InvoicesPage
-              currentUserRoles={currentRoles}
-              currentUserName={session.fullName}
-              onOpenInvoice={(id) => {
-                setSelectedInvoiceId(id);
-                setActiveTab('INVOICE_DETAIL');
-              }}
-            />
-          ) : activeTab === 'INVOICE_DETAIL' && selectedInvoiceId ? (
-            <InvoiceDetailPage
-              invoiceId={selectedInvoiceId}
-              onBack={() => setActiveTab('INVOICES')}
-              currentUserRoles={currentRoles}
-              currentUserName={session.fullName}
-            />
           ) : activeTab === 'DEPARTMENTS' ? (
             <DepartmentTreePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'PERMISSIONS' ? (
@@ -753,7 +783,7 @@ export default function App() {
                   <option value="" disabled>
                     -- Chọn dự án --
                   </option>
-                  {mockProjects.map((proj) => (
+                  {allProjects.map((proj) => (
                     <option key={proj.id} value={proj.id}>
                       {proj.projectCode} — {proj.name}
                     </option>
@@ -797,7 +827,7 @@ export default function App() {
                   <option value="" disabled>
                     -- Chọn dự án --
                   </option>
-                  {mockProjects.map((proj) => (
+                  {allProjects.map((proj) => (
                     <option key={proj.id} value={proj.id}>
                       {proj.projectCode} — {proj.name}
                     </option>
@@ -841,7 +871,7 @@ export default function App() {
                   <option value="" disabled>
                     -- Chọn dự án --
                   </option>
-                  {mockProjects.map((proj) => (
+                  {allProjects.map((proj) => (
                     <option key={proj.id} value={proj.id}>
                       {proj.projectCode} — {proj.name}
                     </option>

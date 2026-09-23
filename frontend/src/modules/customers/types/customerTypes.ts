@@ -124,6 +124,9 @@ export interface CustomerOverviewItem {
   date: string | null; // ISO date (yyyy-MM-dd)
   /** Chỉ có ở hợp đồng (ví dụ TIME_AND_MATERIAL) — null với cơ hội bán hàng. */
   contractType: string | null;
+  /** Ngày kết thúc hợp đồng — chỉ có ở dòng hợp đồng, null với cơ hội/dự án. Dùng để tự
+   *  điền sẵn "Ngày kết thúc dự kiến" khi tạo dự án từ hợp đồng (NCL-05-CN-001). */
+  endDate: string | null;
 }
 
 /**

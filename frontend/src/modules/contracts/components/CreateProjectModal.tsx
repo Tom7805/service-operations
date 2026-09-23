@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
 import { getActiveUsersLookup, type UserLookup } from '../../users/api/usersApi';
-import type {
-  ContractTargetForProject,
-  ProjectCreateFromContractReq,
-  ProjectRes,
+import {
+  CONTRACT_TYPE_LABEL,
+  type ContractTargetForProject,
+  type ProjectCreateFromContractReq,
+  type ProjectRes,
 } from '../types/contractTypes';
 import { createProjectFromContract, ProjectsApiError } from '../api/contractsApi';
 import { validateProjectCreateForm } from '../../projects/validators/projectValidators';
@@ -36,16 +37,9 @@ function formatAmount(value: number | null | undefined): string {
   return currencyFormatter.format(value);
 }
 
-const CONTRACT_TYPE_LABELS: Record<string, string> = {
-  TIME_AND_MATERIAL: 'Time & Material',
-  FIXED_PRICE: 'Fixed Price',
-  MAINTENANCE: 'Maintenance',
-  MILESTONE: 'Milestone',
-};
-
 function contractTypeLabel(value: string | null | undefined): string {
   if (!value) return 'Chưa xác định';
-  return CONTRACT_TYPE_LABELS[value] ?? value;
+  return (CONTRACT_TYPE_LABEL as Record<string, string>)[value] ?? value;
 }
 
 export default function CreateProjectModal({

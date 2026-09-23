@@ -180,6 +180,7 @@ export default function CustomerOverviewPanel({
       contractType: item.contractType ?? undefined,
       totalValue: item.amount,
       startDate: item.date,
+      endDate: item.endDate,
     });
     setIsCreateProjectOpen(true);
   }, [customerId, customerName]);
@@ -198,6 +199,7 @@ export default function CustomerOverviewPanel({
       contractType: item.contractType ?? undefined,
       totalValue: item.amount,
       startDate: item.date,
+      endDate: item.endDate,
     });
     setIsCreateFromTemplateOpen(true);
   }, [customerId, customerName]);

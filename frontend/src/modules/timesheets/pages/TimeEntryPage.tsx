@@ -106,6 +106,17 @@ export default function TimeEntryPage({
 
   const entries = summary?.entries ?? [];
 
+  // Tổng giờ đã ghi theo từng ngày, gộp TẤT CẢ công việc trong tuần — dùng để cảnh báo trước
+  // khi chọn ngày, vì trần "không quá 12 giờ/ngày" tính trên toàn bộ công việc, không chỉ riêng
+  // công việc đang xem (khác với việc phát hiện trùng ngày, chỉ xét trong cùng công việc).
+  const dailyHoursMap = weekSummaries
+    .flatMap((s) => s.entries)
+    .filter((e) => e.status !== 'REJECTED')
+    .reduce<Record<string, number>>((acc, e) => {
+      acc[e.workDate] = (acc[e.workDate] ?? 0) + e.hours;
+      return acc;
+    }, {});
+
   const draftEntriesInWeek = weekSummaries.flatMap((s) => s.entries.filter((e) => e.status === 'DRAFT'));
   const draftCountInWeek = draftEntriesInWeek.length;
   const draftHoursInWeek = draftEntriesInWeek.reduce((sum, e) => sum + e.hours, 0);
@@ -426,6 +437,7 @@ export default function TimeEntryPage({
         taskName={taskName || summary?.taskName || undefined}
         entry={editingEntry}
         existingEntries={entries}
+        dailyHoursMap={dailyHoursMap}
         weekFrom={weekFrom}
         weekTo={weekTo}
         onSaved={() => {

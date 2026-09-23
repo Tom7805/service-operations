@@ -96,7 +96,7 @@ public class RevenueRecognitionServiceImpl implements RevenueRecognitionService 
 		List<TimeEntry> entries = taskIds.isEmpty() ? List.of()
 				: timeEntryRepository.findByTaskIdInAndStatusOrderByWorkDateAscIdAsc(taskIds, TimeEntryStatus.APPROVED);
 
-		Map<Long, Employee> employeesByUserId = employeeRepository.findAllById(
+		Map<Long, Employee> employeesByUserId = employeeRepository.findByUser_IdIn(
 				entries.stream().map(TimeEntry::getUserId).distinct().toList()).stream()
 					.collect(Collectors.toMap(employee -> employee.getUser().getId(), Function.identity()));
 

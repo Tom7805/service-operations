@@ -1,5 +1,14 @@
 export type ContractType = 'TIME_AND_MATERIAL' | 'FIXED_PRICE' | 'MAINTENANCE' | 'MILESTONE';
 
+/** Nhãn tiếng Việt cho từng loại hợp đồng — dùng chung ở mọi nơi hiển thị (dropdown khai báo,
+ *  bảng danh sách, trang chi tiết) để không lệch cách gọi giữa các màn hình. */
+export const CONTRACT_TYPE_LABEL: Record<ContractType, string> = {
+  TIME_AND_MATERIAL: 'Theo giờ công & vật tư',
+  FIXED_PRICE: 'Trọn gói (giá cố định)',
+  MAINTENANCE: 'Bảo trì định kỳ',
+  MILESTONE: 'Theo mốc thanh toán',
+};
+
 export interface ContractCreateFromOpportunityReq {
   name?: string | null;
   contractType: ContractType;

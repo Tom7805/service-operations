@@ -228,7 +228,7 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
           <h1 className="page-title">Khai báo cây tổ chức</h1>
           <p className="page-subtitle">Thiết lập sơ đồ phòng ban và gán người quản lý.</p>
         </div>
-        <div className="page-header-actions">
+        <div className="page-header__actions">
           <button type="button" className="btn-primary btn-lg" onClick={handleOpenCreateRoot}>
             <span className="btn-icon icon-sm">{ICONS.building}</span> Thêm bộ phận cấp gốc
           </button>

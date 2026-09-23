@@ -96,7 +96,7 @@ describe('CreateProjectModal (NCL-05-CN-001 — Tạo dự án từ hợp đồn
     // Kiểm tra thông tin kế thừa hiển thị
     expect(screen.getByText(/Tạo dự án từ hợp đồng/i)).toBeInTheDocument();
     expect(screen.getByText(/Công ty TNHH ABC/i)).toBeInTheDocument();
-    expect(screen.getByText(/Fixed Price/i)).toBeInTheDocument();
+    expect(screen.getByText(/Trọn gói \(giá cố định\)/i)).toBeInTheDocument();
     expect(screen.getByText(/RUNNING \(Đang triển khai\)/i)).toBeInTheDocument();
 
     // Điền thông tin form

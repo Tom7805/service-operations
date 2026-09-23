@@ -10,18 +10,25 @@ import type { TimesheetSummaryRes } from '../../timesheets/types/timesheetTypes'
 import { getMyWeekTimeEntries, submitWeek, TimesheetsApiError } from '../../timesheets/api/timesheetsApi';
 import WeeklyTimesheetGrid from '../../timesheets/components/WeeklyTimesheetGrid';
 import TimeEntryPage from '../../timesheets/pages/TimeEntryPage';
+import ExpenseListPage from '../../expenses/pages/ExpenseListPage';
 import { addDays, formatIsoDate, getMondayOf } from '../../timesheets/utils/weekRange';
 import { canSubmitWeek, countDraftEntries } from '../../timesheets/validators/timesheetValidators';
 
 export interface MyWorkPageProps {
   currentUserRoles?: string[];
   currentUserName?: string;
+  currentUserId?: number;
 }
 
 interface SelectedTask {
   projectId: number;
   taskId: number;
   taskName: string;
+}
+
+interface SelectedExpenseProject {
+  projectId: number;
+  projectName: string;
 }
 
 const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
@@ -52,8 +59,13 @@ function formatDate(dateStr: string | null): string {
  * chỉ dành cho Nhân viên chuyên môn VT-03 vì backend TimeEntryController chỉ mở
  * cho vai trò này). Một điểm vào duy nhất thay vì hai màn rời rạc và trùng lặp.
  */
-export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'Người dùng' }: MyWorkPageProps) {
+export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'Người dùng', currentUserId }: MyWorkPageProps) {
   const canLogTime = currentUserRoles.includes('VT-03');
+  // NCL-08-CN-001: Nhân viên chuyên môn ghi nhận chi phí dự án — nhưng modal "Quản lý dự
+  // án" (nơi có tab Chi phí) chỉ mở được từ menu "Khách hàng", vốn không dành cho VT-03.
+  // Route riêng ngay tại đây (trang họ đang đứng) để VT-03 có lối vào, thay vì đi qua
+  // "Quản lý dự án" đủ mọi tab như PM.
+  const [selectedExpenseProject, setSelectedExpenseProject] = useState<SelectedExpenseProject | null>(null);
 
   // ----- Công việc được giao (mọi vai trò) -----
   const [tasks, setTasks] = useState<MyTaskRes[]>([]);
@@ -184,6 +196,17 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
 
   const confirmBackdrop = useBackdropClick(() => setConfirmSubmit(false), submitting);
 
+  if (selectedExpenseProject) {
+    return (
+      <ExpenseListPage
+        projectId={selectedExpenseProject.projectId}
+        currentUserRoles={currentUserRoles}
+        currentUserId={currentUserId}
+        onBack={() => setSelectedExpenseProject(null)}
+      />
+    );
+  }
+
   if (selectedTask) {
     return (
       <TimeEntryPage
@@ -267,6 +290,7 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
                   <th>Khung ngày dự kiến</th>
                   <th>Trạng thái</th>
                   {canLogTime && <th>Giờ công</th>}
+                  {canLogTime && <th>Chi phí</th>}
                 </tr>
               </thead>
               <tbody>
@@ -323,6 +347,18 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
                               {ICONS.clock} Ghi giờ công
                             </button>
                           )}
+                        </td>
+                      )}
+                      {canLogTime && (
+                        <td>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-xs"
+                            onClick={() => setSelectedExpenseProject({ projectId: task.projectId, projectName: task.projectName })}
+                            data-testid={`btn-project-expenses-${task.projectId}`}
+                          >
+                            {ICONS.receipt} Chi phí dự án
+                          </button>
                         </td>
                       )}
                     </tr>

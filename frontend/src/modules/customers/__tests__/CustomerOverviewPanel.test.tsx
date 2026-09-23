@@ -76,19 +76,19 @@ const baseCustomer = {
 const fullOverview: CustomerOverview = {
   customer: baseCustomer,
   opportunities: [
-    { id: 1, code: 'CH-001', name: 'Cơ hội triển khai ERP', status: 'WON', amount: 500_000_000, date: '2026-02-10', contractType: null },
+    { id: 1, code: 'CH-001', name: 'Cơ hội triển khai ERP', status: 'WON', amount: 500_000_000, date: '2026-02-10', contractType: null, endDate: null },
   ],
   contracts: [
-    { id: 2, code: 'HD-001', name: 'Hợp đồng triển khai ERP', status: 'ACTIVE', amount: 480_000_000, date: '2026-03-01', contractType: 'TIME_AND_MATERIAL' },
+    { id: 2, code: 'HD-001', name: 'Hợp đồng triển khai ERP', status: 'ACTIVE', amount: 480_000_000, date: '2026-03-01', contractType: 'TIME_AND_MATERIAL', endDate: '2026-12-15' },
   ],
   projects: [
-    { id: 3, code: 'DA-001', name: 'Dự án ERP giai đoạn 1', status: 'RUNNING', amount: null, date: '2026-03-15', contractType: null },
+    { id: 3, code: 'DA-001', name: 'Dự án ERP giai đoạn 1', status: 'RUNNING', amount: null, date: '2026-03-15', contractType: null, endDate: null },
   ],
   invoices: [
-    { id: 4, code: 'HDon-001', name: 'Hóa đơn đợt 1', status: 'PAID', amount: 200_000_000, date: '2026-04-05', contractType: null },
+    { id: 4, code: 'HDon-001', name: 'Hóa đơn đợt 1', status: 'PAID', amount: 200_000_000, date: '2026-04-05', contractType: null, endDate: null },
   ],
   receivables: [
-    { id: 5, code: 'HDon-002', name: 'Hóa đơn đợt 2', status: 'OVERDUE', amount: 120_000_000, date: '2026-05-20', contractType: null },
+    { id: 5, code: 'HDon-002', name: 'Hóa đơn đợt 2', status: 'OVERDUE', amount: 120_000_000, date: '2026-05-20', contractType: null, endDate: null },
   ],
 };
 
