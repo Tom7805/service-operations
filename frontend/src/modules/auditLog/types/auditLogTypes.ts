@@ -48,7 +48,15 @@ export const DATA_TYPE_LABELS: Record<SensitiveDataTypeCode, string> = {
 
 /** Nhật ký thao tác nghiệp vụ tổng hợp (Tài khoản, Phân quyền, 2FA...) — thay cho các ô "nhật ký"
  * nhúng tạm thời, chỉ lưu trên trình duyệt, đã dùng trước đây ở từng trang. */
-export type AuditTargetType = 'USER' | 'ROLE_SCOPE' | 'TWO_FACTOR' | 'DEPARTMENT' | 'CUSTOMER' | 'MASKING' | 'GENERAL';
+export type AuditTargetType =
+  | 'USER'
+  | 'ROLE_SCOPE'
+  | 'TWO_FACTOR'
+  | 'DEPARTMENT'
+  | 'CUSTOMER'
+  | 'MASKING'
+  | 'GENERAL'
+  | 'ACCEPTANCE';
 
 export interface AuditLogEntry {
   id: number;
@@ -90,6 +98,7 @@ export const TARGET_TYPE_LABELS: Record<AuditTargetType, string> = {
   CUSTOMER: 'Khách hàng',
   MASKING: 'Che dữ liệu',
   GENERAL: 'Khác',
+  ACCEPTANCE: 'Nghiệm thu',
 };
 
 // Tên vai trò dùng chung toàn dự án — xem `src/utils/roleLabel.ts`.
