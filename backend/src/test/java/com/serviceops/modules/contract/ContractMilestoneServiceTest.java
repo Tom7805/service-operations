@@ -1,6 +1,7 @@
 package com.serviceops.modules.contract;
 
 import com.serviceops.common.exception.BusinessRuleException;
+import com.serviceops.modules.acceptance.repository.AcceptanceCertificateRepository;
 import com.serviceops.modules.contract.dto.request.ContractMilestoneReq;
 import com.serviceops.modules.contract.entity.Contract;
 import com.serviceops.modules.contract.entity.ContractMilestone;
@@ -40,11 +41,15 @@ class ContractMilestoneServiceTest {
 	@Mock
 	private ContractAuditLogger auditLogger;
 
+	@Mock
+	private AcceptanceCertificateRepository acceptanceCertificateRepository;
+
 	private ContractMilestoneServiceImpl service;
 
 	@BeforeEach
 	void setUp() {
-		service = new ContractMilestoneServiceImpl(contractRepository, milestoneRepository, auditLogger);
+		service = new ContractMilestoneServiceImpl(contractRepository, milestoneRepository, auditLogger,
+				acceptanceCertificateRepository);
 		SecurityContextHolder.clearContext();
 	}
 

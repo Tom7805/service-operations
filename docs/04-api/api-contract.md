@@ -2684,13 +2684,16 @@ trúc từng phần tử như response của `GET`.
 | 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`); hệ thống ghi `DENIED_ACCESS`. |
 | 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng với `{contractId}`. |
 | 400 | `VALIDATION_ERROR` | Mảng rỗng, thiếu tỷ lệ/số tiền, số tiền không hợp lệ, tỷ lệ không khớp số tiền hoặc tổng mốc khác `totalValue`. |
-| 400 | `INVALID_STATE` | Hợp đồng đã có mốc `INVOICED` (đã lập hóa đơn, `NCL-10-CN-002`) — không được khai báo lại danh sách mốc. |
+| 400 | `INVALID_STATE` | Hợp đồng đã có mốc `INVOICED` (đã lập hóa đơn, `NCL-10-CN-002`) — không được khai báo lại danh sách mốc; hoặc có mốc đang gắn phiếu nghiệm thu (`NCL-12-CN-003`) — phải gỡ liên kết trước. |
 
 #### `PATCH /contracts/{contractId}/milestones/{milestoneId}/status`
 
 Đổi trạng thái một mốc. Chỉ đi **đúng một bước tiến** theo trình tự `PENDING` → `READY_TO_INVOICE` →
-`INVOICED`; không nhảy cóc, không lùi. Cho tới khi story nghiệm thu (`NCL-12-CN-003`) tự động mở mốc, đây là
-cách duy nhất đưa mốc sang `READY_TO_INVOICE` để `NCL-10-CN-002` lập được hóa đơn (QTN-25).
+`INVOICED`; không nhảy cóc, không lùi.
+
+**QTN-25 (từ `NCL-12-CN-003`):** mốc **đã gắn phiếu nghiệm thu** thì do luồng nghiệm thu tự mở/khóa — khi phiếu
+được khách hàng xác nhận mốc tự sang `READY_TO_INVOICE`; mở tay mốc đó khi phiếu chưa `ACCEPTED` bị chặn
+(`400 INVALID_STATE`). Mốc **chưa gắn phiếu** vẫn mở tay được qua endpoint này như trước.
 
 **Trạng thái `INVOICED` không đặt được qua endpoint này** — nó chỉ do
 `POST /contracts/{contractId}/milestones/{milestoneId}/invoice` (`NCL-10-CN-002`) đặt, để mốc `INVOICED` luôn đi
@@ -2713,7 +2716,7 @@ kèm một hóa đơn thật.
 | 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`); hệ thống ghi `DENIED_ACCESS`. |
 | 404 | `RESOURCE_NOT_FOUND` | Không có hợp đồng `{contractId}`, không có mốc `{milestoneId}` hoặc mốc không thuộc hợp đồng. |
 | 400 | `VALIDATION_ERROR` | Thiếu `status` hoặc giá trị không thuộc `PENDING`/`READY_TO_INVOICE`/`INVOICED`. |
-| 400 | `INVALID_STATE` | `status` = `INVOICED` (phải lập hóa đơn qua `NCL-10-CN-002`); hoặc chuyển nhảy cóc/lùi/giữ nguyên trạng thái. |
+| 400 | `INVALID_STATE` | `status` = `INVOICED` (phải lập hóa đơn qua `NCL-10-CN-002`); hoặc chuyển nhảy cóc/lùi/giữ nguyên trạng thái; hoặc mở mốc đang gắn phiếu nghiệm thu chưa được khách hàng xác nhận (QTN-25). |
 
 ### `NCL-04-CN-004` — Lập phụ lục điều chỉnh hợp đồng
 
@@ -4877,7 +4880,7 @@ invoicedTotal` là phần còn có thể lập.
 | 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
 | 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`); hệ thống ghi "Từ chối truy cập" (TC-03). |
 | 404 | `RESOURCE_NOT_FOUND` | Không có hợp đồng `{contractId}`, không có mốc `{milestoneId}`, hoặc mốc không thuộc hợp đồng này. |
-| 400 | `INVALID_STATE` | Loại hợp đồng không phải `FIXED_PRICE`/`MILESTONE`; mốc còn `PENDING` (chưa nghiệm thu, QTN-25) hoặc đã `INVOICED`. |
+| 400 | `INVALID_STATE` | Loại hợp đồng không phải `FIXED_PRICE`/`MILESTONE`; mốc còn `PENDING` (chưa nghiệm thu, QTN-25) hoặc đã `INVOICED`; hoặc mốc gắn phiếu nghiệm thu chưa được khách hàng xác nhận (`NCL-12-CN-003` TC-02). |
 | 400 | `VALIDATION_ERROR` | Tổng hóa đơn lũy kế vượt giá trị hợp đồng hoặc hạn mức (TC-02, QTN-19) — `message` yêu cầu lập phụ lục trước; hoặc `dueDate` trước `invoiceDate`; hoặc `note` quá dài. |
 
 **Ghi chú cho Frontend:**
@@ -5905,6 +5908,399 @@ tháng (mặc định từ tháng 1 tới tháng hiện tại của năm nay), b
 khi rê chuột, và bảng số liệu đầy đủ.
 
 ---
+
+## Epic `NCL-12` — Nghiệm thu và bàn giao
+
+Chung cho cả Epic:
+
+- **Hạng mục** = `work package` của `NCL-05-CN-002` (`GET /projects/{projectId}/work-breakdown`). Hạng mục có thể
+  lồng nhiều cấp; "công việc của hạng mục" gồm cả công việc của mọi hạng mục con cháu.
+- **Phạm vi dữ liệu (QTN-01):** Quản lý dự án (`VT-02`) chỉ thao tác trên dự án mình là `projectManagerId`. Đúng vai
+  trò nhưng khác dự án cũng nhận `403 FORBIDDEN`. Mọi lượt 403 được ghi Nhật ký hệ thống "Từ chối truy cập" kèm tên
+  chức năng (TC-03 của cả 4 story).
+- **Lưu lịch sử (TC-04):** mọi thao tác thay đổi ghi Nhật ký hệ thống với `targetType` = `ACCEPTANCE` (lọc được trên
+  trang Nhật ký); lịch sử xác nhận/từ chối của khách hàng còn được trả trong `decisions` của chi tiết phiếu.
+- Tệp (biên bản nghiệm thu, tệp bàn giao) là **đường dẫn mô phỏng** dạng chuỗi — giống `receiptUrl` của chi phí.
+
+**Trạng thái phiếu nghiệm thu (`status`):**
+
+| Giá trị | Ý nghĩa | Chuyển tiếp |
+|---|---|---|
+| `PENDING_CONFIRMATION` | Chờ khách hàng xác nhận | → `ACCEPTED` (confirm) · → `NEEDS_REVISION` (reject) |
+| `NEEDS_REVISION` | Khách hàng từ chối, cần chỉnh sửa | → `PENDING_CONFIRMATION` (nộp lại, `revisionNo` + 1) |
+| `ACCEPTED` | Đã nghiệm thu — **nội dung bị khoá**, trạng thái cuối | — |
+
+**Enum khác:** `deliverableType` ∈ `DOCUMENT`, `SOURCE_CODE`, `SOFTWARE_BUILD`, `DESIGN`, `REPORT`, `OTHER` ·
+`confirmationChannel`/`decisions[].channel` ∈ `INTERNAL` (QLDA ghi nhận), `PORTAL` (dành cho `NCL-13-CN-003`) ·
+`decisions[].decision` ∈ `ACCEPTED`, `REJECTED`.
+
+**Bản đồ endpoint:**
+
+| Story | Method & path | Vai trò |
+|---|---|---|
+| CN-001 | `GET /projects/{projectId}/work-packages/{workPackageId}/acceptance-readiness` | `VT-02` (PM dự án) |
+| CN-001 | `POST /projects/{projectId}/acceptances` | `VT-02` (PM dự án) |
+| CN-001 | `GET /projects/{projectId}/acceptances` | `VT-02` (PM dự án) |
+| CN-001/003 | `GET /acceptances?contractId=&projectId=&status=` | `VT-02` (chỉ dự án mình), `VT-05` (tất cả) |
+| CN-001/003 | `GET /acceptances/{certificateId}` | `VT-02` (PM dự án), `VT-05` |
+| CN-002 | `PUT /acceptances/{certificateId}` (nộp lại) | `VT-02` (PM dự án) |
+| CN-002 | `POST /acceptances/{certificateId}/confirm` | `VT-02` (PM dự án) |
+| CN-002 | `POST /acceptances/{certificateId}/reject` | `VT-02` (PM dự án) |
+| CN-003 | `PUT /acceptances/{certificateId}/payment-milestone` | `VT-05` |
+| CN-003 | `DELETE /acceptances/{certificateId}/payment-milestone` | `VT-05` |
+| CN-003 | `GET /contracts/{contractId}/milestone-acceptances` | `VT-05` |
+| CN-004 | `POST /projects/{projectId}/deliverables` | `VT-02` (PM dự án) |
+| CN-004 | `GET /projects/{projectId}/deliverables?workPackageId=` | `VT-02` (PM dự án) |
+| CN-004 | `GET /deliverables/{deliverableId}` | `VT-02` (PM dự án) |
+| CN-004 | `POST /deliverables/{deliverableId}/versions` | `VT-02` (PM dự án) |
+| CN-004 | `GET /deliverables/{deliverableId}/versions` | `VT-02` (PM dự án) |
+
+### `NCL-12-CN-001` — Lập phiếu nghiệm thu hạng mục
+
+**QTN-24:** chỉ lập phiếu khi **toàn bộ** công việc của hạng mục (kể cả hạng mục con) ở trạng thái `DONE`. Hệ
+thống tự dựng nội dung phiếu: danh sách công việc + **phiên bản mới nhất** của từng sản phẩm bàn giao của hạng mục
+(sản phẩm chưa bàn giao lần nào thì không vào phiếu). Nội dung được chụp lại tại thời điểm lập/nộp lại.
+
+Mỗi nhánh cây hạng mục chỉ có **một** phiếu: nếu chính hạng mục, hạng mục con cháu hoặc hạng mục cha đã có phiếu (bất
+kỳ trạng thái nào) thì bị chặn `409` — tránh nghiệm thu một công việc hai lần. Phiếu bị từ chối thì **nộp lại** chứ
+không lập phiếu mới. Dự án đã đóng (`CLOSED`) không lập/nộp lại phiếu được.
+
+#### `GET /projects/{projectId}/work-packages/{workPackageId}/acceptance-readiness`
+
+Xem trước trước khi bấm lập phiếu — dùng để liệt kê công việc còn dang dở (TC-02) và xem trước sản phẩm bàn giao.
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "projectId": 12,
+    "workPackageId": 40,
+    "workPackageName": "Giai doan 1",
+    "ready": false,
+    "totalTasks": 3,
+    "doneTasks": 1,
+    "unfinishedTasks": [
+      { "taskId": 101, "taskName": "Kiem thu", "status": "IN_PROGRESS" },
+      { "taskId": 102, "taskName": "Trien khai", "status": "TODO" }
+    ],
+    "deliverables": [
+      { "deliverableId": 7, "deliverableName": "Tai lieu thiet ke", "latestVersionId": 15, "latestVersionNo": "1.1" },
+      { "deliverableId": 8, "deliverableName": "Ban cai dat", "latestVersionId": null, "latestVersionNo": null }
+    ],
+    "activeCertificateId": null,
+    "activeCertificateCode": null,
+    "activeCertificateStatus": null
+  }
+}
+```
+
+`ready` = dự án đang chạy **và** hạng mục có ≥ 1 công việc **và** không còn công việc dang dở **và** nhánh cây chưa
+có phiếu (`activeCertificate*` khác `null` là phiếu đang chặn).
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 403 | `FORBIDDEN` | Không phải `VT-02`, hoặc không phải PM của dự án. |
+| 404 | `RESOURCE_NOT_FOUND` | Không có dự án, hoặc hạng mục không thuộc dự án. |
+
+#### `POST /projects/{projectId}/acceptances`
+
+**Request:**
+
+```json
+{
+  "workPackageId": 40,
+  "title": "Nghiem thu giai doan 1",
+  "acceptedValue": 300000000,
+  "note": "Theo moc 1 cua hop dong"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `workPackageId` | number | có | Hạng mục thuộc dự án. |
+| `title` | string | không | ≤ 255 ký tự; bỏ trống → `"Nghiem thu hang muc <tên hạng mục>"`. |
+| `acceptedValue` | number | có | Giá trị nghiệm thu, ≥ 0, tối đa 2 chữ số thập phân. |
+| `note` | string | không | ≤ 1000 ký tự. |
+
+**Response thành công — `200 OK`** (TC-01) — `data` là **chi tiết phiếu** (dùng chung cho mọi endpoint trả chi
+tiết của Epic này):
+
+```json
+{
+  "success": true,
+  "message": "Lap phieu nghiem thu thanh cong",
+  "data": {
+    "id": 5,
+    "certificateCode": "NT-20260924-A1B2C3",
+    "projectId": 12,
+    "projectCode": "DA-001",
+    "projectName": "Trien khai ERP",
+    "contractId": 3,
+    "workPackageId": 40,
+    "workPackageName": "Giai doan 1",
+    "title": "Nghiem thu giai doan 1",
+    "acceptedValue": 300000000.00,
+    "note": "Theo moc 1 cua hop dong",
+    "status": "PENDING_CONFIRMATION",
+    "revisionNo": 1,
+    "lastRejectionReason": null,
+    "signerName": null,
+    "signedDate": null,
+    "minutesUrl": null,
+    "confirmationChannel": null,
+    "confirmedBy": null,
+    "confirmedAt": null,
+    "paymentMilestone": null,
+    "linkedBy": null,
+    "linkedAt": null,
+    "tasks": [
+      { "taskId": 100, "taskName": "Phan tich yeu cau" },
+      { "taskId": 103, "taskName": "Lap trinh phan he" }
+    ],
+    "deliverables": [
+      { "deliverableId": 7, "deliverableVersionId": 15, "deliverableName": "Tai lieu thiet ke", "versionNo": "1.1" }
+    ],
+    "decisions": [],
+    "createdBy": "pm01",
+    "createdAt": "2026-09-24T10:00:00",
+    "updatedAt": "2026-09-24T10:00:00"
+  }
+}
+```
+
+`paymentMilestone` (khi đã gắn mốc — `NCL-12-CN-003`):
+`{ "id": 101, "name": "Dot 1", "amount": 300000000.00, "expectedDate": "2026-11-30", "status": "READY_TO_INVOICE" }`.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-02`, hoặc không phải PM của dự án (TC-03). |
+| 404 | `RESOURCE_NOT_FOUND` | Không có dự án, hoặc hạng mục không thuộc dự án. |
+| 400 | `VALIDATION_ERROR` | Thiếu `workPackageId`/`acceptedValue`, giá trị âm, chuỗi quá dài. |
+| 400 | `INVALID_STATE` | Dự án đã đóng; hạng mục chưa có công việc; **còn công việc chưa `DONE`** (TC-02 — `message` liệt kê `#id tên (trạng thái)` từng công việc; màn hình nên dùng `acceptance-readiness` để hiển thị có cấu trúc). |
+| 409 | `DUPLICATE_DATA` | Hạng mục (hoặc hạng mục cha/con) đã có phiếu. |
+
+#### `GET /projects/{projectId}/acceptances` · `GET /acceptances` · `GET /acceptances/{certificateId}`
+
+- `GET /projects/{projectId}/acceptances`: phiếu của một dự án (PM dự án), mới nhất trước.
+- `GET /acceptances?contractId=&projectId=&status=`: tra cứu — **Kế toán** thấy mọi phiếu (lọc `contractId` để chọn
+  phiếu gắn mốc); **PM** chỉ thấy phiếu của dự án mình. Tham số đều tùy chọn; `status` là một giá trị enum trạng thái.
+- Hai endpoint danh sách trả mảng **tóm tắt**:
+
+```json
+{
+  "id": 5, "certificateCode": "NT-20260924-A1B2C3", "projectId": 12, "projectCode": "DA-001",
+  "projectName": "Trien khai ERP", "contractId": 3, "workPackageId": 40, "workPackageName": "Giai doan 1",
+  "title": "Nghiem thu giai doan 1", "acceptedValue": 300000000.00, "status": "ACCEPTED", "revisionNo": 1,
+  "contractMilestoneId": 101, "contractMilestoneName": "Dot 1", "createdBy": "pm01",
+  "createdAt": "2026-09-24T10:00:00", "confirmedAt": "2026-09-25T09:00:00"
+}
+```
+
+- `GET /acceptances/{certificateId}`: chi tiết phiếu (cấu trúc như response của `POST` ở trên). PM khác dự án → `403`;
+  không có phiếu → `404`.
+
+### `NCL-12-CN-002` — Khách hàng xác nhận phiếu nghiệm thu
+
+Quản lý dự án ghi nhận kết quả khách hàng đưa ra (kênh `INTERNAL`, kèm biên bản mô phỏng). Chỉ phiếu
+`PENDING_CONFIRMATION` mới xác nhận/từ chối được. Mỗi lần xác nhận/từ chối thêm một dòng vào `decisions` (không ghi
+đè). Xác nhận và từ chối không yêu cầu dự án còn chạy (khách hàng có thể ký sau khi dự án đóng).
+
+#### `POST /acceptances/{certificateId}/confirm` (TC-01)
+
+```json
+{ "signerName": "Nguyen Van A", "signedDate": "2026-09-25", "minutesUrl": "/files/bien-ban-nt-gd1.pdf" }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `signerName` | string | có | Người đại diện khách hàng ký, ≤ 255 ký tự. |
+| `signedDate` | date | có | Không ở tương lai, không trước ngày lập phiếu. |
+| `minutesUrl` | string | có | Đường dẫn biên bản đã ký (mô phỏng), ≤ 500 ký tự. |
+
+Kết quả: phiếu → `ACCEPTED`, **khóa nội dung** (không nộp lại/sửa được nữa); nếu phiếu đã gắn mốc thanh toán đang
+`PENDING` thì mốc **tự chuyển `READY_TO_INVOICE`** trong cùng giao dịch (QTN-25) — ghi thêm `MILESTONE_STATUS_UPDATE`
+vào nhật ký hợp đồng. `data` là chi tiết phiếu.
+
+#### `POST /acceptances/{certificateId}/reject` (TC-02)
+
+```json
+{ "reason": "Thieu tai lieu huong dan su dung", "signerName": "Nguyen Van A", "minutesUrl": null }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `reason` | string | có | Lý do từ chối, ≤ 1000 ký tự — lưu vào `lastRejectionReason` và `decisions[].reason`. |
+| `signerName` | string | không | ≤ 255 ký tự. |
+| `minutesUrl` | string | không | ≤ 500 ký tự. |
+
+Kết quả: phiếu → `NEEDS_REVISION`.
+
+#### `PUT /acceptances/{certificateId}` — nộp lại sau khi bị từ chối
+
+Body giống `POST /projects/{projectId}/acceptances` nhưng **không có** `workPackageId`
+(`{ "title": "...", "acceptedValue": 250000000, "note": "..." }`). Hệ thống kiểm tra lại QTN-24, chụp lại nội dung
+(công việc, phiên bản sản phẩm mới nhất), tăng `revisionNo`, xoá `lastRejectionReason`, đưa phiếu về
+`PENDING_CONFIRMATION`. Chỉ phiếu `NEEDS_REVISION` và dự án đang chạy.
+
+**Response lỗi (chung cho confirm / reject / nộp lại):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-02`, hoặc không phải PM của dự án (TC-03). |
+| 404 | `RESOURCE_NOT_FOUND` | Không có phiếu `{certificateId}`. |
+| 400 | `VALIDATION_ERROR` | Thiếu trường bắt buộc; `signedDate` ở tương lai hoặc trước ngày lập phiếu. |
+| 400 | `INVALID_STATE` | confirm/reject khi phiếu không ở `PENDING_CONFIRMATION` (đã `ACCEPTED`, hoặc đang `NEEDS_REVISION` — phải nộp lại trước); nộp lại khi phiếu không ở `NEEDS_REVISION`, dự án đã đóng, hoặc hạng mục lại có công việc chưa `DONE`. |
+
+### `NCL-12-CN-003` — Gắn phiếu nghiệm thu với mốc thanh toán
+
+Chỉ **Kế toán** (`VT-05`). Mỗi mốc gắn tối đa một phiếu, mỗi phiếu gắn tối đa một mốc; mốc phải thuộc **hợp đồng của
+dự án** có phiếu. Sau khi gắn/gỡ, trạng thái mốc được đồng bộ theo phiếu (**QTN-25**):
+
+| Phiếu | Mốc trước | Mốc sau |
+|---|---|---|
+| `ACCEPTED` | `PENDING` | `READY_TO_INVOICE` — lập được hóa đơn (TC-01) |
+| chưa `ACCEPTED` | `READY_TO_INVOICE` (mở tay trước đó) | `PENDING` — giữ chờ nghiệm thu |
+| chưa `ACCEPTED` | `PENDING` | `PENDING` |
+| gỡ liên kết | `READY_TO_INVOICE` | `PENDING` (mất căn cứ mở mốc) |
+
+Khi phiếu gắn kèm chưa `ACCEPTED`: `POST /contracts/{id}/milestones/{id}/invoice` bị chặn `400 INVALID_STATE` (TC-02)
+và `PATCH .../status` sang `READY_TO_INVOICE` cũng bị chặn. Mốc đã `INVOICED` thì không gắn/gỡ được nữa.
+
+#### `PUT /acceptances/{certificateId}/payment-milestone`
+
+```json
+{ "contractMilestoneId": 101 }
+```
+
+Gắn lại sang mốc khác được (mốc cũ, nếu đang `READY_TO_INVOICE`, về `PENDING`); gắn lại đúng mốc hiện tại thì không
+đổi gì. `data` là chi tiết phiếu (xem `paymentMilestone.status` để biết mốc đã mở chưa).
+
+#### `DELETE /acceptances/{certificateId}/payment-milestone`
+
+Gỡ phiếu khỏi mốc. `data` là chi tiết phiếu với `paymentMilestone` = `null`.
+
+**Response lỗi (gắn / gỡ):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) (TC-03). |
+| 404 | `RESOURCE_NOT_FOUND` | Không có phiếu hoặc mốc. |
+| 400 | `VALIDATION_ERROR` | Thiếu `contractMilestoneId`; mốc không thuộc hợp đồng của dự án. |
+| 400 | `INVALID_STATE` | Mốc (mới hoặc cũ) đã `INVOICED`; gỡ khi phiếu chưa gắn mốc nào. |
+| 409 | `DUPLICATE_DATA` | Mốc đã gắn với phiếu khác. |
+
+#### `GET /contracts/{contractId}/milestone-acceptances`
+
+Danh sách mốc của hợp đồng kèm phiếu đã gắn — màn hình Kế toán dùng để biết mốc nào đủ điều kiện lập hóa đơn.
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "milestoneId": 101, "contractId": 3, "milestoneName": "Dot 1", "amount": 300000000.00,
+      "expectedDate": "2026-11-30", "acceptanceCondition": "Khach hang ky bien ban nghiem thu",
+      "milestoneStatus": "READY_TO_INVOICE",
+      "certificateId": 5, "certificateCode": "NT-20260924-A1B2C3", "certificateStatus": "ACCEPTED",
+      "projectCode": "DA-001", "workPackageName": "Giai doan 1"
+    },
+    {
+      "milestoneId": 102, "contractId": 3, "milestoneName": "Dot 2", "amount": 700000000.00,
+      "expectedDate": "2027-03-31", "acceptanceCondition": null, "milestoneStatus": "PENDING",
+      "certificateId": null, "certificateCode": null, "certificateStatus": null,
+      "projectCode": null, "workPackageName": null
+    }
+  ]
+}
+```
+
+Lỗi: `403` (không phải `VT-05`), `404` (không có hợp đồng).
+
+### `NCL-12-CN-004` — Quản lý sản phẩm bàn giao và phiên bản
+
+Sản phẩm bàn giao gắn với một hạng mục; tên không trùng trong cùng hạng mục (không phân biệt hoa thường). Mỗi lần
+bàn giao tạo **phiên bản mới**, phiên bản cũ giữ nguyên, không sửa/xoá (TC-01). Số phiên bản không được trùng trong
+cùng sản phẩm (không phân biệt hoa thường, bỏ khoảng trắng đầu/cuối — TC-02). "Mới nhất" = ngày bàn giao lớn nhất
+(cùng ngày thì bản ghi sau). Thêm sản phẩm/phiên bản yêu cầu dự án đang chạy.
+
+#### `POST /projects/{projectId}/deliverables`
+
+```json
+{ "workPackageId": 40, "name": "Tai lieu thiet ke", "deliverableType": "DOCUMENT", "description": "SRS + thiet ke CSDL" }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `workPackageId` | number | có | Hạng mục thuộc dự án. |
+| `name` | string | có | ≤ 255 ký tự. |
+| `deliverableType` | enum | có | Xem enum đầu mục Epic. |
+| `description` | string | không | ≤ 1000 ký tự. |
+
+**Response** — `data` là sản phẩm (cấu trúc dùng chung cho `GET` danh sách/chi tiết):
+
+```json
+{
+  "id": 7, "projectId": 12, "workPackageId": 40, "workPackageName": "Giai doan 1",
+  "name": "Tai lieu thiet ke", "deliverableType": "DOCUMENT", "description": "SRS + thiet ke CSDL",
+  "versionCount": 2,
+  "latestVersion": { "id": 15, "deliverableId": 7, "versionNo": "1.1", "deliveredDate": "2026-09-23",
+    "receiverName": "Le Van C", "fileUrl": "/files/tkcsdl-1.1.pdf", "note": null, "latest": true,
+    "createdBy": "pm01", "createdAt": "2026-09-23T15:00:00" },
+  "versions": [ "... cùng cấu trúc latestVersion, mới nhất trước ..." ],
+  "createdBy": "pm01", "createdAt": "2026-09-20T09:00:00"
+}
+```
+
+Sản phẩm mới tạo có `versionCount` = 0, `latestVersion` = `null`, `versions` = `[]`.
+
+#### `GET /projects/{projectId}/deliverables?workPackageId=` · `GET /deliverables/{deliverableId}`
+
+Danh sách (lọc theo hạng mục nếu có `workPackageId`) và chi tiết sản phẩm, kèm toàn bộ lịch sử phiên bản.
+
+#### `POST /deliverables/{deliverableId}/versions`
+
+```json
+{ "versionNo": "1.1", "deliveredDate": "2026-09-23", "receiverName": "Le Van C", "fileUrl": "/files/tkcsdl-1.1.pdf", "note": "Bo sung chuong 4" }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `versionNo` | string | có | ≤ 50 ký tự, duy nhất trong sản phẩm. |
+| `deliveredDate` | date | có | Không ở tương lai. |
+| `receiverName` | string | có | Người nhận phía khách hàng, ≤ 255 ký tự. |
+| `fileUrl` | string | không | Đường dẫn tệp mô phỏng, ≤ 500 ký tự. |
+| `note` | string | không | ≤ 1000 ký tự. |
+
+`data` là phiên bản vừa lưu (`latest` cho biết nó có phải bản mới nhất không — bàn giao bù một phiên bản ngày cũ
+thì `latest` = `false`).
+
+#### `GET /deliverables/{deliverableId}/versions`
+
+Mảng phiên bản, mới nhất trước.
+
+**Response lỗi (CN-004):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-02`, hoặc không phải PM của dự án (TC-03). |
+| 404 | `RESOURCE_NOT_FOUND` | Không có dự án/sản phẩm; hạng mục không thuộc dự án. |
+| 400 | `VALIDATION_ERROR` | Thiếu trường bắt buộc, chuỗi quá dài, `deliveredDate` ở tương lai. |
+| 400 | `INVALID_STATE` | Dự án đã đóng. |
+| 409 | `DUPLICATE_DATA` | Trùng tên sản phẩm trong hạng mục, hoặc trùng số phiên bản (TC-02). |
+
+**Ghi chú cho Frontend (Epic NCL-12):**
+- Nút "Lập phiếu nghiệm thu" nên gọi `acceptance-readiness` trước; `ready = false` thì hiển thị `unfinishedTasks`.
+- Phiếu `ACCEPTED`: ẩn mọi thao tác sửa/xác nhận/từ chối. Phiếu `NEEDS_REVISION`: hiện `lastRejectionReason` và nút nộp lại.
+- Màn hình mốc thanh toán của Kế toán nên dùng `GET /contracts/{id}/milestone-acceptances`; mốc có `certificateId`
+  thì ẩn nút mở tay (`PATCH .../status`) — backend sẽ chặn nếu phiếu chưa `ACCEPTED`.
 
 ## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)
 

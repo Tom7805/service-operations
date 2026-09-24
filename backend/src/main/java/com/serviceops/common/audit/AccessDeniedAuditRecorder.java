@@ -42,6 +42,15 @@ public class AccessDeniedAuditRecorder {
     private static final List<Rule> RULES = new ArrayList<>();
 
     static {
+        // Epic NCL-12 đứng đầu danh sách: "/acceptances/{id}/reject" chứa "/reject" (từ chối bảng chấm công),
+        // "/contracts/{id}/milestone-acceptances" chứa "/contracts", "/projects/{id}/work-packages/..." v.v.
+        RULES.add(rule(uri -> uri.contains("/acceptances/") && (uri.endsWith("/confirm") || uri.endsWith("/reject")),
+                new Feature(AuditTargetType.ACCEPTANCE, "Xác nhận phiếu nghiệm thu")));
+        RULES.add(rule("/payment-milestone", new Feature(AuditTargetType.ACCEPTANCE, "Gắn phiếu nghiệm thu với mốc thanh toán")));
+        RULES.add(rule("/milestone-acceptances", new Feature(AuditTargetType.ACCEPTANCE, "Gắn phiếu nghiệm thu với mốc thanh toán")));
+        RULES.add(rule("/acceptance-readiness", new Feature(AuditTargetType.ACCEPTANCE, "Lập phiếu nghiệm thu hạng mục")));
+        RULES.add(rule("/acceptances", new Feature(AuditTargetType.ACCEPTANCE, "Lập phiếu nghiệm thu hạng mục")));
+        RULES.add(rule("/deliverables", new Feature(AuditTargetType.ACCEPTANCE, "Quản lý sản phẩm bàn giao")));
         // Phải đứng trước "/invoice": "/invoice-proposals" cũng chứa chuỗi "/invoice".
         RULES.add(rule("/invoice-proposals", new Feature(AuditTargetType.INVOICE, "Tạo đề nghị xuất hóa đơn từ giờ công")));
         RULES.add(rule("/receivables", new Feature(AuditTargetType.INVOICE, "Theo dõi công nợ quá hạn")));

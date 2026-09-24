@@ -18,5 +18,8 @@ public enum AuditTargetType {
 	EXPENSE,
 
 	/** Hoa don va thanh toan (Epic NCL-10). */
-	INVOICE
+	INVOICE,
+
+	/** Phieu nghiem thu va san pham ban giao (Epic NCL-12). */
+	ACCEPTANCE
 }
