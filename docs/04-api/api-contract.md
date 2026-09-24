@@ -5368,6 +5368,69 @@ Lịch sử nhắc thu nợ của một hóa đơn, mới nhất trước.
 
 ---
 
+## Epic `NCL-11` — Báo cáo và bảng điều khiển
+
+### `NCL-11-CN-001` — Bảng điều khiển vận hành
+
+#### `GET /reports/dashboard`
+
+Các chỉ số chính của kỳ chọn cho Ban giám đốc. Chỉ dành cho `VT-01` (QTN-01) — vai trò khác nhận
+`403 FORBIDDEN` và bị ghi Nhật ký hệ thống lần từ chối (TC-03). Mỗi lượt xem thành công ghi một dòng
+Nhật ký hệ thống ("Xem bảng điều khiển vận hành": người thực hiện, vai trò, kỳ, thời điểm) và một dòng
+Nhật ký truy cập dữ liệu nhạy cảm loại `MARGIN` (TC-04).
+
+**Query params** (bắt buộc cả hai, định dạng `YYYY-MM-DD`, gồm cả hai đầu):
+
+| Tham số | Ghi chú |
+|---|---|
+| `from` | Ngày đầu kỳ. |
+| `to` | Ngày cuối kỳ, không được trước `from`. |
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "from": "2026-01-01",
+    "to": "2026-01-31",
+    "kpis": {
+      "recognizedRevenue": 4000000.00,
+      "averageMarginRate": 0.1000,
+      "billableHoursRatio": 0.4444,
+      "negativeMarginProjectCount": 1,
+      "overdueInvoiceCount": 2
+    },
+    "missingCostEntryCount": 0,
+    "missingRevenueEntryCount": 0
+  }
+}
+```
+
+| Trường | Cách tính |
+|---|---|
+| `recognizedRevenue` | Tổng doanh thu của các dòng giờ công **đã duyệt** (`APPROVED`) có `workDate` trong kỳ và tính phí (`billable`): giờ × đơn giá bán theo hợp đồng ÷ 8 × hệ số loại hình công việc (cùng công thức báo cáo biên `NCL-09-CN-005`). |
+| `averageMarginRate` | Phân số, không phải %: (tổng doanh thu − tổng giá vốn nhân công) ÷ tổng doanh thu của kỳ, làm tròn 4 chữ số. `0.1000` = 10%. Gộp có trọng số, không lấy trung bình cộng từng dự án. |
+| `billableHoursRatio` | Phân số: giờ tính phí ÷ tổng giờ, chỉ tính giờ công đã duyệt trong kỳ (dòng đảo/sửa mang dấu nên cộng thẳng). |
+| `negativeMarginProjectCount` | Số dự án có (doanh thu − giá vốn nhân công) `< 0` trong kỳ. Dự án chỉ có giờ không tính phí hoặc thiếu đơn giá bán (doanh thu 0) mà có giá vốn cũng bị tính là âm biên. |
+| `overdueInvoiceCount` | Số hóa đơn `ISSUED`/`PARTIALLY_PAID` còn phải thu `> 0` có `dueDate` **trước** `min(hôm nay, to)`. Trạng thái và số đã thu là hiện tại, hệ thống không dựng lại lịch sử thanh toán tới cuối kỳ. |
+| `missingCostEntryCount` / `missingRevenueEntryCount` | Số dòng giờ công đã duyệt thiếu đơn giá vốn / đơn giá bán. Dòng đó không làm hỏng bảng nhưng khiến doanh thu và biên thấp hơn thực tế — nên hiển thị cảnh báo khi `> 0`. |
+
+Kỳ không có dữ liệu (TC-02) trả `200` với mọi chỉ số bằng `0`, không báo lỗi.
+
+Giới hạn hiện tại: giá vốn chỉ gồm nhân công (chưa gồm chi phí dự án/thuê ngoài); doanh thu tính theo giờ công
+nên hợp đồng trọn gói không được quy đổi theo tiến độ hoàn thành. Vì vậy số liệu khớp báo cáo biên
+`NCL-09-CN-005` cùng kỳ nhưng có thể khác `GET /projects/{projectId}/profitability` (tính toàn thời gian, đủ các khoản chi phí).
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-01`. |
+| 400 | `VALIDATION_ERROR` | Thiếu `from`/`to`, sai định dạng ngày, hoặc `from` sau `to`. |
+
+---
+
 ## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)
 
 
