@@ -5,7 +5,7 @@ import { roleLabels } from '../../../utils/roleLabel';
 import { getWorkBreakdown } from '../../projects/api/projectsApi';
 import type { ProjectRes } from '../../projects/types/projectTypes';
 import type { WorkBreakdownRes } from '../../projects/types/taskTypes';
-import { checkAcceptanceAccess, fetchProjectAcceptances } from '../api/acceptanceApi';
+import { checkAcceptanceAccess, checkAcceptanceConfirmAccess, fetchProjectAcceptances } from '../api/acceptanceApi';
 import AcceptanceFormModal from '../components/AcceptanceFormModal';
 import {
   ACCEPTANCE_STATUS_META,
@@ -76,12 +76,13 @@ export default function AcceptanceListPage({
 }: Props) {
   const isAllowed = currentUserRoles.includes('VT-02');
 
-  // TC-03: luôn có một request thật khi người không đủ vai trò mở chức năng, để backend ghi nhật ký.
+  // TC-03 (NCL-12-CN-001 và CN-002): màn này là lối vào cả lập phiếu lẫn ghi nhận xác nhận phiếu — người
+  // không đủ vai trò mở vào thì gửi request thật tới cả hai chức năng để backend ghi nhật ký từng lần từ chối.
   useEffect(() => {
     if (isAllowed) return;
-    checkAcceptanceAccess().catch(() => {
-      // Kết quả không quan trọng — màn hình từ chối đã hiển thị theo vai trò.
-    });
+    // Kết quả không quan trọng — màn hình từ chối đã hiển thị theo vai trò.
+    checkAcceptanceAccess().catch(() => undefined);
+    checkAcceptanceConfirmAccess().catch(() => undefined);
   }, [isAllowed]);
 
   // QTN-01: PM chỉ thao tác trên dự án mình là người quản lý — không liệt kê dự án của người khác.
@@ -156,11 +157,11 @@ export default function AcceptanceListPage({
       <div className="access-denied-container" data-testid="acceptance-access-denied">
         <div className="access-denied-card">
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
-          <h2>Bạn không có thẩm quyền lập phiếu nghiệm thu</h2>
+          <h2>Bạn không có thẩm quyền lập hoặc xác nhận phiếu nghiệm thu</h2>
           <p>
-            Theo quy tắc phân quyền, chức năng lập phiếu nghiệm thu hạng mục chỉ dành cho{' '}
-            <strong>Quản lý dự án</strong> (VT-02) phụ trách dự án. Hệ thống đã ghi lại lần từ chối truy cập
-            này vào nhật ký hệ thống.
+            Theo quy tắc phân quyền, chức năng lập phiếu nghiệm thu hạng mục và ghi nhận khách hàng xác nhận/từ
+            chối phiếu chỉ dành cho <strong>Quản lý dự án</strong> (VT-02) phụ trách dự án. Hệ thống đã ghi lại
+            lần từ chối truy cập này vào nhật ký hệ thống.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">
@@ -409,6 +410,11 @@ export default function AcceptanceListPage({
           <div className="user-table-card">
             <div className="page-header" style={{ padding: '16px 16px 0' }}>
               <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Phiếu nghiệm thu đã lập</h3>
+              {certificates.length > 0 && (
+                <span className="field-hint">
+                  Bấm vào phiếu để ghi nhận khách hàng xác nhận, từ chối hoặc nộp lại phiếu.
+                </span>
+              )}
             </div>
             {certificates.length === 0 ? (
               <div className="table-empty-state" data-testid="acceptance-cert-empty">

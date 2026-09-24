@@ -665,6 +665,7 @@ export default function App() {
             <AcceptanceDetailPage
               key={selectedAcceptanceId}
               certificateId={selectedAcceptanceId}
+              currentUserRoles={currentRoles}
               onBack={() => setActiveTab('ACCEPTANCES')}
             />
           ) : activeTab === 'ACCEPTANCES' || activeTab === 'ACCEPTANCE_DETAIL' ? (

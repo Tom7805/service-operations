@@ -18,6 +18,7 @@ vi.mock('../api/acceptanceApi', () => {
   }
   return {
     checkAcceptanceAccess: vi.fn(),
+    checkAcceptanceConfirmAccess: vi.fn(),
     fetchProjectAcceptances: vi.fn(),
     getAcceptanceReadiness: vi.fn(),
     createAcceptance: vi.fn(),
@@ -78,6 +79,7 @@ function Harness({ roles = ['VT-02'], onOpen = vi.fn() }: { roles?: string[]; on
 describe('AcceptanceListPage — NCL-12-CN-001', () => {
   beforeEach(() => {
     vi.mocked(acceptanceApi.checkAcceptanceAccess).mockReset().mockResolvedValue(undefined);
+    vi.mocked(acceptanceApi.checkAcceptanceConfirmAccess).mockReset().mockResolvedValue(undefined);
     vi.mocked(acceptanceApi.fetchProjectAcceptances).mockReset().mockResolvedValue([CERT]);
     vi.mocked(acceptanceApi.getAcceptanceReadiness).mockReset();
     vi.mocked(projectsApi.getWorkBreakdown).mockReset().mockResolvedValue(TREE);
@@ -85,8 +87,9 @@ describe('AcceptanceListPage — NCL-12-CN-001', () => {
 
   it('TC-03: người không phải Quản lý dự án bị từ chối và có request thật để backend ghi nhật ký', async () => {
     render(<Harness roles={['VT-05']} />);
-    expect(screen.getByTestId('acceptance-access-denied')).toHaveTextContent('không có thẩm quyền lập phiếu nghiệm thu');
+    expect(screen.getByTestId('acceptance-access-denied')).toHaveTextContent('không có thẩm quyền lập hoặc xác nhận phiếu nghiệm thu');
     await waitFor(() => expect(acceptanceApi.checkAcceptanceAccess).toHaveBeenCalledTimes(1));
+    expect(acceptanceApi.checkAcceptanceConfirmAccess).toHaveBeenCalledTimes(1);
     expect(projectsApi.getWorkBreakdown).not.toHaveBeenCalled();
   });
 
@@ -101,6 +104,7 @@ describe('AcceptanceListPage — NCL-12-CN-001', () => {
     expect(screen.getByTestId('acceptance-no-project')).toBeInTheDocument();
     expect(screen.getByTestId('acceptance-open-create')).toBeDisabled();
     expect(acceptanceApi.checkAcceptanceAccess).not.toHaveBeenCalled();
+    expect(acceptanceApi.checkAcceptanceConfirmAccess).not.toHaveBeenCalled();
   });
 
   it('chọn dự án → hiện tình trạng nghiệm thu từng hạng mục và danh sách phiếu đã lập', async () => {
