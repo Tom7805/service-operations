@@ -61,6 +61,7 @@ public class AccessDeniedAuditRecorder {
         RULES.add(rule("/invoice", new Feature(AuditTargetType.INVOICE, "Lập hóa đơn theo mốc hợp đồng")));
         RULES.add(rule("/reports/margin/by-customer", new Feature(AuditTargetType.GENERAL, "Báo cáo biên lợi nhuận theo khách hàng")));
         RULES.add(rule("/reports/margin/by-employee", new Feature(AuditTargetType.GENERAL, "Báo cáo biên lợi nhuận theo nhân sự")));
+        RULES.add(rule("/reports/dashboard", new Feature(AuditTargetType.GENERAL, "Bảng điều khiển vận hành")));
         // "/contracts/{id}/milestones..." (NCL-04-CN-003, mốc thanh toán hợp đồng) và
         // "/projects/{id}/milestones..." (NCL-05-CN-008, mốc tiến độ dự án) đều chứa chuỗi con
         // "/milestones" nên không phân biệt được bằng một khoá chuỗi con — bắt riêng nhánh hợp đồng ở

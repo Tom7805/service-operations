@@ -116,7 +116,7 @@ class RevenueRecognitionServiceTest {
 		TimeEntry entry = entry(30L, 100L, new BigDecimal("8.00"), true);
 		when(timeEntryRepository.findByTaskIdInAndStatusOrderByWorkDateAscIdAsc(List.of(20L), TimeEntryStatus.APPROVED))
 				.thenReturn(List.of(entry));
-		when(employeeRepository.findAllById(List.of(100L))).thenReturn(List.of(employee(10L, 100L)));
+		when(employeeRepository.findByUser_IdIn(List.of(100L))).thenReturn(List.of(employee(10L, 100L)));
 
 		when(rateResolutionService.resolveForTimeEntry(30L)).thenReturn(new ResolvedRateRes(
 				30L, 20L, 1L, 5L, "Lập trình viên", "Cao cấp", entry.getWorkDate(), entry.getHours(),
@@ -150,7 +150,7 @@ class RevenueRecognitionServiceTest {
 		TimeEntry nonBillableEntry = entry(31L, 100L, new BigDecimal("2.00"), false);
 		when(timeEntryRepository.findByTaskIdInAndStatusOrderByWorkDateAscIdAsc(List.of(20L), TimeEntryStatus.APPROVED))
 				.thenReturn(List.of(billableEntry, nonBillableEntry));
-		when(employeeRepository.findAllById(List.of(100L))).thenReturn(List.of(employee(10L, 100L)));
+		when(employeeRepository.findByUser_IdIn(List.of(100L))).thenReturn(List.of(employee(10L, 100L)));
 
 		when(rateResolutionService.resolveForTimeEntry(30L)).thenReturn(new ResolvedRateRes(
 				30L, 20L, 1L, 5L, "Lập trình viên", "Cao cấp", billableEntry.getWorkDate(), billableEntry.getHours(),
@@ -179,7 +179,7 @@ class RevenueRecognitionServiceTest {
 		TimeEntry entry = entry(30L, 100L, new BigDecimal("8.00"), true);
 		when(timeEntryRepository.findByTaskIdInAndStatusOrderByWorkDateAscIdAsc(List.of(20L), TimeEntryStatus.APPROVED))
 				.thenReturn(List.of(entry));
-		when(employeeRepository.findAllById(List.of(100L))).thenReturn(List.of(employee(10L, 100L)));
+		when(employeeRepository.findByUser_IdIn(List.of(100L))).thenReturn(List.of(employee(10L, 100L)));
 
 		when(rateResolutionService.resolveForTimeEntry(30L))
 				.thenThrow(new BusinessRuleException(ErrorCode.VALIDATION_ERROR, "Chua khai bao cap bac"));
