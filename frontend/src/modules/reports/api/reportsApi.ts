@@ -1,5 +1,6 @@
 import type { PipelineReportRes } from '../types/pipelineReportTypes';
 import type {
+  DashboardSummaryRes,
   ExportedReportFile,
   MonthlyRevenueReportRes,
   ReportExportReq,
@@ -47,6 +48,14 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
 
 export async function getPipelineReport(): Promise<PipelineReportRes> {
   return requestBackend<PipelineReportRes>(`${API_BASE_URL}/opportunities/pipeline-report`, {
+    method: 'GET',
+  });
+}
+
+/** NCL-11-CN-001: các chỉ số chính của kỳ chọn cho Ban giám đốc (VT-01). */
+export async function getDashboardSummary(from: string, to: string): Promise<DashboardSummaryRes> {
+  const params = new URLSearchParams({ from, to });
+  return requestBackend<DashboardSummaryRes>(`${API_BASE_URL}/reports/dashboard?${params.toString()}`, {
     method: 'GET',
   });
 }
