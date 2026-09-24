@@ -24,6 +24,7 @@ import OpportunitySearchPicker from './modules/opportunities/components/Opportun
 import OpportunityListPage from './modules/opportunities/pages/OpportunityListPage';
 import RevenueForecastPage from './modules/opportunities/pages/RevenueForecastPage';
 import PipelineReportPage from './modules/reports/pages/PipelineReportPage';
+import ReportExportPage from './modules/reports/pages/ReportExportPage';
 import MyWorkPage from './modules/mytasks/pages/MyWorkPage';
 import TimesheetApprovalPage from './modules/timesheets/pages/TimesheetApprovalPage';
 import TimesheetRejectPage from './modules/timesheets/pages/TimesheetRejectPage';
@@ -703,6 +704,8 @@ export default function App() {
                 </button>
               </div>
             </div>
+          ) : activeTab === 'REPORT_EXPORT' ? (
+            <ReportExportPage currentUserRoles={currentRoles} />
           ) : activeTab === 'PIPELINE_REPORT' ? (
             <PipelineReportPage
               currentUserRoles={currentRoles}

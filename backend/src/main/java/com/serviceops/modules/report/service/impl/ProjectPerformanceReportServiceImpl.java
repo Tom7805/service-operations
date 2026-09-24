@@ -35,11 +35,13 @@ import com.serviceops.modules.timesheet.enums.TimeEntryStatus;
 import com.serviceops.modules.timesheet.repository.TimeEntryRepository;
 import com.serviceops.security.scope.CurrentUserScopeProvider;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.AccessDeniedException;import org.springframework.stereotype.Service;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -93,10 +95,7 @@ public class ProjectPerformanceReportServiceImpl implements ProjectPerformanceRe
 				.filter(project -> status == null || project.getStatus() == status)
 				.toList();
 
-		List<ProjectPerformanceRes> rows = buildRows(projects).stream()
-				.sorted(Comparator.comparing((ProjectPerformanceRes row) -> row.status() != ProjectStatus.RUNNING)
-						.thenComparing(ProjectPerformanceRes::projectCode, String.CASE_INSENSITIVE_ORDER))
-				.toList();
+		List<ProjectPerformanceRes> rows = sorted(buildRows(projects));
 
 		int withoutPlan = (int) rows.stream().filter(row -> !row.planAvailable()).count();
 		int overHours = (int) rows.stream()
@@ -131,6 +130,31 @@ public class ProjectPerformanceReportServiceImpl implements ProjectPerformanceRe
 				detail);
 		sensitiveAccessLogger.logView(SensitiveDataType.MARGIN, projectId, "ProjectPerformanceReport", detail);
 		return row;
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<ProjectPerformanceRes> getRowsForPeriod(LocalDate from, LocalDate to) {
+		Long managerId = requireCurrentUserId();
+		List<Project> projects = projectRepository.findByProjectManagerId(managerId).stream()
+				.filter(project -> activeInPeriod(project, from, to))
+				.toList();
+		return sorted(buildRows(projects));
+	}
+
+	/** Dự án hoạt động trong kỳ khi khoảng [startDate, expectedEndDate] giao với [from, to]; thiếu đầu nào coi là mở. */
+	private static boolean activeInPeriod(Project project, LocalDate from, LocalDate to) {
+		boolean startedBeforeEnd = project.getStartDate() == null || !project.getStartDate().isAfter(to);
+		boolean endsAfterStart = project.getExpectedEndDate() == null || !project.getExpectedEndDate().isBefore(from);
+		return startedBeforeEnd && endsAfterStart;
+	}
+
+	/** Dự án RUNNING trước CLOSED, sau đó theo mã dự án. */
+	private static List<ProjectPerformanceRes> sorted(List<ProjectPerformanceRes> rows) {
+		return rows.stream()
+				.sorted(Comparator.comparing((ProjectPerformanceRes row) -> row.status() != ProjectStatus.RUNNING)
+						.thenComparing(ProjectPerformanceRes::projectCode, String.CASE_INSENSITIVE_ORDER))
+				.toList();
 	}
 
 	private List<ProjectPerformanceRes> buildRows(List<Project> projects) {

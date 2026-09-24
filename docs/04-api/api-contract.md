@@ -5691,6 +5691,116 @@ Giới hạn hiện tại: báo giá chỉ có kế hoạch nhân công nên `pl
 `actualCost` có gồm. Vì vậy dự án có nhiều chi phí ngoài giờ công sẽ có `marginGapPercentPoints` âm hơn phần do giờ
 công gây ra; `hoursVarianceMarginImpactPercentPoints` cho biết riêng phần do giờ công.
 
+### `NCL-11-CN-004` — Xuất báo cáo ra tệp
+
+Quản lý dự án chọn báo cáo và kỳ, hệ thống trả về **tệp bảng tính** để gửi khách hàng hoặc lưu trữ ngoài hệ thống.
+Số liệu lấy từ cùng nguồn với màn hình báo cáo tương ứng nên tệp khớp với những gì người dùng thấy.
+
+**Quyền**: chỉ `VT-02` (Quản lý dự án). Vai trò khác nhận `403 FORBIDDEN` và bị ghi Nhật ký hệ thống lần từ chối
+với nhãn "Xuất báo cáo ra tệp" (TC-03). Người xuất chỉ nhận dữ liệu của dự án mình phụ trách (QTN-01).
+
+**Nhật ký (TC-04, QTN-03)**: mỗi lần xuất **thành công** ghi một dòng Nhật ký hệ thống (hành động "Xuất báo cáo",
+nhãn "Xuất báo cáo ra tệp", chi tiết gồm loại báo cáo, kỳ, số dòng, có/không cột giá vốn và tên tệp) và một dòng
+Nhật ký truy cập dữ liệu nhạy cảm `action = EXPORT`, `dataType = MARGIN`, `targetRef = <reportType>`. Cả hai ghi cùng
+transaction: không ghi được nhật ký thì không trả tệp. Lần xuất bị từ chối vì kỳ trống (TC-02) không ghi nhật ký
+xuất.
+
+**Che dữ liệu (QTN-02, `NCL-01-CN-005-TC-02`)**: với người không thuộc `VT-01`/`VT-05`/`VT-06`, các cột giá vốn
+**không có mặt** trong tệp (bỏ hẳn cả tên cột, không thay bằng `***`). Người giữ đồng thời `VT-02` và một vai trò được
+xem giá vốn thì nhận đủ cột.
+
+#### `GET /reports/export`
+
+**Query params:**
+
+| Tham số | Bắt buộc | Ghi chú |
+|---|---|---|
+| `reportType` | Có | Loại báo cáo. Hiện có `PROJECT_PERFORMANCE` (báo cáo hiệu quả theo dự án — `NCL-11-CN-003`). Giá trị khác → `400 VALIDATION_ERROR`. |
+| `from` | Có | Ngày bắt đầu kỳ, `yyyy-MM-dd`, gồm cả ngày này. |
+| `to` | Có | Ngày kết thúc kỳ, `yyyy-MM-dd`, gồm cả ngày này. Không được trước `from`. |
+| `format` | Không | Định dạng tệp. Hiện có `CSV` (mặc định). |
+
+**Kỳ với `PROJECT_PERFORMANCE`**: lấy các dự án người xuất phụ trách **hoạt động trong kỳ**, tức
+`startDate <= to` và (`expectedEndDate` trống hoặc `expectedEndDate >= from`); ngày còn trống coi là mở. Số liệu của
+từng dự án tính như `GET /reports/project-performance` (toàn thời gian dự án, không cắt theo kỳ). Thứ tự dòng: dự án
+`RUNNING` trước `CLOSED`, sau đó theo `projectCode`.
+
+**Response thành công — `200 OK`**: thân response là **nội dung tệp**, không bọc `BaseRes`.
+
+| Header | Giá trị |
+|---|---|
+| `Content-Type` | `text/csv; charset=UTF-8` |
+| `Content-Disposition` | `attachment; filename="bao-cao-hieu-qua-du-an_2026-07-01_2026-09-30.csv"; filename*=UTF-8''bao-cao-hieu-qua-du-an_2026-07-01_2026-09-30.csv` |
+| `X-Report-Row-Count` | Số dòng dữ liệu (không tính dòng tiêu đề), ví dụ `2` |
+
+Cả `Content-Disposition` và `X-Report-Row-Count` đã được mở qua CORS (`Access-Control-Expose-Headers`) để frontend
+đọc được. Tên tệp: `<slug-báo-cáo>_<from>_<to>.<đuôi>`, chỉ ký tự ASCII.
+
+**Định dạng CSV**: mã hóa UTF-8 **có BOM** (Excel mở đúng tiếng Việt), ngăn cách bằng dấu phẩy, xuống dòng `CRLF`,
+trích dẫn theo RFC 4180 (ô chứa dấu phẩy, dấu nháy kép hoặc xuống dòng được bọc trong `"…"`, dấu `"` nhân đôi). Số in
+dạng thập phân thuần với dấu chấm (`200000000.00`, `18.75`); phần trăm là số phần trăm như ở `NCL-11-CN-003`. Ô trống
+là giá trị `null`. Ô văn bản bắt đầu bằng `=`, `+`, `-`, `@` được thêm dấu `'` phía trước để bảng tính không hiểu
+thành công thức (chống CSV injection); ô số âm không bị đổi.
+
+**Các cột của `PROJECT_PERFORMANCE`** (theo đúng thứ tự; cột đánh dấu 🔒 chỉ có khi người xuất được xem giá vốn):
+
+| Cột | Nguồn (`ProjectPerformanceRes`) |
+|---|---|
+| Mã dự án | `projectCode` |
+| Tên dự án | `projectName` |
+| Trạng thái | `status`: `Đang chạy` / `Đã đóng` |
+| Mã hợp đồng | `contractCode` |
+| Loại hợp đồng | `contractType`: `Theo giờ` / `Trọn gói` / `Duy trì` / `Theo mốc` |
+| Có kế hoạch | `planAvailable`: `Có` / `Không` |
+| Giờ dự kiến | `plannedHours` |
+| Giờ thực tế | `actualHours` |
+| Chênh lệch giờ | `hoursVariance` |
+| Chênh lệch giờ (%) | `hoursVariancePercent` |
+| Giá trị hợp đồng | `contractValue` |
+| Doanh thu ghi nhận | `recognizedRevenue` |
+| Doanh thu / giá trị hợp đồng (%) | `revenueToContractPercent` |
+| Doanh thu dự kiến | `plannedRevenue` |
+| 🔒 Giá vốn dự kiến | `plannedCost` |
+| 🔒 Giá vốn thực tế | `actualCost` |
+| Biên dự kiến (%) | `plannedMarginPercent` |
+| Biên thực tế (%) | `actualMarginPercent` |
+| Chênh lệch biên (điểm %) | `marginGapPercentPoints` |
+| 🔒 Chi phí do chênh lệch giờ | `hoursVarianceCostImpact` |
+| Ảnh hưởng biên do chênh lệch giờ (điểm %) | `hoursVarianceMarginImpactPercentPoints` |
+| Cảnh báo | `warnings` nối bằng ` \| ` |
+
+Ví dụ tệp của Quản lý dự án (không có cột 🔒):
+```csv
+Mã dự án,Tên dự án,Trạng thái,Mã hợp đồng,Loại hợp đồng,Có kế hoạch,Giờ dự kiến,Giờ thực tế,Chênh lệch giờ,Chênh lệch giờ (%),Giá trị hợp đồng,Doanh thu ghi nhận,Doanh thu / giá trị hợp đồng (%),Doanh thu dự kiến,Biên dự kiến (%),Biên thực tế (%),Chênh lệch biên (điểm %),Ảnh hưởng biên do chênh lệch giờ (điểm %),Cảnh báo
+DA-01,Trien khai ERP,Đang chạy,HD-500,Theo giờ,Có,800.00,950.00,150.00,18.75,200000000.00,95000000.00,47.50,120000000.00,50.00,47.37,-2.63,-6.25,"Giờ công thực tế vượt kế hoạch 150.00 giờ (18.75%), làm biên lợi nhuận giảm 6.25 điểm phần trăm."
+DA-02,Bao tri website,Đang chạy,HD-501,Theo giờ,Không,,40.00,,,50000000.00,20000000.00,40.00,,,35.00,,,Dự án chưa có báo giá gắn kèm nên thiếu dữ liệu kế hoạch để so sánh.
+```
+
+**Response lỗi** — luôn là JSON lỗi chuẩn (`success = false`) dù response thành công là tệp. Frontend cần kiểm tra
+`response.ok` trước khi đọc thân response thành tệp:
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | — | Chưa đăng nhập. |
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-02` (TC-03). Có ghi nhật ký lần từ chối. |
+| 400 | `INVALID_STATE` | Kỳ đã chọn không có số liệu để xuất (TC-02) — `message`: `Khong co du lieu de xuat trong ky <from> den <to>`. |
+| 400 | `VALIDATION_ERROR` | Thiếu `reportType`/`from`/`to`, ngày sai định dạng, `from` sau `to`, hoặc `reportType`/`format` không nằm trong danh sách. |
+
+Ví dụ lỗi TC-02:
+```json
+{
+  "success": false,
+  "errorCode": "INVALID_STATE",
+  "message": "Khong co du lieu de xuat trong ky 2026-07-01 den 2026-09-30",
+  "timestamp": "2026-09-24T14:05:11.1234567",
+  "fieldErrors": null
+}
+```
+
+**Giao diện**: mục điều hướng "Xuất báo cáo" (chỉ `VT-02`) mở danh sách báo cáo xuất được; chọn một báo cáo sẽ mở hộp
+thoại chọn kỳ (mặc định từ đầu tháng tới hôm nay). Form kiểm tra `from ≤ to` trước khi gửi, sau đó tải tệp và báo số
+dòng đã xuất.
+
 ---
 
 ## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)

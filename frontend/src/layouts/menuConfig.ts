@@ -29,6 +29,7 @@ export type Tab =
   | 'TWO_FACTOR_SETTINGS'
   | 'REPORTS'
   | 'PIPELINE_REPORT'
+  | 'REPORT_EXPORT'
   | 'MY_WORK'
   | 'TIMESHEET_APPROVAL'
   | 'TIMESHEET_REJECT'
@@ -191,6 +192,11 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
     // thống tự gửi thông báo cho quản lý dự án + Ban giám đốc mỗi khi tính lại biên lợi
     // nhuận (NCL-09-CN-003). Chỉ Ban giám đốc (VT-01) được đặt/đổi (TC-03); VT-02/VT-05
     // chỉ xem được ngưỡng hiện hành.
+  },
+  {
+    tab: 'REPORT_EXPORT', icon: ICONS.download, label: 'Xuất báo cáo', requires: ['VT-02'],
+    // NCL-11-CN-004: Quản lý dự án chọn báo cáo + kỳ rồi xuất tệp bảng tính. Backend
+    // tự bỏ cột giá vốn theo quyền người xuất (QTN-02) và ghi nhật ký mỗi lần xuất.
   },
   { tab: 'OPPORTUNITY_DETAIL', icon: ICONS.building, label: 'Cơ hội', requires: ['VT-04'] },
 ];
