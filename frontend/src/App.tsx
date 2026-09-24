@@ -25,6 +25,7 @@ import OpportunityListPage from './modules/opportunities/pages/OpportunityListPa
 import RevenueForecastPage from './modules/opportunities/pages/RevenueForecastPage';
 import PipelineReportPage from './modules/reports/pages/PipelineReportPage';
 import DashboardPage from './modules/reports/pages/DashboardPage';
+import UtilizationReportPage from './modules/reports/pages/UtilizationReportPage';
 import ReportExportPage from './modules/reports/pages/ReportExportPage';
 import RevenueReportPage from './modules/reports/pages/RevenueReportPage';
 import TimesheetReportPage from './modules/reports/pages/TimesheetReportPage';
@@ -741,6 +742,23 @@ export default function App() {
                   <span className="report-card__arrow">{ICONS.arrowRight}</span>
                 </button>
                 )}
+                {currentRoles.includes('VT-01') && (
+                  <button
+                    type="button"
+                    className="report-card"
+                    onClick={() => setActiveTab('UTILIZATION_REPORT')}
+                  >
+                    <span className="report-card__icon">{ICONS.users}</span>
+                    <span className="report-card__body">
+                      <span className="report-card__title">Tỷ lệ giờ tính phí</span>
+                      <span className="report-card__desc">
+                        Giờ tính phí so với giờ làm việc chuẩn của kỳ, theo toàn công ty, từng bộ phận
+                        và từng người.
+                      </span>
+                    </span>
+                    <span className="report-card__arrow">{ICONS.arrowRight}</span>
+                  </button>
+                )}
                 {currentRoles.includes('VT-02') && (
                   <button
                     type="button"
@@ -783,6 +801,8 @@ export default function App() {
                 setActiveTab('OPPORTUNITIES');
               }}
             />
+          ) : activeTab === 'UTILIZATION_REPORT' ? (
+            <UtilizationReportPage currentUserRoles={currentRoles} onBack={() => setActiveTab('REPORTS')} />
           ) : activeTab === 'CUSTOMER_MERGE' ? (
             <CustomerMergePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'BILL_RATES' ? (

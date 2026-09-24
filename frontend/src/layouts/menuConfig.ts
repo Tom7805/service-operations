@@ -30,6 +30,7 @@ export type Tab =
   | 'REPORTS'
   | 'PIPELINE_REPORT'
   | 'OPERATIONAL_DASHBOARD'
+  | 'UTILIZATION_REPORT'
   | 'REPORT_EXPORT'
   | 'REVENUE_REPORT'
   | 'TIMESHEET_REPORT'
@@ -118,11 +119,12 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
   { tab: 'REVENUE_FORECAST', icon: ICONS.chart, label: 'Dự báo doanh thu', requires: ['VT-01', 'VT-04'] },
   {
     tab: 'REPORTS', icon: ICONS.document, label: 'Báo cáo',
-    matches: ['PIPELINE_REPORT', 'OPERATIONAL_DASHBOARD', 'REVENUE_REPORT', 'TIMESHEET_REPORT'],
+    matches: ['PIPELINE_REPORT', 'OPERATIONAL_DASHBOARD', 'UTILIZATION_REPORT', 'REVENUE_REPORT', 'TIMESHEET_REPORT'],
     requires: ['VT-01', 'VT-04', 'VT-05', 'VT-02'],
     // Trung tâm báo cáo: mỗi thẻ báo cáo tự lọc theo vai trò (đường ống: VT-01/VT-04; bảng điều khiển
-    // vận hành NCL-11-CN-001: VT-01; doanh thu theo tháng NCL-11-CN-005: VT-01/VT-05; giờ công theo
-    // nhân sự NCL-11-CN-006: VT-02), trang báo cáo cũng tự chặn vai trò không đúng.
+    // vận hành NCL-11-CN-001: VT-01; tỷ lệ giờ tính phí NCL-11-CN-002: VT-01; doanh thu theo tháng
+    // NCL-11-CN-005: VT-01/VT-05; giờ công theo nhân sự NCL-11-CN-006: VT-02), trang báo cáo cũng tự
+    // chặn vai trò không đúng.
   },
   { tab: 'CUSTOMER_MERGE', icon: ICONS.merge, label: 'Gộp KH trùng', requires: ['VT-07'] },
   {

@@ -6,6 +6,7 @@ import type {
   ReportExportReq,
   TimesheetByEmployeeRes,
 } from '../types/reportTypes';
+import type { UtilizationReportRes } from '../types/utilizationReportTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -56,6 +57,14 @@ export async function getPipelineReport(): Promise<PipelineReportRes> {
 export async function getDashboardSummary(from: string, to: string): Promise<DashboardSummaryRes> {
   const params = new URLSearchParams({ from, to });
   return requestBackend<DashboardSummaryRes>(`${API_BASE_URL}/reports/dashboard?${params.toString()}`, {
+    method: 'GET',
+  });
+}
+
+/** NCL-11-CN-002: tỷ lệ giờ tính phí của kỳ theo toàn công ty, từng bộ phận và từng người (VT-01). */
+export async function getUtilizationReport(from: string, to: string): Promise<UtilizationReportRes> {
+  const params = new URLSearchParams({ from, to });
+  return requestBackend<UtilizationReportRes>(`${API_BASE_URL}/reports/utilization?${params.toString()}`, {
     method: 'GET',
   });
 }
