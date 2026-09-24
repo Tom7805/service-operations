@@ -2,6 +2,8 @@ package com.serviceops.modules.contract.service.impl;
 
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
+import com.serviceops.modules.acceptance.enums.AcceptanceStatus;
+import com.serviceops.modules.acceptance.repository.AcceptanceCertificateRepository;
 import com.serviceops.modules.contract.dto.request.ContractMilestoneReq;
 import com.serviceops.modules.contract.dto.response.ContractMilestoneRes;
 import com.serviceops.modules.contract.entity.Contract;
@@ -33,6 +35,7 @@ public class ContractMilestoneServiceImpl implements ContractMilestoneService {
     private final ContractRepository contractRepository;
     private final ContractMilestoneRepository milestoneRepository;
     private final ContractAuditLogger auditLogger;
+    private final AcceptanceCertificateRepository acceptanceCertificateRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -66,12 +69,18 @@ public class ContractMilestoneServiceImpl implements ContractMilestoneService {
 
         // Da co moc xuat hoa don thi khong duoc khai bao lai: deleteByContractId + tao moi (PENDING)
         // se lam mat moc do va hoa don gan voi no (NCL-10-CN-002), cho phep lap trung hoa don.
-        boolean hasInvoicedMilestone = milestoneRepository.findByContractIdOrderByExpectedDateAscIdAsc(contractId)
-                .stream()
+        List<ContractMilestone> existing = milestoneRepository.findByContractIdOrderByExpectedDateAscIdAsc(contractId);
+        boolean hasInvoicedMilestone = existing.stream()
                 .anyMatch(m -> m.getStatus() == ContractMilestoneStatus.INVOICED);
         if (hasInvoicedMilestone) {
             throw new BusinessRuleException(ErrorCode.INVALID_STATE,
                     "Hop dong da co moc thanh toan da xuat hoa don, khong the khai bao lai danh sach moc");
+        }
+        // Tuong tu: xoa moc dang gan phieu nghiem thu se lam mat can cu mo moc (NCL-12-CN-003, QTN-25).
+        List<Long> existingIds = existing.stream().map(ContractMilestone::getId).toList();
+        if (!existingIds.isEmpty() && acceptanceCertificateRepository.existsByContractMilestoneIdIn(existingIds)) {
+            throw new BusinessRuleException(ErrorCode.INVALID_STATE,
+                    "Hop dong co moc thanh toan dang gan phieu nghiem thu, hay go lien ket truoc khi khai bao lai danh sach moc");
         }
 
         milestoneRepository.deleteByContractId(contractId);
@@ -118,13 +127,7 @@ public class ContractMilestoneServiceImpl implements ContractMilestoneService {
     @Override
     public ContractMilestoneRes updateStatus(Long contractId, Long milestoneId, ContractMilestoneStatus newStatus) {
         requireContract(contractId);
-        ContractMilestone milestone = milestoneRepository.findById(milestoneId)
-                .orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
-                        "Khong tim thay moc thanh toan voi id=" + milestoneId));
-        if (!milestone.getContractId().equals(contractId)) {
-            throw new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
-                    "Moc thanh toan voi id=" + milestoneId + " khong thuoc hop dong id=" + contractId);
-        }
+        ContractMilestone milestone = requireMilestone(contractId, milestoneId);
 
         ContractMilestoneStatus current = milestone.getStatus();
         // Chi cho di dung mot buoc ve phia truoc theo trinh tu enum khai bao
@@ -133,6 +136,19 @@ public class ContractMilestoneServiceImpl implements ContractMilestoneService {
             throw new BusinessRuleException(ErrorCode.INVALID_STATE,
                     "Khong the doi trang thai moc thanh toan tu " + current + " sang " + newStatus
                             + " — chi duoc chuyen tuan tu PENDING -> READY_TO_INVOICE -> INVOICED");
+        }
+        // QTN-25: moc da gan phieu nghiem thu chi mo khi phieu da duoc khach hang xac nhan. Luong xac
+        // nhan/gan moc (NCL-12-CN-002/003) luu phieu ACCEPTED truoc roi moi goi ham nay nen van qua.
+        if (newStatus == ContractMilestoneStatus.READY_TO_INVOICE) {
+            String milestoneName = milestone.getName();
+            acceptanceCertificateRepository.findByContractMilestoneId(milestoneId)
+                    .filter(certificate -> certificate.getStatus() != AcceptanceStatus.ACCEPTED)
+                    .ifPresent(certificate -> {
+                        throw new BusinessRuleException(ErrorCode.INVALID_STATE,
+                                "Moc thanh toan \"" + milestoneName + "\" gan voi phieu nghiem thu "
+                                        + certificate.getCertificateCode() + " chua duoc khach hang xac nhan"
+                                        + " — chua du dieu kien lap hoa don (QTN-25)");
+                    });
         }
 
         milestone.setStatus(newStatus);
@@ -143,6 +159,39 @@ public class ContractMilestoneServiceImpl implements ContractMilestoneService {
                 "Doi trang thai moc thanh toan \"" + milestone.getName() + "\" tu " + current + " sang " + newStatus);
 
         return toResponse(milestone);
+    }
+
+    @Override
+    public ContractMilestoneRes holdForAcceptance(Long contractId, Long milestoneId, String reason) {
+        requireContract(contractId);
+        ContractMilestone milestone = requireMilestone(contractId, milestoneId);
+        switch (milestone.getStatus()) {
+            case PENDING -> {
+                return toResponse(milestone);
+            }
+            case INVOICED -> throw new BusinessRuleException(ErrorCode.INVALID_STATE,
+                    "Moc thanh toan \"" + milestone.getName() + "\" da xuat hoa don, khong the dua ve cho nghiem thu");
+            case READY_TO_INVOICE -> {
+            }
+        }
+        milestone.setStatus(ContractMilestoneStatus.PENDING);
+        milestone.setUpdatedAt(LocalDateTime.now());
+        milestone = milestoneRepository.save(milestone);
+        auditLogger.record(contractId, ContractAuditAction.MILESTONE_STATUS_UPDATE,
+                "Dua moc thanh toan \"" + milestone.getName() + "\" tu READY_TO_INVOICE ve PENDING (cho nghiem thu): "
+                        + reason);
+        return toResponse(milestone);
+    }
+
+    private ContractMilestone requireMilestone(Long contractId, Long milestoneId) {
+        ContractMilestone milestone = milestoneRepository.findById(milestoneId)
+                .orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
+                        "Khong tim thay moc thanh toan voi id=" + milestoneId));
+        if (!milestone.getContractId().equals(contractId)) {
+            throw new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
+                    "Moc thanh toan voi id=" + milestoneId + " khong thuoc hop dong id=" + contractId);
+        }
+        return milestone;
     }
 
     private Contract requireContract(Long contractId) {

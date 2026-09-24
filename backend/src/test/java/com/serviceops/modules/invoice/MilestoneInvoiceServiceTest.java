@@ -11,6 +11,7 @@ import com.serviceops.modules.contract.enums.ContractType;
 import com.serviceops.modules.contract.repository.ContractMilestoneRepository;
 import com.serviceops.modules.contract.repository.ContractRepository;
 import com.serviceops.modules.contract.service.ContractMilestoneService;
+import com.serviceops.modules.acceptance.repository.AcceptanceCertificateRepository;
 import com.serviceops.modules.invoice.dto.request.InvoiceFromMilestoneReq;
 import com.serviceops.modules.invoice.dto.response.InvoiceRes;
 import com.serviceops.modules.invoice.entity.Invoice;
@@ -69,6 +70,8 @@ class MilestoneInvoiceServiceTest {
 	private InvoiceLineRepository invoiceLineRepository;
 	@Mock
 	private AuditLogService auditLogService;
+	@Mock
+	private AcceptanceCertificateRepository acceptanceCertificateRepository;
 
 	private MilestoneInvoiceServiceImpl service;
 
@@ -77,7 +80,7 @@ class MilestoneInvoiceServiceTest {
 		Clock clock = Clock.fixed(Instant.parse("2026-09-21T03:00:00Z"), ZONE);
 		service = new MilestoneInvoiceServiceImpl(contractRepository, milestoneRepository,
 				contractMilestoneService, invoiceRepository, invoiceLineRepository,
-				new MilestoneAcceptanceValidator(), new ContractValueLimitValidator(), auditLogService, clock);
+				new MilestoneAcceptanceValidator(acceptanceCertificateRepository), new ContractValueLimitValidator(), auditLogService, clock);
 		SecurityContextHolder.getContext().setAuthentication(
 				new UsernamePasswordAuthenticationToken("ketoan01", "x"));
 	}
