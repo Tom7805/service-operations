@@ -58,3 +58,76 @@ export function validateAcceptanceForm(input: AcceptanceFormInput): {
 
   return { isValid: Object.keys(errors).length === 0, errors };
 }
+
+export const SIGNER_MAX_LENGTH = 255;
+export const MINUTES_URL_MAX_LENGTH = 500;
+export const REASON_MAX_LENGTH = 1000;
+
+/** Ngày hôm nay theo giờ máy người dùng, dạng YYYY-MM-DD (không dùng toISOString — lệch múi giờ UTC). */
+export function todayLocalIso(now: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+export interface ConfirmFormInput {
+  signerName: string;
+  signedDate: string;
+  minutesUrl: string;
+}
+
+export type ConfirmFormErrors = Partial<Record<keyof ConfirmFormInput, string>>;
+
+/**
+ * NCL-12-CN-002 TC-01 — khớp AcceptanceConfirmReq và kiểm tra ngày ký của backend: bắt buộc người ký,
+ * ngày ký, biên bản; ngày ký không ở tương lai và không trước ngày lập phiếu.
+ */
+export function validateConfirmForm(
+  input: ConfirmFormInput,
+  certificateCreatedAt: string,
+  today: string = todayLocalIso()
+): { isValid: boolean; errors: ConfirmFormErrors } {
+  const errors: ConfirmFormErrors = {};
+  const signer = input.signerName.trim();
+  if (!signer) errors.signerName = 'Nhập tên người đại diện khách hàng ký xác nhận';
+  else if (signer.length > SIGNER_MAX_LENGTH) errors.signerName = `Tên người ký tối đa ${SIGNER_MAX_LENGTH} ký tự`;
+
+  const createdDate = (certificateCreatedAt ?? '').slice(0, 10);
+  if (!input.signedDate) errors.signedDate = 'Chọn ngày ký biên bản';
+  else if (input.signedDate > today) errors.signedDate = 'Ngày ký biên bản không được ở tương lai';
+  else if (createdDate && input.signedDate < createdDate) {
+    errors.signedDate = `Ngày ký không được trước ngày lập phiếu (${createdDate.split('-').reverse().join('/')})`;
+  }
+
+  const url = input.minutesUrl.trim();
+  if (!url) errors.minutesUrl = 'Tải lên hoặc nhập đường dẫn biên bản nghiệm thu đã ký';
+  else if (url.length > MINUTES_URL_MAX_LENGTH) errors.minutesUrl = `Đường dẫn biên bản tối đa ${MINUTES_URL_MAX_LENGTH} ký tự`;
+
+  return { isValid: Object.keys(errors).length === 0, errors };
+}
+
+export interface RejectFormInput {
+  reason: string;
+  signerName: string;
+  minutesUrl: string;
+}
+
+export type RejectFormErrors = Partial<Record<keyof RejectFormInput, string>>;
+
+/** NCL-12-CN-002 TC-02 — lý do từ chối bắt buộc; người ký và biên bản tuỳ chọn. */
+export function validateRejectForm(input: RejectFormInput): { isValid: boolean; errors: RejectFormErrors } {
+  const errors: RejectFormErrors = {};
+  const reason = input.reason.trim();
+  if (!reason) errors.reason = 'Nhập lý do khách hàng từ chối nghiệm thu';
+  else if (reason.length > REASON_MAX_LENGTH) errors.reason = `Lý do từ chối tối đa ${REASON_MAX_LENGTH} ký tự`;
+  if (input.signerName.trim().length > SIGNER_MAX_LENGTH) errors.signerName = `Tên người ký tối đa ${SIGNER_MAX_LENGTH} ký tự`;
+  if (input.minutesUrl.trim().length > MINUTES_URL_MAX_LENGTH) {
+    errors.minutesUrl = `Đường dẫn biên bản tối đa ${MINUTES_URL_MAX_LENGTH} ký tự`;
+  }
+  return { isValid: Object.keys(errors).length === 0, errors };
+}
+
+/** Đường dẫn mô phỏng cho tệp biên bản người dùng chọn (backend chỉ lưu chuỗi, không nhận tệp thật). */
+export function simulatedMinutesPath(certificateCode: string, fileName: string): string {
+  const safe = fileName.trim().replace(/\s+/g, '-');
+  return `/files/nghiem-thu/${certificateCode}/${safe}`;
+}

@@ -1,8 +1,11 @@
 import type {
   AcceptanceCertificateRes,
+  AcceptanceConfirmReq,
   AcceptanceCreateReq,
   AcceptanceDetailRes,
   AcceptanceReadinessRes,
+  AcceptanceRejectReq,
+  AcceptanceUpdateReq,
 } from '../types/acceptanceTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
@@ -85,6 +88,43 @@ export async function fetchProjectAcceptances(projectId: number): Promise<Accept
 /** GET /acceptances/{certificateId} — chi tiết phiếu (PM dự án hoặc Kế toán). */
 export async function getAcceptance(certificateId: number): Promise<AcceptanceDetailRes> {
   return requestBackend<AcceptanceDetailRes>(`${API_BASE_URL}/acceptances/${certificateId}`, { method: 'GET' });
+}
+
+/** POST /acceptances/{certificateId}/confirm — phiếu → ACCEPTED, khoá nội dung, mở mốc thanh toán đã gắn (QTN-25). */
+export async function confirmAcceptance(certificateId: number, req: AcceptanceConfirmReq): Promise<AcceptanceDetailRes> {
+  return requestBackend<AcceptanceDetailRes>(`${API_BASE_URL}/acceptances/${certificateId}/confirm`, {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+}
+
+/** POST /acceptances/{certificateId}/reject — phiếu → NEEDS_REVISION, lưu lý do từ chối. */
+export async function rejectAcceptance(certificateId: number, req: AcceptanceRejectReq): Promise<AcceptanceDetailRes> {
+  return requestBackend<AcceptanceDetailRes>(`${API_BASE_URL}/acceptances/${certificateId}/reject`, {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+}
+
+/** PUT /acceptances/{certificateId} — nộp lại phiếu bị từ chối: chụp lại nội dung, tăng lần nộp, về chờ xác nhận. */
+export async function resubmitAcceptance(certificateId: number, req: AcceptanceUpdateReq): Promise<AcceptanceDetailRes> {
+  return requestBackend<AcceptanceDetailRes>(`${API_BASE_URL}/acceptances/${certificateId}`, {
+    method: 'PUT',
+    body: JSON.stringify(req),
+  });
+}
+
+/**
+ * NCL-12-CN-002 TC-03: request thật tới endpoint xác nhận phiếu khi người không đủ vai trò mở chức năng,
+ * để backend trả 403 và ghi "Từ chối truy cập — Xác nhận phiếu nghiệm thu". Body phải HỢP LỆ: Spring
+ * kiểm tra @Valid trước khi tới @PreAuthorize, body rỗng sẽ nhận 400 và không có gì được ghi nhật ký.
+ * Phiếu id 0 không tồn tại nên dù lỡ gọi với QLDA cũng chỉ nhận 404, không thay đổi dữ liệu.
+ */
+export async function checkAcceptanceConfirmAccess(): Promise<void> {
+  await requestBackend<unknown>(`${API_BASE_URL}/acceptances/0/confirm`, {
+    method: 'POST',
+    body: JSON.stringify({ signerName: '-', signedDate: '2000-01-01', minutesUrl: '-' }),
+  });
 }
 
 /**

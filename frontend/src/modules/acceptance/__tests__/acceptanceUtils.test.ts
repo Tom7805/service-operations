@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 import type { WorkBreakdownRes, TaskRes } from '../../projects/types/taskTypes';
 import type { AcceptanceCertificateRes } from '../types/acceptanceTypes';
 import { acceptanceStateOf, flattenWorkPackages } from '../utils/workPackageTree';
-import { parseMoneyInput, validateAcceptanceForm } from '../validators/acceptanceValidators';
+import {
+  parseMoneyInput,
+  simulatedMinutesPath,
+  todayLocalIso,
+  validateAcceptanceForm,
+  validateConfirmForm,
+  validateRejectForm,
+} from '../validators/acceptanceValidators';
 
 function task(id: number, status: TaskRes['status'], workPackageId = 1): TaskRes {
   return {
@@ -89,5 +96,38 @@ describe('validateAcceptanceForm', () => {
     expect(validateAcceptanceForm({ ...base, acceptedValue: '10,123' }).errors.acceptedValue).toMatch(/2 chữ số/);
     expect(validateAcceptanceForm({ ...base, title: 'x'.repeat(256) }).errors.title).toBeTruthy();
     expect(validateAcceptanceForm({ ...base, note: 'x'.repeat(1001) }).errors.note).toBeTruthy();
+  });
+});
+
+describe('validateConfirmForm / validateRejectForm (NCL-12-CN-002)', () => {
+  const created = '2026-09-24T10:00:00';
+  const today = '2026-09-25';
+
+  it('xác nhận hợp lệ khi đủ người ký, ngày ký trong khoảng [ngày lập, hôm nay] và biên bản', () => {
+    expect(
+      validateConfirmForm({ signerName: 'A', signedDate: '2026-09-24', minutesUrl: '/f.pdf' }, created, today).isValid
+    ).toBe(true);
+  });
+
+  it('chặn ngày ký trước ngày lập phiếu hoặc ở tương lai', () => {
+    expect(
+      validateConfirmForm({ signerName: 'A', signedDate: '2026-09-23', minutesUrl: '/f.pdf' }, created, today).errors
+        .signedDate
+    ).toBe('Ngày ký không được trước ngày lập phiếu (24/09/2026)');
+    expect(
+      validateConfirmForm({ signerName: 'A', signedDate: '2026-09-26', minutesUrl: '/f.pdf' }, created, today).errors
+        .signedDate
+    ).toMatch(/tương lai/);
+  });
+
+  it('từ chối bắt buộc lý do, giới hạn độ dài', () => {
+    expect(validateRejectForm({ reason: '  ', signerName: '', minutesUrl: '' }).errors.reason).toBeTruthy();
+    expect(validateRejectForm({ reason: 'x'.repeat(1001), signerName: '', minutesUrl: '' }).errors.reason).toBeTruthy();
+    expect(validateRejectForm({ reason: 'Thieu tai lieu', signerName: '', minutesUrl: '' }).isValid).toBe(true);
+  });
+
+  it('tạo đường dẫn biên bản mô phỏng từ tên tệp', () => {
+    expect(simulatedMinutesPath('NT-1', 'bien ban ky.pdf')).toBe('/files/nghiem-thu/NT-1/bien-ban-ky.pdf');
+    expect(todayLocalIso(new Date(2026, 0, 5))).toBe('2026-01-05');
   });
 });

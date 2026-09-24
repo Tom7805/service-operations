@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import { AcceptanceApiError, getAcceptance } from '../api/acceptanceApi';
+import AcceptanceDecisionModal, { type AcceptanceDecisionMode } from '../components/AcceptanceDecisionModal';
+import AcceptanceResubmitModal from '../components/AcceptanceResubmitModal';
 import {
   ACCEPTANCE_STATUS_META,
+  CHANNEL_LABEL,
   DECISION_META,
+  MILESTONE_STATUS_META,
   type AcceptanceDetailRes,
 } from '../types/acceptanceTypes';
 
@@ -11,6 +15,8 @@ interface Props {
   certificateId: number;
   onBack: () => void;
   initialCertificate?: AcceptanceDetailRes;
+  /** Chỉ Quản lý dự án (VT-02) thấy các thao tác ghi nhận xác nhận/từ chối/nộp lại (NCL-12-CN-002). */
+  currentUserRoles?: string[];
 }
 
 function formatAmount(value: number | null | undefined): string {
@@ -43,10 +49,41 @@ interface HistoryEntry {
  * NCL-12-CN-001 — Chi tiết phiếu nghiệm thu: nội dung đã chụp lại lúc lập (công việc, phiên bản sản
  * phẩm bàn giao, giá trị) và lịch sử phiếu — ai lập, lúc nào, các lần khách hàng xác nhận/từ chối (TC-04).
  */
-export default function AcceptanceDetailPage({ certificateId, onBack, initialCertificate }: Props) {
+export default function AcceptanceDetailPage({
+  certificateId,
+  onBack,
+  initialCertificate,
+  currentUserRoles = [],
+}: Props) {
+  const canAct = currentUserRoles.includes('VT-02');
   const [certificate, setCertificate] = useState<AcceptanceDetailRes | null>(initialCertificate ?? null);
   const [isLoading, setIsLoading] = useState(!initialCertificate);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [decisionMode, setDecisionMode] = useState<AcceptanceDecisionMode | null>(null);
+  const [resubmitOpen, setResubmitOpen] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const handleDecisionDone = (updated: AcceptanceDetailRes, mode: AcceptanceDecisionMode) => {
+    setCertificate(updated);
+    setDecisionMode(null);
+    if (mode === 'confirm') {
+      const m = updated.paymentMilestone;
+      setNotice(
+        `Đã ghi nhận khách hàng xác nhận phiếu ${updated.certificateCode} — phiếu đã nghiệm thu và khoá nội dung.` +
+          (m
+            ? ` Mốc thanh toán "${m.name}": ${MILESTONE_STATUS_META[m.status]?.label ?? m.status}.`
+            : ' Phiếu chưa gắn mốc thanh toán; mốc sẽ mở ngay khi Kế toán gắn phiếu.')
+      );
+    } else {
+      setNotice(`Đã ghi nhận khách hàng từ chối phiếu ${updated.certificateCode} — phiếu chuyển sang cần chỉnh sửa.`);
+    }
+  };
+
+  const handleResubmitted = (updated: AcceptanceDetailRes) => {
+    setCertificate(updated);
+    setResubmitOpen(false);
+    setNotice(`Đã nộp lại phiếu ${updated.certificateCode} (lần ${updated.revisionNo}) — đang chờ khách hàng xác nhận.`);
+  };
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -84,14 +121,31 @@ export default function AcceptanceDetailPage({ certificateId, onBack, initialCer
           at: d.recordedAt,
           actor: d.recordedBy,
           label: `${DECISION_META[d.decision]?.label ?? d.decision} (lần nộp ${d.revisionNo})`,
-          detail:
-            d.decision === 'REJECTED'
-              ? d.reason
-              : [d.signerName && `Người ký: ${d.signerName}`, d.signedDate && `ngày ${formatDate(d.signedDate)}`]
-                  .filter(Boolean)
-                  .join(', '),
+          detail: [
+            d.decision === 'REJECTED' && d.reason && `Lý do: ${d.reason}`,
+            d.signerName && `Người ký: ${d.signerName}`,
+            d.signedDate && `ngày ký ${formatDate(d.signedDate)}`,
+            d.minutesUrl && `biên bản ${d.minutesUrl}`,
+            `kênh: ${CHANNEL_LABEL[d.channel] ?? d.channel}`,
+          ]
+            .filter(Boolean)
+            .join(' · '),
           badge: DECISION_META[d.decision]?.badge ?? 'badge--gray',
         })),
+        // Lần nộp lại gần nhất: phiếu đang chờ xác nhận ở lần nộp > 1 thì updatedAt chính là lúc nộp lại.
+        ...(certificate.status === 'PENDING_CONFIRMATION' && certificate.revisionNo > 1 && certificate.updatedAt
+          ? [
+              {
+                key: 'resubmit',
+                at: certificate.updatedAt,
+                // Chỉ QLDA của dự án mới nộp lại được; tên tài khoản cụ thể nằm trong Nhật ký hệ thống.
+                actor: 'Quản lý dự án',
+                label: `Nộp lại phiếu (lần ${certificate.revisionNo})`,
+                detail: `Giá trị ${formatAmount(certificate.acceptedValue)} · ${certificate.tasks.length} công việc`,
+                badge: 'badge--gold',
+              },
+            ]
+          : []),
       ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
     : [];
 
@@ -144,6 +198,15 @@ export default function AcceptanceDetailPage({ certificateId, onBack, initialCer
         </div>
       ) : certificate && status ? (
         <>
+          {notice && (
+            <div className="alert-box alert-box--success" role="status" data-testid="acceptance-detail-notice">
+              <span className="alert-box__icon">{ICONS.checkCircle}</span>
+              <div className="alert-box__content">{notice}</div>
+              <button type="button" className="modal-close" onClick={() => setNotice(null)} aria-label="Ẩn thông báo">
+                {ICONS.close}
+              </button>
+            </div>
+          )}
           <div className="stats-grid">
             <div className="stat-card">
               <div className="stat-card__icon stat-card__icon--purple">{ICONS.money}</div>
@@ -178,14 +241,65 @@ export default function AcceptanceDetailPage({ certificateId, onBack, initialCer
           </div>
 
           <div className="user-table-card" style={{ padding: '20px', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
-              <span className={`badge ${status.badge}`} data-testid="acceptance-detail-status">
-                {status.label}
-              </span>
-              {certificate.status === 'PENDING_CONFIRMATION' && (
-                <span className="field-hint">Phiếu đang chờ khách hàng xác nhận.</span>
+            <div
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+                flexWrap: 'wrap', marginBottom: '16px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <span className={`badge ${status.badge}`} data-testid="acceptance-detail-status">
+                  {status.label}
+                </span>
+                {certificate.status === 'PENDING_CONFIRMATION' && (
+                  <span className="field-hint">Phiếu đang chờ khách hàng xác nhận.</span>
+                )}
+                {certificate.status === 'NEEDS_REVISION' && (
+                  <span className="field-hint">Chỉnh sửa theo lý do khách hàng đưa ra rồi nộp lại phiếu.</span>
+                )}
+              </div>
+              {canAct && certificate.status === 'PENDING_CONFIRMATION' && (
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }} data-testid="acceptance-decision-actions">
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    onClick={() => setDecisionMode('reject')}
+                    data-testid="acceptance-open-reject"
+                  >
+                    <span className="icon-xs">{ICONS.close}</span> Khách hàng từ chối
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => setDecisionMode('confirm')}
+                    data-testid="acceptance-open-confirm"
+                  >
+                    <span className="icon-xs">{ICONS.checkCircle}</span> Khách hàng xác nhận
+                  </button>
+                </div>
+              )}
+              {canAct && certificate.status === 'NEEDS_REVISION' && (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => setResubmitOpen(true)}
+                  data-testid="acceptance-open-resubmit"
+                >
+                  <span className="icon-xs">{ICONS.edit}</span> Chỉnh sửa và nộp lại
+                </button>
               )}
             </div>
+            {certificate.status === 'ACCEPTED' && (
+              <div className="alert-box alert-box--success" data-testid="acceptance-locked">
+                <span className="alert-box__icon">{ICONS.lock}</span>
+                <div className="alert-box__content">
+                  <strong>Phiếu đã nghiệm thu — nội dung đã khoá</strong>
+                  Khách hàng {certificate.signerName || '—'} ký ngày {formatDate(certificate.signedDate)}
+                  {certificate.confirmationChannel ? ` (${CHANNEL_LABEL[certificate.confirmationChannel]})` : ''}.
+                  Phiếu không thể chỉnh sửa hay nộp lại.
+                </div>
+              </div>
+            )}
             {certificate.lastRejectionReason && certificate.status === 'NEEDS_REVISION' && (
               <div className="alert-box alert-box--warning">
                 <span className="alert-box__icon">{ICONS.alertTriangle}</span>
@@ -214,21 +328,41 @@ export default function AcceptanceDetailPage({ certificateId, onBack, initialCer
                 <span className="detail-label">Thời điểm lập</span>
                 <span className="detail-value">{formatDateTime(certificate.createdAt)}</span>
               </div>
-              {certificate.paymentMilestone && (
-                <div className="detail-field">
-                  <span className="detail-label">Mốc thanh toán đã gắn</span>
-                  <span className="detail-value">
-                    {certificate.paymentMilestone.name} · {formatAmount(certificate.paymentMilestone.amount)}
+              <div className="detail-field">
+                <span className="detail-label">Mốc thanh toán đã gắn</span>
+                {certificate.paymentMilestone ? (
+                  <span className="detail-value" data-testid="acceptance-detail-milestone">
+                    {certificate.paymentMilestone.name} · {formatAmount(certificate.paymentMilestone.amount)}{' '}
+                    <span
+                      className={`badge ${MILESTONE_STATUS_META[certificate.paymentMilestone.status]?.badge ?? 'badge--gray'}`}
+                    >
+                      {MILESTONE_STATUS_META[certificate.paymentMilestone.status]?.label ?? certificate.paymentMilestone.status}
+                    </span>
                   </span>
-                </div>
-              )}
+                ) : (
+                  <span className="detail-value cell-muted" style={{ fontWeight: 400 }}>
+                    Chưa gắn — Kế toán gắn phiếu vào mốc thanh toán của hợp đồng
+                  </span>
+                )}
+              </div>
               {certificate.confirmedAt && (
-                <div className="detail-field">
-                  <span className="detail-label">Khách hàng xác nhận</span>
-                  <span className="detail-value">
-                    {certificate.signerName || '—'} · {formatDateTime(certificate.confirmedAt)}
-                  </span>
-                </div>
+                <>
+                  <div className="detail-field">
+                    <span className="detail-label">Ghi nhận xác nhận</span>
+                    <span className="detail-value">
+                      {certificate.confirmedBy || '—'} · {formatDateTime(certificate.confirmedAt)}
+                    </span>
+                  </div>
+                  <div className="detail-field">
+                    <span className="detail-label">Biên bản đã ký</span>
+                    <span
+                      className="detail-value"
+                      style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: '14px', overflowWrap: 'anywhere' }}
+                    >
+                      {certificate.minutesUrl || '—'}
+                    </span>
+                  </div>
+                </>
               )}
               <div className="detail-field" style={{ gridColumn: '1 / -1' }}>
                 <span className="detail-label">Ghi chú</span>
@@ -331,6 +465,24 @@ export default function AcceptanceDetailPage({ certificateId, onBack, initialCer
               </table>
             </div>
           </div>
+
+          {canAct && decisionMode && (
+            <AcceptanceDecisionModal
+              isOpen
+              mode={decisionMode}
+              certificate={certificate}
+              onClose={() => setDecisionMode(null)}
+              onDone={handleDecisionDone}
+            />
+          )}
+          {canAct && (
+            <AcceptanceResubmitModal
+              isOpen={resubmitOpen}
+              certificate={certificate}
+              onClose={() => setResubmitOpen(false)}
+              onResubmitted={handleResubmitted}
+            />
+          )}
         </>
       ) : null}
     </div>

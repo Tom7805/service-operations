@@ -51,6 +51,27 @@ export interface AcceptanceCreateReq {
   note?: string | null;
 }
 
+/** POST /acceptances/{certificateId}/confirm — QLDA ghi nhận khách hàng đã ký xác nhận (NCL-12-CN-002 TC-01). */
+export interface AcceptanceConfirmReq {
+  signerName: string;
+  signedDate: string; // YYYY-MM-DD
+  minutesUrl: string;
+}
+
+/** POST /acceptances/{certificateId}/reject — QLDA ghi nhận khách hàng từ chối kèm lý do (TC-02). */
+export interface AcceptanceRejectReq {
+  reason: string;
+  signerName?: string | null;
+  minutesUrl?: string | null;
+}
+
+/** PUT /acceptances/{certificateId} — chỉnh sửa và nộp lại phiếu sau khi bị từ chối. */
+export interface AcceptanceUpdateReq {
+  title?: string | null;
+  acceptedValue: number;
+  note?: string | null;
+}
+
 /** Dòng tóm tắt phiếu — GET /projects/{projectId}/acceptances, GET /acceptances. */
 export interface AcceptanceCertificateRes {
   id: number;
@@ -149,6 +170,18 @@ export const TASK_STATUS_META: Record<TaskStatus, { label: string; badge: string
   IN_PROGRESS: { label: 'Đang làm', badge: 'badge--blue' },
   WAITING_APPROVAL: { label: 'Chờ duyệt', badge: 'badge--gold' },
   DONE: { label: 'Hoàn thành', badge: 'badge--green' },
+};
+
+/** Trạng thái mốc thanh toán hợp đồng đã gắn với phiếu (QTN-25: phiếu ACCEPTED thì mốc được mở). */
+export const MILESTONE_STATUS_META: Record<string, { label: string; badge: string }> = {
+  PENDING: { label: 'Chờ nghiệm thu', badge: 'badge--gray' },
+  READY_TO_INVOICE: { label: 'Sẵn sàng xuất hóa đơn', badge: 'badge--green' },
+  INVOICED: { label: 'Đã xuất hóa đơn', badge: 'badge--blue' },
+};
+
+export const CHANNEL_LABEL: Record<ConfirmationChannel, string> = {
+  INTERNAL: 'QLDA ghi nhận',
+  PORTAL: 'Cổng khách hàng',
 };
 
 export const DECISION_META: Record<AcceptanceDecisionType, { label: string; badge: string }> = {
