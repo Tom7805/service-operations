@@ -1,5 +1,10 @@
 import type { PipelineReportRes } from '../types/pipelineReportTypes';
-import type { ExportedReportFile, MonthlyRevenueReportRes, ReportExportReq } from '../types/reportTypes';
+import type {
+  ExportedReportFile,
+  MonthlyRevenueReportRes,
+  ReportExportReq,
+  TimesheetByEmployeeRes,
+} from '../types/reportTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -50,6 +55,14 @@ export async function getPipelineReport(): Promise<PipelineReportRes> {
 export async function getMonthlyRevenue(fromMonth: string, toMonth: string): Promise<MonthlyRevenueReportRes> {
   const params = new URLSearchParams({ fromMonth, toMonth });
   return requestBackend<MonthlyRevenueReportRes>(`${API_BASE_URL}/reports/revenue/monthly?${params.toString()}`, {
+    method: 'GET',
+  });
+}
+
+/** NCL-11-CN-006 — lưới giờ công người × dự án; `from`/`to` dạng yyyy-MM-dd, gồm cả hai đầu. */
+export async function getTimesheetReport(from: string, to: string): Promise<TimesheetByEmployeeRes> {
+  const params = new URLSearchParams({ from, to });
+  return requestBackend<TimesheetByEmployeeRes>(`${API_BASE_URL}/reports/timesheet?${params.toString()}`, {
     method: 'GET',
   });
 }

@@ -65,3 +65,27 @@ export interface MonthlyRevenueReportRes {
   missingRevenueEntryCount: number;
   warnings: string[];
 }
+
+/** NCL-11-CN-006 — một ô lưới người × dự án: tổng giờ ĐÃ DUYỆT của một nhân sự trên một dự án trong kỳ. */
+export interface TimesheetEmployeeProjectRow {
+  employeeId: number | null;
+  employeeName: string | null;
+  projectId: number;
+  projectCode: string | null;
+  projectName: string | null;
+  billableHours: number;
+  nonBillableHours: number;
+  totalHours: number;
+}
+
+/** NCL-11-CN-006 — báo cáo giờ công theo nhân sự: khớp `TimesheetByEmployeeRes` của backend. */
+export interface TimesheetByEmployeeRes {
+  from: string;
+  to: string;
+  employeeCount: number;
+  projectCount: number;
+  totalBillableHours: number;
+  totalNonBillableHours: number;
+  totalHours: number;
+  rows: TimesheetEmployeeProjectRow[];
+}
