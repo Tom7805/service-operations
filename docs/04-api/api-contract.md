@@ -930,6 +930,42 @@ Danh sách hợp đồng lao động của một hồ sơ, mới nhất trước
 | 409 | `DUPLICATE_DATA` | Tài khoản đã có hồ sơ nhân sự |
 | 400 | `INVALID_STATE` | `endDate` sớm hơn ngày bắt đầu (TC-03) |
 
+#### Lịch ngày nghỉ lễ (`/holidays`) — bổ sung cho QTN-23
+
+Ngày lễ **không tính vào giờ làm việc chuẩn** của báo cáo tỷ lệ giờ tính phí (`NCL-11-CN-002`) và KPI
+`billableHoursRatio` của bảng điều khiển (`NCL-11-CN-001`). Cùng phân quyền với hồ sơ nhân sự: chỉ Nhân sự
+(`VT-06`) và Quản trị viên (`VT-07`); vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối. Bảng
+chưa có dữ liệu mẫu — đến khi được khai báo, mọi ngày thứ Hai đến thứ Sáu đều tính là ngày làm việc. Mỗi lần thêm,
+sửa, xóa đều ghi Nhật ký hệ thống (người thực hiện, nội dung, thời điểm).
+
+**Body** của `POST /holidays` và `PUT /holidays/{id}`:
+```json
+{ "name": "Quoc khanh", "holidayDate": "2026-09-02", "recurringYearly": true }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `name` | string | có | Tối đa 255 ký tự |
+| `holidayDate` | date (`yyyy-MM-dd`) | có | Mỗi ngày chỉ khai báo được một lần |
+| `recurringYearly` | boolean | không | `true` cho ngày lễ cố định theo dương lịch (1/1, 30/4, 1/5, 2/9): áp dụng cùng ngày/tháng của mọi năm từ năm của `holidayDate` (29/2 chỉ ở năm nhuận). Mặc định `false` cho ngày lễ một lần (Tết Nguyên đán, Giỗ Tổ, ngày nghỉ bù) |
+
+- `GET /holidays` — danh sách ngày lễ theo `holidayDate` tăng dần, mỗi phần tử `{ id, name, holidayDate, recurringYearly }`.
+- `POST /holidays` — thêm một ngày lễ, trả ngày lễ vừa tạo.
+- `PUT /holidays/{id}` — sửa ngày lễ, trả bản sau khi sửa.
+- `DELETE /holidays/{id}` — xóa ngày lễ.
+
+Quy tắc tính giờ chuẩn: chỉ ngày lễ rơi vào thứ Hai đến thứ Sáu mới bị trừ (cuối tuần vốn không có giờ chuẩn), và chỉ
+ngày lễ nằm trong thời gian làm việc của nhân sự. Nhân sự bán thời gian mất đúng số giờ/ngày của mình (`standardHoursPerWeek` ÷ 5).
+**Giờ công làm vào ngày lễ vẫn được cộng vào giờ tính phí** nhưng không cộng thêm giờ chuẩn, nên tỷ lệ của người làm ngày
+lễ có thể vượt 100%. Chưa hỗ trợ "làm bù" vào ngày cuối tuần: chỉ khai báo được ngày nghỉ, không khai báo được ngày làm thêm.
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 403 | `FORBIDDEN` | Không phải Nhân sự/Quản trị viên |
+| 400 | `VALIDATION_ERROR` | Thiếu `name` hoặc `holidayDate`, `name` quá 255 ký tự, hoặc ngày sai định dạng |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy ngày lễ `{id}` khi sửa/xóa |
+| 409 | `DUPLICATE_DATA` | Ngày này đã được khai báo là ngày lễ |
+
 ---
 
 ### `NCL-01-CN-008` — Đổi mật khẩu và khôi phục mật khẩu
@@ -5411,7 +5447,7 @@ Nhật ký truy cập dữ liệu nhạy cảm loại `MARGIN` (TC-04).
 |---|---|
 | `recognizedRevenue` | Tổng doanh thu của các dòng giờ công **đã duyệt** (`APPROVED`) có `workDate` trong kỳ và tính phí (`billable`): giờ × đơn giá bán theo hợp đồng ÷ 8 × hệ số loại hình công việc (cùng công thức báo cáo biên `NCL-09-CN-005`). |
 | `averageMarginRate` | Phân số, không phải %: (tổng doanh thu − tổng giá vốn nhân công) ÷ tổng doanh thu của kỳ, làm tròn 4 chữ số. `0.1000` = 10%. Gộp có trọng số, không lấy trung bình cộng từng dự án. |
-| `billableHoursRatio` | Phân số: giờ tính phí ÷ tổng giờ, chỉ tính giờ công đã duyệt trong kỳ (dòng đảo/sửa mang dấu nên cộng thẳng). |
+| `billableHoursRatio` | Phân số theo QTN-23: giờ công tính phí đã duyệt trong kỳ (dòng đảo/sửa mang dấu nên cộng thẳng) ÷ tổng **giờ làm việc chuẩn** của mọi nhân sự trong kỳ. Giờ chuẩn của một người = số ngày thứ Hai đến thứ Sáu (trừ ngày lễ) trong phần giao giữa kỳ và `[hireDate, endDate]` × `standardHoursPerWeek` ÷ 5, không kể ngày lễ khai báo ở `/holidays`. Nhân sự vào làm giữa kỳ chỉ tính từ ngày vào làm. `0` khi tổng giờ chuẩn bằng 0. Có thể vượt `1` khi làm thêm giờ. |
 | `negativeMarginProjectCount` | Số dự án có (doanh thu − giá vốn nhân công) `< 0` trong kỳ. Dự án chỉ có giờ không tính phí hoặc thiếu đơn giá bán (doanh thu 0) mà có giá vốn cũng bị tính là âm biên. |
 | `overdueInvoiceCount` | Số hóa đơn `ISSUED`/`PARTIALLY_PAID` còn phải thu `> 0` có `dueDate` **trước** `min(hôm nay, to)`. Trạng thái và số đã thu là hiện tại, hệ thống không dựng lại lịch sử thanh toán tới cuối kỳ. |
 | `missingCostEntryCount` / `missingRevenueEntryCount` | Số dòng giờ công đã duyệt thiếu đơn giá vốn / đơn giá bán. Dòng đó không làm hỏng bảng nhưng khiến doanh thu và biên thấp hơn thực tế — nên hiển thị cảnh báo khi `> 0`. |
@@ -5421,6 +5457,83 @@ Kỳ không có dữ liệu (TC-02) trả `200` với mọi chỉ số bằng `0
 Giới hạn hiện tại: giá vốn chỉ gồm nhân công (chưa gồm chi phí dự án/thuê ngoài); doanh thu tính theo giờ công
 nên hợp đồng trọn gói không được quy đổi theo tiến độ hoàn thành. Vì vậy số liệu khớp báo cáo biên
 `NCL-09-CN-005` cùng kỳ nhưng có thể khác `GET /projects/{projectId}/profitability` (tính toàn thời gian, đủ các khoản chi phí).
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-01`. |
+| 400 | `VALIDATION_ERROR` | Thiếu `from`/`to`, sai định dạng ngày, hoặc `from` sau `to`. |
+
+### `NCL-11-CN-002` — Báo cáo tỷ lệ giờ tính phí
+
+#### `GET /reports/utilization`
+
+Tỷ lệ giờ tính phí của kỳ theo **toàn công ty, từng bộ phận và từng người**. Chỉ dành cho `VT-01` — vai trò
+khác nhận `403 FORBIDDEN` và bị ghi Nhật ký hệ thống lần từ chối (TC-04). Mỗi lượt xem thành công ghi một dòng
+Nhật ký hệ thống "Xem báo cáo tỷ lệ giờ tính phí" (người thực hiện, vai trò, kỳ, thời điểm — TC-05).
+
+**Query params** (bắt buộc cả hai, định dạng `YYYY-MM-DD`, gồm cả hai đầu): `from`, `to` (không được trước `from`).
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "from": "2026-02-01",
+    "to": "2026-02-28",
+    "totalBillableHours": 300.00,
+    "totalStandardHours": 640.00,
+    "totalRatio": 0.4688,
+    "unlistedBillableHours": 24.00,
+    "departments": [
+      {
+        "departmentId": 1,
+        "departmentName": "Phong ky thuat",
+        "employeeCount": 3,
+        "billableHours": 160.00,
+        "standardHours": 400.00,
+        "ratio": 0.4000
+      },
+      {
+        "departmentId": null,
+        "departmentName": "Chưa gán bộ phận",
+        "employeeCount": 1,
+        "billableHours": 80.00,
+        "standardHours": 160.00,
+        "ratio": 0.5000
+      }
+    ],
+    "employees": [
+      {
+        "employeeId": 11,
+        "userId": 201,
+        "fullName": "Nhan su A",
+        "professionalRole": "Ky su phan mem",
+        "departmentId": 1,
+        "departmentName": "Phong ky thuat",
+        "billableHours": 120.00,
+        "standardHours": 160.00,
+        "ratio": 0.7500
+      }
+    ]
+  }
+}
+```
+
+| Trường | Cách tính |
+|---|---|
+| `billableHours` | Tổng giờ công **đã duyệt** (`APPROVED`) và tính phí (`billable`) có `workDate` trong kỳ. Dòng đảo/sửa mang dấu nên cộng thẳng. |
+| `standardHours` | Giờ làm việc chuẩn của kỳ (QTN-23): số ngày thứ Hai đến thứ Sáu, không phải ngày lễ, trong phần giao giữa kỳ và `[hireDate, endDate]` của nhân sự × `standardHoursPerWeek` ÷ 5. Người vào làm giữa kỳ chỉ tính từ ngày vào làm (TC-02); người nghỉ việc giữa kỳ chỉ tính đến ngày nghỉ. Ngày lễ lấy từ lịch `/holidays`; người làm vào ngày lễ vẫn có giờ tính phí ở tử số nên tỷ lệ có thể vượt `1`. |
+| `ratio` | Phân số, không phải %: `billableHours ÷ standardHours`, làm tròn 4 chữ số (`0.7500` = 75%), không chặn trần nên có thể vượt `1` khi làm thêm giờ. Người đang làm việc trong kỳ nhưng chưa ghi giờ nào có `ratio = 0` và vẫn hiện trong báo cáo (TC-03). `null` khi `standardHours = 0` mà vẫn có giờ tính phí (thường do nhập sai ngày vào/nghỉ việc). |
+| `departments` | Chỉ tính nhân sự **trực tiếp** thuộc bộ phận đó, không cộng dồn bộ phận con. `ratio` là tổng giờ tính phí ÷ tổng giờ chuẩn của bộ phận (không phải trung bình cộng các tỷ lệ). Nhân sự chưa gán bộ phận gộp vào một dòng `departmentId = null` xếp cuối, nên tổng các dòng luôn bằng số toàn công ty. Sắp theo tên bộ phận. |
+| `employees` | Sắp theo họ tên. Người không làm việc ngày nào trong kỳ và không có giờ tính phí (vào làm sau kỳ, nghỉ trước kỳ) không xuất hiện. |
+| `totalBillableHours`, `totalStandardHours`, `totalRatio` | Tổng của mọi người trong `employees`; `totalRatio = null` khi `totalStandardHours = 0`. Bằng `billableHoursRatio` của `GET /reports/dashboard` cùng kỳ khi `unlistedBillableHours = 0`. |
+| `unlistedBillableHours` | Giờ tính phí đã duyệt của tài khoản không xuất hiện trong báo cáo (chưa có hồ sơ nhân sự hoặc không làm việc ngày nào trong kỳ). `totalBillableHours + unlistedBillableHours` bằng mọi giờ tính phí đã duyệt của kỳ. |
+
+Giới hạn hiện tại: chưa có dữ liệu nghỉ phép nên người nghỉ phép dài ngày ra `0` giống người chưa ghi giờ nào. Ngày lễ chỉ có hiệu lực khi
+Nhân sự đã khai báo ở `/holidays`; chưa khai báo thì mọi ngày thứ Hai đến thứ Sáu đều tính là ngày làm việc.
 
 **Response lỗi:**
 
