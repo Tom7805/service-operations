@@ -26,6 +26,7 @@ import RevenueForecastPage from './modules/opportunities/pages/RevenueForecastPa
 import PipelineReportPage from './modules/reports/pages/PipelineReportPage';
 import ReportExportPage from './modules/reports/pages/ReportExportPage';
 import RevenueReportPage from './modules/reports/pages/RevenueReportPage';
+import TimesheetReportPage from './modules/reports/pages/TimesheetReportPage';
 import MyWorkPage from './modules/mytasks/pages/MyWorkPage';
 import TimesheetApprovalPage from './modules/timesheets/pages/TimesheetApprovalPage';
 import TimesheetRejectPage from './modules/timesheets/pages/TimesheetRejectPage';
@@ -722,10 +723,29 @@ export default function App() {
                   <span className="report-card__arrow">{ICONS.arrowRight}</span>
                 </button>
                 )}
+                {currentRoles.includes('VT-02') && (
+                  <button
+                    type="button"
+                    className="report-card"
+                    onClick={() => setActiveTab('TIMESHEET_REPORT')}
+                  >
+                    <span className="report-card__icon">{ICONS.clock}</span>
+                    <span className="report-card__body">
+                      <span className="report-card__title">Giờ công theo nhân sự</span>
+                      <span className="report-card__desc">
+                        Giờ công đã duyệt của từng nhân sự trên từng dự án bạn quản lý, tách giờ có
+                        tính phí và không tính phí.
+                      </span>
+                    </span>
+                    <span className="report-card__arrow">{ICONS.arrowRight}</span>
+                  </button>
+                )}
               </div>
             </div>
           ) : activeTab === 'REVENUE_REPORT' ? (
             <RevenueReportPage currentUserRoles={currentRoles} />
+          ) : activeTab === 'TIMESHEET_REPORT' ? (
+            <TimesheetReportPage currentUserRoles={currentRoles} />
           ) : activeTab === 'REPORT_EXPORT' ? (
             <ReportExportPage currentUserRoles={currentRoles} />
           ) : activeTab === 'PIPELINE_REPORT' ? (
