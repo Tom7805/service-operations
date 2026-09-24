@@ -5542,6 +5542,155 @@ Nhân sự đã khai báo ở `/holidays`; chưa khai báo thì mọi ngày th�
 | 403 | `FORBIDDEN` | Token không có vai trò `VT-01`. |
 | 400 | `VALIDATION_ERROR` | Thiếu `from`/`to`, sai định dạng ngày, hoặc `from` sau `to`. |
 
+### `NCL-11-CN-003` — Báo cáo hiệu quả theo dự án
+
+So **kế hoạch trong báo giá** với **thực tế tính đến hiện tại** của các dự án theo ba cặp: giờ công dự kiến – giờ
+công thực tế, giá trị hợp đồng – doanh thu ghi nhận, biên dự kiến – biên thực tế. Không giới hạn theo kỳ (tính toàn
+thời gian của dự án, giống `planned-vs-actual-margin` của `NCL-09-CN-006`).
+
+**Quyền**: chỉ `VT-02` (Quản lý dự án). Vai trò khác (kể cả `VT-01`, `VT-05`) nhận `403 FORBIDDEN` và bị ghi Nhật ký
+hệ thống lần từ chối với nhãn "Báo cáo hiệu quả theo dự án" (TC-03). Người xem chỉ thấy dự án có
+`projectManagerId` là chính mình (QTN-01). Mỗi lượt xem thành công ghi một dòng Nhật ký hệ thống "Xem báo cáo hiệu
+quả theo dự án" và một dòng Nhật ký truy cập dữ liệu nhạy cảm loại `MARGIN` (TC-04).
+
+**Che dữ liệu (QTN-02, `NCL-01-CN-005-TC-01`)**: `plannedCost`, `actualCost`, `hoursVarianceCostImpact` gắn
+`@MaskSensitive(COST)` nên luôn trả về chuỗi `"***"` với Quản lý dự án. Doanh thu và các chỉ số biên theo phần trăm
+vẫn hiển thị.
+
+**Định dạng phần trăm**: mọi trường `*Percent` và `*PercentPoints` là số phần trăm 2 chữ số, không phải phân số:
+`18.75` nghĩa là 18,75%, `100.00` nghĩa là 100%.
+
+#### `GET /reports/project-performance`
+
+**Query params:**
+
+| Tham số | Bắt buộc | Ghi chú |
+|---|---|---|
+| `status` | Không | `RUNNING` hoặc `CLOSED`. Bỏ trống = mọi trạng thái. Giá trị khác → `400`. |
+
+**Response thành công — `200 OK`** (ví dụ TC-01: báo giá 800 giờ, thực tế 950 giờ; TC-02: dự án chưa có báo giá):
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "status": null,
+    "projectCount": 2,
+    "projectsWithoutPlanCount": 1,
+    "overPlannedHoursProjectCount": 1,
+    "belowPlannedMarginProjectCount": 1,
+    "projects": [
+      {
+        "projectId": 1,
+        "projectCode": "DA-01",
+        "projectName": "Trien khai ERP",
+        "status": "RUNNING",
+        "customerId": 3,
+        "contractId": 500,
+        "contractCode": "HD-500",
+        "contractType": "TIME_AND_MATERIAL",
+        "planAvailable": true,
+        "quoteId": 7,
+        "quoteVersion": 2,
+        "plannedHours": 800.00,
+        "actualHours": 950.00,
+        "hoursVariance": 150.00,
+        "hoursVariancePercent": 18.75,
+        "contractValue": 200000000.00,
+        "recognizedRevenue": 95000000.00,
+        "revenueRecognitionMethod": "HOURLY",
+        "revenueToContractPercent": 47.50,
+        "plannedRevenue": 120000000.00,
+        "plannedCost": "***",
+        "actualCost": "***",
+        "plannedMarginPercent": 50.00,
+        "actualMarginPercent": 47.37,
+        "marginGapPercentPoints": -2.63,
+        "hoursVarianceCostImpact": "***",
+        "hoursVarianceMarginImpactPercentPoints": -6.25,
+        "missingPlannedCostItemCount": 0,
+        "missingActualCostEntryCount": 0,
+        "missingActualRevenueEntryCount": 0,
+        "warnings": [
+          "Giờ công thực tế vượt kế hoạch 150.00 giờ (18.75%), làm biên lợi nhuận giảm 6.25 điểm phần trăm."
+        ]
+      },
+      {
+        "projectId": 2,
+        "projectCode": "DA-02",
+        "projectName": "Bao tri website",
+        "status": "RUNNING",
+        "customerId": 4,
+        "contractId": 501,
+        "contractCode": "HD-501",
+        "contractType": "TIME_AND_MATERIAL",
+        "planAvailable": false,
+        "quoteId": null,
+        "quoteVersion": null,
+        "plannedHours": null,
+        "actualHours": 40.00,
+        "hoursVariance": null,
+        "hoursVariancePercent": null,
+        "contractValue": 50000000.00,
+        "recognizedRevenue": 20000000.00,
+        "revenueRecognitionMethod": "HOURLY",
+        "revenueToContractPercent": 40.00,
+        "plannedRevenue": null,
+        "plannedCost": "***",
+        "actualCost": "***",
+        "plannedMarginPercent": null,
+        "actualMarginPercent": 35.00,
+        "marginGapPercentPoints": null,
+        "hoursVarianceCostImpact": "***",
+        "hoursVarianceMarginImpactPercentPoints": null,
+        "missingPlannedCostItemCount": 0,
+        "missingActualCostEntryCount": 0,
+        "missingActualRevenueEntryCount": 0,
+        "warnings": ["Dự án chưa có báo giá gắn kèm nên thiếu dữ liệu kế hoạch để so sánh."]
+      }
+    ]
+  }
+}
+```
+
+| Trường | Cách tính |
+|---|---|
+| `planAvailable` | `false` khi hợp đồng của dự án chưa gắn báo giá (TC-02). Dự án vẫn có trong danh sách (không trả 404). Mọi trường `planned*` và các trường so sánh với kế hoạch bằng `null`, còn `warnings[0]` báo thiếu dữ liệu kế hoạch. |
+| `plannedHours` | Tổng số ngày công các dòng báo giá × 8. |
+| `actualHours` | Tổng giờ mọi dòng giờ công **đã duyệt** của dự án, gồm cả dòng tính phí và không tính phí. Dòng đảo/sửa mang dấu nên cộng thẳng. |
+| `hoursVariance` / `hoursVariancePercent` | `actualHours − plannedHours` (dương là vượt kế hoạch) và phần trăm của nó so với `plannedHours` (`null` khi `plannedHours = 0`). |
+| `contractValue` | `totalValue` hiện hành của hợp đồng (đã gồm phụ lục/gia hạn). |
+| `recognizedRevenue` | Tính như `NCL-09-CN-002`. `FIXED_PRICE`: `contractValue` × số công việc `DONE` ÷ tổng số công việc (`PERCENTAGE_OF_COMPLETION`). Các loại khác: tổng giờ tính phí đã duyệt × đơn giá áp dụng (`HOURLY`). `MAINTENANCE`/`MILESTONE` chưa có cách ghi nhận riêng nên tạm tính theo giờ và có cảnh báo trong `warnings`. |
+| `revenueToContractPercent` | `recognizedRevenue ÷ contractValue × 100`; `null` khi `contractValue = 0`. |
+| `plannedRevenue` / `plannedCost` / `plannedMarginPercent` | Cùng nguồn với `NCL-09-CN-006`: doanh thu = `totalAmount` của báo giá. Chi phí ước tính = ngày công × 8 × chi phí giờ công bình quân của các nhân sự đang giữ vai trò đó tại ngày lập báo giá. |
+| `actualCost` / `actualMarginPercent` | Giá vốn nhân công các dòng đã duyệt + chi phí dự án + chi phí thuê ngoài **đã duyệt** (như `NCL-09-CN-003`). Biên = (doanh thu ghi nhận − giá vốn) ÷ doanh thu ghi nhận × 100; `null` khi doanh thu bằng 0. |
+| `marginGapPercentPoints` | `actualMarginPercent − plannedMarginPercent` (điểm phần trăm, âm là thấp hơn kế hoạch). `null` nếu thiếu một trong hai vế. |
+| `hoursVarianceCostImpact` / `hoursVarianceMarginImpactPercentPoints` | Ảnh hưởng của chênh lệch giờ tới biên (TC-01): `hoursVariance` × chi phí nhân công bình quân thực tế mỗi giờ, và `−impact ÷ plannedRevenue × 100`. Âm là biên bị giảm. |
+| `missing*Count` | Số dòng báo giá chưa ước tính được chi phí, số dòng giờ công thiếu đơn giá vốn, và số dòng giờ công tính phí thiếu đơn giá bán. Tài khoản chưa có hồ sơ nhân sự cũng được đếm vào đây. Khi `> 0` thì số liệu thấp hơn thực tế, nên hiển thị cảnh báo. |
+| `warnings` | Diễn giải sẵn bằng tiếng Việt, hiển thị nguyên văn được. Không bao giờ chứa số tiền giá vốn. |
+| Bộ đếm cấp báo cáo | `overPlannedHoursProjectCount`: số dự án có `hoursVariance > 0`. `belowPlannedMarginProjectCount`: số dự án có `marginGapPercentPoints < 0`. |
+
+Thứ tự: dự án `RUNNING` trước `CLOSED`, sau đó theo `projectCode`. Người không quản lý dự án nào nhận `200` với
+`projects: []`.
+
+#### `GET /reports/project-performance/{projectId}`
+
+Trả về **một** phần tử cùng cấu trúc với `projects[i]` ở trên, dùng cho màn hình chi tiết. Nhật ký ghi kèm
+`targetId = projectId`.
+
+**Response lỗi (cả hai endpoint):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | — | Chưa đăng nhập. |
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-02`, hoặc (endpoint chi tiết) dự án do quản lý khác phụ trách. Cả hai trường hợp đều ghi nhật ký lần từ chối. |
+| 404 | `RESOURCE_NOT_FOUND` | (endpoint chi tiết) Không tìm thấy dự án `{projectId}`. |
+| 400 | `VALIDATION_ERROR` | `status` không phải `RUNNING`/`CLOSED`. |
+
+Giới hạn hiện tại: báo giá chỉ có kế hoạch nhân công nên `plannedCost` không gồm chi phí dự án/thuê ngoài, trong khi
+`actualCost` có gồm. Vì vậy dự án có nhiều chi phí ngoài giờ công sẽ có `marginGapPercentPoints` âm hơn phần do giờ
+công gây ra; `hoursVarianceMarginImpactPercentPoints` cho biết riêng phần do giờ công.
+
 ---
 
 ## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)
