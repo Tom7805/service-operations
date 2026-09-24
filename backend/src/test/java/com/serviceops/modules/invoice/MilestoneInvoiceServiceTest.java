@@ -22,6 +22,7 @@ import com.serviceops.modules.invoice.repository.InvoiceRepository;
 import com.serviceops.modules.invoice.service.impl.MilestoneInvoiceServiceImpl;
 import com.serviceops.modules.invoice.validator.ContractValueLimitValidator;
 import com.serviceops.modules.invoice.validator.MilestoneAcceptanceValidator;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -83,6 +84,12 @@ class MilestoneInvoiceServiceTest {
 				new MilestoneAcceptanceValidator(acceptanceCertificateRepository), new ContractValueLimitValidator(), auditLogService, clock);
 		SecurityContextHolder.getContext().setAuthentication(
 				new UsernamePasswordAuthenticationToken("ketoan01", "x"));
+	}
+
+	/** SecurityContextHolder la ThreadLocal: khong don thi nguoi dung o day ro sang test khac cung JVM. */
+	@AfterEach
+	void clearSecurityContext() {
+		SecurityContextHolder.clearContext();
 	}
 
 	@Test

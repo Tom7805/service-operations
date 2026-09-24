@@ -109,10 +109,15 @@ public class PortalInvoiceServiceImpl implements PortalInvoiceService {
 				.filter(invoice -> invoice.remainingAmount().signum() > 0 && nextDueDate.equals(invoice.dueDate()))
 				.map(PortalInvoiceRes::remainingAmount).toList());
 		Customer customer = customerRepository.findById(scope.customerId()).orElse(null);
-		return new PortalDebtSummaryRes(scope.customerId(), customer == null ? null : customer.getCode(),
-				customer == null ? null : customer.getName(), invoices.size(), totalInvoiced, totalPaid,
-				totalOutstanding, overdue.size(), sum(overdue.stream().map(PortalInvoiceRes::remainingAmount).toList()),
-				nextDueDate, nextDueAmount);
+		PortalDebtSummaryRes result = new PortalDebtSummaryRes(scope.customerId(),
+				customer == null ? null : customer.getCode(), customer == null ? null : customer.getName(),
+				invoices.size(), totalInvoiced, totalPaid, totalOutstanding, overdue.size(),
+				sum(overdue.stream().map(PortalInvoiceRes::remainingAmount).toList()), nextDueDate, nextDueAmount);
+		auditLogService.record("Khách hàng xem tổng hợp công nợ", AuditTargetType.PORTAL, scope.accountId(),
+				"Cổng khách hàng " + scope.username(),
+				"Khach hang " + scope.username() + " xem tong hop cong no tren cong: con phai tra "
+						+ totalOutstanding.toPlainString() + ", qua han " + overdue.size() + " hoa don");
+		return result;
 	}
 
 	@Override

@@ -15,6 +15,7 @@ import com.serviceops.modules.project.entity.Project;
 import com.serviceops.modules.project.logging.ProjectAuditLogger;
 import com.serviceops.modules.project.repository.ProjectRepository;
 import com.serviceops.modules.project.service.impl.ProjectServiceImpl;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -57,6 +58,12 @@ class ProjectServiceImplTest {
 	void setUp() {
 		service = new ProjectServiceImpl(contractRepository, userRepository, projectRepository, auditLogger);
 		SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken("pm01", "n/a"));
+	}
+
+	/** SecurityContextHolder la ThreadLocal: khong don thi nguoi dung o day ro sang test khac cung JVM. */
+	@AfterEach
+	void clearSecurityContext() {
+		SecurityContextHolder.clearContext();
 	}
 
 	@Test

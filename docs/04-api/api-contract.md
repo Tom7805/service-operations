@@ -6332,7 +6332,10 @@ Chung cho cả Epic:
 - **Không lộ dữ liệu nội bộ:** response cổng là DTO riêng, chỉ gồm các trường liệt kê dưới đây — không có mô tả/ghi
   chú nội bộ, giờ công, ngân sách, giá vốn, rủi ro, hạn mức hợp đồng, tài khoản nhân viên đã thao tác.
 - **Lưu lịch sử:** mọi thao tác của quản trị viên và mọi lượt khách hàng xem/duyệt ghi Nhật ký hệ thống — lọc
-  `targetType = PORTAL` (xem/cấp/khoá) hoặc `ACCEPTANCE` (xác nhận/từ chối phiếu).
+  `targetType = PORTAL` (xem/cấp/khoá) hoặc `ACCEPTANCE` (xác nhận/từ chối phiếu). Các `action` phía khách hàng:
+  "Khách hàng xem danh sách dự án", "Khách hàng xem tiến độ dự án", "Khách hàng xem danh sách phiếu nghiệm thu",
+  "Khách hàng xem phiếu nghiệm thu", "Khách hàng xem hóa đơn và công nợ" (danh sách + chi tiết),
+  "Khách hàng xem tổng hợp công nợ".
 
 **Bản đồ endpoint:**
 

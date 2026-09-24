@@ -112,6 +112,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -488,6 +489,8 @@ class PortalIntegrationTest {
 				.allSatisfy(summary -> assertThat(summary.projectId()).isEqualTo(projectA.getId()));
 		assertThat(acceptanceService.list(null, AcceptanceStatus.PENDING_CONFIRMATION))
 				.extracting(PortalAcceptanceSummaryRes::id).containsExactly(pending.getId());
+		verify(auditLogService, times(2)).record(eq("Khách hàng xem danh sách phiếu nghiệm thu"),
+				eq(AuditTargetType.PORTAL), anyLong(), anyString(), contains("phieu nghiem thu tren cong"));
 
 		PortalAcceptanceRes detail = acceptanceService.get(pending.getId());
 		assertThat(detail.awaitingDecision()).isTrue();
@@ -536,6 +539,8 @@ class PortalIntegrationTest {
 		assertThat(summary.totalOverdue()).isEqualByComparingTo("40000000");
 		assertThat(summary.nextDueDate()).isEqualTo(TODAY.plusDays(20));
 		assertThat(summary.nextDueAmount()).isEqualByComparingTo("50000000");
+		verify(auditLogService).record(eq("Khách hàng xem tổng hợp công nợ"), eq(AuditTargetType.PORTAL), anyLong(),
+				anyString(), contains("con phai tra 90000000"));
 
 		PortalInvoiceDetailRes detail = invoiceService.get(partial.getId());
 		assertThat(detail.lines()).singleElement().satisfies(line -> assertThat(line.description()).isEqualTo("Dot 1"));
