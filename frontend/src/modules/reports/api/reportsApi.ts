@@ -7,6 +7,10 @@ import type {
   TimesheetByEmployeeRes,
 } from '../types/reportTypes';
 import type { UtilizationReportRes } from '../types/utilizationReportTypes';
+import type {
+  ProjectPerformanceReportRes,
+  ProjectPerformanceStatus,
+} from '../types/projectPerformanceReportTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -65,6 +69,16 @@ export async function getDashboardSummary(from: string, to: string): Promise<Das
 export async function getUtilizationReport(from: string, to: string): Promise<UtilizationReportRes> {
   const params = new URLSearchParams({ from, to });
   return requestBackend<UtilizationReportRes>(`${API_BASE_URL}/reports/utilization?${params.toString()}`, {
+    method: 'GET',
+  });
+}
+
+/** NCL-11-CN-003: kế hoạch báo giá so với thực tế của các dự án đang quản lý (VT-02). */
+export async function getProjectPerformanceReport(
+  status?: ProjectPerformanceStatus
+): Promise<ProjectPerformanceReportRes> {
+  const params = status ? `?${new URLSearchParams({ status }).toString()}` : '';
+  return requestBackend<ProjectPerformanceReportRes>(`${API_BASE_URL}/reports/project-performance${params}`, {
     method: 'GET',
   });
 }

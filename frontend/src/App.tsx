@@ -26,6 +26,7 @@ import RevenueForecastPage from './modules/opportunities/pages/RevenueForecastPa
 import PipelineReportPage from './modules/reports/pages/PipelineReportPage';
 import DashboardPage from './modules/reports/pages/DashboardPage';
 import UtilizationReportPage from './modules/reports/pages/UtilizationReportPage';
+import ProjectPerformanceReportPage from './modules/reports/pages/ProjectPerformanceReportPage';
 import ReportExportPage from './modules/reports/pages/ReportExportPage';
 import RevenueReportPage from './modules/reports/pages/RevenueReportPage';
 import TimesheetReportPage from './modules/reports/pages/TimesheetReportPage';
@@ -763,6 +764,23 @@ export default function App() {
                   <button
                     type="button"
                     className="report-card"
+                    onClick={() => setActiveTab('PROJECT_PERFORMANCE_REPORT')}
+                  >
+                    <span className="report-card__icon">{ICONS.briefcase}</span>
+                    <span className="report-card__body">
+                      <span className="report-card__title">Hiệu quả theo dự án</span>
+                      <span className="report-card__desc">
+                        So kế hoạch trong báo giá với thực tế: giờ công, doanh thu và biên lợi nhuận
+                        của các dự án bạn quản lý.
+                      </span>
+                    </span>
+                    <span className="report-card__arrow">{ICONS.arrowRight}</span>
+                  </button>
+                )}
+                {currentRoles.includes('VT-02') && (
+                  <button
+                    type="button"
+                    className="report-card"
                     onClick={() => setActiveTab('TIMESHEET_REPORT')}
                   >
                     <span className="report-card__icon">{ICONS.clock}</span>
@@ -803,6 +821,15 @@ export default function App() {
             />
           ) : activeTab === 'UTILIZATION_REPORT' ? (
             <UtilizationReportPage currentUserRoles={currentRoles} onBack={() => setActiveTab('REPORTS')} />
+          ) : activeTab === 'PROJECT_PERFORMANCE_REPORT' ? (
+            <ProjectPerformanceReportPage
+              currentUserRoles={currentRoles}
+              onBack={() => setActiveTab('REPORTS')}
+              onViewProject={(id) => {
+                setSelectedProjectId(id);
+                setActiveTab('PROJECT_MARGIN');
+              }}
+            />
           ) : activeTab === 'CUSTOMER_MERGE' ? (
             <CustomerMergePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'BILL_RATES' ? (
