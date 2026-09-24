@@ -17,6 +17,8 @@ import ContractListPage from './modules/contracts/pages/ContractListPage';
 import ContractDetailPage from './modules/contracts/pages/ContractDetailPage';
 import InvoicesPage from './modules/invoices/pages/InvoicesPage';
 import InvoiceDetailPage from './modules/invoices/pages/InvoiceDetailPage';
+import AcceptanceListPage from './modules/acceptance/pages/AcceptanceListPage';
+import AcceptanceDetailPage from './modules/acceptance/pages/AcceptanceDetailPage';
 import BillRatePage from './modules/rates/pages/BillRatePage';
 import RateHistoryPage from './modules/rates/pages/RateHistoryPage';
 import OpportunityDetailPage from './modules/opportunities/pages/OpportunityDetailPage';
@@ -95,6 +97,9 @@ export default function App() {
   const [selectedContractId, setSelectedContractId] = useState<number | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
+  // NCL-12-CN-001: dự án đang chọn ở màn Nghiệm thu được giữ lại khi mở/quay về từ chi tiết phiếu.
+  const [acceptanceProjectId, setAcceptanceProjectId] = useState<number | null>(null);
+  const [selectedAcceptanceId, setSelectedAcceptanceId] = useState<number | null>(null);
 
   // Danh sách dự án dùng cho các ô chọn dạng dropdown ở màn hình Giá vốn/Biên lợi nhuận
   // (NCL-09) — nạp một lần từ GET /projects khi đăng nhập.
@@ -655,6 +660,25 @@ export default function App() {
               onBack={() => setActiveTab('INVOICES')}
               currentUserRoles={currentRoles}
               currentUserName={session.fullName}
+            />
+          ) : activeTab === 'ACCEPTANCE_DETAIL' && selectedAcceptanceId ? (
+            <AcceptanceDetailPage
+              key={selectedAcceptanceId}
+              certificateId={selectedAcceptanceId}
+              onBack={() => setActiveTab('ACCEPTANCES')}
+            />
+          ) : activeTab === 'ACCEPTANCES' || activeTab === 'ACCEPTANCE_DETAIL' ? (
+            <AcceptanceListPage
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+              currentUserId={session.userId}
+              projects={allProjects}
+              selectedProjectId={acceptanceProjectId}
+              onSelectProject={setAcceptanceProjectId}
+              onOpenCertificate={(id) => {
+                setSelectedAcceptanceId(id);
+                setActiveTab('ACCEPTANCE_DETAIL');
+              }}
             />
           ) : activeTab === 'OPPORTUNITIES' ? (
             <OpportunityListPage

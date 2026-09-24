@@ -16,6 +16,8 @@ export type Tab =
   | 'RATE_HISTORY'
   | 'INVOICES'
   | 'INVOICE_DETAIL'
+  | 'ACCEPTANCES'
+  | 'ACCEPTANCE_DETAIL'
   | 'DEPARTMENTS'
   | 'PERMISSIONS'
   | 'USERS'
@@ -149,6 +151,12 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
     // đồng cụ thể nên không đưa được vào trang chi tiết hợp đồng. Đề xuất hóa đơn
     // (T&M) và lịch hóa đơn định kỳ (Maintenance) đã chuyển hẳn vào ContractDetailPage
     // (nhúng sẵn, hợp đồng chọn sẵn) — không còn là tab riêng ở đây. Chỉ Kế toán (VT-05).
+  },
+  {
+    tab: 'ACCEPTANCES', icon: ICONS.clipboardList, label: 'Nghiệm thu hạng mục', matches: ['ACCEPTANCE_DETAIL'],
+    requires: ['VT-02'],
+    // NCL-12-CN-001: Quản lý dự án chọn dự án mình phụ trách, lập phiếu nghiệm thu cho hạng mục đã hoàn
+    // thành toàn bộ công việc (QTN-24) và xem các phiếu đã lập. Backend chỉ mở cho VT-02 là PM của dự án.
   },
   {
     tab: 'EXPENSE_APPROVAL', icon: ICONS.money, label: 'Duyệt chi phí dự án', requires: ['VT-05'],
