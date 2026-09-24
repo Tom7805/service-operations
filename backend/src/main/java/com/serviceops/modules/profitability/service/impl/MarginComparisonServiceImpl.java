@@ -15,10 +15,7 @@ import com.serviceops.modules.project.entity.Task;
 import com.serviceops.modules.project.repository.ProjectRepository;
 import com.serviceops.modules.project.repository.TaskRepository;
 import com.serviceops.modules.quotation.entity.Quote;
-import com.serviceops.modules.quotation.entity.QuoteItem;
 import com.serviceops.modules.quotation.repository.QuoteRepository;
-import com.serviceops.modules.rate.dto.response.ResolvedEmployeeHourlyRateRes;
-import com.serviceops.modules.rate.service.EmployeeHourlyRateService;
 import com.serviceops.modules.timesheet.entity.TimeEntry;
 import com.serviceops.modules.timesheet.enums.TimeEntryStatus;
 import com.serviceops.modules.timesheet.repository.TimeEntryRepository;
@@ -28,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +38,7 @@ import java.util.stream.Collectors;
  * — NCL-04-CN-001). Báo giá chỉ có doanh thu dự kiến (đơn giá bán theo vai trò × số ngày công) chứ
  * chưa gắn với nhân sự cụ thể (lập trước khi giao việc), nên chi phí dự kiến ở đây là ước tính: chi phí
  * giờ công bình quân của các nhân sự hiện đang giữ cùng vai trò chuyên môn với từng dòng báo giá, tại
- * thời điểm lập báo giá. Nguồn "thực tế" tính từ mọi dòng giờ công đã duyệt của dự án tính đến hiện tại,
+ * thời điểm lập báo giá ({@link QuotePlanEstimator}). Nguồn "thực tế" tính từ mọi dòng giờ công đã duyệt của dự án tính đến hiện tại,
  * cùng công thức với NCL-09-CN-005 qua {@link EntryMarginCalculator}.</p>
  */
 @Service
@@ -56,7 +52,7 @@ public class MarginComparisonServiceImpl implements MarginComparisonService {
 	private final TaskRepository taskRepository;
 	private final TimeEntryRepository timeEntryRepository;
 	private final EmployeeRepository employeeRepository;
-	private final EmployeeHourlyRateService employeeHourlyRateService;
+	private final QuotePlanEstimator quotePlanEstimator;
 	private final EntryMarginCalculator entryMarginCalculator;
 	private final SensitiveAccessLogger sensitiveAccessLogger;
 
@@ -79,7 +75,9 @@ public class MarginComparisonServiceImpl implements MarginComparisonService {
 				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
 						"Khong tim thay bao gia voi ID: " + contract.getQuoteId()));
 
-		PlannedFigures planned = computePlanned(quote);
+		QuotePlanEstimator.Plan plan = quotePlanEstimator.estimate(quote);
+		PlannedFigures planned = new PlannedFigures(plan.workDays(), plan.revenue(), plan.cost(), plan.margin(),
+				marginPercent(plan.margin(), plan.revenue()), plan.missingCostItemCount());
 		ActualFigures actual = computeActual(project);
 
 		BigDecimal marginGap = (planned.marginPercent() != null && actual.marginPercent() != null)
@@ -98,56 +96,6 @@ public class MarginComparisonServiceImpl implements MarginComparisonService {
 				actual.hours(), actual.revenue(), actual.cost(), actual.margin(), actual.marginPercent(),
 				marginGap, hoursVariance, gapReasons,
 				planned.missingCostItemCount(), actual.missingCostEntryCount(), actual.missingRevenueEntryCount());
-	}
-
-	/** Doanh thu tu {@code Quote#totalAmount}; chi phi uoc tinh tu chi phi gio cong binh quan theo vai tro. */
-	private PlannedFigures computePlanned(Quote quote) {
-		LocalDate asOf = quote.getCreatedAt().toLocalDate();
-		BigDecimal workDays = BigDecimal.ZERO;
-		BigDecimal cost = BigDecimal.ZERO;
-		int missingCostItemCount = 0;
-
-		for (QuoteItem item : quote.getItems()) {
-			workDays = workDays.add(item.getWorkDays());
-
-			BigDecimal avgHourlyCost = averageHourlyCostForRole(item.getProfessionalRole(), asOf);
-			if (avgHourlyCost == null) {
-				missingCostItemCount++;
-				continue;
-			}
-			BigDecimal itemCost = item.getWorkDays().multiply(EntryMarginCalculator.STANDARD_HOURS_PER_DAY)
-					.multiply(avgHourlyCost).setScale(2, RoundingMode.HALF_UP);
-			cost = cost.add(itemCost);
-		}
-
-		BigDecimal revenue = quote.getTotalAmount() == null ? BigDecimal.ZERO : quote.getTotalAmount();
-		BigDecimal margin = revenue.subtract(cost);
-		return new PlannedFigures(workDays, revenue, cost, margin, marginPercent(margin, revenue), missingCostItemCount);
-	}
-
-	/** Trung binh cong chi phi gio cong (theo gio) cua cac nhan su dang giu vai tro nay; null neu khong uoc tinh duoc. */
-	private BigDecimal averageHourlyCostForRole(String professionalRole, LocalDate asOf) {
-		String role = professionalRole == null ? "" : professionalRole.trim();
-		if (role.isBlank()) {
-			return null;
-		}
-		List<Employee> employees = employeeRepository.findByProfessionalRoleIgnoreCase(role);
-		if (employees.isEmpty()) {
-			return null;
-		}
-		BigDecimal sum = BigDecimal.ZERO;
-		int count = 0;
-		for (Employee employee : employees) {
-			ResolvedEmployeeHourlyRateRes resolved = employeeHourlyRateService.resolve(employee.getId(), asOf);
-			if (!resolved.missingCostData()) {
-				sum = sum.add(resolved.hourlyRate());
-				count++;
-			}
-		}
-		if (count == 0) {
-			return null;
-		}
-		return sum.divide(BigDecimal.valueOf(count), 4, RoundingMode.HALF_UP);
 	}
 
 	/** Doanh thu/gia von thuc te tu moi dong gio cong DA DUYET cua du an tinh den hien tai. */
