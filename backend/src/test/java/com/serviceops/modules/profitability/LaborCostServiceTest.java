@@ -51,7 +51,7 @@ class LaborCostServiceTest {
 		User user = new User();
 		user.setId(100L);
 		employee.setUser(user);
-		when(employeeRepository.findAllById(List.of(100L))).thenReturn(List.of(employee));
+		when(employeeRepository.findByUser_IdIn(List.of(100L))).thenReturn(List.of(employee));
 	}
 
 	@Test

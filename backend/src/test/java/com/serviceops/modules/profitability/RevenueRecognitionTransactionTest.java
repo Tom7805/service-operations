@@ -251,7 +251,7 @@ class RevenueRecognitionTransactionTest {
 		when(timeEntryRepository.findByTaskIdInAndStatusOrderByWorkDateAscIdAsc(List.of(20L),
 				TimeEntryStatus.APPROVED)).thenReturn(List.of(entry));
 		when(timeEntryRepository.findById(30L)).thenReturn(Optional.of(entry));
-		when(employeeRepository.findAllById(any())).thenReturn(List.of(employee));
+		when(employeeRepository.findByUser_IdIn(any())).thenReturn(List.of(employee));
 		when(employeeRepository.findByUser_Id(100L)).thenReturn(Optional.of(employee));
 	}
 }
