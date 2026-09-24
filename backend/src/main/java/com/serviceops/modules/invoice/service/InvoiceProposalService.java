@@ -1,7 +1,11 @@
 package com.serviceops.modules.invoice.service;
 
+import com.serviceops.modules.invoice.dto.request.InvoiceFromProposalReq;
 import com.serviceops.modules.invoice.dto.request.InvoiceProposalCreateReq;
 import com.serviceops.modules.invoice.dto.response.InvoiceProposalRes;
+import com.serviceops.modules.invoice.dto.response.InvoiceRes;
+
+import java.util.List;
 
 public interface InvoiceProposalService {
 
@@ -19,4 +23,28 @@ public interface InvoiceProposalService {
 	 *         INVALID_STATE neu hop dong khong phai TIME_AND_MATERIAL hoac khong co dong nao du dieu kien
 	 */
 	InvoiceProposalRes createFromApprovedTimesheets(Long projectId, InvoiceProposalCreateReq request);
+
+	/** Toan bo de nghi xuat hoa don (moi trang thai) cua mot hop dong, moi nhat truoc. */
+	List<InvoiceProposalRes> listByContract(Long contractId);
+
+	/**
+	 * Chuyen mot de nghi dang PENDING thanh hoa don chinh thuc — moi dong cua de nghi (gio cong + chi phi)
+	 * thanh mot dong hoa don. Chi goi duoc mot lan cho moi de nghi (chuyen sang INVOICED sau khi thanh cong).
+	 *
+	 * @throws com.serviceops.common.exception.BusinessRuleException
+	 *         RESOURCE_NOT_FOUND neu khong co de nghi; INVALID_STATE neu de nghi khong con PENDING (da lap
+	 *         hoa don hoac da huy); VALIDATION_ERROR neu vuot gia tri/han muc hop dong (QTN-19)
+	 */
+	InvoiceRes convertToInvoice(Long proposalId, InvoiceFromProposalReq request);
+
+	/**
+	 * Huy mot de nghi dang PENDING (vd tao nham, hoac muon gom lai chung voi de nghi khac cho gon thanh
+	 * mot hoa don duy nhat). Giai phong toan bo dong gio cong/chi phi cua de nghi nay (xoa cac dong,
+	 * voi rieng phieu chi phi thi dat lai {@code invoiced=false}) de lan tao de nghi sau gom lai duoc,
+	 * dung nhu {@link InvoiceProposalService} da mo ta o {@code ProposalStatus.CANCELLED}.
+	 *
+	 * @throws com.serviceops.common.exception.BusinessRuleException
+	 *         RESOURCE_NOT_FOUND neu khong co de nghi; INVALID_STATE neu de nghi khong con PENDING
+	 */
+	InvoiceProposalRes cancelProposal(Long proposalId);
 }

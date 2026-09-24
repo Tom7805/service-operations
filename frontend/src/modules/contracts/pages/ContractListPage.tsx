@@ -449,22 +449,14 @@ export default function ContractListPage({
                   const status = STATUS_META[c.status] ?? { label: c.status, badge: 'badge--gray' };
                   const busy = busyContractId === c.id;
                   return (
-                    <tr key={c.id}>
+                    <tr
+                      key={c.id}
+                      onClick={onOpenDetail ? () => onOpenDetail(c.id) : undefined}
+                      style={onOpenDetail ? { cursor: 'pointer' } : undefined}
+                      data-testid={`contract-row-${c.id}`}
+                    >
                       <td style={{ fontFamily: 'var(--font-mono, monospace)', fontWeight: 600 }} title={`ID hợp đồng: ${c.id}`}>
-                        {onOpenDetail ? (
-                          <button
-                            type="button"
-                            className="link-button"
-                            style={{ font: 'inherit', fontWeight: 600, color: 'var(--ink-strong)', background: 'none', border: 0, padding: 0, cursor: 'pointer', textDecoration: 'underline' }}
-                            onClick={() => onOpenDetail(c.id)}
-                            data-testid={`contract-code-link-${c.id}`}
-                          >
-                            {c.contractCode}
-                          </button>
-                        ) : (
-                          c.contractCode
-                        )}
-                        <div className="cell-muted" style={{ fontWeight: 400, fontSize: '11px' }}>ID: {c.id}</div>
+                        {c.contractCode}
                       </td>
                       <td>{c.name || '—'}</td>
                       <td>{c.customerName || '—'}</td>
@@ -483,7 +475,7 @@ export default function ContractListPage({
                       <td>
                         <span className={`badge ${status.badge}`}>{status.label}</span>
                       </td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
                         <RowActionsMenu
                           ariaLabel={`Thao tác hợp đồng ${c.contractCode}`}
                           actions={rowActions(c, busy)}

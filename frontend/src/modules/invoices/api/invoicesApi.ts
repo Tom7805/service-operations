@@ -5,6 +5,7 @@ import type {
   InvoiceStatus,
   InvoiceProposalCreateReq,
   InvoiceProposalRes,
+  InvoiceFromProposalReq,
   RecurringScheduleReq,
   RecurringScheduleRes,
   RecurringInvoiceRunReq,
@@ -98,6 +99,42 @@ export async function createInvoiceProposal(
   return requestBackend<InvoiceProposalRes>(`${API_BASE_URL}/projects/${projectId}/invoice-proposals`, {
     method: 'POST',
     body: JSON.stringify(req),
+  });
+}
+
+/**
+ * GET /contracts/{contractId}/invoice-proposals — toàn bộ đề xuất hóa đơn (mọi trạng thái) của một hợp
+ * đồng, mới nhất trước. Dùng để hiển thị lại các đề xuất PENDING sau khi tải lại trang (trước đây chỉ
+ * thấy được đề xuất vừa tạo, không có cách nào xem lại).
+ */
+export async function fetchInvoiceProposals(contractId: number): Promise<InvoiceProposalRes[]> {
+  return requestBackend<InvoiceProposalRes[]>(`${API_BASE_URL}/contracts/${contractId}/invoice-proposals`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * POST /invoice-proposals/{proposalId}/invoice — chuyển một đề xuất đang PENDING thành hóa đơn chính
+ * thức. Body tuỳ chọn (mặc định: ngày hóa đơn = hôm nay, hạn = +30 ngày, ghi chú lấy từ đề xuất).
+ */
+export async function convertProposalToInvoice(
+  proposalId: number,
+  req?: InvoiceFromProposalReq
+): Promise<InvoiceRes> {
+  return requestBackend<InvoiceRes>(`${API_BASE_URL}/invoice-proposals/${proposalId}/invoice`, {
+    method: 'POST',
+    body: JSON.stringify(req ?? {}),
+  });
+}
+
+/**
+ * POST /invoice-proposals/{proposalId}/cancel — hủy một đề xuất đang PENDING (ví dụ tạo nhầm, hoặc
+ * muốn gom lại chung với đề xuất khác thành 1 hóa đơn). Giải phóng giờ công/chi phí để lần tạo đề
+ * xuất sau gom lại được.
+ */
+export async function cancelInvoiceProposal(proposalId: number): Promise<InvoiceProposalRes> {
+  return requestBackend<InvoiceProposalRes>(`${API_BASE_URL}/invoice-proposals/${proposalId}/cancel`, {
+    method: 'POST',
   });
 }
 

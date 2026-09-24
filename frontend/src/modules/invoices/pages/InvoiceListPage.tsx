@@ -249,7 +249,12 @@ export default function InvoiceListPage({
                 {filtered.map((inv) => {
                   const status = STATUS_META[inv.status] ?? { label: inv.status, badge: 'badge--gray' };
                   return (
-                    <tr key={inv.id}>
+                    <tr
+                      key={inv.id}
+                      onClick={() => onOpenInvoice(inv.id)}
+                      style={{ cursor: 'pointer' }}
+                      data-testid={`invoice-row-${inv.id}`}
+                    >
                       <td style={{ fontFamily: 'var(--font-mono, monospace)', fontWeight: 600 }}>
                         {inv.invoiceCode}
                       </td>
@@ -262,7 +267,7 @@ export default function InvoiceListPage({
                       <td>
                         <span className={`badge ${status.badge}`}>{status.label}</span>
                       </td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
                         <RowActionsMenu
                           ariaLabel={`Thao tác hóa đơn ${inv.invoiceCode}`}
                           actions={rowActions(inv)}

@@ -17,9 +17,12 @@ import com.serviceops.modules.invoice.entity.InvoiceProposal;
 import com.serviceops.modules.invoice.entity.InvoiceProposalLine;
 import com.serviceops.modules.invoice.enums.ProposalLineType;
 import com.serviceops.modules.invoice.enums.ProposalStatus;
+import com.serviceops.modules.invoice.repository.InvoiceLineRepository;
 import com.serviceops.modules.invoice.repository.InvoiceProposalLineRepository;
 import com.serviceops.modules.invoice.repository.InvoiceProposalRepository;
+import com.serviceops.modules.invoice.repository.InvoiceRepository;
 import com.serviceops.modules.invoice.service.impl.InvoiceProposalServiceImpl;
+import com.serviceops.modules.invoice.validator.ContractValueLimitValidator;
 import com.serviceops.modules.notification.enums.NotificationType;
 import com.serviceops.modules.notification.service.NotificationService;
 import com.serviceops.modules.project.entity.Project;
@@ -89,6 +92,9 @@ class InvoiceProposalServiceTest {
 	@Mock private ProjectExpenseRepository projectExpenseRepository;
 	@Mock private InvoiceProposalRepository proposalRepository;
 	@Mock private InvoiceProposalLineRepository proposalLineRepository;
+	@Mock private InvoiceRepository invoiceRepository;
+	@Mock private InvoiceLineRepository invoiceLineRepository;
+	@Mock private ContractValueLimitValidator limitValidator;
 	@Mock private RateResolutionService rateResolutionService;
 	@Mock private NotificationService notificationService;
 	@Mock private AuditLogService auditLogService;
@@ -100,6 +106,7 @@ class InvoiceProposalServiceTest {
 		Clock clock = Clock.fixed(Instant.parse("2026-10-01T03:00:00Z"), ZONE);
 		service = new InvoiceProposalServiceImpl(projectRepository, contractRepository, taskRepository,
 				timeEntryRepository, projectExpenseRepository, proposalRepository, proposalLineRepository,
+				invoiceRepository, invoiceLineRepository, limitValidator,
 				rateResolutionService, notificationService, auditLogService, clock);
 		SecurityContextHolder.getContext().setAuthentication(
 				new UsernamePasswordAuthenticationToken("ketoan01", "x"));

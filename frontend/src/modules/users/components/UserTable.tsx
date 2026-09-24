@@ -200,7 +200,12 @@ export const UserTable: React.FC<UserTableProps> = ({
                 <tr key={user.id} className={user.status === 'LOCKED' ? 'row--locked' : ''}>
                   <td className="col-index">{index + 1}</td>
                   <td>
-                    <div className="user-profile-cell">
+                    <div
+                      className="user-profile-cell"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => onViewDetail(user)}
+                      title="Nhấp để xem chi tiết"
+                    >
                       <div className="avatar-circle">
                         {user.fullName.charAt(0).toUpperCase()}
                       </div>
