@@ -24,6 +24,7 @@ import OpportunitySearchPicker from './modules/opportunities/components/Opportun
 import OpportunityListPage from './modules/opportunities/pages/OpportunityListPage';
 import RevenueForecastPage from './modules/opportunities/pages/RevenueForecastPage';
 import PipelineReportPage from './modules/reports/pages/PipelineReportPage';
+import DashboardPage from './modules/reports/pages/DashboardPage';
 import MyWorkPage from './modules/mytasks/pages/MyWorkPage';
 import TimesheetApprovalPage from './modules/timesheets/pages/TimesheetApprovalPage';
 import TimesheetRejectPage from './modules/timesheets/pages/TimesheetRejectPage';
@@ -686,6 +687,23 @@ export default function App() {
               </div>
 
               <div className="report-catalog-grid">
+                {currentRoles.includes('VT-01') && (
+                  <button
+                    type="button"
+                    className="report-card"
+                    onClick={() => setActiveTab('OPERATIONAL_DASHBOARD')}
+                  >
+                    <span className="report-card__icon">{ICONS.chart}</span>
+                    <span className="report-card__body">
+                      <span className="report-card__title">Bảng điều khiển vận hành</span>
+                      <span className="report-card__desc">
+                        Doanh thu ghi nhận, tỷ suất biên lợi nhuận, tỷ lệ giờ tính phí, dự án âm
+                        biên và hóa đơn quá hạn của kỳ chọn.
+                      </span>
+                    </span>
+                    <span className="report-card__arrow">{ICONS.arrowRight}</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   className="report-card"
@@ -703,6 +721,14 @@ export default function App() {
                 </button>
               </div>
             </div>
+          ) : activeTab === 'OPERATIONAL_DASHBOARD' ? (
+            <DashboardPage
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+              onBack={() => setActiveTab('REPORTS')}
+              onViewNegativeMarginProjects={() => setActiveTab('PROJECT_MARGIN')}
+              onViewOverdueInvoices={() => setActiveTab('INVOICES')}
+            />
           ) : activeTab === 'PIPELINE_REPORT' ? (
             <PipelineReportPage
               currentUserRoles={currentRoles}
