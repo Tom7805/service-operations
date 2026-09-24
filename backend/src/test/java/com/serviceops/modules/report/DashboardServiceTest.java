@@ -7,6 +7,9 @@ import com.serviceops.common.audit.service.AuditLogService;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.identity.employee.entity.Employee;
+import com.serviceops.modules.identity.employee.entity.Holiday;
+import com.serviceops.modules.identity.employee.service.HolidayCalendar;
+import com.serviceops.modules.identity.employee.service.HolidayService;
 import com.serviceops.modules.identity.employee.repository.EmployeeRepository;
 import com.serviceops.modules.identity.user.entity.User;
 import com.serviceops.modules.invoice.dto.response.InvoiceDetailRes;
@@ -24,8 +27,8 @@ import com.serviceops.modules.rate.service.WorkTypeRateService;
 import com.serviceops.modules.report.dto.request.ReportPeriodReq;
 import com.serviceops.modules.report.dto.response.DashboardSummaryRes;
 import com.serviceops.modules.report.repository.DashboardQueryRepository;
-import com.serviceops.modules.report.repository.DashboardQueryRepository.ApprovedHours;
 import com.serviceops.modules.report.service.impl.DashboardServiceImpl;
+import com.serviceops.modules.report.service.impl.StandardHoursCalculator;
 import com.serviceops.modules.timesheet.entity.TimeEntry;
 import com.serviceops.modules.timesheet.enums.TimeEntryStatus;
 import com.serviceops.modules.timesheet.enums.WorkType;
@@ -49,6 +52,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -72,6 +76,7 @@ class DashboardServiceTest {
 	@Mock private ContractBillRateService contractBillRateService;
 	@Mock private WorkTypeRateService workTypeRateService;
 	@Mock private DashboardQueryRepository dashboardQueryRepository;
+	@Mock private HolidayService holidayService;
 	@Mock private InvoiceService invoiceService;
 	@Mock private AuditLogService auditLogService;
 	@Mock private SensitiveAccessLogger sensitiveAccessLogger;
@@ -84,7 +89,29 @@ class DashboardServiceTest {
 				employeeHourlyRateService, contractBillRateService, workTypeRateService);
 		Clock clock = Clock.fixed(TODAY.atStartOfDay().toInstant(ZoneOffset.UTC), ZoneOffset.UTC);
 		service = new DashboardServiceImpl(timeEntryRepository, taskRepository, projectRepository, employeeRepository,
-				calculator, dashboardQueryRepository, invoiceService, auditLogService, sensitiveAccessLogger, clock);
+				calculator, dashboardQueryRepository, new StandardHoursCalculator(), holidayService, invoiceService,
+				auditLogService, sensitiveAccessLogger, clock);
+		lenient().when(holidayService.calendarFor(any(), any())).thenReturn(HolidayCalendar.none());
+	}
+
+	/** Ngày lễ không tính giờ chuẩn: 1/1/2026 là thứ Năm nên tháng 1 còn 21 ngày = 168 giờ, 84 giờ tính phí -> 0.5. */
+	@Test
+	void excludesHolidaysFromStandardHoursOfBillableRatio() {
+		Holiday newYear = new Holiday();
+		newYear.setName("Tet duong lich");
+		newYear.setHolidayDate(FROM);
+		newYear.setRecurringYearly(true);
+		when(holidayService.calendarFor(FROM, TO)).thenReturn(HolidayCalendar.of(List.of(newYear), FROM, TO));
+		when(timeEntryRepository.findByStatusAndWorkDateBetweenOrderByWorkDateAscIdAsc(TimeEntryStatus.APPROVED, FROM, TO))
+				.thenReturn(List.of());
+		when(dashboardQueryRepository.sumApprovedBillableHours(FROM, TO)).thenReturn(new BigDecimal("84.00"));
+		when(dashboardQueryRepository.findEmployeesEmployedBetween(FROM, TO))
+				.thenReturn(List.of(staff("40.00", LocalDate.of(2025, 1, 1), null)));
+		when(invoiceService.listOverdue(TO, null)).thenReturn(List.of());
+
+		DashboardSummaryRes result = service.getSummary(new ReportPeriodReq(FROM, TO));
+
+		assertThat(result.kpis().billableHoursRatio()).isEqualByComparingTo("0.5000");
 	}
 
 	/** TC-01: dự án A lãi, dự án B (giờ không tính phí) âm biên; đủ 5 chỉ số đúng số học. */
@@ -104,8 +131,10 @@ class DashboardServiceTest {
 		when(contractBillRateService.resolve(5000L, "Lap trinh vien", "Senior", FROM))
 				.thenReturn(new ResolvedContractBillRateRes(new BigDecimal("4000000.00"), FROM, true));
 		when(workTypeRateService.resolveFactor(WorkType.NORMAL)).thenReturn(BigDecimal.ONE);
-		when(dashboardQueryRepository.sumApprovedHours(FROM, TO))
-				.thenReturn(new ApprovedHours(new BigDecimal("8.00"), new BigDecimal("18.00")));
+		when(dashboardQueryRepository.sumApprovedBillableHours(FROM, TO)).thenReturn(new BigDecimal("112.00"));
+		// Tháng 1/2026 có 22 ngày làm việc: toàn thời gian 40h/tuần = 176h; bán thời gian 20h/tuần vào làm 15/1 = 12 ngày = 48h.
+		when(dashboardQueryRepository.findEmployeesEmployedBetween(FROM, TO)).thenReturn(List.of(
+				staff("40.00", LocalDate.of(2025, 6, 1), null), staff("20.00", LocalDate.of(2026, 1, 15), null)));
 		when(invoiceService.listOverdue(TO, null))
 				.thenReturn(List.of(mock(InvoiceDetailRes.class), mock(InvoiceDetailRes.class)));
 
@@ -116,7 +145,8 @@ class DashboardServiceTest {
 		assertThat(result.to()).isEqualTo(TO);
 		assertThat(result.kpis().recognizedRevenue()).isEqualByComparingTo("4000000.00");
 		assertThat(result.kpis().averageMarginRate()).isEqualByComparingTo("0.1000");
-		assertThat(result.kpis().billableHoursRatio()).isEqualByComparingTo("0.4444");
+		// 112 giờ tính phí / (176 + 48) giờ chuẩn (QTN-23), không chia cho tổng giờ đã ghi
+		assertThat(result.kpis().billableHoursRatio()).isEqualByComparingTo("0.5000");
 		assertThat(result.kpis().negativeMarginProjectCount()).isEqualTo(1);
 		assertThat(result.kpis().overdueInvoiceCount()).isEqualTo(2);
 		assertThat(result.missingCostEntryCount()).isZero();
@@ -128,8 +158,7 @@ class DashboardServiceTest {
 	void returnsZeroKpisWhenPeriodHasNoActivity() {
 		when(timeEntryRepository.findByStatusAndWorkDateBetweenOrderByWorkDateAscIdAsc(TimeEntryStatus.APPROVED, FROM, TO))
 				.thenReturn(List.of());
-		when(dashboardQueryRepository.sumApprovedHours(FROM, TO))
-				.thenReturn(new ApprovedHours(BigDecimal.ZERO, BigDecimal.ZERO));
+		when(dashboardQueryRepository.sumApprovedBillableHours(FROM, TO)).thenReturn(BigDecimal.ZERO);
 		when(invoiceService.listOverdue(TO, null)).thenReturn(List.of());
 
 		DashboardSummaryRes result = service.getSummary(new ReportPeriodReq(FROM, TO));
@@ -148,8 +177,7 @@ class DashboardServiceTest {
 		LocalDate futureEnd = LocalDate.of(2026, 2, 28);
 		when(timeEntryRepository.findByStatusAndWorkDateBetweenOrderByWorkDateAscIdAsc(TimeEntryStatus.APPROVED, FROM, futureEnd))
 				.thenReturn(List.of());
-		when(dashboardQueryRepository.sumApprovedHours(FROM, futureEnd))
-				.thenReturn(new ApprovedHours(BigDecimal.ZERO, BigDecimal.ZERO));
+		when(dashboardQueryRepository.sumApprovedBillableHours(FROM, futureEnd)).thenReturn(BigDecimal.ZERO);
 		when(invoiceService.listOverdue(TODAY, null)).thenReturn(List.of(mock(InvoiceDetailRes.class)));
 
 		DashboardSummaryRes result = service.getSummary(new ReportPeriodReq(FROM, futureEnd));
@@ -173,8 +201,9 @@ class DashboardServiceTest {
 				.thenReturn(new ResolvedEmployeeHourlyRateRes(1L, new BigDecimal("150000.00"), FROM, false));
 		when(contractBillRateService.resolve(5000L, "Lap trinh vien", "Senior", FROM))
 				.thenThrow(new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Chua khai bao don gia"));
-		when(dashboardQueryRepository.sumApprovedHours(FROM, TO))
-				.thenReturn(new ApprovedHours(new BigDecimal("5.00"), new BigDecimal("5.00")));
+		when(dashboardQueryRepository.sumApprovedBillableHours(FROM, TO)).thenReturn(new BigDecimal("5.00"));
+		when(dashboardQueryRepository.findEmployeesEmployedBetween(FROM, TO))
+				.thenReturn(List.of(staff("40.00", LocalDate.of(2025, 1, 1), null)));
 		when(invoiceService.listOverdue(TO, null)).thenReturn(List.of());
 
 		DashboardSummaryRes result = service.getSummary(new ReportPeriodReq(FROM, TO));
@@ -184,7 +213,21 @@ class DashboardServiceTest {
 		assertThat(result.kpis().averageMarginRate()).isEqualByComparingTo(BigDecimal.ZERO);
 		// doanh thu 0 nhưng còn giá vốn 750,000 -> dự án bị tính là âm biên
 		assertThat(result.kpis().negativeMarginProjectCount()).isEqualTo(1);
-		assertThat(result.kpis().billableHoursRatio()).isEqualByComparingTo("1.0000");
+		// 5 giờ tính phí / 176 giờ chuẩn của tháng 1/2026
+		assertThat(result.kpis().billableHoursRatio()).isEqualByComparingTo("0.0284");
+	}
+
+	/** Có giờ tính phí nhưng không nhân sự nào đang làm việc trong kỳ: mẫu số 0 -> tỷ lệ 0, không chia cho 0. */
+	@Test
+	void billableHoursRatioIsZeroWhenNobodyIsEmployedInThePeriod() {
+		when(timeEntryRepository.findByStatusAndWorkDateBetweenOrderByWorkDateAscIdAsc(TimeEntryStatus.APPROVED, FROM, TO))
+				.thenReturn(List.of());
+		when(dashboardQueryRepository.sumApprovedBillableHours(FROM, TO)).thenReturn(new BigDecimal("8.00"));
+		when(invoiceService.listOverdue(TO, null)).thenReturn(List.of());
+
+		DashboardSummaryRes result = service.getSummary(new ReportPeriodReq(FROM, TO));
+
+		assertThat(result.kpis().billableHoursRatio()).isEqualByComparingTo(BigDecimal.ZERO);
 	}
 
 	/** TC-04: mỗi lượt xem thành công ghi nhật ký (người thực hiện/thời điểm do AuditLogService tự điền). */
@@ -192,8 +235,7 @@ class DashboardServiceTest {
 	void recordsAuditAndSensitiveAccessLogsForSuccessfulView() {
 		when(timeEntryRepository.findByStatusAndWorkDateBetweenOrderByWorkDateAscIdAsc(TimeEntryStatus.APPROVED, FROM, TO))
 				.thenReturn(List.of());
-		when(dashboardQueryRepository.sumApprovedHours(FROM, TO))
-				.thenReturn(new ApprovedHours(BigDecimal.ZERO, BigDecimal.ZERO));
+		when(dashboardQueryRepository.sumApprovedBillableHours(FROM, TO)).thenReturn(BigDecimal.ZERO);
 		when(invoiceService.listOverdue(TO, null)).thenReturn(List.of());
 
 		service.getSummary(new ReportPeriodReq(FROM, TO));
@@ -238,6 +280,14 @@ class DashboardServiceTest {
 		user.setId(userId);
 		user.setFullName("Nguyen Van " + userId);
 		employee.setUser(user);
+		return employee;
+	}
+
+	private static Employee staff(String standardHoursPerWeek, LocalDate hireDate, LocalDate endDate) {
+		Employee employee = new Employee();
+		employee.setStandardHoursPerWeek(new BigDecimal(standardHoursPerWeek));
+		employee.setHireDate(hireDate);
+		employee.setEndDate(endDate);
 		return employee;
 	}
 
