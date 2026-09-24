@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { WorkBreakdownRes, TaskRes } from '../../projects/types/taskTypes';
 import type { AcceptanceCertificateRes } from '../types/acceptanceTypes';
 import { acceptanceStateOf, flattenWorkPackages } from '../utils/workPackageTree';
+import { milestoneEligibility, milestoneStatusAfterLink } from '../utils/milestoneEligibility';
 import {
   parseMoneyInput,
   simulatedMinutesPath,
@@ -129,5 +130,33 @@ describe('validateConfirmForm / validateRejectForm (NCL-12-CN-002)', () => {
   it('tạo đường dẫn biên bản mô phỏng từ tên tệp', () => {
     expect(simulatedMinutesPath('NT-1', 'bien ban ky.pdf')).toBe('/files/nghiem-thu/NT-1/bien-ban-ky.pdf');
     expect(todayLocalIso(new Date(2026, 0, 5))).toBe('2026-01-05');
+  });
+});
+
+describe('milestoneEligibility (NCL-12-CN-003, QTN-25)', () => {
+  const row = {
+    milestoneId: 1, contractId: 3, milestoneName: 'Dot 1', amount: 1, expectedDate: null, acceptanceCondition: null,
+    milestoneStatus: 'PENDING' as const, certificateId: null, certificateCode: null, certificateStatus: null,
+    projectCode: null, workPackageName: null,
+  };
+
+  it('đủ điều kiện khi mốc sẵn sàng và phiếu gắn kèm đã xác nhận (hoặc mốc mở không gắn phiếu)', () => {
+    expect(milestoneEligibility({ ...row, milestoneStatus: 'READY_TO_INVOICE', certificateId: 5, certificateCode: 'NT', certificateStatus: 'ACCEPTED' }).state).toBe('ELIGIBLE');
+    expect(milestoneEligibility({ ...row, milestoneStatus: 'READY_TO_INVOICE' }).state).toBe('ELIGIBLE');
+  });
+
+  it('chưa đủ điều kiện khi phiếu gắn kèm chưa xác nhận — kể cả mốc đã mở tay', () => {
+    const r = milestoneEligibility({ ...row, milestoneStatus: 'READY_TO_INVOICE', certificateId: 5, certificateCode: 'NT-5', certificateStatus: 'NEEDS_REVISION' });
+    expect(r.state).toBe('CERTIFICATE_NOT_ACCEPTED');
+    expect(r.reason).toContain('NT-5');
+    expect(milestoneEligibility(row).state).toBe('NO_CERTIFICATE');
+    expect(milestoneEligibility({ ...row, milestoneStatus: 'INVOICED' }).state).toBe('INVOICED');
+  });
+
+  it('trạng thái mốc sau khi gắn theo bảng đồng bộ QTN-25', () => {
+    expect(milestoneStatusAfterLink('PENDING', true)).toBe('READY_TO_INVOICE');
+    expect(milestoneStatusAfterLink('READY_TO_INVOICE', false)).toBe('PENDING');
+    expect(milestoneStatusAfterLink('PENDING', false)).toBe('PENDING');
+    expect(milestoneStatusAfterLink('INVOICED', true)).toBe('INVOICED');
   });
 });

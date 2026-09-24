@@ -3,9 +3,12 @@ import type {
   AcceptanceConfirmReq,
   AcceptanceCreateReq,
   AcceptanceDetailRes,
+  AcceptanceMilestoneLinkReq,
   AcceptanceReadinessRes,
   AcceptanceRejectReq,
+  AcceptanceStatus,
   AcceptanceUpdateReq,
+  MilestoneAcceptanceRes,
 } from '../types/acceptanceTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
@@ -44,7 +47,9 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
     const code = payload.errorCode || payload.code || (response.status === 403 ? 'FORBIDDEN' : 'UNKNOWN_ERROR');
     let message = payload.message || 'Đã có lỗi xảy ra khi gọi dịch vụ máy chủ Backend.';
     if (response.status === 403) {
-      message = 'Bạn không có quyền thao tác trên dự án này — chỉ Quản lý dự án phụ trách mới lập được phiếu nghiệm thu.';
+      message =
+        'Bạn không có quyền thực hiện thao tác này — phiếu nghiệm thu do Quản lý dự án phụ trách dự án lập/ghi nhận, ' +
+        'việc gắn phiếu với mốc thanh toán do Kế toán thực hiện.';
     }
     if (response.status === 401) message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
     if (payload.fieldErrors && payload.fieldErrors.length > 0) {
@@ -112,6 +117,54 @@ export async function resubmitAcceptance(certificateId: number, req: AcceptanceU
     method: 'PUT',
     body: JSON.stringify(req),
   });
+}
+
+/** GET /acceptances?contractId=&projectId=&status= — Kế toán thấy mọi phiếu, lọc theo hợp đồng để chọn phiếu gắn mốc. */
+export async function searchAcceptances(
+  params: { contractId?: number; projectId?: number; status?: AcceptanceStatus } = {}
+): Promise<AcceptanceCertificateRes[]> {
+  const qs = new URLSearchParams();
+  if (params.contractId != null) qs.set('contractId', String(params.contractId));
+  if (params.projectId != null) qs.set('projectId', String(params.projectId));
+  if (params.status) qs.set('status', params.status);
+  const query = qs.toString();
+  return requestBackend<AcceptanceCertificateRes[]>(`${API_BASE_URL}/acceptances${query ? `?${query}` : ''}`, {
+    method: 'GET',
+  });
+}
+
+/** GET /contracts/{contractId}/milestone-acceptances — mốc thanh toán kèm phiếu đã gắn. Chỉ Kế toán (VT-05). */
+export async function fetchMilestoneAcceptances(contractId: number): Promise<MilestoneAcceptanceRes[]> {
+  return requestBackend<MilestoneAcceptanceRes[]>(`${API_BASE_URL}/contracts/${contractId}/milestone-acceptances`, {
+    method: 'GET',
+  });
+}
+
+/** PUT /acceptances/{certificateId}/payment-milestone — gắn (hoặc đổi) mốc; trạng thái mốc đồng bộ theo phiếu (QTN-25). */
+export async function linkPaymentMilestone(
+  certificateId: number,
+  req: AcceptanceMilestoneLinkReq
+): Promise<AcceptanceDetailRes> {
+  return requestBackend<AcceptanceDetailRes>(`${API_BASE_URL}/acceptances/${certificateId}/payment-milestone`, {
+    method: 'PUT',
+    body: JSON.stringify(req),
+  });
+}
+
+/** DELETE /acceptances/{certificateId}/payment-milestone — gỡ phiếu khỏi mốc; mốc đang mở thì về chờ nghiệm thu. */
+export async function unlinkPaymentMilestone(certificateId: number): Promise<AcceptanceDetailRes> {
+  return requestBackend<AcceptanceDetailRes>(`${API_BASE_URL}/acceptances/${certificateId}/payment-milestone`, {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * NCL-12-CN-003 TC-03: người không phải Kế toán mở chức năng gắn nghiệm thu với mốc thanh toán → gọi thật
+ * endpoint chỉ dành cho VT-05 để backend trả 403 và ghi "Từ chối truy cập — Gắn phiếu nghiệm thu với mốc
+ * thanh toán" vào Nhật ký hệ thống. Endpoint chỉ đọc nên không đổi dữ liệu.
+ */
+export async function checkMilestoneLinkAccess(contractId: number): Promise<void> {
+  await requestBackend<unknown>(`${API_BASE_URL}/contracts/${contractId}/milestone-acceptances`, { method: 'GET' });
 }
 
 /**

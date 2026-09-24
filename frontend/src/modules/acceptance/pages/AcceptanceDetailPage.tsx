@@ -3,10 +3,10 @@ import { ICONS } from '../../../components/common/icons';
 import { AcceptanceApiError, getAcceptance } from '../api/acceptanceApi';
 import AcceptanceDecisionModal, { type AcceptanceDecisionMode } from '../components/AcceptanceDecisionModal';
 import AcceptanceResubmitModal from '../components/AcceptanceResubmitModal';
+import { buildAcceptanceHistory } from '../utils/acceptanceHistory';
 import {
   ACCEPTANCE_STATUS_META,
   CHANNEL_LABEL,
-  DECISION_META,
   MILESTONE_STATUS_META,
   type AcceptanceDetailRes,
 } from '../types/acceptanceTypes';
@@ -36,14 +36,6 @@ function formatDateTime(value?: string | null): string {
   return Number.isNaN(d.getTime()) ? value : d.toLocaleString('vi-VN');
 }
 
-interface HistoryEntry {
-  key: string;
-  at: string;
-  actor: string | null;
-  label: string;
-  detail?: string | null;
-  badge: string;
-}
 
 /**
  * NCL-12-CN-001 — Chi tiết phiếu nghiệm thu: nội dung đã chụp lại lúc lập (công việc, phiên bản sản
@@ -106,48 +98,7 @@ export default function AcceptanceDetailPage({
     ? ACCEPTANCE_STATUS_META[certificate.status] ?? { label: certificate.status, badge: 'badge--gray' }
     : null;
 
-  const history: HistoryEntry[] = certificate
-    ? [
-        {
-          key: 'created',
-          at: certificate.createdAt,
-          actor: certificate.createdBy,
-          label: 'Lập phiếu nghiệm thu',
-          detail: `Giá trị ${formatAmount(certificate.acceptedValue)} · ${certificate.tasks.length} công việc · ${certificate.deliverables.length} sản phẩm bàn giao`,
-          badge: 'badge--blue',
-        },
-        ...certificate.decisions.map((d) => ({
-          key: `decision-${d.id}`,
-          at: d.recordedAt,
-          actor: d.recordedBy,
-          label: `${DECISION_META[d.decision]?.label ?? d.decision} (lần nộp ${d.revisionNo})`,
-          detail: [
-            d.decision === 'REJECTED' && d.reason && `Lý do: ${d.reason}`,
-            d.signerName && `Người ký: ${d.signerName}`,
-            d.signedDate && `ngày ký ${formatDate(d.signedDate)}`,
-            d.minutesUrl && `biên bản ${d.minutesUrl}`,
-            `kênh: ${CHANNEL_LABEL[d.channel] ?? d.channel}`,
-          ]
-            .filter(Boolean)
-            .join(' · '),
-          badge: DECISION_META[d.decision]?.badge ?? 'badge--gray',
-        })),
-        // Lần nộp lại gần nhất: phiếu đang chờ xác nhận ở lần nộp > 1 thì updatedAt chính là lúc nộp lại.
-        ...(certificate.status === 'PENDING_CONFIRMATION' && certificate.revisionNo > 1 && certificate.updatedAt
-          ? [
-              {
-                key: 'resubmit',
-                at: certificate.updatedAt,
-                // Chỉ QLDA của dự án mới nộp lại được; tên tài khoản cụ thể nằm trong Nhật ký hệ thống.
-                actor: 'Quản lý dự án',
-                label: `Nộp lại phiếu (lần ${certificate.revisionNo})`,
-                detail: `Giá trị ${formatAmount(certificate.acceptedValue)} · ${certificate.tasks.length} công việc`,
-                badge: 'badge--gold',
-              },
-            ]
-          : []),
-      ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
-    : [];
+  const history = certificate ? buildAcceptanceHistory(certificate) : [];
 
   return (
     <div className="user-management-page">
