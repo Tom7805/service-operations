@@ -24,6 +24,7 @@ import OpportunitySearchPicker from './modules/opportunities/components/Opportun
 import OpportunityListPage from './modules/opportunities/pages/OpportunityListPage';
 import RevenueForecastPage from './modules/opportunities/pages/RevenueForecastPage';
 import PipelineReportPage from './modules/reports/pages/PipelineReportPage';
+import ProjectPerformanceReportPage from './modules/reports/pages/ProjectPerformanceReportPage';
 import MyWorkPage from './modules/mytasks/pages/MyWorkPage';
 import TimesheetApprovalPage from './modules/timesheets/pages/TimesheetApprovalPage';
 import TimesheetRejectPage from './modules/timesheets/pages/TimesheetRejectPage';
@@ -701,6 +702,23 @@ export default function App() {
                   </span>
                   <span className="report-card__arrow">{ICONS.arrowRight}</span>
                 </button>
+                {currentRoles.includes('VT-02') && (
+                  <button
+                    type="button"
+                    className="report-card"
+                    onClick={() => setActiveTab('PROJECT_PERFORMANCE_REPORT')}
+                  >
+                    <span className="report-card__icon">{ICONS.briefcase}</span>
+                    <span className="report-card__body">
+                      <span className="report-card__title">Hiệu quả theo dự án</span>
+                      <span className="report-card__desc">
+                        So kế hoạch trong báo giá với thực tế: giờ công, doanh thu và biên lợi nhuận
+                        của các dự án bạn quản lý.
+                      </span>
+                    </span>
+                    <span className="report-card__arrow">{ICONS.arrowRight}</span>
+                  </button>
+                )}
               </div>
             </div>
           ) : activeTab === 'PIPELINE_REPORT' ? (
@@ -710,6 +728,15 @@ export default function App() {
               onViewOpportunity={(id) => {
                 setFocusOpportunityId(id);
                 setActiveTab('OPPORTUNITIES');
+              }}
+            />
+          ) : activeTab === 'PROJECT_PERFORMANCE_REPORT' ? (
+            <ProjectPerformanceReportPage
+              currentUserRoles={currentRoles}
+              onBack={() => setActiveTab('REPORTS')}
+              onViewProject={(id) => {
+                setSelectedProjectId(id);
+                setActiveTab('PROJECT_MARGIN');
               }}
             />
           ) : activeTab === 'CUSTOMER_MERGE' ? (
