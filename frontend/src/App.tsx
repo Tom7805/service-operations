@@ -19,6 +19,7 @@ import InvoicesPage from './modules/invoices/pages/InvoicesPage';
 import InvoiceDetailPage from './modules/invoices/pages/InvoiceDetailPage';
 import AcceptanceListPage from './modules/acceptance/pages/AcceptanceListPage';
 import AcceptanceDetailPage from './modules/acceptance/pages/AcceptanceDetailPage';
+import DeliverablePage from './modules/acceptance/pages/DeliverablePage';
 import BillRatePage from './modules/rates/pages/BillRatePage';
 import RateHistoryPage from './modules/rates/pages/RateHistoryPage';
 import OpportunityDetailPage from './modules/opportunities/pages/OpportunityDetailPage';
@@ -664,6 +665,15 @@ export default function App() {
               certificateId={selectedAcceptanceId}
               currentUserRoles={currentRoles}
               onBack={() => setActiveTab('ACCEPTANCES')}
+            />
+          ) : activeTab === 'DELIVERABLES' ? (
+            <DeliverablePage
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+              currentUserId={session.userId}
+              projects={allProjects}
+              selectedProjectId={acceptanceProjectId}
+              onSelectProject={setAcceptanceProjectId}
             />
           ) : activeTab === 'ACCEPTANCES' || activeTab === 'ACCEPTANCE_DETAIL' ? (
             <AcceptanceListPage

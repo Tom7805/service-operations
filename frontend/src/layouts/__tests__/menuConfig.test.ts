@@ -64,6 +64,7 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'CUSTOMERS',
       'OPPORTUNITIES',
       'ACCEPTANCES',
+      'DELIVERABLES',
       'PROJECT_LABOR_COST',
       'PLANNED_VS_ACTUAL',
       'PROFIT_FORECAST',

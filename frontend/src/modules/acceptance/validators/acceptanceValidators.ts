@@ -131,3 +131,106 @@ export function simulatedMinutesPath(certificateCode: string, fileName: string):
   const safe = fileName.trim().replace(/\s+/g, '-');
   return `/files/nghiem-thu/${certificateCode}/${safe}`;
 }
+
+/* ===== NCL-12-CN-004 — Sản phẩm bàn giao và phiên bản ===== */
+
+export const DELIVERABLE_NAME_MAX_LENGTH = 255;
+export const DELIVERABLE_DESCRIPTION_MAX_LENGTH = 1000;
+export const VERSION_NO_MAX_LENGTH = 50;
+export const RECEIVER_MAX_LENGTH = 255;
+export const FILE_URL_MAX_LENGTH = 500;
+
+export interface DeliverableFormInput {
+  workPackageId: number | null;
+  name: string;
+  deliverableType: string;
+  description: string;
+}
+
+export type DeliverableFormErrors = Partial<Record<keyof DeliverableFormInput, string>>;
+
+/** Khớp DeliverableCreateReq; tên trùng trong cùng hạng mục (không phân biệt hoa thường) chặn trước khi gửi. */
+export function validateDeliverableForm(
+  input: DeliverableFormInput,
+  existingNamesInWorkPackage: string[] = []
+): { isValid: boolean; errors: DeliverableFormErrors } {
+  const errors: DeliverableFormErrors = {};
+  if (input.workPackageId == null) errors.workPackageId = 'Chọn hạng mục của sản phẩm bàn giao';
+  const name = input.name.trim();
+  if (!name) errors.name = 'Nhập tên sản phẩm bàn giao';
+  else if (name.length > DELIVERABLE_NAME_MAX_LENGTH) errors.name = `Tên sản phẩm tối đa ${DELIVERABLE_NAME_MAX_LENGTH} ký tự`;
+  else if (existingNamesInWorkPackage.some((n) => n.trim().toLowerCase() === name.toLowerCase())) {
+    errors.name = `Hạng mục đã có sản phẩm "${name}" — đặt tên khác`;
+  }
+  if (!input.deliverableType) errors.deliverableType = 'Chọn loại sản phẩm';
+  if (input.description.trim().length > DELIVERABLE_DESCRIPTION_MAX_LENGTH) {
+    errors.description = `Mô tả tối đa ${DELIVERABLE_DESCRIPTION_MAX_LENGTH} ký tự`;
+  }
+  return { isValid: Object.keys(errors).length === 0, errors };
+}
+
+export interface VersionFormInput {
+  versionNo: string;
+  deliveredDate: string;
+  receiverName: string;
+  fileUrl: string;
+  note: string;
+}
+
+export type VersionFormErrors = Partial<Record<keyof VersionFormInput, string>>;
+
+/** So khớp số phiên bản như backend: bỏ khoảng trắng đầu/cuối, không phân biệt hoa thường. */
+export function normalizeVersionNo(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+/**
+ * NCL-12-CN-004 — khớp DeliverableVersionReq: số phiên bản bắt buộc, duy nhất trong sản phẩm (TC-02); ngày bàn
+ * giao không ở tương lai; người nhận bắt buộc.
+ */
+export function validateVersionForm(
+  input: VersionFormInput,
+  existingVersionNos: string[],
+  today: string = todayLocalIso()
+): { isValid: boolean; errors: VersionFormErrors } {
+  const errors: VersionFormErrors = {};
+  const versionNo = input.versionNo.trim();
+  if (!versionNo) errors.versionNo = 'Nhập số phiên bản';
+  else if (versionNo.length > VERSION_NO_MAX_LENGTH) errors.versionNo = `Số phiên bản tối đa ${VERSION_NO_MAX_LENGTH} ký tự`;
+  else if (existingVersionNos.some((v) => normalizeVersionNo(v) === normalizeVersionNo(versionNo))) {
+    errors.versionNo = `Phiên bản "${versionNo}" đã tồn tại — vui lòng đặt số phiên bản khác`;
+  }
+  if (!input.deliveredDate) errors.deliveredDate = 'Chọn ngày bàn giao';
+  else if (input.deliveredDate > today) errors.deliveredDate = 'Ngày bàn giao không được ở tương lai';
+  const receiver = input.receiverName.trim();
+  if (!receiver) errors.receiverName = 'Nhập người nhận phía khách hàng';
+  else if (receiver.length > RECEIVER_MAX_LENGTH) errors.receiverName = `Tên người nhận tối đa ${RECEIVER_MAX_LENGTH} ký tự`;
+  if (input.fileUrl.trim().length > FILE_URL_MAX_LENGTH) errors.fileUrl = `Đường dẫn tệp tối đa ${FILE_URL_MAX_LENGTH} ký tự`;
+  if (input.note.trim().length > NOTE_MAX_LENGTH) errors.note = `Ghi chú tối đa ${NOTE_MAX_LENGTH} ký tự`;
+  return { isValid: Object.keys(errors).length === 0, errors };
+}
+
+/**
+ * Gợi ý số phiên bản kế tiếp từ phiên bản mới nhất: tăng số cuối cùng ("1.1" → "1.2", "v2" → "v3"); không có
+ * số nào hoặc chưa có phiên bản thì gợi ý "1.0". Người dùng vẫn sửa được.
+ */
+export function suggestNextVersionNo(latestVersionNo: string | null | undefined, existing: string[] = []): string {
+  if (!latestVersionNo) return existing.length === 0 ? '1.0' : '';
+  const match = latestVersionNo.trim().match(/^(.*?)(\d+)(\D*)$/);
+  if (!match) return '';
+  const [, prefix, num, suffix] = match;
+  let n = Number(num) + 1;
+  let candidate = `${prefix}${n}${suffix}`;
+  const taken = new Set(existing.map(normalizeVersionNo));
+  while (taken.has(normalizeVersionNo(candidate))) {
+    n += 1;
+    candidate = `${prefix}${n}${suffix}`;
+  }
+  return candidate;
+}
+
+/** Đường dẫn mô phỏng cho tệp bàn giao người dùng chọn (backend chỉ lưu chuỗi). */
+export function simulatedDeliverablePath(deliverableId: number, versionNo: string, fileName: string): string {
+  const safeVersion = versionNo.trim().replace(/\s+/g, '-') || 'ban-giao';
+  return `/files/ban-giao/${deliverableId}/${safeVersion}/${fileName.trim().replace(/\s+/g, '-')}`;
+}
