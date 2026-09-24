@@ -29,5 +29,8 @@ public enum NotificationType {
 	DUNNING_REMINDER,
 
 	/** NCL-10-CN-005: rao soat dinh ky vua tu tao mot hoa don nhap tu dieu khoan hop dong duy tri. */
-	RECURRING_INVOICE_GENERATED
+	RECURRING_INVOICE_GENERATED,
+
+	/** NCL-13-CN-003: khach hang vua xac nhan hoac tu choi phieu nghiem thu tren cong — bao PM du an. */
+	ACCEPTANCE_DECIDED_ON_PORTAL
 }

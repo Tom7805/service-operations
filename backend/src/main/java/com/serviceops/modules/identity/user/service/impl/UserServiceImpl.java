@@ -119,6 +119,10 @@ public class UserServiceImpl implements UserService {
         if (request.status() == UserStatus.ACTIVE) {
             user.setFailedLoginAttempts(0);
             user.setLockedUntil(null);
+        } else {
+            // Khoa tai khoan phai cham dut ngay cac phien dang mo: JwtAuthFilter chi chap nhan token cung
+            // tokenVersion, nen mo khoa lai thi nguoi dung cung phai dang nhap lai.
+            user.bumpTokenVersion();
         }
         log.info("USER_STATUS_CHANGED userId={} username={} status={}", user.getId(), user.getUsername(), request.status());
         auditLogService.record(

@@ -16,6 +16,8 @@ import com.serviceops.modules.customer.repository.CustomerAuditLogRepository;
 import com.serviceops.modules.customer.repository.CustomerDuplicateOverrideLogRepository;
 import com.serviceops.modules.customer.repository.CustomerMergeLogRepository;
 import com.serviceops.modules.customer.repository.CustomerRepository;
+import com.serviceops.modules.customer.service.impl.CustomerBusinessRecordMover;
+import com.serviceops.modules.customer.service.impl.CustomerBusinessRecordMover.MovedRecords;
 import com.serviceops.modules.customer.service.impl.CustomerMergeServiceImpl;
 import com.serviceops.security.CustomUserDetails;
 import org.junit.jupiter.api.AfterEach;
@@ -29,7 +31,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -68,6 +72,9 @@ class CustomerMergeServiceTest {
 	@Mock
 	private com.serviceops.common.audit.service.AuditLogService systemAuditLogService;
 
+	@Mock
+	private CustomerBusinessRecordMover businessRecordMover;
+
 	private final CustomerMapper customerMapper = new CustomerMapper();
 
 	private CustomerMergeServiceImpl service;
@@ -78,7 +85,7 @@ class CustomerMergeServiceTest {
 	@BeforeEach
 	void setUp() {
 		service = new CustomerMergeServiceImpl(customerRepository, customerMapper, auditLogRepository,
-				overrideLogRepository, mergeLogRepository, systemAuditLogService);
+				overrideLogRepository, mergeLogRepository, systemAuditLogService, businessRecordMover);
 
 		target = new Customer();
 		target.setId(1L);
@@ -94,6 +101,7 @@ class CustomerMergeServiceTest {
 		lenient().when(customerRepository.findById(2L)).thenReturn(Optional.of(source));
 		lenient().when(auditLogRepository.findByCustomerIdOrderByCreatedAtDesc(2L)).thenReturn(List.of());
 		lenient().when(overrideLogRepository.findByCustomerId(2L)).thenReturn(List.of());
+		lenient().when(businessRecordMover.moveRecords(2L, 1L)).thenReturn(movedRecords(0, 0, 0, 0, 0));
 
 		lenient().when(userDetails.getId()).thenReturn(99L);
 		lenient().when(userDetails.getUsername()).thenReturn("admin01");
@@ -103,6 +111,17 @@ class CustomerMergeServiceTest {
 	@AfterEach
 	void tearDown() {
 		SecurityContextHolder.clearContext();
+	}
+
+	private static MovedRecords movedRecords(int opportunities, int contracts, int projects, int invoices,
+			int proposals) {
+		Map<String, Integer> counts = new LinkedHashMap<>();
+		counts.put("co hoi", opportunities);
+		counts.put("hop dong", contracts);
+		counts.put("du an", projects);
+		counts.put("hoa don", invoices);
+		counts.put("de nghi xuat hoa don", proposals);
+		return new MovedRecords(counts);
 	}
 
 	private CustomerAuditLog auditLogOf(Long customerId) {
@@ -167,6 +186,23 @@ class CustomerMergeServiceTest {
 		ArgumentCaptor<List<CustomerDuplicateOverrideLog>> captor = ArgumentCaptor.forClass(List.class);
 		verify(overrideLogRepository).saveAll(captor.capture());
 		assertThat(captor.getValue()).containsExactly(unpaidLikeRecord);
+	}
+
+	@Test
+	@DisplayName("TC-01/TC-02: gop chuyen co hoi, hop dong, du an, hoa don sang ho so giu lai va ghi so ban ghi vao nhat ky")
+	void movesBusinessRecordsToTarget() {
+		when(businessRecordMover.moveRecords(2L, 1L)).thenReturn(movedRecords(2, 1, 1, 3, 0));
+
+		service.merge(new CustomerMergeReq(1L, 2L));
+
+		verify(businessRecordMover).moveRecords(2L, 1L);
+		ArgumentCaptor<CustomerMergeLog> mergeLogCaptor = ArgumentCaptor.forClass(CustomerMergeLog.class);
+		verify(mergeLogRepository).save(mergeLogCaptor.capture());
+		assertThat(mergeLogCaptor.getValue().getMovedRecordSummary())
+				.contains("2 co hoi", "1 hop dong", "1 du an", "3 hoa don");
+		ArgumentCaptor<CustomerAuditLog> auditCaptor = ArgumentCaptor.forClass(CustomerAuditLog.class);
+		verify(auditLogRepository).save(auditCaptor.capture());
+		assertThat(auditCaptor.getValue().getDetail()).contains("3 hoa don");
 	}
 
 	@Test
@@ -244,12 +280,14 @@ class CustomerMergeServiceTest {
 	void previewReturnsCountsWithoutMutatingData() {
 		when(auditLogRepository.findByCustomerIdOrderByCreatedAtDesc(2L)).thenReturn(List.of(auditLogOf(2L)));
 		when(overrideLogRepository.findByCustomerId(2L)).thenReturn(List.of(overrideLogOf(2L), overrideLogOf(2L)));
+		when(businessRecordMover.countRecords(2L)).thenReturn(4L);
 
 		MergePreviewRes preview = service.preview(new CustomerMergeReq(1L, 2L));
 
 		assertThat(preview.targetCustomer().id()).isEqualTo(1L);
 		assertThat(preview.sourceCustomer().id()).isEqualTo(2L);
-		assertThat(preview.relatedRecordCount()).isEqualTo(3L);
+		assertThat(preview.relatedRecordCount()).isEqualTo(7L);
+		verify(businessRecordMover, never()).moveRecords(any(), any());
 
 		assertThat(source.getStatus()).isEqualTo(CustomerStatus.ACTIVE);
 		verify(customerRepository, never()).save(any());

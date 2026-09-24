@@ -705,6 +705,9 @@ Cập nhật `fullName`, `email`, `departmentId`, `roleCodes` và tùy chọn `p
 
 `status` nhận `ACTIVE`, `LOCKED` hoặc `INACTIVE`. Khi mở lại bằng `ACTIVE`, hệ thống xóa bộ đếm đăng nhập sai và thời gian khóa tạm.
 
+Khi chuyển sang `LOCKED`/`INACTIVE`, **mọi phiên đang mở của tài khoản mất hiệu lực ngay**: lần gọi API kế tiếp bằng
+token cũ nhận `401 UNAUTHORIZED` (không phải chờ token hết hạn). Mở lại tài khoản thì người dùng phải đăng nhập lại.
+
 Các lỗi riêng của story: `DUPLICATE_DATA` (409), `RESOURCE_NOT_FOUND` (404), `INVALID_STATE` (400), `FORBIDDEN` (403).
 
 ---
@@ -1614,8 +1617,8 @@ Xem trước ảnh hưởng trước khi gộp thật — **không làm thay đ�
 }
 ```
 
-- `relatedRecordCount`: tổng số bản ghi hiện có của hồ sơ bị gộp (nhật ký khách hàng + lý do bỏ qua cảnh báo
-  trùng) sẽ được chuyển về hồ sơ giữ lại khi gộp thật.
+- `relatedRecordCount`: tổng số bản ghi hiện có của hồ sơ bị gộp sẽ được chuyển về hồ sơ giữ lại khi gộp thật —
+  cơ hội, hợp đồng, dự án, hoá đơn, đề nghị xuất hoá đơn, nhật ký khách hàng và lý do bỏ qua cảnh báo trùng.
 
 **Response lỗi:**
 
@@ -1637,6 +1640,12 @@ Thực hiện gộp hai hồ sơ (TC-01). Body giống hệt `POST /customers/me
 
 Luôn thực hiện gộp — **không kiểm tra hay chặn** theo bất kỳ điều kiện nào của dữ liệu liên quan của hồ sơ bị
 gộp (ví dụ còn công nợ chưa thanh toán); dữ liệu đó vẫn được chuyển về hồ sơ giữ lại kèm dấu vết nguồn gốc (TC-02).
+
+Dữ liệu được chuyển trong cùng giao dịch: **cơ hội, hợp đồng, dự án, hoá đơn (giữ nguyên trạng thái và công nợ),
+đề nghị xuất hoá đơn**, nhật ký khách hàng, lý do bỏ qua cảnh báo trùng. Mỗi bản ghi nghiệp vụ được chuyển lưu
+khách hàng gốc ở cột `original_customer_id` (chỉ ghi ở lần gộp đầu tiên). Người liên hệ **không** chuyển — mỗi khách
+hàng chỉ có một đầu mối chính. Nhật ký gộp (`movedRecordSummary`) ghi số bản ghi đã chuyển theo từng loại.
+Migration `V85` chuyển bù dữ liệu của các lần gộp đã thực hiện trước bản sửa này.
 
 **Response thành công — `200 OK`:**
 ```json
@@ -6301,6 +6310,352 @@ Mảng phiên bản, mới nhất trước.
 - Phiếu `ACCEPTED`: ẩn mọi thao tác sửa/xác nhận/từ chối. Phiếu `NEEDS_REVISION`: hiện `lastRejectionReason` và nút nộp lại.
 - Màn hình mốc thanh toán của Kế toán nên dùng `GET /contracts/{id}/milestone-acceptances`; mốc có `certificateId`
   thì ẩn nút mở tay (`PATCH .../status`) — backend sẽ chặn nếu phiếu chưa `ACCEPTED`.
+
+## Epic `NCL-13` — Cổng khách hàng
+
+Chung cho cả Epic:
+
+- **Hai nhóm endpoint tách bạch:**
+  - `/portal-accounts/**` — màn hình quản trị, chỉ **Quản trị viên** (`VT-07`) — `NCL-13-CN-001`.
+  - `/portal/**` — cổng khách hàng, chỉ tài khoản **Khách hàng** (`VT-09`) — `NCL-13-CN-002/003/004`.
+- **Đăng nhập cổng** dùng chung `POST /auth/login` (không có endpoint đăng nhập riêng). `roles` trong response chứa
+  `VT-09` → Frontend điều hướng sang giao diện cổng. Đổi mật khẩu/khôi phục mật khẩu dùng chung `/auth/**`.
+- **Hàng rào QTN-26 ở tầng bảo mật** (`SecurityConfig`):
+  - Tài khoản `VT-09` **chỉ** gọi được `/portal/**`, `/auth/**`, `/notifications/**`. Mọi API nội bộ khác (kể cả API
+    không gắn vai trò như `GET /departments`, `GET /me/tasks`) → `403 FORBIDDEN`.
+  - Tài khoản nội bộ gọi `/portal/**` → `403 FORBIDDEN` (TC "Không có quyền" của CN-002/003/004).
+  - Mọi lượt 403 ghi Nhật ký hệ thống "Từ chối truy cập" (`targetType = PORTAL`) kèm tên chức năng.
+- **Phạm vi dữ liệu (QTN-26):** tài khoản cổng chỉ thấy dữ liệu của **đúng khách hàng** được gán khi cấp tài khoản
+  (cộng các hồ sơ đã gộp vào khách hàng đó — `NCL-02-CN-006`, cùng một pháp nhân). Mở bản ghi ngoài phạm vi bằng
+  đường dẫn trực tiếp → `403 FORBIDDEN` + ghi nhật ký. **Bản ghi không tồn tại cũng trả `403`** (không trả `404`)
+  để khách hàng không dò được mã bản ghi của khách hàng khác.
+- **Không lộ dữ liệu nội bộ:** response cổng là DTO riêng, chỉ gồm các trường liệt kê dưới đây — không có mô tả/ghi
+  chú nội bộ, giờ công, ngân sách, giá vốn, rủi ro, hạn mức hợp đồng, tài khoản nhân viên đã thao tác.
+- **Lưu lịch sử:** mọi thao tác của quản trị viên và mọi lượt khách hàng xem/duyệt ghi Nhật ký hệ thống — lọc
+  `targetType = PORTAL` (xem/cấp/khoá) hoặc `ACCEPTANCE` (xác nhận/từ chối phiếu).
+
+**Bản đồ endpoint:**
+
+| Story | Method & path | Vai trò |
+|---|---|---|
+| CN-001 | `GET /portal-accounts/candidates?customerId=` | `VT-07` |
+| CN-001 | `POST /portal-accounts` | `VT-07` |
+| CN-001 | `GET /portal-accounts?customerId=&status=` | `VT-07` |
+| CN-001 | `GET /portal-accounts/{accountId}` | `VT-07` |
+| CN-001 | `PATCH /portal-accounts/{accountId}/status` | `VT-07` |
+| CN-002 | `GET /portal/projects` | `VT-09` |
+| CN-002 | `GET /portal/projects/{projectId}` | `VT-09` |
+| CN-003 | `GET /portal/acceptances?projectId=&status=` | `VT-09` |
+| CN-003 | `GET /portal/acceptances/{certificateId}` | `VT-09` |
+| CN-003 | `POST /portal/acceptances/{certificateId}/confirm` | `VT-09` |
+| CN-003 | `POST /portal/acceptances/{certificateId}/reject` | `VT-09` |
+| CN-004 | `GET /portal/invoices?status=&overdueOnly=` | `VT-09` |
+| CN-004 | `GET /portal/invoices/summary` | `VT-09` |
+| CN-004 | `GET /portal/invoices/{invoiceId}` | `VT-09` |
+
+### `NCL-13-CN-001` — Cấp tài khoản cổng cho khách hàng
+
+Quản trị viên chọn **một người liên hệ** của khách hàng (`NCL-02-CN-003`) và cấp tài khoản.
+Hệ thống tạo tài khoản đăng nhập vai trò `VT-09`, phạm vi `SELF`, **ngoài cây tổ chức** (`departmentId = null`),
+họ tên/email lấy từ người liên hệ, và **gắn cố định** với khách hàng của người liên hệ (TC-01). Mỗi người liên hệ tối
+đa một tài khoản cổng.
+
+#### `GET /portal-accounts/candidates?customerId=`
+
+Người liên hệ của khách hàng kèm tài khoản cổng đã cấp (nếu có) — để chọn người được cấp. Đầu mối chính đứng đầu.
+Cần endpoint riêng vì `GET /customers/{customerId}/contacts` chỉ dành cho Nhân viên kinh doanh (`NCL-02-CN-003-TC-03`).
+
+```json
+[
+  { "contactId": 11, "fullName": "Tran Van B", "title": "Giam doc", "email": "b@abc.example", "role": "PRIMARY",
+    "portalAccountId": null, "portalUsername": null, "portalStatus": null },
+  { "contactId": 12, "fullName": "Nguyen Thi Nhi", "title": "Truong phong Cong nghe", "email": "nhi@abc.example",
+    "role": "SECONDARY", "portalAccountId": 3, "portalUsername": "nhi.abc", "portalStatus": "ACTIVE" }
+]
+```
+
+`customerId` bắt buộc; khách hàng không tồn tại → `404 RESOURCE_NOT_FOUND`.
+
+#### `POST /portal-accounts`
+
+**Request:**
+
+```json
+{ "contactId": 12, "username": "nhi.abc", "password": "Matkhau123" }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `contactId` | number | có | Người liên hệ được cấp tài khoản. Khách hàng suy ra từ người liên hệ — **không** nhận `customerId` từ client. |
+| `username` | string | có | 3–100 ký tự, chỉ gồm chữ, số và `. _ @ -`; không trùng (không phân biệt hoa thường) với tài khoản nào. |
+| `password` | string | có | 8–100 ký tự, có ít nhất một chữ cái và một chữ số (cùng luật `NCL-01-CN-008`). Quản trị viên gửi cho khách hàng qua kênh riêng; khách hàng tự đổi bằng `POST /auth/change-password`. |
+
+**Response thành công — `200 OK`** — `data` là **tài khoản cổng** (dùng chung cho mọi endpoint của story này):
+
+```json
+{
+  "success": true,
+  "message": "Cap tai khoan cong khach hang thanh cong",
+  "data": {
+    "id": 3,
+    "userId": 41,
+    "username": "nhi.abc",
+    "fullName": "Nguyen Thi Nhi",
+    "email": "nhi@khachhang-abc.example",
+    "status": "ACTIVE",
+    "customerId": 1001,
+    "customerCode": "KH-100001",
+    "customerName": "Cong ty CP Giai Phap So Viet",
+    "contactId": 12,
+    "contactName": "Nguyen Thi Nhi",
+    "contactTitle": "Truong phong Cong nghe",
+    "contactRole": "SECONDARY",
+    "statusReason": null,
+    "statusChangedBy": null,
+    "statusChangedAt": null,
+    "createdBy": "admin",
+    "createdAt": "2026-09-24T10:00:00"
+  }
+}
+```
+
+`status` đọc trực tiếp từ tài khoản đăng nhập (`users.status`): `ACTIVE` hoặc `LOCKED` — khoá ở đây hay ở màn hình
+Quản lý tài khoản đều cho cùng kết quả.
+
+#### `GET /portal-accounts?customerId=&status=` · `GET /portal-accounts/{accountId}`
+
+Danh sách (mới nhất trước) / chi tiết tài khoản cổng. `customerId`, `status` (`ACTIVE`|`LOCKED`) tùy chọn.
+
+#### `PATCH /portal-accounts/{accountId}/status` (TC-02)
+
+```json
+{ "status": "LOCKED", "reason": "Nguoi lien he da nghi viec" }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `status` | string | có | `LOCKED` (khoá) hoặc `ACTIVE` (mở lại). `INACTIVE` bị từ chối. |
+| `reason` | string | không | ≤ 500 ký tự — lưu vào `statusReason`. |
+
+Khoá: tài khoản **không đăng nhập được nữa** (`POST /auth/login` trả `401 ACCOUNT_INACTIVE`) và **mọi phiên đang mở
+mất hiệu lực ngay** (tăng `tokenVersion`). **Không xoá dữ liệu nào** — tài khoản, liên kết khách hàng, lịch sử xác
+nhận nghiệm thu giữ nguyên. Mở lại: đặt lại số lần đăng nhập sai. `message` = `"Khoa tai khoan cong thanh cong"` /
+`"Mo khoa tai khoan cong thanh cong"`.
+
+**Response lỗi (CN-001):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-07` (TC-03). |
+| 404 | `RESOURCE_NOT_FOUND` | Không có người liên hệ `contactId` / tài khoản `accountId`; chưa khai báo vai trò `VT-09`. |
+| 400 | `VALIDATION_ERROR` | Thiếu trường; `username` sai định dạng; mật khẩu không đạt luật; `status` = `INACTIVE`. |
+| 400 | `INVALID_STATE` | Khách hàng của người liên hệ đã bị gộp (`MERGED`) — cấp từ hồ sơ giữ lại; khoá tài khoản đang khoá / mở tài khoản đang mở. |
+| 409 | `DUPLICATE_DATA` | Người liên hệ đã có tài khoản cổng; trùng `username`; email người liên hệ đã là email của tài khoản khác (email dùng để khôi phục mật khẩu phải duy nhất). |
+
+### `NCL-13-CN-002` — Khách hàng xem tiến độ dự án
+
+#### `GET /portal/projects` (TC-01)
+
+Mảng dự án của chính khách hàng (cả đang chạy lẫn đã đóng), mới nhất trước:
+
+```json
+{
+  "id": 12,
+  "projectCode": "DA-001",
+  "name": "Trien khai ERP",
+  "status": "RUNNING",
+  "startDate": "2026-09-01",
+  "expectedEndDate": "2026-12-31",
+  "contractCode": "HD-2026-001",
+  "projectManagerName": "Nguyen Van Dung",
+  "totalTasks": 12,
+  "doneTasks": 8,
+  "progressPercent": 67,
+  "totalMilestones": 3,
+  "doneMilestones": 1,
+  "lateMilestones": 1,
+  "nextMilestoneName": "Ban giao giai doan 1",
+  "nextMilestoneDate": "2026-09-19"
+}
+```
+
+`progressPercent` = số công việc `DONE` / tổng số công việc, làm tròn số nguyên (0 khi chưa có công việc).
+`nextMilestone*` = mốc chưa hoàn thành có ngày kế hoạch sớm nhất (kể cả mốc đang trễ).
+
+#### `GET /portal/projects/{projectId}` (TC-01, TC-02, TC-03)
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "project": { "...": "cùng cấu trúc phần tử của GET /portal/projects" },
+    "workPackages": [
+      { "id": 40, "parentId": null, "name": "Giai doan 1", "totalTasks": 3, "doneTasks": 2,
+        "progressPercent": 67, "acceptanceStatus": "PENDING_CONFIRMATION" },
+      { "id": 41, "parentId": 40, "name": "Thiet ke", "totalTasks": 1, "doneTasks": 1,
+        "progressPercent": 100, "acceptanceStatus": null }
+    ],
+    "milestones": [
+      { "id": 7, "name": "Ban giao giai doan 1", "plannedDate": "2026-09-19", "actualDate": null,
+        "status": "LATE", "daysLate": 5 }
+    ],
+    "deliverables": [
+      { "deliverableId": 7, "workPackageId": 41, "workPackageName": "Thiet ke", "name": "Tai lieu thiet ke",
+        "deliverableType": "DOCUMENT", "latestVersionNo": "1.1", "latestDeliveredDate": "2026-09-22",
+        "latestFileUrl": "/files/tai-lieu-thiet-ke-1.1.pdf", "versionCount": 2 }
+    ]
+  }
+}
+```
+
+- `workPackages`: mọi hạng mục (lồng cấp qua `parentId`); số công việc tính **cả hạng mục con cháu**.
+  `acceptanceStatus` = trạng thái phiếu nghiệm thu của hạng mục (`NCL-12`), `null` nếu chưa lập phiếu.
+- `milestones[].status` ∈ `DONE`, `ON_TRACK`, `LATE` — cùng quy tắc `NCL-05-CN-008`; `daysLate` chỉ có khi `LATE`.
+- `deliverables`: chỉ sản phẩm **đã bàn giao ít nhất một lần**, kèm phiên bản mới nhất.
+- **TC-03 — không hiển thị ghi chú nội bộ:** response **không có** mô tả của hạng mục, công việc, mốc, sản phẩm,
+  ghi chú phiên bản bàn giao, tên từng công việc, giờ công/ngân sách giờ, giá trị hạn mức, rủi ro dự án.
+
+**Response lỗi (CN-002):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải tài khoản cổng (TC-04); dự án của khách hàng khác hoặc không tồn tại (TC-02); tài khoản `VT-09` chưa được gắn khách hàng; tài khoản đã bị khoá. |
+
+### `NCL-13-CN-003` — Khách hàng duyệt phiếu nghiệm thu trên cổng
+
+Cùng luồng trạng thái với `NCL-12-CN-002`, khác ở **kênh** `PORTAL`: khách hàng tự bấm thay vì Quản lý dự án ghi
+nhận. Chỉ phiếu `PENDING_CONFIRMATION` mới xác nhận/từ chối được. Sau mỗi quyết định, Quản lý dự án của dự án nhận
+thông báo trong hệ thống (`type = ACCEPTANCE_DECIDED_ON_PORTAL`, `referenceType = ACCEPTANCE_CERTIFICATE`).
+
+#### `GET /portal/acceptances?projectId=&status=` · `GET /portal/acceptances/{certificateId}`
+
+Danh sách (mới nhất trước) — phần tử **tóm tắt**:
+
+```json
+{
+  "id": 5, "certificateCode": "NT-20260924-A1B2C3", "projectId": 12, "projectCode": "DA-001",
+  "projectName": "Trien khai ERP", "workPackageName": "Giai doan 1", "title": "Nghiem thu giai doan 1",
+  "acceptedValue": 300000000.00, "status": "PENDING_CONFIRMATION", "revisionNo": 1, "awaitingDecision": true,
+  "createdAt": "2026-09-24T10:00:00", "updatedAt": "2026-09-24T10:00:00", "confirmedAt": null
+}
+```
+
+Chi tiết — `data` dùng chung cho `GET` chi tiết, `confirm`, `reject`:
+
+```json
+{
+  "id": 5, "certificateCode": "NT-20260924-A1B2C3", "projectId": 12, "projectCode": "DA-001",
+  "projectName": "Trien khai ERP", "workPackageName": "Giai doan 1", "title": "Nghiem thu giai doan 1",
+  "acceptedValue": 300000000.00, "note": "Theo moc 1 cua hop dong",
+  "status": "ACCEPTED", "revisionNo": 1, "lastRejectionReason": null,
+  "signerName": "Nguyen Thi Nhi", "signedDate": "2026-09-25",
+  "confirmationChannel": "PORTAL", "confirmedAt": "2026-09-25T09:00:00", "awaitingDecision": false,
+  "tasks": ["Phan tich yeu cau", "Lap trinh phan he"],
+  "deliverables": [ { "deliverableName": "Tai lieu thiet ke", "versionNo": "1.1" } ],
+  "decisions": [
+    { "decision": "ACCEPTED", "channel": "PORTAL", "revisionNo": 1, "signerName": "Nguyen Thi Nhi",
+      "signedDate": "2026-09-25", "reason": null, "recordedAt": "2026-09-25T09:00:00" }
+  ],
+  "createdAt": "2026-09-24T10:00:00", "updatedAt": "2026-09-25T09:00:00"
+}
+```
+
+Không có trong response cổng: mốc thanh toán đã gắn, đường dẫn biên bản nội bộ, tài khoản nhân viên đã lập/ghi nhận.
+
+#### `POST /portal/acceptances/{certificateId}/confirm` (TC-01)
+
+Không có body. Kết quả: phiếu → `ACCEPTED`, **khoá nội dung**; `signerName` = họ tên người liên hệ đang đăng nhập,
+`signedDate` = hôm nay, `confirmationChannel` = `PORTAL`, `confirmedAt` = thời điểm bấm (tài khoản cổng được lưu
+làm người xác nhận). Nếu phiếu đã gắn mốc thanh toán đang `PENDING` thì mốc **tự chuyển `READY_TO_INVOICE`**
+(QTN-25) trong cùng giao dịch. `message` = `"Xac nhan nghiem thu thanh cong"`.
+
+#### `POST /portal/acceptances/{certificateId}/reject` (TC-02)
+
+```json
+{ "reason": "Thieu tai lieu huong dan su dung" }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `reason` | string | có | Không được để trống/chỉ khoảng trắng, ≤ 1000 ký tự. |
+
+Kết quả: phiếu → `NEEDS_REVISION`, lý do lưu vào `lastRejectionReason` và `decisions[]`. `message` =
+`"Tu choi nghiem thu thanh cong"`.
+
+**Response lỗi (CN-003):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải tài khoản cổng (TC-03, kể cả Quản lý dự án); phiếu/dự án của khách hàng khác hoặc không tồn tại. |
+| 400 | `VALIDATION_ERROR` | Từ chối mà thiếu `reason` (TC-02) hoặc quá 1000 ký tự; thiếu body. |
+| 400 | `INVALID_STATE` | Phiếu không ở `PENDING_CONFIRMATION` (đã `ACCEPTED`, hoặc đang `NEEDS_REVISION` chờ Quản lý dự án nộp lại). |
+
+### `NCL-13-CN-004` — Khách hàng xem hóa đơn và công nợ
+
+Chỉ hoá đơn **đã phát hành** (`ISSUED`, `PARTIALLY_PAID`, `PAID`, `CANCELLED`) — hoá đơn nháp `DRAFT` không hiển thị
+trên cổng. Số đã trả/còn lại/quá hạn tính cùng cách `NCL-10-CN-003/004`.
+
+#### `GET /portal/invoices?status=&overdueOnly=` (TC-01)
+
+`status` tùy chọn (không nhận `DRAFT`); `overdueOnly=true` chỉ lấy hoá đơn quá hạn. Mảng, mới nhất trước:
+
+```json
+{
+  "id": 9, "invoiceCode": "INV-20260901-A1B2C3", "contractId": 3, "contractCode": "HD-2026-001",
+  "invoiceDate": "2026-08-15", "dueDate": "2026-09-14", "status": "PARTIALLY_PAID",
+  "totalAmount": 100000000.00, "paidAmount": 60000000.00, "remainingAmount": 40000000.00,
+  "overdue": true, "daysOverdue": 10
+}
+```
+
+`remainingAmount` = `totalAmount` − `paidAmount` (0 với hoá đơn `CANCELLED`). `overdue` = còn phải trả **và** đã qua
+`dueDate`.
+
+#### `GET /portal/invoices/summary`
+
+Tổng hợp công nợ (không tính hoá đơn đã huỷ):
+
+```json
+{
+  "customerId": 1001, "customerCode": "KH-100001", "customerName": "Cong ty CP Giai Phap So Viet",
+  "invoiceCount": 3, "totalInvoiced": 180000000.00, "totalPaid": 90000000.00, "totalOutstanding": 90000000.00,
+  "overdueInvoiceCount": 1, "totalOverdue": 40000000.00,
+  "nextDueDate": "2026-10-14", "nextDueAmount": 50000000.00
+}
+```
+
+`nextDueDate` = hạn thanh toán gần nhất (hôm nay trở đi) của hoá đơn còn nợ; `null` nếu không có.
+
+#### `GET /portal/invoices/{invoiceId}` (TC-02)
+
+```json
+{
+  "invoice": { "...": "cùng cấu trúc phần tử của GET /portal/invoices" },
+  "lines": [ { "description": "Dot 1 - Nghiem thu giai doan 1", "amount": 100000000.00 } ],
+  "payments": [ { "paymentDate": "2026-09-20", "amount": 60000000.00, "method": "BANK_TRANSFER" } ]
+}
+```
+
+Không có trong response cổng: ghi chú của kế toán trên hoá đơn/lần thanh toán, tài khoản đã lập/ghi nhận.
+
+**Response lỗi (CN-004):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải tài khoản cổng (TC-03); hoá đơn của khách hàng khác, hoá đơn nháp hoặc không tồn tại (TC-02). |
+| 400 | `VALIDATION_ERROR` | `status` = `DRAFT` hoặc sai giá trị enum; `overdueOnly` không phải `true`/`false`. |
+
+**Ghi chú cho Frontend (Epic NCL-13):**
+- Sau đăng nhập, `roles` chứa `VT-09` → chỉ hiển thị giao diện cổng; **không** gọi API nội bộ nào (đều trả 403).
+  Menu hiện tại cho `VT-09` thấy "Công việc của tôi" và "Cơ hội" — hai màn hình này sẽ nhận 403 từ backend.
+- Nút xác nhận/từ chối chỉ hiện khi `awaitingDecision = true`; từ chối bắt buộc ô lý do.
+- Màn hình quản trị: chọn khách hàng (`GET /customers`) rồi gọi `GET /portal-accounts/candidates?customerId=` —
+  người liên hệ có `portalAccountId = null` thì hiện nút "Cấp tài khoản".
 
 ## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)
 

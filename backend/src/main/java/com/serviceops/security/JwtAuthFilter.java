@@ -37,7 +37,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 String username = jwtProvider.getUsername(token);
                 CustomUserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                if (jwtProvider.getTokenVersion(token) == userDetails.getTokenVersion()) {
+                // NCL-01-CN-002: tai khoan bi khoa (status khac ACTIVE) khong duoc dung tiep token da phat hanh
+                // truoc do — tra 401 ngay lan goi ke tiep, khong doi token het han.
+                if (userDetails.isEnabled()
+                        && jwtProvider.getTokenVersion(token) == userDetails.getTokenVersion()) {
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities());
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
