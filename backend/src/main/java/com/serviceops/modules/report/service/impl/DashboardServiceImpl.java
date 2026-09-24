@@ -8,6 +8,8 @@ import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.identity.employee.entity.Employee;
 import com.serviceops.modules.identity.employee.repository.EmployeeRepository;
+import com.serviceops.modules.identity.employee.service.HolidayCalendar;
+import com.serviceops.modules.identity.employee.service.HolidayService;
 import com.serviceops.modules.invoice.service.InvoiceService;
 import com.serviceops.modules.profitability.service.impl.EntryMarginCalculator;
 import com.serviceops.modules.project.entity.Project;
@@ -18,7 +20,6 @@ import com.serviceops.modules.report.dto.request.ReportPeriodReq;
 import com.serviceops.modules.report.dto.response.DashboardKpiRes;
 import com.serviceops.modules.report.dto.response.DashboardSummaryRes;
 import com.serviceops.modules.report.repository.DashboardQueryRepository;
-import com.serviceops.modules.report.repository.DashboardQueryRepository.ApprovedHours;
 import com.serviceops.modules.report.service.DashboardService;
 import com.serviceops.modules.timesheet.entity.TimeEntry;
 import com.serviceops.modules.timesheet.enums.TimeEntryStatus;
@@ -42,7 +43,8 @@ import java.util.stream.Collectors;
  *
  * <p>Doanh thu và giá vốn của kỳ gộp từ giờ công ĐÃ DUYỆT qua {@link EntryMarginCalculator} — cùng nguồn với
  * báo cáo biên theo khách hàng/nhân sự (NCL-09-CN-005) nên hai nơi không lệch số. Giá vốn chỉ gồm nhân công;
- * chi phí dự án/thuê ngoài chưa tính vào biên của bảng điều khiển.</p>
+ * chi phí dự án/thuê ngoài chưa tính vào biên của bảng điều khiển. Tỷ lệ giờ tính phí chia cho giờ chuẩn của
+ * nhân sự trong kỳ (QTN-23, {@link StandardHoursCalculator}), không chia cho tổng giờ đã ghi.</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -54,6 +56,8 @@ public class DashboardServiceImpl implements DashboardService {
 	private final EmployeeRepository employeeRepository;
 	private final EntryMarginCalculator entryMarginCalculator;
 	private final DashboardQueryRepository dashboardQueryRepository;
+	private final StandardHoursCalculator standardHoursCalculator;
+	private final HolidayService holidayService;
 	private final InvoiceService invoiceService;
 	private final AuditLogService auditLogService;
 	private final SensitiveAccessLogger sensitiveAccessLogger;
@@ -63,11 +67,16 @@ public class DashboardServiceImpl implements DashboardService {
 	@Override
 	@Transactional
 	public DashboardSummaryRes getSummary(ReportPeriodReq period) {
-		LocalDate from = requireFrom(period);
-		LocalDate to = requireTo(period);
+		ReportPeriodReq validPeriod = ReportPeriodReq.requireValid(period);
+		LocalDate from = validPeriod.from();
+		LocalDate to = validPeriod.to();
 
 		ProfitTotals profit = computeProfit(from, to);
-		ApprovedHours hours = dashboardQueryRepository.sumApprovedHours(from, to);
+		BigDecimal billableHours = dashboardQueryRepository.sumApprovedBillableHours(from, to);
+		HolidayCalendar holidays = holidayService.calendarFor(from, to);
+		BigDecimal standardHours = dashboardQueryRepository.findEmployeesEmployedBetween(from, to).stream()
+				.map(employee -> standardHoursCalculator.standardHours(employee, from, to, holidays))
+				.reduce(BigDecimal.ZERO, BigDecimal::add);
 
 		// Quá hạn tính tại cuối kỳ nhưng không vượt hôm nay: kỳ tương lai không có hóa đơn nào "đã quá hạn" sau hôm nay.
 		LocalDate today = LocalDate.now(clock);
@@ -77,7 +86,7 @@ public class DashboardServiceImpl implements DashboardService {
 		DashboardKpiRes kpis = new DashboardKpiRes(
 				profit.revenue(),
 				ratio(profit.revenue().subtract(profit.cost()), profit.revenue()),
-				ratio(hours.billableHours(), hours.totalHours()),
+				ratio(billableHours, standardHours),
 				profit.negativeMarginProjectCount(),
 				overdueInvoiceCount);
 
@@ -153,24 +162,6 @@ public class DashboardServiceImpl implements DashboardService {
 			return BigDecimal.ZERO.setScale(4);
 		}
 		return numerator.divide(denominator, 4, RoundingMode.HALF_UP);
-	}
-
-	private static LocalDate requireFrom(ReportPeriodReq period) {
-		if (period == null || period.from() == null) {
-			throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR, "Ngay bat dau ky bao cao khong duoc de trong");
-		}
-		if (period.to() != null && period.from().isAfter(period.to())) {
-			throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR,
-					"Ngay bat dau khong duoc sau ngay ket thuc ky bao cao");
-		}
-		return period.from();
-	}
-
-	private static LocalDate requireTo(ReportPeriodReq period) {
-		if (period == null || period.to() == null) {
-			throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR, "Ngay ket thuc ky bao cao khong duoc de trong");
-		}
-		return period.to();
 	}
 
 	private record ProfitTotals(BigDecimal revenue, BigDecimal cost, int negativeMarginProjectCount,
