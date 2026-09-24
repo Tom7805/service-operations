@@ -4,6 +4,9 @@ import com.serviceops.modules.project.enums.ProjectStatus;
 import com.serviceops.modules.report.dto.response.ProjectPerformanceReportRes;
 import com.serviceops.modules.report.dto.response.ProjectPerformanceRes;
 
+import java.time.LocalDate;
+import java.util.List;
+
 public interface ProjectPerformanceReportService {
 
 	/**
@@ -19,4 +22,11 @@ public interface ProjectPerformanceReportService {
 	 * @throws org.springframework.security.access.AccessDeniedException khi dự án không do người xem quản lý
 	 */
 	ProjectPerformanceRes getProjectReport(Long projectId);
+
+	/**
+	 * NCL-11-CN-004: các dòng báo cáo của dự án do người đang đăng nhập quản lý và hoạt động trong kỳ
+	 * ({@code startDate <= to} và {@code expectedEndDate} trống hoặc {@code >= from}), cùng thứ tự với
+	 * {@link #getReport}. KHÔNG ghi nhật ký xem: bên xuất tệp tự ghi nhật ký xuất.
+	 */
+	List<ProjectPerformanceRes> getRowsForPeriod(LocalDate from, LocalDate to);
 }

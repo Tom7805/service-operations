@@ -68,6 +68,7 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'PROFIT_FORECAST',
       'PROJECT_MARGIN',
       'MARGIN_ALERT_THRESHOLD',
+      'REPORT_EXPORT',
     ]);
   });
 

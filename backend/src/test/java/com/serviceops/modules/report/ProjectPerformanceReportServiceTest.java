@@ -299,6 +299,31 @@ class ProjectPerformanceReportServiceTest {
 		verify(entryMarginCalculator, never()).resolve(any(), any(), anyLong());
 	}
 
+	/** NCL-11-CN-004: chỉ lấy dự án hoạt động trong kỳ và không ghi nhật ký xem (bên xuất tệp tự ghi). */
+	@Test
+	void rowsForPeriod_keepsOnlyProjectsActiveInPeriodWithoutViewLog() {
+		Project inside = project(9L, "DA-09", 508L, ProjectStatus.RUNNING);
+		inside.setStartDate(LocalDate.of(2026, 6, 1));
+		inside.setExpectedEndDate(LocalDate.of(2026, 12, 31));
+		Project endedBefore = project(10L, "DA-10", 509L, ProjectStatus.CLOSED);
+		endedBefore.setStartDate(LocalDate.of(2026, 1, 1));
+		endedBefore.setExpectedEndDate(LocalDate.of(2026, 6, 30));
+		Project startsAfter = project(11L, "DA-11", 510L, ProjectStatus.RUNNING);
+		startsAfter.setStartDate(LocalDate.of(2026, 10, 1));
+		stubManagerProjects(inside, endedBefore, startsAfter);
+		when(contractRepository.findAllById(List.of(508L)))
+				.thenReturn(List.of(contract(508L, null, ContractType.TIME_AND_MATERIAL, "10.00")));
+		when(quoteRepository.findAllById(List.of())).thenReturn(List.of());
+		when(taskRepository.findByProjectIdOrderByIdAsc(9L)).thenReturn(List.of());
+		stubNoExpenses(9L);
+
+		List<ProjectPerformanceRes> rows = service.getRowsForPeriod(LocalDate.of(2026, 7, 1),
+				LocalDate.of(2026, 9, 30));
+
+		assertThat(rows).extracting(ProjectPerformanceRes::projectCode).containsExactly("DA-09");
+		verifyNoInteractions(auditLogService, sensitiveAccessLogger);
+	}
+
 	private void stubManagerProjects(Project... projects) {
 		when(currentUserScopeProvider.currentUserId()).thenReturn(MANAGER_ID);
 		when(projectRepository.findByProjectManagerId(MANAGER_ID)).thenReturn(List.of(projects));
