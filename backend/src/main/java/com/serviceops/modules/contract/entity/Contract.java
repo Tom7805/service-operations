@@ -47,6 +47,13 @@ public class Contract extends BaseEntity {
 	@Column(name = "customer_id", nullable = false)
 	private Long customerId;
 
+	/**
+	 * NCL-02-CN-006 TC-02: khach hang goc truoc khi ho so bi gop vao ho so khac — null neu ban ghi chua tung
+	 * bi chuyen. Chi ghi mot lan (lan gop dau tien), cac lan gop sau giu nguyen de truy duoc nguon goc.
+	 */
+	@Column(name = "original_customer_id")
+	private Long originalCustomerId;
+
 	/** Bao gia dung san hop dong, de truy nguoc ve phia ban hang. Khong bat buoc. */
 	@Column(name = "quote_id")
 	private Long quoteId;

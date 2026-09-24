@@ -42,6 +42,15 @@ public class AccessDeniedAuditRecorder {
     private static final List<Rule> RULES = new ArrayList<>();
 
     static {
+        // Epic NCL-13 (cổng khách hàng) đứng trước mọi quy tắc khác: "/portal/acceptances/{id}/confirm"
+        // chứa "/acceptances/", "/portal/invoices" chứa "/invoices", "/portal/projects/..." chứa "/projects"...
+        // "/portal-accounts" (quản trị viên cấp tài khoản) không bắt đầu bằng "/portal/" nên tách riêng.
+        RULES.add(rule("/portal-accounts", new Feature(AuditTargetType.PORTAL, "Cấp tài khoản cổng khách hàng")));
+        RULES.add(rule("/portal/acceptances", new Feature(AuditTargetType.PORTAL, "Duyệt phiếu nghiệm thu trên cổng")));
+        RULES.add(rule("/portal/invoices", new Feature(AuditTargetType.PORTAL, "Xem hóa đơn và công nợ trên cổng")));
+        RULES.add(rule("/portal/projects", new Feature(AuditTargetType.PORTAL, "Cổng theo dõi dự án")));
+        RULES.add(rule(uri -> uri.contains("/portal/") || uri.endsWith("/portal"),
+                new Feature(AuditTargetType.PORTAL, "Cổng khách hàng")));
         // Epic NCL-12 đứng đầu danh sách: "/acceptances/{id}/reject" chứa "/reject" (từ chối bảng chấm công),
         // "/contracts/{id}/milestone-acceptances" chứa "/contracts", "/projects/{id}/work-packages/..." v.v.
         RULES.add(rule(uri -> uri.contains("/acceptances/") && (uri.endsWith("/confirm") || uri.endsWith("/reject")),

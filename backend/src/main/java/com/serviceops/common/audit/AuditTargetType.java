@@ -21,5 +21,8 @@ public enum AuditTargetType {
 	INVOICE,
 
 	/** Phieu nghiem thu va san pham ban giao (Epic NCL-12). */
-	ACCEPTANCE
+	ACCEPTANCE,
+
+	/** Tai khoan cong khach hang va cac luot khach hang tra cuu tren cong (Epic NCL-13). */
+	PORTAL
 }

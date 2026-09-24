@@ -13,4 +13,16 @@ public interface AcceptanceConfirmationService {
 	AcceptanceDetailRes confirm(Long certificateId, AcceptanceConfirmReq request);
 
 	AcceptanceDetailRes reject(Long certificateId, AcceptanceRejectReq request);
+
+	/**
+	 * NCL-13-CN-003: khach hang tu xac nhan phieu tren cong (kenh PORTAL) — cung quy tac voi {@link #confirm}:
+	 * chi phieu PENDING_CONFIRMATION, khoa noi dung, mo moc thanh toan da gan (QTN-25). Ngay ky = hom nay,
+	 * nguoi ky = nguoi lien he dang dang nhap cong, khong co bien ban giay.
+	 *
+	 * <p>Khong kiem tra quyen: noi goi (cong khach hang) PHAI chan pham vi khach hang truoc (QTN-26).</p>
+	 */
+	void confirmOnPortal(Long certificateId, String signerName);
+
+	/** NCL-13-CN-003: khach hang tu choi phieu tren cong kem ly do — nhu {@link #reject}, kenh PORTAL. */
+	void rejectOnPortal(Long certificateId, String reason, String signerName);
 }

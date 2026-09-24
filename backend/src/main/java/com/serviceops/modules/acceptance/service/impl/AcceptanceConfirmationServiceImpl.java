@@ -69,27 +69,8 @@ public class AcceptanceConfirmationServiceImpl implements AcceptanceConfirmation
 					"Ngay ky bien ban khong duoc truoc ngay lap phieu (" + certificate.getCreatedAt().toLocalDate() + ")");
 		}
 
-		LocalDateTime now = LocalDateTime.now(clock);
-		String username = currentUsername();
-		certificate.setStatus(AcceptanceStatus.ACCEPTED);
-		certificate.setSignerName(request.signerName().trim());
-		certificate.setSignedDate(request.signedDate());
-		certificate.setMinutesUrl(request.minutesUrl().trim());
-		certificate.setConfirmationChannel(ConfirmationChannel.INTERNAL);
-		certificate.setConfirmedBy(username);
-		certificate.setConfirmedAt(now);
-		certificate.setUpdatedAt(now);
-		certificate = certificateRepository.saveAndFlush(certificate);
-
-		saveDecision(certificate, AcceptanceDecisionType.ACCEPTED, certificate.getSignerName(),
-				certificate.getSignedDate(), certificate.getMinutesUrl(), null, username, now);
-
-		String milestoneNote = openLinkedMilestone(certificate);
-		auditLogService.record("Xác nhận phiếu nghiệm thu", AuditTargetType.ACCEPTANCE, certificate.getId(),
-				"Phiếu nghiệm thu " + certificate.getCertificateCode(),
-				"Khach hang (" + certificate.getSignerName() + ") xac nhan phieu " + certificate.getCertificateCode()
-						+ " lan " + certificate.getRevisionNo() + ", ky ngay " + certificate.getSignedDate()
-						+ ", bien ban " + certificate.getMinutesUrl() + milestoneNote);
+		certificate = applyConfirmation(certificate, request.signerName().trim(), request.signedDate(),
+				request.minutesUrl().trim(), ConfirmationChannel.INTERNAL);
 		return assembler.toDetail(certificate, project);
 	}
 
@@ -99,22 +80,74 @@ public class AcceptanceConfirmationServiceImpl implements AcceptanceConfirmation
 		Project project = accessGuard.requireManagedProject(certificate.getProjectId());
 		requireStatusPending(certificate);
 
+		certificate = applyRejection(certificate, request.reason().trim(), blankToNull(request.signerName()),
+				blankToNull(request.minutesUrl()), ConfirmationChannel.INTERNAL);
+		return assembler.toDetail(certificate, project);
+	}
+
+	@Override
+	public void confirmOnPortal(Long certificateId, String signerName) {
+		AcceptanceCertificate certificate = requireLocked(certificateId);
+		requireStatusPending(certificate);
+		applyConfirmation(certificate, blankToNull(signerName), LocalDate.now(clock), null, ConfirmationChannel.PORTAL);
+	}
+
+	@Override
+	public void rejectOnPortal(Long certificateId, String reason, String signerName) {
+		AcceptanceCertificate certificate = requireLocked(certificateId);
+		requireStatusPending(certificate);
+		applyRejection(certificate, reason.trim(), blankToNull(signerName), null, ConfirmationChannel.PORTAL);
+	}
+
+	/** TC-01 (ca hai kenh): khoa noi dung phieu, luu quyet dinh, mo moc thanh toan da gan va ghi nhat ky. */
+	private AcceptanceCertificate applyConfirmation(AcceptanceCertificate certificate, String signerName,
+			LocalDate signedDate, String minutesUrl, ConfirmationChannel channel) {
 		LocalDateTime now = LocalDateTime.now(clock);
 		String username = currentUsername();
-		String reason = request.reason().trim();
+		certificate.setStatus(AcceptanceStatus.ACCEPTED);
+		certificate.setSignerName(signerName);
+		certificate.setSignedDate(signedDate);
+		certificate.setMinutesUrl(minutesUrl);
+		certificate.setConfirmationChannel(channel);
+		certificate.setConfirmedBy(username);
+		certificate.setConfirmedAt(now);
+		certificate.setUpdatedAt(now);
+		certificate = certificateRepository.saveAndFlush(certificate);
+
+		saveDecision(certificate, AcceptanceDecisionType.ACCEPTED, channel, certificate.getSignerName(),
+				certificate.getSignedDate(), certificate.getMinutesUrl(), null, username, now);
+
+		String milestoneNote = openLinkedMilestone(certificate);
+		String evidence = channel == ConfirmationChannel.PORTAL
+				? ", xac nhan truc tiep tren cong khach hang"
+				: ", bien ban " + certificate.getMinutesUrl();
+		auditLogService.record("Xác nhận phiếu nghiệm thu", AuditTargetType.ACCEPTANCE, certificate.getId(),
+				"Phiếu nghiệm thu " + certificate.getCertificateCode(),
+				"Khach hang (" + certificate.getSignerName() + ") xac nhan phieu " + certificate.getCertificateCode()
+						+ " lan " + certificate.getRevisionNo() + ", ky ngay " + certificate.getSignedDate()
+						+ evidence + milestoneNote);
+		return certificate;
+	}
+
+	/** TC-02 (ca hai kenh): phieu ve NEEDS_REVISION kem ly do de Quan ly du an sua va nop lai. */
+	private AcceptanceCertificate applyRejection(AcceptanceCertificate certificate, String reason, String signerName,
+			String minutesUrl, ConfirmationChannel channel) {
+		LocalDateTime now = LocalDateTime.now(clock);
+		String username = currentUsername();
 		certificate.setStatus(AcceptanceStatus.NEEDS_REVISION);
 		certificate.setLastRejectionReason(reason);
 		certificate.setUpdatedAt(now);
 		certificate = certificateRepository.save(certificate);
 
-		saveDecision(certificate, AcceptanceDecisionType.REJECTED, blankToNull(request.signerName()), null,
-				blankToNull(request.minutesUrl()), reason, username, now);
+		saveDecision(certificate, AcceptanceDecisionType.REJECTED, channel, signerName, null, minutesUrl, reason,
+				username, now);
 
 		auditLogService.record("Từ chối phiếu nghiệm thu", AuditTargetType.ACCEPTANCE, certificate.getId(),
 				"Phiếu nghiệm thu " + certificate.getCertificateCode(),
 				"Khach hang tu choi phieu " + certificate.getCertificateCode() + " lan " + certificate.getRevisionNo()
+						+ (channel == ConfirmationChannel.PORTAL ? " tren cong khach hang" : "")
 						+ ", ly do: " + reason);
-		return assembler.toDetail(certificate, project);
+		return certificate;
 	}
 
 	/** QTN-25: phieu vua ACCEPTED thi mo moc thanh toan da gan neu moc con cho nghiem thu. */
@@ -132,12 +165,13 @@ public class AcceptanceConfirmationServiceImpl implements AcceptanceConfirmation
 		return "; mo moc thanh toan \"" + milestone.getName() + "\" sang READY_TO_INVOICE";
 	}
 
-	private void saveDecision(AcceptanceCertificate certificate, AcceptanceDecisionType type, String signerName,
-			LocalDate signedDate, String minutesUrl, String reason, String username, LocalDateTime now) {
+	private void saveDecision(AcceptanceCertificate certificate, AcceptanceDecisionType type,
+			ConfirmationChannel channel, String signerName, LocalDate signedDate, String minutesUrl, String reason,
+			String username, LocalDateTime now) {
 		AcceptanceDecision decision = new AcceptanceDecision();
 		decision.setCertificateId(certificate.getId());
 		decision.setDecision(type);
-		decision.setChannel(ConfirmationChannel.INTERNAL);
+		decision.setChannel(channel);
 		decision.setRevisionNo(certificate.getRevisionNo());
 		decision.setSignerName(signerName);
 		decision.setSignedDate(signedDate);
