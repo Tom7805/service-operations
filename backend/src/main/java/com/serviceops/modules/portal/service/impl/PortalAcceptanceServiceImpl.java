@@ -79,10 +79,14 @@ public class PortalAcceptanceServiceImpl implements PortalAcceptanceService {
 		Map<Long, String> packageNames = workPackageRepository.findAllById(certificates.stream()
 						.map(AcceptanceCertificate::getWorkPackageId).distinct().toList()).stream()
 				.collect(Collectors.toMap(WorkPackage::getId, WorkPackage::getName));
-		return certificates.stream()
+		List<PortalAcceptanceSummaryRes> result = certificates.stream()
 				.map(certificate -> mapper.toPortalAcceptanceSummary(certificate,
 						projectsById.get(certificate.getProjectId()), packageNames.get(certificate.getWorkPackageId())))
 				.toList();
+		auditLogService.record("Khách hàng xem danh sách phiếu nghiệm thu", AuditTargetType.PORTAL, scope.accountId(),
+				"Cổng khách hàng " + scope.username(),
+				"Khach hang " + scope.username() + " xem danh sach " + result.size() + " phieu nghiem thu tren cong");
+		return result;
 	}
 
 	@Override

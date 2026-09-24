@@ -24,6 +24,7 @@ import com.serviceops.modules.project.repository.ProjectTemplateRepository;
 import com.serviceops.modules.project.repository.TaskRepository;
 import com.serviceops.modules.project.repository.WorkPackageRepository;
 import com.serviceops.modules.project.service.impl.ProjectTemplateServiceImpl;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -91,6 +92,12 @@ class ProjectTemplateServiceImplTest {
 		service = new ProjectTemplateServiceImpl(templateRepository, templateItemRepository, contractRepository,
 				userRepository, projectRepository, workPackageRepository, taskRepository, auditLogger);
 		SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken("pm01", "n/a"));
+	}
+
+	/** SecurityContextHolder la ThreadLocal: khong don thi nguoi dung o day ro sang test khac cung JVM. */
+	@AfterEach
+	void clearSecurityContext() {
+		SecurityContextHolder.clearContext();
 	}
 
 	@Test
