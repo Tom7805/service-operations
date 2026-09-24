@@ -5801,6 +5801,109 @@ Ví dụ lỗi TC-02:
 thoại chọn kỳ (mặc định từ đầu tháng tới hôm nay). Form kiểm tra `from ≤ to` trước khi gửi, sau đó tải tệp và báo số
 dòng đã xuất.
 
+### `NCL-11-CN-005` — Báo cáo doanh thu theo tháng
+
+Doanh thu ghi nhận **từng tháng** trong kỳ, tách theo **loại hợp đồng** và so với **cùng tháng năm trước**.
+
+**Quyền**: `VT-01` (Ban giám đốc) và `VT-05` (Kế toán). Vai trò khác nhận `403 FORBIDDEN` và bị ghi Nhật ký hệ thống
+lần từ chối với nhãn "Báo cáo doanh thu theo tháng" (TC-03). Mỗi lượt xem thành công ghi một dòng Nhật ký hệ thống
+"Xem báo cáo doanh thu theo tháng" (TC-04). Báo cáo chỉ có doanh thu, không có giá vốn, nên không che cột nào và không
+ghi Nhật ký truy cập dữ liệu nhạy cảm.
+
+**Cách tính**: doanh thu một tháng = tổng các dòng giờ công **đã duyệt, tính phí** có `workDate` trong tháng × đơn giá
+bán áp dụng tại ngày đó (đơn giá riêng hợp đồng ưu tiên hơn bảng giá chung, nhân hệ số loại hình công việc — QTN-15,
+QTN-16). Dòng đảo/sửa mang dấu nên cộng thẳng. Đây là **cùng nguồn** với chỉ số doanh thu của bảng điều khiển
+(`NCL-11-CN-001`): cùng một tháng xem ở hai nơi ra cùng số. Loại hợp đồng lấy từ hợp đồng của dự án chứa dòng giờ công.
+
+> **Giới hạn với hợp đồng trọn gói**: `NCL-09-CN-002` ghi nhận doanh thu `FIXED_PRICE` theo tỷ lệ công việc hoàn
+> thành, nhưng công việc không lưu ngày hoàn thành nên con số đó chỉ có lũy kế tới hiện tại, không chia được theo
+> tháng. Báo cáo này vì vậy quy doanh thu trọn gói theo tháng từ giờ công tính phí × đơn giá. Khi kỳ có doanh thu
+> trọn gói, `warnings` nêu rõ điều này.
+
+#### `GET /reports/revenue/monthly`
+
+**Query params:**
+
+| Tham số | Bắt buộc | Ghi chú |
+|---|---|---|
+| `fromMonth` | Có | Tháng đầu kỳ, dạng `yyyy-MM`, gồm cả tháng này. |
+| `toMonth` | Có | Tháng cuối kỳ, dạng `yyyy-MM`, gồm cả tháng này. Không được trước `fromMonth`. Tối đa **36 tháng** mỗi lần xem. |
+
+**Response thành công — `200 OK`** (ví dụ TC-01, rút gọn còn 2 tháng):
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "fromMonth": "2026-01",
+    "toMonth": "2026-02",
+    "hasData": true,
+    "totalRevenue": 23000000.00,
+    "totalByContractType": {
+      "TIME_AND_MATERIAL": 18000000.00,
+      "FIXED_PRICE": 5000000.00,
+      "MAINTENANCE": 0.00,
+      "MILESTONE": 0.00
+    },
+    "previousYearTotalRevenue": 12000000.00,
+    "totalChangePercent": 91.67,
+    "months": [
+      {
+        "month": "2026-01",
+        "revenue": 15000000.00,
+        "byContractType": {
+          "TIME_AND_MATERIAL": 10000000.00,
+          "FIXED_PRICE": 5000000.00,
+          "MAINTENANCE": 0.00,
+          "MILESTONE": 0.00
+        },
+        "previousYearRevenue": 12000000.00,
+        "changePercent": 25.00
+      },
+      {
+        "month": "2026-02",
+        "revenue": 8000000.00,
+        "byContractType": {
+          "TIME_AND_MATERIAL": 8000000.00,
+          "FIXED_PRICE": 0.00,
+          "MAINTENANCE": 0.00,
+          "MILESTONE": 0.00
+        },
+        "previousYearRevenue": 0.00,
+        "changePercent": null
+      }
+    ],
+    "missingRevenueEntryCount": 0,
+    "warnings": [
+      "Doanh thu hợp đồng trọn gói theo tháng quy từ giờ công tính phí × đơn giá; số lũy kế theo tỷ lệ hoàn thành xem ở màn hình doanh thu ghi nhận của từng dự án."
+    ]
+  }
+}
+```
+
+| Trường | Ý nghĩa |
+|---|---|
+| `hasData` | `false` khi kỳ không có dòng giờ công đã duyệt, tính phí nào (TC-02). Khi đó vẫn trả `200`: `months` vẫn đủ các tháng với giá trị `0`, và giao diện hiện "Không có dữ liệu doanh thu trong kỳ". |
+| `months` | Luôn đủ **mọi** tháng từ `fromMonth` tới `toMonth` theo thứ tự tăng dần, kể cả tháng bằng 0. Kỳ 12 tháng cho đúng 12 phần tử. |
+| `byContractType` / `totalByContractType` | Luôn đủ 4 khóa `TIME_AND_MATERIAL`, `FIXED_PRICE`, `MAINTENANCE`, `MILESTONE` (loại không có doanh thu là `0.00`). |
+| `previousYearRevenue` / `previousYearTotalRevenue` | Doanh thu của cùng tháng (cùng kỳ) năm trước, tính cùng cách. |
+| `changePercent` / `totalChangePercent` | `(hiện tại − năm trước) ÷ năm trước × 100`, số phần trăm 2 chữ số (`25.00` = 25%). `null` khi năm trước bằng 0. |
+| `missingRevenueEntryCount` | Số dòng giờ công tính phí thiếu đơn giá bán hoặc thiếu hồ sơ nhân sự. Các dòng này bị loại khỏi doanh thu thay vì làm hỏng cả báo cáo; khi `> 0` thì `warnings` có cảnh báo doanh thu thấp hơn thực tế. |
+| `warnings` | Diễn giải sẵn bằng tiếng Việt, hiển thị nguyên văn được. |
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | — | Chưa đăng nhập. |
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-01` hoặc `VT-05` (TC-03). Có ghi nhật ký lần từ chối. |
+| 400 | `VALIDATION_ERROR` | Thiếu `fromMonth`/`toMonth`, sai định dạng `yyyy-MM`, `fromMonth` sau `toMonth`, hoặc kỳ dài hơn 36 tháng. |
+
+**Giao diện**: thẻ "Doanh thu theo tháng" trong trung tâm Báo cáo (chỉ hiện với `VT-01`/`VT-05`). Trang gồm bộ lọc
+tháng (mặc định từ tháng 1 tới tháng hiện tại của năm nay), ba ô tổng (kỳ này, cùng kỳ năm trước, % thay đổi), biểu
+đồ cột chồng theo loại hợp đồng với vạch ngang đánh dấu doanh thu cùng tháng năm trước (cùng một trục tiền), chi tiết
+khi rê chuột, và bảng số liệu đầy đủ.
+
 ---
 
 ## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)

@@ -30,6 +30,7 @@ export type Tab =
   | 'REPORTS'
   | 'PIPELINE_REPORT'
   | 'REPORT_EXPORT'
+  | 'REVENUE_REPORT'
   | 'MY_WORK'
   | 'TIMESHEET_APPROVAL'
   | 'TIMESHEET_REJECT'
@@ -113,7 +114,12 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
     viewOnlyHint: 'Cơ hội bán hàng — chế độ chỉ xem, cần vai trò Nhân viên kinh doanh để tạo hoặc chuyển giai đoạn',
   },
   { tab: 'REVENUE_FORECAST', icon: ICONS.chart, label: 'Dự báo doanh thu', requires: ['VT-01', 'VT-04'] },
-  { tab: 'REPORTS', icon: ICONS.document, label: 'Báo cáo', matches: ['PIPELINE_REPORT'], requires: ['VT-01', 'VT-04'] },
+  {
+    tab: 'REPORTS', icon: ICONS.document, label: 'Báo cáo', matches: ['PIPELINE_REPORT', 'REVENUE_REPORT'],
+    requires: ['VT-01', 'VT-04', 'VT-05'],
+    // Trung tâm báo cáo: mỗi thẻ báo cáo tự lọc theo vai trò (đường ống: VT-01/VT-04; doanh thu theo
+    // tháng NCL-11-CN-005: VT-01/VT-05), trang báo cáo cũng tự chặn vai trò không đúng.
+  },
   { tab: 'CUSTOMER_MERGE', icon: ICONS.merge, label: 'Gộp KH trùng', requires: ['VT-07'] },
   {
     tab: 'BILL_RATES', icon: ICONS.money, label: 'Bảng đơn giá', requires: ['VT-05', 'VT-07'],

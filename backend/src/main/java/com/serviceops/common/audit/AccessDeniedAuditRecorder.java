@@ -63,7 +63,8 @@ public class AccessDeniedAuditRecorder {
         RULES.add(rule("/reports/margin/by-employee", new Feature(AuditTargetType.GENERAL, "Báo cáo biên lợi nhuận theo nhân sự")));
         RULES.add(rule("/reports/dashboard", new Feature(AuditTargetType.GENERAL, "Bảng điều khiển vận hành")));
         RULES.add(rule("/reports/utilization", new Feature(AuditTargetType.GENERAL, "Báo cáo tỷ lệ giờ tính phí")));
-        RULES.add(rule("/reports/export", new Feature(AuditTargetType.GENERAL, "Xuất báo cáo ra tệp")));
+        RULES.add(rule("/reports/revenue", new Feature(AuditTargetType.GENERAL, "Báo cáo doanh thu theo tháng")));
+        RULES.add(rule("/reports/export",new Feature(AuditTargetType.GENERAL, "Xuất báo cáo ra tệp")));
         RULES.add(rule("/reports/project-performance",new Feature(AuditTargetType.GENERAL, "Báo cáo hiệu quả theo dự án")));
         // "/contracts/{id}/milestones..." (NCL-04-CN-003, mốc thanh toán hợp đồng) và
         // "/projects/{id}/milestones..." (NCL-05-CN-008, mốc tiến độ dự án) đều chứa chuỗi con
