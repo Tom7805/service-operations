@@ -100,6 +100,7 @@ public class AccessDeniedAuditRecorder {
         RULES.add(rule("/roles", new Feature(AuditTargetType.ROLE_SCOPE, "Phân quyền")));
         RULES.add(rule("/users", new Feature(AuditTargetType.USER, "Quản lý tài khoản")));
         RULES.add(rule("/rates", new Feature(AuditTargetType.MASKING, "Chi phí giờ công nội bộ")));
+        RULES.add(rule("/holidays", new Feature(AuditTargetType.GENERAL, "Lịch ngày nghỉ lễ")));
         RULES.add(rule("/employees", new Feature(AuditTargetType.USER, "Quản lý nhân sự")));
         RULES.add(rule("/departments", new Feature(AuditTargetType.DEPARTMENT, "Quản lý tổ chức")));
         RULES.add(rule("/auth/two-factor", new Feature(AuditTargetType.TWO_FACTOR, "Xác thực hai bước")));
