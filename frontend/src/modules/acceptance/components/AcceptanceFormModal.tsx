@@ -381,7 +381,9 @@ export default function AcceptanceFormModal({
                             <div>
                               <h4 className="acceptance-preview__title">Sản phẩm bàn giao</h4>
                               {readiness.deliverables.length === 0 ? (
-                                <p className="field-hint">Hạng mục chưa khai báo sản phẩm bàn giao.</p>
+                                <p className="field-hint">
+                                  Hạng mục chưa khai báo sản phẩm bàn giao (khai báo ở mục "Sản phẩm bàn giao").
+                                </p>
                               ) : (
                                 <ul className="acceptance-task-list">
                                   {readiness.deliverables.map((d) => (

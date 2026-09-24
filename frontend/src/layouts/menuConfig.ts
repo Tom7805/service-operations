@@ -18,6 +18,7 @@ export type Tab =
   | 'INVOICE_DETAIL'
   | 'ACCEPTANCES'
   | 'ACCEPTANCE_DETAIL'
+  | 'DELIVERABLES'
   | 'DEPARTMENTS'
   | 'PERMISSIONS'
   | 'USERS'
@@ -157,6 +158,11 @@ export const BUSINESS_NAV_ITEMS: NavItem[] = [
     requires: ['VT-02'],
     // NCL-12-CN-001: Quản lý dự án chọn dự án mình phụ trách, lập phiếu nghiệm thu cho hạng mục đã hoàn
     // thành toàn bộ công việc (QTN-24) và xem các phiếu đã lập. Backend chỉ mở cho VT-02 là PM của dự án.
+  },
+  {
+    tab: 'DELIVERABLES', icon: ICONS.document, label: 'Sản phẩm bàn giao', requires: ['VT-02'],
+    // NCL-12-CN-004: PM khai báo sản phẩm bàn giao theo hạng mục và ghi nhận từng phiên bản đã giao cho
+    // khách hàng (ngày, người nhận); phiên bản mới nhất là nội dung đưa vào phiếu nghiệm thu.
   },
   {
     tab: 'EXPENSE_APPROVAL', icon: ICONS.money, label: 'Duyệt chi phí dự án', requires: ['VT-05'],

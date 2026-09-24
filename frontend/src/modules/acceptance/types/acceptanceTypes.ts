@@ -211,3 +211,63 @@ export const DECISION_META: Record<AcceptanceDecisionType, { label: string; badg
   ACCEPTED: { label: 'Khách hàng xác nhận', badge: 'badge--green' },
   REJECTED: { label: 'Khách hàng từ chối', badge: 'badge--red' },
 };
+
+/* ===== NCL-12-CN-004 — Sản phẩm bàn giao và phiên bản ===== */
+
+export type DeliverableType = 'DOCUMENT' | 'SOURCE_CODE' | 'SOFTWARE_BUILD' | 'DESIGN' | 'REPORT' | 'OTHER';
+
+export const DELIVERABLE_TYPE_LABEL: Record<DeliverableType, string> = {
+  DOCUMENT: 'Tài liệu',
+  SOURCE_CODE: 'Mã nguồn',
+  SOFTWARE_BUILD: 'Bản cài đặt phần mềm',
+  DESIGN: 'Thiết kế',
+  REPORT: 'Báo cáo',
+  OTHER: 'Khác',
+};
+
+/** POST /projects/{projectId}/deliverables */
+export interface DeliverableCreateReq {
+  workPackageId: number;
+  name: string;
+  deliverableType: DeliverableType;
+  description?: string | null;
+}
+
+/** POST /deliverables/{deliverableId}/versions — mỗi lần bàn giao tạo một phiên bản mới, bản cũ giữ nguyên. */
+export interface DeliverableVersionReq {
+  versionNo: string;
+  deliveredDate: string; // YYYY-MM-DD
+  receiverName: string;
+  fileUrl?: string | null;
+  note?: string | null;
+}
+
+export interface DeliverableVersionRes {
+  id: number;
+  deliverableId: number;
+  versionNo: string;
+  deliveredDate: string;
+  receiverName: string;
+  fileUrl: string | null;
+  note: string | null;
+  /** Bản mới nhất = ngày bàn giao lớn nhất (cùng ngày thì bản ghi sau). Bàn giao bù ngày cũ → false. */
+  latest: boolean;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+export interface DeliverableRes {
+  id: number;
+  projectId: number;
+  workPackageId: number;
+  workPackageName: string;
+  name: string;
+  deliverableType: DeliverableType;
+  description: string | null;
+  versionCount: number;
+  latestVersion: DeliverableVersionRes | null;
+  /** Toàn bộ phiên bản, mới nhất trước. */
+  versions: DeliverableVersionRes[];
+  createdBy: string | null;
+  createdAt: string;
+}

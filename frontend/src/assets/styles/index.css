@@ -3606,3 +3606,7 @@ body { background: var(--canvas); }
 .milestone-link-option--disabled:hover { border-color: var(--line); }
 .milestone-link-option__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .milestone-link-option__title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* Sản phẩm bàn giao và phiên bản (NCL-12-CN-004) */
+.deliverable-history-row > td { background: var(--surface-muted, #F9F9F8); padding: 12px 16px 16px 32px; }
+.deliverable-version-table { background: var(--surface, #ffffff); border: 1px solid var(--line); border-radius: var(--radius-md); }
+.deliverable-version-row--new > td { background: var(--pale-green-bg); }

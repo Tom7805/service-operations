@@ -10,6 +10,9 @@ import {
   validateAcceptanceForm,
   validateConfirmForm,
   validateRejectForm,
+  validateVersionForm,
+  suggestNextVersionNo,
+  validateDeliverableForm,
 } from '../validators/acceptanceValidators';
 
 function task(id: number, status: TaskRes['status'], workPackageId = 1): TaskRes {
@@ -158,5 +161,38 @@ describe('milestoneEligibility (NCL-12-CN-003, QTN-25)', () => {
     expect(milestoneStatusAfterLink('READY_TO_INVOICE', false)).toBe('PENDING');
     expect(milestoneStatusAfterLink('PENDING', false)).toBe('PENDING');
     expect(milestoneStatusAfterLink('INVOICED', true)).toBe('INVOICED');
+  });
+});
+
+describe('validateVersionForm / suggestNextVersionNo (NCL-12-CN-004)', () => {
+  const ok = { versionNo: '1.1', deliveredDate: '2026-09-25', receiverName: 'Le Van C', fileUrl: '', note: '' };
+
+  it('hợp lệ khi đủ số phiên bản, ngày bàn giao không ở tương lai và người nhận', () => {
+    expect(validateVersionForm(ok, ['1.0'], '2026-09-25').isValid).toBe(true);
+  });
+
+  it('TC-02: trùng số phiên bản không phân biệt hoa thường, bỏ khoảng trắng', () => {
+    expect(validateVersionForm({ ...ok, versionNo: ' V1.0 ' }, ['v1.0'], '2026-09-25').errors.versionNo).toMatch(/đã tồn tại/);
+  });
+
+  it('chặn thiếu trường, ngày tương lai', () => {
+    const { errors } = validateVersionForm({ ...ok, versionNo: '', receiverName: ' ', deliveredDate: '2026-09-26' }, [], '2026-09-25');
+    expect(errors.versionNo).toBeTruthy();
+    expect(errors.receiverName).toBeTruthy();
+    expect(errors.deliveredDate).toMatch(/tương lai/);
+  });
+
+  it('gợi ý số phiên bản kế tiếp, bỏ qua số đã dùng', () => {
+    expect(suggestNextVersionNo(null, [])).toBe('1.0');
+    expect(suggestNextVersionNo('1.1', ['1.0', '1.1'])).toBe('1.2');
+    expect(suggestNextVersionNo('v2', ['v2', 'v3'])).toBe('v4');
+    expect(suggestNextVersionNo('final', ['final'])).toBe('');
+  });
+
+  it('khai báo sản phẩm: bắt buộc hạng mục, tên, loại; trùng tên trong hạng mục', () => {
+    expect(validateDeliverableForm({ workPackageId: null, name: '', deliverableType: '', description: '' }).isValid).toBe(false);
+    expect(
+      validateDeliverableForm({ workPackageId: 1, name: 'Tai Lieu', deliverableType: 'DOCUMENT', description: '' }, ['tai lieu']).errors.name
+    ).toMatch(/đã có sản phẩm/);
   });
 });

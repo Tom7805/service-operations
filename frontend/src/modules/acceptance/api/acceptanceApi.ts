@@ -8,6 +8,10 @@ import type {
   AcceptanceRejectReq,
   AcceptanceStatus,
   AcceptanceUpdateReq,
+  DeliverableCreateReq,
+  DeliverableRes,
+  DeliverableVersionReq,
+  DeliverableVersionRes,
   MilestoneAcceptanceRes,
 } from '../types/acceptanceTypes';
 
@@ -48,8 +52,8 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
     let message = payload.message || 'Đã có lỗi xảy ra khi gọi dịch vụ máy chủ Backend.';
     if (response.status === 403) {
       message =
-        'Bạn không có quyền thực hiện thao tác này — phiếu nghiệm thu do Quản lý dự án phụ trách dự án lập/ghi nhận, ' +
-        'việc gắn phiếu với mốc thanh toán do Kế toán thực hiện.';
+        'Bạn không có quyền thực hiện thao tác này — phiếu nghiệm thu và sản phẩm bàn giao do Quản lý dự án phụ trách ' +
+        'dự án quản lý, việc gắn phiếu với mốc thanh toán do Kế toán thực hiện.';
     }
     if (response.status === 401) message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
     if (payload.fieldErrors && payload.fieldErrors.length > 0) {
@@ -156,6 +160,46 @@ export async function unlinkPaymentMilestone(certificateId: number): Promise<Acc
   return requestBackend<AcceptanceDetailRes>(`${API_BASE_URL}/acceptances/${certificateId}/payment-milestone`, {
     method: 'DELETE',
   });
+}
+
+/* ===== NCL-12-CN-004 — Sản phẩm bàn giao và phiên bản (Quản lý dự án của dự án, VT-02) ===== */
+
+/** GET /projects/{projectId}/deliverables?workPackageId= — sản phẩm bàn giao kèm toàn bộ lịch sử phiên bản. */
+export async function fetchDeliverables(projectId: number, workPackageId?: number): Promise<DeliverableRes[]> {
+  const qs = workPackageId != null ? `?workPackageId=${workPackageId}` : '';
+  return requestBackend<DeliverableRes[]>(`${API_BASE_URL}/projects/${projectId}/deliverables${qs}`, { method: 'GET' });
+}
+
+/** GET /deliverables/{deliverableId} — chi tiết một sản phẩm và lịch sử phiên bản. */
+export async function getDeliverable(deliverableId: number): Promise<DeliverableRes> {
+  return requestBackend<DeliverableRes>(`${API_BASE_URL}/deliverables/${deliverableId}`, { method: 'GET' });
+}
+
+/** POST /projects/{projectId}/deliverables — khai báo sản phẩm bàn giao cho một hạng mục. */
+export async function createDeliverable(projectId: number, req: DeliverableCreateReq): Promise<DeliverableRes> {
+  return requestBackend<DeliverableRes>(`${API_BASE_URL}/projects/${projectId}/deliverables`, {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+}
+
+/** POST /deliverables/{deliverableId}/versions — bàn giao một phiên bản mới (TC-01); trùng số phiên bản → 409 (TC-02). */
+export async function createDeliverableVersion(
+  deliverableId: number,
+  req: DeliverableVersionReq
+): Promise<DeliverableVersionRes> {
+  return requestBackend<DeliverableVersionRes>(`${API_BASE_URL}/deliverables/${deliverableId}/versions`, {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+}
+
+/**
+ * NCL-12-CN-004 TC-03: người không phải Quản lý dự án mở chức năng quản lý sản phẩm bàn giao → request thật tới
+ * endpoint chỉ dành cho VT-02 để backend trả 403 và ghi "Từ chối truy cập — Quản lý sản phẩm bàn giao".
+ */
+export async function checkDeliverableAccess(): Promise<void> {
+  await requestBackend<unknown>(`${API_BASE_URL}/projects/0/deliverables`, { method: 'GET' });
 }
 
 /**
