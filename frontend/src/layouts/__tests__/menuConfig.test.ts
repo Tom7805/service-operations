@@ -63,6 +63,7 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'UNSUBMITTED_TIMESHEETS',
       'CUSTOMERS',
       'OPPORTUNITIES',
+      'REPORTS',
       'PROJECT_LABOR_COST',
       'PLANNED_VS_ACTUAL',
       'PROFIT_FORECAST',
@@ -228,7 +229,10 @@ describe('isTabVisible — tuần tự hóa lại khi vai trỏ đổi', () => {
   });
 
   it('tab con ẩn khi mục cha bị khóa', () => {
-    expect(isTabVisible('PIPELINE_REPORT', ['VT-02'])).toBe(false); // cha: Báo cáo bị khóa
+    // Báo cáo giờ mở cho VT-02 (báo cáo giờ công theo nhân sự NCL-11-CN-006 riêng cho Quản lý dự án),
+    // nên PIPELINE_REPORT thấy được qua menu — từng trang con vẫn tự chặn vai trò không đúng
+    // (PipelineReportPage chỉ cho VT-01/VT-04 xem thật sự).
+    expect(isTabVisible('PIPELINE_REPORT', ['VT-02'])).toBe(true); // cha: Báo cáo (đã mở cho VT-02)
     expect(isTabVisible('DETAIL', ['VT-02'])).toBe(false); // cha: Tài khoản (VT-07)
     expect(isTabVisible('DEPARTMENTS', ['VT-02'])).toBe(false);
   });
