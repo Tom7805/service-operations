@@ -28,6 +28,8 @@ import ContractTypeLimitModal from '../components/ContractTypeLimitModal';
 import ContractMilestonesModal from '../components/ContractMilestonesModal';
 import ContractLimitAlert from '../components/ContractLimitAlert';
 import ContractExpiryReminderModal from '../components/ContractExpiryReminderModal';
+import MilestoneAcceptancePanel from '../../acceptance/components/MilestoneAcceptancePanel';
+import { checkMilestoneLinkAccess } from '../../acceptance/api/acceptanceApi';
 
 interface Props {
   contractId: number;
@@ -111,6 +113,15 @@ export default function ContractDetailPage({ contractId, currentUserRoles = [], 
   const [isMilestonesModalOpen, setIsMilestonesModalOpen] = useState(false);
   const [isLimitAlertOpen, setIsLimitAlertOpen] = useState(false);
   const [isExpiryReminderOpen, setIsExpiryReminderOpen] = useState(false);
+  // Tăng mỗi lần danh sách mốc được lưu lại ở modal quản lý mốc → khối nghiệm thu theo mốc nạp lại.
+  const [milestonesVersion, setMilestonesVersion] = useState(0);
+
+  // NCL-12-CN-003 TC-03: trang này là lối vào chức năng gắn nghiệm thu với mốc thanh toán — người không phải
+  // Kế toán mở vào thì gọi thật endpoint của chức năng để backend ghi nhật ký lần từ chối.
+  useEffect(() => {
+    if (isAllowed) return;
+    checkMilestoneLinkAccess(contractId).catch(() => undefined);
+  }, [isAllowed, contractId]);
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setToast({ text, type });
@@ -189,7 +200,10 @@ export default function ContractDetailPage({ contractId, currentUserRoles = [], 
         <div className="access-denied-card">
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền xem chi tiết hợp đồng</h2>
-          <p>Chức năng này chỉ dành riêng cho <strong>Kế toán</strong> (VT-05).</p>
+          <p>
+            Chức năng này (kể cả gắn phiếu nghiệm thu với mốc thanh toán) chỉ dành riêng cho <strong>Kế toán</strong>{' '}
+            (VT-05). Hệ thống đã ghi lại lần từ chối truy cập này vào nhật ký hệ thống.
+          </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">Tài khoản: {currentUserName}</span>
             <span className="security-log-badge__item">
@@ -338,12 +352,24 @@ export default function ContractDetailPage({ contractId, currentUserRoles = [], 
 
       {/* Khối lập hóa đơn — nội dung đổi theo loại hợp đồng, không cần rời trang */}
       {(contract.contractType === 'FIXED_PRICE' || contract.contractType === 'MILESTONE') && (
-        <MilestonesSection
-          contract={contract}
-          milestones={milestones}
-          loading={milestonesLoading}
-          onManage={() => setIsMilestonesModalOpen(true)}
-        />
+        <>
+          <MilestonesSection
+            contract={contract}
+            milestones={milestones}
+            loading={milestonesLoading}
+            onManage={() => setIsMilestonesModalOpen(true)}
+          />
+          {/* NCL-12-CN-003: gắn phiếu nghiệm thu với mốc — mốc chỉ lập hóa đơn khi phiếu đã xác nhận (QTN-25). */}
+          <MilestoneAcceptancePanel
+            key={milestonesVersion}
+            contractId={contract.id}
+            currentUserRoles={currentUserRoles}
+            onChanged={() => {
+              void loadMilestones();
+              void loadInvoices();
+            }}
+          />
+        </>
       )}
       {contract.contractType === 'TIME_AND_MATERIAL' && (
         <ProposalSection
@@ -434,6 +460,7 @@ export default function ContractDetailPage({ contractId, currentUserRoles = [], 
           setIsMilestonesModalOpen(false);
           showToast('Đã lưu danh sách mốc thanh toán.');
           refreshAll();
+          setMilestonesVersion((v) => v + 1);
         }}
       />
 

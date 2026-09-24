@@ -72,6 +72,29 @@ export interface AcceptanceUpdateReq {
   note?: string | null;
 }
 
+/** PUT /acceptances/{certificateId}/payment-milestone — Kế toán gắn phiếu vào mốc (NCL-12-CN-003). */
+export interface AcceptanceMilestoneLinkReq {
+  contractMilestoneId: number;
+}
+
+export type ContractMilestoneStatus = 'PENDING' | 'READY_TO_INVOICE' | 'INVOICED';
+
+/** GET /contracts/{contractId}/milestone-acceptances — mốc của hợp đồng kèm phiếu đã gắn (nếu có). */
+export interface MilestoneAcceptanceRes {
+  milestoneId: number;
+  contractId: number;
+  milestoneName: string;
+  amount: number;
+  expectedDate: string | null;
+  acceptanceCondition: string | null;
+  milestoneStatus: ContractMilestoneStatus;
+  certificateId: number | null;
+  certificateCode: string | null;
+  certificateStatus: AcceptanceStatus | null;
+  projectCode: string | null;
+  workPackageName: string | null;
+}
+
 /** Dòng tóm tắt phiếu — GET /projects/{projectId}/acceptances, GET /acceptances. */
 export interface AcceptanceCertificateRes {
   id: number;
