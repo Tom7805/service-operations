@@ -36,7 +36,8 @@ export interface InvoiceRes {
   id: number;
   invoiceCode: string;
   contractId: number;
-  milestoneId: number;
+  /** null khi hóa đơn lập từ đề xuất T&M (không gắn với mốc thanh toán nào). */
+  milestoneId: number | null;
   milestoneName?: string | null;
   status: InvoiceStatus;
   totalAmount: number;
@@ -54,6 +55,13 @@ export interface InvoiceProposalCreateReq {
   periodFrom: string;
   periodTo: string;
   note?: string | null;
+}
+
+/** POST /invoice-proposals/{proposalId}/invoice — body (mọi trường tuỳ chọn). */
+export interface InvoiceFromProposalReq {
+  invoiceDate?: string | null;
+  note?: string | null;
+  dueDate?: string | null;
 }
 
 export type ProposalStatus = 'PENDING' | 'INVOICED' | 'CANCELLED';

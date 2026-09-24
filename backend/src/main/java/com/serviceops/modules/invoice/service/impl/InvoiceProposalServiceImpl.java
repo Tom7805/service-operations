@@ -10,17 +10,25 @@ import com.serviceops.modules.contract.repository.ContractRepository;
 import com.serviceops.modules.expense.entity.ProjectExpense;
 import com.serviceops.modules.expense.enums.ExpenseStatus;
 import com.serviceops.modules.expense.repository.ProjectExpenseRepository;
+import com.serviceops.modules.invoice.dto.request.InvoiceFromProposalReq;
 import com.serviceops.modules.invoice.dto.request.InvoiceProposalCreateReq;
 import com.serviceops.modules.invoice.dto.response.InvoiceProposalLineRes;
 import com.serviceops.modules.invoice.dto.response.InvoiceProposalRes;
 import com.serviceops.modules.invoice.dto.response.InvoiceProposalSkippedRes;
+import com.serviceops.modules.invoice.dto.response.InvoiceRes;
+import com.serviceops.modules.invoice.entity.Invoice;
+import com.serviceops.modules.invoice.entity.InvoiceLine;
 import com.serviceops.modules.invoice.entity.InvoiceProposal;
 import com.serviceops.modules.invoice.entity.InvoiceProposalLine;
+import com.serviceops.modules.invoice.enums.InvoiceStatus;
 import com.serviceops.modules.invoice.enums.ProposalLineType;
 import com.serviceops.modules.invoice.enums.ProposalStatus;
+import com.serviceops.modules.invoice.repository.InvoiceLineRepository;
 import com.serviceops.modules.invoice.repository.InvoiceProposalLineRepository;
 import com.serviceops.modules.invoice.repository.InvoiceProposalRepository;
+import com.serviceops.modules.invoice.repository.InvoiceRepository;
 import com.serviceops.modules.invoice.service.InvoiceProposalService;
+import com.serviceops.modules.invoice.validator.ContractValueLimitValidator;
 import com.serviceops.modules.notification.enums.NotificationType;
 import com.serviceops.modules.notification.service.NotificationService;
 import com.serviceops.modules.project.entity.Project;
@@ -81,6 +89,9 @@ public class InvoiceProposalServiceImpl implements InvoiceProposalService {
 	private final ProjectExpenseRepository projectExpenseRepository;
 	private final InvoiceProposalRepository proposalRepository;
 	private final InvoiceProposalLineRepository proposalLineRepository;
+	private final InvoiceRepository invoiceRepository;
+	private final InvoiceLineRepository invoiceLineRepository;
+	private final ContractValueLimitValidator limitValidator;
 	private final RateResolutionService rateResolutionService;
 	private final NotificationService notificationService;
 	private final AuditLogService auditLogService;
@@ -209,6 +220,138 @@ public class InvoiceProposalServiceImpl implements InvoiceProposalService {
 		notifyProjectManager(project, proposal, laborLines.size(), expenses.size());
 
 		return toResponse(proposal, saved, skipped);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<InvoiceProposalRes> listByContract(Long contractId) {
+		List<InvoiceProposal> proposals = proposalRepository.findByContractIdOrderByIdDesc(contractId);
+		InvoiceProposalSkippedRes noSkip = new InvoiceProposalSkippedRes(0, 0, 0, 0);
+		return proposals.stream()
+				.map(p -> toResponse(p, proposalLineRepository.findByInvoiceProposalIdOrderByIdAsc(p.getId()), noSkip))
+				.toList();
+	}
+
+	@Override
+	public InvoiceRes convertToInvoice(Long proposalId, InvoiceFromProposalReq request) {
+		InvoiceProposal proposal = proposalRepository.findById(proposalId)
+				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
+						"Khong tim thay de nghi xuat hoa don voi id=" + proposalId));
+		if (proposal.getStatus() != ProposalStatus.PENDING) {
+			throw new BusinessRuleException(ErrorCode.INVALID_STATE,
+					"De nghi " + proposal.getProposalCode() + " dang o trang thai " + proposal.getStatus()
+							+ ", chi de nghi PENDING moi lap hoa don duoc");
+		}
+
+		Contract contract = contractRepository.findByIdForUpdate(proposal.getContractId())
+				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
+						"Khong tim thay hop dong voi id=" + proposal.getContractId()));
+
+		BigDecimal amount = proposal.getTotalAmount().setScale(2, RoundingMode.HALF_UP);
+		BigDecimal alreadyInvoiced = invoiceRepository.sumActiveTotalByContractId(contract.getId())
+				.setScale(2, RoundingMode.HALF_UP);
+		limitValidator.validate(contract, alreadyInvoiced, amount);
+
+		LocalDate today = LocalDate.now(clock);
+		LocalDateTime now = LocalDateTime.now(clock);
+		LocalDate invoiceDate = request != null && request.invoiceDate() != null ? request.invoiceDate() : today;
+		LocalDate dueDate = request != null && request.dueDate() != null
+				? request.dueDate()
+				: invoiceDate.plusDays(Invoice.DEFAULT_PAYMENT_TERM_DAYS);
+		if (dueDate.isBefore(invoiceDate)) {
+			throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR,
+					"Han thanh toan (" + dueDate + ") khong duoc truoc ngay hoa don (" + invoiceDate + ")");
+		}
+		String note = request != null && request.note() != null && !request.note().isBlank()
+				? request.note().trim()
+				: proposal.getNote();
+
+		Invoice invoice = new Invoice();
+		invoice.setInvoiceCode(generateInvoiceCode(today));
+		invoice.setContractId(contract.getId());
+		invoice.setCustomerId(proposal.getCustomerId());
+		invoice.setStatus(InvoiceStatus.ISSUED);
+		invoice.setTotalAmount(amount);
+		invoice.setInvoiceDate(invoiceDate);
+		invoice.setDueDate(dueDate);
+		invoice.setNote(note);
+		invoice.setCreatedBy(currentUsername());
+		invoice.setCreatedAt(now);
+		invoice.setUpdatedAt(now);
+		invoice = invoiceRepository.save(invoice);
+
+		List<InvoiceProposalLine> proposalLines = proposalLineRepository.findByInvoiceProposalIdOrderByIdAsc(proposal.getId());
+		Long invoiceId = invoice.getId();
+		List<InvoiceLine> invoiceLines = proposalLines.stream().map(pl -> {
+			InvoiceLine line = new InvoiceLine();
+			line.setInvoiceId(invoiceId);
+			line.setDescription(pl.getDescription());
+			line.setAmount(pl.getAmount());
+			return line;
+		}).toList();
+		invoiceLineRepository.saveAll(invoiceLines);
+
+		proposal.setStatus(ProposalStatus.INVOICED);
+		proposal.setUpdatedAt(now);
+		proposalRepository.save(proposal);
+
+		auditLogService.record("Lap hoa don tu de nghi xuat hoa don", AuditTargetType.INVOICE, invoice.getId(),
+				invoice.getInvoiceCode(),
+				"Lap hoa don " + invoice.getInvoiceCode() + " gia tri " + amount + " tu de nghi "
+						+ proposal.getProposalCode() + " cua hop dong " + contract.getContractCode()
+						+ " (tong da xuat " + alreadyInvoiced + " -> " + alreadyInvoiced.add(amount) + ")");
+
+		return new InvoiceRes(invoice.getId(), invoice.getInvoiceCode(), contract.getId(), null, null,
+				invoice.getStatus().name(), amount, invoice.getInvoiceDate(), invoice.getDueDate(), invoice.getNote(),
+				contract.getTotalValue(), alreadyInvoiced.add(amount), invoice.getCreatedBy(), invoice.getCreatedAt());
+	}
+
+	@Override
+	public InvoiceProposalRes cancelProposal(Long proposalId) {
+		InvoiceProposal proposal = proposalRepository.findById(proposalId)
+				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
+						"Khong tim thay de nghi xuat hoa don voi id=" + proposalId));
+		if (proposal.getStatus() != ProposalStatus.PENDING) {
+			throw new BusinessRuleException(ErrorCode.INVALID_STATE,
+					"De nghi " + proposal.getProposalCode() + " dang o trang thai " + proposal.getStatus()
+							+ ", chi de nghi PENDING moi huy duoc");
+		}
+
+		List<InvoiceProposalLine> lines = proposalLineRepository.findByInvoiceProposalIdOrderByIdAsc(proposalId);
+		List<Long> expenseIds = lines.stream()
+				.map(InvoiceProposalLine::getProjectExpenseId)
+				.filter(id -> id != null)
+				.toList();
+		if (!expenseIds.isEmpty()) {
+			List<ProjectExpense> expenses = projectExpenseRepository.findAllById(expenseIds);
+			LocalDateTime now = LocalDateTime.now(clock);
+			for (ProjectExpense expense : expenses) {
+				expense.setInvoiced(false);
+				expense.setUpdatedAt(now);
+			}
+			projectExpenseRepository.saveAll(expenses);
+		}
+		// Xoa het cac dong de giai phong time_entry_id/project_expense_id (UNIQUE) — de nghi tao sau
+		// moi gom lai duoc dung gio cong/chi phi nay (findProposedTimeEntryIds khong loc theo trang thai
+		// de nghi cha nen chi xoa dong moi thuc su "tra lai" duoc du lieu).
+		proposalLineRepository.deleteAll(lines);
+
+		proposal.setStatus(ProposalStatus.CANCELLED);
+		proposal.setUpdatedAt(LocalDateTime.now(clock));
+		proposal = proposalRepository.save(proposal);
+
+		auditLogService.record("Huy de nghi xuat hoa don", AuditTargetType.INVOICE, proposal.getId(),
+				proposal.getProposalCode(),
+				"Huy de nghi " + proposal.getProposalCode() + " (tong " + proposal.getTotalAmount()
+						+ ") — giai phong " + lines.size() + " dong de gom lai o de nghi sau");
+
+		return toResponse(proposal, List.of(), new InvoiceProposalSkippedRes(0, 0, 0, 0));
+	}
+
+	/** INV-yyyyMMdd-XXXXXX; cot invoice_code co UNIQUE nen trung ngau nhien (rat hiem) van bi chan o DB. */
+	private String generateInvoiceCode(LocalDate date) {
+		String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 6).toUpperCase();
+		return "INV-" + CODE_DATE.format(date) + "-" + suffix;
 	}
 
 	private InvoiceProposalLine laborLine(TimeEntry entry, Task task, BigDecimal unitRate) {

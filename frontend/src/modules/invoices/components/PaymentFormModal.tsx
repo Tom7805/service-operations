@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
@@ -25,6 +25,12 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+/** Định dạng chuỗi chữ số thô thành có dấu chấm phân cách hàng nghìn kiểu vi-VN. */
+function formatVnAmount(rawDigits: string): string {
+  if (!rawDigits) return '';
+  return Number(rawDigits).toLocaleString('vi-VN');
+}
+
 /**
  * NCL-10-CN-003 — Ghi nhận một khoản khách hàng đã thanh toán cho một hóa đơn.
  * Backend tự tính lại paidAmount/remainingAmount/status (PARTIALLY_PAID nếu còn thiếu,
@@ -41,6 +47,18 @@ export default function PaymentFormModal({ isOpen, onClose, onSaved, invoice, cu
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const backdrop = useBackdropClick(onClose, submitting);
+
+  // Mỗi lần mở modal (kể cả mở lại để ghi đợt thanh toán tiếp theo cho cùng hóa đơn) đều phải
+  // xóa sạch dữ liệu của lần ghi trước — nếu không, số tiền/ghi chú cũ vẫn còn nguyên trên form.
+  useEffect(() => {
+    if (!isOpen) return;
+    setAmount('');
+    setPaymentDate(todayIso());
+    setMethod('BANK_TRANSFER');
+    setNote('');
+    setErrors({});
+    setSaveError(null);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -110,11 +128,12 @@ export default function PaymentFormModal({ isOpen, onClose, onSaved, invoice, cu
                   <label className="form-label" htmlFor="payment-amount">Số tiền (VNĐ)</label>
                   <input
                     id="payment-amount"
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     className={`form-input ${errors.amount ? 'form-input--error' : ''}`}
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    min={0}
+                    value={formatVnAmount(amount)}
+                    onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))}
+                    placeholder="0"
                   />
                   {errors.amount && <span className="field-error">{errors.amount}</span>}
                 </div>

@@ -15,6 +15,9 @@ import type { InvoiceDetailRes, InvoiceProposalRes, RecurringScheduleRes, Invoic
 import {
   fetchInvoices,
   createInvoiceProposal,
+  fetchInvoiceProposals,
+  convertProposalToInvoice,
+  cancelInvoiceProposal,
   getRecurringSchedule,
   createRecurringSchedule,
   updateRecurringSchedule,
@@ -343,7 +346,14 @@ export default function ContractDetailPage({ contractId, currentUserRoles = [], 
         />
       )}
       {contract.contractType === 'TIME_AND_MATERIAL' && (
-        <ProposalSection contract={contract} onCreated={() => showToast('Đã tạo đề xuất hóa đơn.')} />
+        <ProposalSection
+          contract={contract}
+          onCreated={() => showToast('Đã tạo đề xuất hóa đơn.')}
+          onInvoiced={() => {
+            showToast('Đã lập hóa đơn từ đề xuất.');
+            void loadInvoices();
+          }}
+        />
       )}
       {contract.contractType === 'MAINTENANCE' && (
         <RecurringSection contract={contract} onSaved={() => showToast('Đã lưu lịch hóa đơn định kỳ.')} />
@@ -514,7 +524,15 @@ function MilestonesSection({
 }
 
 /** TIME_AND_MATERIAL — đề xuất hóa đơn nhúng thẳng vào trang, hợp đồng đã chọn sẵn. */
-function ProposalSection({ contract, onCreated }: { contract: ContractRes; onCreated: () => void }) {
+function ProposalSection({
+  contract,
+  onCreated,
+  onInvoiced,
+}: {
+  contract: ContractRes;
+  onCreated: () => void;
+  onInvoiced: () => void;
+}) {
   const [projects, setProjects] = useState<ProjectRes[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [projectsError, setProjectsError] = useState<string | null>(null);
@@ -526,7 +544,26 @@ function ProposalSection({ contract, onCreated }: { contract: ContractRes; onCre
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [result, setResult] = useState<InvoiceProposalRes | null>(null);
+
+  // Toàn bộ đề xuất (mọi trạng thái) của hợp đồng — nạp từ server thay vì chỉ giữ tạm kết quả lần
+  // tạo gần nhất, để tải lại trang hoặc quay lại sau vẫn thấy các đề xuất PENDING chưa lập hóa đơn.
+  const [proposals, setProposals] = useState<InvoiceProposalRes[]>([]);
+  const [proposalsLoading, setProposalsLoading] = useState(true);
+  const [proposalsError, setProposalsError] = useState<string | null>(null);
+  const [convertingId, setConvertingId] = useState<number | null>(null);
+  const [convertError, setConvertError] = useState<string | null>(null);
+
+  const loadProposals = useCallback(async () => {
+    setProposalsLoading(true);
+    setProposalsError(null);
+    try {
+      setProposals(await fetchInvoiceProposals(contract.id));
+    } catch (err) {
+      setProposalsError(err instanceof InvoicesApiError ? err.message : 'Không tải được danh sách đề xuất hóa đơn.');
+    } finally {
+      setProposalsLoading(false);
+    }
+  }, [contract.id]);
 
   useEffect(() => {
     setProjectsLoading(true);
@@ -536,11 +573,14 @@ function ProposalSection({ contract, onCreated }: { contract: ContractRes; onCre
       .finally(() => setProjectsLoading(false));
   }, [contract.id]);
 
+  useEffect(() => {
+    void loadProposals();
+  }, [loadProposals]);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (submitting) return;
     setSubmitError(null);
-    setResult(null);
 
     const formErrors: Record<string, string> = {};
     if (!selectedProjectId) formErrors.projectId = 'Chọn dự án trước';
@@ -550,18 +590,61 @@ function ProposalSection({ contract, onCreated }: { contract: ContractRes; onCre
 
     setSubmitting(true);
     try {
-      const proposal = await createInvoiceProposal(Number(selectedProjectId), {
+      await createInvoiceProposal(Number(selectedProjectId), {
         periodFrom,
         periodTo,
         note: note.trim() || null,
       });
-      setResult(proposal);
       onCreated();
+      void loadProposals();
     } catch (err) {
       setSubmitError(err instanceof InvoicesApiError ? err.message : 'Không tạo được đề xuất hóa đơn. Vui lòng thử lại.');
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleConvert = async (proposalId: number) => {
+    if (convertingId != null) return;
+    setConvertError(null);
+    setConvertingId(proposalId);
+    try {
+      await convertProposalToInvoice(proposalId);
+      onInvoiced();
+      void loadProposals();
+    } catch (err) {
+      setConvertError(err instanceof InvoicesApiError ? err.message : 'Không lập được hóa đơn từ đề xuất này. Vui lòng thử lại.');
+    } finally {
+      setConvertingId(null);
+    }
+  };
+
+  const handleCancel = async (proposalId: number, proposalCode: string) => {
+    if (convertingId != null) return;
+    if (!window.confirm(`Hủy đề xuất ${proposalCode}? Giờ công/chi phí trong đề xuất này sẽ được giải phóng để gom lại ở đề xuất sau.`)) {
+      return;
+    }
+    setConvertError(null);
+    setConvertingId(proposalId);
+    try {
+      await cancelInvoiceProposal(proposalId);
+      void loadProposals();
+    } catch (err) {
+      setConvertError(err instanceof InvoicesApiError ? err.message : 'Không hủy được đề xuất này. Vui lòng thử lại.');
+    } finally {
+      setConvertingId(null);
+    }
+  };
+
+  const PROPOSAL_STATUS_LABEL: Record<string, string> = {
+    PENDING: 'Chờ lập hóa đơn',
+    INVOICED: 'Đã lập hóa đơn',
+    CANCELLED: 'Đã hủy',
+  };
+  const PROPOSAL_STATUS_BADGE: Record<string, string> = {
+    PENDING: 'badge--gold',
+    INVOICED: 'badge--green',
+    CANCELLED: 'badge--gray',
   };
 
   return (
@@ -586,10 +669,14 @@ function ProposalSection({ contract, onCreated }: { contract: ContractRes; onCre
               // Điền sẵn kỳ đề xuất = đầu tháng hiện tại → hôm nay khi vừa chọn dự án — kỳ
               // đề xuất thường theo tháng đang chạy, người dùng chỉnh tay lại nếu cần kỳ khác.
               if (e.target.value && !periodFrom && !periodTo) {
+                // toISOString() quy đổi sang UTC trước khi cắt chuỗi ngày — với múi giờ UTC+7,
+                // nửa đêm giờ VN bị lùi thành ngày hôm trước theo UTC, làm "Từ ngày" sai lệch 1
+                // ngày. Dùng toLocaleDateString('sv-SE') để lấy đúng yyyy-MM-dd theo giờ máy.
+                const toLocalIsoDate = (d: Date) => d.toLocaleDateString('sv-SE');
                 const today = new Date();
                 const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-                setPeriodFrom(firstOfMonth.toISOString().slice(0, 10));
-                setPeriodTo(today.toISOString().slice(0, 10));
+                setPeriodFrom(toLocalIsoDate(firstOfMonth));
+                setPeriodTo(toLocalIsoDate(today));
               }
             }}
             disabled={projectsLoading}
@@ -633,18 +720,67 @@ function ProposalSection({ contract, onCreated }: { contract: ContractRes; onCre
         </button>
       </form>
 
-      {result && (
-        <div style={{ marginTop: '18px', borderTop: '1px solid var(--border-subtle, #eee)', paddingTop: '14px' }} data-testid="contract-detail-proposal-result">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
-            <strong style={{ fontSize: '15px' }}>{result.proposalCode}</strong>
-            <span className="badge badge--blue">{formatAmount(result.totalAmount)}</span>
-            <span className="cell-muted">{formatDate(result.periodFrom)} → {formatDate(result.periodTo)}</span>
-          </div>
-          <p className="cell-muted" style={{ fontSize: '12.5px' }}>
-            Tiền công: {formatAmount(result.laborAmount)} · Chi phí: {formatAmount(result.expenseAmount)}
-          </p>
+      <div style={{ marginTop: '18px', borderTop: '1px solid var(--border-subtle, #eee)', paddingTop: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <strong style={{ fontSize: '13.5px' }}>Đề xuất đã tạo</strong>
+          <button type="button" className="btn-icon-refresh" onClick={() => void loadProposals()} title="Tải lại" aria-label="Tải lại danh sách đề xuất">
+            {ICONS.refresh}
+          </button>
         </div>
-      )}
+        {convertError && <div className="alert-box alert-box--danger" role="alert" style={{ marginBottom: '12px' }}>{convertError}</div>}
+        {proposalsError && <div className="alert-box alert-box--danger" style={{ marginBottom: '12px' }}>{proposalsError}</div>}
+        {proposalsLoading ? (
+          <p className="cell-muted" style={{ fontSize: '12.5px' }}>Đang tải…</p>
+        ) : proposals.length === 0 ? (
+          <p className="cell-muted" style={{ fontSize: '12.5px' }}>Chưa có đề xuất nào cho hợp đồng này.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }} data-testid="contract-detail-proposal-list">
+            {proposals.map((p) => (
+              <div
+                key={p.id}
+                data-testid={`proposal-row-${p.id}`}
+                style={{ border: '1px solid var(--border-subtle, #eee)', borderRadius: '8px', padding: '10px 12px' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '6px' }}>
+                  <strong style={{ fontSize: '14px' }}>{p.proposalCode}</strong>
+                  <span className={`badge ${PROPOSAL_STATUS_BADGE[p.status] ?? 'badge--gray'}`}>
+                    {PROPOSAL_STATUS_LABEL[p.status] ?? p.status}
+                  </span>
+                  <span className="badge badge--blue">{formatAmount(p.totalAmount)}</span>
+                  <span className="cell-muted">{formatDate(p.periodFrom)} → {formatDate(p.periodTo)}</span>
+                  {p.status === 'PENDING' && (
+                    <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        style={{ padding: '4px 12px', fontSize: '12.5px' }}
+                        disabled={convertingId != null}
+                        onClick={() => void handleCancel(p.id, p.proposalCode)}
+                        data-testid={`btn-cancel-proposal-${p.id}`}
+                      >
+                        Hủy đề xuất
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        style={{ padding: '4px 12px', fontSize: '12.5px' }}
+                        disabled={convertingId != null}
+                        onClick={() => void handleConvert(p.id)}
+                        data-testid={`btn-convert-proposal-${p.id}`}
+                      >
+                        {convertingId === p.id ? 'Đang xử lý…' : 'Chuyển thành hóa đơn'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <p className="cell-muted" style={{ fontSize: '12.5px', margin: 0 }}>
+                  Tiền công: {formatAmount(p.laborAmount)} · Chi phí: {formatAmount(p.expenseAmount)}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -22,10 +22,13 @@ import com.serviceops.modules.invoice.dto.request.InvoiceProposalCreateReq;
 import com.serviceops.modules.invoice.dto.response.InvoiceProposalRes;
 import com.serviceops.modules.invoice.entity.InvoiceProposal;
 import com.serviceops.modules.invoice.entity.InvoiceProposalLine;
+import com.serviceops.modules.invoice.repository.InvoiceLineRepository;
 import com.serviceops.modules.invoice.repository.InvoiceProposalLineRepository;
 import com.serviceops.modules.invoice.repository.InvoiceProposalRepository;
+import com.serviceops.modules.invoice.repository.InvoiceRepository;
 import com.serviceops.modules.invoice.service.InvoiceProposalService;
 import com.serviceops.modules.invoice.service.impl.InvoiceProposalServiceImpl;
+import com.serviceops.modules.invoice.validator.ContractValueLimitValidator;
 import com.serviceops.modules.notification.service.NotificationService;
 import com.serviceops.modules.project.entity.Project;
 import com.serviceops.modules.project.entity.Task;
@@ -100,6 +103,9 @@ class InvoiceProposalTransactionTest {
 		@Bean UserRepository userRepository() { return mock(UserRepository.class); }
 		@Bean InvoiceProposalRepository invoiceProposalRepository() { return mock(InvoiceProposalRepository.class); }
 		@Bean InvoiceProposalLineRepository invoiceProposalLineRepository() { return mock(InvoiceProposalLineRepository.class); }
+		@Bean InvoiceRepository invoiceRepository() { return mock(InvoiceRepository.class); }
+		@Bean InvoiceLineRepository invoiceLineRepository() { return mock(InvoiceLineRepository.class); }
+		@Bean ContractValueLimitValidator contractValueLimitValidator() { return new ContractValueLimitValidator(); }
 		@Bean ContractBillRateRepository contractBillRateRepository() { return mock(ContractBillRateRepository.class); }
 		@Bean BillRateRepository billRateRepository() { return mock(BillRateRepository.class); }
 		@Bean WorkTypeRateFactorRepository workTypeRateFactorRepository() { return mock(WorkTypeRateFactorRepository.class); }
@@ -144,10 +150,13 @@ class InvoiceProposalTransactionTest {
 				ContractRepository contractRepository, TaskRepository taskRepository,
 				TimeEntryRepository timeEntryRepository, ProjectExpenseRepository projectExpenseRepository,
 				InvoiceProposalRepository proposalRepository, InvoiceProposalLineRepository proposalLineRepository,
+				InvoiceRepository invoiceRepository, InvoiceLineRepository invoiceLineRepository,
+				ContractValueLimitValidator limitValidator,
 				RateResolutionService rateResolutionService, NotificationService notificationService,
 				AuditLogService auditLogService, Clock clock) {
 			return new InvoiceProposalServiceImpl(projectRepository, contractRepository, taskRepository,
 					timeEntryRepository, projectExpenseRepository, proposalRepository, proposalLineRepository,
+					invoiceRepository, invoiceLineRepository, limitValidator,
 					rateResolutionService, notificationService, auditLogService, clock);
 		}
 	}

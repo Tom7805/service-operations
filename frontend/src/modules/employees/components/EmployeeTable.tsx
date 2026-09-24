@@ -79,7 +79,12 @@ export default function EmployeeTable({ employees, loading, onEdit, onViewDetail
               filteredEmployees.map((emp) => (
                 <tr key={emp.id}>
                   <td>
-                    <div className="user-profile-cell">
+                    <div
+                      className="user-profile-cell"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => onViewDetail(emp)}
+                      title="Nhấp để xem chi tiết"
+                    >
                       <div className="avatar-circle">{emp.fullName.charAt(0).toUpperCase()}</div>
                       <div className="user-profile-meta">
                         <span className="user-profile-fullname">{emp.fullName}</span>
