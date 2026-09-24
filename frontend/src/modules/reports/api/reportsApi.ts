@@ -1,4 +1,5 @@
 import type { PipelineReportRes } from '../types/pipelineReportTypes';
+import type { UtilizationReportRes } from '../types/utilizationReportTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -41,6 +42,14 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
 
 export async function getPipelineReport(): Promise<PipelineReportRes> {
   return requestBackend<PipelineReportRes>(`${API_BASE_URL}/opportunities/pipeline-report`, {
+    method: 'GET',
+  });
+}
+
+/** NCL-11-CN-002: tỷ lệ giờ tính phí của kỳ theo toàn công ty, từng bộ phận và từng người (VT-01). */
+export async function getUtilizationReport(from: string, to: string): Promise<UtilizationReportRes> {
+  const params = new URLSearchParams({ from, to });
+  return requestBackend<UtilizationReportRes>(`${API_BASE_URL}/reports/utilization?${params.toString()}`, {
     method: 'GET',
   });
 }
