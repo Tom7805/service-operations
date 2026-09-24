@@ -91,6 +91,7 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'TIMESHEET_PERIOD',
       'CONTRACTS',
       'OPPORTUNITIES',
+      'REPORTS',
       'BILL_RATES',
       'RATE_HISTORY',
       'INVOICES',
@@ -166,6 +167,7 @@ describe('navGroupsFor — bỏ qua nhóm không có mục hiển thị', () => 
     expect(groups[1].items.map((i) => i.tab)).toEqual([
       'CONTRACTS',
       'OPPORTUNITIES',
+      'REPORTS',
       'BILL_RATES',
       'RATE_HISTORY',
       'INVOICES',

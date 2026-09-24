@@ -25,6 +25,7 @@ import OpportunityListPage from './modules/opportunities/pages/OpportunityListPa
 import RevenueForecastPage from './modules/opportunities/pages/RevenueForecastPage';
 import PipelineReportPage from './modules/reports/pages/PipelineReportPage';
 import ReportExportPage from './modules/reports/pages/ReportExportPage';
+import RevenueReportPage from './modules/reports/pages/RevenueReportPage';
 import MyWorkPage from './modules/mytasks/pages/MyWorkPage';
 import TimesheetApprovalPage from './modules/timesheets/pages/TimesheetApprovalPage';
 import TimesheetRejectPage from './modules/timesheets/pages/TimesheetRejectPage';
@@ -687,6 +688,24 @@ export default function App() {
               </div>
 
               <div className="report-catalog-grid">
+                {(currentRoles.includes('VT-01') || currentRoles.includes('VT-05')) && (
+                  <button
+                    type="button"
+                    className="report-card"
+                    onClick={() => setActiveTab('REVENUE_REPORT')}
+                  >
+                    <span className="report-card__icon">{ICONS.chart}</span>
+                    <span className="report-card__body">
+                      <span className="report-card__title">Doanh thu theo tháng</span>
+                      <span className="report-card__desc">
+                        Doanh thu ghi nhận từng tháng, tách theo loại hợp đồng và so với cùng kỳ năm
+                        trước.
+                      </span>
+                    </span>
+                    <span className="report-card__arrow">{ICONS.arrowRight}</span>
+                  </button>
+                )}
+                {(currentRoles.includes('VT-01') || currentRoles.includes('VT-04')) && (
                 <button
                   type="button"
                   className="report-card"
@@ -702,8 +721,11 @@ export default function App() {
                   </span>
                   <span className="report-card__arrow">{ICONS.arrowRight}</span>
                 </button>
+                )}
               </div>
             </div>
+          ) : activeTab === 'REVENUE_REPORT' ? (
+            <RevenueReportPage currentUserRoles={currentRoles} />
           ) : activeTab === 'REPORT_EXPORT' ? (
             <ReportExportPage currentUserRoles={currentRoles} />
           ) : activeTab === 'PIPELINE_REPORT' ? (

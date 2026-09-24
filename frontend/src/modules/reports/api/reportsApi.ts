@@ -1,5 +1,5 @@
 import type { PipelineReportRes } from '../types/pipelineReportTypes';
-import type { ExportedReportFile, ReportExportReq } from '../types/reportTypes';
+import type { ExportedReportFile, MonthlyRevenueReportRes, ReportExportReq } from '../types/reportTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -42,6 +42,14 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
 
 export async function getPipelineReport(): Promise<PipelineReportRes> {
   return requestBackend<PipelineReportRes>(`${API_BASE_URL}/opportunities/pipeline-report`, {
+    method: 'GET',
+  });
+}
+
+/** NCL-11-CN-005 — doanh thu ghi nhận theo tháng; `fromMonth`/`toMonth` dạng yyyy-MM, tối đa 36 tháng. */
+export async function getMonthlyRevenue(fromMonth: string, toMonth: string): Promise<MonthlyRevenueReportRes> {
+  const params = new URLSearchParams({ fromMonth, toMonth });
+  return requestBackend<MonthlyRevenueReportRes>(`${API_BASE_URL}/reports/revenue/monthly?${params.toString()}`, {
     method: 'GET',
   });
 }
