@@ -133,6 +133,7 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'USERS',
       'EMPLOYEES',
       'PERMISSIONS',
+      'PORTAL_ACCOUNTS',
       'TWO_FACTOR_SETTINGS',
       'SYSTEM_AUDIT_LOG',
       'AUDIT_LOG',

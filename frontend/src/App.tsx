@@ -4,6 +4,7 @@ import type { AuthSession } from './modules/auth/types/authTypes';
 import UserListPage from './modules/users/pages/UserListPage';
 import UserDetailPage from './modules/users/pages/UserDetailPage';
 import RolePermissionPage from './modules/users/pages/RolePermissionPage';
+import PortalAccountPage from './modules/portal/pages/PortalAccountPage';
 import DepartmentTreePage from './modules/departments/pages/DepartmentTreePage';
 import SensitiveAccessLogPage from './modules/auditLog/pages/SensitiveAccessLogPage';
 import AuditLogPage from './modules/auditLog/pages/AuditLogPage';
@@ -767,6 +768,12 @@ export default function App() {
             <DepartmentTreePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'PERMISSIONS' ? (
             <RolePermissionPage
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+              onViewAuditLog={() => setActiveTab('SYSTEM_AUDIT_LOG')}
+            />
+          ) : activeTab === 'PORTAL_ACCOUNTS' ? (
+            <PortalAccountPage
               currentUserRoles={currentRoles}
               currentUserName={session.fullName}
               onViewAuditLog={() => setActiveTab('SYSTEM_AUDIT_LOG')}

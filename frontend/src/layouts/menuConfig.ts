@@ -48,6 +48,7 @@ export type Tab =
   | 'PROJECT_RECOGNIZED_REVENUE'
   | 'PROJECT_MARGIN'
   | 'MARGIN_ALERT_THRESHOLD'
+  | 'PORTAL_ACCOUNTS'
   | 'NOTIFICATIONS';
 
 export interface NavItem {
@@ -218,6 +219,11 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { tab: 'USERS', icon: ICONS.user, label: 'Tài khoản', matches: ['DETAIL'], requires: ['VT-07'] },
   { tab: 'EMPLOYEES', icon: ICONS.users, label: 'Nhân sự', matches: ['EMPLOYEE_DETAIL'], requires: ['VT-06', 'VT-07'] },
   { tab: 'PERMISSIONS', icon: ICONS.shield, label: 'Phân quyền', requires: ['VT-07'] },
+  {
+    tab: 'PORTAL_ACCOUNTS', icon: ICONS.globe, label: 'Tài khoản cổng KH', requires: ['VT-07'],
+    // NCL-13-CN-001: Quản trị viên cấp tài khoản cổng cho người liên hệ của khách hàng (gắn cố định với
+    // khách hàng đó — QTN-26) và khoá khi người liên hệ nghỉ việc. Chỉ VT-07 — khớp @PreAuthorize backend.
+  },
 ];
 
 /** Bảo mật & Hệ thống — nhóm riêng, tách khỏi điều hướng nghiệp vụ hàng ngày (theo
