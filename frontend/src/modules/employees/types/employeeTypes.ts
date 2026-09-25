@@ -8,6 +8,7 @@ export interface Employee {
   departmentId: number | null;
   departmentName: string | null;
   professionalRole: string | null;
+  level?: string | null;
   standardHoursPerWeek: number;
   hireDate: string;
   endDate: string | null;
@@ -41,6 +42,7 @@ export interface EmployeeCreatePayload {
   userId: number;
   departmentId?: number | null;
   professionalRole?: string | null;
+  level?: string | null;
   hireDate: string;
   endDate?: string | null;
   standardHoursPerWeek?: number | null;
@@ -49,6 +51,7 @@ export interface EmployeeCreatePayload {
 export interface EmployeeUpdatePayload {
   departmentId?: number | null;
   professionalRole?: string | null;
+  level?: string | null;
   hireDate: string;
   endDate?: string | null;
   standardHoursPerWeek?: number | null;

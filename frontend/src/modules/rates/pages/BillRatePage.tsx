@@ -302,7 +302,7 @@ export default function BillRatePage({
             </p>
           </div>
         ) : (
-          <div className="table-responsive">
+          <div className="table-responsive table-responsive--bounded" tabIndex={0} aria-label="Bảng đơn giá, cuộn để xem thêm">
             <table className="user-data-table" data-testid="bill-rate-table">
               <thead>
                 <tr>
@@ -335,6 +335,13 @@ export default function BillRatePage({
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+        {!loadError && sorted.length > 0 && (
+          <div className="table-footer">
+            <span className="table-footer__count">
+              Hiển thị <strong>{sorted.length}</strong> / <strong>{billRates.length}</strong> đơn giá
+            </span>
           </div>
         )}
       </div>

@@ -93,6 +93,17 @@ const mockMissingRatesQuoteRes: QuoteRes = {
   createdAt: '2026-09-04T10:00:00Z',
 };
 
+function fillRow(row: number, role: string, days: string) {
+  fireEvent.change(screen.getByLabelText(`Vị trí / chức danh dòng ${row}`), { target: { value: role } });
+  fireEvent.change(screen.getByLabelText(`Số ngày công dòng ${row}`), { target: { value: days } });
+}
+
+function fillDefaultQuoteRows() {
+  fillRow(1, 'Lập trình viên cao cấp', '20');
+  fireEvent.click(screen.getByRole('button', { name: /Thêm dòng báo giá/i }));
+  fillRow(2, 'Kỹ sư kiểm thử phần mềm', '10');
+}
+
 describe('QuoteBuilder Component (NCL-03-CN-003-CV-03 & CV-05)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -124,9 +135,10 @@ describe('QuoteBuilder Component (NCL-03-CN-003-CV-03 & CV-05)', () => {
     expect(screen.getByText(/Công ty Cổ phần Công nghệ ABC/)).toBeInTheDocument();
     expect(screen.getByText(/Tư vấn Chuyển đổi số Doanh nghiệp/)).toBeInTheDocument();
 
-    // Có ít nhất 2 dòng mặc định
-    expect(screen.getByDisplayValue('Lập trình viên cao cấp')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Kỹ sư kiểm thử phần mềm')).toBeInTheDocument();
+    // Chỉ có 1 dòng trống, không điền sẵn dữ liệu
+    expect(screen.getByLabelText('Vị trí / chức danh dòng 1')).toHaveValue('');
+    expect(screen.getByLabelText('Số ngày công dòng 1')).toHaveValue(null);
+    expect(screen.queryByLabelText('Vị trí / chức danh dòng 2')).not.toBeInTheDocument();
   });
 
   it('chặn thao tác và cảnh báo quy tắc QTN-06 khi cơ hội KHÔNG ở giai đoạn PROPOSAL', () => {
@@ -181,10 +193,10 @@ describe('QuoteBuilder Component (NCL-03-CN-003-CV-03 & CV-05)', () => {
     fireEvent.click(addBtn);
 
     const roleInputs = screen.getAllByPlaceholderText(/Nhập hoặc chọn vị trí/i);
-    expect(roleInputs.length).toBe(3);
+    expect(roleInputs.length).toBe(2);
 
-    fireEvent.change(roleInputs[2], { target: { value: 'Kiến trúc sư giải pháp' } });
-    expect(roleInputs[2]).toHaveValue('Kiến trúc sư giải pháp');
+    fireEvent.change(roleInputs[1], { target: { value: 'Kiến trúc sư giải pháp' } });
+    expect(roleInputs[1]).toHaveValue('Kiến trúc sư giải pháp');
   });
 
   it('cho phép xóa dòng báo giá khi có nhiều hơn 1 dòng, và không thể xóa khi chỉ còn 1 dòng', () => {
@@ -197,6 +209,7 @@ describe('QuoteBuilder Component (NCL-03-CN-003-CV-03 & CV-05)', () => {
       />
     );
 
+    fireEvent.click(screen.getByRole('button', { name: /Thêm dòng báo giá/i }));
     const deleteButtons = screen.getAllByRole('button', { name: /Xóa dòng/i });
     expect(deleteButtons.length).toBe(2);
 
@@ -218,11 +231,7 @@ describe('QuoteBuilder Component (NCL-03-CN-003-CV-03 & CV-05)', () => {
       />
     );
 
-    const roleInput = screen.getByDisplayValue('Lập trình viên cao cấp');
-    fireEvent.change(roleInput, { target: { value: '' } });
-
-    const daysInput = screen.getByDisplayValue('20');
-    fireEvent.change(daysInput, { target: { value: '0' } });
+    fillRow(1, '', '0');
 
     const submitBtn = screen.getByRole('button', { name: /Lưu & Tạo báo giá/i });
     fireEvent.click(submitBtn);
@@ -249,6 +258,7 @@ describe('QuoteBuilder Component (NCL-03-CN-003-CV-03 & CV-05)', () => {
       />
     );
 
+    fillDefaultQuoteRows();
     const submitBtn = screen.getByRole('button', { name: /Lưu & Tạo báo giá/i });
     fireEvent.click(submitBtn);
 
@@ -288,6 +298,8 @@ describe('QuoteBuilder Component (NCL-03-CN-003-CV-03 & CV-05)', () => {
       />
     );
 
+    fillDefaultQuoteRows();
+
     const submitBtn = screen.getByRole('button', { name: /Lưu & Tạo báo giá/i });
     fireEvent.click(submitBtn);
 
@@ -316,6 +328,7 @@ describe('QuoteBuilder Component (NCL-03-CN-003-CV-03 & CV-05)', () => {
       />
     );
 
+    fillDefaultQuoteRows();
     const submitBtn = screen.getByRole('button', { name: /Lưu & Tạo báo giá/i });
     fireEvent.click(submitBtn);
 

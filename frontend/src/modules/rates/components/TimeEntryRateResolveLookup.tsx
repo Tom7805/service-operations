@@ -13,6 +13,7 @@ import type {
   TimeEntryLookupEmployeeRes,
 } from '../types/rateTypes';
 import { WORK_TYPE_LABELS } from '../types/rateTypes';
+import RateResultCard, { STANDARD_HOURS_PER_DAY, formatRateDate, formatVnd } from './RateResultCard';
 import { validateTimeEntryRateLookupForm, type TimeEntryRateLookupFormValues } from '../validators/rateValidators';
 
 const EMPTY_FORM: TimeEntryRateLookupFormValues = {
@@ -23,17 +24,6 @@ const EMPTY_FORM: TimeEntryRateLookupFormValues = {
 interface Props {
   /** Toàn bộ cấp bậc đã từng khai báo trong bảng đơn giá, để chọn theo tên thay vì gõ tay. */
   levelOptions: string[];
-}
-
-function formatMoney(value: number): string {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 2 }).format(
-    value
-  );
-}
-
-function formatDate(value: string): string {
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString('vi-VN');
 }
 
 /**
@@ -218,7 +208,7 @@ export default function TimeEntryRateResolveLookup({ levelOptions }: Props) {
             </option>
             {candidates.map((row) => (
               <option key={row.entryId} value={row.entryId}>
-                {formatDate(row.workDate)} · {row.projectName} · {row.taskName} · {row.hours} giờ
+                {formatRateDate(row.workDate)} · {row.projectName} · {row.taskName} · {row.hours} giờ
               </option>
             ))}
           </select>
@@ -271,57 +261,33 @@ export default function TimeEntryRateResolveLookup({ levelOptions }: Props) {
       )}
 
       {result && (
-        <div
-          className="alert-box alert-box--success"
-          role="status"
-          style={{ marginTop: '14px', display: 'block' }}
-          data-testid="time-entry-rate-resolve-result"
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
-            <strong style={{ fontSize: '16px' }}>{formatMoney(result.appliedDailyRate)} / ngày công</strong>
-            <span className={`badge ${result.isContractSpecific ? 'badge--blue' : 'badge--gray'}`}>
-              {result.isContractSpecific ? 'Đơn giá riêng hợp đồng' : 'Đơn giá chung công ty'}
-            </span>
-            <span className="badge badge--gold">{WORK_TYPE_LABELS[result.workType]}</span>
-          </div>
-
-          <div className="table-responsive">
-            <table className="user-data-table">
-              <tbody>
-                <tr>
-                  <td className="cell-muted">Dòng giờ công</td>
-                  <td>
-                    #{result.timeEntryId} · {result.professionalRole} ({result.level})
-                  </td>
-                </tr>
-                <tr>
-                  <td className="cell-muted">Ngày công / số giờ</td>
-                  <td>
-                    {formatDate(result.workDate)} · {result.hours} giờ
-                  </td>
-                </tr>
-                <tr>
-                  <td className="cell-muted">Đơn giá theo vai trò/cấp bậc</td>
-                  <td>
-                    {formatMoney(result.dailyRate)} (hiệu lực từ {formatDate(result.effectiveFrom)})
-                  </td>
-                </tr>
-                <tr>
-                  <td className="cell-muted">Hệ số loại hình công việc</td>
-                  <td>× {result.rateFactor}</td>
-                </tr>
-                <tr>
-                  <td className="cell-muted">
-                    <strong>Đơn giá cuối cùng</strong>
-                  </td>
-                  <td>
-                    <strong>{formatMoney(result.appliedDailyRate)}</strong>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <RateResultCard
+          testId="time-entry-rate-resolve-result"
+          eyebrow={`Dòng giờ công #${result.timeEntryId}`}
+          title={result.professionalRole}
+          level={result.level}
+          badges={[
+            result.isContractSpecific
+              ? { label: 'Đơn giá riêng hợp đồng', tone: 'blue' }
+              : { label: 'Đơn giá chung công ty', tone: 'gray' },
+            { label: WORK_TYPE_LABELS[result.workType], tone: 'gold' },
+          ]}
+          dailyRate={result.appliedDailyRate}
+          facts={[
+            { label: 'Ngày công', value: formatRateDate(result.workDate) },
+            { label: 'Số giờ', value: `${result.hours} giờ` },
+            { label: 'Đơn giá có hiệu lực từ', value: formatRateDate(result.effectiveFrom) },
+          ]}
+          ledger={[
+            { label: 'Đơn giá theo vai trò / cấp bậc', value: formatVnd(result.dailyRate) },
+            { label: 'Hệ số loại hình công việc', value: String(result.rateFactor) },
+            { label: 'Đơn giá cuối cùng / ngày công', value: formatVnd(result.appliedDailyRate), total: true },
+            { label: `Quy ra giờ (${STANDARD_HOURS_PER_DAY} giờ / ngày công)`, value: formatVnd(result.appliedDailyRate / STANDARD_HOURS_PER_DAY) },
+            { label: 'Số giờ của dòng này', value: `${result.hours} giờ` },
+            { label: 'Doanh thu của dòng giờ công', value: formatVnd((result.appliedDailyRate / STANDARD_HOURS_PER_DAY) * result.hours), total: true },
+          ]}
+          footnote="Đơn giá áp dụng theo thứ tự ưu tiên: đơn giá riêng của hợp đồng, rồi đơn giá chung công ty; sau đó nhân hệ số loại hình công việc."
+        />
       )}
     </div>
   );
