@@ -3707,3 +3707,24 @@ tr.row--locked .portal-account-cell__name { color: var(--ink-muted); }
   .portal-content { padding: 20px 16px 40px; }
   .portal-project-grid { grid-template-columns: 1fr; }
 }
+
+/* ===== Cổng khách hàng — duyệt phiếu nghiệm thu (NCL-13-CN-003) ===== */
+.portal-topbar__badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #C2410C; color: #ffffff; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-mono, monospace); }
+.portal-status-lg { font-size: 14px; padding: 6px 12px; align-self: flex-start; }
+.portal-decision-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 16px 20px; margin-bottom: 16px; border: 1px solid rgba(194, 65, 12, .25); background: #FFF6ED; border-radius: var(--radius-lg); }
+.portal-decision-bar strong { font-size: 15px; }
+.portal-decision-bar p { margin: 2px 0 0; font-size: 13.5px; color: var(--ink-muted); }
+.portal-decision-bar__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.portal-acceptance-note { margin: 0; padding-top: 12px; border-top: 1px solid var(--overlay-hairline, #F1F0EE); font-size: 14px; overflow-wrap: anywhere; }
+.portal-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.portal-two-col > .portal-section { margin-bottom: 16px; }
+.portal-plain-list { list-style: none; margin: 0; padding: 8px 20px 14px; display: flex; flex-direction: column; }
+.portal-plain-list li { display: flex; align-items: center; gap: 8px; padding: 8px 0; font-size: 14px; overflow-wrap: anywhere; }
+.portal-plain-list li + li { border-top: 1px dashed var(--overlay-hairline, #F1F0EE); }
+.portal-plain-list__icon { color: var(--pale-green-fg, #346538); flex-shrink: 0; }
+.portal-agree { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; padding: 12px 14px; border: 1px solid var(--line, #EAEAEA); border-radius: var(--radius-md); font-size: 14px; cursor: pointer; }
+.portal-agree input { margin-top: 3px; flex-shrink: 0; }
+.portal-acceptance-row--pending > td { background: #FFFBF5; }
+@media (max-width: 900px) { .portal-two-col { grid-template-columns: 1fr; } }
+/* Hộp thông báo có chữ đậm nằm giữa câu (không phải tiêu đề) — cổng khách hàng. */
+.alert-box--inline .alert-box__content strong { display: inline; margin-bottom: 0; }

@@ -7,6 +7,9 @@ import type { PortalProjectRes } from '../types/portalTypes';
 interface Props {
   customerName: string;
   onOpenProject: (projectId: number) => void;
+  /** Số phiếu nghiệm thu chờ khách hàng xác nhận (NCL-13-CN-003). */
+  pendingAcceptances?: number;
+  onOpenAcceptances?: () => void;
 }
 
 type StatusFilter = 'RUNNING' | 'CLOSED' | 'ALL';
@@ -16,7 +19,12 @@ type StatusFilter = 'RUNNING' | 'CLOSED' | 'ALL';
  * tiếp của từng dự án. Backend chỉ trả dự án của khách hàng gắn với tài khoản cổng (QTN-26) và ghi nhật ký mỗi lượt
  * xem (TC-05).
  */
-export default function PortalDashboardPage({ customerName, onOpenProject }: Props) {
+export default function PortalDashboardPage({
+  customerName,
+  onOpenProject,
+  pendingAcceptances = 0,
+  onOpenAcceptances,
+}: Props) {
   const [projects, setProjects] = useState<PortalProjectRes[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -77,6 +85,18 @@ export default function PortalDashboardPage({ customerName, onOpenProject }: Pro
           <span className="icon-xs">{ICONS.refresh}</span> Làm mới
         </button>
       </div>
+
+      {pendingAcceptances > 0 && onOpenAcceptances && (
+        <div className="alert-box alert-box--warning alert-box--inline" data-testid="portal-dashboard-pending">
+          <span className="alert-box__icon">{ICONS.bell}</span>
+          <div className="alert-box__content">
+            Bạn có <strong>{pendingAcceptances}</strong> phiếu nghiệm thu đang chờ xác nhận.{' '}
+            <button type="button" className="btn-link" onClick={onOpenAcceptances} style={{ padding: 0 }}>
+              Xem và duyệt ngay
+            </button>
+          </div>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="user-table-card">

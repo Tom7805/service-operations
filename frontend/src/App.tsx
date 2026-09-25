@@ -7,7 +7,7 @@ import RolePermissionPage from './modules/users/pages/RolePermissionPage';
 import PortalAccountPage from './modules/portal/pages/PortalAccountPage';
 import PortalApp from './modules/portal/PortalApp';
 import PortalAccessDeniedPage from './modules/portal/pages/PortalAccessDeniedPage';
-import { isPortalHash } from './modules/portal/utils/portalRoute';
+import { isPortalHash, portalFeatureOf } from './modules/portal/utils/portalRoute';
 import DepartmentTreePage from './modules/departments/pages/DepartmentTreePage';
 import SensitiveAccessLogPage from './modules/auditLog/pages/SensitiveAccessLogPage';
 import AuditLogPage from './modules/auditLog/pages/AuditLogPage';
@@ -110,16 +110,18 @@ export default function App() {
    *  chốt kết quả), thay vì chỉ biết mỗi con số ID không thao tác được gì. */
   const [focusOpportunityId, setFocusOpportunityId] = useState<number | null>(null);
   /** Đường dẫn `#/portal/...` của cổng khách hàng — tài khoản nội bộ mở vào sẽ bị từ chối (NCL-13-CN-002-TC-04). */
-  const [portalHashRequested, setPortalHashRequested] = useState<boolean>(() => isPortalHash(window.location.hash));
+  const readPortalHash = () => (isPortalHash(window.location.hash) ? window.location.hash : '');
+  const [portalHashValue, setPortalHashValue] = useState<string>(readPortalHash);
+  const portalHashRequested = portalHashValue !== '';
   useEffect(() => {
-    const onHash = () => setPortalHashRequested(isPortalHash(window.location.hash));
+    const onHash = () => setPortalHashValue(readPortalHash());
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
   const leavePortalHash = () => {
     if (!isPortalHash(window.location.hash)) return;
     window.history.replaceState(null, '', window.location.pathname + window.location.search);
-    setPortalHashRequested(false);
+    setPortalHashValue('');
   };
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -529,6 +531,7 @@ export default function App() {
             <PortalAccessDeniedPage
               currentUserRoles={currentRoles}
               currentUserName={session.fullName}
+              feature={portalFeatureOf(portalHashValue)}
               onLeave={leavePortalHash}
             />
           ) : activeTab === 'CHANGE_PASSWORD' ? (

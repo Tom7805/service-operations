@@ -92,3 +92,67 @@ export const PORTAL_DELIVERABLE_TYPE_LABEL: Record<PortalDeliverableType, string
   REPORT: 'Báo cáo',
   OTHER: 'Khác',
 };
+
+/* ===== NCL-13-CN-003 — Khách hàng duyệt phiếu nghiệm thu trên cổng ===== */
+
+export type PortalDecisionType = 'ACCEPTED' | 'REJECTED';
+export type PortalConfirmationChannel = 'PORTAL' | 'INTERNAL';
+
+/** Phần tử danh sách `GET /portal/acceptances` (tóm tắt). */
+export interface PortalAcceptanceSummary {
+  id: number;
+  certificateCode: string;
+  projectId: number;
+  projectCode: string;
+  projectName: string;
+  workPackageName?: string | null;
+  title: string;
+  acceptedValue?: number | null;
+  status: PortalAcceptanceStatus | string;
+  revisionNo: number;
+  /** true khi phiếu đang chờ chính khách hàng quyết định (PENDING_CONFIRMATION). */
+  awaitingDecision: boolean;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  confirmedAt?: string | null;
+}
+
+export interface PortalAcceptanceDecision {
+  decision: PortalDecisionType | string;
+  channel?: PortalConfirmationChannel | string | null;
+  revisionNo?: number | null;
+  signerName?: string | null;
+  signedDate?: string | null;
+  reason?: string | null;
+  recordedAt?: string | null;
+}
+
+/** Chi tiết phiếu — dùng chung cho `GET /portal/acceptances/{id}`, `confirm`, `reject`. */
+export interface PortalAcceptanceDetail extends PortalAcceptanceSummary {
+  note?: string | null;
+  lastRejectionReason?: string | null;
+  signerName?: string | null;
+  signedDate?: string | null;
+  confirmationChannel?: PortalConfirmationChannel | string | null;
+  tasks: string[];
+  deliverables: Array<{ deliverableName: string; versionNo?: string | null }>;
+  decisions: PortalAcceptanceDecision[];
+}
+
+export const PORTAL_ACCEPTANCE_LIST_STATUS_LABEL: Record<PortalAcceptanceStatus, string> = {
+  PENDING_CONFIRMATION: 'Chờ bạn xác nhận',
+  ACCEPTED: 'Đã nghiệm thu',
+  NEEDS_REVISION: 'Đang chỉnh sửa',
+};
+
+export const PORTAL_DECISION_LABEL: Record<PortalDecisionType, string> = {
+  ACCEPTED: 'Xác nhận nghiệm thu',
+  REJECTED: 'Từ chối nghiệm thu',
+};
+
+export const PORTAL_CHANNEL_LABEL: Record<PortalConfirmationChannel, string> = {
+  PORTAL: 'Trên cổng khách hàng',
+  INTERNAL: 'Ghi nhận bởi quản lý dự án',
+};
+
+export const PORTAL_REJECT_REASON_MAX = 1000;
