@@ -253,6 +253,14 @@ export interface ContractPageSummary {
 export interface ContractPageQuery {
   keyword?: string;
   status?: string;
+  /** `false` = máy chủ không tính số liệu tổng hợp (ô chọn hợp đồng). */
+  includeSummary?: boolean;
+}
+
+/** Lựa chọn cho ô chọn hợp đồng: tìm theo mã, tên hoặc tên khách hàng ở máy chủ, tối đa `limit`. */
+export async function searchContractOptions(keyword: string, limit = 50): Promise<ContractRes[]> {
+  const result = await fetchContractsPage({ keyword, includeSummary: false }, 0, limit);
+  return result.content;
 }
 
 /** Một trang hợp đồng (GET /contracts/paged): tìm theo mã, tên hoặc tên khách hàng, lọc trạng thái. */

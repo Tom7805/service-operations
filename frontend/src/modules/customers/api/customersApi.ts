@@ -320,6 +320,22 @@ export interface CustomerPageQuery {
   industry?: string;
   companySize?: string;
   priority?: string;
+  /** Bỏ hồ sơ đã gộp (MERGED) — cho các ô chọn khách hàng của thao tác nghiệp vụ mới. */
+  excludeMerged?: boolean;
+  /** `false` = máy chủ không tính số liệu tổng hợp (ô chọn chỉ cần danh sách). */
+  includeSummary?: boolean;
+}
+
+/** Số khách hàng tối đa hiện trong một ô chọn có tìm kiếm. */
+export const CUSTOMER_OPTION_LIMIT = 50;
+
+/**
+ * Lựa chọn cho ô chọn khách hàng: tìm ở máy chủ (tên, mã, MST, SĐT...), bỏ hồ sơ đã gộp,
+ * tối đa `limit` hồ sơ — thay cho việc nạp toàn bộ danh mục khách hàng về trình duyệt.
+ */
+export async function searchCustomerOptions(keyword: string, limit = CUSTOMER_OPTION_LIMIT): Promise<Customer[]> {
+  const result = await fetchCustomersPage({ keyword, excludeMerged: true, includeSummary: false }, 0, limit);
+  return result.content;
 }
 
 /**

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  fetchCustomers,
+  searchCustomerOptions,
   previewCustomerMerge,
   mergeCustomers,
   checkCustomerMergeAccess,
@@ -50,8 +50,8 @@ function CustomerSearchPicker({
     debounceRef.current = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const data = await fetchCustomers(trimmed);
-        setResults(data.filter((c) => c.status !== 'MERGED').slice(0, 8));
+        // Máy chủ tìm, bỏ hồ sơ đã gộp và chỉ trả 8 kết quả — không kéo cả danh mục về trình duyệt.
+        setResults(await searchCustomerOptions(trimmed, 8));
         setIsOpen(true);
       } catch {
         setResults([]);

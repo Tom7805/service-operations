@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getPipelineReport, ReportsApiError } from '../api/reportsApi';
 import type { PipelineReportRes, PipelineStageRes } from '../types/pipelineReportTypes';
 import { STAGE_CONFIGS, type OpportunityStage } from '../../opportunities/types/opportunityTypes';
-import { fetchOpportunities } from '../../opportunities/api/opportunitiesApi';
+import { fetchOpportunitiesByIds } from '../../opportunities/api/opportunitiesApi';
 import { ICONS } from '../../../components/common/icons';
 import { ReportErrorAlert, ReportSkeleton } from '../components/ReportStates';
 
@@ -61,9 +61,9 @@ export default function PipelineReportPage({
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /** Báo cáo đường ống chỉ trả về ID cơ hội đọng lâu, không có tên — tra thêm
-   *  một lần danh sách cơ hội để đổi ID thành tên thật, hiển thị được và bấm
-   *  thao tác được thay vì in ra một dãy số vô nghĩa với người dùng. */
+  /** Báo cáo đường ống chỉ trả về ID cơ hội đọng lâu, không có tên — tra tên đúng
+   *  các ID đó (theo lô) để hiển thị được và bấm thao tác được, thay vì in ra một dãy
+   *  số vô nghĩa. Trước đây nạp CẢ pipeline chỉ để dựng bảng tên này. */
   const [opportunityNames, setOpportunityNames] = useState<Record<number, string>>({});
 
   /** Bấm "Làm mới" liên tiếp: chỉ phản hồi của lần gọi mới nhất được ghi vào trang. */
@@ -104,10 +104,18 @@ export default function PipelineReportPage({
     load();
   }, [load]);
 
+  const stalledIdsKey = useMemo(
+    () =>
+      Array.from(new Set((data?.stages ?? []).flatMap((s) => s.stalledOpportunityIds ?? [])))
+        .sort((a, b) => a - b)
+        .join(','),
+    [data]
+  );
+
   useEffect(() => {
-    if (!isAllowed) return;
+    if (!isAllowed || !stalledIdsKey) return;
     let cancelled = false;
-    fetchOpportunities()
+    fetchOpportunitiesByIds(stalledIdsKey.split(',').map(Number))
       .then((list) => {
         if (cancelled) return;
         const map: Record<number, string> = {};
@@ -122,7 +130,7 @@ export default function PipelineReportPage({
     return () => {
       cancelled = true;
     };
-  }, [isAllowed]);
+  }, [isAllowed, stalledIdsKey]);
 
   const opportunityLabel = useCallback(
     (id: number): string => opportunityNames[id] ?? `Cơ hội #${id}`,

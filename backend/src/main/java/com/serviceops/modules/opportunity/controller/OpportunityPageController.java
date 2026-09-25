@@ -1,5 +1,7 @@
 package com.serviceops.modules.opportunity.controller;
 
+import java.util.List;
+
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,9 +33,10 @@ public class OpportunityPageController {
 	public BaseRes<PageRes<OpportunityRes, OpportunityPageSummaryRes>> list(
 			@RequestParam(required = false) String keyword,
 			@RequestParam(required = false) OpportunityStage stage,
-			@RequestParam(required = false) Long id,
+			@RequestParam(required = false) List<Long> ids,
+			@RequestParam(defaultValue = "true") boolean includeSummary,
 			@RequestParam(required = false) Integer page,
 			@RequestParam(required = false) Integer size) {
-		return BaseRes.ok(opportunityPageQueryService.findPage(keyword, stage, id, page, size));
+		return BaseRes.ok(opportunityPageQueryService.findPage(keyword, stage, ids, includeSummary, page, size));
 	}
 }

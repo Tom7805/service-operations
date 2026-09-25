@@ -37,11 +37,12 @@ public class ContractPageQueryService {
 	private final CustomerRepository customerRepository;
 	private final ContractMapper contractMapper;
 
-	public PageRes<ContractRes, ContractPageSummaryRes> findPage(String keyword, ContractStatus status, Integer page,
-			Integer size) {
+	/** @param includeSummary {@code false} = bo cac truy van so lieu tong hop (o chon hop dong). */
+	public PageRes<ContractRes, ContractPageSummaryRes> findPage(String keyword, ContractStatus status,
+			boolean includeSummary, Integer page, Integer size) {
 		Page<Contract> result = contractRepository.findAll(filters(keyword, status),
 				PageRequests.of(page, size, Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"))));
-		return PageRes.of(result, toResponses(result.getContent()), summary());
+		return PageRes.of(result, toResponses(result.getContent()), includeSummary ? summary() : null);
 	}
 
 	private Specification<Contract> filters(String keyword, ContractStatus status) {

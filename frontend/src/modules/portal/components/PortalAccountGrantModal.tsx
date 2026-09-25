@@ -3,6 +3,8 @@ import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
 import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import type { Customer } from '../../customers/types/customerTypes';
+import { searchCustomerOptions } from '../../customers/api/customersApi';
+import { useRemoteOptions } from '../../../hooks/useRemoteOptions';
 import { createPortalAccount, fetchPortalCandidates, PortalAccountApiError } from '../api/portalAccountApi';
 import {
   CONTACT_ROLE_LABEL,
@@ -23,10 +25,8 @@ import {
 
 interface Props {
   isOpen: boolean;
-  /** Hồ sơ khách hàng để chọn — trang đã nạp sẵn từ `GET /customers`. */
-  customers: Customer[];
-  customersLoading?: boolean;
-  initialCustomerId?: number | null;
+  /** Khách hàng chọn sẵn (đang lọc ở trang). Danh sách để chọn do máy chủ tìm theo từ khoá. */
+  initialCustomer?: Customer | null;
   onClose: () => void;
   /** Gọi ngay khi cấp thành công để trang nạp lại danh sách; modal vẫn mở để hiện thông tin đăng nhập. */
   onCreated: (account: PortalAccountRes) => void;
@@ -86,14 +86,20 @@ function statusLabel(status: string | null): string {
  */
 export default function PortalAccountGrantModal({
   isOpen,
-  customers,
-  customersLoading = false,
-  initialCustomerId = null,
+  initialCustomer = null,
   onClose,
   onCreated,
 }: Props) {
-  const [customerId, setCustomerId] = useState<number | null>(null);
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const customerId = customer?.id ?? null;
   const [customerSearch, setCustomerSearch] = useState('');
+  // Máy chủ tìm theo tên / mã KH / MST (tối đa 50 hồ sơ, bỏ hồ sơ đã gộp) — không nạp cả danh mục.
+  const customerOptions = useRemoteOptions({
+    keyword: customerSearch,
+    fetchOptions: searchCustomerOptions,
+    enabled: isOpen,
+  });
+  const customersLoading = isOpen && !customerOptions.hasLoaded && !customerOptions.error;
   const [candidates, setCandidates] = useState<PortalContactCandidateRes[]>([]);
   const [candidatesLoading, setCandidatesLoading] = useState(false);
   const [candidatesError, setCandidatesError] = useState<string | null>(null);
@@ -109,21 +115,12 @@ export default function PortalAccountGrantModal({
   const [created, setCreated] = useState<{ account: PortalAccountRes; password: string } | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
-  const activeCustomers = useMemo(() => customers.filter((c) => c.status !== 'MERGED'), [customers]);
-
   const visibleCustomers = useMemo(() => {
-    const q = customerSearch.trim().toLowerCase();
-    const list = q
-      ? activeCustomers.filter(
-          (c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q) || (c.taxCode ?? '').includes(q)
-        )
-      : activeCustomers;
+    const list = customerOptions.options;
     // Giữ khách hàng đang chọn trong danh sách kể cả khi không khớp từ khoá, để <select> không mất giá trị.
-    const selected = activeCustomers.find((c) => c.id === customerId);
-    return selected && !list.includes(selected) ? [selected, ...list] : list;
-  }, [activeCustomers, customerSearch, customerId]);
+    return customer && !list.some((c) => c.id === customer.id) ? [customer, ...list] : list;
+  }, [customerOptions.options, customer]);
 
-  const customer = activeCustomers.find((c) => c.id === customerId) ?? null;
   const contact = candidates.find((c) => c.contactId === contactId) ?? null;
   const available = candidates.filter((c) => c.portalAccountId == null);
 
@@ -164,9 +161,11 @@ export default function PortalAccountGrantModal({
     setSaveError(null);
     setCreated(null);
     setCopied(null);
-    setCustomerId(initialCustomerId ?? null);
-    if (initialCustomerId != null) void loadCandidates(initialCustomerId);
-  }, [isOpen, initialCustomerId, loadCandidates]);
+    setCustomer(initialCustomer ?? null);
+    if (initialCustomer != null) void loadCandidates(initialCustomer.id);
+    // Chỉ khởi tạo lại khi mở modal / đổi khách hàng chọn sẵn (so theo id, không theo object).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, initialCustomer?.id, loadCandidates]);
 
   // Gợi ý tên đăng nhập theo người liên hệ đang chọn, trừ khi quản trị viên đã tự sửa.
   useEffect(() => {
@@ -189,7 +188,7 @@ export default function PortalAccountGrantModal({
 
   const selectCustomer = (value: string) => {
     const id = value ? Number(value) : null;
-    setCustomerId(id);
+    setCustomer(id == null ? null : visibleCustomers.find((c) => c.id === id) ?? null);
     setCandidates([]);
     setContactId(null);
     setUsernameTouched(false);
@@ -350,7 +349,7 @@ export default function PortalAccountGrantModal({
                     setConfirmPassword('');
                     setUsername('');
                     setUsernameTouched(false);
-                    setCustomerId(cid);
+                    // Khách hàng vừa cấp vẫn đang được chọn — chỉ nạp lại người liên hệ của họ.
                     void loadCandidates(cid);
                   }}
                 >

@@ -19,7 +19,7 @@ vi.mock('../api/ratesApi', () => ({
 }));
 
 vi.mock('../../contracts/api/contractsApi', () => ({
-  fetchContracts: vi.fn(),
+  searchContractOptions: vi.fn(),
 }));
 
 const contractRates: ContractBillRateRes[] = [
@@ -34,7 +34,7 @@ describe('ContractRateManager (NCL-07-CN-003 — Khai báo đơn giá riêng the
     vi.clearAllMocks();
     // Mặc định coi như chưa tải được danh sách hợp đồng (vd VT-07 không có quyền liệt
     // kê) để các test cũ dùng ô nhập ID không bị đổi hành vi.
-    vi.mocked(contractsApi.fetchContracts).mockRejectedValue(new Error('no list permission'));
+    vi.mocked(contractsApi.searchContractOptions).mockRejectedValue(new Error('no list permission'));
   });
 
   it('chưa nhập ID hợp đồng thì chưa gọi API, chỉ hiện ô nhập', async () => {
@@ -63,13 +63,16 @@ describe('ContractRateManager (NCL-07-CN-003 — Khai báo đơn giá riêng the
     const contracts: ContractRes[] = [
       { id: 1, contractCode: 'HD-001', name: 'Website bán hàng', opportunityId: null, customerId: 1, quoteId: null, contractType: 'FIXED_PRICE', totalValue: 100000000, status: 'ACTIVE' } as ContractRes,
     ];
-    vi.mocked(contractsApi.fetchContracts).mockResolvedValue(contracts);
+    vi.mocked(contractsApi.searchContractOptions).mockResolvedValue(contracts);
     vi.mocked(ratesApi.fetchContractBillRates).mockResolvedValue(contractRates);
 
     render(<ContractRateManager currentUserRoles={['VT-05']} roleOptions={ROLE_OPTIONS} levelsByRole={LEVELS_BY_ROLE} />);
 
     const select = await screen.findByLabelText('Hợp đồng');
     expect(screen.queryByLabelText('ID hợp đồng')).toBeNull();
+    // Lựa chọn do máy chủ tìm (không nạp toàn bộ hợp đồng) — chờ có lựa chọn rồi mới chọn.
+    await within(select).findByRole('option', { name: /HD-001/ });
+    expect(contractsApi.searchContractOptions).toHaveBeenCalledWith('');
     fireEvent.change(select, { target: { value: '1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Mở đơn giá hợp đồng' }));
 

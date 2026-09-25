@@ -23,7 +23,7 @@ vi.mock('../api/ratesApi', () => ({
 }));
 
 vi.mock('../../contracts/api/contractsApi', () => ({
-  fetchContracts: vi.fn(() => Promise.reject(new Error('not needed for this suite'))),
+  searchContractOptions: vi.fn(() => Promise.reject(new Error('not needed for this suite'))),
 }));
 
 const billRates: BillRateRes[] = [

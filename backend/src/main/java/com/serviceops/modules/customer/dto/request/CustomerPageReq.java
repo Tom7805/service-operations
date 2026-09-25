@@ -17,6 +17,15 @@ public class CustomerPageReq {
 
 	private String priority;
 
+	/** {@code true} = bo ho so da gop (MERGED) — cho cac o chon khach hang cua thao tac nghiep vu moi. */
+	private Boolean excludeMerged;
+
+	/**
+	 * {@code false} = khong tinh so lieu tong hop (the thong ke, gia tri o loc) — o chon/tim kiem
+	 * chi can danh sach, bo duoc cac truy van tong hop moi lan go phim. Mac dinh co tinh.
+	 */
+	private Boolean includeSummary;
+
 	/** So trang, bat dau tu 0. */
 	private Integer page;
 

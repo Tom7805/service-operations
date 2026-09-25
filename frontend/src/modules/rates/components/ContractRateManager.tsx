@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { ICONS } from '../../../components/common/icons';
-import { fetchContracts } from '../../contracts/api/contractsApi';
+import { searchContractOptions } from '../../contracts/api/contractsApi';
+import { useRemoteOptions } from '../../../hooks/useRemoteOptions';
 import type { ContractRes } from '../../contracts/types/contractTypes';
 import { fetchContractBillRates, RatesApiError } from '../api/ratesApi';
 import type { ContractBillRateRes } from '../types/rateTypes';
@@ -38,8 +39,25 @@ function formatDate(value: string): string {
  */
 export default function ContractRateManager({ currentUserRoles = [], roleOptions, levelsByRole }: Props) {
   const canListContracts = currentUserRoles.includes('VT-05') || currentUserRoles.includes('VT-07');
-  const [contracts, setContracts] = useState<ContractRes[]>([]);
-  const [contractsLoadError, setContractsLoadError] = useState<string | null>(null);
+  // Ô chọn hợp đồng: máy chủ tìm theo mã / tên / tên khách hàng (tối đa 50) thay cho việc nạp
+  // toàn bộ hợp đồng khi mở màn. Hợp đồng đang mở luôn được giữ trong danh sách.
+  const [contractSearch, setContractSearch] = useState('');
+  const [openedContract, setOpenedContract] = useState<ContractRes | null>(null);
+  const contractOptions = useRemoteOptions({
+    keyword: contractSearch,
+    fetchOptions: searchContractOptions,
+    enabled: canListContracts,
+  });
+  const contractsLoadError = contractOptions.error
+    ? 'Không tải được danh sách hợp đồng — vẫn có thể nhập ID hợp đồng thủ công.'
+    : null;
+  const contracts = useMemo(
+    () =>
+      openedContract && !contractOptions.options.some((c) => c.id === openedContract.id)
+        ? [openedContract, ...contractOptions.options]
+        : contractOptions.options,
+    [contractOptions.options, openedContract]
+  );
   const [contractIdInput, setContractIdInput] = useState('');
   const [activeContractId, setActiveContractId] = useState<number | null>(null);
   const [rates, setRates] = useState<ContractBillRateRes[]>([]);
@@ -47,13 +65,6 @@ export default function ContractRateManager({ currentUserRoles = [], roleOptions
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!canListContracts) return;
-    fetchContracts()
-      .then(setContracts)
-      .catch(() => setContractsLoadError('Không tải được danh sách hợp đồng — vẫn có thể nhập ID hợp đồng thủ công.'));
-  }, [canListContracts]);
 
   const loadContractRates = useCallback(async (contractId: number) => {
     setIsLoading(true);
@@ -75,6 +86,7 @@ export default function ContractRateManager({ currentUserRoles = [], roleOptions
     e.preventDefault();
     const id = Number(contractIdInput);
     if (!Number.isFinite(id) || id <= 0) return;
+    setOpenedContract(contracts.find((c) => c.id === id) ?? null);
     setActiveContractId(id);
     setToast(null);
     void loadContractRates(id);
@@ -126,6 +138,21 @@ export default function ContractRateManager({ currentUserRoles = [], roleOptions
 
       <form onSubmit={handleOpenContract} style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
         {canListContracts && !contractsLoadError ? (
+          <div style={{ minWidth: '220px' }}>
+            <label className="form-label" htmlFor="contract-rate-search">
+              Tìm hợp đồng
+            </label>
+            <input
+              id="contract-rate-search"
+              type="search"
+              className="form-input"
+              placeholder="Mã, tên hoặc khách hàng..."
+              value={contractSearch}
+              onChange={(e) => setContractSearch(e.target.value)}
+            />
+          </div>
+        ) : null}
+        {canListContracts && !contractsLoadError ? (
           <div style={{ minWidth: '280px' }}>
             <label className="form-label" htmlFor="contract-rate-select">
               Hợp đồng
@@ -136,7 +163,9 @@ export default function ContractRateManager({ currentUserRoles = [], roleOptions
               value={contractIdInput}
               onChange={(e) => setContractIdInput(e.target.value)}
             >
-              <option value="">-- Chọn hợp đồng --</option>
+              <option value="">
+                {!contractOptions.hasLoaded ? 'Đang tải hợp đồng...' : `-- Chọn hợp đồng (${contracts.length}) --`}
+              </option>
               {contracts.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.contractCode} — {c.name}
@@ -177,7 +206,8 @@ export default function ContractRateManager({ currentUserRoles = [], roleOptions
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
             <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}>
-              {contracts.find((c) => c.id === activeContractId)?.contractCode ?? `Hợp đồng #${activeContractId}`}
+              {(openedContract?.id === activeContractId ? openedContract?.contractCode : undefined) ??
+                `Hợp đồng #${activeContractId}`}
             </h3>
             <button type="button" className="btn btn-primary" onClick={() => setIsFormOpen(true)}>
               <span className="icon-xs">{ICONS.plus}</span> Khai báo đơn giá riêng

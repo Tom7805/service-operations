@@ -53,34 +53,40 @@ public class OpportunityPageQueryService {
 	private final EntityManager entityManager;
 
 	/**
-	 * @param id chi lay dung co hoi nay (neu nam trong pham vi) — de mo thang mot co hoi khi duoc dieu
-	 *           huong tu noi khac (Bao cao duong ong) ma khong phai nap ca pipeline de tim; {@code null} = khong loc
+	 * @param ids            chi lay cac co hoi nay (neu nam trong pham vi) — mo thang mot co hoi hoac tra ten
+	 *                       theo lo ma khong phai nap ca pipeline; {@code null}/rong = khong loc
+	 * @param includeSummary {@code false} = bo cac truy van so lieu tong hop (o chon, tra ten)
 	 */
-	public PageRes<OpportunityRes, OpportunityPageSummaryRes> findPage(String keyword, OpportunityStage stage, Long id,
-			Integer page, Integer size) {
+	public PageRes<OpportunityRes, OpportunityPageSummaryRes> findPage(String keyword, OpportunityStage stage,
+			List<Long> ids, boolean includeSummary, Integer page, Integer size) {
 		Specification<Opportunity> scope = SpecSupport.ownerInScope(currentUserScopeProvider.currentScope(),
 				currentUserScopeProvider.currentUserId(), "ownerId");
 
-		Page<Opportunity> result = opportunityRepository.findAll(scope.and(filters(keyword, stage, id)),
+		Page<Opportunity> result = opportunityRepository.findAll(scope.and(filters(keyword, stage, ids)),
 				PageRequests.of(page, size, Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"))));
-		return PageRes.of(result, toResponses(result.getContent()), summary(scope));
+		return PageRes.of(result, toResponses(result.getContent()), includeSummary ? summary(scope) : null);
 	}
 
-	private Specification<Opportunity> filters(String keyword, OpportunityStage stage, Long id) {
+	private Specification<Opportunity> filters(String keyword, OpportunityStage stage, List<Long> ids) {
 		String normalized = SpecSupport.normalize(keyword);
 		return (root, query, cb) -> {
 			List<Predicate> where = new ArrayList<>();
 			if (normalized != null) {
-				where.add(cb.or(
+				List<Predicate> any = new ArrayList<>(List.of(
 						SpecSupport.containsIgnoreCase(cb, root.get("name"), normalized),
 						SpecSupport.relatedNameContains(query, cb, root.get("customerId"), Customer.class, "name",
 								normalized)));
+				// Nhap so (vd "42") thi khop ca ma so co hoi — o chon co hoi truoc day cho tim theo id.
+				if (normalized.chars().allMatch(Character::isDigit) && normalized.length() <= 18) {
+					any.add(cb.equal(root.get("id"), Long.valueOf(normalized)));
+				}
+				where.add(cb.or(any.toArray(Predicate[]::new)));
 			}
 			if (stage != null) {
 				where.add(cb.equal(root.get("stage"), stage));
 			}
-			if (id != null) {
-				where.add(cb.equal(root.get("id"), id));
+			if (ids != null && !ids.isEmpty()) {
+				where.add(root.get("id").in(ids));
 			}
 			return cb.and(where.toArray(Predicate[]::new));
 		};

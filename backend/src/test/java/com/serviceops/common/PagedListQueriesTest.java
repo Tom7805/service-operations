@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -90,12 +91,12 @@ class PagedListQueriesTest {
 		opportunity("Tu van", acme, "600.00", null, OpportunityStage.APPROACH, salesB);
 		em.flush();
 
-		PageRes<OpportunityRes, OpportunityPageSummaryRes> byCustomer = opportunities.findPage("acme", null, null, 0, 10);
+		PageRes<OpportunityRes, OpportunityPageSummaryRes> byCustomer = opportunities.findPage("acme", null, null, true, 0, 10);
 		assertThat(byCustomer.content()).extracting(OpportunityRes::name)
 				.containsExactlyInAnyOrder("Trien khai ERP", "Tu van");
 		assertThat(byCustomer.content()).allSatisfy(o -> assertThat(o.customerName()).isEqualTo("Acme Viet Nam"));
 
-		assertThat(opportunities.findPage(null, OpportunityStage.WON, null, 0, 10).content())
+		assertThat(opportunities.findPage(null, OpportunityStage.WON, null, true, 0, 10).content())
 				.extracting(OpportunityRes::name).containsExactly("Bao tri he thong");
 
 		OpportunityPageSummaryRes summary = byCustomer.summary();
@@ -114,7 +115,7 @@ class PagedListQueriesTest {
 		em.flush();
 		when(scopeProvider.currentScope()).thenReturn(new UserScope(DataScopeType.DEPARTMENT, Set.of(10L)));
 
-		PageRes<OpportunityRes, OpportunityPageSummaryRes> page = opportunities.findPage(null, null, null, 0, 10);
+		PageRes<OpportunityRes, OpportunityPageSummaryRes> page = opportunities.findPage(null, null, null, true, 0, 10);
 
 		assertThat(page.content()).extracting(OpportunityRes::name).containsExactly("Trien khai ERP");
 		assertThat(page.summary().total()).isEqualTo(1);
@@ -127,12 +128,32 @@ class PagedListQueriesTest {
 		opportunity("Trien khai ERP", acme, "1000.00", "50.00", OpportunityStage.PROPOSAL, salesA);
 		opportunity("Bao tri he thong", globex, "400.00", "100.00", OpportunityStage.WON, salesB);
 		em.flush();
-		Long otherTeamId = opportunities.findPage("bao tri", null, null, 0, 10).content().get(0).id();
+		Long otherTeamId = opportunities.findPage("bao tri", null, null, true, 0, 10).content().get(0).id();
 
-		assertThat(opportunities.findPage(null, null, otherTeamId, 0, 1).content()).extracting(OpportunityRes::name)
+		assertThat(opportunities.findPage(null, null, List.of(otherTeamId), true, 0, 1).content()).extracting(OpportunityRes::name)
 				.containsExactly("Bao tri he thong");
 		when(scopeProvider.currentScope()).thenReturn(new UserScope(DataScopeType.DEPARTMENT, Set.of(10L)));
-		assertThat(opportunities.findPage(null, null, otherTeamId, 0, 1).content()).isEmpty();
+		assertThat(opportunities.findPage(null, null, List.of(otherTeamId), true, 0, 1).content()).isEmpty();
+	}
+
+	@Test
+	@DisplayName("Co hoi: tra theo lo nhieu id, tu khoa la so khop ca ma so, bo so lieu tong hop khi khong can")
+	void opportunitiesByIdsAndNumericKeyword() {
+		opportunity("Trien khai ERP", acme, "1000.00", "50.00", OpportunityStage.PROPOSAL, salesA);
+		opportunity("Bao tri he thong", globex, "400.00", "100.00", OpportunityStage.WON, salesB);
+		opportunity("Tu van", acme, "600.00", null, OpportunityStage.APPROACH, salesB);
+		em.flush();
+		java.util.Map<String, Long> idByName = new java.util.HashMap<>();
+		opportunities.findPage(null, null, null, true, 0, 10).content().forEach(o -> idByName.put(o.name(), o.id()));
+
+		PageRes<OpportunityRes, OpportunityPageSummaryRes> byIds = opportunities.findPage(null, null,
+				List.of(idByName.get("Trien khai ERP"), idByName.get("Tu van")), false, 0, 10);
+		assertThat(byIds.content()).extracting(OpportunityRes::name).containsExactlyInAnyOrder("Trien khai ERP", "Tu van");
+		assertThat(byIds.summary()).isNull();
+
+		String numeric = String.valueOf(idByName.get("Bao tri he thong"));
+		assertThat(opportunities.findPage(numeric, null, null, false, 0, 10).content()).extracting(OpportunityRes::id)
+				.contains(idByName.get("Bao tri he thong"));
 	}
 
 	@Test
@@ -143,12 +164,12 @@ class PagedListQueriesTest {
 		contract("HD-003", globex, ContractStatus.ACTIVE, "800.00");
 		em.flush();
 
-		assertThat(contracts.findPage("globex", ContractStatus.ACTIVE, 0, 10).content())
+		assertThat(contracts.findPage("globex", ContractStatus.ACTIVE, true, 0, 10).content())
 				.extracting(ContractRes::contractCode).containsExactly("HD-003");
-		assertThat(contracts.findPage("hd-001", null, 0, 10).content()).extracting(ContractRes::customerName)
+		assertThat(contracts.findPage("hd-001", null, true, 0, 10).content()).extracting(ContractRes::customerName)
 				.containsExactly("Acme Viet Nam");
 
-		ContractPageSummaryRes summary = contracts.findPage("khong-khop", null, 0, 10).summary();
+		ContractPageSummaryRes summary = contracts.findPage("khong-khop", null, true, 0, 10).summary();
 		assertThat(summary).isEqualTo(new ContractPageSummaryRes(3, 2, 1, 1));
 	}
 

@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import {
   createOpportunityActivity,
-  fetchOpportunities,
   fetchOpportunityActivities,
+  fetchOpportunityById,
   OpportunityApiError,
 } from '../api/opportunitiesApi';
 import type { ContractRes } from '../../contracts/types/contractTypes';
@@ -112,8 +112,7 @@ export default function OpportunityDetailPage({
 
     async function loadOpportunityStatus() {
       try {
-        const all = await fetchOpportunities();
-        const found = all.find((o) => o.id === opportunityId);
+        const found = await fetchOpportunityById(opportunityId);
         if (!cancelled && found) {
           setResolvedStatus(found.status as OpportunityStatus);
           setResolvedName(found.name);
@@ -141,10 +140,10 @@ export default function OpportunityDetailPage({
       try {
         const data = await fetchOpportunityActivities(opportunityId);
         if (!cancelled) setActivities(data);
-        // also try to fetch basic opportunity info from the list
+        // Thông tin cơ bản của cơ hội — tra đúng cơ hội này, không nạp cả pipeline.
         try {
-          const list = await fetchOpportunities();
-          if (!cancelled) setOpportunity(list.find((o) => o.id === opportunityId) ?? null);
+          const found = await fetchOpportunityById(opportunityId);
+          if (!cancelled) setOpportunity(found);
         } catch {
           // ignore
         }

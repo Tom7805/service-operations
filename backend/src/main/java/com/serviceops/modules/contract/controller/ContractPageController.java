@@ -32,8 +32,9 @@ public class ContractPageController {
 	public BaseRes<PageRes<ContractRes, ContractPageSummaryRes>> list(
 			@RequestParam(required = false) String keyword,
 			@RequestParam(required = false) ContractStatus status,
+			@RequestParam(defaultValue = "true") boolean includeSummary,
 			@RequestParam(required = false) Integer page,
 			@RequestParam(required = false) Integer size) {
-		return BaseRes.ok(contractPageQueryService.findPage(keyword, status, page, size));
+		return BaseRes.ok(contractPageQueryService.findPage(keyword, status, includeSummary, page, size));
 	}
 }

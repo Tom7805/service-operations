@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
-import { fetchOpportunities } from '../api/opportunitiesApi';
-import type { Opportunity } from '../types/opportunityTypes';
+import { useRemoteOptions } from '../../../hooks/useRemoteOptions';
+import { searchOpportunityOptions } from '../api/opportunitiesApi';
 
 interface OpportunitySearchPickerProps {
   onSelect: (opportunityId: number, opportunityName: string) => void;
@@ -10,46 +10,16 @@ interface OpportunitySearchPickerProps {
 /**
  * Cơ hội không có "mã số" hiển thị ở đâu trong hệ thống để người dùng tra cứu —
  * ID chỉ là khoá kỹ thuật trong database. Vì vậy thay vì bắt nhập số ID mù,
- * cho tìm theo tên cơ hội / tên khách hàng rồi chọn từ danh sách khớp.
+ * cho tìm theo tên cơ hội / tên khách hàng rồi chọn từ danh sách khớp. Máy chủ tìm và
+ * chỉ trả 8 kết quả đầu (mới nhất trước) — không nạp cả pipeline về trình duyệt.
  */
 export default function OpportunitySearchPicker({ onSelect }: OpportunitySearchPickerProps) {
-  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setIsLoading(true);
-      setLoadError(null);
-      try {
-        const data = await fetchOpportunities();
-        if (!cancelled) setOpportunities(data);
-      } catch {
-        if (!cancelled) setLoadError('Không thể tải danh sách cơ hội. Vui lòng thử lại.');
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const results = useMemo(() => {
-    const trimmed = query.trim().toLowerCase();
-    if (!trimmed) return opportunities.slice(0, 8);
-    return opportunities
-      .filter(
-        (o) =>
-          o.name.toLowerCase().includes(trimmed) ||
-          o.customerName?.toLowerCase().includes(trimmed) ||
-          String(o.id).includes(trimmed)
-      )
-      .slice(0, 8);
-  }, [opportunities, query]);
+  // Tìm theo tên cơ hội, tên khách hàng hoặc mã số — chạy ở máy chủ sau khi ngừng gõ 300ms.
+  const search = useRemoteOptions({ keyword: query, fetchOptions: searchOpportunityOptions });
+  const results = search.options;
+  const isLoading = !search.hasLoaded && !search.error;
+  const loadError = search.error ? 'Không thể tải danh sách cơ hội. Vui lòng thử lại.' : null;
 
   return (
     <div className="opportunity-picker">

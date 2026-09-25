@@ -3,7 +3,8 @@ import type { CSSProperties } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import RowActionsMenu from '../../../components/common/RowActionsMenu';
 import { roleLabel, roleLabels } from '../../../utils/roleLabel';
-import { fetchCustomers } from '../../customers/api/customersApi';
+import { searchCustomerOptions } from '../../customers/api/customersApi';
+import { useRemoteOptions } from '../../../hooks/useRemoteOptions';
 import type { Customer } from '../../customers/types/customerTypes';
 import type { AuditLogEntry } from '../../auditLog/types/auditLogTypes';
 import {
@@ -58,9 +59,26 @@ export default function PortalAccountPage({
     checkPortalAccountAccess().catch(() => undefined);
   }, [isAdmin]);
 
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [customersLoading, setCustomersLoading] = useState(false);
-  const [customerFilter, setCustomerFilter] = useState<number | ''>('');
+  // Ô lọc khách hàng: máy chủ tìm theo từ khoá (tối đa 50 hồ sơ, bỏ hồ sơ đã gộp) thay cho
+  // việc nạp toàn bộ danh mục khách hàng khi mở trang. Khách hàng đang lọc luôn được giữ lại.
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const customerOptions = useRemoteOptions({
+    keyword: customerSearch,
+    fetchOptions: searchCustomerOptions,
+    enabled: isAdmin,
+  });
+  const customersLoading = isAdmin && !customerOptions.hasLoaded && !customerOptions.error;
+  const customers = useMemo(
+    () =>
+      selectedCustomer && !customerOptions.options.some((c) => c.id === selectedCustomer.id)
+        ? [selectedCustomer, ...customerOptions.options]
+        : customerOptions.options,
+    [customerOptions.options, selectedCustomer]
+  );
+  const customerFilter: number | '' = selectedCustomer?.id ?? '';
+  const setCustomerFilter = (value: number | '') =>
+    setSelectedCustomer(value === '' ? null : customers.find((c) => c.id === value) ?? null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [search, setSearch] = useState('');
 
@@ -107,22 +125,7 @@ export default function PortalAccountPage({
 
   useEffect(() => {
     if (!isAdmin) return;
-    let cancelled = false;
-    setCustomersLoading(true);
-    fetchCustomers()
-      .then((list) => {
-        if (!cancelled) setCustomers(list);
-      })
-      .catch(() => {
-        if (!cancelled) setCustomers([]);
-      })
-      .finally(() => {
-        if (!cancelled) setCustomersLoading(false);
-      });
     void loadRecent();
-    return () => {
-      cancelled = true;
-    };
   }, [isAdmin, loadRecent]);
 
   useEffect(() => {
@@ -207,7 +210,6 @@ export default function PortalAccountPage({
     );
   }
 
-  const selectedCustomer = customerFilter === '' ? null : customers.find((c) => c.id === customerFilter) ?? null;
 
   return (
     <div className="user-management-page">
@@ -294,6 +296,18 @@ export default function PortalAccountPage({
             )}
           </div>
           <div className="toolbar-filters">
+            <div className="filter-group">
+              <input
+                type="search"
+                className="filter-select"
+                style={{ maxWidth: '200px' }}
+                placeholder="Tìm khách hàng..."
+                aria-label="Tìm khách hàng để lọc"
+                value={customerSearch}
+                onChange={(e) => setCustomerSearch(e.target.value)}
+                data-testid="portal-account-customer-search"
+              />
+            </div>
             <div className="filter-group">
               <label htmlFor="portal-account-customer" className="filter-label">Khách hàng:</label>
               <select
@@ -540,9 +554,7 @@ export default function PortalAccountPage({
 
       <PortalAccountGrantModal
         isOpen={grantOpen}
-        customers={customers}
-        customersLoading={customersLoading}
-        initialCustomerId={customerFilter === '' ? null : customerFilter}
+        initialCustomer={selectedCustomer}
         onClose={() => setGrantOpen(false)}
         onCreated={handleCreated}
       />

@@ -17,6 +17,7 @@ import com.serviceops.modules.customer.dto.request.CustomerPageReq;
 import com.serviceops.modules.customer.dto.response.CustomerPageSummaryRes;
 import com.serviceops.modules.customer.dto.response.CustomerRes;
 import com.serviceops.modules.customer.entity.Customer;
+import com.serviceops.modules.customer.enums.CustomerStatus;
 import com.serviceops.modules.customer.mapper.CustomerMapper;
 import com.serviceops.modules.customer.repository.CustomerRepository;
 import com.serviceops.security.scope.CurrentUserScopeProvider;
@@ -48,7 +49,8 @@ public class CustomerPageQueryService {
 		Page<Customer> page = customerRepository.findAll(filtered, PageRequests.of(request.getPage(),
 				request.getSize(), Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"))));
 		List<CustomerRes> content = page.getContent().stream().map(customerMapper::toResponse).toList();
-		return PageRes.of(page, content, summary(scope));
+		boolean withSummary = !Boolean.FALSE.equals(request.getIncludeSummary());
+		return PageRes.of(page, content, withSummary ? summary(scope) : null);
 	}
 
 	private Specification<Customer> filters(CustomerPageReq request) {
@@ -75,6 +77,9 @@ public class CustomerPageQueryService {
 			}
 			if (priority != null) {
 				where.add(SpecSupport.equalsIgnoreCase(cb, root.get("priority"), priority));
+			}
+			if (Boolean.TRUE.equals(request.getExcludeMerged())) {
+				where.add(cb.notEqual(root.get("status"), CustomerStatus.MERGED));
 			}
 			return cb.and(where.toArray(Predicate[]::new));
 		};

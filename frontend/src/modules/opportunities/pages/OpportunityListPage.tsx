@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback, memo } from 'react';
 import type { Opportunity, OpportunityStage, QuoteRes } from '../types/opportunityTypes';
 import { STAGE_CONFIGS, LOSS_REASON_OPTIONS } from '../types/opportunityTypes';
-import { fetchOpportunitiesPage, OpportunityApiError } from '../api/opportunitiesApi';
+import { fetchOpportunitiesPage, fetchOpportunityById, OpportunityApiError } from '../api/opportunitiesApi';
 import OpportunityFormModal from '../components/OpportunityFormModal';
 import StageTransitionControl from '../components/StageTransitionControl';
 import QuoteBuilder from '../components/QuoteBuilder';
@@ -142,9 +142,8 @@ export default function OpportunityListPage({
   useEffect(() => {
     if (!focusOpportunityId) return;
     let cancelled = false;
-    fetchOpportunitiesPage({ id: focusOpportunityId }, 0, 1)
-      .then((result) => {
-        const target = result.content.find((o) => o.id === focusOpportunityId);
+    fetchOpportunityById(focusOpportunityId)
+      .then((target) => {
         if (cancelled || !target) return;
         setSearchTerm('');
         setStageFilter('ALL');

@@ -324,8 +324,40 @@ export interface OpportunityPageSummary {
 export interface OpportunityPageQuery {
   keyword?: string;
   stage?: string;
-  /** Chỉ lấy đúng cơ hội này (nếu nằm trong phạm vi người xem) — để mở thẳng một cơ hội. */
-  id?: number;
+  /** Chỉ lấy các cơ hội này (nếu nằm trong phạm vi người xem) — mở thẳng hoặc tra tên theo lô. */
+  ids?: number[];
+  /** `false` = máy chủ không tính số liệu tổng hợp (ô chọn, tra tên). */
+  includeSummary?: boolean;
+}
+
+/** Kích thước trang tối đa máy chủ chấp nhận — tra theo lô chia nhỏ theo ngưỡng này. */
+const MAX_PAGE_SIZE = 100;
+
+/**
+ * Tra các cơ hội theo id (trong phạm vi người xem) — thay cho việc nạp cả pipeline rồi
+ * `find`/dựng bảng tên. Chia lô tối đa 100 id mỗi yêu cầu, chạy song song.
+ */
+export async function fetchOpportunitiesByIds(ids: number[]): Promise<Opportunity[]> {
+  const unique = Array.from(new Set(ids));
+  if (unique.length === 0) return [];
+  const chunks: number[][] = [];
+  for (let i = 0; i < unique.length; i += MAX_PAGE_SIZE) chunks.push(unique.slice(i, i + MAX_PAGE_SIZE));
+  const pages = await Promise.all(
+    chunks.map((chunk) => fetchOpportunitiesPage({ ids: chunk, includeSummary: false }, 0, chunk.length))
+  );
+  return pages.flatMap((p) => p.content);
+}
+
+/** Một cơ hội theo id (trong phạm vi người xem), `null` nếu không có hoặc ngoài phạm vi. */
+export async function fetchOpportunityById(id: number): Promise<Opportunity | null> {
+  const [found] = await fetchOpportunitiesByIds([id]);
+  return found ?? null;
+}
+
+/** Lựa chọn cho ô tìm cơ hội: tìm theo tên cơ hội, tên khách hàng hoặc mã số ở máy chủ. */
+export async function searchOpportunityOptions(keyword: string, limit = 8): Promise<Opportunity[]> {
+  const result = await fetchOpportunitiesPage({ keyword, includeSummary: false }, 0, limit);
+  return result.content;
 }
 
 /**

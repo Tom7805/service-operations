@@ -21,7 +21,7 @@ vi.mock('../api/portalAccountApi', async () => {
 });
 
 vi.mock('../../customers/api/customersApi', () => ({
-  fetchCustomers: vi.fn(),
+  searchCustomerOptions: vi.fn(),
 }));
 
 const api = vi.mocked(portalApi);
@@ -103,7 +103,14 @@ function openRowMenu(username: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(customersApi.fetchCustomers).mockResolvedValue(customers as never);
+  // Máy chủ giả: tìm theo tên/mã và bỏ hồ sơ đã gộp (excludeMerged) như GET /customers/paged.
+  vi.mocked(customersApi.searchCustomerOptions).mockImplementation(async (keyword: string) =>
+    customers.filter(
+      (c) =>
+        c.status !== 'MERGED' &&
+        (!keyword || `${c.code} ${c.name}`.toLowerCase().includes(keyword.toLowerCase()))
+    ) as never
+  );
   api.fetchPortalAccounts.mockResolvedValue([account()]);
   api.fetchPortalCandidates.mockResolvedValue(candidates);
   api.fetchPortalAccountHistory.mockResolvedValue([historyEntry]);
@@ -130,6 +137,7 @@ describe('NCL-13-CN-001 — Cấp tài khoản cổng cho khách hàng', () => {
 
     // Hồ sơ đã gộp không có trong danh sách chọn.
     const select = within(modal).getByTestId('portal-grant-customer') as HTMLSelectElement;
+    await within(select).findByRole('option', { name: /KH-100001/ });
     expect(within(select).queryByText(/KH-100002/)).not.toBeInTheDocument();
 
     fireEvent.change(select, { target: { value: '1001' } });
@@ -163,6 +171,7 @@ describe('NCL-13-CN-001 — Cấp tài khoản cổng cho khách hàng', () => {
     await renderAdmin();
     fireEvent.click(screen.getByTestId('portal-account-open-grant'));
     const modal = await screen.findByTestId('portal-grant-modal');
+    await within(modal).findByRole('option', { name: /KH-100001/ });
     fireEvent.change(within(modal).getByTestId('portal-grant-customer'), { target: { value: '1001' } });
     await within(modal).findByTestId('portal-grant-contact-11');
 
@@ -186,6 +195,7 @@ describe('NCL-13-CN-001 — Cấp tài khoản cổng cho khách hàng', () => {
     await renderAdmin();
     fireEvent.click(screen.getByTestId('portal-account-open-grant'));
     const modal = await screen.findByTestId('portal-grant-modal');
+    await within(modal).findByRole('option', { name: /KH-100001/ });
     fireEvent.change(within(modal).getByTestId('portal-grant-customer'), { target: { value: '1001' } });
     await within(modal).findByTestId('portal-grant-contact-11');
     fireEvent.click(within(modal).getByTestId('portal-grant-generate'));
@@ -201,6 +211,7 @@ describe('NCL-13-CN-001 — Cấp tài khoản cổng cho khách hàng', () => {
     await renderAdmin();
     fireEvent.click(screen.getByTestId('portal-account-open-grant'));
     const modal = await screen.findByTestId('portal-grant-modal');
+    await within(modal).findByRole('option', { name: /KH-100001/ });
     fireEvent.change(within(modal).getByTestId('portal-grant-customer'), { target: { value: '1001' } });
     await within(modal).findByTestId('portal-grant-contact-11');
     fireEvent.change(within(modal).getByTestId('portal-grant-password'), { target: { value: 'Matkhau123' } });
@@ -215,6 +226,7 @@ describe('NCL-13-CN-001 — Cấp tài khoản cổng cho khách hàng', () => {
     await renderAdmin();
     fireEvent.click(screen.getByTestId('portal-account-open-grant'));
     const modal = await screen.findByTestId('portal-grant-modal');
+    await within(modal).findByRole('option', { name: /KH-100001/ });
     fireEvent.change(within(modal).getByTestId('portal-grant-customer'), { target: { value: '1001' } });
     expect(await within(modal).findByTestId('portal-grant-no-contacts')).toBeInTheDocument();
     expect(within(modal).getByTestId('portal-grant-submit')).toBeDisabled();
@@ -279,7 +291,7 @@ describe('NCL-13-CN-001 — Cấp tài khoản cổng cho khách hàng', () => {
     expect(screen.getByTestId('portal-account-access-denied')).toHaveTextContent('Quản trị viên');
     await waitFor(() => expect(api.checkPortalAccountAccess).toHaveBeenCalledTimes(1));
     expect(api.fetchPortalAccounts).not.toHaveBeenCalled();
-    expect(customersApi.fetchCustomers).not.toHaveBeenCalled();
+    expect(customersApi.searchCustomerOptions).not.toHaveBeenCalled();
   });
 
   it('TC-04: chi tiết tài khoản hiện lịch sử với người thực hiện, nội dung và thời điểm', async () => {
@@ -329,6 +341,7 @@ describe('NCL-13-CN-001 — Cấp tài khoản cổng cho khách hàng', () => {
     expect(screen.queryByTestId('portal-account-row-5')).not.toBeInTheDocument();
 
     await waitFor(() => expect(screen.getByTestId('portal-account-customer-filter')).not.toBeDisabled());
+    await within(screen.getByTestId('portal-account-customer-filter')).findByRole('option', { name: /KH-100001/ });
     fireEvent.change(screen.getByTestId('portal-account-customer-filter'), { target: { value: '1001' } });
     await waitFor(() => expect(api.fetchPortalAccounts).toHaveBeenLastCalledWith({ customerId: 1001 }));
   });

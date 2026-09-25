@@ -127,6 +127,28 @@ class CustomerPageQueryServiceTest {
 				.containsExactly("Cong ty Alpha", "Cong ty Gamma 100%");
 	}
 
+	@Test
+	@DisplayName("O chon khach hang: bo ho so da gop va khong tinh so lieu tong hop")
+	void pickerExcludesMergedWithoutSummary() {
+		Customer merged = new Customer();
+		merged.setCode("KH" + System.nanoTime());
+		merged.setName("Cong ty Alpha (cu)");
+		merged.setStatus(com.serviceops.modules.customer.enums.CustomerStatus.MERGED);
+		merged.setCreatedAt(LocalDateTime.of(2026, 1, 4, 8, 0));
+		em.persist(merged);
+		em.flush();
+
+		CustomerPageReq request = req("alpha", null, null);
+		assertThat(service.findPage(request).content()).extracting(CustomerRes::name)
+				.containsExactlyInAnyOrder("Cong ty Alpha", "Cong ty Alpha (cu)");
+
+		request.setExcludeMerged(true);
+		request.setIncludeSummary(false);
+		PageRes<CustomerRes, CustomerPageSummaryRes> picker = service.findPage(request);
+		assertThat(picker.content()).extracting(CustomerRes::name).containsExactly("Cong ty Alpha");
+		assertThat(picker.summary()).isNull();
+	}
+
 	private void asScope(UserScope scope, Long userId) {
 		when(scopeProvider.currentScope()).thenReturn(scope);
 		when(scopeProvider.currentUserId()).thenReturn(userId);
