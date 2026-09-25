@@ -13,4 +13,6 @@ COPY --from=build /app/target/*.jar app.jar
 # Render/nhiều PaaS cấp cổng qua biến PORT lúc chạy; ${PORT:-8080} vẫn cho
 # chạy đúng khi không có PORT (vd docker-compose local dùng SERVER_PORT).
 EXPOSE 8080
-ENTRYPOINT ["sh", "-c", "java -Dserver.port=${PORT:-${SERVER_PORT:-8080}} -jar app.jar"]
+# JVM tu co gian theo RAM cua container thay vi mac dinh 25% — tranh OOM/GC lien tuc.
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError"
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Dserver.port=${PORT:-${SERVER_PORT:-8080}} -jar app.jar"]
