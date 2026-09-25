@@ -131,21 +131,21 @@ export default function TimesheetReportPage({ currentUserRoles = [] }: Timesheet
             marginBottom: '16px' }}>
             <div className="user-table-card" style={{ padding: '14px 16px' }}>
               <div className="field-hint">Nhân sự</div>
-              <div style={{ fontSize: '22px', fontWeight: 600 }}>{data.employeeCount}</div>
+              <div style={{ fontSize: '24px', fontWeight: 600 }}>{data.employeeCount}</div>
             </div>
             <div className="user-table-card" style={{ padding: '14px 16px' }}>
               <div className="field-hint">Dự án</div>
-              <div style={{ fontSize: '22px', fontWeight: 600 }}>{data.projectCount}</div>
+              <div style={{ fontSize: '24px', fontWeight: 600 }}>{data.projectCount}</div>
             </div>
             <div className="user-table-card" style={{ padding: '14px 16px' }}>
               <div className="field-hint">Giờ có tính phí</div>
-              <div style={{ fontSize: '22px', fontWeight: 600 }} data-testid="timesheet-total-billable">
+              <div style={{ fontSize: '24px', fontWeight: 600 }} data-testid="timesheet-total-billable">
                 {hours.format(data.totalBillableHours)}
               </div>
             </div>
             <div className="user-table-card" style={{ padding: '14px 16px' }}>
               <div className="field-hint">Giờ không tính phí</div>
-              <div style={{ fontSize: '22px', fontWeight: 600 }}>{hours.format(data.totalNonBillableHours)}</div>
+              <div style={{ fontSize: '24px', fontWeight: 600 }}>{hours.format(data.totalNonBillableHours)}</div>
             </div>
           </div>
 
