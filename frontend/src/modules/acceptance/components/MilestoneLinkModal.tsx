@@ -11,6 +11,7 @@ import {
   type MilestoneAcceptanceRes,
 } from '../types/acceptanceTypes';
 import { milestoneStatusAfterLink } from '../utils/milestoneEligibility';
+import { useDialogA11y } from '../../projects/components/deliveryUi';
 
 interface Props {
   isOpen: boolean;
@@ -61,6 +62,8 @@ export default function MilestoneLinkModal({ isOpen, contractId, milestone, onCl
 
   const selected = useMemo(() => certificates.find((c) => c.id === selectedId) ?? null, [certificates, selectedId]);
 
+  const dialogRef = useDialogA11y(isOpen, onClose, submitting);
+
   if (!isOpen) return null;
 
   const afterStatus = selected ? milestoneStatusAfterLink(milestone.milestoneStatus, selected.status === 'ACCEPTED') : null;
@@ -90,7 +93,7 @@ export default function MilestoneLinkModal({ isOpen, contractId, milestone, onCl
         aria-modal="true"
         aria-labelledby="milestone-link-title"
       >
-        <div className="modal-card" style={{ width: 'min(100%, 760px)' }} data-testid="milestone-link-modal">
+        <div ref={dialogRef} className="modal-card dl-modal" style={{ width: 'min(100%, 760px)' }} data-testid="milestone-link-modal">
           <div className="modal-header">
             <div className="modal-header__title-wrap">
               <h3 id="milestone-link-title" className="modal-title">

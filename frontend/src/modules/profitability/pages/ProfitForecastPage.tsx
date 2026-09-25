@@ -4,6 +4,7 @@ import type { ProjectRes } from '../../projects/types/projectTypes';
 import { getProject } from '../../projects/api/projectsApi';
 import type { ProfitForecastRes } from '../types/profitabilityTypes';
 import { getProfitForecast, ProfitabilityApiError } from '../api/profitabilityApi';
+import { ReportErrorAlert, ReportSkeleton } from '../../reports/components/ReportStates';
 
 export interface ProfitForecastPageProps {
   projectId: number;
@@ -37,24 +38,26 @@ interface ComparisonCardProps {
   actual: string;
   forecast: string;
   testId: string;
-  forecastColor?: string;
+  /** Sắc thái ngữ nghĩa của giá trị dự báo (lãi/lỗ); mặc định là màu thống kê trung tính. */
+  forecastTone?: 'good' | 'bad';
 }
 
 /** Thẻ so sánh một cặp giá trị Hiện tại vs Dự báo khi kết thúc. */
-function ComparisonCard({ label, actual, forecast, testId, forecastColor = 'var(--pale-blue-fg)' }: ComparisonCardProps) {
+function ComparisonCard({ label, actual, forecast, testId, forecastTone }: ComparisonCardProps) {
+  const forecastClass = forecastTone === 'bad' ? 'ia-sub--bad' : forecastTone === 'good' ? 'ia-sub--good' : 'ia-compare__planned';
   return (
     <div className="stat-card" data-testid={testId}>
       <span className="stat-card__label">{label}</span>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>Hiện tại</span>
-          <span style={{ fontSize: '14.5px', fontWeight: 600, color: 'var(--ink-strong)' }}>{actual}</span>
+      <dl className="ia-compare">
+        <div className="ia-compare__row">
+          <dt className="ia-sub">Hiện tại</dt>
+          <dd className="ia-compare__actual">{actual}</dd>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>Dự báo khi kết thúc</span>
-          <span style={{ fontSize: '14.5px', fontWeight: 600, color: forecastColor }}>{forecast}</span>
+        <div className="ia-compare__row">
+          <dt className="ia-sub">Dự báo khi kết thúc</dt>
+          <dd className={`ia-compare__actual ${forecastClass}`}>{forecast}</dd>
         </div>
-      </div>
+      </dl>
     </div>
   );
 }
@@ -70,7 +73,7 @@ function ProfitForecastContent({ data }: { data: ProfitForecastRes }) {
     <>
       {/* TC-02: nguy cơ lỗ */}
       {data.riskOfLoss && (
-        <div className="alert-box alert-box--danger" role="alert" style={{ marginBottom: '12px' }} data-testid="risk-of-loss-alert">
+        <div className="alert-box alert-box--danger" role="alert" data-testid="risk-of-loss-alert">
           <strong>Nguy cơ lỗ:</strong> biên lợi nhuận dự báo khi kết thúc dự án âm ({formatCurrency(data.forecastMargin)}).
           Cân nhắc siết lại phạm vi hoặc đàm phán lại giá trị hợp đồng.
         </div>
@@ -78,7 +81,7 @@ function ProfitForecastContent({ data }: { data: ProfitForecastRes }) {
 
       {/* TC-02: đã vượt ngân sách → cách ước tính phần còn lại */}
       {data.overBudget && (
-        <div className="alert-box alert-box--warning" role="alert" style={{ marginBottom: '12px' }} data-testid="over-budget-alert">
+        <div className="alert-box alert-box--warning" role="alert" data-testid="over-budget-alert">
           <strong>Đã vượt ngân sách giờ công:</strong> {formatNumber(data.actualHours)} / {formatNumber(data.budgetHours)} giờ.
           Phần còn lại được ước tính theo tốc độ tiêu hao thực tế
           {data.taskCompletionRate != null && <> (tỷ lệ hoàn thành công việc {formatNumber(data.taskCompletionRate * 100)} %)</>}.
@@ -86,8 +89,8 @@ function ProfitForecastContent({ data }: { data: ProfitForecastRes }) {
       )}
 
       {data.warnings.length > 0 && (
-        <div className="alert-box alert-box--info" role="status" style={{ marginBottom: '16px' }} data-testid="forecast-warnings">
-          <ul style={{ margin: 0, paddingLeft: '20px' }}>
+        <div className="alert-box alert-box--info" role="status" data-testid="forecast-warnings">
+          <ul className="ia-reason-list ia-reason-list--inherit">
             {data.warnings.map((warning, index) => (
               <li key={index} data-testid={`forecast-warning-${index}`}>
                 {warning}
@@ -98,43 +101,44 @@ function ProfitForecastContent({ data }: { data: ProfitForecastRes }) {
       )}
 
       {/* Giờ công: ngân sách / đã dùng / còn lại */}
-      <div className="user-table-card" style={{ padding: '20px', marginBottom: '24px' }} data-testid="hours-forecast">
-        <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700, color: 'var(--ink-strong)' }}>Giờ công đến khi kết thúc</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '16px' }}>
+      <div className="user-table-card ia-card-pad ia-section" data-testid="hours-forecast">
+        <h3 className="ia-section-title ia-mb-12">Giờ công đến khi kết thúc</h3>
+        <div className="ia-metric-row">
           <div data-testid="budget-hours">
-            <div style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>Ngân sách giờ</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ink-strong)' }}>{formatNumber(data.budgetHours)} giờ</div>
+            <div className="ia-sub">Ngân sách giờ</div>
+            <div className="ia-metric">{formatNumber(data.budgetHours)} giờ</div>
           </div>
           <div data-testid="actual-hours">
-            <div style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>Đã dùng</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: data.overBudget ? 'var(--pale-red-fg)' : 'var(--ink-strong)' }}>
+            <div className="ia-sub">Đã dùng</div>
+            <div className={`ia-metric${data.overBudget ? ' ia-sub--bad' : ''}`}>
               {formatNumber(data.actualHours)} giờ
             </div>
           </div>
           <div data-testid="remaining-hours">
-            <div style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>Còn lại (ước tính)</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--pale-blue-fg)' }}>{formatNumber(data.remainingHours)} giờ</div>
+            <div className="ia-sub">Còn lại (ước tính)</div>
+            <div className="ia-metric ia-compare__planned">{formatNumber(data.remainingHours)} giờ</div>
           </div>
           <div data-testid="estimated-total-hours">
-            <div style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>Tổng giờ khi kết thúc</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ink-strong)' }}>
+            <div className="ia-sub">Tổng giờ khi kết thúc</div>
+            <div className="ia-metric">
               {formatNumber(data.estimatedTotalHoursAtCompletion)} giờ
             </div>
           </div>
         </div>
         {usedPercent != null && (
-          <div style={{ marginTop: '16px' }} data-testid="budget-usage">
-            <div style={{ fontSize: '12.5px', color: 'var(--ink-faint)', marginBottom: '6px' }}>
+          <div className="ia-mt-16" data-testid="budget-usage">
+            <div className="ia-sub ia-mb-6" id="budget-usage-label">
               Đã dùng {formatNumber(usedPercent)} % ngân sách giờ
             </div>
-            <div style={{ height: '8px', borderRadius: 'var(--radius-sm)', background: 'var(--line)', overflow: 'hidden' }}>
-              <div
-                style={{
-                  width: `${Math.min(usedPercent, 100)}%`,
-                  height: '100%',
-                  background: data.overBudget ? 'var(--pale-red-fg)' : 'var(--pale-blue-fg)',
-                }}
-              />
+            <div
+              className={`ia-progress${data.overBudget ? ' ia-progress--over' : ''}`}
+              role="progressbar"
+              aria-labelledby="budget-usage-label"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(Math.min(usedPercent, 100))}
+            >
+              <div className="ia-progress__fill" style={{ width: `${Math.min(usedPercent, 100)}%` }} />
             </div>
           </div>
         )}
@@ -149,14 +153,14 @@ function ProfitForecastContent({ data }: { data: ProfitForecastRes }) {
           actual={formatCurrency(data.actualMargin)}
           forecast={formatCurrency(data.forecastMargin)}
           testId="kpi-margin"
-          forecastColor={forecastNegative ? 'var(--pale-red-fg)' : 'var(--pale-green-fg)'}
+          forecastTone={forecastNegative ? 'bad' : 'good'}
         />
         <ComparisonCard
           label="Biên lợi nhuận"
           actual={formatPercent(data.actualMarginPercent)}
           forecast={formatPercent(data.forecastMarginPercent)}
           testId="kpi-margin-percent"
-          forecastColor={forecastNegative ? 'var(--pale-red-fg)' : 'var(--pale-green-fg)'}
+          forecastTone={forecastNegative ? 'bad' : 'good'}
         />
       </div>
 
@@ -233,12 +237,12 @@ export default function ProfitForecastPage({
 
   if (!canViewScreen) {
     return (
-      <div className="user-management-page" data-testid="profit-forecast-forbidden">
+      <div className="user-management-page ia-page" data-testid="profit-forecast-forbidden">
         <div className="alert-box alert-box--danger" role="alert">
           Bạn không có quyền xem dự báo lợi nhuận tới khi kết thúc dự án (yêu cầu vai trò Quản lý dự án VT-02).
         </div>
         {onBack && (
-          <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
+          <button type="button" className="btn btn-secondary ia-denied-back" onClick={onBack}>
             {ICONS.arrowLeft} Quay lại
           </button>
         )}
@@ -247,26 +251,26 @@ export default function ProfitForecastPage({
   }
 
   return (
-    <div className="user-management-page" data-testid="profit-forecast-page">
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+    <div className="user-management-page ia-page" data-testid="profit-forecast-page">
+      <div className="page-header">
+        <div className="ia-head">
           {onBack && (
             <button type="button" className="btn btn-secondary btn-sm btn-back" onClick={onBack} data-testid="btn-back-profit-forecast">
               {ICONS.arrowLeft} Quay lại
             </button>
           )}
           <div>
-            <h1 className="page-title" style={{ margin: '4px 0' }}>Dự báo lợi nhuận tới khi kết thúc dự án</h1>
+            <h1 className="page-title">Dự báo lợi nhuận tới khi kết thúc dự án</h1>
             <p className="page-subtitle" data-testid="project-code">{project?.projectCode || `Mã: ${projectId}`}</p>
             {project?.name && (
-              <p className="page-subtitle" style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
+              <p className="page-subtitle">
                 {project.name}
               </p>
             )}
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="page-header__actions">
           <button
             type="button"
             className="btn btn-secondary btn-sm"
@@ -280,22 +284,17 @@ export default function ProfitForecastPage({
       </div>
 
       {error && (
-        <div className="alert-box alert-box--danger" role="alert" style={{ marginBottom: '16px' }} data-testid="profit-forecast-error">
-          {error}
-        </div>
+        <ReportErrorAlert testId="profit-forecast-error" message={error} onRetry={() => void loadData()} retryDisabled={loading} />
       )}
 
       {loading ? (
-        <div data-testid="profit-forecast-loading" role="status" aria-label="Đang tải dự báo lợi nhuận...">
-            <div className="skeleton" style={{ height: '88px', marginBottom: '24px' }} />
-            <div className="skeleton" style={{ height: '240px' }} />
-          </div>
+        <ReportSkeleton testId="profit-forecast-loading" label="Đang tải dự báo lợi nhuận..." kpis={4} chart tableColumns={0} />
       ) : !data ? (
         !error && (
-          <div className="table-empty-state" data-testid="profit-forecast-empty" style={{ padding: '32px' }}>
+          <div className="table-empty-state" data-testid="profit-forecast-empty">
             <div className="table-empty-state__icon">{ICONS.chart}</div>
-            <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>Không có dữ liệu</h4>
-            <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>Dự án này chưa có dữ liệu để dự báo lợi nhuận.</p>
+            <h3>Không có dữ liệu</h3>
+            <p className="ia-inline-empty">Dự án này chưa có dữ liệu để dự báo lợi nhuận.</p>
           </div>
         )
       ) : (

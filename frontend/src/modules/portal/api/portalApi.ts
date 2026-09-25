@@ -9,6 +9,7 @@ import type {
   PortalProjectProgressRes,
   PortalProjectRes,
 } from '../types/portalTypes';
+import { httpFetch } from '../../../utils/http';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -33,7 +34,7 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
 
   let response: Response;
   try {
-    response = await fetch(url, { ...options, headers });
+    response = await httpFetch(url, { ...options, headers });
   } catch {
     throw new PortalApiError('NETWORK_ERROR', 'Không kết nối được máy chủ. Vui lòng kiểm tra mạng và thử lại.', 503);
   }

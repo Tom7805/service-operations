@@ -15,7 +15,11 @@ export interface CommandItem {
 interface CommandPaletteProps {
   items: CommandItem[];
   onSelect: (id: string) => void;
+  /** Gọi khi mục đang được chọn (bằng phím mũi tên / rê chuột) thay đổi — dùng để tải trước trang. */
+  onPreview?: (id: string) => void;
 }
+
+const optionId = (id: string) => `cmdk-opt-${id}`;
 
 /** Bỏ dấu tiếng Việt để "tai khoan" cũng tìm ra "Tài khoản" — người dùng gõ nhanh
  *  thường không bỏ dấu, và bắt họ gõ đúng dấu là tự dựng rào cản. */
@@ -36,7 +40,7 @@ function khongDau(text: string): string {
  * giá trị cao nhất cho một công cụ vận hành, và cũng là thứ phân biệt phần mềm nội bộ được
  * chăm chút với phần mềm nội bộ làm cho xong.
  */
-export const CommandPalette: React.FC<CommandPaletteProps> = ({ items, onSelect }) => {
+export const CommandPalette: React.FC<CommandPaletteProps> = ({ items, onSelect, onPreview }) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
@@ -44,6 +48,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ items, onSelect 
   const listRef = useRef<HTMLDivElement>(null);
   /** Nhớ phần tử đang focus trước khi mở, để trả con trỏ về đúng chỗ khi đóng. */
   const restoreFocusRef = useRef<HTMLElement | null>(null);
+  const openRef = useRef(false);
+  openRef.current = open;
 
   const results = useMemo(() => {
     const q = khongDau(query.trim());
@@ -55,7 +61,10 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ items, onSelect 
     setOpen(false);
     setQuery('');
     setActiveIndex(0);
-    restoreFocusRef.current?.focus();
+    const target = restoreFocusRef.current;
+    restoreFocusRef.current = null;
+    // Phần tử cũ có thể đã bị gỡ khỏi DOM (đổi trang) — khi đó để App tự đưa focus về nội dung.
+    if (target && target.isConnected) target.focus();
   }, []);
 
   const choose = useCallback(
@@ -71,13 +80,19 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ items, onSelect 
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
+        // Bấm lại phím tắt khi đang mở = đóng (trả focus về chỗ cũ, xóa từ khóa),
+        // không ghi đè chỗ cần trả focus bằng chính ô tìm kiếm của bảng lệnh.
+        if (openRef.current) {
+          close();
+          return;
+        }
         restoreFocusRef.current = document.activeElement as HTMLElement;
-        setOpen((v) => !v);
+        setOpen(true);
       }
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [close]);
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
@@ -92,8 +107,14 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ items, onSelect 
   useEffect(() => {
     if (!open) return;
     const el = listRef.current?.querySelector<HTMLElement>('[data-active="true"]');
-    el?.scrollIntoView({ block: 'nearest' });
+    el?.scrollIntoView?.({ block: 'nearest' });
   }, [activeIndex, open]);
+
+  // Mục đang trỏ tới gần như chắc chắn là nơi người dùng sắp mở — báo ra ngoài để tải trước.
+  const previewId = open ? results[activeIndex]?.id : undefined;
+  useEffect(() => {
+    if (previewId) onPreview?.(previewId);
+  }, [previewId, onPreview]);
 
   if (!open) return null;
 
@@ -111,6 +132,19 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ items, onSelect 
     if (e.key === 'ArrowUp') {
       e.preventDefault();
       setActiveIndex((i) => (results.length === 0 ? 0 : (i - 1 + results.length) % results.length));
+      return;
+    }
+    // Home/End chỉ nhảy danh sách khi ô tìm kiếm trống — có chữ thì để con trỏ văn bản dùng.
+    if ((e.key === 'Home' || e.key === 'End') && query === '' && results.length > 0) {
+      e.preventDefault();
+      setActiveIndex(e.key === 'Home' ? 0 : results.length - 1);
+      return;
+    }
+    // Hộp thoại modal: Tab không được lọt ra trang phía sau. Focus luôn ở ô tìm kiếm,
+    // lựa chọn đi bằng mũi tên (mẫu combobox + aria-activedescendant).
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      inputRef.current?.focus();
       return;
     }
     if (e.key === 'Enter') {
@@ -146,13 +180,19 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ items, onSelect 
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             aria-label="Tìm màn hình"
+            role="combobox"
+            aria-expanded="true"
+            aria-autocomplete="list"
             aria-controls="cmdk-list"
+            aria-activedescendant={results[activeIndex] ? optionId(results[activeIndex].id) : undefined}
             autoComplete="off"
+            spellCheck={false}
+            enterKeyHint="go"
           />
           <kbd className="cmdk__kbd">ESC</kbd>
         </div>
 
-        <div className="cmdk__list" id="cmdk-list" ref={listRef} role="listbox">
+        <div className="cmdk__list" id="cmdk-list" ref={listRef} role="listbox" aria-label="Màn hình">
           {results.length === 0 ? (
             <p className="cmdk__empty">
               Không có màn hình nào khớp với <strong>“{query}”</strong>.
@@ -164,12 +204,20 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ items, onSelect 
                 {group.entries.map(({ item, index }) => (
                   <button
                     key={item.id}
+                    id={optionId(item.id)}
                     type="button"
                     role="option"
+                    tabIndex={-1}
                     aria-selected={index === activeIndex}
                     data-active={index === activeIndex}
                     className="cmdk__item"
-                    onMouseEnter={() => setActiveIndex(index)}
+                    // mousemove thay vì mouseenter: khi cuộn bằng phím mũi tên, danh sách trượt
+                    // dưới con trỏ chuột đứng yên sẽ bắn mouseenter và giật lựa chọn đi chỗ khác.
+                    onMouseMove={() => {
+                      if (index !== activeIndex) setActiveIndex(index);
+                    }}
+                    // Giữ focus ở ô tìm kiếm khi bấm chuột vào một mục.
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => choose(item.id)}
                   >
                     {item.icon && <span className="cmdk__item-icon">{item.icon}</span>}
@@ -181,7 +229,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ items, onSelect 
           )}
         </div>
 
-        <div className="cmdk__footer">
+        <p className="shell-sr-only" role="status" aria-live="polite">
+          {query ? `${results.length} kết quả` : ''}
+        </p>
+
+        <div className="cmdk__footer" aria-hidden="true">
           <span><kbd className="cmdk__kbd">↑</kbd><kbd className="cmdk__kbd">↓</kbd> di chuyển</span>
           <span><kbd className="cmdk__kbd">↵</kbd> mở</span>
         </div>

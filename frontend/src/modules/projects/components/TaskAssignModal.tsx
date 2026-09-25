@@ -5,6 +5,7 @@ import { getActiveUsersLookup, type UserLookup } from '../../users/api/usersApi'
 import type { TaskAssignmentReq, TaskAssignmentRes } from '../types/taskTypes';
 import { assignTask, getTaskAssignments, ProjectsApiError } from '../api/projectsApi';
 import { validateTaskAssignmentForm } from '../validators/projectValidators';
+import { useDialogA11y } from './deliveryUi';
 
 export interface TaskAssignModalProps {
   isOpen: boolean;
@@ -69,6 +70,8 @@ export default function TaskAssignModal({
     })();
   }, [isOpen, projectId, taskId]);
 
+  const dialogRef = useDialogA11y(isOpen, onClose, submitting);
+
   if (!isOpen) return null;
 
   const toggleUser = (userId: number) => {
@@ -126,7 +129,7 @@ export default function TaskAssignModal({
       aria-modal="true"
       aria-labelledby="task-assign-modal-title"
     >
-      <div className="modal-card">
+      <div ref={dialogRef} className="modal-card dl-modal">
         <div className="modal-header">
           <div className="modal-header__title-wrap">
             <h3 id="task-assign-modal-title" className="modal-title">

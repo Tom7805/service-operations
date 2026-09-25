@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
 import { useBackdropClick } from '../../../hooks/useBackdropClick';
@@ -13,6 +13,8 @@ import TimeEntryPage from '../../timesheets/pages/TimeEntryPage';
 import ExpenseListPage from '../../expenses/pages/ExpenseListPage';
 import { addDays, formatIsoDate, getMondayOf } from '../../timesheets/utils/weekRange';
 import { canSubmitWeek, countDraftEntries } from '../../timesheets/validators/timesheetValidators';
+import { useAutoDismiss, useDialogA11y, useIsPhone, useLatestRequest } from '../../projects/components/deliveryUi';
+import { EmptyBlock, LoadError, SkeletonTable } from '../../projects/components/DeliveryStates';
 
 export interface MyWorkPageProps {
   currentUserRoles?: string[];
@@ -52,6 +54,91 @@ function formatDate(dateStr: string | null): string {
   return d.toLocaleDateString('vi-VN');
 }
 
+interface TaskRowProps {
+  task: MyTaskRes;
+  canLogTime: boolean;
+  updating: boolean;
+  onStatusChange: (task: MyTaskRes, nextStatus: TaskStatus) => void;
+  onLogTime: (task: MyTaskRes) => void;
+  onOpenExpenses: (task: MyTaskRes) => void;
+}
+
+/**
+ * Một hàng công việc — memo để toast/đổi tuần/nạp lại lưới giờ công không vẽ lại cả danh
+ * sách. Trên điện thoại hàng tự xếp thành thẻ (`.dl-stack-table`, nhãn lấy từ `data-label`).
+ */
+const TaskRow = memo(function TaskRow({ task, canLogTime, updating, onStatusChange, onLogTime, onOpenExpenses }: TaskRowProps) {
+  const badge = statusBadgeConfig[task.taskStatus] || { label: task.taskStatus, className: 'wbs-badge--todo' };
+  const isClosedProject = task.projectStatus === 'CLOSED';
+  return (
+    <tr data-testid={`my-task-row-${task.taskId}`}>
+      <td className="dl-stack-title" data-label="Dự án">
+        <span className="dl-cell-strong">{task.projectName}</span>
+        <span className="dl-cell-sub dl-cell-code">{task.projectCode}</span>
+      </td>
+      <td data-label="Công việc">{task.taskName}</td>
+      <td className="dl-cell-date" data-label="Khung ngày">
+        {formatDate(task.assignmentStartDate ?? task.expectedStartDate)}
+        {' ➔ '}
+        {formatDate(task.assignmentEndDate ?? task.expectedEndDate)}
+      </td>
+      <td data-label="Trạng thái">
+        {isClosedProject ? (
+          <span className={`wbs-badge ${badge.className}`}>{badge.label}</span>
+        ) : (
+          <select
+            className={`form-input dl-select-auto status-select status-select--${badge.className.replace('wbs-badge--', '')}`}
+            value={task.taskStatus}
+            disabled={updating}
+            aria-label={`Trạng thái công việc ${task.taskName}`}
+            aria-busy={updating || undefined}
+            onChange={(e) => onStatusChange(task, e.target.value as TaskStatus)}
+            data-testid={`my-task-status-select-${task.taskId}`}
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        )}
+      </td>
+      {canLogTime && (
+        <td data-label={isClosedProject ? 'Giờ công' : undefined}>
+          {isClosedProject ? (
+            <span className="field-hint" title="Dự án đã đóng — không ghi thêm giờ công">
+              —
+            </span>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-primary btn-xs"
+              onClick={() => onLogTime(task)}
+              data-testid={`btn-log-time-${task.taskId}`}
+            >
+              {ICONS.clock} Ghi giờ công
+            </button>
+          )}
+        </td>
+      )}
+      {canLogTime && (
+        <td>
+          <button
+            type="button"
+            className="btn btn-secondary btn-xs"
+            onClick={() => onOpenExpenses(task)}
+            data-testid={`btn-project-expenses-${task.projectId}`}
+          >
+            {ICONS.receipt} Chi phí dự án
+          </button>
+        </td>
+      )}
+    </tr>
+  );
+});
+
+const TASK_HEADERS_BASE = ['Dự án', 'Công việc', 'Khung ngày dự kiến', 'Trạng thái'];
+
 /**
  * "Công việc và giờ công": gộp "Công việc của tôi" (NCL-05-CN-003/004 — danh sách
  * công việc được PM phân công trên mọi dự án + tự đổi trạng thái, không giới hạn
@@ -61,6 +148,7 @@ function formatDate(dateStr: string | null): string {
  */
 export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'Người dùng', currentUserId }: MyWorkPageProps) {
   const canLogTime = currentUserRoles.includes('VT-03');
+  const isPhone = useIsPhone();
   // NCL-08-CN-001: Nhân viên chuyên môn ghi nhận chi phí dự án — nhưng modal "Quản lý dự
   // án" (nơi có tab Chi phí) chỉ mở được từ menu "Khách hàng", vốn không dành cho VT-03.
   // Route riêng ngay tại đây (trang họ đang đứng) để VT-03 có lối vào, thay vì đi qua
@@ -73,26 +161,31 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
   const [tasksError, setTasksError] = useState<string | null>(null);
   const [updatingTaskId, setUpdatingTaskId] = useState<number | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const clearToast = useCallback(() => setToast(null), []);
+  useAutoDismiss(toast, clearToast, 4000);
 
-  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+  const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
-  };
+  }, []);
 
+  const tasksRequest = useLatestRequest();
   const loadTasks = useCallback(async () => {
+    const token = tasksRequest.begin();
     setTasksLoading(true);
     setTasksError(null);
     try {
       const data = await getMyTasks();
+      if (!tasksRequest.isLatest(token)) return;
       setTasks(data);
     } catch (err) {
+      if (!tasksRequest.isLatest(token)) return;
       const message =
         err instanceof MyTasksApiError || err instanceof Error ? err.message : 'Không thể tải danh sách công việc.';
       setTasksError(message);
     } finally {
-      setTasksLoading(false);
+      if (tasksRequest.isLatest(token)) setTasksLoading(false);
     }
-  }, []);
+  }, [tasksRequest]);
 
   useEffect(() => {
     void loadTasks();
@@ -113,6 +206,18 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
       setUpdatingTaskId(null);
     }
   };
+  // Callback ổn định cho các hàng đã memo — luôn gọi phiên bản handler mới nhất.
+  const statusChangeRef = useRef(handleStatusChange);
+  statusChangeRef.current = handleStatusChange;
+  const onRowStatusChange = useCallback((task: MyTaskRes, next: TaskStatus) => {
+    void statusChangeRef.current(task, next);
+  }, []);
+  const onRowLogTime = useCallback((task: MyTaskRes) => {
+    setSelectedTask({ projectId: task.projectId, taskId: task.taskId, taskName: task.taskName });
+  }, []);
+  const onRowOpenExpenses = useCallback((task: MyTaskRes) => {
+    setSelectedExpenseProject({ projectId: task.projectId, projectName: task.projectName });
+  }, []);
 
   // ----- Giờ công tuần (chỉ VT-03) -----
   const [weekFrom, setWeekFrom] = useState<string>(() => getMondayOf());
@@ -125,54 +230,62 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
   const [selectedTask, setSelectedTask] = useState<SelectedTask | null>(null);
   const [confirmSubmit, setConfirmSubmit] = useState(false);
 
+  // Bấm "Tuần trước/Tuần sau" liên tục: chỉ nhận phản hồi của tuần đang xem, bỏ phản hồi đến trễ.
+  const weekRequest = useLatestRequest();
   const loadWeek = useCallback(async () => {
     if (!canLogTime) return;
+    const token = weekRequest.begin();
     setWeekLoading(true);
     setWeekError(null);
     try {
       const data = await getMyWeekTimeEntries(weekFrom, weekTo);
+      if (!weekRequest.isLatest(token)) return;
       setSummaries(data);
     } catch (err) {
+      if (!weekRequest.isLatest(token)) return;
       const message =
         err instanceof TimesheetsApiError || err instanceof Error ? err.message : 'Không thể tải bảng giờ công.';
       setWeekError(message);
     } finally {
-      setWeekLoading(false);
+      if (weekRequest.isLatest(token)) setWeekLoading(false);
     }
-  }, [canLogTime, weekFrom, weekTo]);
+  }, [canLogTime, weekFrom, weekTo, weekRequest]);
 
   useEffect(() => {
     void loadWeek();
   }, [loadWeek]);
 
-  const grandTotal = summaries.reduce((sum, s) => sum + (s.totalHours ?? 0), 0);
-  const allEntries = summaries.flatMap((s) => s.entries);
-  const hasDraft = canSubmitWeek(summaries);
-  const draftCount = countDraftEntries(summaries);
-  const submitBanner = (() => {
-    if (allEntries.length === 0 || hasDraft) return null;
-    const hasApproved = allEntries.some((e) => e.status === 'APPROVED');
-    const hasSubmitted = allEntries.some((e) => e.status === 'SUBMITTED');
-    // Kiểm tra "đang chờ duyệt" TRƯỚC "đã duyệt": sau khi được phép nộp bổ sung việc
-    // mới vào một tuần đã duyệt, tuần có thể ở trạng thái hỗn hợp (phần cũ đã duyệt,
-    // phần mới vừa nộp) — nếu ưu tiên "đã duyệt" trước sẽ báo sai là xong hết, trong
-    // khi PM chưa hề duyệt phần mới.
-    if (hasSubmitted) {
-      return {
-        tone: 'submitted',
-        text: hasApproved
-          ? 'Một phần giờ công tuần này đã được duyệt, phần còn lại vừa nộp — đang chờ Quản lý dự án duyệt.'
-          : 'Đã nộp bảng chấm công tuần này — đang chờ Quản lý dự án duyệt.',
-      };
-    }
-    if (hasApproved) return { tone: 'approved', text: 'Bảng chấm công tuần này đã được Quản lý dự án duyệt.' };
-    return { tone: 'rejected', text: 'Bảng chấm công tuần này bị từ chối. Hãy chỉnh sửa giờ công rồi nộp lại.' };
-  })();
-
-  const totalDraftHours = summaries.reduce(
-    (sum, s) => sum + s.entries.filter((e) => e.status === 'DRAFT').reduce((h, e) => h + e.hours, 0),
-    0
-  );
+  const weekStats = useMemo(() => {
+    const grandTotal = summaries.reduce((sum, s) => sum + (s.totalHours ?? 0), 0);
+    const allEntries = summaries.flatMap((s) => s.entries);
+    const hasDraft = canSubmitWeek(summaries);
+    const draftCount = countDraftEntries(summaries);
+    const submitBanner = (() => {
+      if (allEntries.length === 0 || hasDraft) return null;
+      const hasApproved = allEntries.some((e) => e.status === 'APPROVED');
+      const hasSubmitted = allEntries.some((e) => e.status === 'SUBMITTED');
+      // Kiểm tra "đang chờ duyệt" TRƯỚC "đã duyệt": sau khi được phép nộp bổ sung việc
+      // mới vào một tuần đã duyệt, tuần có thể ở trạng thái hỗn hợp (phần cũ đã duyệt,
+      // phần mới vừa nộp) — nếu ưu tiên "đã duyệt" trước sẽ báo sai là xong hết, trong
+      // khi PM chưa hề duyệt phần mới.
+      if (hasSubmitted) {
+        return {
+          tone: 'submitted',
+          text: hasApproved
+            ? 'Một phần giờ công tuần này đã được duyệt, phần còn lại vừa nộp — đang chờ Quản lý dự án duyệt.'
+            : 'Đã nộp bảng chấm công tuần này — đang chờ Quản lý dự án duyệt.',
+        };
+      }
+      if (hasApproved) return { tone: 'approved', text: 'Bảng chấm công tuần này đã được Quản lý dự án duyệt.' };
+      return { tone: 'rejected', text: 'Bảng chấm công tuần này bị từ chối. Hãy chỉnh sửa giờ công rồi nộp lại.' };
+    })();
+    const totalDraftHours = summaries.reduce(
+      (sum, s) => sum + s.entries.filter((e) => e.status === 'DRAFT').reduce((h, e) => h + e.hours, 0),
+      0
+    );
+    return { grandTotal, hasDraft, draftCount, submitBanner, totalDraftHours };
+  }, [summaries]);
+  const { grandTotal, hasDraft, draftCount, submitBanner, totalDraftHours } = weekStats;
 
   const handleSubmitWeek = async () => {
     if (!hasDraft || submitting) return;
@@ -194,7 +307,9 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
     }
   };
 
-  const confirmBackdrop = useBackdropClick(() => setConfirmSubmit(false), submitting);
+  const closeConfirm = useCallback(() => setConfirmSubmit(false), []);
+  const confirmBackdrop = useBackdropClick(closeConfirm, submitting);
+  const confirmCardRef = useDialogA11y(confirmSubmit, closeConfirm, submitting);
 
   if (selectedExpenseProject) {
     return (
@@ -223,9 +338,23 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
     );
   }
 
+  const taskHeaders = canLogTime ? [...TASK_HEADERS_BASE, 'Giờ công', 'Chi phí'] : TASK_HEADERS_BASE;
+
+  const submitWeekButton = hasDraft ? (
+    <button
+      type="button"
+      className="btn btn-primary btn-sm"
+      onClick={() => setConfirmSubmit(true)}
+      disabled={submitting}
+      data-testid="btn-submit-week"
+    >
+      {ICONS.checkCircle} {submitting ? 'Đang nộp…' : `Nộp bảng chấm công (${draftCount} dòng)`}
+    </button>
+  ) : null;
+
   return (
-    <div className="user-management-page" data-testid="my-work-page">
-      <div className="page-header" style={{ marginBottom: '16px' }}>
+    <div className="user-management-page dl-page" data-testid="my-work-page">
+      <div className="page-header dl-mb-16">
         <div>
           {/* Menu bên trái và thanh trên cùng của layout đã hiện đúng chữ "Công việc và giờ
               công" rồi — lặp lại y hệt làm tiêu đề trang thứ hai chỉ gây rối mắt. Tiêu đề ở
@@ -237,145 +366,93 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
             {canLogTime ? '; bảng giờ công tuần để ghi và nộp ở bên dưới.' : '.'}
           </p>
         </div>
-        <button
-          type="button"
-          className="btn btn-secondary btn-sm"
-          onClick={() => {
-            void loadTasks();
-            void loadWeek();
-          }}
-          disabled={tasksLoading || weekLoading}
-        >
-          {ICONS.refresh} Làm mới
-        </button>
+        <div className="dl-header-actions">
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => {
+              void loadTasks();
+              void loadWeek();
+            }}
+            disabled={tasksLoading || weekLoading}
+          >
+            {ICONS.refresh} {tasksLoading || weekLoading ? 'Đang tải…' : 'Làm mới'}
+          </button>
+        </div>
       </div>
 
       {toast && (
-        <div className={`alert-box alert-box--${toast.type === 'success' ? 'success' : 'danger'}`} role="alert" style={{ marginBottom: '14px' }}>
+        <div
+          className={`alert-box alert-box--${toast.type === 'success' ? 'success' : 'danger'}`}
+          role={toast.type === 'error' ? 'alert' : 'status'}
+          aria-live="polite"
+        >
           {toast.message}
         </div>
       )}
 
       {tasksError && (
-        <div className="alert-box alert-box--danger" role="alert" data-testid="my-tasks-error" style={{ marginBottom: '14px' }}>
-          {tasksError}
-        </div>
+        <LoadError
+          message={tasksError}
+          onRetry={() => void loadTasks()}
+          retrying={tasksLoading}
+          testId="my-tasks-error"
+        />
       )}
 
-      <div className="user-table-card" style={{ padding: '20px', marginBottom: '16px' }}>
-        <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
-          Công việc đang được giao
-        </h3>
+      <section className="user-table-card dl-card-pad" aria-labelledby="my-tasks-heading">
+        <div className="dl-section-head">
+          <h2 id="my-tasks-heading" className="dl-section-title">
+            Công việc đang được giao
+          </h2>
+          {!tasksLoading && tasks.length > 0 && <span className="dl-section-meta">{tasks.length} công việc</span>}
+        </div>
 
-        {tasksLoading ? (
-          <div className="table-loading-state" data-testid="my-tasks-loading">
-            <span className="spinner-lg" />
-            <p style={{ marginTop: '10px' }}>Đang tải danh sách công việc...</p>
-          </div>
+        {tasksLoading && tasks.length === 0 ? (
+          <SkeletonTable headers={taskHeaders} rows={3} testId="my-tasks-loading" label="Đang tải danh sách công việc…" />
         ) : tasks.length === 0 ? (
-          <div className="table-empty-state" data-testid="my-tasks-empty">
-            <div className="table-empty-state__icon">{ICONS.folder}</div>
-            <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>Chưa được giao công việc nào</h4>
-            <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
-              Khi Quản lý dự án phân công cho bạn, công việc sẽ xuất hiện ở đây.
-            </p>
-          </div>
+          tasksError ? null : (
+            <EmptyBlock icon={ICONS.folder} title="Chưa được giao công việc nào" testId="my-tasks-empty">
+              Khi Quản lý dự án phân công cho bạn, công việc sẽ xuất hiện ở đây. Bấm “Làm mới” nếu vừa được giao việc.
+            </EmptyBlock>
+          )
         ) : (
-          <div className="table-responsive">
-            <table className="user-data-table" data-testid="my-tasks-table">
+          <div className="table-responsive" aria-busy={tasksLoading || undefined}>
+            <table className="user-data-table dl-stack-table" data-testid="my-tasks-table">
               <thead>
                 <tr>
-                  <th>Dự án</th>
-                  <th>Công việc</th>
-                  <th>Khung ngày dự kiến</th>
-                  <th>Trạng thái</th>
-                  {canLogTime && <th>Giờ công</th>}
-                  {canLogTime && <th>Chi phí</th>}
+                  {taskHeaders.map((h) => (
+                    <th key={h}>{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {tasks.map((task) => {
-                  const badge = statusBadgeConfig[task.taskStatus] || { label: task.taskStatus, className: 'wbs-badge--todo' };
-                  const isClosedProject = task.projectStatus === 'CLOSED';
-                  return (
-                    <tr key={task.taskId} data-testid={`my-task-row-${task.taskId}`}>
-                      <td>
-                        <div style={{ fontWeight: 500 }}>{task.projectName}</div>
-                        <div style={{ fontSize: '12px', color: 'var(--ink-muted)' }}>{task.projectCode}</div>
-                      </td>
-                      <td>{task.taskName}</td>
-                      <td style={{ whiteSpace: 'nowrap', fontSize: '13px', color: 'var(--ink-muted)' }}>
-                        {formatDate(task.assignmentStartDate ?? task.expectedStartDate)}
-                        {' ➔ '}
-                        {formatDate(task.assignmentEndDate ?? task.expectedEndDate)}
-                      </td>
-                      <td>
-                        {isClosedProject ? (
-                          <span className={`wbs-badge ${badge.className}`}>{badge.label}</span>
-                        ) : (
-                          <select
-                            className={`form-input status-select status-select--${badge.className.replace('wbs-badge--', '')}`}
-                            style={{ width: 'auto', minWidth: '150px' }}
-                            value={task.taskStatus}
-                            disabled={updatingTaskId === task.taskId}
-                            onChange={(e) => void handleStatusChange(task, e.target.value as TaskStatus)}
-                            data-testid={`my-task-status-select-${task.taskId}`}
-                          >
-                            {STATUS_OPTIONS.map((opt) => (
-                              <option key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                      </td>
-                      {canLogTime && (
-                        <td>
-                          {isClosedProject ? (
-                            <span className="field-hint" style={{ fontSize: '12px' }}>
-                              —
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              className="btn btn-primary btn-xs"
-                              onClick={() =>
-                                setSelectedTask({ projectId: task.projectId, taskId: task.taskId, taskName: task.taskName })
-                              }
-                              data-testid={`btn-log-time-${task.taskId}`}
-                            >
-                              {ICONS.clock} Ghi giờ công
-                            </button>
-                          )}
-                        </td>
-                      )}
-                      {canLogTime && (
-                        <td>
-                          <button
-                            type="button"
-                            className="btn btn-secondary btn-xs"
-                            onClick={() => setSelectedExpenseProject({ projectId: task.projectId, projectName: task.projectName })}
-                            data-testid={`btn-project-expenses-${task.projectId}`}
-                          >
-                            {ICONS.receipt} Chi phí dự án
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })}
+                {tasks.map((task) => (
+                  <TaskRow
+                    key={task.taskId}
+                    task={task}
+                    canLogTime={canLogTime}
+                    updating={updatingTaskId === task.taskId}
+                    onStatusChange={onRowStatusChange}
+                    onLogTime={onRowLogTime}
+                    onOpenExpenses={onRowOpenExpenses}
+                  />
+                ))}
               </tbody>
             </table>
           </div>
         )}
-      </div>
+      </section>
 
       {canLogTime && (
         <>
           {weekError && (
-            <div className="alert-box alert-box--danger" role="alert" data-testid="my-timesheet-load-error" style={{ marginBottom: '16px' }}>
-              {weekError}
-            </div>
+            <LoadError
+              message={weekError}
+              onRetry={() => void loadWeek()}
+              retrying={weekLoading}
+              testId="my-timesheet-load-error"
+            />
           )}
 
           <div className="user-table-card week-nav">
@@ -390,7 +467,7 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
               >
                 {ICONS.arrowLeft}
               </button>
-              <div className="week-nav__label">
+              <div className="week-nav__label" aria-live="polite">
                 <span className="week-nav__range" data-testid="my-timesheet-week-label">
                   {formatIsoDate(weekFrom)} → {formatIsoDate(weekTo)}
                 </span>
@@ -416,35 +493,36 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
 
             <div className="week-nav__summary">
               <span className="week-nav__total">
-                Tổng giờ tuần <strong data-testid="grand-total-hours">{grandTotal}</strong>
+                Tổng giờ tuần <strong className="dl-num" data-testid="grand-total-hours">{grandTotal}</strong>
               </span>
-              {hasDraft && (
-                <button type="button" className="btn-primary btn-sm" onClick={() => setConfirmSubmit(true)} disabled={submitting} data-testid="btn-submit-week">
-                  {ICONS.checkCircle} {submitting ? 'Đang nộp…' : `Nộp bảng chấm công (${draftCount} dòng)`}
-                </button>
-              )}
+              {!isPhone && submitWeekButton}
             </div>
           </div>
 
           {submitBanner && (
-            <div className={`status-pill status-pill--${submitBanner.tone}`} style={{ marginBottom: '16px' }} data-testid="submit-week-banner">
+            <div className={`status-pill status-pill--${submitBanner.tone} dl-week-banner`} data-testid="submit-week-banner">
               <span className="status-pill__dot" />
               {submitBanner.text}
             </div>
           )}
 
-          <div className="user-table-card" style={{ padding: '20px' }}>
+          <div className="user-table-card dl-card-pad">
             {weekLoading ? (
-              <div className="table-loading-state" data-testid="my-timesheet-table-loading">
-                <span className="spinner-lg" />
-                <p style={{ marginTop: '10px' }}>Đang nạp bảng giờ công...</p>
-              </div>
+              <SkeletonTable
+                headers={['Công việc', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN', 'Tổng']}
+                rows={2}
+                testId="my-timesheet-table-loading"
+                label="Đang nạp bảng giờ công…"
+              />
             ) : (
               // Mở lại một dòng giờ công cụ thể để sửa: dùng đúng nút "Ghi giờ công" ở bảng
               // công việc phía trên, không lặp lại một lối vào thứ hai cho cùng một việc.
               <WeeklyTimesheetGrid weekFrom={weekFrom} weekTo={weekTo} summaries={summaries} />
             )}
           </div>
+
+          {/* Điện thoại: nút nộp tuần dính đáy màn hình, luôn trong tầm ngón cái. */}
+          {isPhone && submitWeekButton && <div className="dl-sticky-cta">{submitWeekButton}</div>}
         </>
       )}
 
@@ -456,11 +534,13 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
             onClick={confirmBackdrop.onClick}
             role="dialog"
             aria-modal="true"
+            aria-labelledby="my-work-submit-week-title"
+            aria-describedby="my-work-submit-week-desc"
           >
-            <div className="modal-card" style={{ maxWidth: '440px' }}>
+            <div className="modal-card dl-modal dl-modal-sm" ref={confirmCardRef}>
               <div className="modal-header">
                 <div className="modal-header__title-wrap">
-                  <h3 className="modal-title">
+                  <h3 className="modal-title" id="my-work-submit-week-title">
                     <span className="modal-title__icon">{ICONS.checkCircle}</span>
                     Nộp bảng chấm công tuần
                   </h3>
@@ -468,7 +548,7 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
                 <button
                   type="button"
                   className="modal-close"
-                  onClick={() => setConfirmSubmit(false)}
+                  onClick={closeConfirm}
                   disabled={submitting}
                   aria-label="Đóng"
                 >
@@ -476,20 +556,20 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
                 </button>
               </div>
               <div className="modal-body">
-                <p>
+                <p id="my-work-submit-week-desc">
                   Nộp bảng chấm công tuần {formatIsoDate(weekFrom)} → {formatIsoDate(weekTo)} với{' '}
                   <strong>{draftCount}</strong> dòng giờ công (tổng <strong>{totalDraftHours}</strong> giờ)?
                 </p>
                 <p className="field-hint">
                   Sau khi nộp, bạn sẽ không sửa hoặc xóa được các dòng giờ công của tuần này cho đến khi được duyệt.
                 </p>
-                <div style={{ marginTop: '16px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                  <button type="button" className="btn" onClick={() => setConfirmSubmit(false)} disabled={submitting}>
+                <div className="dl-modal-actions dl-modal-actions--plain">
+                  <button type="button" className="btn btn-secondary" onClick={closeConfirm} disabled={submitting}>
                     Hủy
                   </button>
                   <button
                     type="button"
-                    className="btn-primary"
+                    className="btn btn-primary"
                     onClick={() => void handleSubmitWeek()}
                     disabled={submitting}
                     data-testid="btn-confirm-submit-week"

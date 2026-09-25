@@ -19,6 +19,7 @@ import { validateProjectCreateFromTemplateForm } from '../validators/projectVali
 import WorkBreakdownTree from './WorkBreakdownTree';
 import { getActiveUsersLookup, type UserLookup } from '../../users/api/usersApi';
 import { CONTRACT_TYPE_LABEL } from '../../contracts/types/contractTypes';
+import { useDialogA11y } from './deliveryUi';
 
 export interface CreateProjectFromTemplateModalProps {
   isOpen: boolean;
@@ -173,6 +174,8 @@ export default function CreateProjectFromTemplateModal({
     }
   }, []);
 
+  const dialogRef = useDialogA11y(isOpen, onClose, isSubmitting);
+
   if (!isOpen) return null;
 
   // Gán cho tôi
@@ -267,7 +270,7 @@ export default function CreateProjectFromTemplateModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="modal-card project-modal-card" style={{ width: 'min(100%, 780px)', maxHeight: '90vh' }}>
+      <div ref={dialogRef} className="modal-card dl-modal project-modal-card" style={{ width: 'min(100%, 780px)', maxHeight: '90vh' }}>
         {/* Header modal */}
         <div className="modal-header">
           <div className="modal-header__title-wrap">

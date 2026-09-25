@@ -1,23 +1,43 @@
-import { useCallback, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useMemo, useRef, useState, type FormEvent } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import { getUtilizationReport, ReportsApiError } from '../api/reportsApi';
 import type { UtilizationReportRes } from '../types/utilizationReportTypes';
+import { ReportErrorAlert, ReportSkeleton } from '../components/ReportStates';
 
 export interface UtilizationReportPageProps {
   currentUserRoles?: string[];
   onBack?: () => void;
 }
 
+const twoDecimalFormatter = new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 function formatHours(hours: number): string {
-  return new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(hours);
+  return twoDecimalFormatter.format(hours);
 }
 
 /** `ratio` backend trả dạng phân số (0.7500 = 75%) — nhân 100 khi hiển thị; `null` khi thiếu giờ chuẩn. */
 function formatRatio(ratio: number | null): string {
   if (ratio === null) return '—';
-  return `${new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
-    ratio * 100
-  )}%`;
+  return `${twoDecimalFormatter.format(ratio * 100)}%`;
+}
+
+const MISSING_STANDARD_HINT = 'Không có giờ chuẩn nhưng có giờ tính phí — có thể do nhập sai ngày vào làm/nghỉ việc';
+
+/** Ô tỷ lệ: con số là thông tin chính, thanh mảnh bên cạnh giúp quét nhanh cả cột.
+ *  Vượt 100% (làm quá giờ chuẩn) chuyển sang màu cảnh báo — màu mang nghĩa, kèm con số. */
+function RatioCell({ ratio, flagOver = false }: { ratio: number | null; flagOver?: boolean }) {
+  if (ratio === null) {
+    return <span className="ia-dash">{formatRatio(ratio)}</span>;
+  }
+  const over = flagOver && ratio > 1;
+  return (
+    <span className={`ia-meter${over ? ' ia-meter--over' : ''}`}>
+      <span className="ia-meter__value">{formatRatio(ratio)}</span>
+      <span className="ia-meter__track" aria-hidden="true">
+        <span className="ia-meter__fill" style={{ ['--ia-ratio' as string]: Math.max(0, Math.min(ratio, 1)) }} />
+      </span>
+    </span>
+  );
 }
 
 function firstDayOfMonthISO(): string {
@@ -48,14 +68,20 @@ export default function UtilizationReportPage({ currentUserRoles = ['VT-01'], on
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
 
+  /** Chỉ phản hồi của lần gọi mới nhất được ghi vào trang (bấm "Xem" liên tiếp với kỳ khác nhau). */
+  const requestIdRef = useRef(0);
+
   const loadReport = useCallback(async (from: string, to: string) => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
     try {
       const data = await getUtilizationReport(from, to);
+      if (requestId !== requestIdRef.current) return;
       setReport(data);
       setHasSearched(true);
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       const message =
         err instanceof ReportsApiError || err instanceof Error
           ? err.message
@@ -63,7 +89,7 @@ export default function UtilizationReportPage({ currentUserRoles = ['VT-01'], on
       setError(message);
       setReport(null);
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   }, []);
 
@@ -106,7 +132,7 @@ export default function UtilizationReportPage({ currentUserRoles = ['VT-01'], on
             Báo cáo tỷ lệ giờ tính phí chỉ dành riêng cho vai trò <strong>Ban giám đốc</strong>.
           </p>
           {onBack && (
-            <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
+            <button type="button" className="btn btn-secondary ia-denied-back" onClick={onBack}>
               {ICONS.arrowLeft} Quay lại
             </button>
           )}
@@ -116,9 +142,9 @@ export default function UtilizationReportPage({ currentUserRoles = ['VT-01'], on
   }
 
   return (
-    <div className="user-management-page" data-testid="utilization-report-page">
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+    <div className="user-management-page ia-page" data-testid="utilization-report-page">
+      <div className="page-header">
+        <div className="ia-head">
           {onBack && (
             <button
               type="button"
@@ -130,7 +156,7 @@ export default function UtilizationReportPage({ currentUserRoles = ['VT-01'], on
             </button>
           )}
           <div>
-            <h1 className="page-title" style={{ margin: '4px 0' }}>
+            <h1 className="page-title">
               Báo cáo tỷ lệ giờ tính phí
             </h1>
             <p className="page-subtitle">
@@ -141,8 +167,8 @@ export default function UtilizationReportPage({ currentUserRoles = ['VT-01'], on
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} noValidate className="user-table-card" style={{ padding: '20px', marginBottom: '16px' }}>
-        <div className="toolbar-filters" style={{ display: 'flex', alignItems: 'flex-end', gap: '16px', flexWrap: 'wrap' }}>
+      <form onSubmit={handleSubmit} noValidate className="user-table-card ia-filter-card" aria-busy={loading}>
+        <div className="toolbar-filters">
           <div className="filter-group">
             <label className="filter-label" htmlFor="utilization-from">
               Từ ngày <span className="field-required">*</span>
@@ -151,9 +177,10 @@ export default function UtilizationReportPage({ currentUserRoles = ['VT-01'], on
               id="utilization-from"
               type="date"
               className="form-input"
-              style={{ height: 38 }}
               value={fromInput}
               onChange={(e) => setFromInput(e.target.value)}
+              aria-invalid={fieldError ? true : undefined}
+              aria-describedby={fieldError ? 'error-utilization-report' : undefined}
               disabled={loading}
               data-testid="utilization-from-input"
             />
@@ -166,9 +193,10 @@ export default function UtilizationReportPage({ currentUserRoles = ['VT-01'], on
               id="utilization-to"
               type="date"
               className="form-input"
-              style={{ height: 38 }}
               value={toInput}
               onChange={(e) => setToInput(e.target.value)}
+              aria-invalid={fieldError ? true : undefined}
+              aria-describedby={fieldError ? 'error-utilization-report' : undefined}
               disabled={loading}
               data-testid="utilization-to-input"
             />
@@ -178,37 +206,36 @@ export default function UtilizationReportPage({ currentUserRoles = ['VT-01'], on
           </button>
         </div>
         {fieldError && (
-          <p className="field-error" data-testid="error-utilization-report" style={{ color: 'var(--pale-red-fg)', fontSize: '13.5px', marginTop: '8px' }}>
+          <p className="ia-field-error" id="error-utilization-report" role="alert" data-testid="error-utilization-report">
             {fieldError}
           </p>
         )}
       </form>
 
       {error && (
-        <div className="alert-box alert-box--danger" role="alert" style={{ marginBottom: '16px' }} data-testid="utilization-report-error">
-          {error}
-        </div>
+        <ReportErrorAlert
+          testId="utilization-report-error"
+          message={error}
+          onRetry={() => loadReport(fromInput, toInput)}
+          retryDisabled={loading}
+        />
       )}
 
       {loading ? (
-        <div data-testid="utilization-report-loading" role="status" aria-label="Đang tải báo cáo...">
-          <div className="skeleton" style={{ height: '88px', marginBottom: '24px' }} />
-          <div className="skeleton" style={{ height: '240px' }} />
-        </div>
+        <ReportSkeleton testId="utilization-report-loading" kpis={3} tableColumns={5} tableRows={5} />
       ) : !hasSearched ? (
         !error && (
           <div className="table-empty-state" data-testid="utilization-report-prompt">
             <div className="table-empty-state__icon">{ICONS.users}</div>
-            <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
-              Chọn khoảng thời gian rồi bấm "Xem báo cáo" để xem tỷ lệ giờ tính phí.
-            </p>
+            <h3>Chưa chọn kỳ báo cáo</h3>
+            <p>Chọn khoảng thời gian rồi bấm "Xem báo cáo" để xem tỷ lệ giờ tính phí.</p>
           </div>
         )
       ) : (
         report && (
           <>
             {report.unlistedBillableHours > 0 && (
-              <div className="alert-box alert-box--warning" role="alert" style={{ marginBottom: '16px' }} data-testid="utilization-unlisted-alert">
+              <div className="alert-box alert-box--warning" role="alert" data-testid="utilization-unlisted-alert">
                 <strong>Lưu ý:</strong> Có {formatHours(report.unlistedBillableHours)} giờ tính phí đã duyệt
                 thuộc các tài khoản chưa có hồ sơ nhân sự hoặc không làm việc ngày nào trong kỳ — không được
                 gộp vào các số liệu bên dưới.
@@ -239,13 +266,13 @@ export default function UtilizationReportPage({ currentUserRoles = ['VT-01'], on
               </div>
             </div>
 
-            <div className="user-table-card" style={{ padding: '20px', marginBottom: '16px' }} data-testid="utilization-department-table">
-              <div style={{ marginBottom: '16px' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>Theo bộ phận</h3>
+            <div className="user-table-card ia-card-pad ia-section" data-testid="utilization-department-table">
+              <div className="ia-section-head">
+                <h3 className="ia-section-title">Theo bộ phận</h3>
               </div>
 
               {report.departments.length === 0 ? (
-                <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }} data-testid="utilization-department-empty">
+                <p className="ia-inline-empty" data-testid="utilization-department-empty">
                   Không có bộ phận nào có giờ công trong kỳ đã chọn.
                 </p>
               ) : (
@@ -254,21 +281,21 @@ export default function UtilizationReportPage({ currentUserRoles = ['VT-01'], on
                     <thead>
                       <tr>
                         <th>Bộ phận</th>
-                        <th style={{ textAlign: 'right' }}>Số nhân sự</th>
-                        <th style={{ textAlign: 'right' }}>Giờ tính phí</th>
-                        <th style={{ textAlign: 'right' }}>Giờ chuẩn</th>
-                        <th style={{ textAlign: 'right' }}>Tỷ lệ</th>
+                        <th className="text-right">Số nhân sự</th>
+                        <th className="text-right">Giờ tính phí</th>
+                        <th className="text-right">Giờ chuẩn</th>
+                        <th className="text-right">Tỷ lệ</th>
                       </tr>
                     </thead>
                     <tbody>
                       {report.departments.map((d) => (
                         <tr key={d.departmentId ?? 'unassigned'} data-testid={`utilization-department-row-${d.departmentId ?? 'unassigned'}`}>
                           <td>{d.departmentName}</td>
-                          <td style={{ textAlign: 'right' }}>{d.employeeCount.toLocaleString('vi-VN')}</td>
-                          <td style={{ textAlign: 'right' }}>{formatHours(d.billableHours)}</td>
-                          <td style={{ textAlign: 'right' }}>{formatHours(d.standardHours)}</td>
-                          <td style={{ textAlign: 'right' }} title={d.ratio === null ? 'Không có giờ chuẩn nhưng có giờ tính phí — có thể do nhập sai ngày vào làm/nghỉ việc' : undefined}>
-                            {formatRatio(d.ratio)}
+                          <td className="ia-num">{d.employeeCount.toLocaleString('vi-VN')}</td>
+                          <td className="ia-num">{formatHours(d.billableHours)}</td>
+                          <td className="ia-num">{formatHours(d.standardHours)}</td>
+                          <td className="ia-num" title={d.ratio === null ? MISSING_STANDARD_HINT : undefined}>
+                            <RatioCell ratio={d.ratio} />
                           </td>
                         </tr>
                       ))}
@@ -278,13 +305,13 @@ export default function UtilizationReportPage({ currentUserRoles = ['VT-01'], on
               )}
             </div>
 
-            <div className="user-table-card" style={{ padding: '20px' }} data-testid="utilization-employee-table">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>Theo từng người</h3>
+            <div className="user-table-card ia-card-pad" data-testid="utilization-employee-table">
+              <div className="ia-section-head">
+                <h3 className="ia-section-title">Theo từng người</h3>
                 <input
-                  type="text"
-                  className="form-input"
-                  style={{ height: 34, maxWidth: 260 }}
+                  type="search"
+                  className="form-input ia-search"
+                  aria-label="Tìm nhân sự theo tên, vai trò, bộ phận"
                   placeholder="Tìm theo tên, vai trò, bộ phận..."
                   value={employeeSearch}
                   onChange={(e) => setEmployeeSearch(e.target.value)}
@@ -293,11 +320,11 @@ export default function UtilizationReportPage({ currentUserRoles = ['VT-01'], on
               </div>
 
               {report.employees.length === 0 ? (
-                <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }} data-testid="utilization-employee-empty">
+                <p className="ia-inline-empty" data-testid="utilization-employee-empty">
                   Không có nhân sự nào làm việc trong kỳ đã chọn.
                 </p>
               ) : filteredEmployees.length === 0 ? (
-                <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }} data-testid="utilization-employee-no-match">
+                <p className="ia-inline-empty" data-testid="utilization-employee-no-match">
                   Không tìm thấy nhân sự phù hợp với từ khóa "{employeeSearch}".
                 </p>
               ) : (
@@ -308,9 +335,9 @@ export default function UtilizationReportPage({ currentUserRoles = ['VT-01'], on
                         <th>Họ tên</th>
                         <th>Vai trò</th>
                         <th>Bộ phận</th>
-                        <th style={{ textAlign: 'right' }}>Giờ tính phí</th>
-                        <th style={{ textAlign: 'right' }}>Giờ chuẩn</th>
-                        <th style={{ textAlign: 'right' }}>Tỷ lệ</th>
+                        <th className="text-right">Giờ tính phí</th>
+                        <th className="text-right">Giờ chuẩn</th>
+                        <th className="text-right">Tỷ lệ</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -319,13 +346,10 @@ export default function UtilizationReportPage({ currentUserRoles = ['VT-01'], on
                           <td>{e.fullName}</td>
                           <td>{e.professionalRole ?? '—'}</td>
                           <td>{e.departmentName ?? 'Chưa gán bộ phận'}</td>
-                          <td style={{ textAlign: 'right' }}>{formatHours(e.billableHours)}</td>
-                          <td style={{ textAlign: 'right' }}>{formatHours(e.standardHours)}</td>
-                          <td
-                            style={{ textAlign: 'right', color: e.ratio !== null && e.ratio > 1 ? 'var(--pale-yellow-fg)' : undefined }}
-                            title={e.ratio === null ? 'Không có giờ chuẩn nhưng có giờ tính phí — có thể do nhập sai ngày vào làm/nghỉ việc' : undefined}
-                          >
-                            {formatRatio(e.ratio)}
+                          <td className="ia-num">{formatHours(e.billableHours)}</td>
+                          <td className="ia-num">{formatHours(e.standardHours)}</td>
+                          <td className="ia-num" title={e.ratio === null ? MISSING_STANDARD_HINT : undefined}>
+                            <RatioCell ratio={e.ratio} flagOver />
                           </td>
                         </tr>
                       ))}

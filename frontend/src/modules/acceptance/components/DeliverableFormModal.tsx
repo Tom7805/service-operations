@@ -16,6 +16,7 @@ import {
   validateDeliverableForm,
   type DeliverableFormErrors,
 } from '../validators/acceptanceValidators';
+import { useDialogA11y } from '../../projects/components/deliveryUi';
 
 interface Props {
   isOpen: boolean;
@@ -58,6 +59,8 @@ export default function DeliverableFormModal({
     setErrors({});
     setSaveError(null);
   }, [isOpen, initialWorkPackageId]);
+
+  const dialogRef = useDialogA11y(isOpen, onClose, submitting);
 
   if (!isOpen) return null;
 
@@ -106,7 +109,7 @@ export default function DeliverableFormModal({
         aria-modal="true"
         aria-labelledby="deliverable-form-title"
       >
-        <div className="modal-card" style={{ width: 'min(100%, 600px)' }} data-testid="deliverable-form-modal">
+        <div ref={dialogRef} className="modal-card dl-modal" style={{ width: 'min(100%, 600px)' }} data-testid="deliverable-form-modal">
           <div className="modal-header">
             <div className="modal-header__title-wrap">
               <h3 id="deliverable-form-title" className="modal-title">

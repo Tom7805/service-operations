@@ -12,6 +12,7 @@ import {
   validateAcceptanceForm,
   type AcceptanceFormErrors,
 } from '../validators/acceptanceValidators';
+import { useDialogA11y } from '../../projects/components/deliveryUi';
 
 interface Props {
   isOpen: boolean;
@@ -46,6 +47,8 @@ export default function AcceptanceResubmitModal({ isOpen, certificate, onClose, 
     setErrors({});
     setSaveError(null);
   }, [isOpen, certificate]);
+
+  const dialogRef = useDialogA11y(isOpen, onClose, submitting);
 
   if (!isOpen) return null;
 
@@ -88,7 +91,7 @@ export default function AcceptanceResubmitModal({ isOpen, certificate, onClose, 
         aria-modal="true"
         aria-labelledby="acceptance-resubmit-title"
       >
-        <div className="modal-card" style={{ width: 'min(100%, 600px)' }} data-testid="acceptance-resubmit-modal">
+        <div ref={dialogRef} className="modal-card dl-modal" style={{ width: 'min(100%, 600px)' }} data-testid="acceptance-resubmit-modal">
           <div className="modal-header">
             <div className="modal-header__title-wrap">
               <h3 id="acceptance-resubmit-title" className="modal-title">

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { AuditLogApiError, searchAuditLogs } from '../api/auditLogApi';
 import { TARGET_TYPE_LABELS, roleLabel, type AuditLogEntry, type AuditTargetType } from '../types/auditLogTypes';
 import { ICONS } from '../../../components/common/icons';
@@ -42,9 +42,14 @@ export default function AuditLogPage({
     to: '',
   });
 
+  /** Bộ lọc tự áp dụng sau khi ngừng gõ — nếu yêu cầu cũ về SAU yêu cầu mới, nó không được
+   *  ghi đè kết quả của bộ lọc hiện tại. Chỉ nhận phản hồi của lần gọi mới nhất. */
+  const requestIdRef = useRef(0);
+
   const fetchLogs = useCallback(
     async (targetPage: number) => {
       if (!isAdmin) return;
+      const requestId = ++requestIdRef.current;
       setLoading(true);
       setError(null);
       try {
@@ -56,11 +61,13 @@ export default function AuditLogPage({
           page: targetPage,
           size: PAGE_SIZE,
         });
+        if (requestId !== requestIdRef.current) return;
         setEntries(result.content);
         setPage(result.page);
         setTotalPages(result.totalPages);
         setTotalElements(result.totalElements);
       } catch (err) {
+        if (requestId !== requestIdRef.current) return;
         const message =
           err instanceof AuditLogApiError
             ? err.message
@@ -69,7 +76,7 @@ export default function AuditLogPage({
               : 'Không thể tải nhật ký thao tác.';
         setError(message);
       } finally {
-        setLoading(false);
+        if (requestId === requestIdRef.current) setLoading(false);
       }
     },
     [isAdmin, appliedFilters]
@@ -137,7 +144,7 @@ export default function AuditLogPage({
   }
 
   return (
-    <div className="user-management-page">
+    <div className="user-management-page ia-page">
       <div className="page-header">
         <div>
           <h1 className="page-title">Nhật ký thao tác hệ thống</h1>
@@ -170,7 +177,7 @@ export default function AuditLogPage({
         <div className="alert alert--error" role="alert">
           <span className="alert__icon">{ICONS.alertTriangle}</span>
           <span>{error}</span>
-          <button type="button" className="btn-secondary text-dark ml-auto" onClick={() => fetchLogs(page)}>
+          <button type="button" className="btn-secondary ml-auto" onClick={() => fetchLogs(page)} disabled={loading}>
             Thử lại
           </button>
         </div>

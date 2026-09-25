@@ -5,6 +5,7 @@ import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import { AcceptanceApiError, getAcceptance } from '../api/acceptanceApi';
 import { ACCEPTANCE_STATUS_META, type AcceptanceDetailRes } from '../types/acceptanceTypes';
 import { buildAcceptanceHistory } from '../utils/acceptanceHistory';
+import { useDialogA11y } from '../../projects/components/deliveryUi';
 
 interface Props {
   isOpen: boolean;
@@ -49,6 +50,8 @@ export default function AcceptanceHistoryModal({ isOpen, certificateId, onClose 
     if (isOpen) void load();
   }, [isOpen, load]);
 
+  const dialogRef = useDialogA11y(isOpen, onClose, false);
+
   if (!isOpen) return null;
 
   const status = certificate ? ACCEPTANCE_STATUS_META[certificate.status] : null;
@@ -63,7 +66,7 @@ export default function AcceptanceHistoryModal({ isOpen, certificateId, onClose 
         aria-modal="true"
         aria-labelledby="acceptance-history-title"
       >
-        <div className="modal-card" style={{ width: 'min(100%, 760px)' }} data-testid="acceptance-history-modal">
+        <div ref={dialogRef} className="modal-card dl-modal" style={{ width: 'min(100%, 760px)' }} data-testid="acceptance-history-modal">
           <div className="modal-header">
             <div className="modal-header__title-wrap">
               <h3 id="acceptance-history-title" className="modal-title">

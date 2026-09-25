@@ -87,7 +87,7 @@ export default function ForgotPasswordForm({ onBackToLogin, onCodeSent }: Forgot
           )}
         </button>
       </form>
-      <div className="form-options" style={{ marginTop: 16 }}>
+      <div className="form-options ia-mt-16">
         <a
           href="#login"
           onClick={(e) => {

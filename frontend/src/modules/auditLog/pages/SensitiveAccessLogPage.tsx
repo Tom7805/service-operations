@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { AuditLogApiError, searchSensitiveAccessLogs } from '../api/auditLogApi';
 import {
   ACCESS_ACTION_LABELS,
@@ -56,9 +56,14 @@ export default function SensitiveAccessLogPage({
     to: '',
   });
 
+  /** Bộ lọc tự áp dụng sau khi ngừng gõ — nếu yêu cầu cũ về SAU yêu cầu mới, nó không được
+   *  ghi đè kết quả của bộ lọc hiện tại. Chỉ nhận phản hồi của lần gọi mới nhất. */
+  const requestIdRef = useRef(0);
+
   const fetchLogs = useCallback(
     async (targetPage: number) => {
       if (!isAdmin) return;
+      const requestId = ++requestIdRef.current;
       setLoading(true);
       setError(null);
       try {
@@ -70,11 +75,13 @@ export default function SensitiveAccessLogPage({
           page: targetPage,
           size: PAGE_SIZE,
         });
+        if (requestId !== requestIdRef.current) return;
         setEntries(result.content);
         setPage(result.page);
         setTotalPages(result.totalPages);
         setTotalElements(result.totalElements);
       } catch (err) {
+        if (requestId !== requestIdRef.current) return;
         const message =
           err instanceof AuditLogApiError
             ? err.message
@@ -83,7 +90,7 @@ export default function SensitiveAccessLogPage({
               : 'Không thể tải nhật ký truy cập dữ liệu nhạy cảm.';
         setError(message);
       } finally {
-        setLoading(false);
+        if (requestId === requestIdRef.current) setLoading(false);
       }
     },
     [isAdmin, appliedFilters]
@@ -138,7 +145,7 @@ export default function SensitiveAccessLogPage({
   const exportCount = entries.filter((e) => e.action === 'EXPORT').length;
 
   return (
-    <div className="user-management-page">
+    <div className="user-management-page ia-page">
       {/* Page Header */}
       <div className="page-header">
         <div>
@@ -188,7 +195,7 @@ export default function SensitiveAccessLogPage({
         <div className="alert alert--error" role="alert">
           <span className="alert__icon">{ICONS.alertTriangle}</span>
           <span>{error}</span>
-          <button type="button" className="btn-secondary text-dark ml-auto" onClick={() => fetchLogs(page)}>
+          <button type="button" className="btn-secondary ml-auto" onClick={() => fetchLogs(page)} disabled={loading}>
             Thử lại
           </button>
         </div>
@@ -202,8 +209,8 @@ export default function SensitiveAccessLogPage({
               <span className="filter-label">Tài khoản</span>
               <input
                 type="text"
-                className="form-input"
-                style={{ height: 38, width: 180 }}
+                className="form-input ia-input-180"
+                aria-label="Lọc theo tài khoản"
                 placeholder="vd: nhansu"
                 value={usernameInput}
                 onChange={(e) => setUsernameInput(e.target.value)}
@@ -271,7 +278,7 @@ export default function SensitiveAccessLogPage({
               ) : entries.length === 0 ? (
                 <tr>
                   {/* TC-02: không có bản ghi nào thỏa bộ lọc */}
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#5B5A57' }}>
+                  <td colSpan={7} className="ia-table-empty-cell">
                     Không tìm thấy nhật ký truy cập nào thỏa bộ lọc đã chọn.
                   </td>
                 </tr>
@@ -301,11 +308,11 @@ export default function SensitiveAccessLogPage({
         </div>
 
         {/* Phân trang */}
-        <div className="table-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="table-footer table-footer--paginated">
           <span>
             Trang {totalPages === 0 ? 0 : page + 1}/{totalPages} — {totalElements} bản ghi
           </span>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="table-footer__pagination">
             <button
               type="button"
               className="btn-secondary"

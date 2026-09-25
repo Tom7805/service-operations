@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { CSSProperties } from 'react';
 import { ICONS } from './icons';
@@ -48,6 +48,7 @@ export const RowActionsMenu: React.FC<RowActionsMenuProps> = ({ actions, ariaLab
   const [panelStyle, setPanelStyle] = useState<CSSProperties>({ position: 'fixed', visibility: 'hidden' });
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const triggerId = useId();
 
   const positionPanel = useCallback(() => {
     const btn = triggerRef.current;
@@ -87,7 +88,11 @@ export const RowActionsMenu: React.FC<RowActionsMenuProps> = ({ actions, ariaLab
       if (!isInside(event.target as Node)) setOpen(false);
     };
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
+      if (event.key === 'Escape') {
+        setOpen(false);
+        // Trả focus về nút ⋮ — nếu không, người dùng bàn phím rơi về đầu trang.
+        triggerRef.current?.focus({ preventScroll: true });
+      }
     };
     // Cuộn bất kỳ khung nào (capture) hoặc đổi cỡ cửa sổ: bám lại theo nút ⋮.
     const reposition = () => positionPanel();
@@ -103,24 +108,60 @@ export const RowActionsMenu: React.FC<RowActionsMenuProps> = ({ actions, ariaLab
     };
   }, [open, positionPanel]);
 
+  // Panel nằm ở cuối <body> (portal) nên phím Tab từ nút ⋮ KHÔNG đi vào được các mục.
+  // Vì vậy: mở menu thì đưa focus vào mục đầu tiên, và điều hướng bằng phím mũi tên
+  // (mẫu WAI-ARIA menu button). Tab đóng menu và trả focus về nút ⋮.
+  useEffect(() => {
+    if (!open) return;
+    const first = panelRef.current?.querySelector<HTMLButtonElement>('.row-menu__item:not(:disabled)');
+    first?.focus({ preventScroll: true });
+  }, [open]);
+
+  const handlePanelKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const items = Array.from(
+      panelRef.current?.querySelectorAll<HTMLButtonElement>('.row-menu__item:not(:disabled)') ?? [],
+    );
+    if (items.length === 0) return;
+    const index = items.indexOf(document.activeElement as HTMLButtonElement);
+    let next: HTMLButtonElement | undefined;
+    if (event.key === 'ArrowDown') next = items[(index + 1) % items.length];
+    else if (event.key === 'ArrowUp') next = items[(index - 1 + items.length) % items.length];
+    else if (event.key === 'Home') next = items[0];
+    else if (event.key === 'End') next = items[items.length - 1];
+    else if (event.key === 'Tab') {
+      event.preventDefault();
+      setOpen(false);
+      triggerRef.current?.focus({ preventScroll: true });
+      return;
+    }
+    if (next) {
+      event.preventDefault();
+      next.focus({ preventScroll: true });
+    }
+  };
+
   const panel = (
     <div
       ref={panelRef}
       className={`row-menu__panel row-menu__panel--open ${openUpward ? 'row-menu__panel--up' : ''}`}
       role="menu"
+      aria-labelledby={triggerId}
       style={panelStyle}
+      onKeyDown={handlePanelKeyDown}
     >
       {actions.map((action) => (
         <button
           key={action.key}
           type="button"
           role="menuitem"
+          tabIndex={-1}
           data-testid={action.testId}
           className={`row-menu__item ${action.tone === 'danger' ? 'row-menu__item--danger' : ''}`}
           title={action.disabled ? action.disabledReason ?? action.label : action.label}
           disabled={action.disabled}
           onClick={() => {
             setOpen(false);
+            triggerRef.current?.focus({ preventScroll: true });
             action.onClick();
           }}
         >
@@ -135,10 +176,11 @@ export const RowActionsMenu: React.FC<RowActionsMenuProps> = ({ actions, ariaLab
     <div className="row-menu">
       <button
         ref={triggerRef}
+        id={triggerId}
         type="button"
         className="row-menu__trigger"
         aria-label={ariaLabel}
-        aria-haspopup="true"
+        aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >

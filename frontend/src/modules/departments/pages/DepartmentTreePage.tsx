@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useDeferredValue, useEffect, useState } from 'react';
 import type {
   CreateDepartmentPayload,
   Department,
@@ -46,6 +46,8 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
 
   // Search & View Mode filters
   const [searchKeyword, setSearchKeyword] = useState<string>('');
+  // Ô tìm kiếm cập nhật ngay; cây (có thể vài trăm nút) lọc theo giá trị hoãn — gõ không bị giật.
+  const deferredSearchKeyword = useDeferredValue(searchKeyword);
   const [viewMode, setViewMode] = useState<ViewMode>('TREE');
 
   // Modals state
@@ -210,7 +212,7 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
   const uniqueManagers = new Set(flatData.map((d) => d.managerId).filter(Boolean)).size;
 
   return (
-    <div className="user-management-page">
+    <div className="user-management-page ia-page">
       {/* Toast Notification Banner */}
       {toastMessage && (
         <div className={`toast-banner toast-banner--${toastMessage.type}`} role="status">
@@ -277,19 +279,20 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
         <div className="alert alert--error mb-4" role="alert">
           <span className="alert__icon">{ICONS.alertTriangle}</span>
           <span>{error}</span>
-          <button type="button" className="btn-secondary text-dark ml-auto" onClick={fetchTreeAndDepartments}>
+          <button type="button" className="btn-secondary ml-auto" onClick={fetchTreeAndDepartments} disabled={loading}>
             Thử lại
           </button>
         </div>
       )}
 
       {/* Toolbar & Filter Bar */}
-      <div className="user-table-card mb-4" style={{ borderRadius: '16px 16px 0 0', marginBottom: 0 }}>
+      <div className="user-table-card ia-toolbar-card--attached">
         <div className="user-table-toolbar">
           <div className="search-box">
             <span className="search-box__icon">{ICONS.search}</span>
             <input
-              type="text"
+              type="search"
+              aria-label="Tìm kiếm theo tên bộ phận"
               className="search-box__input"
               placeholder="Tìm kiếm theo tên bộ phận..."
               value={searchKeyword}
@@ -349,7 +352,7 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
           treeData={treeData}
           flatData={flatData}
           loading={loading}
-          searchKeyword={searchKeyword}
+          searchKeyword={deferredSearchKeyword}
           viewMode={viewMode}
           onAddChild={handleOpenCreateChild}
           onEdit={handleOpenEdit}

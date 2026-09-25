@@ -6,6 +6,7 @@ import { approveExpense, rejectExpense, ExpensesApiError } from '../api/expenses
 import type { ExpenseRes } from '../types/expenseTypes';
 import { EXPENSE_TYPE_LABELS } from '../types/expenseTypes';
 import { validateExpenseRejectReason } from '../validators/expenseValidators';
+import { useDialogA11y } from '../../projects/components/deliveryUi';
 
 interface ExpenseApprovalActionBarProps {
   expense: ExpenseRes;
@@ -47,6 +48,7 @@ export default function ExpenseApprovalActionBar({
 
   const approveBackdrop = useBackdropClick(closeModal, submitting);
   const rejectBackdrop = useBackdropClick(closeModal, submitting);
+  const dialogRef = useDialogA11y(openModal !== null, closeModal, submitting);
 
   const handleApprove = async () => {
     setSubmitting(true);
@@ -117,7 +119,7 @@ export default function ExpenseApprovalActionBar({
             role="dialog"
             aria-modal="true"
           >
-            <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
+            <div ref={dialogRef} className="modal-card dl-modal modal-card--sm" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
                 <h3 className="modal-title">
                   <span className="modal-title__icon">{ICONS.checkCircle}</span> Duyệt phiếu chi phí
@@ -163,7 +165,7 @@ export default function ExpenseApprovalActionBar({
             role="dialog"
             aria-modal="true"
           >
-            <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
+            <div ref={dialogRef} className="modal-card dl-modal modal-card--sm" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
                 <h3 className="modal-title text-danger">
                   <span className="modal-title__icon">{ICONS.close}</span> Từ chối phiếu chi phí

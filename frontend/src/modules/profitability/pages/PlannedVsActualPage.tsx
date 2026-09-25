@@ -4,6 +4,7 @@ import type { ProjectRes } from '../../projects/types/projectTypes';
 import { getProject, ProjectsApiError } from '../../projects/api/projectsApi';
 import type { PlannedVsActualMarginRes } from '../types/profitabilityTypes';
 import { getPlannedVsActualMargin, ProfitabilityApiError } from '../api/profitabilityApi';
+import { ReportErrorAlert, ReportSkeleton } from '../../reports/components/ReportStates';
 
 export interface PlannedVsActualPageProps {
   projectId: number;
@@ -56,16 +57,16 @@ function ComparisonCard({ label, planned, actual, testId }: ComparisonCardProps)
   return (
     <div className="stat-card" data-testid={testId}>
       <span className="stat-card__label">{label}</span>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>Dự kiến</span>
-          <span style={{ fontSize: '14.5px', fontWeight: 600, color: 'var(--pale-blue-fg)' }}>{planned}</span>
+      <dl className="ia-compare">
+        <div className="ia-compare__row">
+          <dt className="ia-sub">Dự kiến</dt>
+          <dd className="ia-compare__planned">{planned}</dd>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>Thực tế</span>
-          <span style={{ fontSize: '14.5px', fontWeight: 600, color: 'var(--ink-strong)' }}>{actual}</span>
+        <div className="ia-compare__row">
+          <dt className="ia-sub">Thực tế</dt>
+          <dd className="ia-compare__actual">{actual}</dd>
         </div>
-      </div>
+      </dl>
     </div>
   );
 }
@@ -83,7 +84,6 @@ function PlannedVsActualContent({ data }: { data: PlannedVsActualMarginRes }) {
       <div
         className="alert-box alert-box--info"
         role="status"
-        style={{ marginBottom: '16px' }}
         data-testid="quote-source"
       >
         So sánh dựa trên báo giá <strong>#{data.quoteId}</strong> (phiên bản {data.quoteVersion})
@@ -95,7 +95,6 @@ function PlannedVsActualContent({ data }: { data: PlannedVsActualMarginRes }) {
         <div
           className="alert-box alert-box--warning"
           role="alert"
-          style={{ marginBottom: '12px' }}
           data-testid="missing-planned-cost-alert"
         >
           <strong>Cảnh báo:</strong> Có {data.missingPlannedCostItemCount} dòng báo giá chưa ước tính
@@ -106,7 +105,6 @@ function PlannedVsActualContent({ data }: { data: PlannedVsActualMarginRes }) {
         <div
           className="alert-box alert-box--warning"
           role="alert"
-          style={{ marginBottom: '12px' }}
           data-testid="missing-actual-cost-alert"
         >
           <strong>Cảnh báo:</strong> Có {data.missingActualCostEntryCount} dòng giờ công đã duyệt chưa
@@ -117,7 +115,6 @@ function PlannedVsActualContent({ data }: { data: PlannedVsActualMarginRes }) {
         <div
           className="alert-box alert-box--warning"
           role="alert"
-          style={{ marginBottom: '12px' }}
           data-testid="missing-actual-revenue-alert"
         >
           <strong>Cảnh báo:</strong> Có {data.missingActualRevenueEntryCount} dòng giờ công đã duyệt chưa
@@ -174,41 +171,28 @@ function PlannedVsActualContent({ data }: { data: PlannedVsActualMarginRes }) {
 
       {/* Chênh lệch số giờ công */}
       <div
-        className="user-table-card"
-        style={{ padding: '20px', marginBottom: '24px' }}
+        className="user-table-card ia-card-pad ia-section"
         data-testid="hours-comparison"
       >
-        <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700, color: 'var(--ink-strong)' }}>
+        <h3 className="ia-section-title ia-mb-12">
           So sánh số giờ công và chi phí giờ
         </h3>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: '16px',
-          }}
-        >
+        <div className="ia-metric-row">
           <div data-testid="planned-hours">
-            <div style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>Dự kiến</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--pale-blue-fg)' }}>
+            <div className="ia-sub">Dự kiến</div>
+            <div className="ia-metric ia-compare__planned">
               {formatNumber(plannedHours)} giờ ({formatNumber(data.plannedWorkDays)} ngày)
             </div>
           </div>
           <div data-testid="actual-hours">
-            <div style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>Thực tế</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ink-strong)' }}>
+            <div className="ia-sub">Thực tế</div>
+            <div className="ia-metric">
               {formatNumber(data.actualHours)} giờ
             </div>
           </div>
           <div data-testid="hours-variance">
-            <div style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>Chênh lệch</div>
-            <div
-              style={{
-                fontSize: '16px',
-                fontWeight: 600,
-                color: data.hoursVarianceVsPlanned >= 0 ? 'var(--pale-red-fg)' : 'var(--pale-green-fg)',
-              }}
-            >
+            <div className="ia-sub">Chênh lệch</div>
+            <div className={`ia-metric ${data.hoursVarianceVsPlanned >= 0 ? 'ia-sub--bad' : 'ia-sub--good'}`}>
               {formatHoursSigned(data.hoursVarianceVsPlanned)} giờ
             </div>
           </div>
@@ -218,16 +202,15 @@ function PlannedVsActualContent({ data }: { data: PlannedVsActualMarginRes }) {
       {/* Nguyên nhân chênh lệch */}
       {data.gapReasons && data.gapReasons.length > 0 && (
         <div
-          className="user-table-card"
-          style={{ padding: '20px', marginBottom: '16px' }}
+          className="user-table-card ia-card-pad ia-section"
           data-testid="gap-reasons"
         >
-          <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700, color: 'var(--ink-strong)' }}>
+          <h3 className="ia-section-title ia-mb-12">
             Nguyên nhân chênh lệch
           </h3>
-          <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--ink-strong)', fontSize: '13.5px' }}>
+          <ul className="ia-reason-list">
             {data.gapReasons.map((reason, index) => (
-              <li key={index} style={{ marginBottom: '4px' }} data-testid={`gap-reason-${index}`}>
+              <li key={index} data-testid={`gap-reason-${index}`}>
                 {reason}
               </li>
             ))}
@@ -314,13 +297,13 @@ export default function PlannedVsActualPage({
 
   if (!canViewScreen) {
     return (
-      <div className="user-management-page" data-testid="planned-vs-actual-forbidden">
+      <div className="user-management-page ia-page" data-testid="planned-vs-actual-forbidden">
         <div className="alert-box alert-box--danger" role="alert">
           Bạn không có quyền xem so sánh biên lợi nhuận dự kiến với thực tế của dự án này
           (yêu cầu vai trò Quản lý dự án VT-02).
         </div>
         {onBack && (
-          <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
+          <button type="button" className="btn btn-secondary ia-denied-back" onClick={onBack}>
             {ICONS.arrowLeft} Quay lại
           </button>
         )}
@@ -329,9 +312,9 @@ export default function PlannedVsActualPage({
   }
 
   return (
-    <div className="user-management-page" data-testid="planned-vs-actual-page">
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+    <div className="user-management-page ia-page" data-testid="planned-vs-actual-page">
+      <div className="page-header">
+        <div className="ia-head">
           {onBack && (
             <button
               type="button"
@@ -343,17 +326,17 @@ export default function PlannedVsActualPage({
             </button>
           )}
           <div>
-            <h1 className="page-title" style={{ margin: '4px 0' }}>Biên lợi nhuận dự kiến vs thực tế</h1>
+            <h1 className="page-title">Biên lợi nhuận dự kiến vs thực tế</h1>
             <p className="page-subtitle" data-testid="project-code">{project?.projectCode || `Mã: ${projectId}`}</p>
             {project?.name && (
-              <p className="page-subtitle" style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
+              <p className="page-subtitle">
                 {project.name}
               </p>
             )}
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="page-header__actions">
           <button
             type="button"
             className="btn btn-secondary btn-sm"
@@ -367,34 +350,24 @@ export default function PlannedVsActualPage({
       </div>
 
       {error && (
-        <div
-          className="alert-box alert-box--danger"
-          role="alert"
-          style={{ marginBottom: '16px' }}
-          data-testid="planned-vs-actual-error"
-        >
-          {error}
-        </div>
+        <ReportErrorAlert testId="planned-vs-actual-error" message={error} onRetry={() => void loadData()} retryDisabled={loading} />
       )}
 
       {loading ? (
-        <div data-testid="planned-vs-actual-loading" role="status" aria-label="Đang tải so sánh biên lợi nhuận...">
-            <div className="skeleton" style={{ height: '88px', marginBottom: '24px' }} />
-            <div className="skeleton" style={{ height: '240px' }} />
-          </div>
+        <ReportSkeleton testId="planned-vs-actual-loading" label="Đang tải so sánh biên lợi nhuận..." kpis={4} chart tableColumns={0} />
       ) : notFound ? (
-        <div className="table-empty-state" data-testid="planned-vs-actual-not-found" style={{ padding: '32px' }}>
+        <div className="table-empty-state" data-testid="planned-vs-actual-not-found">
           <div className="table-empty-state__icon">{ICONS.info}</div>
-          <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>Chưa có báo giá gắn dự án</h4>
-          <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
+          <h3>Chưa có báo giá gắn dự án</h3>
+          <p className="ia-inline-empty">
             Dự án chưa có báo giá nào gắn kèm (qua hợp đồng) để so sánh biên lợi nhuận dự kiến với thực tế.
           </p>
         </div>
       ) : !data ? (
-        <div className="table-empty-state" data-testid="planned-vs-actual-empty" style={{ padding: '32px' }}>
+        <div className="table-empty-state" data-testid="planned-vs-actual-empty">
           <div className="table-empty-state__icon">{ICONS.chart}</div>
-          <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>Không có dữ liệu</h4>
-          <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
+          <h3>Không có dữ liệu</h3>
+          <p className="ia-inline-empty">
             Dự án này chưa có dữ liệu biên lợi nhuận để so sánh.
           </p>
         </div>

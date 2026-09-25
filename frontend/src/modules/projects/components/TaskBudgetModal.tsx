@@ -4,6 +4,7 @@ import ModalPortal from '../../../components/common/ModalPortal';
 import type { TaskBudgetReq, TaskBudgetStatusRes } from '../types/taskTypes';
 import { setTaskBudget, ProjectsApiError } from '../api/projectsApi';
 import { validateTaskBudgetForm } from '../validators/projectValidators';
+import { useDialogA11y } from './deliveryUi';
 
 export interface TaskBudgetModalProps {
   isOpen: boolean;
@@ -41,6 +42,8 @@ export default function TaskBudgetModal({
       setServerError(null);
     }
   }, [isOpen, currentBudgetHours]);
+
+  const dialogRef = useDialogA11y(isOpen, onClose, submitting);
 
   if (!isOpen) return null;
 
@@ -90,7 +93,7 @@ export default function TaskBudgetModal({
       aria-modal="true"
       aria-labelledby="task-budget-modal-title"
     >
-      <div className="modal-card">
+      <div ref={dialogRef} className="modal-card dl-modal">
         <div className="modal-header">
           <div className="modal-header__title-wrap">
             <h3 id="task-budget-modal-title" className="modal-title">

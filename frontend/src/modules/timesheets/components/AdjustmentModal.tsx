@@ -5,6 +5,7 @@ import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import { adjustTimeEntry, TimesheetsApiError } from '../api/timesheetsApi';
 import type { AdjustableEntryRes, AdjustmentTraceRes } from '../types/timesheetTypes';
 import { validateAdjustmentForm } from '../validators/timesheetValidators';
+import { useDialogA11y } from '../../projects/components/deliveryUi';
 
 interface AdjustmentModalProps {
   projectId: number;
@@ -54,6 +55,7 @@ export default function AdjustmentModal({
   };
 
   const backdrop = useBackdropClick(closeModal, submitting);
+  const dialogRef = useDialogA11y(true, closeModal, submitting);
 
   const handleSubmit = async () => {
     const entryIdNum = Number(entryId);
@@ -104,7 +106,7 @@ export default function AdjustmentModal({
         role="dialog"
         aria-modal="true"
       >
-        <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
+        <div ref={dialogRef} className="modal-card dl-modal modal-card--sm" onClick={(e) => e.stopPropagation()}>
           <div className="modal-header">
             <h3 className="modal-title">
               <span className="modal-title__icon">{ICONS.edit}</span> Điều chỉnh giờ công đã duyệt

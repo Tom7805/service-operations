@@ -12,6 +12,7 @@ import type {
   TwoFactorRoleConfig,
   TwoFactorVerifyPayload,
 } from '../types/authTypes';
+import { httpFetch } from '../../../utils/http';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -127,7 +128,7 @@ async function requestAuthBackend<T>(url: string, options: RequestInit = {}, wit
 
   let response: Response;
   try {
-    response = await fetch(url, { ...options, headers });
+    response = await httpFetch(url, { ...options, headers });
   } catch {
     throw new AuthApiError(
       'NETWORK_ERROR',

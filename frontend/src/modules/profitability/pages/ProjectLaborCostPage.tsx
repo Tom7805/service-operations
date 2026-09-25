@@ -6,6 +6,7 @@ import type { ProjectRes } from '../../projects/types/projectTypes';
 import { getProject, ProjectsApiError } from '../../projects/api/projectsApi';
 import type { ProjectLaborCostRes } from '../types/profitabilityTypes';
 import { getProjectLaborCost, ProfitabilityApiError } from '../api/profitabilityApi';
+import { ReportErrorAlert, ReportSkeleton } from '../../reports/components/ReportStates';
 
 export interface ProjectLaborCostPageProps {
   projectId: number;
@@ -106,13 +107,13 @@ export default function ProjectLaborCostPage({
 
   if (!canViewScreen) {
     return (
-      <div className="user-management-page" data-testid="labor-cost-forbidden">
+      <div className="user-management-page ia-page" data-testid="labor-cost-forbidden">
         <div className="alert-box alert-box--danger" role="alert">
           Bạn không có quyền xem giá vốn giờ công dự án này (yêu cầu vai trò Ban giám đốc
           VT-01, Quản lý dự án VT-02 hoặc Kế toán VT-05).
         </div>
         {onBack && (
-          <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
+          <button type="button" className="btn btn-secondary ia-denied-back" onClick={onBack}>
             {ICONS.arrowLeft} Quay lại
           </button>
         )}
@@ -121,9 +122,9 @@ export default function ProjectLaborCostPage({
   }
 
   return (
-    <div className="user-management-page" data-testid="labor-cost-page">
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+    <div className="user-management-page ia-page" data-testid="labor-cost-page">
+      <div className="page-header">
+        <div className="ia-head">
           {onBack && (
             <button
               type="button"
@@ -135,14 +136,14 @@ export default function ProjectLaborCostPage({
             </button>
           )}
           <div>
-            <h1 className="page-title" style={{ margin: '4px 0' }}>
+            <h1 className="page-title">
               Giá vốn giờ công dự án
             </h1>
             <p className="page-subtitle" data-testid="project-code">{project?.projectCode || `Mã: ${projectId}`}</p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="page-header__actions">
           <button
             type="button"
             className="btn btn-secondary btn-sm"
@@ -165,26 +166,16 @@ export default function ProjectLaborCostPage({
       </div>
 
       {error && (
-        <div
-          className="alert-box alert-box--danger"
-          role="alert"
-          style={{ marginBottom: '16px' }}
-          data-testid="labor-cost-error"
-        >
-          {error}
-        </div>
+        <ReportErrorAlert testId="labor-cost-error" message={error} onRetry={() => void loadData()} retryDisabled={loading} />
       )}
 
       {loading ? (
-        <div data-testid="labor-cost-loading" role="status" aria-label="Đang tải giá vốn giờ công...">
-            <div className="skeleton" style={{ height: '88px', marginBottom: '24px' }} />
-            <div className="skeleton" style={{ height: '240px' }} />
-          </div>
+        <ReportSkeleton testId="labor-cost-loading" label="Đang tải giá vốn giờ công..." kpis={4} tableColumns={6} />
       ) : !laborCost || laborCost.lines.length === 0 ? (
         <div className="table-empty-state" data-testid="labor-cost-empty">
           <div className="table-empty-state__icon">{ICONS.money}</div>
-          <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>Không có dữ liệu</h4>
-          <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
+          <h3>Không có dữ liệu</h3>
+          <p className="ia-inline-empty">
             Dự án này chưa có giờ công đã duyệt để tính giá vốn.
           </p>
         </div>
@@ -194,7 +185,6 @@ export default function ProjectLaborCostPage({
             <div
               className="alert-box alert-box--warning"
               role="alert"
-              style={{ marginBottom: '16px' }}
               data-testid="labor-cost-missing-alert"
             >
               <strong>Cảnh báo:</strong> Có {laborCost.missingCostEntryCount} dòng giờ công đã duyệt chưa có
@@ -229,7 +219,7 @@ export default function ProjectLaborCostPage({
 
           {/* RBAC: Ẩn bảng chi tiết cho Project Manager (VT-02) không có VT-01 */}
           {!canViewTableDetail && (
-            <div className="alert-box alert-box--info" role="alert" style={{ marginBottom: '16px' }} data-testid="table-hidden-notice">
+            <div className="alert-box alert-box--info" role="alert" data-testid="table-hidden-notice">
               <strong>Thông báo:</strong> Vai trò Quản lý dự án (VT-02) chỉ được xem tổng số giờ và số dòng giờ
               công. Số tiền giá vốn (đơn giá/giờ, tổng giá vốn) và bảng chi tiết từng nhân sự bị ẩn theo phân
               quyền — chỉ Ban giám đốc (VT-01), Kế toán (VT-05) và Nhân sự (VT-06) được xem số tiền này.
@@ -237,9 +227,9 @@ export default function ProjectLaborCostPage({
           )}
 
           {canViewTableDetail && (
-            <div className="user-table-card" style={{ padding: '20px' }} data-testid="labor-cost-detail-table">
-              <div style={{ marginBottom: '16px' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
+            <div className="user-table-card ia-card-pad" data-testid="labor-cost-detail-table">
+              <div className="ia-section-head">
+                <h3 className="ia-section-title">
                   Chi tiết từng dòng giờ công
                 </h3>
               </div>
@@ -250,9 +240,9 @@ export default function ProjectLaborCostPage({
                     <tr>
                       <th>Ngày công</th>
                       <th>Mã nhân sự</th>
-                      <th style={{ textAlign: 'right' }}>Số giờ</th>
-                      <th style={{ textAlign: 'right' }}>Đơn giá/giờ</th>
-                      <th style={{ textAlign: 'right' }}>Giá vốn</th>
+                      <th className="text-right">Số giờ</th>
+                      <th className="text-right">Đơn giá/giờ</th>
+                      <th className="text-right">Giá vốn</th>
                       <th>Trạng thái dữ liệu</th>
                     </tr>
                   </thead>
@@ -261,13 +251,13 @@ export default function ProjectLaborCostPage({
                       <tr key={line.timeEntryId} data-testid={`labor-cost-line-${line.timeEntryId}`}>
                         <td>{line.workDate}</td>
                         <td>Mã nhân sự: {line.employeeId}</td>
-                        <td style={{ textAlign: 'right' }}>{formatHours(line.hours)}</td>
-                        <td style={{ textAlign: 'right' }}>
+                        <td className="ia-num">{formatHours(line.hours)}</td>
+                        <td className="ia-num">
                           <MaskedCell canView={sensitive} maskedText="••••••">
                             {formatCurrency(line.hourlyRate)}
                           </MaskedCell>
                         </td>
-                        <td style={{ textAlign: 'right' }}>
+                        <td className="ia-num">
                           <MaskedCell canView={sensitive} maskedText="••••••">
                             {formatCurrency(line.laborCost)}
                           </MaskedCell>

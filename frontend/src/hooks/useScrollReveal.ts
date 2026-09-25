@@ -20,25 +20,6 @@ export function useScrollReveal(deps: unknown = null): void {
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     if (reduced || typeof IntersectionObserver === 'undefined') return;
 
-    const targets = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal-target]'));
-    if (targets.length === 0) return;
-
-    const viewportH = window.innerHeight;
-    const observed: HTMLElement[] = [];
-
-    targets.forEach((el) => {
-      // Thứ đã nằm trong khung nhìn ngay từ đầu thì hiện luôn — nó thuộc về hiệu ứng
-      // xổ trang, không phải hiệu ứng cuộn. Ẩn nó đi rồi hiện lại là một nhịp giật thừa.
-      if (el.getBoundingClientRect().top < viewportH * 0.9) {
-        el.setAttribute('data-reveal', 'shown');
-        return;
-      }
-      el.setAttribute('data-reveal', 'pending');
-      observed.push(el);
-    });
-
-    if (observed.length === 0) return;
-
     const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -51,8 +32,54 @@ export function useScrollReveal(deps: unknown = null): void {
       { rootMargin: '0px 0px -12% 0px', threshold: 0.05 }
     );
 
-    observed.forEach((el) => io.observe(el));
-    return () => io.disconnect();
+    /** Chỉ xử lý mục CHƯA được đánh dấu — gọi lại nhiều lần vẫn rẻ và không ẩn lại thứ đã hiện. */
+    const scan = (): boolean => {
+      const targets = document.querySelectorAll<HTMLElement>('[data-reveal-target]:not([data-reveal])');
+      if (targets.length === 0) return false;
+      const viewportH = window.innerHeight;
+      targets.forEach((el) => {
+        // Thứ đã nằm trong khung nhìn ngay từ đầu thì hiện luôn — nó thuộc về hiệu ứng
+        // xổ trang, không phải hiệu ứng cuộn. Ẩn nó đi rồi hiện lại là một nhịp giật thừa.
+        if (el.getBoundingClientRect().top < viewportH * 0.9) {
+          el.setAttribute('data-reveal', 'shown');
+          return;
+        }
+        el.setAttribute('data-reveal', 'pending');
+        io.observe(el);
+      });
+      return true;
+    };
+
+    // Trang là chunk lazy + dữ liệu tải bất đồng bộ: lúc effect này chạy, nội dung
+    // thật thường CHƯA có trong DOM (còn đang hiện khung xương). Theo dõi DOM trong
+    // một khoảng ngắn để bắt các mục xuất hiện muộn, rồi ngắt hẳn — không để một
+    // MutationObserver chạy mãi trên bảng dữ liệu dày.
+    let mo: MutationObserver | null = null;
+    let raf = 0;
+    let stopTimer = 0;
+    const stopWatching = () => {
+      mo?.disconnect();
+      mo = null;
+      cancelAnimationFrame(raf);
+      window.clearTimeout(stopTimer);
+    };
+    if (!scan() && typeof MutationObserver !== 'undefined') {
+      const root = document.getElementById('noi-dung-chinh') ?? document.body;
+      mo = new MutationObserver(() => {
+        if (raf) return;
+        raf = requestAnimationFrame(() => {
+          raf = 0;
+          if (scan()) stopWatching();
+        });
+      });
+      mo.observe(root, { childList: true, subtree: true });
+      stopTimer = window.setTimeout(stopWatching, 5000);
+    }
+
+    return () => {
+      stopWatching();
+      io.disconnect();
+    };
   }, [deps]);
 }
 

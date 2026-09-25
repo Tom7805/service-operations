@@ -5,6 +5,7 @@ import { createExpense, updateRejectedExpense, ExpensesApiError } from '../api/e
 import type { ExpenseRes, ExpenseType } from '../types/expenseTypes';
 import { EXPENSE_TYPE_LABELS } from '../types/expenseTypes';
 import { validateExpenseForm, type ExpenseFormErrors } from '../validators/expenseValidators';
+import { useDialogA11y } from '../../projects/components/deliveryUi';
 
 export interface ExpenseFormModalProps {
   isOpen: boolean;
@@ -61,6 +62,8 @@ export default function ExpenseFormModal({ isOpen, onClose, projectId, expense =
     setServerError(null);
   }, [isOpen, expense]);
 
+  const dialogRef = useDialogA11y(isOpen, onClose, submitting);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -109,7 +112,7 @@ export default function ExpenseFormModal({ isOpen, onClose, projectId, expense =
         aria-modal="true"
         aria-labelledby="expense-form-modal-title"
       >
-        <div className="modal-card project-modal-card">
+        <div ref={dialogRef} className="modal-card dl-modal project-modal-card">
           <div className="modal-header">
             <div className="modal-header__title-wrap">
               <h3 id="expense-form-modal-title" className="modal-title">

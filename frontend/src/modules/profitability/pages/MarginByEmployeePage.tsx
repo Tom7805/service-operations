@@ -2,6 +2,7 @@ import { useCallback, useState, type FormEvent } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import type { MarginByEmployeeRes } from '../types/profitabilityTypes';
 import { getMarginByEmployee, ProfitabilityApiError } from '../api/profitabilityApi';
+import { ReportErrorAlert, ReportSkeleton } from '../../reports/components/ReportStates';
 
 export interface MarginByEmployeePageProps {
   currentUserRoles?: string[];
@@ -94,13 +95,13 @@ export default function MarginByEmployeePage({
 
   if (!canViewScreen) {
     return (
-      <div className="user-management-page" data-testid="margin-by-employee-forbidden">
+      <div className="user-management-page ia-page" data-testid="margin-by-employee-forbidden">
         <div className="alert-box alert-box--danger" role="alert">
           Bạn không có quyền xem báo cáo biên lợi nhuận theo nhân sự (chỉ dành cho Ban giám đốc
           VT-01).
         </div>
         {onBack && (
-          <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
+          <button type="button" className="btn btn-secondary ia-denied-back" onClick={onBack}>
             {ICONS.arrowLeft} Quay lại
           </button>
         )}
@@ -109,9 +110,9 @@ export default function MarginByEmployeePage({
   }
 
   return (
-    <div className="user-management-page" data-testid="margin-by-employee-page">
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+    <div className="user-management-page ia-page" data-testid="margin-by-employee-page">
+      <div className="page-header">
+        <div className="ia-head">
           {onBack && (
             <button
               type="button"
@@ -123,7 +124,7 @@ export default function MarginByEmployeePage({
             </button>
           )}
           <div>
-            <h1 className="page-title" style={{ margin: '4px 0' }}>
+            <h1 className="page-title">
               Báo cáo biên lợi nhuận theo nhân sự
             </h1>
             <p className="page-subtitle">
@@ -134,8 +135,8 @@ export default function MarginByEmployeePage({
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} noValidate className="user-table-card" style={{ padding: '20px', marginBottom: '16px' }}>
-        <div className="toolbar-filters" style={{ display: 'flex', alignItems: 'flex-end', gap: '16px', flexWrap: 'wrap' }}>
+      <form onSubmit={handleSubmit} noValidate className="user-table-card ia-filter-card">
+        <div className="toolbar-filters">
           <div className="filter-group">
             <label className="filter-label" htmlFor="margin-employee-from">
               Từ ngày <span className="field-required">*</span>
@@ -144,7 +145,6 @@ export default function MarginByEmployeePage({
               id="margin-employee-from"
               type="date"
               className="form-input"
-              style={{ height: 38 }}
               value={fromInput}
               onChange={(e) => setFromInput(e.target.value)}
               disabled={loading}
@@ -159,7 +159,6 @@ export default function MarginByEmployeePage({
               id="margin-employee-to"
               type="date"
               className="form-input"
-              style={{ height: 38 }}
               value={toInput}
               onChange={(e) => setToInput(e.target.value)}
               disabled={loading}
@@ -171,28 +170,23 @@ export default function MarginByEmployeePage({
           </button>
         </div>
         {fieldError && (
-          <p className="field-error" data-testid="error-margin-by-employee" style={{ color: 'var(--pale-red-fg)', fontSize: '13.5px', marginTop: '8px' }}>
+          <p className="ia-field-error" data-testid="error-margin-by-employee">
             {fieldError}
           </p>
         )}
       </form>
 
       {error && (
-        <div className="alert-box alert-box--danger" role="alert" style={{ marginBottom: '16px' }} data-testid="margin-by-employee-error">
-          {error}
-        </div>
+        <ReportErrorAlert testId="margin-by-employee-error" message={error} onRetry={() => void loadReport(fromInput, toInput)} retryDisabled={loading} />
       )}
 
       {loading ? (
-        <div data-testid="margin-by-employee-loading" role="status" aria-label="Đang tải báo cáo...">
-            <div className="skeleton" style={{ height: '88px', marginBottom: '24px' }} />
-            <div className="skeleton" style={{ height: '240px' }} />
-          </div>
+        <ReportSkeleton testId="margin-by-employee-loading" label="Đang tải báo cáo..." kpis={4} tableColumns={6} />
       ) : !hasSearched ? (
         !error && (
           <div className="table-empty-state" data-testid="margin-by-employee-prompt">
             <div className="table-empty-state__icon">{ICONS.users}</div>
-            <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
+            <p className="ia-inline-empty">
               Chọn khoảng thời gian rồi bấm "Xem báo cáo" để xem biên lợi nhuận theo nhân sự.
             </p>
           </div>
@@ -201,7 +195,7 @@ export default function MarginByEmployeePage({
         report && (
           <>
             {(report.missingCostEntryCount > 0 || report.missingRevenueEntryCount > 0) && (
-              <div className="alert-box alert-box--warning" role="alert" style={{ marginBottom: '16px' }} data-testid="margin-by-employee-missing-alert">
+              <div className="alert-box alert-box--warning" role="alert" data-testid="margin-by-employee-missing-alert">
                 <strong>Cảnh báo:</strong>{' '}
                 {report.missingCostEntryCount > 0 && <>Có {report.missingCostEntryCount} dòng giờ công chưa có chi phí hiệu lực. </>}
                 {report.missingRevenueEntryCount > 0 && <>Có {report.missingRevenueEntryCount} dòng giờ công tính phí chưa có đơn giá hiệu lực. </>}
@@ -228,13 +222,13 @@ export default function MarginByEmployeePage({
               </div>
             </div>
 
-            <div className="user-table-card" style={{ padding: '20px' }} data-testid="margin-by-employee-table">
-              <div style={{ marginBottom: '16px' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>Chi tiết theo nhân sự</h3>
+            <div className="user-table-card ia-card-pad" data-testid="margin-by-employee-table">
+              <div className="ia-section-head">
+                <h3 className="ia-section-title">Chi tiết theo nhân sự</h3>
               </div>
 
               {report.lines.length === 0 ? (
-                <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }} data-testid="margin-by-employee-empty">
+                <p className="ia-inline-empty" data-testid="margin-by-employee-empty">
                   Không có giờ công đã duyệt nào trong kỳ đã chọn.
                 </p>
               ) : (
@@ -244,11 +238,11 @@ export default function MarginByEmployeePage({
                       <tr>
                         <th>Nhân sự</th>
                         <th>Vai trò chuyên môn</th>
-                        <th style={{ textAlign: 'right' }}>Số giờ đã duyệt</th>
-                        <th style={{ textAlign: 'right' }}>Doanh thu</th>
-                        <th style={{ textAlign: 'right' }}>Giá vốn</th>
-                        <th style={{ textAlign: 'right' }}>Biên lợi nhuận</th>
-                        <th style={{ textAlign: 'right' }}>Tỷ suất</th>
+                        <th className="text-right">Số giờ đã duyệt</th>
+                        <th className="text-right">Doanh thu</th>
+                        <th className="text-right">Giá vốn</th>
+                        <th className="text-right">Biên lợi nhuận</th>
+                        <th className="text-right">Tỷ suất</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -256,11 +250,11 @@ export default function MarginByEmployeePage({
                         <tr key={line.employeeId} data-testid={`margin-by-employee-line-${line.employeeId}`}>
                           <td>{line.employeeName}</td>
                           <td>{line.professionalRole || '—'}</td>
-                          <td style={{ textAlign: 'right' }}>{formatHours(line.approvedHours)}</td>
-                          <td style={{ textAlign: 'right' }}>{formatCurrency(line.revenue)}</td>
-                          <td style={{ textAlign: 'right' }}>{formatCurrency(line.cost)}</td>
-                          <td style={{ textAlign: 'right', color: line.margin < 0 ? 'var(--pale-red-fg)' : 'var(--ink-strong)' }}>{formatCurrency(line.margin)}</td>
-                          <td style={{ textAlign: 'right' }}>{formatMarginPercent(line.marginPercent)}</td>
+                          <td className="ia-num">{formatHours(line.approvedHours)}</td>
+                          <td className="ia-num">{formatCurrency(line.revenue)}</td>
+                          <td className="ia-num">{formatCurrency(line.cost)}</td>
+                          <td className={`ia-num ia-strong${line.margin < 0 ? ' text-danger' : ''}`}>{formatCurrency(line.margin)}</td>
+                          <td className="ia-num">{formatMarginPercent(line.marginPercent)}</td>
                         </tr>
                       ))}
                     </tbody>

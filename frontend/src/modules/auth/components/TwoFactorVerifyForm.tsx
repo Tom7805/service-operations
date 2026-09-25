@@ -1,6 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ICONS } from '../../../components/common/icons';
-import QRCode from 'qrcode';
 import { AuthApiError, verifyTwoFactor } from '../api/authApi';
 import type { AuthSession } from '../types/authTypes';
 import { validateTwoFactorVerifyForm, type TwoFactorVerifyFormErrors } from '../validators/authValidators';
@@ -26,7 +25,8 @@ function useQrCodeDataUrl(otpauthUri: string | null) {
       return;
     }
     let cancelled = false;
-    QRCode.toDataURL(otpauthUri, { width: 200, margin: 1 })
+    import('qrcode')
+      .then(({ default: QRCode }) => QRCode.toDataURL(otpauthUri, { width: 200, margin: 1 }))
       .then((url) => {
         if (!cancelled) setDataUrl(url);
       })
@@ -84,6 +84,12 @@ export default function TwoFactorVerifyForm({
     setSecretCopied(true);
     setTimeout(() => setSecretCopied(false), 2500);
   };
+
+  // Sai mã thì xóa ô và đặt con trỏ lại vào đó — người dùng gõ ngay mã mới, không phải chạm lại vào ô.
+  const otpInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (serverError && !submitting) otpInputRef.current?.focus();
+  }, [serverError, submitting]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -188,7 +194,14 @@ export default function TwoFactorVerifyForm({
         <div className="field">
           <input
             id="two-factor-otp"
+            ref={otpInputRef}
+            className="ia-otp-input"
             inputMode="numeric"
+            pattern="[0-9]*"
+            enterKeyHint="done"
+            autoFocus={!totpEnrollment}
+            aria-invalid={errors.otp || serverError ? true : undefined}
+            aria-describedby={errors.otp ? 'two-factor-otp-error' : serverError ? 'two-factor-server-error' : undefined}
             autoComplete="one-time-code"
             maxLength={6}
             value={otp}
@@ -200,22 +213,21 @@ export default function TwoFactorVerifyForm({
             }}
             placeholder="Nhập mã gồm 6 chữ số"
             disabled={submitting}
-            style={{ letterSpacing: '0.4em', textAlign: 'center', fontWeight: 700 }}
           />
         </div>
         {errors.otp && (
-          <p className="form-error" role="alert">
-            <span>!</span>
+          <p className="form-error" id="two-factor-otp-error" role="alert">
+            <span aria-hidden="true">!</span>
             {errors.otp}
           </p>
         )}
         {serverError && (
-          <p className="form-error" role="alert">
-            <span>!</span>
+          <p className="form-error" id="two-factor-server-error" role="alert">
+            <span aria-hidden="true">!</span>
             {serverError}
           </p>
         )}
-        <button className="submit" type="submit" disabled={submitting}>
+        <button className="submit" type="submit" disabled={submitting} aria-busy={submitting}>
           {submitting ? (
             <>
               <i className="loader" />
@@ -232,7 +244,7 @@ export default function TwoFactorVerifyForm({
         <span className="icon-sm">{ICONS.check}</span>
         <p>Nhập sai mã quá 3 lần liên tiếp, tài khoản sẽ tạm khóa để bảo vệ dữ liệu.</p>
       </div>
-      <div className="form-options" style={{ marginTop: 16 }}>
+      <div className="form-options ia-mt-16">
         <a
           href="#login"
           onClick={(event) => {

@@ -58,8 +58,7 @@ export default function NotificationList({ notifications, onMarkRead }: Notifica
         <button
           key={n.id}
           type="button"
-          className="notif-panel__row"
-          style={{ width: '100%', border: 'none', background: 'none', textAlign: 'left', cursor: n.isRead ? 'default' : 'pointer' }}
+          className={`notif-panel__row ia-notif-row${n.isRead ? ' ia-notif-row--read' : ''}`}
           onClick={() => !n.isRead && onMarkRead(n)}
           data-testid={`notification-row-${n.id}`}
           data-read={n.isRead}

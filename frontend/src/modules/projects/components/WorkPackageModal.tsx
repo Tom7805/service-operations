@@ -4,6 +4,7 @@ import ModalPortal from '../../../components/common/ModalPortal';
 import type { WorkBreakdownRes, WorkPackageReq } from '../types/taskTypes';
 import { createWorkPackage, ProjectsApiError } from '../api/projectsApi';
 import { validateWorkPackageForm } from '../validators/projectValidators';
+import { useDialogA11y } from './deliveryUi';
 
 export interface WorkPackageModalProps {
   isOpen: boolean;
@@ -38,6 +39,8 @@ export default function WorkPackageModal({
       setServerError(null);
     }
   }, [isOpen]);
+
+  const dialogRef = useDialogA11y(isOpen, onClose, submitting);
 
   if (!isOpen) return null;
 
@@ -92,7 +95,7 @@ export default function WorkPackageModal({
       aria-modal="true"
       aria-labelledby="work-package-modal-title"
     >
-      <div className="modal-card project-modal-card">
+      <div ref={dialogRef} className="modal-card dl-modal project-modal-card">
         <div className="modal-header">
           <div className="modal-header__title-wrap">
             <h3 id="work-package-modal-title" className="modal-title">

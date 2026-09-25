@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import type { ProjectRes } from '../../projects/types/projectTypes';
 import { getProject, ProjectsApiError } from '../../projects/api/projectsApi';
@@ -8,6 +8,8 @@ import TimeEntryForm from '../components/TimeEntryForm';
 import ClosedProjectNotice from '../components/ClosedProjectNotice';
 import TimerWidget from '../components/TimerWidget';
 import { addDays, formatIsoDate, getMondayOf } from '../utils/weekRange';
+import { useAutoDismiss, useIsPhone, useLatestRequest } from '../../projects/components/deliveryUi';
+import { EmptyBlock, LoadError, SkeletonTable } from '../../projects/components/DeliveryStates';
 
 export interface TimeEntryPageProps {
   projectId: number;
@@ -32,12 +34,75 @@ const STATUS_PILL_CLASS: Record<TimeEntryStatus, string> = {
   REJECTED: 'status-pill--locked',
 };
 
+const ENTRY_HEADERS = ['Ngày', 'Số giờ', 'Ghi chú', 'Tính phí', 'Trạng thái', ''];
+
 function formatDateTime(value: string | null | undefined): string {
   if (!value) return '—';
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
   return d.toLocaleString('vi-VN');
 }
+
+interface EntryRowProps {
+  entry: TimeEntryRes;
+  canLog: boolean;
+  deleting: boolean;
+  onEdit: (entry: TimeEntryRes) => void;
+  onDelete: (entry: TimeEntryRes) => void;
+}
+
+/** Một dòng giờ công — memo để toast/mở form không vẽ lại cả bảng. Trên điện thoại xếp thành thẻ. */
+const EntryRow = memo(function EntryRow({ entry, canLog, deleting, onEdit, onDelete }: EntryRowProps) {
+  const isDraft = entry.status === 'DRAFT';
+  return (
+    <tr data-testid={`entry-row-${entry.id}`}>
+      <td className="dl-stack-title dl-num dl-cell-strong" data-label="Ngày">
+        {entry.workDate}
+      </td>
+      <td className="dl-num" data-label="Số giờ">
+        {entry.hours}
+      </td>
+      <td data-label="Ghi chú">
+        <span>
+          {entry.note || '—'}
+          <span className="dl-cell-sub">Tạo lúc {formatDateTime(entry.createdAt)}</span>
+        </span>
+      </td>
+      <td data-label="Tính phí">{entry.billable ? 'Có' : 'Không'}</td>
+      <td data-label="Trạng thái">
+        <span className={`status-pill ${STATUS_PILL_CLASS[entry.status]}`} data-testid={`entry-status-${entry.id}`}>
+          <i className="status-pill__dot" />
+          {STATUS_LABEL[entry.status]}
+        </span>
+      </td>
+      <td>
+        {canLog && isDraft && (
+          <div className="dl-row-actions">
+            <button
+              type="button"
+              className="btn btn-secondary btn-xs"
+              onClick={() => onEdit(entry)}
+              aria-label={`Sửa giờ công ngày ${entry.workDate}`}
+              data-testid={`btn-edit-entry-${entry.id}`}
+            >
+              Sửa
+            </button>
+            <button
+              type="button"
+              className="btn btn-danger btn-xs"
+              onClick={() => onDelete(entry)}
+              disabled={deleting}
+              aria-label={`Xóa giờ công ngày ${entry.workDate}`}
+              data-testid={`btn-delete-entry-${entry.id}`}
+            >
+              {deleting ? 'Đang xóa…' : 'Xóa'}
+            </button>
+          </div>
+        )}
+      </td>
+    </tr>
+  );
+});
 
 export default function TimeEntryPage({
   projectId,
@@ -49,6 +114,7 @@ export default function TimeEntryPage({
 }: TimeEntryPageProps) {
   // Toàn bộ endpoint ghi giờ công chỉ dành cho Nhân viên chuyên môn (VT-03) (NCL-06-CN-001).
   const canView = currentUserRoles.includes('VT-03');
+  const isPhone = useIsPhone();
 
   const [weekFrom, setWeekFrom] = useState<string>(() => getMondayOf());
   const weekTo = addDays(weekFrom, 6);
@@ -72,13 +138,17 @@ export default function TimeEntryPage({
   const isProjectOpen = project?.status === 'RUNNING';
   const canLog = canView && isProjectOpen;
 
-  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+  const clearToast = useCallback(() => setToast(null), []);
+  useAutoDismiss(toast, clearToast, 4000);
+  const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
-  };
+  }, []);
 
+  // Bấm "Tuần trước/Tuần sau" liên tục: chỉ nhận phản hồi của lần tải mới nhất.
+  const request = useLatestRequest();
   const loadData = useCallback(async () => {
     if (!canView) return;
+    const token = request.begin();
     setLoading(true);
     setError(null);
     try {
@@ -86,40 +156,50 @@ export default function TimeEntryPage({
         initialProject ? Promise.resolve(initialProject) : getProject(projectId),
         getMyWeekTimeEntries(weekFrom, weekTo),
       ]);
+      if (!request.isLatest(token)) return;
       setProject(projData);
       setSummary(weekData.find((item) => item.taskId === taskId) ?? null);
       setWeekSummaries(weekData);
     } catch (err: unknown) {
+      if (!request.isLatest(token)) return;
       const msg =
         err instanceof ProjectsApiError || err instanceof TimesheetsApiError || err instanceof Error
           ? err.message
           : 'Không thể tải dữ liệu giờ công.';
       setError(msg);
     } finally {
-      setLoading(false);
+      if (request.isLatest(token)) setLoading(false);
     }
-  }, [projectId, taskId, weekFrom, weekTo, canView, initialProject]);
+  }, [projectId, taskId, weekFrom, weekTo, canView, initialProject, request]);
 
   useEffect(() => {
     void loadData();
   }, [loadData]);
 
-  const entries = summary?.entries ?? [];
+  const entries = useMemo(() => summary?.entries ?? [], [summary]);
 
   // Tổng giờ đã ghi theo từng ngày, gộp TẤT CẢ công việc trong tuần — dùng để cảnh báo trước
   // khi chọn ngày, vì trần "không quá 12 giờ/ngày" tính trên toàn bộ công việc, không chỉ riêng
   // công việc đang xem (khác với việc phát hiện trùng ngày, chỉ xét trong cùng công việc).
-  const dailyHoursMap = weekSummaries
-    .flatMap((s) => s.entries)
-    .filter((e) => e.status !== 'REJECTED')
-    .reduce<Record<string, number>>((acc, e) => {
-      acc[e.workDate] = (acc[e.workDate] ?? 0) + e.hours;
-      return acc;
-    }, {});
+  const dailyHoursMap = useMemo(
+    () =>
+      weekSummaries
+        .flatMap((s) => s.entries)
+        .filter((e) => e.status !== 'REJECTED')
+        .reduce<Record<string, number>>((acc, e) => {
+          acc[e.workDate] = (acc[e.workDate] ?? 0) + e.hours;
+          return acc;
+        }, {}),
+    [weekSummaries]
+  );
 
-  const draftEntriesInWeek = weekSummaries.flatMap((s) => s.entries.filter((e) => e.status === 'DRAFT'));
-  const draftCountInWeek = draftEntriesInWeek.length;
-  const draftHoursInWeek = draftEntriesInWeek.reduce((sum, e) => sum + e.hours, 0);
+  const { draftCountInWeek, draftHoursInWeek } = useMemo(() => {
+    const draftEntriesInWeek = weekSummaries.flatMap((s) => s.entries.filter((e) => e.status === 'DRAFT'));
+    return {
+      draftCountInWeek: draftEntriesInWeek.length,
+      draftHoursInWeek: draftEntriesInWeek.reduce((sum, e) => sum + e.hours, 0),
+    };
+  }, [weekSummaries]);
 
   const handleSubmitWeek = async () => {
     if (draftCountInWeek === 0 || submitting) return;
@@ -150,10 +230,10 @@ export default function TimeEntryPage({
     setIsFormOpen(true);
   };
 
-  const openEditForm = (entry: TimeEntryRes) => {
+  const openEditForm = useCallback((entry: TimeEntryRes) => {
     setEditingEntry(entry);
     setIsFormOpen(true);
-  };
+  }, []);
 
   const handleDelete = async (entry: TimeEntryRes) => {
     if (!window.confirm(`Bạn có chắc chắn muốn xóa bản ghi giờ công ngày ${entry.workDate} không?`)) {
@@ -171,15 +251,22 @@ export default function TimeEntryPage({
       setDeletingId(null);
     }
   };
+  // Callback ổn định cho các hàng đã memo — luôn gọi handler mới nhất.
+  const deleteRef = useRef(handleDelete);
+  deleteRef.current = handleDelete;
+  const onRowDelete = useCallback((entry: TimeEntryRes) => {
+    void deleteRef.current(entry);
+  }, []);
+  const closeForm = useCallback(() => setIsFormOpen(false), []);
 
   if (!canView) {
     return (
-      <div className="user-management-page" data-testid="time-entry-forbidden">
+      <div className="user-management-page dl-page" data-testid="time-entry-forbidden">
         <div className="alert-box alert-box--danger" role="alert">
           Bạn không có quyền ghi giờ công (yêu cầu vai trò Nhân viên chuyên môn VT-03).
         </div>
         {onBack && (
-          <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
+          <button type="button" className="btn btn-secondary dl-mt-16" onClick={onBack}>
             {ICONS.arrowLeft} Quay lại
           </button>
         )}
@@ -187,13 +274,33 @@ export default function TimeEntryPage({
     );
   }
 
+  const submitWeekButton =
+    canView && draftCountInWeek > 0 ? (
+      <button
+        type="button"
+        className={`btn ${canLog ? 'btn-secondary' : 'btn-primary'} btn-sm`}
+        onClick={handleSubmitWeek}
+        disabled={submitting}
+        data-testid="btn-submit-week-from-task"
+        title="Nộp toàn bộ giờ công Nháp của tuần này (mọi công việc), không chỉ riêng công việc đang xem"
+      >
+        {ICONS.checkCircle} {submitting ? 'Đang nộp…' : `Nộp bảng chấm công (${draftCountInWeek} dòng)`}
+      </button>
+    ) : null;
+
+  const addEntryButton = canLog ? (
+    <button type="button" className="btn btn-primary btn-sm" onClick={openCreateForm} data-testid="btn-add-time-entry">
+      + Ghi giờ công
+    </button>
+  ) : null;
+
   return (
-    <div className="user-management-page" data-testid="time-entry-page">
+    <div className="user-management-page dl-page" data-testid="time-entry-page">
       {toast && (
         <div
           className={`alert-box alert-box--${toast.type === 'success' ? 'success' : 'danger'}`}
-          role="alert"
-          style={{ marginBottom: '16px' }}
+          role={toast.type === 'error' ? 'alert' : 'status'}
+          aria-live="polite"
           data-testid="time-entry-toast"
         >
           {toast.message}
@@ -201,8 +308,8 @@ export default function TimeEntryPage({
       )}
 
       <div className="task-page-header">
-        <div className="task-page-header__top">
-          {onBack && (
+        {onBack && (
+          <div className="task-page-header__top">
             <button
               type="button"
               className="btn btn-secondary btn-sm btn-back"
@@ -211,25 +318,24 @@ export default function TimeEntryPage({
             >
               {ICONS.arrowLeft} Quay lại
             </button>
-          )}
-          <div className="page-header__kicker" style={{ margin: 0 }}>
-            <span className="page-header__tag">{ICONS.clock} GHI GIỜ CÔNG</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">
-              {project?.name || `Dự án #${projectId}`} · {project?.projectCode || `#${projectId}`}
-            </span>
           </div>
-        </div>
+        )}
 
         <div className="task-page-header__main">
           <div>
-            <span className="task-title-eyebrow">Công việc</span>
-            <h1 className="page-title task-title" style={{ margin: '2px 0 0' }}>
+            <h1 className="page-title task-title dl-task-title">
               {taskName || summary?.taskName || `Công việc #${taskId}`}
             </h1>
+            <p className="page-subtitle dl-task-subtitle">
+              {ICONS.clock}
+              <span>
+                Ghi giờ công · {project?.name || `Dự án #${projectId}`} ·{' '}
+                <span className="dl-cell-code">{project?.projectCode || `#${projectId}`}</span>
+              </span>
+            </p>
           </div>
 
-          <div className="page-header__actions">
+          <div className="page-header__actions dl-header-actions">
             <button
               type="button"
               className="btn btn-secondary btn-sm"
@@ -237,30 +343,10 @@ export default function TimeEntryPage({
               disabled={loading}
               data-testid="btn-reload-time-entries"
             >
-              {ICONS.refresh} Tải lại
+              {ICONS.refresh} {loading ? 'Đang tải…' : 'Tải lại'}
             </button>
-            {canView && draftCountInWeek > 0 && (
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                onClick={handleSubmitWeek}
-                disabled={submitting}
-                data-testid="btn-submit-week-from-task"
-                title="Nộp toàn bộ giờ công Nháp của tuần này (mọi công việc), không chỉ riêng công việc đang xem"
-              >
-                {ICONS.checkCircle} {submitting ? 'Đang nộp…' : `Nộp bảng chấm công (${draftCountInWeek} dòng)`}
-              </button>
-            )}
-            {canLog && (
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                onClick={openCreateForm}
-                data-testid="btn-add-time-entry"
-              >
-                + Ghi giờ công
-              </button>
-            )}
+            {!isPhone && submitWeekButton}
+            {!isPhone && addEntryButton}
           </div>
         </div>
       </div>
@@ -277,7 +363,7 @@ export default function TimeEntryPage({
           >
             {ICONS.arrowLeft}
           </button>
-          <div className="week-nav__label">
+          <div className="week-nav__label" aria-live="polite">
             <span className="week-nav__range" data-testid="week-range-label">
               {formatIsoDate(weekFrom)} → {formatIsoDate(weekTo)}
             </span>
@@ -304,7 +390,7 @@ export default function TimeEntryPage({
         {summary && (
           <div className="week-nav__summary" data-testid="time-entry-budget-summary">
             <span className="week-nav__total">
-              Tổng giờ tuần <strong>{summary.totalHours}</strong>
+              Tổng giờ tuần <strong className="dl-num">{summary.totalHours}</strong>
             </span>
             {summary.budgetHours != null && (
               <span className={`badge ${summary.overBudgetWarning ? 'badge--pink' : 'badge--green'}`} data-testid="time-entry-usage-badge">
@@ -316,19 +402,9 @@ export default function TimeEntryPage({
         )}
       </div>
 
-      {loading && (
-        <div className="alert-box" role="status" style={{ marginBottom: '16px' }} data-testid="time-entry-loading">
-          Đang tải dữ liệu giờ công…
-        </div>
-      )}
-
       {project && !isProjectOpen && <ClosedProjectNotice project={project} />}
 
-      {error && (
-        <div className="alert-box alert-box--danger" role="alert" data-testid="time-entry-load-error" style={{ marginBottom: '16px' }}>
-          {error}
-        </div>
-      )}
+      {error && <LoadError message={error} onRetry={() => void loadData()} retrying={loading} testId="time-entry-load-error" />}
 
       {!loading && (
         <TimerWidget
@@ -343,95 +419,74 @@ export default function TimeEntryPage({
         />
       )}
 
-      <div className="user-table-card" style={{ padding: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>Bản ghi giờ công trong tuần</h3>
-          <span className="field-hint" style={{ fontSize: '13px' }}>{entries.length} bản ghi</span>
+      <section className="user-table-card dl-card-pad" aria-labelledby="time-entry-list-heading">
+        <div className="dl-section-head">
+          <h2 id="time-entry-list-heading" className="dl-section-title">
+            Bản ghi giờ công trong tuần
+          </h2>
+          <span className="dl-section-meta">{entries.length} bản ghi</span>
         </div>
 
         {loading ? (
-          <div className="table-loading-state" data-testid="time-entry-table-loading">
-            <span className="spinner-lg" />
-            <p style={{ marginTop: '10px' }}>Đang nạp bản ghi giờ công...</p>
-          </div>
+          <SkeletonTable
+            headers={ENTRY_HEADERS}
+            rows={3}
+            testId="time-entry-table-loading"
+            label="Đang nạp bản ghi giờ công…"
+          />
         ) : entries.length === 0 ? (
-          <div className="table-empty-state" data-testid="time-entry-empty">
-            <div className="table-empty-state__icon">{ICONS.clock}</div>
-            <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>Chưa có bản ghi giờ công nào trong tuần này</h4>
-            <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
-              {canLog
-                ? 'Hãy bấm nút "+ Ghi giờ công" ở trên để bắt đầu ghi nhận giờ làm việc cho công việc này.'
-                : 'Không có dữ liệu để hiển thị.'}
-            </p>
-          </div>
+          <EmptyBlock
+            icon={ICONS.clock}
+            title="Chưa có bản ghi giờ công nào trong tuần này"
+            testId="time-entry-empty"
+          >
+            {canLog
+              ? 'Hãy bấm nút "+ Ghi giờ công" ở trên để bắt đầu ghi nhận giờ làm việc cho công việc này.'
+              : 'Không có dữ liệu để hiển thị.'}
+          </EmptyBlock>
         ) : (
           <div className="table-responsive">
-            <table className="user-data-table">
+            <table className="user-data-table dl-stack-table dl-entry-table">
               <thead>
                 <tr>
-                  <th style={{ width: '110px' }}>Ngày</th>
-                  <th style={{ width: '90px' }}>Số giờ</th>
+                  <th className="dl-col-date">Ngày</th>
+                  <th className="dl-col-hours">Số giờ</th>
                   <th>Ghi chú</th>
-                  <th style={{ width: '100px' }}>Tính phí</th>
-                  <th style={{ width: '120px' }}>Trạng thái</th>
-                  <th style={{ width: '150px' }}></th>
+                  <th className="dl-col-billable">Tính phí</th>
+                  <th className="dl-col-status">Trạng thái</th>
+                  <th className="dl-col-actions">
+                    <span className="dl-sr-only">Thao tác</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {entries.map((entry) => {
-                  const isDraft = entry.status === 'DRAFT';
-                  return (
-                    <tr key={entry.id} data-testid={`entry-row-${entry.id}`}>
-                      <td>{entry.workDate}</td>
-                      <td>{entry.hours}</td>
-                      <td>
-                        {entry.note || '—'}
-                        <div className="field-hint" style={{ marginTop: '2px', fontSize: '11.5px' }}>
-                          Tạo lúc {formatDateTime(entry.createdAt)}
-                        </div>
-                      </td>
-                      <td>{entry.billable ? 'Có' : 'Không'}</td>
-                      <td>
-                        <span className={`status-pill ${STATUS_PILL_CLASS[entry.status]}`} data-testid={`entry-status-${entry.id}`}>
-                          <i className="status-pill__dot" />
-                          {STATUS_LABEL[entry.status]}
-                        </span>
-                      </td>
-                      <td>
-                        {canLog && isDraft && (
-                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                            <button
-                              type="button"
-                              className="btn btn-secondary btn-xs"
-                              onClick={() => openEditForm(entry)}
-                              data-testid={`btn-edit-entry-${entry.id}`}
-                            >
-                              Sửa
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-danger btn-xs"
-                              onClick={() => void handleDelete(entry)}
-                              disabled={deletingId === entry.id}
-                              data-testid={`btn-delete-entry-${entry.id}`}
-                            >
-                              Xóa
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {entries.map((entry) => (
+                  <EntryRow
+                    key={entry.id}
+                    entry={entry}
+                    canLog={canLog}
+                    deleting={deletingId === entry.id}
+                    onEdit={openEditForm}
+                    onDelete={onRowDelete}
+                  />
+                ))}
               </tbody>
             </table>
           </div>
         )}
-      </div>
+      </section>
+
+      {/* Điện thoại: hành động chính dính đáy màn hình, luôn trong tầm ngón cái. */}
+      {isPhone && (submitWeekButton || addEntryButton) && (
+        <div className="dl-sticky-cta">
+          {submitWeekButton}
+          {addEntryButton}
+        </div>
+      )}
 
       <TimeEntryForm
         isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
+        onClose={closeForm}
         projectId={projectId}
         taskId={taskId}
         taskName={taskName || summary?.taskName || undefined}

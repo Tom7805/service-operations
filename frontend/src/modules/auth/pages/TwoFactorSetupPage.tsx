@@ -3,6 +3,7 @@ import { AuthApiError, getTwoFactorConfigs, updateTwoFactorConfig } from '../api
 import type { TwoFactorRoleConfig } from '../types/authTypes';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import TableSkeleton from '../../../components/common/TableSkeleton';
 import { useBackdropClick } from '../../../hooks/useBackdropClick';
 
 interface TwoFactorSetupPageProps {
@@ -131,19 +132,15 @@ export default function TwoFactorSetupPage({
                 <th>Vai trò</th>
                 <th>Trạng thái</th>
                 <th>Cập nhật lần cuối</th>
-                <th style={{ textAlign: 'right' }}>Hành động</th>
+                <th className="text-right">Hành động</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', padding: 32, color: '#5B5A57' }}>
-                    Đang tải cấu hình...
-                  </td>
-                </tr>
+                <TableSkeleton columns={4} rows={4} />
               ) : configs.length === 0 ? (
                 <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', padding: 32, color: '#5B5A57' }}>
+                  <td colSpan={4} className="ia-table-empty-cell">
                     Chưa có vai trò nào trong hệ thống.
                   </td>
                 </tr>
@@ -192,11 +189,11 @@ export default function TwoFactorSetupPage({
 
       {confirmTarget && (
         <ModalPortal>
-        <div className="modal-backdrop" onMouseDown={confirmModalBackdrop.onMouseDown} onClick={confirmModalBackdrop.onClick} role="dialog">
+        <div className="modal-backdrop" onMouseDown={confirmModalBackdrop.onMouseDown} onClick={confirmModalBackdrop.onClick} role="dialog" aria-modal="true" aria-labelledby="two-factor-confirm-title">
           <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
-                <h3 className="modal-title">
+                <h3 className="modal-title" id="two-factor-confirm-title">
                   <span className="modal-title__icon">{confirmTarget.enabled ? ICONS.unlock : ICONS.lock}</span>
                   {confirmTarget.enabled ? 'Tắt xác thực hai bước' : 'Bật xác thực hai bước'}
                 </h3>
@@ -215,10 +212,15 @@ export default function TwoFactorSetupPage({
               </p>
             </div>
             <div className="modal-footer">
-              <button type="button" className="btn-secondary" onClick={() => setConfirmTarget(null)}>
+              <button type="button" className="btn-secondary" onClick={() => setConfirmTarget(null)} autoFocus>
                 Hủy
               </button>
-              <button type="button" className="btn-primary" onClick={handleConfirmToggle}>
+              <button
+                type="button"
+                className={confirmTarget.enabled ? 'btn-danger' : 'btn-primary'}
+                onClick={handleConfirmToggle}
+                disabled={savingRoleId === confirmTarget.roleId}
+              >
                 {confirmTarget.enabled ? 'Xác nhận tắt' : 'Xác nhận bật'}
               </button>
             </div>
@@ -231,7 +233,7 @@ export default function TwoFactorSetupPage({
         <div className={`toast-banner toast-banner--${toastMessage.type}`} role="status">
           <span className="toast-banner__icon">{toastMessage.type === 'success' ? ICONS.checkCircle : ICONS.alertTriangle}</span>
           <span>{toastMessage.text}</span>
-          <button type="button" className="toast-banner__close" onClick={() => setToastMessage(null)}>
+          <button type="button" className="toast-banner__close" onClick={() => setToastMessage(null)} aria-label="Đóng thông báo">
             <span className="icon-sm">{ICONS.close}</span>
           </button>
         </div>

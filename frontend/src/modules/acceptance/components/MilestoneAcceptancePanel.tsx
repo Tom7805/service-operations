@@ -13,6 +13,7 @@ import {
 import { milestoneEligibility } from '../utils/milestoneEligibility';
 import AcceptanceHistoryModal from './AcceptanceHistoryModal';
 import MilestoneLinkModal from './MilestoneLinkModal';
+import { useDialogA11y } from '../../projects/components/deliveryUi';
 
 interface Props {
   contractId: number;
@@ -313,6 +314,7 @@ function UnlinkConfirmModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const backdrop = useBackdropClick(onClose, submitting);
+  const dialogRef = useDialogA11y(true, onClose, submitting);
 
   const handleUnlink = async () => {
     if (row.certificateId == null || submitting) return;
@@ -337,7 +339,7 @@ function UnlinkConfirmModal({
         aria-modal="true"
         aria-labelledby="milestone-unlink-title"
       >
-        <div className="modal-card" style={{ width: 'min(100%, 480px)' }} data-testid="milestone-unlink-modal">
+        <div ref={dialogRef} className="modal-card dl-modal" style={{ width: 'min(100%, 480px)' }} data-testid="milestone-unlink-modal">
           <div className="modal-header">
             <h3 id="milestone-unlink-title" className="modal-title">
               <span className="modal-title__icon">{ICONS.alertTriangle}</span>

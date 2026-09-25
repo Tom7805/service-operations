@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
+import { useDialogA11y } from '../../projects/components/deliveryUi';
 import type { TimeEntryRes } from '../types/timesheetTypes';
 import { createTimeEntry, TimesheetsApiError, updateTimeEntry } from '../api/timesheetsApi';
 import { validateTimeEntryCreateForm, validateTimeEntryUpdateForm } from '../validators/timesheetValidators';
@@ -104,7 +106,22 @@ export default function TimeEntryForm({
     setDuplicateEntry(null);
   }, [isOpen, entry, weekFrom, weekTo]);
 
+  const backdrop = useBackdropClick(onClose, submitting);
+  const cardRef = useDialogA11y(isOpen, onClose, submitting);
+
+  // Danh sách "ngày đã có giờ công" chỉ tính lại khi dữ liệu tuần đổi, không phải mỗi phím gõ.
+  const loggedDaysText = useMemo(
+    () =>
+      Object.entries(dailyHoursMap)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, hrs]) => `${date} (${hrs}h)`)
+        .join(', '),
+    [dailyHoursMap]
+  );
+
   if (!isOpen) return null;
+
+  const dayHours = workDate ? dailyHoursMap[workDate] ?? 0 : 0;
 
   const switchToEditEntry = (existing: TimeEntryRes) => {
     setActiveEntry(existing);
@@ -174,14 +191,13 @@ export default function TimeEntryForm({
     <ModalPortal>
     <div
       className="modal-backdrop"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !submitting) onClose();
-      }}
+      onMouseDown={backdrop.onMouseDown}
+      onClick={backdrop.onClick}
       role="dialog"
       aria-modal="true"
       aria-labelledby="time-entry-form-modal-title"
     >
-      <div className="modal-card project-modal-card">
+      <div className="modal-card project-modal-card dl-modal" ref={cardRef}>
         <div className="modal-header">
           <div className="modal-header__title-wrap">
             <h3 id="time-entry-form-modal-title" className="modal-title">
@@ -195,13 +211,12 @@ export default function TimeEntryForm({
           </button>
         </div>
 
-        <div className="modal-body" style={{ overflowY: 'auto' }}>
+        <div className="modal-body">
           {serverError && (
             <div
               className="alert-box alert-box--danger"
               role="alert"
               data-testid="time-entry-server-error"
-              style={{ marginBottom: '14px' }}
             >
               {serverError}
             </div>
@@ -209,12 +224,11 @@ export default function TimeEntryForm({
 
           {duplicateEntry && (
             <div
-              className="alert-box alert-box--warning"
+              className="alert-box alert-box--warning dl-dup-alert"
               role="alert"
               data-testid="time-entry-duplicate-alert"
-              style={{ marginBottom: '14px' }}
             >
-              <p style={{ margin: '0 0 8px' }}>
+              <p className="dl-alert-note">
                 Đã có bản ghi giờ công cho công việc này trong ngày {duplicateEntry.workDate} ({duplicateEntry.hours}{' '}
                 giờ). Hãy sửa bản ghi có sẵn thay vì tạo mới.
               </p>
@@ -230,7 +244,7 @@ export default function TimeEntryForm({
           )}
 
           <form onSubmit={handleSubmit} noValidate data-testid="time-entry-form">
-            <div className="form-group" style={{ marginBottom: '14px' }}>
+            <div className="form-group dl-form-group">
               <label className="form-label" htmlFor="time-entry-workdate">
                 Ngày làm việc <span className="field-required">*</span>
               </label>
@@ -238,6 +252,9 @@ export default function TimeEntryForm({
                 id="time-entry-workdate"
                 type="date"
                 className={`form-input ${errors.workDate ? 'form-input--error' : ''}`}
+                aria-invalid={Boolean(errors.workDate) || undefined}
+                aria-describedby={errors.workDate ? 'error-time-entry-workdate' : undefined}
+                aria-required="true"
                 value={workDate}
                 max={todayIso()}
                 onChange={(e) => {
@@ -249,51 +266,46 @@ export default function TimeEntryForm({
                 autoFocus
               />
               {isEdit && (
-                <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px' }}>
+                <p className="dl-field-hint">
                   Không đổi được ngày làm việc của bản ghi đã có — muốn đổi ngày thì xoá bản ghi này rồi ghi bản
                   ghi mới.
                 </p>
               )}
-              {!isEdit && workDate && (dailyHoursMap[workDate] ?? 0) > 0 && (
+              {!isEdit && workDate && dayHours > 0 && (
                 <p
-                  className="field-hint"
+                  className={`dl-field-hint${dayHours >= 12 ? ' dl-field-hint--danger' : ''}`}
                   data-testid="time-entry-day-hours-hint"
-                  style={{
-                    fontSize: '12px',
-                    marginTop: '4px',
-                    color: (dailyHoursMap[workDate] ?? 0) >= 12 ? 'var(--pale-red-fg)' : 'var(--ink-muted)',
-                  }}
                 >
                   Ngày {workDate} đã ghi {dailyHoursMap[workDate]} giờ (mọi công việc) — còn tối đa{' '}
                   {Math.max(0, 12 - (dailyHoursMap[workDate] ?? 0))} giờ để ghi thêm.
                 </p>
               )}
               {!isEdit && Object.keys(dailyHoursMap).length > 0 && (
-                <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px' }}>
-                  Các ngày trong tuần đã có giờ công:{' '}
-                  {Object.entries(dailyHoursMap)
-                    .sort(([a], [b]) => a.localeCompare(b))
-                    .map(([date, hrs]) => `${date} (${hrs}h)`)
-                    .join(', ')}
+                <p className="dl-field-hint">
+                  Các ngày trong tuần đã có giờ công: {loggedDaysText}
                 </p>
               )}
               {errors.workDate && (
-                <p className="field-error" data-testid="error-time-entry-workdate" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
+                <p className="dl-field-error" id="error-time-entry-workdate" data-testid="error-time-entry-workdate" role="alert">
                   {errors.workDate}
                 </p>
               )}
             </div>
 
-            <div className="form-group" style={{ marginBottom: '14px' }}>
+            <div className="form-group dl-form-group">
               <label className="form-label" htmlFor="time-entry-hours">
                 Số giờ công <span className="field-required">*</span>
               </label>
               <input
                 id="time-entry-hours"
                 type="number"
+                inputMode="decimal"
                 step="0.25"
                 min="0.01"
-                className={`form-input ${errors.hours ? 'form-input--error' : ''}`}
+                className={`form-input dl-input-narrow ${errors.hours ? 'form-input--error' : ''}`}
+                aria-invalid={Boolean(errors.hours) || undefined}
+                aria-describedby={errors.hours ? 'error-time-entry-hours' : undefined}
+                aria-required="true"
                 value={hours}
                 onChange={(e) => {
                   setHours(e.target.value);
@@ -302,22 +314,24 @@ export default function TimeEntryForm({
                 }}
                 placeholder="Ví dụ: 3.5"
                 disabled={submitting}
-                style={{ maxWidth: '160px' }}
               />
               {errors.hours && (
-                <p className="field-error" data-testid="error-time-entry-hours" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
+                <p className="dl-field-error" id="error-time-entry-hours" data-testid="error-time-entry-hours" role="alert">
                   {errors.hours}
                 </p>
               )}
             </div>
 
-            <div className="form-group" style={{ marginBottom: '14px' }}>
+            <div className="form-group dl-form-group">
               <label className="form-label" htmlFor="time-entry-note">
                 Ghi chú <span className="field-required">*</span>
               </label>
               <textarea
                 id="time-entry-note"
                 className={`form-input ${errors.note ? 'form-input--error' : ''}`}
+                aria-invalid={Boolean(errors.note) || undefined}
+                aria-describedby={errors.note ? 'error-time-entry-note' : undefined}
+                aria-required="true"
                 rows={3}
                 value={note}
                 onChange={(e) => {
@@ -329,14 +343,14 @@ export default function TimeEntryForm({
                 disabled={submitting}
               />
               {errors.note && (
-                <p className="field-error" data-testid="error-time-entry-note" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
+                <p className="dl-field-error" id="error-time-entry-note" data-testid="error-time-entry-note" role="alert">
                   {errors.note}
                 </p>
               )}
             </div>
 
-            <div className="form-group" style={{ marginBottom: '18px' }}>
-              <label className="form-check" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+            <div className="form-group dl-form-group--last">
+              <label className="form-check dl-check">
                 <input
                   id="time-entry-billable"
                   type="checkbox"
@@ -348,11 +362,11 @@ export default function TimeEntryForm({
               </label>
             </div>
 
-            <div className="modal-footer" style={{ padding: '16px 0 0', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+            <div className="dl-modal-actions">
               <button type="button" className="btn btn-secondary" onClick={onClose} disabled={submitting}>
                 Hủy bỏ
               </button>
-              <button type="submit" className="btn btn-primary" disabled={submitting} data-testid="submit-time-entry-btn">
+              <button type="submit" className="btn btn-primary" disabled={submitting} data-testid="submit-time-entry-btn" aria-busy={submitting || undefined}>
                 {submitting ? 'Đang lưu…' : isEdit ? 'Lưu thay đổi' : 'Ghi giờ công'}
               </button>
             </div>

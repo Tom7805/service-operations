@@ -5,6 +5,7 @@ import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import { approveTimesheet, rejectTimesheet, TimesheetsApiError } from '../api/timesheetsApi';
 import type { PendingTimesheetRes, TimesheetApprovalRes, TimesheetRejectRes } from '../types/timesheetTypes';
 import { validateRejectReason } from '../validators/timesheetValidators';
+import { useDialogA11y } from '../../projects/components/deliveryUi';
 
 interface ApprovalActionBarProps {
   timesheet: PendingTimesheetRes;
@@ -40,6 +41,7 @@ export default function ApprovalActionBar({ timesheet, onApproved, onRejected, o
 
   const approveBackdrop = useBackdropClick(closeModal, submitting);
   const rejectBackdrop = useBackdropClick(closeModal, submitting);
+  const dialogRef = useDialogA11y(openModal !== null, closeModal, submitting);
 
   const handleApprove = async () => {
     setSubmitting(true);
@@ -110,7 +112,7 @@ export default function ApprovalActionBar({ timesheet, onApproved, onRejected, o
             role="dialog"
             aria-modal="true"
           >
-            <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
+            <div ref={dialogRef} className="modal-card dl-modal modal-card--sm" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
                 <h3 className="modal-title">
                   <span className="modal-title__icon">{ICONS.checkCircle}</span> Duyệt bảng chấm công
@@ -172,7 +174,7 @@ export default function ApprovalActionBar({ timesheet, onApproved, onRejected, o
             role="dialog"
             aria-modal="true"
           >
-            <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
+            <div ref={dialogRef} className="modal-card dl-modal modal-card--sm" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
                 <h3 className="modal-title text-danger">
                   <span className="modal-title__icon">{ICONS.close}</span> Từ chối bảng chấm công

@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { getTimesheetReport, ReportsApiError } from '../api/reportsApi';
 import type { TimesheetByEmployeeRes } from '../types/reportTypes';
 import { ICONS } from '../../../components/common/icons';
+import { ReportErrorAlert, ReportSkeleton } from '../components/ReportStates';
 
 interface TimesheetReportPageProps {
   currentUserRoles?: string[];
@@ -33,13 +34,20 @@ export default function TimesheetReportPage({ currentUserRoles = [] }: Timesheet
   const [loading, setLoading] = useState(isAllowed);
   const [error, setError] = useState<string | null>(null);
 
+  /** Chỉ phản hồi của lần gọi mới nhất được ghi vào trang — đổi kỳ liên tiếp thì phản hồi cũ bị bỏ. */
+  const requestIdRef = useRef(0);
+
   const load = useCallback(async () => {
     if (!isAllowed) return;
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
     try {
-      setData(await getTimesheetReport(period.from, period.to));
+      const res = await getTimesheetReport(period.from, period.to);
+      if (requestId !== requestIdRef.current) return;
+      setData(res);
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       setData(null);
       setError(
         err instanceof ReportsApiError && err.code === 'FORBIDDEN'
@@ -49,7 +57,7 @@ export default function TimesheetReportPage({ currentUserRoles = [] }: Timesheet
             : 'Không tải được báo cáo.'
       );
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   }, [isAllowed, period]);
 
@@ -67,7 +75,7 @@ export default function TimesheetReportPage({ currentUserRoles = [] }: Timesheet
 
   if (!isAllowed) {
     return (
-      <div className="user-management-page">
+      <div className="user-management-page ia-page">
         <div className="alert-box alert-box--danger" role="alert">
           <span className="icon-xs">{ICONS.lock}</span> Chỉ Quản lý dự án được xem báo cáo giờ công theo nhân sự.
         </div>
@@ -78,14 +86,9 @@ export default function TimesheetReportPage({ currentUserRoles = [] }: Timesheet
   const rows = data?.rows ?? [];
 
   return (
-    <div className="user-management-page">
+    <div className="user-management-page ia-page">
       <div className="page-header">
         <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.chart} BÁO CÁO</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">GIỜ CÔNG</span>
-          </div>
           <h1 className="page-title">Giờ công theo nhân sự</h1>
           <p className="page-subtitle">
             Giờ công đã duyệt của từng nhân sự trên từng dự án bạn quản lý, tách giờ có tính phí và không tính phí.
@@ -93,8 +96,7 @@ export default function TimesheetReportPage({ currentUserRoles = [] }: Timesheet
         </div>
       </div>
 
-      <form onSubmit={applyPeriod} noValidate
-        style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'flex-end', marginBottom: '16px' }}>
+      <form onSubmit={applyPeriod} noValidate className="ia-filter-form" aria-busy={loading}>
         <div>
           <label className="form-label" htmlFor="timesheet-from">Từ ngày</label>
           <input id="timesheet-from" type="date" className="form-input" value={draft.from}
@@ -103,21 +105,19 @@ export default function TimesheetReportPage({ currentUserRoles = [] }: Timesheet
         <div>
           <label className="form-label" htmlFor="timesheet-to">Đến ngày</label>
           <input id="timesheet-to" type="date" className={`form-input ${periodError ? 'form-input--error' : ''}`}
+            aria-invalid={periodError ? true : undefined}
+            aria-describedby={periodError ? 'timesheet-period-error' : undefined}
             value={draft.to} onChange={(e) => setDraft((d) => ({ ...d, to: e.target.value }))} />
         </div>
         <button type="submit" className="btn-primary" disabled={loading}>
           {loading ? 'Đang tải…' : 'Xem báo cáo'}
         </button>
-        {periodError && <small className="field-error" style={{ flexBasis: '100%' }}>{periodError}</small>}
+        {periodError && <small className="field-error" id="timesheet-period-error">{periodError}</small>}
       </form>
 
-      {error && (
-        <div className="alert-box alert-box--danger" role="alert">
-          <span className="icon-xs">{ICONS.alertTriangle}</span> {error}
-        </div>
-      )}
+      {error && <ReportErrorAlert message={error} onRetry={() => void load()} retryDisabled={loading} />}
 
-      {loading && !data && <p className="field-hint">Đang tải báo cáo…</p>}
+      {loading && !data && <ReportSkeleton label="Đang tải báo cáo…" kpis={4} tableColumns={5} tableRows={6} />}
 
       {data && rows.length === 0 && !loading && (
         <div className="alert-box alert-box--info" role="status" data-testid="timesheet-empty">
@@ -127,37 +127,37 @@ export default function TimesheetReportPage({ currentUserRoles = [] }: Timesheet
 
       {data && rows.length > 0 && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px',
-            marginBottom: '16px' }}>
-            <div className="user-table-card" style={{ padding: '14px 16px' }}>
-              <div className="field-hint">Nhân sự</div>
-              <div style={{ fontSize: '22px', fontWeight: 600 }}>{data.employeeCount}</div>
+          <div className="stats-grid">
+            <div className="stat-card">
+              <span className="stat-card__label">Nhân sự</span>
+              <span className="stat-card__value">{data.employeeCount}</span>
             </div>
-            <div className="user-table-card" style={{ padding: '14px 16px' }}>
-              <div className="field-hint">Dự án</div>
-              <div style={{ fontSize: '22px', fontWeight: 600 }}>{data.projectCount}</div>
+            <div className="stat-card">
+              <span className="stat-card__label">Dự án</span>
+              <span className="stat-card__value">{data.projectCount}</span>
             </div>
-            <div className="user-table-card" style={{ padding: '14px 16px' }}>
-              <div className="field-hint">Giờ có tính phí</div>
-              <div style={{ fontSize: '22px', fontWeight: 600 }} data-testid="timesheet-total-billable">
+            <div className="stat-card">
+              <span className="stat-card__label">Giờ có tính phí</span>
+              <span className="stat-card__value" data-testid="timesheet-total-billable">
                 {hours.format(data.totalBillableHours)}
-              </div>
+              </span>
             </div>
-            <div className="user-table-card" style={{ padding: '14px 16px' }}>
-              <div className="field-hint">Giờ không tính phí</div>
-              <div style={{ fontSize: '22px', fontWeight: 600 }}>{hours.format(data.totalNonBillableHours)}</div>
+            <div className="stat-card">
+              <span className="stat-card__label">Giờ không tính phí</span>
+              <span className="stat-card__value">{hours.format(data.totalNonBillableHours)}</span>
             </div>
           </div>
 
-          <div className="user-table-card" style={{ overflowX: 'auto' }}>
+          <div className="user-table-card ia-table-card">
+            <div className="table-responsive">
             <table className="user-data-table" data-testid="timesheet-table">
               <thead>
                 <tr>
                   <th>Nhân sự</th>
                   <th>Dự án</th>
-                  <th style={{ textAlign: 'right' }}>Giờ có tính phí</th>
-                  <th style={{ textAlign: 'right' }}>Giờ không tính phí</th>
-                  <th style={{ textAlign: 'right' }}>Tổng giờ</th>
+                  <th className="text-right">Giờ có tính phí</th>
+                  <th className="text-right">Giờ không tính phí</th>
+                  <th className="text-right">Tổng giờ</th>
                 </tr>
               </thead>
               <tbody>
@@ -165,21 +165,22 @@ export default function TimesheetReportPage({ currentUserRoles = [] }: Timesheet
                   <tr key={`${row.employeeId ?? 'x'}-${row.projectId}`}>
                     <td>{row.employeeName ?? '—'}</td>
                     <td>{row.projectCode ? `${row.projectCode} — ${row.projectName ?? ''}` : (row.projectName ?? '—')}</td>
-                    <td style={{ textAlign: 'right' }}>{hours.format(row.billableHours)}</td>
-                    <td style={{ textAlign: 'right' }}>{hours.format(row.nonBillableHours)}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 600 }}>{hours.format(row.totalHours)}</td>
+                    <td className="ia-num">{hours.format(row.billableHours)}</td>
+                    <td className="ia-num">{hours.format(row.nonBillableHours)}</td>
+                    <td className="ia-num ia-strong">{hours.format(row.totalHours)}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={2} style={{ fontWeight: 600 }}>Tổng</td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>{hours.format(data.totalBillableHours)}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>{hours.format(data.totalNonBillableHours)}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>{hours.format(data.totalHours)}</td>
+                  <td colSpan={2}>Tổng</td>
+                  <td className="ia-num">{hours.format(data.totalBillableHours)}</td>
+                  <td className="ia-num">{hours.format(data.totalNonBillableHours)}</td>
+                  <td className="ia-num">{hours.format(data.totalHours)}</td>
                 </tr>
               </tfoot>
             </table>
+            </div>
           </div>
         </>
       )}

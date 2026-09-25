@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import type { Department, DepartmentTreeNode } from '../types/departmentTypes';
 import { getUnitTypeLabel, getUnitTypeMonogram } from '../constants/departmentUnitTypes';
 import { ICONS } from '../../../components/common/icons';
@@ -32,7 +32,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
   // Track expanded node IDs in Tree/List view
   const [collapsedNodes, setCollapsedNodes] = useState<Set<number>>(new Set());
 
-  const toggleNode = (nodeId: number) => {
+  const toggleNode = useCallback((nodeId: number) => {
     setCollapsedNodes((prev) => {
       const next = new Set(prev);
       if (next.has(nodeId)) {
@@ -42,21 +42,66 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
       }
       return next;
     });
-  };
+  }, []);
 
   const isCollapsed = (nodeId: number) => collapsedNodes.has(nodeId);
 
+  const keyword = searchKeyword.trim().toLowerCase();
+
+  /* Chỉ mục dựng MỘT lần mỗi khi dữ liệu đổi. Trước đây mỗi dòng của chế độ Bảng gọi
+   * flatData.find()/filter() (và getDepth gọi find() theo từng bậc cha) — O(n²)–O(n³) với
+   * cây vài trăm bộ phận, chạy lại ở mỗi phím gõ tìm kiếm. */
+  const { byId, childCountByParent, depthById } = useMemo(() => {
+    const map = new Map<number, Department>();
+    const childCounts = new Map<number, number>();
+    for (const d of flatData) {
+      map.set(d.id, d);
+      if (d.parentId) childCounts.set(d.parentId, (childCounts.get(d.parentId) ?? 0) + 1);
+    }
+    const depths = new Map<number, number>();
+    const depthOf = (id: number): number => {
+      const cached = depths.get(id);
+      if (cached !== undefined) return cached;
+      let depth = 0;
+      let current = map.get(id);
+      const seen = new Set<number>();
+      while (current && current.parentId && !seen.has(current.id)) {
+        seen.add(current.id);
+        depth += 1;
+        current = map.get(current.parentId);
+      }
+      depths.set(id, depth);
+      return depth;
+    };
+    for (const d of flatData) depthOf(d.id);
+    return { byId: map, childCountByParent: childCounts, depthById: depths };
+  }, [flatData]);
+
+  /* Tập id của các nút KHỚP từ khóa hoặc có hậu duệ khớp — tính một lượt từ dưới lên thay
+   * cho nodeMatchesSearch() đệ quy lại toàn bộ cây con ở MỖI cấp khi vẽ. */
+  const visibleIds = useMemo(() => {
+    if (!keyword) return null;
+    const ids = new Set<number>();
+    const visit = (node: DepartmentTreeNode): boolean => {
+      let match = node.name.toLowerCase().includes(keyword);
+      for (const child of node.children) {
+        if (visit(child)) match = true;
+      }
+      if (match) ids.add(node.id);
+      return match;
+    };
+    treeData.forEach(visit);
+    return ids;
+  }, [treeData, keyword]);
+
+  const filteredFlatData = useMemo(
+    () => (keyword === '' ? flatData : flatData.filter((d) => d.name.toLowerCase().includes(keyword))),
+    [flatData, keyword]
+  );
+
   // Độ sâu thực tế của một bộ phận trong cây (0 = cấp gốc) — dùng để hiển thị "Cấp N" đúng vị trí
   // thay vì chỉ ghi chung chung "Trực thuộc" cho mọi hàng không phải gốc ở chế độ Bảng dữ liệu.
-  const getDepth = (deptId: number): number => {
-    let depth = 0;
-    let current = flatData.find((d) => d.id === deptId);
-    while (current && current.parentId) {
-      depth += 1;
-      current = flatData.find((d) => d.id === current!.parentId);
-    }
-    return depth;
-  };
+  const getDepth = (deptId: number): number => depthById.get(deptId) ?? 0;
 
   // Convert tree node to flat Department object helper
   const nodeToDepartment = (node: DepartmentTreeNode, parentId: number | null): Department => {
@@ -74,8 +119,11 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
     return (
       <div className="tree-loading-state" role="status" aria-label="Đang tải cấu trúc cây tổ chức">
         <div className="skeleton" />
-        <div className="skeleton" style={{ marginLeft: '24px' }} />
-        <div className="skeleton" style={{ marginLeft: '24px' }} />
+        <div className="skeleton ia-tree-skel--child" />
+        <div className="skeleton ia-tree-skel--child" />
+        <div className="skeleton ia-tree-skel--grandchild" />
+        <div className="skeleton" />
+        <div className="skeleton ia-tree-skel--child" />
       </div>
     );
   }
@@ -90,18 +138,8 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
     );
   }
 
-  // Filter flat data if search keyword is present
-  const filteredFlatData = flatData.filter((d) =>
-    searchKeyword.trim() === '' ? true : d.name.toLowerCase().includes(searchKeyword.trim().toLowerCase())
-  );
-
-  // Helper to check if a node or its children match search keyword
-  const nodeMatchesSearch = (node: DepartmentTreeNode, keyword: string): boolean => {
-    if (!keyword.trim()) return true;
-    const kw = keyword.trim().toLowerCase();
-    if (node.name.toLowerCase().includes(kw)) return true;
-    return node.children.some((child) => nodeMatchesSearch(child, keyword));
-  };
+  // Nút (hoặc một hậu duệ của nó) có khớp từ khóa không — tra tập đã tính sẵn, O(1).
+  const nodeMatchesSearch = (node: DepartmentTreeNode): boolean => visibleIds === null || visibleIds.has(node.id);
 
   // Shared action menu, reused by both Tree and Branch-List views — một menu kebab (⋮)
   // gọn gàng thay cho 4 nút riêng lẻ, cùng mẫu với bảng Tài khoản (RowActionsMenu).
@@ -123,7 +161,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
     const rows: Array<{ dept: Department; level: number; path: string; childCount: number }> = [];
     const walk = (nodes: DepartmentTreeNode[], level: number, parentId: number | null, ancestorNames: string[]) => {
       nodes.forEach((node) => {
-        if (searchKeyword.trim() !== '' && !nodeMatchesSearch(node, searchKeyword)) return;
+        if (!nodeMatchesSearch(node)) return;
         rows.push({
           dept: nodeToDepartment(node, parentId),
           level,
@@ -141,12 +179,12 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
   const renderTreeNode = (node: DepartmentTreeNode, level: number = 0, parentId: number | null = null) => {
     const hasChildren = node.children && node.children.length > 0;
     const collapsed = isCollapsed(node.id);
-    const matchesKw = searchKeyword.trim() !== '' && node.name.toLowerCase().includes(searchKeyword.trim().toLowerCase());
-    const departmentObj = nodeToDepartment(node, parentId);
-
-    if (searchKeyword.trim() !== '' && !nodeMatchesSearch(node, searchKeyword)) {
+    if (!nodeMatchesSearch(node)) {
       return null;
     }
+
+    const matchesKw = keyword !== '' && node.name.toLowerCase().includes(keyword);
+    const departmentObj = nodeToDepartment(node, parentId);
 
     return (
       <div key={node.id} className={`tree-node-wrapper level-${level}`}>
@@ -159,6 +197,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
                 onClick={() => toggleNode(node.id)}
                 title={collapsed ? 'Mở rộng nhánh con' : 'Thu gọn nhánh con'}
                 aria-expanded={!collapsed}
+                aria-label={`${collapsed ? 'Mở rộng' : 'Thu gọn'} nhánh ${node.name}`}
               >
                 {/* MỘT icon xoay đi, không phải hai ký tự khác nhau (`▶` / `▼`).
                     Hai lý do: ký tự hình học lấy nét từ font hệ thống nên không
@@ -168,7 +207,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
                 <span className="icon-xs tree-toggle-btn__caret">{ICONS.chevronDown}</span>
               </button>
             ) : (
-              <span className="tree-node-dot" />
+              <span className="tree-node-dot" aria-hidden="true" />
             )}
 
             <div className="tree-node-info">
@@ -212,20 +251,20 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
                 <th>Bộ phận cha</th>
                 <th>Trưởng bộ phận</th>
                 <th>Số đơn vị con</th>
-                <th style={{ textAlign: 'right' }}>Thao tác</th>
+                <th className="text-right">Thao tác</th>
               </tr>
             </thead>
             <tbody>
               {filteredFlatData.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#5B5A57' }}>
+                  <td colSpan={6} className="ia-table-empty-cell">
                     Không tìm thấy bộ phận nào phù hợp với từ khóa "{searchKeyword}".
                   </td>
                 </tr>
               ) : (
                 filteredFlatData.map((dept) => {
-                  const parentDept = flatData.find((d) => d.id === dept.parentId);
-                  const childCount = flatData.filter((d) => d.parentId === dept.id).length;
+                  const parentDept = dept.parentId ? byId.get(dept.parentId) : undefined;
+                  const childCount = childCountByParent.get(dept.id) ?? 0;
                   const isRoot = !dept.parentId;
                   const depth = getDepth(dept.id);
 
@@ -233,7 +272,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
                     <tr key={dept.id}>
                       <td>
                         <div className="user-profile-cell">
-                          <span className="avatar-circle avatar-circle--lg" style={{ background: isRoot ? '#111111' : '#1F6C9F' }}>
+                          <span className={`avatar-circle avatar-circle--lg ${isRoot ? 'ia-dept-avatar--root' : 'ia-dept-avatar--branch'}`} aria-hidden="true">
                             {getUnitTypeMonogram(dept.unitType)}
                           </span>
                           <div className="user-profile-meta">
@@ -253,18 +292,16 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
                         {parentDept ? (
                           <span className="cell-dept">{parentDept.name}</span>
                         ) : (
-                          <span style={{ color: '#6B6A67', fontStyle: 'italic' }}>-- Cấp cao nhất --</span>
+                          <span className="ia-dash">-- Cấp cao nhất --</span>
                         )}
                       </td>
                       <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <strong style={{ color: '#111111' }}>{dept.managerName || 'Chưa gán'}</strong>
-                        </div>
+                        <strong className="ia-strong">{dept.managerName || 'Chưa gán'}</strong>
                       </td>
                       <td>
                         <span className="badge-children">{childCount} bộ phận con</span>
                       </td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td className="text-right">
                         {renderActionButtons(dept)}
                       </td>
                     </tr>

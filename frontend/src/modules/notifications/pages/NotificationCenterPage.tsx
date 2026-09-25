@@ -85,7 +85,7 @@ export default function NotificationCenterPage() {
         </div>
       </div>
 
-      <div className="status-tabs" style={{ marginBottom: '16px' }}>
+      <div className="status-tabs ia-mb-16">
         <button
           type="button"
           className={`status-tab ${!unreadOnly ? 'status-tab--active' : ''}`}
@@ -122,16 +122,26 @@ export default function NotificationCenterPage() {
 
       <div className="user-table-card">
         {loading ? (
-          <div style={{ padding: '40px', textAlign: 'center' }}>Đang tải thông báo…</div>
+          <div className="ia-notif-skeleton" role="status" aria-label="Đang tải thông báo…">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="ia-notif-skeleton__row" aria-hidden="true">
+                <span className="skeleton skeleton-avatar" />
+                <span className="skeleton-profile__lines">
+                  <span className="skeleton skeleton-text" />
+                  <span className="skeleton skeleton-text skeleton-text--sm" />
+                </span>
+              </div>
+            ))}
+          </div>
         ) : (
           <NotificationList notifications={notifications} onMarkRead={handleMarkRead} />
         )}
 
-        <div className="table-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="table-footer table-footer--paginated">
           <span>
             Trang <strong>{page + 1}</strong>
           </span>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div className="table-footer__pagination">
             <button type="button" className="btn-secondary" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0 || loading}>
               ← Trang trước
             </button>

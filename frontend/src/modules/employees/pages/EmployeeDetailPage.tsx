@@ -205,9 +205,18 @@ export default function EmployeeDetailPage({ employeeId, onBack, currentUserRole
 
   if (loading) {
     return (
-      <div className="user-detail-page p-6">
-        <div className="skeleton skeleton-text" style={{ width: '200px', height: '30px' }} />
-        <div className="skeleton skeleton-card mt-4" style={{ height: '300px' }} />
+      <div className="user-detail-page p-6 ia-detail-skeleton" role="status" aria-label="Đang tải hồ sơ nhân sự">
+        <div className="skeleton ia-detail-skeleton__title" />
+        <div className="skeleton skeleton-text ia-detail-skeleton__sub" />
+        <div className="detail-card ia-detail-skeleton__card" aria-hidden="true">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="ia-detail-skeleton__field">
+              <span className="skeleton skeleton-text skeleton-text--sm" />
+              <span className="skeleton skeleton-text" />
+            </div>
+          ))}
+        </div>
+        <div className="skeleton ia-detail-skeleton__block" />
       </div>
     );
   }
@@ -283,7 +292,7 @@ export default function EmployeeDetailPage({ employeeId, onBack, currentUserRole
           <h3 className="section-title">Hợp đồng lao động</h3>
 
           {employee.contracts.length === 0 ? (
-            <p style={{ color: '#5B5A57', fontSize: 13.5 }}>Chưa có hợp đồng lao động nào được ghi nhận.</p>
+            <p className="ia-inline-empty">Chưa có hợp đồng lao động nào được ghi nhận.</p>
           ) : (
             <div className="table-responsive">
               <table className="user-data-table">
@@ -378,7 +387,7 @@ export default function EmployeeDetailPage({ employeeId, onBack, currentUserRole
               <span className="field-hint">Không được sớm hơn ngày bắt đầu.</span>
             </div>
 
-            <div className="form-field form-field--full" style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <div className="form-field form-field--full ia-form-actions">
               <button type="submit" className="btn-primary" disabled={submittingContract}>
                 {submittingContract ? 'Đang lưu...' : '+ Ghi nhận hợp đồng'}
               </button>
@@ -392,13 +401,13 @@ export default function EmployeeDetailPage({ employeeId, onBack, currentUserRole
 
             <div className="detail-section" data-testid="hourly-rate-section">
               <h3 className="section-title">Chi phí giờ công nội bộ</h3>
-              <p style={{ color: '#5B5A57', fontSize: 13.5, marginTop: '-4px' }}>
+              <p className="ia-inline-empty ia-mt-n4">
                 Dữ liệu nhạy cảm (lương/giá vốn) — dùng để tính giá vốn dự án. Mỗi lần xem hoặc khai báo đều
                 được hệ thống tự ghi vào nhật ký truy cập dữ liệu nhạy cảm.
               </p>
 
               {hourlyRatesLoading ? (
-                <div className="skeleton skeleton-card mt-2" style={{ height: '80px' }} />
+                <div className="skeleton skeleton-card mt-2 ia-h-80" />
               ) : hourlyRatesError ? (
                 <div className="alert alert--error mt-2" role="alert">
                   <span className="alert__icon">{ICONS.alertTriangle}</span>
@@ -408,7 +417,7 @@ export default function EmployeeDetailPage({ employeeId, onBack, currentUserRole
                   </button>
                 </div>
               ) : hourlyRates.length === 0 ? (
-                <p style={{ color: '#5B5A57', fontSize: 13.5 }}>Chưa có mốc chi phí giờ công nào được khai báo.</p>
+                <p className="ia-inline-empty">Chưa có mốc chi phí giờ công nào được khai báo.</p>
               ) : (
                 <div className="table-responsive">
                   <table className="user-data-table" data-testid="hourly-rate-table">
@@ -421,7 +430,7 @@ export default function EmployeeDetailPage({ employeeId, onBack, currentUserRole
                     <tbody>
                       {hourlyRates.map((r) => (
                         <tr key={r.id}>
-                          <td style={{ fontFamily: 'var(--font-mono, monospace)' }}>{formatHourlyRate(r.hourlyRate)}</td>
+                          <td className="mono-cell ia-num">{formatHourlyRate(r.hourlyRate)}</td>
                           <td>{formatDate(r.effectiveFrom)}</td>
                         </tr>
                       ))}
@@ -478,7 +487,7 @@ export default function EmployeeDetailPage({ employeeId, onBack, currentUserRole
                     <span className="field-hint">Mặc định theo ngày vào làm, có thể chỉnh sửa nếu cần mốc khác.</span>
                   </div>
 
-                  <div className="form-field form-field--full" style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <div className="form-field form-field--full ia-form-actions">
                     <button type="submit" className="btn-primary" disabled={submittingHourlyRate}>
                       {submittingHourlyRate ? 'Đang lưu...' : '+ Khai báo chi phí giờ công'}
                     </button>
@@ -488,11 +497,11 @@ export default function EmployeeDetailPage({ employeeId, onBack, currentUserRole
 
               <hr className="divider" />
 
-              <h4 style={{ fontSize: '13.5px', fontWeight: 600, marginBottom: '10px' }}>
+              <h4 className="ia-subheading">
                 Tra chi phí giờ công tại một thời điểm
               </h4>
-              <form onSubmit={handleResolveHourlyRate} style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                <div className="form-field" style={{ minWidth: '180px' }}>
+              <form onSubmit={handleResolveHourlyRate} className="ia-inline-form">
+                <div className="form-field ia-minw-180">
                   <label htmlFor="hourly-rate-resolve-as-of" className="form-label">
                     Ngày phát sinh
                   </label>
@@ -526,7 +535,7 @@ export default function EmployeeDetailPage({ employeeId, onBack, currentUserRole
               {resolveResult && !resolveResult.missingCostData && resolveResult.hourlyRate != null && (
                 <div className="alert-box alert-box--success mt-2" role="status" data-testid="hourly-rate-resolved">
                   <strong>{formatHourlyRate(resolveResult.hourlyRate)} / giờ</strong>
-                  <div className="field-hint" style={{ marginTop: '4px' }}>
+                  <div className="field-hint ia-mt-4">
                     Mốc áp dụng có hiệu lực từ {formatDate(resolveResult.effectiveFrom as string)}.
                   </div>
                 </div>

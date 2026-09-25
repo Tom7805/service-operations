@@ -4,6 +4,7 @@ import ModalPortal from '../../../components/common/ModalPortal';
 import type { TaskCreateReq, TaskRes } from '../types/taskTypes';
 import { createTask, ProjectsApiError } from '../api/projectsApi';
 import { validateTaskCreateForm } from '../validators/projectValidators';
+import { useDialogA11y } from './deliveryUi';
 
 export interface TaskFormModalProps {
   isOpen: boolean;
@@ -44,6 +45,8 @@ export default function TaskFormModal({
       setServerError(null);
     }
   }, [isOpen]);
+
+  const dialogRef = useDialogA11y(isOpen, onClose, submitting);
 
   if (!isOpen) return null;
 
@@ -98,7 +101,7 @@ export default function TaskFormModal({
       aria-modal="true"
       aria-labelledby="task-form-modal-title"
     >
-      <div className="modal-card project-modal-card">
+      <div ref={dialogRef} className="modal-card dl-modal project-modal-card">
         <div className="modal-header">
           <div className="modal-header__title-wrap">
             <h3 id="task-form-modal-title" className="modal-title">

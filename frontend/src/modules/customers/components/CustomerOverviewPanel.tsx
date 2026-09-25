@@ -204,12 +204,18 @@ export default function CustomerOverviewPanel({
     setIsCreateFromTemplateOpen(true);
   }, [customerId, customerName]);
 
+  // Chỉ phản hồi của lần tải MỚI NHẤT được ghi vào state (bấm tải lại liên tiếp, hoặc đổi
+  // khách hàng khi yêu cầu cũ chưa về, không để dữ liệu cũ đè lên dữ liệu mới).
+  const loadReqRef = useRef(0);
+
   const loadOverview = useCallback(async () => {
+    const reqId = ++loadReqRef.current;
     setIsLoading(true);
     setErrorKind('none');
     setErrorMessage('');
     try {
       const data = await fetchCustomerOverview(customerId);
+      if (reqId !== loadReqRef.current) return;
       setOverview(data);
       const count =
         data.opportunities.length +
@@ -219,6 +225,7 @@ export default function CustomerOverviewPanel({
         data.receivables.length;
       onLoadedRef.current?.({ at: new Date().toLocaleString('vi-VN'), itemCount: count });
     } catch (err) {
+      if (reqId !== loadReqRef.current) return;
       const status = err instanceof CustomerApiError ? err.statusCode : undefined;
       if (status === 403) {
         setErrorKind('forbidden');
@@ -235,7 +242,7 @@ export default function CustomerOverviewPanel({
         );
       }
     } finally {
-      setIsLoading(false);
+      if (reqId === loadReqRef.current) setIsLoading(false);
     }
   }, [customerId]);
 
@@ -280,14 +287,33 @@ export default function CustomerOverviewPanel({
     !!overview &&
     timeline.length === 0;
 
-  // ----- Trạng thái tải -----
-  if (isLoading) {
+  // ----- Trạng thái tải lần đầu -----
+  // Chỉ thay cả panel bằng khung xương khi CHƯA có dữ liệu. Tải lại sau khi lưu phụ lục/gia hạn/
+  // tạo dự án giữ nguyên nội dung đang xem (và modal đang mở) — trước đây mỗi lần tải lại, cả
+  // panel bị thay bằng vòng quay, modal đang mở bị gỡ ra rồi dựng lại từ đầu.
+  if (isLoading && !overview) {
     return (
-      <div className="user-table-card customer-summary-panel" data-testid="customer-summary-loading">
-        <div className="table-loading-state">
-          <div className="spinner-lg" />
-          <p>Đang tải hồ sơ tổng hợp của khách hàng...</p>
+      <div
+        className="user-table-card customer-summary-panel"
+        data-testid="customer-summary-loading"
+        aria-busy="true"
+      >
+        <div className="sl-overview-skeleton">
+          <div className="skeleton sl-overview-skeleton__title" />
+          <div className="skeleton skeleton-text" style={{ width: '56%' }} />
+          <div className="sl-skel-stats">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div key={i} className="sl-skel-stat">
+                <div className="skeleton skeleton-text skeleton-text--sm" style={{ width: '50%' }} />
+                <div className="skeleton sl-skel-value" />
+              </div>
+            ))}
+          </div>
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="skeleton sl-overview-skeleton__row" />
+          ))}
         </div>
+        <p className="sl-sr-only" role="status">Đang tải hồ sơ tổng hợp của khách hàng...</p>
       </div>
     );
   }
@@ -343,7 +369,11 @@ export default function CustomerOverviewPanel({
 
   // ----- Thành công -----
   return (
-    <div className="user-table-card customer-summary-panel" data-testid="customer-summary-panel">
+    <div
+      className="user-table-card customer-summary-panel"
+      data-testid="customer-summary-panel"
+      aria-busy={isLoading || undefined}
+    >
       <div className="customer-summary-toolbar">
         <div>
           <h3 className="customer-summary-title">Hồ sơ tổng hợp — {customerName}</h3>
@@ -353,8 +383,9 @@ export default function CustomerOverviewPanel({
         </div>
         <button
           type="button"
-          className="btn-icon-refresh"
+          className={`btn-icon-refresh${isLoading ? ' sl-refreshing' : ''}`}
           onClick={loadOverview}
+          disabled={isLoading}
           title="Tải lại hồ sơ tổng hợp từ máy chủ"
           data-testid="btn-reload-summary"
           aria-label="Tải lại hồ sơ tổng hợp"
@@ -377,7 +408,7 @@ export default function CustomerOverviewPanel({
             <div className="stat-card__icon stat-card__icon--purple">{ICONS.document}</div>
             <div>
               <span className="stat-card__label">Hợp đồng · Tổng giá trị</span>
-              <div className="stat-card__value" style={{ fontSize: '15px' }}>
+              <div className="stat-card__value sl-stat-sm">
                 {totals.contracts} · {formatAmount(totals.contractValue)}
               </div>
             </div>
@@ -400,7 +431,7 @@ export default function CustomerOverviewPanel({
             <div className="stat-card__icon stat-card__icon--red">{ICONS.money}</div>
             <div>
               <span className="stat-card__label">Công nợ phải thu</span>
-              <div className="stat-card__value text-warning" style={{ fontSize: '15px' }}>
+              <div className="stat-card__value text-warning sl-stat-sm">
                 {formatAmount(totals.receivableValue)}
               </div>
             </div>
@@ -409,7 +440,7 @@ export default function CustomerOverviewPanel({
       )}
 
       {isEmpty ? (
-        <div className="table-empty-state" data-testid="customer-summary-empty" style={{ marginTop: '8px' }}>
+        <div className="table-empty-state sl-mt-8" data-testid="customer-summary-empty">
           <div className="table-empty-state__icon">{ICONS.folder}</div>
           <h3>Chưa phát sinh dữ liệu hợp tác</h3>
           <p>
@@ -423,25 +454,21 @@ export default function CustomerOverviewPanel({
           <div className="customer-summary-section">
             <button
               type="button"
-              className="customer-summary-section__title"
+              className="customer-summary-section__title sl-disclosure"
               onClick={() => toggleSection('timeline')}
               aria-expanded={expandedSections.has('timeline')}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+              aria-controls="customer-summary-timeline"
             >
               <span
-                className="icon-sm"
-                style={{
-                  display: 'inline-flex',
-                  transition: 'transform 0.15s ease',
-                  transform: expandedSections.has('timeline') ? 'rotate(0deg)' : 'rotate(-90deg)',
-                }}
+                className={`icon-sm sl-chevron${expandedSections.has('timeline') ? '' : ' sl-chevron--collapsed'}`}
+                aria-hidden="true"
               >
                 {ICONS.chevronDown}
               </span>
-              <span className="icon-sm">{ICONS.clock}</span> Dòng thời gian hợp tác
+              <span className="icon-sm" aria-hidden="true">{ICONS.clock}</span> Dòng thời gian hợp tác
             </button>
             {expandedSections.has('timeline') && (
-              <ol className="customer-timeline" data-testid="customer-summary-timeline">
+              <ol className="customer-timeline" data-testid="customer-summary-timeline" id="customer-summary-timeline">
                 {timeline.map(({ section, item }) => (
                   <li key={`${section.key}-${item.id}`} className="customer-timeline__item">
                     <span className="customer-timeline__date">{formatDate(item.date)}</span>
@@ -472,29 +499,24 @@ export default function CustomerOverviewPanel({
               >
                 <button
                   type="button"
-                  className="customer-summary-section__title"
+                  className="customer-summary-section__title sl-disclosure"
                   onClick={() => toggleSection(section.key)}
                   aria-expanded={isExpanded}
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                 >
                   <span
-                    className="icon-sm"
-                    style={{
-                      display: 'inline-flex',
-                      transition: 'transform 0.15s ease',
-                      transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
-                    }}
+                    className={`icon-sm sl-chevron${isExpanded ? '' : ' sl-chevron--collapsed'}`}
+                    aria-hidden="true"
                   >
                     {ICONS.chevronDown}
                   </span>
-                  <span className="icon-sm">{section.icon}</span> {section.label} <span className="cell-muted">({items.length})</span>
+                  <span className="icon-sm" aria-hidden="true">{section.icon}</span> {section.label} <span className="cell-muted">({items.length})</span>
                 </button>
                 {isExpanded && (
                 items.length === 0 ? (
                   <p className="customer-summary-section__empty cell-muted">{section.emptyHint}</p>
                 ) : (
-                  <div className="table-responsive">
-                    <table className="user-data-table">
+                  <div className="table-responsive sl-stack-host">
+                    <table className="user-data-table sl-stack-sm">
                           <thead>
                             <tr>
                               <th style={{ width: '120px' }}>Ngày</th>
@@ -504,33 +526,33 @@ export default function CustomerOverviewPanel({
                               {section.key === 'contracts' && <th style={{ width: '140px' }}>Mã</th>}
                               <th>Tên</th>
                               <th style={{ width: '140px' }}>Trạng thái</th>
-                              <th style={{ width: '160px', textAlign: 'right' }}>Giá trị</th>
+                              <th className="sl-num" style={{ width: '160px' }}>Giá trị</th>
                               {/* Chỉ hợp đồng và dự án có hành động thật ở đây — cơ hội bán hàng đã có
                                   trang riêng để thao tác (chuyển giai đoạn, chốt kết quả...), hóa đơn/
                                   công nợ (NCL-10) chưa triển khai nên chưa có hành động nào để hiện. */}
                               {(section.key === 'contracts' || section.key === 'projects') && (
-                                <th style={{ width: '160px', textAlign: 'right' }}>Hành động</th>
+                                <th className="sl-num" style={{ width: '160px' }}>Hành động</th>
                               )}
                             </tr>
                           </thead>
                       <tbody>
                         {items.map((item) => (
                           <tr key={item.id}>
-                            <td>{formatDate(item.date)}</td>
-                            {section.key === 'contracts' && <td>{item.code || '—'}</td>}
-                            <td>{item.name || '—'}</td>
-                            <td>
+                            <td data-label="Ngày">{formatDate(item.date)}</td>
+                            {section.key === 'contracts' && <td data-label="Mã" className="sl-code">{item.code || '—'}</td>}
+                            <td data-label="Tên" className="sl-stack-sm__wide">{item.name || '—'}</td>
+                            <td data-label="Trạng thái">
                               {item.status ? (
                                 <span className={statusClass(item.status)}>{item.status}</span>
                               ) : (
                                 <span className="cell-muted">—</span>
                               )}
                             </td>
-                            <td style={{ textAlign: 'right' }}>{formatAmount(item.amount)}</td>
+                            <td data-label="Giá trị" className="sl-num">{formatAmount(item.amount)}</td>
                             {(section.key === 'contracts' || section.key === 'projects') && (
-                            <td style={{ textAlign: 'right' }}>
+                            <td className="sl-num sl-stack-sm__actions">
                               {section.key === 'contracts' ? (
-                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                                <div className="sl-row-actions">
                                   {currentUserRoles.includes('VT-02') && (
                                     <button
                                       type="button"
@@ -583,7 +605,7 @@ export default function CustomerOverviewPanel({
                                   )}
                                 </div>
                               ) : section.key === 'projects' ? (
-                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                                <div className="sl-row-actions">
                                   {(currentUserRoles.includes('VT-01') || currentUserRoles.includes('VT-02') || currentUserRoles.includes('VT-03')) ? (
                                     <button
                                       type="button"
@@ -620,7 +642,7 @@ export default function CustomerOverviewPanel({
       </p>
 
       {contractLoadError && (
-        <div className="alert-box alert-box--danger" role="alert" style={{ marginTop: '12px' }}>
+        <div className="alert-box alert-box--danger sl-mt-12" role="alert">
           {contractLoadError}
         </div>
       )}

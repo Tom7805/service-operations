@@ -7,6 +7,7 @@ import ApprovalActionBar from '../components/ApprovalActionBar';
 import { getMyApprovalHistory, getPendingTimesheets, TimesheetsApiError } from '../api/timesheetsApi';
 import type { PendingTimesheetRes, TimesheetApprovalHistoryRes } from '../types/timesheetTypes';
 import { formatIsoDate } from '../utils/weekRange';
+import { useDialogA11y } from '../../projects/components/deliveryUi';
 
 export interface TimesheetApprovalPageProps {
   currentUserRoles?: string[];
@@ -44,6 +45,7 @@ export default function TimesheetApprovalPage({
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const historyBackdrop = useBackdropClick(() => setHistoryOpen(false));
+  const dialogRef = useDialogA11y(historyOpen, () => setHistoryOpen(false), false);
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setToast({ text, type });
@@ -275,7 +277,7 @@ export default function TimesheetApprovalPage({
             role="dialog"
             aria-modal="true"
           >
-            <div className="modal-card" style={{ maxWidth: '800px' }}>
+            <div ref={dialogRef} className="modal-card dl-modal" style={{ maxWidth: '800px' }}>
               <div className="modal-header">
                 <div className="modal-header__title-wrap">
                   <h3 className="modal-title">

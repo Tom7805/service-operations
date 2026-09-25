@@ -46,12 +46,12 @@ export default function LoginForm({ onAuthenticated, onForgotPassword, onTwoFact
     <p className="login-card__intro">Đăng nhập để tiếp tục công việc của bạn.</p>
     <form onSubmit={handleSubmit} noValidate>
       <label htmlFor="username">Tài khoản</label>
-      <div className="field"><input id="username" autoComplete="username" value={username} onChange={(event) => { setUsername(event.target.value); if (error) setError(''); }} placeholder="Nhập tên tài khoản" disabled={loading} /></div>
+      <div className="field"><input id="username" autoComplete="username" autoFocus autoCapitalize="none" spellCheck={false} enterKeyHint="next" aria-invalid={error ? true : undefined} aria-describedby={error ? 'login-error' : undefined} value={username} onChange={(event) => { setUsername(event.target.value); if (error) setError(''); }} placeholder="Nhập tên tài khoản" disabled={loading} /></div>
       <label htmlFor="password">Mật khẩu</label>
-      <div className="field"><input id="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(event) => { setPassword(event.target.value); if (error) setError(''); }} placeholder="Nhập mật khẩu" disabled={loading} /><button type="button" className="field__toggle" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}><EyeIcon visible={showPassword} /></button></div>
+      <div className="field"><input id="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" enterKeyHint="go" aria-invalid={error ? true : undefined} aria-describedby={error ? 'login-error' : undefined} value={password} onChange={(event) => { setPassword(event.target.value); if (error) setError(''); }} placeholder="Nhập mật khẩu" disabled={loading} /><button type="button" className="field__toggle" onClick={() => setShowPassword(!showPassword)} aria-pressed={showPassword} aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}><EyeIcon visible={showPassword} /></button></div>
       <div className="form-options"><label className="checkbox"><input type="checkbox" /> <span>Ghi nhớ đăng nhập</span></label><a href="#forgot-password" onClick={(event) => { event.preventDefault(); onForgotPassword?.(); }}>Quên mật khẩu?</a></div>
-      {error && <p className="form-error" role="alert"><span>!</span>{error}</p>}
-      <button className="submit" type="submit" disabled={loading}>{loading ? <><i className="loader" />Đang xác thực</> : <>Đăng nhập <span className="icon-sm">{ICONS.arrowRight}</span></>}</button>
+      {error && <p className="form-error" id="login-error" role="alert"><span aria-hidden="true">!</span>{error}</p>}
+      <button className="submit" type="submit" disabled={loading} aria-busy={loading}>{loading ? <><i className="loader" />Đang xác thực</> : <>Đăng nhập <span className="icon-sm">{ICONS.arrowRight}</span></>}</button>
     </form>
     <div className="secure-note"><span className="icon-sm">{ICONS.check}</span><p>Phiên đăng nhập được bảo vệ và tự động kết thúc khi không hoạt động.</p></div>
     <p className="login-card__privacy">Bằng việc tiếp tục, bạn xác nhận đã đọc và đồng ý với<br /><a href="#terms">Điều khoản sử dụng</a> và <a href="#privacy">Chính sách bảo mật</a>.</p>

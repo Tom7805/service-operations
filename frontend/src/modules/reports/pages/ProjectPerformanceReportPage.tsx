@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import MaskedCell from '../../../components/common/MaskedCell';
 import { getProjectPerformanceReport, ReportsApiError } from '../api/reportsApi';
+import { ReportErrorAlert, ReportSkeleton } from '../components/ReportStates';
 import type {
   MaskedCost,
   ProjectPerformanceReportRes,
@@ -26,19 +27,24 @@ function contractTypeLabel(value: string): string {
   return CONTRACT_TYPE_LABELS[value] ?? value;
 }
 
+/* Bộ định dạng dựng MỘT lần — tạo Intl.NumberFormat mới cho từng ô (7 cột × N dòng) là
+ * phần tốn nhất khi vẽ lại bảng. */
+const currencyFormatter = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
+const twoDecimalFormatter = new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+  return currencyFormatter.format(amount);
 }
 
 function formatHours(hours: number | null): string {
   if (hours == null) return '—';
-  return `${new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(hours)} giờ`;
+  return `${twoDecimalFormatter.format(hours)} giờ`;
 }
 
 /** `*Percent`/`*PercentPoints` đã là số phần trăm 2 chữ số (backend không gửi phân số). */
 function formatPercent(value: number | null): string {
   if (value == null) return '—';
-  return `${new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)}%`;
+  return `${twoDecimalFormatter.format(value)}%`;
 }
 
 function formatPercentSigned(value: number | null): string {
@@ -55,7 +61,7 @@ function formatHoursSigned(value: number | null): string {
 
 /** `plannedCost`/`actualCost`/`hoursVarianceCostImpact` luôn là `"***"` với Quản lý dự án (QTN-02). */
 function CostCell({ value }: { value: MaskedCost | null }) {
-  if (value === null) return <span style={{ color: 'var(--ink-faint)' }}>—</span>;
+  if (value === null) return <span className="ia-dash">—</span>;
   if (value === '***') {
     return (
       <MaskedCell canView={false} maskedText="***">
@@ -89,24 +95,33 @@ export default function ProjectPerformanceReportPage({
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /** Đổi bộ lọc trạng thái liên tiếp: chỉ phản hồi của lần gọi mới nhất được hiển thị,
+   *  phản hồi cũ về muộn không ghi đè danh sách đang lọc. */
+  const requestIdRef = useRef(0);
+
   const loadReport = useCallback(
     async (isManualRefresh = false) => {
       if (!canViewScreen) return;
+      const requestId = ++requestIdRef.current;
       if (isManualRefresh) setRefreshing(true);
       else setLoading(true);
       setError(null);
       try {
         const data = await getProjectPerformanceReport(statusFilter || undefined);
+        if (requestId !== requestIdRef.current) return;
         setReport(data);
       } catch (err) {
+        if (requestId !== requestIdRef.current) return;
         const message =
           err instanceof ReportsApiError || err instanceof Error
             ? err.message
             : 'Không thể tải báo cáo hiệu quả theo dự án.';
         setError(message);
       } finally {
-        setLoading(false);
-        setRefreshing(false);
+        if (requestId === requestIdRef.current) {
+          setLoading(false);
+          setRefreshing(false);
+        }
       }
     },
     [canViewScreen, statusFilter]
@@ -134,7 +149,7 @@ export default function ProjectPerformanceReportPage({
             Báo cáo hiệu quả theo dự án chỉ dành riêng cho vai trò <strong>Quản lý dự án</strong>.
           </p>
           {onBack && (
-            <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
+            <button type="button" className="btn btn-secondary ia-denied-back" onClick={onBack}>
               {ICONS.arrowLeft} Quay lại
             </button>
           )}
@@ -144,9 +159,9 @@ export default function ProjectPerformanceReportPage({
   }
 
   return (
-    <div className="user-management-page" data-testid="project-performance-page">
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+    <div className="user-management-page ia-page" data-testid="project-performance-page">
+      <div className="page-header">
+        <div className="ia-head">
           {onBack && (
             <button
               type="button"
@@ -158,7 +173,7 @@ export default function ProjectPerformanceReportPage({
             </button>
           )}
           <div>
-            <h1 className="page-title" style={{ margin: '4px 0' }}>
+            <h1 className="page-title">
               Báo cáo hiệu quả theo dự án
             </h1>
             <p className="page-subtitle">
@@ -181,8 +196,8 @@ export default function ProjectPerformanceReportPage({
         </div>
       </div>
 
-      <div className="user-table-card" style={{ padding: '20px', marginBottom: '16px' }}>
-        <div className="toolbar-filters" style={{ display: 'flex', alignItems: 'flex-end', gap: '16px', flexWrap: 'wrap' }}>
+      <div className="user-table-card ia-filter-card">
+        <div className="toolbar-filters">
           <div className="filter-group">
             <label className="filter-label" htmlFor="project-performance-status">
               Trạng thái dự án
@@ -190,7 +205,6 @@ export default function ProjectPerformanceReportPage({
             <select
               id="project-performance-status"
               className="form-input"
-              style={{ height: 38 }}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as ProjectPerformanceStatus | '')}
               disabled={loading}
@@ -205,21 +219,16 @@ export default function ProjectPerformanceReportPage({
       </div>
 
       {error && (
-        <div className="alert-box alert-box--danger" role="alert" style={{ marginBottom: '16px', justifyContent: 'space-between' }} data-testid="project-performance-error">
-          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {ICONS.alertTriangle} {error}
-          </span>
-          <button type="button" className="btn-secondary" onClick={() => loadReport()}>
-            Thử lại
-          </button>
-        </div>
+        <ReportErrorAlert
+          testId="project-performance-error"
+          message={error}
+          onRetry={() => loadReport()}
+          retryDisabled={loading || refreshing}
+        />
       )}
 
       {loading ? (
-        <div data-testid="project-performance-loading" role="status" aria-label="Đang tải báo cáo...">
-          <div className="skeleton" style={{ height: '88px', marginBottom: '24px' }} />
-          <div className="skeleton" style={{ height: '240px' }} />
-        </div>
+        <ReportSkeleton testId="project-performance-loading" kpis={4} tableColumns={7} tableRows={5} />
       ) : report ? (
         <>
           <div className="stats-grid" data-testid="project-performance-kpi-grid">
@@ -239,10 +248,10 @@ export default function ProjectPerformanceReportPage({
             </div>
             <button
               type="button"
-              className="stat-card"
+              className="stat-card ia-kpi-btn"
               data-testid="kpi-over-planned-hours-count"
               onClick={() => setOnlyOverPlannedHours((v) => !v)}
-              style={{ textAlign: 'left', cursor: 'pointer' }}
+              aria-pressed={onlyOverPlannedHours}
               title="Lọc danh sách chỉ hiện dự án vượt giờ kế hoạch"
             >
               <span className="stat-card__label">
@@ -255,10 +264,10 @@ export default function ProjectPerformanceReportPage({
             </button>
             <button
               type="button"
-              className="stat-card"
+              className="stat-card ia-kpi-btn"
               data-testid="kpi-below-planned-margin-count"
               onClick={() => setOnlyBelowPlannedMargin((v) => !v)}
-              style={{ textAlign: 'left', cursor: 'pointer' }}
+              aria-pressed={onlyBelowPlannedMargin}
               title="Lọc danh sách chỉ hiện dự án dưới biên kế hoạch"
             >
               <span className="stat-card__label">
@@ -272,14 +281,24 @@ export default function ProjectPerformanceReportPage({
           </div>
 
           {(onlyOverPlannedHours || onlyBelowPlannedMargin) && (
-            <div className="toolbar-filters" style={{ marginBottom: '12px', gap: '8px' }} data-testid="project-performance-active-filters">
+            <div className="ia-chip-row" data-testid="project-performance-active-filters">
               {onlyOverPlannedHours && (
-                <button type="button" className="pipeline-stalled-chip" onClick={() => setOnlyOverPlannedHours(false)}>
+                <button
+                  type="button"
+                  className="pipeline-stalled-chip"
+                  onClick={() => setOnlyOverPlannedHours(false)}
+                  aria-label="Bỏ lọc Vượt giờ kế hoạch"
+                >
                   Vượt giờ kế hoạch {ICONS.close}
                 </button>
               )}
               {onlyBelowPlannedMargin && (
-                <button type="button" className="pipeline-stalled-chip" onClick={() => setOnlyBelowPlannedMargin(false)}>
+                <button
+                  type="button"
+                  className="pipeline-stalled-chip"
+                  onClick={() => setOnlyBelowPlannedMargin(false)}
+                  aria-label="Bỏ lọc Dưới biên kế hoạch"
+                >
                   Dưới biên kế hoạch {ICONS.close}
                 </button>
               )}
@@ -303,6 +322,16 @@ export default function ProjectPerformanceReportPage({
                 <div className="table-empty-state__icon">{ICONS.search}</div>
                 <h3>Không có dự án phù hợp bộ lọc</h3>
                 <p>Bỏ bớt bộ lọc phía trên để xem lại toàn bộ danh sách.</p>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    setOnlyOverPlannedHours(false);
+                    setOnlyBelowPlannedMargin(false);
+                  }}
+                >
+                  Bỏ tất cả bộ lọc
+                </button>
               </div>
             ) : (
               <div className="table-responsive">
@@ -311,10 +340,10 @@ export default function ProjectPerformanceReportPage({
                     <tr>
                       <th>Dự án</th>
                       <th>Hợp đồng</th>
-                      <th style={{ textAlign: 'right' }}>Giờ công (DK / TT)</th>
-                      <th style={{ textAlign: 'right' }}>Doanh thu (HĐ / Ghi nhận)</th>
-                      <th style={{ textAlign: 'right' }}>Biên LN (DK / TT)</th>
-                      <th style={{ textAlign: 'right' }}>Chi phí (DK / TT)</th>
+                      <th className="text-right">Giờ công (DK / TT)</th>
+                      <th className="text-right">Doanh thu (HĐ / Ghi nhận)</th>
+                      <th className="text-right">Biên LN (DK / TT)</th>
+                      <th className="text-right">Chi phí (DK / TT)</th>
                       <th>Cảnh báo</th>
                     </tr>
                   </thead>
@@ -333,7 +362,8 @@ export default function ProjectPerformanceReportPage({
   );
 }
 
-function ProjectPerformanceRow({
+/** memo: bấm thẻ lọc hay đổi trạng thái "đang tải lại" không vẽ lại các dòng không đổi. */
+const ProjectPerformanceRow = memo(function ProjectPerformanceRow({
   project: p,
   onViewProject,
 }: {
@@ -341,86 +371,70 @@ function ProjectPerformanceRow({
   onViewProject?: (projectId: number, projectName: string) => void;
 }) {
   const missingCount = p.missingPlannedCostItemCount + p.missingActualCostEntryCount + p.missingActualRevenueEntryCount;
+  const hoursTone = p.hoursVariance != null && p.hoursVariance > 0 ? 'ia-sub--bad' : 'ia-sub--good';
+  const marginTone =
+    p.marginGapPercentPoints == null ? '' : p.marginGapPercentPoints < 0 ? 'ia-sub--bad' : 'ia-sub--good';
 
   return (
     <tr data-testid={`project-performance-row-${p.projectId}`}>
       <td>
-        {onViewProject ? (
-          <button
-            type="button"
-            className="pipeline-stalled-chip"
-            onClick={() => onViewProject(p.projectId, p.projectName)}
-            style={{ marginBottom: '4px' }}
-          >
-            {p.projectCode}
-            <span aria-hidden="true">{ICONS.arrowRight}</span>
-          </button>
-        ) : (
-          <strong>{p.projectCode}</strong>
-        )}
-        <div style={{ fontSize: '13px', color: 'var(--ink-strong)' }}>{p.projectName}</div>
-        <span className={`status-pill ${p.status === 'RUNNING' ? 'status-pill--active' : 'status-pill--inactive'}`} style={{ marginTop: '4px' }}>
-          {p.status === 'RUNNING' ? 'Đang chạy' : 'Đã đóng'}
-        </span>
-        {!p.planAvailable && (
-          <div style={{ marginTop: '4px' }}>
-            <span className="badge badge--warning">Thiếu báo giá</span>
-          </div>
-        )}
+        <div className="ia-cell-stack">
+          {onViewProject ? (
+            <button
+              type="button"
+              className="pipeline-stalled-chip"
+              onClick={() => onViewProject(p.projectId, p.projectName)}
+              title={`Mở dự án ${p.projectName}`}
+            >
+              {p.projectCode}
+              <span aria-hidden="true">{ICONS.arrowRight}</span>
+            </button>
+          ) : (
+            <strong>{p.projectCode}</strong>
+          )}
+          <div className="ia-project-name">{p.projectName}</div>
+          <span className={`status-pill ${p.status === 'RUNNING' ? 'status-pill--active' : 'status-pill--inactive'}`}>
+            {p.status === 'RUNNING' ? 'Đang chạy' : 'Đã đóng'}
+          </span>
+          {!p.planAvailable && <span className="badge badge--warning">Thiếu báo giá</span>}
+        </div>
       </td>
       <td>
         <div className="mono-cell">{p.contractCode}</div>
-        <div style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>{contractTypeLabel(p.contractType)}</div>
+        <span className="ia-sub">{contractTypeLabel(p.contractType)}</span>
       </td>
-      <td style={{ textAlign: 'right' }}>
-        <div style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>DK: {formatHours(p.plannedHours)}</div>
+      <td className="ia-num">
+        <span className="ia-sub">DK: {formatHours(p.plannedHours)}</span>
         <div className="mono-cell">TT: {formatHours(p.actualHours)}</div>
-        <div
-          style={{
-            fontSize: '12.5px',
-            color: p.hoursVariance != null && p.hoursVariance > 0 ? 'var(--pale-red-fg)' : 'var(--pale-green-fg)',
-          }}
-        >
+        <span className={`ia-sub ${hoursTone}`}>
           {formatHoursSigned(p.hoursVariance)} ({formatPercentSigned(p.hoursVariancePercent)})
-        </div>
+        </span>
       </td>
-      <td style={{ textAlign: 'right' }}>
-        <div style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>HĐ: {formatCurrency(p.contractValue)}</div>
+      <td className="ia-num">
+        <span className="ia-sub">HĐ: {formatCurrency(p.contractValue)}</span>
         <div className="mono-cell">Ghi nhận: {formatCurrency(p.recognizedRevenue)}</div>
-        <div style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>{formatPercent(p.revenueToContractPercent)} hợp đồng</div>
+        <span className="ia-sub">{formatPercent(p.revenueToContractPercent)} hợp đồng</span>
       </td>
-      <td style={{ textAlign: 'right' }}>
-        <div style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>DK: {formatPercent(p.plannedMarginPercent)}</div>
+      <td className="ia-num">
+        <span className="ia-sub">DK: {formatPercent(p.plannedMarginPercent)}</span>
         <div className="mono-cell">TT: {formatPercent(p.actualMarginPercent)}</div>
-        <div
-          style={{
-            fontSize: '12.5px',
-            color:
-              p.marginGapPercentPoints == null ? 'var(--ink-faint)' : p.marginGapPercentPoints < 0 ? 'var(--pale-red-fg)' : 'var(--pale-green-fg)',
-          }}
-        >
-          {formatPercentSigned(p.marginGapPercentPoints)} điểm
-        </div>
+        <span className={`ia-sub ${marginTone}`}>{formatPercentSigned(p.marginGapPercentPoints)} điểm</span>
       </td>
-      <td style={{ textAlign: 'right' }}>
-        <div style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>
+      <td className="ia-num">
+        <span className="ia-sub">
           DK: <CostCell value={p.plannedCost} />
-        </div>
+        </span>
         <div>
           TT: <CostCell value={p.actualCost} />
         </div>
       </td>
       <td>
         {p.warnings.length === 0 && missingCount === 0 ? (
-          <span style={{ color: 'var(--ink-faint)' }}>—</span>
+          <span className="ia-dash">—</span>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxWidth: '260px' }}>
+          <div className="ia-warn-list">
             {p.warnings.map((w, i) => (
-              <span
-                key={i}
-                data-testid={`project-performance-warning-${p.projectId}-${i}`}
-                style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: '12.5px', color: 'var(--pale-yellow-fg)' }}
-              >
+              <span key={i} data-testid={`project-performance-warning-${p.projectId}-${i}`} className="ia-warn-item">
                 {ICONS.alertTriangle} {w}
               </span>
             ))}
@@ -434,4 +448,4 @@ function ProjectPerformanceRow({
       </td>
     </tr>
   );
-}
+});

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import type { DashboardKpiRes } from '../types/reportTypes';
 
@@ -8,6 +9,8 @@ export interface DashboardKpiRowProps {
   /** Bấm vào thẻ "Hóa đơn quá hạn" thì mở sang danh sách hóa đơn để xử lý tiếp. */
   onViewOverdueInvoices?: () => void;
 }
+
+const percentFormatter = new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const currencyFormatter = new Intl.NumberFormat('vi-VN', {
   style: 'currency',
@@ -21,9 +24,7 @@ function formatVND(value: number): string {
 
 /** `averageMarginRate`/`billableHoursRatio` là phân số (0.1000 = 10%) — nhân 100 để hiển thị %. */
 function formatPercent(fraction: number): string {
-  return `${new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
-    fraction * 100
-  )}%`;
+  return `${percentFormatter.format(fraction * 100)}%`;
 }
 
 /**
@@ -32,7 +33,7 @@ function formatPercent(fraction: number): string {
  * Hai chỉ số cảnh báo (âm biên, quá hạn) bấm được để mở thẳng sang màn hình liên quan xử lý
  * tiếp — không chỉ là con số tĩnh.
  */
-export default function DashboardKpiRow({
+function DashboardKpiRow({
   kpis,
   onViewNegativeMarginProjects,
   onViewOverdueInvoices,
@@ -44,7 +45,7 @@ export default function DashboardKpiRow({
           <span className="stat-card__icon stat-card__icon--green">{ICONS.money}</span>
           Doanh thu ghi nhận
         </span>
-        <span className="stat-card__value stat-card__value--md text-success">
+        <span className="stat-card__value stat-card__value--md">
           {formatVND(kpis.recognizedRevenue)}
         </span>
       </div>
@@ -69,11 +70,10 @@ export default function DashboardKpiRow({
 
       <button
         type="button"
-        className="stat-card"
+        className="stat-card ia-kpi-btn"
         data-testid="kpi-negative-margin-projects"
         onClick={onViewNegativeMarginProjects}
         disabled={!onViewNegativeMarginProjects}
-        style={{ textAlign: 'left', cursor: onViewNegativeMarginProjects ? 'pointer' : 'default' }}
         title={onViewNegativeMarginProjects ? 'Xem chi tiết dự án âm biên' : undefined}
       >
         <span className="stat-card__label">
@@ -83,15 +83,19 @@ export default function DashboardKpiRow({
         <span className={`stat-card__value ${kpis.negativeMarginProjectCount > 0 ? 'text-danger' : ''}`}>
           {kpis.negativeMarginProjectCount.toLocaleString('vi-VN')}
         </span>
+        {onViewNegativeMarginProjects && (
+          <span className="ia-kpi-btn__hint" aria-hidden="true">
+            Xem dự án {ICONS.arrowRight}
+          </span>
+        )}
       </button>
 
       <button
         type="button"
-        className="stat-card"
+        className="stat-card ia-kpi-btn"
         data-testid="kpi-overdue-invoices"
         onClick={onViewOverdueInvoices}
         disabled={!onViewOverdueInvoices}
-        style={{ textAlign: 'left', cursor: onViewOverdueInvoices ? 'pointer' : 'default' }}
         title={onViewOverdueInvoices ? 'Xem danh sách hóa đơn quá hạn' : undefined}
       >
         <span className="stat-card__label">
@@ -101,7 +105,15 @@ export default function DashboardKpiRow({
         <span className={`stat-card__value ${kpis.overdueInvoiceCount > 0 ? 'text-warning' : ''}`}>
           {kpis.overdueInvoiceCount.toLocaleString('vi-VN')}
         </span>
+        {onViewOverdueInvoices && (
+          <span className="ia-kpi-btn__hint" aria-hidden="true">
+            Xem hóa đơn {ICONS.arrowRight}
+          </span>
+        )}
       </button>
     </div>
   );
 }
+
+/** memo: dải chỉ số chỉ đổi khi số liệu đổi — gõ ngày trong bộ lọc không vẽ lại cả dải. */
+export default memo(DashboardKpiRow);

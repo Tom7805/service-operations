@@ -1,6 +1,7 @@
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
 import { useBackdropClick } from '../../../hooks/useBackdropClick';
+import { useDialogA11y } from '../../projects/components/deliveryUi';
 
 interface SubmitWeekConfirmModalProps {
   isOpen: boolean;
@@ -32,6 +33,8 @@ export default function SubmitWeekConfirmModal({
 }: SubmitWeekConfirmModalProps) {
   const backdrop = useBackdropClick(onCancel, submitting);
 
+  const dialogRef = useDialogA11y(isOpen, onCancel, submitting);
+
   if (!isOpen) return null;
 
   return (
@@ -45,7 +48,7 @@ export default function SubmitWeekConfirmModal({
         aria-labelledby="submit-week-modal-title"
         data-testid="submit-week-confirm-modal"
       >
-        <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
+        <div ref={dialogRef} className="modal-card dl-modal modal-card--sm" onClick={(e) => e.stopPropagation()}>
           <div className="modal-header">
             <h3 id="submit-week-modal-title" className="modal-title">
               <span className="modal-title__icon">{ICONS.check}</span> Xác nhận nộp bảng chấm công

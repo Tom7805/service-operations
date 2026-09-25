@@ -7,6 +7,7 @@ import RejectActionButton from '../components/RejectActionButton';
 import { getMyApprovalHistory, getPendingTimesheets, TimesheetsApiError } from '../api/timesheetsApi';
 import type { PendingTimesheetRes, TimesheetApprovalHistoryRes } from '../types/timesheetTypes';
 import { formatIsoDate } from '../utils/weekRange';
+import { useDialogA11y } from '../../projects/components/deliveryUi';
 
 export interface TimesheetRejectPageProps {
   currentUserRoles?: string[];
@@ -42,6 +43,7 @@ export default function TimesheetRejectPage({
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const historyBackdrop = useBackdropClick(() => setHistoryOpen(false));
+  const dialogRef = useDialogA11y(historyOpen, () => setHistoryOpen(false), false);
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setToast({ text, type });
@@ -263,7 +265,7 @@ export default function TimesheetRejectPage({
             role="dialog"
             aria-modal="true"
           >
-            <div className="modal-card" style={{ maxWidth: '760px' }}>
+            <div ref={dialogRef} className="modal-card dl-modal" style={{ maxWidth: '760px' }}>
               <div className="modal-header">
                 <div className="modal-header__title-wrap">
                   <h3 className="modal-title">

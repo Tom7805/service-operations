@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type {
   Opportunity,
   QuoteItemReq,
@@ -25,6 +25,13 @@ import { useBackdropClick } from '../../../hooks/useBackdropClick';
 
 /** Giá trị đặc biệt của ô chọn chức danh khi người dùng muốn tự gõ tay thay vì chọn từ danh mục có sẵn. */
 const MANUAL_ROLE_ENTRY = '__manual__';
+
+/** Formatter dựng một lần cho cả module — trước đây mỗi ô tiền dựng lại một Intl.NumberFormat. */
+const CURRENCY_FORMAT = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
+const formatCurrency = (amount: number | null | undefined): string => {
+  if (amount === null || amount === undefined) return '—';
+  return CURRENCY_FORMAT.format(amount);
+};
 
 interface QuoteBuilderProps {
   opportunity: Opportunity;
@@ -85,22 +92,64 @@ export default function QuoteBuilder({
   const [historyQuotes, setHistoryQuotes] = useState<QuoteRes[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  // Chỉ phản hồi của lần mở lịch sử MỚI NHẤT được ghi vào state (mở/đóng/mở lại nhanh
+  // không để phản hồi cũ về muộn đè lên).
+  const historyReqRef = useRef(0);
 
   const handleOpenHistory = async () => {
+    const reqId = ++historyReqRef.current;
     setIsHistoryOpen(true);
     setHistoryLoading(true);
     setHistoryError(null);
     try {
       const history = await fetchOpportunityQuoteHistory(opportunity.id);
-      setHistoryQuotes(history);
+      if (reqId === historyReqRef.current) setHistoryQuotes(history);
     } catch (err) {
+      if (reqId !== historyReqRef.current) return;
       setHistoryError(
         err instanceof QuoteApiError ? err.message : 'Không thể tải lịch sử báo giá. Vui lòng thử lại sau.'
       );
     } finally {
-      setHistoryLoading(false);
+      if (reqId === historyReqRef.current) setHistoryLoading(false);
     }
   };
+
+  // Gợi ý chức danh cho ô gõ tay — chỉ dựng lại khi danh mục đơn giá đổi, không phải mỗi lần gõ phím.
+  const roleSuggestions = useMemo(
+    () => [...new Set([...billRates.map((r) => r.professionalRole), ...POPULAR_PROFESSIONAL_ROLES])],
+    [billRates]
+  );
+
+  // Bàn phím: Esc đóng modal lịch sử trước (lớp trên cùng), rồi mới tới modal báo giá;
+  // không đóng khi đang gửi để không mất dữ liệu đang lưu.
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const historyDialogRef = useRef<HTMLDivElement | null>(null);
+  const escStateRef = useRef({ isHistoryOpen, submitting, onClose });
+  escStateRef.current = { isHistoryOpen, submitting, onClose };
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      const state = escStateRef.current;
+      if (state.isHistoryOpen) {
+        e.stopPropagation();
+        setIsHistoryOpen(false);
+        return;
+      }
+      if (state.submitting) return;
+      state.onClose();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isOpen]);
+
+  // Đưa focus vào hộp thoại khi mở (người dùng bàn phím/trình đọc màn hình bắt đầu ngay trong modal).
+  useEffect(() => {
+    if (isOpen) dialogRef.current?.focus();
+  }, [isOpen]);
+  useEffect(() => {
+    if (isHistoryOpen) historyDialogRef.current?.focus();
+  }, [isHistoryOpen]);
 
   if (!isOpen) return null;
 
@@ -142,6 +191,8 @@ export default function QuoteBuilder({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Chặn gửi hai lần (Enter trong ô nhập + bấm nút cùng lúc) khi yêu cầu trước chưa xong.
+    if (submitting) return;
     setServerError(null);
     setGeneralError(null);
 
@@ -183,13 +234,9 @@ export default function QuoteBuilder({
     }
   };
 
-  const formatCurrency = (amount: number | null | undefined): string => {
-    if (amount === null || amount === undefined) return '—';
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(amount);
-  };
+  const stageShortLabel =
+    STAGE_CONFIGS[opportunity.stage as keyof typeof STAGE_CONFIGS]?.shortLabel ?? opportunity.stage;
+  const isFormLocked = submitting || !isProposalStage || !isAllowedRole;
 
   return (
     <ModalPortal>
@@ -201,7 +248,7 @@ export default function QuoteBuilder({
       aria-modal="true"
       aria-labelledby="quote-builder-title"
     >
-      <div className="modal-card" style={{ maxWidth: '820px', maxHeight: '90vh' }}>
+      <div className="modal-card sl-modal sl-modal--wide" ref={dialogRef} tabIndex={-1}>
         {/* Header modal */}
         <div className="modal-header">
           <div className="modal-header__title-wrap">
@@ -211,7 +258,7 @@ export default function QuoteBuilder({
               </span>
               Lập báo giá cho cơ hội
             </h3>
-            <p className="field-hint" style={{ marginTop: '4px' }}>
+            <p className="field-hint sl-modal__lead">
               Dự toán nhân lực theo ngày công. Hệ thống tự động tra cứu đơn giá bán hiệu lực và tính thành tiền.
             </p>
           </div>
@@ -227,53 +274,18 @@ export default function QuoteBuilder({
         </div>
 
         {/* Thanh tóm tắt cơ hội */}
-        <div
-          style={{
-            padding: '12px 24px',
-            background: 'var(--surface-alt)',
-            borderBottom: '1px solid var(--line)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            fontSize: '13.5px',
-            flexWrap: 'wrap',
-            gap: '12px',
-          }}
-        >
-          <div>
-            <span style={{ color: 'var(--ink-muted)' }}>Cơ hội: </span>
-            {opportunity.code && (
-              <span
-                style={{
-                  fontFamily: 'var(--font-mono, monospace)',
-                  fontWeight: 600,
-                  marginRight: '6px',
-                  color: 'var(--ink-strong)',
-                }}
-              >
-                [{opportunity.code}]
-              </span>
-            )}
-            <strong style={{ color: 'var(--ink-strong)' }}>{opportunity.name}</strong>
+        <div className="sl-modal-summary">
+          <div className="sl-modal-summary__main">
+            <span className="sl-modal-summary__label">Cơ hội: </span>
+            {opportunity.code && <span className="sl-code sl-modal-summary__code">[{opportunity.code}]</span>}
+            <strong>{opportunity.name}</strong>
             {opportunity.customerName && (
-              <span style={{ color: 'var(--ink-soft)' }}> — {opportunity.customerName}</span>
+              <span className="sl-modal-summary__sub"> — {opportunity.customerName}</span>
             )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '12.5px', color: 'var(--ink-muted)' }}>Giai đoạn:</span>
-            <span
-              style={{
-                padding: '2px 8px',
-                borderRadius: '999px',
-                fontSize: '12px',
-                fontWeight: 600,
-                background: isProposalStage ? 'var(--pale-blue-bg)' : 'var(--surface-sunken)',
-                color: isProposalStage ? 'var(--pale-blue-fg)' : 'var(--ink-muted)',
-                border: '1px solid var(--line)',
-              }}
-            >
-              {STAGE_CONFIGS[opportunity.stage as keyof typeof STAGE_CONFIGS]?.shortLabel ?? opportunity.stage}
-            </span>
+          <div className="sl-modal-summary__stage">
+            <span className="sl-modal-summary__label">Giai đoạn:</span>
+            <span className={`sl-tag${isProposalStage ? ' sl-tag--info' : ''}`}>{stageShortLabel}</span>
           </div>
         </div>
 
@@ -281,7 +293,7 @@ export default function QuoteBuilder({
             thật từ bảng đơn giá (đảm bảo khớp), kèm danh sách gợi ý tĩnh dự
             phòng khi chưa tải được đơn giá (mất mạng, chưa có quyền xem...). */}
         <datalist id="popular-roles-suggestions">
-          {[...new Set([...billRates.map((r) => r.professionalRole), ...POPULAR_PROFESSIONAL_ROLES])].map((role) => (
+          {roleSuggestions.map((role) => (
             <option key={role} value={role} />
           ))}
         </datalist>
@@ -289,25 +301,9 @@ export default function QuoteBuilder({
         <div className="modal-body">
           {/* Cảnh báo nếu cơ hội KHÔNG ở giai đoạn PROPOSAL */}
           {!isProposalStage && (
-            <div
-              className="alert-box alert-box--warning"
-              role="alert"
-              style={{
-                marginBottom: '16px',
-                padding: '12px 14px',
-                background: 'var(--pale-yellow-bg)',
-                color: 'var(--pale-yellow-fg)',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid rgba(149, 100, 0, 0.25)',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '10px',
-                fontSize: '13.5px',
-                lineHeight: '1.5',
-              }}
-            >
-              <span style={{ flexShrink: 0, marginTop: '2px' }}>{ICONS.alertTriangle}</span>
-              <div>
+            <div className="sl-banner sl-banner--warning" role="alert">
+              <span className="sl-banner__icon" aria-hidden="true">{ICONS.alertTriangle}</span>
+              <div className="sl-banner__body">
                 <strong>Quy định nghiệp vụ:</strong> Báo giá chỉ được phép khởi tạo khi cơ hội
                 ở giai đoạn <strong>Đề xuất giải pháp</strong>. Cơ hội hiện tại đang ở giai đoạn{' '}
                 <code>{opportunity.stage}</code>. Vui lòng chuyển giai đoạn cơ hội sang Đề xuất trước khi tạo báo giá.
@@ -317,24 +313,9 @@ export default function QuoteBuilder({
 
           {/* Cảnh báo phân quyền nếu không có vai trò VT-04 */}
           {!isAllowedRole && (
-            <div
-              className="alert-box alert-box--danger"
-              role="alert"
-              style={{
-                marginBottom: '16px',
-                padding: '10px 14px',
-                background: 'var(--pale-red-bg)',
-                color: 'var(--pale-red-fg)',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid rgba(159, 47, 45, 0.2)',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '10px',
-                fontSize: '13.5px',
-              }}
-            >
-              <span style={{ flexShrink: 0, marginTop: '2px' }}>{ICONS.lock}</span>
-              <div>
+            <div className="sl-banner sl-banner--error" role="alert">
+              <span className="sl-banner__icon" aria-hidden="true">{ICONS.lock}</span>
+              <div className="sl-banner__body">
                 <strong>Từ chối truy cập:</strong> Chức năng lập báo giá yêu cầu vai trò Nhân viên kinh doanh.
               </div>
             </div>
@@ -342,62 +323,26 @@ export default function QuoteBuilder({
 
           {/* Thông báo lỗi server hoặc validation tổng */}
           {(serverError || generalError) && (
-            <div
-              className="alert-box alert-box--danger"
-              role="alert"
-              style={{
-                marginBottom: '16px',
-                padding: '10px 14px',
-                background: 'var(--pale-red-bg)',
-                color: 'var(--pale-red-fg)',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid rgba(159, 47, 45, 0.2)',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '10px',
-                fontSize: '13.5px',
-              }}
-            >
-              <span style={{ flexShrink: 0, marginTop: '2px' }}>{ICONS.alertTriangle}</span>
-              <div>{serverError || generalError}</div>
+            <div className="sl-banner sl-banner--error" role="alert">
+              <span className="sl-banner__icon" aria-hidden="true">{ICONS.alertTriangle}</span>
+              <div className="sl-banner__body">{serverError || generalError}</div>
             </div>
           )}
 
           {/* Hiển thị kết quả báo giá vừa tạo (nếu có và không trong chế độ chỉnh sửa tạo mới) */}
           {latestQuote && !isEditingNewVersion ? (
             <div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '12px',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span
-                    style={{
-                      padding: '3px 10px',
-                      background: 'var(--pale-green-bg)',
-                      color: 'var(--pale-green-fg)',
-                      borderRadius: '999px',
-                      fontSize: '12.5px',
-                      fontWeight: 600,
-                    }}
-                  >
-                    Báo giá Phiên bản #{latestQuote.version}
-                  </span>
-                  <span style={{ fontSize: '13px', color: 'var(--ink-muted)' }}>
-                    Lập bởi @{latestQuote.createdBy || 'sale01'}
-                  </span>
+              <div className="sl-quote-head">
+                <div className="sl-quote-head__meta">
+                  <span className="sl-tag sl-tag--success">Báo giá Phiên bản #{latestQuote.version}</span>
+                  <span className="sl-quote-head__by">Lập bởi @{latestQuote.createdBy || 'sale01'}</span>
                 </div>
 
                 {isProposalStage && isAllowedRole && (
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="btn btn-secondary sl-btn-sm"
                     onClick={() => setIsEditingNewVersion(true)}
-                    style={{ fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   >
                     <span className="icon-sm">{ICONS.plus}</span>
                     <span>Tạo phiên bản báo giá mới</span>
@@ -407,24 +352,11 @@ export default function QuoteBuilder({
 
               {/* Cảnh báo missingRates nếu có */}
               {latestQuote.missingRates && latestQuote.missingRates.length > 0 && (
-                <div
-                  style={{
-                    marginBottom: '16px',
-                    padding: '12px 14px',
-                    background: 'var(--pale-yellow-bg)',
-                    color: 'var(--pale-yellow-fg)',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid rgba(149, 100, 0, 0.25)',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '10px',
-                    fontSize: '13.5px',
-                  }}
-                >
-                  <span style={{ flexShrink: 0, marginTop: '2px' }}>{ICONS.alertTriangle}</span>
-                  <div>
+                <div className="sl-banner sl-banner--warning">
+                  <span className="sl-banner__icon" aria-hidden="true">{ICONS.alertTriangle}</span>
+                  <div className="sl-banner__body">
                     <strong>Cảnh báo chưa có đơn giá hiệu lực:</strong>
-                    <p style={{ margin: '4px 0 0' }}>
+                    <p>
                       Các vị trí sau chưa được cấu hình đơn giá bán:{' '}
                       <strong>{latestQuote.missingRates.join(', ')}</strong>. Các dòng này được đánh dấu{' '}
                       <code>priced: false</code> và <strong>không được cộng vào tổng tiền báo giá</strong>.
@@ -434,80 +366,32 @@ export default function QuoteBuilder({
               )}
 
               {/* Bảng chi tiết kết quả báo giá */}
-              <div
-                style={{
-                  border: '1px solid var(--line)',
-                  borderRadius: 'var(--radius-md)',
-                  overflow: 'hidden',
-                  marginBottom: '16px',
-                }}
-              >
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13.5px' }}>
+              {/* Dòng chưa có đơn giá được đánh dấu bằng nhãn chữ + màu chữ, không đổ nền cả hàng
+                  (DESIGN.md: nền màu cả hàng vừa là mảng màu lớn, vừa giết phản hồi rê chuột). */}
+              <div className="sl-mini-table sl-mini-table--scroll">
+                <table className="sl-mini-table__table">
                   <thead>
-                    <tr style={{ background: 'var(--surface-alt)', borderBottom: '1px solid var(--line)' }}>
-                      <th style={{ padding: '10px 14px', textAlign: 'center', width: '48px' }}>#</th>
-                      <th style={{ padding: '10px 14px', textAlign: 'left' }}>Vị trí / chức danh</th>
-                      <th style={{ padding: '10px 14px', textAlign: 'right', width: '120px' }}>Ngày công</th>
-                      <th style={{ padding: '10px 14px', textAlign: 'right', width: '160px' }}>Đơn giá/ngày</th>
-                      <th style={{ padding: '10px 14px', textAlign: 'right', width: '180px' }}>Thành tiền</th>
+                    <tr>
+                      <th scope="col" className="sl-mini-table__idx">#</th>
+                      <th scope="col">Vị trí / chức danh</th>
+                      <th scope="col" className="sl-num">Ngày công</th>
+                      <th scope="col" className="sl-num">Đơn giá/ngày</th>
+                      <th scope="col" className="sl-num">Thành tiền</th>
                     </tr>
                   </thead>
                   <tbody>
                     {latestQuote.items.map((item, idx) => (
-                      <tr
-                        key={idx}
-                        style={{
-                          borderBottom: '1px solid var(--line)',
-                          background: item.priced ? 'transparent' : 'rgba(251, 243, 219, 0.3)',
-                        }}
-                      >
-                        <td style={{ padding: '10px 14px', textAlign: 'center', color: 'var(--ink-muted)' }}>
-                          {idx + 1}
-                        </td>
-                        <td style={{ padding: '10px 14px' }}>
-                          <div style={{ fontWeight: 600, color: 'var(--ink-strong)' }}>{item.professionalRole}</div>
+                      <tr key={idx} className={item.priced ? undefined : 'is-unpriced'}>
+                        <td className="sl-mini-table__idx">{idx + 1}</td>
+                        <td>
+                          <div className="sl-mini-table__title">{item.professionalRole}</div>
                           {!item.priced && (
-                            <span
-                              style={{
-                                fontSize: '11px',
-                                color: 'var(--pale-yellow-fg)',
-                                fontWeight: 500,
-                              }}
-                            >
-                              (Chưa có đơn giá bán hiệu lực)
-                            </span>
+                            <span className="sl-mini-table__warn">(Chưa có đơn giá bán hiệu lực)</span>
                           )}
                         </td>
-                        <td
-                          style={{
-                            padding: '10px 14px',
-                            textAlign: 'right',
-                            fontFamily: 'var(--font-mono, monospace)',
-                          }}
-                        >
-                          {item.workDays}
-                        </td>
-                        <td
-                          style={{
-                            padding: '10px 14px',
-                            textAlign: 'right',
-                            fontFamily: 'var(--font-mono, monospace)',
-                            color: item.priced ? 'var(--ink-soft)' : 'var(--ink-muted)',
-                          }}
-                        >
-                          {formatCurrency(item.unitRate)}
-                        </td>
-                        <td
-                          style={{
-                            padding: '10px 14px',
-                            textAlign: 'right',
-                            fontFamily: 'var(--font-mono, monospace)',
-                            fontWeight: 600,
-                            color: item.priced ? 'var(--ink-strong)' : 'var(--ink-muted)',
-                          }}
-                        >
-                          {formatCurrency(item.amount)}
-                        </td>
+                        <td className="sl-num sl-mono">{item.workDays}</td>
+                        <td className="sl-num sl-mono sl-mini-table__rate">{formatCurrency(item.unitRate)}</td>
+                        <td className="sl-num sl-mono sl-mini-table__amount">{formatCurrency(item.amount)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -515,91 +399,40 @@ export default function QuoteBuilder({
               </div>
 
               {/* Tổng tiền báo giá */}
-              <div
-                style={{
-                  padding: '16px 20px',
-                  background: 'var(--surface-alt)',
-                  border: '1px solid var(--line)',
-                  borderRadius: 'var(--radius-md)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <div>
-                  <div
-                    style={{
-                      fontFamily: 'var(--font-mono, monospace)',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      textTransform: 'uppercase',
-                      color: 'var(--ink-muted)',
-                    }}
-                  >
-                    Tổng giá trị báo giá (đã gồm đơn giá hệ thống)
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '13px',
-                      color: 'var(--ink-soft)',
-                      fontStyle: 'italic',
-                      marginTop: '4px',
-                    }}
-                  >
+              <div className="sl-total">
+                <div className="sl-total__text">
+                  <div className="sl-total__label">Tổng giá trị báo giá (đã gồm đơn giá hệ thống)</div>
+                  <div className="sl-total__words">
                     Bằng chữ: {convertVNDToWords(latestQuote.totalAmount) || 'Không đồng'}
                   </div>
                 </div>
-                <div
-                  style={{
-                    fontSize: '24px',
-                    fontWeight: 700,
-                    fontFamily: 'var(--font-mono, monospace)',
-                    fontVariantNumeric: 'tabular-nums',
-                    color: 'var(--ink-strong)',
-                  }}
-                >
-                  {formatCurrency(latestQuote.totalAmount)}
-                </div>
+                <div className="sl-total__value">{formatCurrency(latestQuote.totalAmount)}</div>
               </div>
             </div>
           ) : (
             /* Biểu mẫu nhập liệu các dòng báo giá */
             <form onSubmit={handleSubmit} noValidate>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '12px',
-                }}
-              >
-                <span style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--ink-strong)' }}>
-                  Bảng danh mục vị trí & số ngày công dự kiến
-                </span>
-                <span style={{ fontSize: '12px', color: 'var(--ink-muted)' }}>
+              <div className="sl-quote-formhead">
+                <span className="sl-quote-formhead__title">Bảng danh mục vị trí & số ngày công dự kiến</span>
+                <span className="sl-quote-formhead__hint">
                   Đơn giá sẽ được máy chủ tự động tra cứu theo ngày hiệu lực
                 </span>
               </div>
 
-              <div
-                style={{
-                  border: '1px solid var(--line)',
-                  borderRadius: 'var(--radius-md)',
-                  overflow: 'hidden',
-                  marginBottom: '14px',
-                }}
-              >
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13.5px' }}>
+              {/* Dưới 640px mỗi dòng báo giá xếp thành một thẻ (chức danh chiếm trọn chiều ngang),
+                  không còn phải cuộn ngang để nhập trên điện thoại. */}
+              <div className="sl-mini-table">
+                <table className="sl-mini-table__table sl-quote-edit">
                   <thead>
-                    <tr style={{ background: 'var(--surface-alt)', borderBottom: '1px solid var(--line)' }}>
-                      <th style={{ padding: '10px 12px', textAlign: 'center', width: '48px' }}>#</th>
-                      <th style={{ padding: '10px 12px', textAlign: 'left' }}>
+                    <tr>
+                      <th scope="col" className="sl-mini-table__idx">#</th>
+                      <th scope="col">
                         Vị trí / chức danh <span className="req">*</span>
                       </th>
-                      <th style={{ padding: '10px 12px', textAlign: 'right', width: '160px' }}>
+                      <th scope="col" className="sl-num sl-quote-edit__days">
                         Số ngày công <span className="req">*</span>
                       </th>
-                      <th style={{ padding: '10px 12px', textAlign: 'center', width: '60px' }}>Xóa</th>
+                      <th scope="col" className="sl-quote-edit__del">Xóa</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -608,11 +441,9 @@ export default function QuoteBuilder({
                       const daysError = fieldErrors[`items[${idx}].workDays`];
 
                       return (
-                        <tr key={idx} style={{ borderBottom: '1px solid var(--line)' }}>
-                          <td style={{ padding: '10px 12px', textAlign: 'center', color: 'var(--ink-muted)' }}>
-                            {idx + 1}
-                          </td>
-                          <td style={{ padding: '10px 12px' }}>
+                        <tr key={idx}>
+                          <td className="sl-mini-table__idx">{idx + 1}</td>
+                          <td className="sl-quote-edit__role">
                             {(() => {
                               const hasBillRateOptions = billRates.length > 0;
                               const isKnownRole = billRates.some(
@@ -629,6 +460,7 @@ export default function QuoteBuilder({
                                   <>
                                     <select
                                       className={`form-input ${roleError ? 'form-input--error' : ''}`}
+                                      aria-invalid={roleError ? true : undefined}
                                       value={item.professionalRole}
                                       onChange={(e) => {
                                         if (e.target.value === MANUAL_ROLE_ENTRY) {
@@ -638,7 +470,7 @@ export default function QuoteBuilder({
                                         }
                                         handleItemChange(idx, 'professionalRole', e.target.value);
                                       }}
-                                      disabled={submitting || !isProposalStage || !isAllowedRole}
+                                      disabled={isFormLocked}
                                       aria-label={`Vị trí / chức danh dòng ${idx + 1}`}
                                     >
                                       <option value="" disabled>
@@ -665,18 +497,18 @@ export default function QuoteBuilder({
                                     type="text"
                                     list="popular-roles-suggestions"
                                     className={`form-input ${roleError ? 'form-input--error' : ''}`}
+                                    aria-invalid={roleError ? true : undefined}
                                     placeholder="Nhập hoặc chọn vị trí / chức danh..."
                                     value={item.professionalRole}
                                     onChange={(e) => handleItemChange(idx, 'professionalRole', e.target.value)}
-                                    disabled={submitting || !isProposalStage || !isAllowedRole}
+                                    disabled={isFormLocked}
                                     aria-label={`Vị trí / chức danh dòng ${idx + 1}`}
                                   />
                                   {roleError && <span className="field-error">{roleError}</span>}
                                   {hasBillRateOptions && (
                                     <button
                                       type="button"
-                                      className="btn-link"
-                                      style={{ fontSize: '12px', marginTop: '4px', padding: 0 }}
+                                      className="btn-link sl-link-sm"
                                       onClick={() => {
                                         setManualRoleRows((prev) => {
                                           const next = new Set(prev);
@@ -685,7 +517,7 @@ export default function QuoteBuilder({
                                         });
                                         handleItemChange(idx, 'professionalRole', '');
                                       }}
-                                      disabled={submitting || !isProposalStage || !isAllowedRole}
+                                      disabled={isFormLocked}
                                     >
                                       ← Chọn từ danh mục có sẵn
                                     </button>
@@ -694,36 +526,30 @@ export default function QuoteBuilder({
                               );
                             })()}
                           </td>
-                          <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                          <td className="sl-num sl-quote-edit__days" data-label="Số ngày công">
                             <input
                               type="number"
                               min="0.5"
                               step="0.5"
-                              className={`form-input ${daysError ? 'form-input--error' : ''}`}
+                              inputMode="decimal"
+                              className={`form-input sl-input-num ${daysError ? 'form-input--error' : ''}`}
+                              aria-invalid={daysError ? true : undefined}
                               placeholder="Ví dụ: 20"
                               value={item.workDays === ('' as unknown as number) ? '' : item.workDays}
                               onChange={(e) => handleItemChange(idx, 'workDays', e.target.value)}
-                              disabled={submitting || !isProposalStage || !isAllowedRole}
-                              style={{
-                                textAlign: 'right',
-                                fontFamily: 'var(--font-mono, monospace)',
-                              }}
+                              disabled={isFormLocked}
                               aria-label={`Số ngày công dòng ${idx + 1}`}
                             />
                             {daysError && <span className="field-error">{daysError}</span>}
                           </td>
-                          <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                          <td className="sl-quote-edit__del">
                             <button
                               type="button"
-                              className="icon-btn"
+                              className="icon-btn sl-icon-btn-danger"
                               onClick={() => handleRemoveItem(idx)}
-                              disabled={items.length <= 1 || submitting || !isProposalStage || !isAllowedRole}
+                              disabled={items.length <= 1 || isFormLocked}
                               title={items.length <= 1 ? 'Báo giá phải có ít nhất 1 dòng' : 'Xóa dòng'}
                               aria-label={`Xóa dòng ${idx + 1}`}
-                              style={{
-                                color: items.length <= 1 ? 'var(--ink-faint)' : 'var(--pale-red-fg)',
-                                opacity: items.length <= 1 ? 0.4 : 1,
-                              }}
                             >
                               {ICONS.trash}
                             </button>
@@ -736,14 +562,13 @@ export default function QuoteBuilder({
               </div>
 
               {/* Nút thêm dòng */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="sl-quote-actions">
+                <div className="sl-quote-actions__group">
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="btn btn-secondary sl-btn-sm"
                     onClick={handleAddItem}
-                    disabled={submitting || !isProposalStage || !isAllowedRole}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+                    disabled={isFormLocked}
                   >
                     <span className="icon-sm">{ICONS.plus}</span>
                     <span>Thêm dòng báo giá</span>
@@ -751,10 +576,9 @@ export default function QuoteBuilder({
 
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="btn btn-secondary sl-btn-sm"
                     onClick={handleOpenHistory}
                     disabled={submitting}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
                   >
                     <span className="icon-sm">{ICONS.history}</span>
                     <span>Lịch sử báo giá</span>
@@ -764,9 +588,8 @@ export default function QuoteBuilder({
                 {latestQuote && isEditingNewVersion && (
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="btn btn-secondary sl-btn-sm"
                     onClick={() => setIsEditingNewVersion(false)}
-                    style={{ fontSize: '13px' }}
                   >
                     Xem lại báo giá phiên bản #{latestQuote.version}
                   </button>
@@ -787,8 +610,8 @@ export default function QuoteBuilder({
               type="button"
               className="btn btn-primary"
               onClick={handleSubmit}
-              disabled={submitting || !isProposalStage || !isAllowedRole}
-              style={{ minWidth: '160px' }}
+              disabled={isFormLocked}
+              aria-busy={submitting}
             >
               {submitting ? (
                 <>
@@ -817,7 +640,7 @@ export default function QuoteBuilder({
           aria-modal="true"
           aria-labelledby="quote-history-title"
         >
-          <div className="modal-card" style={{ maxWidth: '640px', maxHeight: '80vh' }}>
+          <div className="modal-card sl-modal" ref={historyDialogRef} tabIndex={-1}>
             <div className="modal-header">
               <h3 id="quote-history-title" className="modal-title">
                 <span className="modal-title__icon" aria-hidden="true">
@@ -837,70 +660,49 @@ export default function QuoteBuilder({
 
             <div className="modal-body">
               {historyLoading && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', color: 'var(--ink-muted)' }}>
-                  <span className="spinner-sm" aria-hidden="true" />
-                  <span>Đang tải lịch sử báo giá...</span>
+                <div className="sl-list" aria-busy="true">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="sl-list-item">
+                      <div className="sl-list-item__main">
+                        <div className="skeleton skeleton-text" style={{ width: '38%' }} />
+                        <div className="skeleton skeleton-text skeleton-text--sm" style={{ width: '62%', marginTop: '8px' }} />
+                      </div>
+                      <div className="skeleton skeleton-text" style={{ width: '90px' }} />
+                    </div>
+                  ))}
+                  <span className="sl-sr-only" role="status">Đang tải lịch sử báo giá...</span>
                 </div>
               )}
 
               {!historyLoading && historyError && (
-                <div
-                  className="alert-box alert-box--danger"
-                  role="alert"
-                  style={{
-                    padding: '10px 14px',
-                    background: 'var(--pale-red-bg)',
-                    color: 'var(--pale-red-fg)',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid rgba(159, 47, 45, 0.2)',
-                    fontSize: '13.5px',
-                  }}
-                >
-                  {historyError}
+                <div className="sl-banner sl-banner--error" role="alert">
+                  <span className="sl-banner__body">{historyError}</span>
+                  <span className="sl-banner__action">
+                    <button type="button" className="btn btn-secondary sl-btn-sm" onClick={handleOpenHistory}>
+                      Thử lại
+                    </button>
+                  </span>
                 </div>
               )}
 
               {!historyLoading && !historyError && historyQuotes.length === 0 && (
-                <div style={{ fontSize: '13.5px', color: 'var(--ink-muted)' }}>
-                  Cơ hội này chưa có phiên bản báo giá nào được lập.
-                </div>
+                <p className="sl-empty__text">
+                  Cơ hội này chưa có phiên bản báo giá nào được lập. Đóng cửa sổ này và bấm "Lưu & Tạo báo giá" để lập phiên bản đầu tiên.
+                </p>
               )}
 
               {!historyLoading && !historyError && historyQuotes.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div className="sl-list">
                   {historyQuotes.map((quote) => (
-                    <div
-                      key={quote.id}
-                      style={{
-                        border: '1px solid var(--line)',
-                        borderRadius: 'var(--radius-md)',
-                        padding: '12px 14px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        gap: '12px',
-                        flexWrap: 'wrap',
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 600, color: 'var(--ink-strong)', fontSize: '13.5px' }}>
-                          Phiên bản #{quote.version}
-                        </div>
-                        <div style={{ fontSize: '12.5px', color: 'var(--ink-muted)' }}>
+                    <div key={quote.id} className="sl-list-item">
+                      <div className="sl-list-item__main">
+                        <div className="sl-list-item__title">Phiên bản #{quote.version}</div>
+                        <div className="sl-list-item__sub">
                           Lập bởi @{quote.createdBy || 'sale01'}
                           {quote.createdAt && ` — ${new Date(quote.createdAt).toLocaleString('vi-VN')}`}
                         </div>
                       </div>
-                      <div
-                        style={{
-                          fontFamily: 'var(--font-mono, monospace)',
-                          fontWeight: 700,
-                          fontSize: '15px',
-                          color: 'var(--ink-strong)',
-                        }}
-                      >
-                        {formatCurrency(quote.totalAmount)}
-                      </div>
+                      <div className="sl-list-item__value">{formatCurrency(quote.totalAmount)}</div>
                     </div>
                   ))}
                 </div>

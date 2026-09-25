@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { memo, useMemo, useState } from 'react';
 import type { User, UserStatus } from '../types/userTypes';
 import { SYSTEM_DEPARTMENTS, SYSTEM_ROLES } from '../types/userTypes';
 import { ICONS } from './icons';
@@ -17,6 +17,118 @@ interface UserTableProps {
   onResetTwoFactor?: (user: User) => void;
 }
 
+const getDepartmentName = (deptId: number | null) => {
+  if (!deptId) return 'Chưa gán bộ phận';
+  const dept = SYSTEM_DEPARTMENTS.find((d) => d.id === deptId);
+  return dept ? dept.name : `Bộ phận #${deptId}`;
+};
+
+const getRoleBadge = (code: string) => {
+  const role = SYSTEM_ROLES.find((r) => r.code === code);
+  const name = role ? role.name : code;
+  return (
+    <span key={code} className="role-chip" title={role?.description || name}>
+      {name}
+    </span>
+  );
+};
+
+const getStatusBadge = (status: UserStatus) => {
+  switch (status) {
+    case 'ACTIVE':
+      return <span className="status-pill status-pill--active"><i className="status-pill__dot" /> Hoạt động</span>;
+    case 'LOCKED':
+      return <span className="status-pill status-pill--locked"><i className="status-pill__dot" /> Đã khóa</span>;
+    case 'INACTIVE':
+      return <span className="status-pill status-pill--inactive"><i className="status-pill__dot" /> Ngưng hoạt động</span>;
+    default:
+      return <span className="status-pill status-pill--inactive">{status}</span>;
+  }
+};
+
+interface UserRowProps {
+  user: User;
+  index: number;
+  onEdit: (user: User) => void;
+  onToggleStatus: (user: User) => void;
+  onAssignRoles: (user: User) => void;
+  onViewDetail: (user: User) => void;
+  onResetTwoFactor?: (user: User) => void;
+}
+
+/** memo: gõ tìm kiếm / đổi tab chỉ vẽ lại dòng có thay đổi, không dựng lại cả bảng. */
+const UserRow = memo(function UserRow({
+  user,
+  index,
+  onEdit,
+  onToggleStatus,
+  onAssignRoles,
+  onViewDetail,
+  onResetTwoFactor,
+}: UserRowProps) {
+  const departmentName = getDepartmentName(user.departmentId);
+  return (
+    <tr className={user.status === 'LOCKED' ? 'row--locked' : ''}>
+      <td className="col-index">{index + 1}</td>
+      <td>
+        {/* Nút thật (không phải div bắt click) — tới được bằng Tab, bấm được bằng Enter/Space. */}
+        <button
+          type="button"
+          className="user-profile-cell ia-row-link"
+          onClick={() => onViewDetail(user)}
+          title="Nhấp để xem chi tiết"
+        >
+          <div className="avatar-circle" aria-hidden="true">
+            {user.fullName.charAt(0).toUpperCase()}
+          </div>
+          <div className="user-profile-meta">
+            <span className="user-profile-fullname" title={user.fullName}>{user.fullName}</span>
+            <span className="user-profile-username" title={`@${user.username}`}>@{user.username}</span>
+          </div>
+        </button>
+      </td>
+      <td>
+        <span className="cell-email" title={user.email || undefined}>{user.email || '—'}</span>
+      </td>
+      <td>
+        <span className="cell-dept" title={departmentName}>{departmentName}</span>
+      </td>
+      <td>
+        <div className="user-tags-wrap">
+          {user.roleCodes && user.roleCodes.length > 0
+            ? user.roleCodes.map((code) => getRoleBadge(code))
+            : <span className="cell-muted">Chưa gán</span>}
+        </div>
+      </td>
+      <td>{getStatusBadge(user.status)}</td>
+      <td className="text-right">
+        <RowActionsMenu
+          actions={[
+            { key: 'edit', label: 'Chỉnh sửa thông tin', icon: ICONS.edit, onClick: () => onEdit(user) },
+            { key: 'role', label: 'Phân quyền & vai trò', icon: ICONS.role, onClick: () => onAssignRoles(user) },
+            { key: 'detail', label: 'Xem chi tiết', icon: ICONS.eye, onClick: () => onViewDetail(user) },
+            ...(onResetTwoFactor
+              ? [{
+                  key: 'reset-2fa',
+                  label: 'Đặt lại xác thực hai bước',
+                  icon: ICONS.resetTwoFactor,
+                  onClick: () => onResetTwoFactor(user),
+                }]
+              : []),
+            {
+              key: 'toggle-status',
+              label: user.status === 'LOCKED' ? 'Mở khóa tài khoản' : 'Khóa tài khoản',
+              icon: user.status === 'LOCKED' ? ICONS.unlock : ICONS.lock,
+              onClick: () => onToggleStatus(user),
+              tone: user.status === 'LOCKED' ? 'default' : 'danger',
+            },
+          ]}
+        />
+      </td>
+    </tr>
+  );
+});
+
 export const UserTable: React.FC<UserTableProps> = ({
   users,
   loading,
@@ -31,61 +143,45 @@ export const UserTable: React.FC<UserTableProps> = ({
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
-  // Filter users based on local search & filters
-  const filteredUsers = users.filter((user) => {
+  // Lọc tại chỗ — chỉ tính lại khi danh sách hoặc bộ lọc đổi, không phải mỗi lần mở menu/toast.
+  const filteredUsers = useMemo(() => {
     const term = search.toLowerCase().trim();
-    const matchesSearch =
-      !term ||
-      user.username.toLowerCase().includes(term) ||
-      user.fullName.toLowerCase().includes(term) ||
-      (user.email && user.email.toLowerCase().includes(term));
+    return users.filter((user) => {
+      const matchesSearch =
+        !term ||
+        user.username.toLowerCase().includes(term) ||
+        user.fullName.toLowerCase().includes(term) ||
+        (user.email && user.email.toLowerCase().includes(term));
 
-    const matchesRole = roleFilter === 'ALL' || user.roleCodes.includes(roleFilter);
-    const matchesStatus = statusFilter === 'ALL' || user.status === statusFilter;
+      const matchesRole = roleFilter === 'ALL' || user.roleCodes.includes(roleFilter);
+      const matchesStatus = statusFilter === 'ALL' || user.status === statusFilter;
 
-    return matchesSearch && matchesRole && matchesStatus;
-  });
+      return matchesSearch && matchesRole && matchesStatus;
+    });
+  }, [users, search, roleFilter, statusFilter]);
 
-  const getDepartmentName = (deptId: number | null) => {
-    if (!deptId) return 'Chưa gán bộ phận';
-    const dept = SYSTEM_DEPARTMENTS.find((d) => d.id === deptId);
-    return dept ? dept.name : `Bộ phận #${deptId}`;
-  };
-
-  const getRoleBadge = (code: string) => {
-    const role = SYSTEM_ROLES.find((r) => r.code === code);
-    const name = role ? role.name : code;
-    return (
-      <span key={code} className="role-chip" title={role?.description || name}>
-        {name}
-      </span>
-    );
-  };
-
-  const getStatusBadge = (status: UserStatus) => {
-    switch (status) {
-      case 'ACTIVE':
-        return <span className="status-pill status-pill--active"><i className="status-pill__dot" /> Hoạt động</span>;
-      case 'LOCKED':
-        return <span className="status-pill status-pill--locked"><i className="status-pill__dot" /> Đã khóa</span>;
-      case 'INACTIVE':
-        return <span className="status-pill status-pill--inactive"><i className="status-pill__dot" /> Ngưng hoạt động</span>;
-      default:
-        return <span className="status-pill status-pill--inactive">{status}</span>;
+  const { activeCount, lockedCount } = useMemo(() => {
+    let active = 0;
+    let locked = 0;
+    for (const u of users) {
+      if (u.status === 'ACTIVE') active += 1;
+      else if (u.status === 'LOCKED') locked += 1;
     }
-  };
+    return { activeCount: active, lockedCount: locked };
+  }, [users]);
 
   return (
     <div className="user-table-card">
       {/* Filter Toolbar */}
       <div className="user-table-toolbar">
         <div className="search-box">
-          <svg className="search-box__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg className="search-box__icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="11" cy="11" r="8" />
             <path d="m21 21-4.3-4.3" />
           </svg>
           <input
-            type="text"
+            type="search"
+            aria-label="Tìm tài khoản theo tên đăng nhập, họ tên hoặc email"
             className="search-box__input"
             placeholder="Tìm theo tên đăng nhập, họ tên hoặc email..."
             value={search}
@@ -133,7 +229,7 @@ export const UserTable: React.FC<UserTableProps> = ({
               className={`status-tab ${statusFilter === 'ACTIVE' ? 'status-tab--active' : ''}`}
               onClick={() => setStatusFilter('ACTIVE')}
             >
-              Hoạt động ({users.filter((u) => u.status === 'ACTIVE').length})
+              Hoạt động ({activeCount})
             </button>
             <button
               type="button"
@@ -142,12 +238,12 @@ export const UserTable: React.FC<UserTableProps> = ({
               className={`status-tab ${statusFilter === 'LOCKED' ? 'status-tab--active' : ''}`}
               onClick={() => setStatusFilter('LOCKED')}
             >
-              Đã khóa ({users.filter((u) => u.status === 'LOCKED').length})
+              Đã khóa ({lockedCount})
             </button>
           </div>
 
-          <button type="button" className="btn-icon-refresh" onClick={onRefresh} title="Tải lại danh sách">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <button type="button" className="btn-icon-refresh" onClick={onRefresh} title="Tải lại danh sách" aria-label="Tải lại danh sách" disabled={loading}>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21.5 2v6h-6M2.5 22v-6h6" />
               <path d="M2 11.5a10 10 0 0 1 18.8-4.3L21.5 8M22 12.5a10 10 0 0 1-18.8 4.3L2.5 16" />
             </svg>
@@ -160,13 +256,13 @@ export const UserTable: React.FC<UserTableProps> = ({
         <table className="user-data-table">
           <thead>
             <tr>
-              <th scope="col" style={{ width: '46px' }}>STT</th>
+              <th scope="col" className="ia-col-index">STT</th>
               <th scope="col">Tài khoản & Họ tên</th>
               <th scope="col">Email</th>
               <th scope="col">Bộ phận</th>
               <th scope="col">Vai trò hệ thống</th>
-              <th scope="col" style={{ width: '132px' }}>Trạng thái</th>
-              <th scope="col" style={{ width: '84px', textAlign: 'right' }}>Thao tác</th>
+              <th scope="col" className="ia-col-status">Trạng thái</th>
+              <th scope="col" className="ia-col-actions text-right">Thao tác</th>
             </tr>
           </thead>
           <tbody>
@@ -197,63 +293,16 @@ export const UserTable: React.FC<UserTableProps> = ({
               </tr>
             ) : (
               filteredUsers.map((user, index) => (
-                <tr key={user.id} className={user.status === 'LOCKED' ? 'row--locked' : ''}>
-                  <td className="col-index">{index + 1}</td>
-                  <td>
-                    <div
-                      className="user-profile-cell"
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => onViewDetail(user)}
-                      title="Nhấp để xem chi tiết"
-                    >
-                      <div className="avatar-circle">
-                        {user.fullName.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="user-profile-meta">
-                        <span className="user-profile-fullname" title={user.fullName}>{user.fullName}</span>
-                        <span className="user-profile-username" title={`@${user.username}`}>@{user.username}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <span className="cell-email" title={user.email || undefined}>{user.email || '—'}</span>
-                  </td>
-                  <td>
-                    <span className="cell-dept" title={getDepartmentName(user.departmentId)}>{getDepartmentName(user.departmentId)}</span>
-                  </td>
-                  <td>
-                    <div className="user-tags-wrap">
-                      {user.roleCodes && user.roleCodes.length > 0
-                        ? user.roleCodes.map((code) => getRoleBadge(code))
-                        : <span className="cell-muted">Chưa gán</span>}
-                    </div>
-                  </td>
-                  <td>{getStatusBadge(user.status)}</td>
-                  <td style={{ textAlign: 'right' }}>
-                    <RowActionsMenu
-                      actions={[
-                        { key: 'edit', label: 'Chỉnh sửa thông tin', icon: ICONS.edit, onClick: () => onEdit(user) },
-                        { key: 'role', label: 'Phân quyền & vai trò', icon: ICONS.role, onClick: () => onAssignRoles(user) },
-                        { key: 'detail', label: 'Xem chi tiết', icon: ICONS.eye, onClick: () => onViewDetail(user) },
-                        ...(onResetTwoFactor
-                          ? [{
-                              key: 'reset-2fa',
-                              label: 'Đặt lại xác thực hai bước',
-                              icon: ICONS.resetTwoFactor,
-                              onClick: () => onResetTwoFactor(user),
-                            }]
-                          : []),
-                        {
-                          key: 'toggle-status',
-                          label: user.status === 'LOCKED' ? 'Mở khóa tài khoản' : 'Khóa tài khoản',
-                          icon: user.status === 'LOCKED' ? ICONS.unlock : ICONS.lock,
-                          onClick: () => onToggleStatus(user),
-                          tone: user.status === 'LOCKED' ? 'default' : 'danger',
-                        },
-                      ]}
-                    />
-                  </td>
-                </tr>
+                <UserRow
+                  key={user.id}
+                  user={user}
+                  index={index}
+                  onEdit={onEdit}
+                  onToggleStatus={onToggleStatus}
+                  onAssignRoles={onAssignRoles}
+                  onViewDetail={onViewDetail}
+                  onResetTwoFactor={onResetTwoFactor}
+                />
               ))
             )}
           </tbody>

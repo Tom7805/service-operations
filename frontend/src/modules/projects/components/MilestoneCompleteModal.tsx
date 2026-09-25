@@ -4,6 +4,7 @@ import ModalPortal from '../../../components/common/ModalPortal';
 import type { ProjectMilestoneRes } from '../types/projectTypes';
 import { completeMilestone, ProjectsApiError } from '../api/projectsApi';
 import { validateMilestoneCompleteForm } from '../validators/projectValidators';
+import { useDialogA11y } from './deliveryUi';
 
 export interface MilestoneCompleteModalProps {
   isOpen: boolean;
@@ -36,6 +37,8 @@ export default function MilestoneCompleteModal({
       setServerError(null);
     }
   }, [isOpen]);
+
+  const dialogRef = useDialogA11y(isOpen && !!milestone, onClose, submitting);
 
   if (!isOpen || !milestone) return null;
 
@@ -79,7 +82,7 @@ export default function MilestoneCompleteModal({
       aria-modal="true"
       aria-labelledby="milestone-complete-modal-title"
     >
-      <div className="modal-card" style={{ width: 'min(100%, 420px)' }}>
+      <div ref={dialogRef} className="modal-card dl-modal" style={{ width: 'min(100%, 420px)' }}>
         <div className="modal-header">
           <div className="modal-header__title-wrap">
             <h3 id="milestone-complete-modal-title" className="modal-title">

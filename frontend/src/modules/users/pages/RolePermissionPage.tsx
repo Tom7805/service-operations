@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { DepartmentInfo, ScopeType, User } from '../types/userTypes';
 import { SYSTEM_ROLES } from '../types/userTypes';
 import { getDepartmentsList, getUsers, updateUserRoleScope } from '../api/usersApi';
@@ -93,6 +93,45 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
     await fetchData();
   };
 
+  // Lọc + đếm tính trong useMemo (trước lần return sớm, đúng luật hook) — gõ tìm kiếm
+  // không còn chạy lại 4 vòng filter trên toàn bộ danh sách ở mỗi lần vẽ.
+  const filteredUsers = useMemo(() => {
+    const keyword = searchKeyword.toLowerCase();
+    return users.filter((u) => {
+      const matchesKeyword =
+        searchKeyword.trim() === '' ||
+        u.username.toLowerCase().includes(keyword) ||
+        u.fullName.toLowerCase().includes(keyword) ||
+        (u.email && u.email.toLowerCase().includes(keyword));
+
+      const matchesRole = filterRole === 'ALL' || (u.roleCodes && u.roleCodes.includes(filterRole));
+
+      const matchesScope =
+        filterScope === 'ALL' ||
+        (filterScope === 'COMPANY' && (!u.scopeType || u.scopeType === 'COMPANY')) ||
+        (filterScope === 'DEPARTMENT' && u.scopeType === 'DEPARTMENT') ||
+        (filterScope === 'SELF' && (u.scopeType === 'SELF' || u.scopeType === 'PERSONAL'));
+
+      return matchesKeyword && matchesRole && matchesScope;
+    });
+  }, [users, searchKeyword, filterRole, filterScope]);
+
+  // KPI Calculations — một lần duyệt.
+  const { totalUsers, companyScopeUsers, deptScopeUsers, selfScopeUsers } = useMemo(() => {
+    let company = 0;
+    let dept = 0;
+    let self = 0;
+    for (const u of users) {
+      if (!u.scopeType || u.scopeType === 'COMPANY') company += 1;
+      if (u.scopeType === 'DEPARTMENT') dept += 1;
+      if (u.scopeType === 'SELF' || u.scopeType === 'PERSONAL') self += 1;
+    }
+    return { totalUsers: users.length, companyScopeUsers: company, deptScopeUsers: dept, selfScopeUsers: self };
+  }, [users]);
+
+  // Tra bộ phận theo id bằng Map thay vì departments.find() hai lần cho MỖI dòng.
+  const departmentById = useMemo(() => new Map(departments.map((d) => [d.id, d])), [departments]);
+
   // TC-04 Render Access Denied screen for non-admin users
   if (!isAdmin) {
     return (
@@ -113,30 +152,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
     );
   }
 
-  // Filtered Users computation
-  const filteredUsers = users.filter((u) => {
-    const matchesKeyword =
-      searchKeyword.trim() === '' ||
-      u.username.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-      u.fullName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-      (u.email && u.email.toLowerCase().includes(searchKeyword.toLowerCase()));
 
-    const matchesRole = filterRole === 'ALL' || (u.roleCodes && u.roleCodes.includes(filterRole));
-
-    const matchesScope =
-      filterScope === 'ALL' ||
-      (filterScope === 'COMPANY' && (!u.scopeType || u.scopeType === 'COMPANY')) ||
-      (filterScope === 'DEPARTMENT' && u.scopeType === 'DEPARTMENT') ||
-      (filterScope === 'SELF' && (u.scopeType === 'SELF' || u.scopeType === 'PERSONAL'));
-
-    return matchesKeyword && matchesRole && matchesScope;
-  });
-
-  // KPI Calculations
-  const totalUsers = users.length;
-  const companyScopeUsers = users.filter((u) => !u.scopeType || u.scopeType === 'COMPANY').length;
-  const deptScopeUsers = users.filter((u) => u.scopeType === 'DEPARTMENT').length;
-  const selfScopeUsers = users.filter((u) => u.scopeType === 'SELF' || u.scopeType === 'PERSONAL').length;
 
   return (
     <div className="user-management-page">
@@ -214,12 +230,13 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
       )}
 
       {/* Main Tab Navigation & Toolbar */}
-      <div className="user-table-card" style={{ marginBottom: '20px' }}>
+      <div className="user-table-card ia-section">
         <div className="user-table-toolbar">
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div className="status-tabs">
+          <div className="ia-tab-row">
+            <div className="status-tabs" role="group" aria-label="Chế độ xem phân quyền">
               <button
                 type="button"
+                aria-pressed={activeTab === 'USERS'}
                 className={`status-tab ${activeTab === 'USERS' ? 'status-tab--active' : ''}`}
                 onClick={() => setActiveTab('USERS')}
               >
@@ -227,6 +244,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
               </button>
               <button
                 type="button"
+                aria-pressed={activeTab === 'ROLES'}
                 className={`status-tab ${activeTab === 'ROLES' ? 'status-tab--active' : ''}`}
                 onClick={() => setActiveTab('ROLES')}
               >
@@ -319,7 +337,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
                   <th>Bộ phận Trực Thuộc</th>
                   <th>Vai trò được gán</th>
                   <th>Phạm vi dữ liệu</th>
-                  <th style={{ textAlign: 'right' }}>Thao tác</th>
+                  <th className="text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -327,14 +345,14 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
                   <TableSkeleton columns={5} />
                 ) : filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#5B5A57' }}>
+                    <td colSpan={5} className="ia-table-empty-cell">
                       Không tìm thấy tài khoản nào khớp với bộ lọc.
                     </td>
                   </tr>
                 ) : (
                   filteredUsers.map((u) => {
-                    const deptObj = departments.find((d) => d.id === u.departmentId);
-                    const scopeDeptObj = departments.find((d) => d.id === u.scopeDepartmentId);
+                    const deptObj = u.departmentId != null ? departmentById.get(u.departmentId) : undefined;
+                    const scopeDeptObj = u.scopeDepartmentId != null ? departmentById.get(u.scopeDepartmentId) : undefined;
                     const isSelf = u.scopeType === 'SELF' || u.scopeType === 'PERSONAL';
                     const isDept = u.scopeType === 'DEPARTMENT';
                     const isCompany = !u.scopeType || u.scopeType === 'COMPANY';
@@ -392,14 +410,13 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
                           {isSelf && <span className="scope-chip">Chỉ cá nhân</span>}
                         </td>
 
-                        <td style={{ textAlign: 'right' }}>
+                        <td className="text-right">
                           {/* Nút kính (phụ), KHÔNG phải nút chàm đặc: màu nhấn đổ đầy được dành riêng
                               cho hành động chính của cả trang. Lặp nó trên từng dòng (10 nút chàm
                               xếp dọc mép phải) làm mất hẳn ý nghĩa "đâu là hành động chính". */}
                           <button
                             type="button"
-                            className="btn-secondary"
-                            style={{ padding: '7px 14px', fontSize: '13px' }}
+                            className="btn-secondary ia-btn-compact"
                             onClick={() => handleOpenConfigure(u)}
                             title="Cấu hình vai trò & phạm vi dữ liệu"
                           >

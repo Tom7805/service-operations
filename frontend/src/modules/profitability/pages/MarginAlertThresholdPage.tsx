@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import type { MarginAlertThresholdRes } from '../types/profitabilityTypes';
 import { getMarginAlertThreshold, ProfitabilityApiError, setMarginAlertThreshold } from '../api/profitabilityApi';
+import { ReportErrorAlert, ReportSkeleton } from '../../reports/components/ReportStates';
 
 export interface MarginAlertThresholdPageProps {
   currentUserRoles?: string[];
@@ -121,13 +122,13 @@ export default function MarginAlertThresholdPage({
 
   if (!canViewScreen) {
     return (
-      <div className="user-management-page" data-testid="margin-threshold-forbidden">
+      <div className="user-management-page ia-page" data-testid="margin-threshold-forbidden">
         <div className="alert-box alert-box--danger" role="alert">
           Bạn không có quyền xem ngưỡng cảnh báo âm biên (yêu cầu vai trò Ban giám đốc VT-01,
           Quản lý dự án VT-02 hoặc Kế toán VT-05).
         </div>
         {onBack && (
-          <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
+          <button type="button" className="btn btn-secondary ia-denied-back" onClick={onBack}>
             {ICONS.arrowLeft} Quay lại
           </button>
         )}
@@ -136,9 +137,9 @@ export default function MarginAlertThresholdPage({
   }
 
   return (
-    <div className="user-management-page" data-testid="margin-threshold-page">
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+    <div className="user-management-page ia-page" data-testid="margin-threshold-page">
+      <div className="page-header">
+        <div className="ia-head">
           {onBack && (
             <button
               type="button"
@@ -150,7 +151,7 @@ export default function MarginAlertThresholdPage({
             </button>
           )}
           <div>
-            <h1 className="page-title" style={{ margin: '4px 0' }}>
+            <h1 className="page-title">
               Ngưỡng cảnh báo dự án âm biên
             </h1>
             <p className="page-subtitle">
@@ -172,31 +173,21 @@ export default function MarginAlertThresholdPage({
       </div>
 
       {error && (
-        <div
-          className="alert-box alert-box--danger"
-          role="alert"
-          style={{ marginBottom: '16px' }}
-          data-testid="margin-threshold-error"
-        >
-          {error}
-        </div>
+        <ReportErrorAlert testId="margin-threshold-error" message={error} onRetry={() => void loadData()} retryDisabled={loading} />
       )}
 
       {loading ? (
-        <div data-testid="margin-threshold-loading" role="status" aria-label="Đang tải ngưỡng cảnh báo...">
-            <div className="skeleton" style={{ height: '88px', marginBottom: '24px' }} />
-            <div className="skeleton" style={{ height: '240px' }} />
-          </div>
+        <ReportSkeleton testId="margin-threshold-loading" label="Đang tải ngưỡng cảnh báo..." kpis={0} chart tableColumns={0} />
       ) : (
-        <div className="user-table-card" style={{ padding: '20px', maxWidth: '520px' }}>
+        <div className="user-table-card ia-card-pad ia-narrow-card--left">
           {threshold && threshold.minMarginRate !== null ? (
-            <div style={{ marginBottom: '20px' }} data-testid="margin-threshold-current">
-              <div style={{ fontSize: '13.5px', color: 'var(--ink-muted)', marginBottom: '8px' }}>Ngưỡng hiện hành</div>
-              <div style={{ fontSize: '28px', fontWeight: 700, color: 'var(--ink-strong)' }}>
+            <div className="ia-mb-20" data-testid="margin-threshold-current">
+              <div className="ia-sub ia-mb-8">Ngưỡng hiện hành</div>
+              <div className="ia-threshold-value">
                 {formatPercent(threshold.minMarginRate)}
               </div>
               {threshold.updatedBy && threshold.updatedAt && (
-                <p style={{ margin: '6px 0 0', color: 'var(--ink-muted)', fontSize: '13.5px' }}>
+                <p className="ia-inline-empty ia-mt-6">
                   Cập nhật lần cuối bởi <strong>{threshold.updatedBy}</strong> lúc{' '}
                   {formatDateTime(threshold.updatedAt)}
                 </p>
@@ -206,7 +197,6 @@ export default function MarginAlertThresholdPage({
             <div
               className="alert-box alert-box--warning"
               role="status"
-              style={{ marginBottom: '20px' }}
               data-testid="margin-threshold-unset"
             >
               Chưa thiết lập ngưỡng — hệ thống hiện KHÔNG cảnh báo dự án âm biên nào.
@@ -217,7 +207,6 @@ export default function MarginAlertThresholdPage({
             <div
               className="alert-box alert-box--success"
               role="status"
-              style={{ marginBottom: '16px' }}
               data-testid="margin-threshold-success"
             >
               {successMessage}
@@ -247,19 +236,15 @@ export default function MarginAlertThresholdPage({
                 data-testid="margin-threshold-input"
               />
               {fieldError && (
-                <p
-                  className="field-error"
-                  data-testid="error-margin-threshold"
-                  style={{ color: 'var(--pale-red-fg)', fontSize: '13.5px', marginTop: '4px' }}
-                >
+                <p className="field-error" id="error-margin-threshold" role="alert" data-testid="error-margin-threshold">
                   {fieldError}
                 </p>
               )}
               <button
                 type="submit"
-                className="btn btn-primary btn-sm"
+                className="btn btn-primary btn-sm ia-mt-16"
                 disabled={saving}
-                style={{ marginTop: '16px' }}
+               
                 data-testid="btn-save-margin-threshold"
               >
                 {ICONS.save} {saving ? 'Đang lưu...' : 'Lưu ngưỡng'}

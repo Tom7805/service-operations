@@ -5,6 +5,7 @@ import type { ProjectRiskReq, ProjectRiskRes, RiskLevel } from '../types/project
 import { createRisk, updateRisk, ProjectsApiError } from '../api/projectsApi';
 import { validateRiskForm } from '../validators/projectValidators';
 import { getActiveUsersLookup, type UserLookup } from '../../users/api/usersApi';
+import { useDialogA11y } from './deliveryUi';
 
 export interface RiskFormModalProps {
   isOpen: boolean;
@@ -58,6 +59,8 @@ export default function RiskFormModal({
       .catch(() => setUsers([]))
       .finally(() => setLoadingUsers(false));
   }, [isOpen, risk]);
+
+  const dialogRef = useDialogA11y(isOpen, onClose, submitting);
 
   if (!isOpen) return null;
 
@@ -118,7 +121,7 @@ export default function RiskFormModal({
       aria-modal="true"
       aria-labelledby="risk-form-modal-title"
     >
-      <div className="modal-card project-modal-card">
+      <div ref={dialogRef} className="modal-card dl-modal project-modal-card">
         <div className="modal-header">
           <div className="modal-header__title-wrap">
             <h3 id="risk-form-modal-title" className="modal-title">

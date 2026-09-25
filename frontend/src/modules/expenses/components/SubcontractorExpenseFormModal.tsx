@@ -7,6 +7,7 @@ import {
   validateSubcontractorExpenseForm,
   type SubcontractorExpenseFormErrors,
 } from '../validators/expenseValidators';
+import { useDialogA11y } from '../../projects/components/deliveryUi';
 
 export interface SubcontractorExpenseFormModalProps {
   isOpen: boolean;
@@ -50,6 +51,8 @@ export default function SubcontractorExpenseFormModal({
     setErrors({});
     setServerError(null);
   }, [isOpen]);
+
+  const dialogRef = useDialogA11y(isOpen, onClose, submitting);
 
   if (!isOpen) return null;
 
@@ -96,7 +99,7 @@ export default function SubcontractorExpenseFormModal({
         aria-modal="true"
         aria-labelledby="subcontractor-expense-form-title"
       >
-        <div className="modal-card project-modal-card">
+        <div ref={dialogRef} className="modal-card dl-modal project-modal-card">
           <div className="modal-header">
             <div className="modal-header__title-wrap">
               <h3 id="subcontractor-expense-form-title" className="modal-title">

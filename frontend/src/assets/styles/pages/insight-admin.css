@@ -1,0 +1,327 @@
+/* CSS rieng cho nhom trang insight-admin — nap sau index.css (xem main.tsx). */
+
+/* ==========================================================================
+   Nhóm trang BÁO CÁO · BIÊN LỢI NHUẬN · QUẢN TRỊ (reports, profitability, users,
+   employees, departments, auditLog, notifications, auth).
+   Mọi bộ chọn đều bắt đầu bằng `.ia-` hoặc nằm dưới `.ia-page` để không rò sang
+   nhóm trang khác. Chỉ dùng token của index.css — không hex mới, không alpha mới.
+   ========================================================================== */
+
+/* --- Tiện ích nhỏ ------------------------------------------------------- */
+.ia-sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.ia-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ia-page .user-data-table td,
+.ia-page .user-data-table th { font-variant-numeric: tabular-nums; }
+.ia-dash { color: var(--ink-faint); }
+.ia-strong { font-weight: 600; color: var(--ink-strong); }
+.ia-sub { display: block; font-size: 12.5px; letter-spacing: var(--track-xs); color: var(--ink-muted); line-height: 1.45; }
+.ia-sub--bad { color: var(--pale-red-fg); }
+.ia-sub--good { color: var(--pale-green-fg); }
+.ia-sub--warn { color: var(--pale-yellow-fg); }
+.ia-note { margin: 0; color: var(--ink-muted); font-size: 12.5px; letter-spacing: var(--track-xs); font-variant-numeric: tabular-nums; }
+.ia-inline-empty { margin: 0; color: var(--ink-muted); font-size: 13.5px; letter-spacing: var(--track-sm); }
+.ia-page .field-required { color: var(--pale-red-fg); margin-left: 2px; }
+.ia-page .badge--warning {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--pale-yellow-bg); color: var(--pale-yellow-fg);
+  border-radius: 999px; padding: 2px 8px; font-size: 12.5px; font-weight: 600; line-height: 1.4;
+}
+
+/* --- Đầu trang: nút Quay lại + tiêu đề ----------------------------------- */
+.ia-page > .page-header { margin-bottom: 16px; }
+.ia-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.ia-head .page-title { margin: 4px 0; }
+.ia-head > div { min-width: 0; }
+
+/* --- Khối bộ lọc ---------------------------------------------------------- */
+.ia-filter-card { padding: 20px; margin-bottom: 16px; }
+.ia-filter-card .toolbar-filters { align-items: flex-end; gap: 12px 16px; }
+/* Nhãn đặt TRÊN ô nhập: khi thu hẹp màn hình các ô xuống dòng gọn gàng thay vì nhãn
+   và ô bị tách rời nhau ở hai dòng khác nhau. */
+.ia-filter-card .filter-group { flex-direction: column; align-items: stretch; gap: 6px; }
+.ia-filter-card .filter-label { font-size: 13.5px; letter-spacing: var(--track-sm); }
+.ia-filter-card .form-input { height: 38px; }
+.ia-field-error { color: var(--pale-red-fg); font-size: 13.5px; letter-spacing: var(--track-sm); margin: 8px 0 0; }
+.ia-filter-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 16px; }
+.ia-filter-form .field-error { flex-basis: 100%; margin-top: 0; }
+.ia-filter-form .form-label { font-size: 13.5px; }
+
+/* --- Cảnh báo có nút thao tác -------------------------------------------- */
+.ia-alert { justify-content: space-between; align-items: center; flex-wrap: wrap; }
+.ia-alert__msg { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1 1 240px; }
+.ia-alert__icon { display: inline-flex; width: 16px; height: 16px; flex-shrink: 0; }
+.ia-alert__icon svg { width: 100%; height: 100%; }
+.ia-alert__retry { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.ia-alert__retry svg { width: 14px; height: 14px; }
+
+/* --- Khung xương khớp bố cục thật ---------------------------------------- */
+.ia-skeleton { display: block; }
+.ia-skeleton__kpis .stat-card { gap: 12px; }
+.ia-skeleton__kpis .stat-card:hover { background: var(--surface); }
+.ia-skeleton__kpi-label { width: 58%; }
+.ia-skeleton__kpi-value { width: 70%; height: 28px; display: block; }
+.ia-skeleton__chart { height: 240px; border-radius: var(--radius-lg); margin-bottom: 16px; }
+.ia-skeleton__table { padding: 0; overflow: hidden; }
+.ia-skeleton__row {
+  display: grid; grid-template-columns: repeat(var(--ia-cols, 5), minmax(0, 1fr));
+  gap: 16px; align-items: center; padding: 18px 16px; border-bottom: 1px solid var(--line);
+}
+.ia-skeleton__row:last-child { border-bottom: none; }
+.ia-skeleton__row--head { background: var(--surface-alt); padding-top: 14px; padding-bottom: 14px; }
+
+/* --- Thẻ chỉ số bấm được (lọc nhanh / mở màn liên quan) ------------------ */
+button.stat-card.ia-kpi-btn {
+  font: inherit; text-align: left; width: 100%; cursor: pointer; color: inherit;
+  position: relative;
+}
+button.stat-card.ia-kpi-btn:disabled { cursor: default; }
+button.stat-card.ia-kpi-btn:not(:disabled):hover { background: var(--surface-alt); }
+button.stat-card.ia-kpi-btn:not(:disabled):active .stat-card__value { transform: scale(0.98); }
+button.stat-card.ia-kpi-btn:focus-visible { outline: 2px solid var(--ink-strong); outline-offset: -2px; }
+button.stat-card.ia-kpi-btn[aria-pressed='true'] { background: var(--surface-sunken); }
+button.stat-card.ia-kpi-btn[aria-pressed='true']::after {
+  content: ''; position: absolute; left: 18px; right: 18px; bottom: 0; height: 2px; background: var(--ink-strong);
+}
+.ia-kpi-btn__hint {
+  display: inline-flex; align-items: center; gap: 4px; margin-top: 10px;
+  font-size: 12.5px; letter-spacing: var(--track-xs); color: var(--ink-muted);
+}
+.ia-kpi-btn__hint svg { width: 12px; height: 12px; }
+.stat-card .stat-card__value { transition: transform var(--dur-press) var(--ease-out); }
+
+/* --- Thẻ khối nội dung --------------------------------------------------- */
+.ia-card-pad { padding: 20px; }
+.ia-section { margin-bottom: 16px; }
+.ia-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.ia-section-title { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: var(--track-md); color: var(--ink-strong); }
+.ia-search { height: 38px; width: 100%; max-width: 280px; }
+.ia-chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.ia-chip-row .pipeline-stalled-chip svg { width: 12px; height: 12px; }
+
+/* Đồng hồ tỷ lệ trong ô bảng: con số vẫn là thông tin chính, thanh mảnh chỉ để quét
+   nhanh cả cột. Vạch 100% là giờ chuẩn — vượt qua thì chuyển màu cảnh báo. */
+.ia-meter { display: inline-flex; align-items: center; justify-content: flex-end; gap: 10px; width: 100%; }
+.ia-meter__track {
+  position: relative; width: 72px; height: 4px; border-radius: var(--radius-sm);
+  background: var(--surface-sunken); overflow: hidden; flex-shrink: 0;
+}
+.ia-meter__fill {
+  position: absolute; inset: 0 auto 0 0; width: calc(var(--ia-ratio, 0) * 100%);
+  max-width: 100%; background: var(--ink-strong); border-radius: var(--radius-sm);
+}
+.ia-meter--over .ia-meter__fill { background: var(--pale-yellow-fg); }
+.ia-meter--over .ia-meter__value { color: var(--pale-yellow-fg); }
+
+/* --- Pipeline: sắc độ theo giai đoạn (xám đậm dần; chỉ THẮNG/THUA có màu) --- */
+.ia-stage-dot[data-stage] { background: var(--overlay-strong); }
+.ia-stage-dot[data-stage='PROPOSAL'] { background: var(--ink-faint); }
+.ia-stage-dot[data-stage='NEGOTIATION'] { background: var(--ink-strong); }
+.ia-stage-dot[data-stage='WON'] { background: var(--pale-green-fg); }
+.ia-stage-dot[data-stage='LOST'] { background: var(--pale-red-fg); }
+.ia-stage-num[data-stage] { color: var(--ink-muted); }
+.ia-stage-num[data-stage='PROPOSAL'] { color: var(--ink); }
+.ia-stage-num[data-stage='NEGOTIATION'] { color: var(--ink-strong); }
+.ia-stage-num[data-stage='WON'] { color: var(--pale-green-fg); }
+.ia-stage-num[data-stage='LOST'] { color: var(--pale-red-fg); }
+.ia-page .pipeline-flow__number { font-variant-numeric: tabular-nums; }
+
+/* --- Biểu đồ doanh thu ---------------------------------------------------- */
+/* Màu loại hợp đồng là màu NHẬN DIỆN chuỗi dữ liệu (không phải trang trí): 4 bước đã
+   chạy bộ kiểm bảng màu (CVD ΔE ≥ 9, tầm nhìn thường ΔE ≥ 22). Hai màu dưới 3:1 so với
+   nền được bù bằng bảng số liệu ngay bên dưới và chú giải có chữ. Chỉ dùng trong biểu đồ. */
+.ia-revenue {
+  --ia-series-tm: #2a78d6;
+  --ia-series-fixed: #eb6834;
+  --ia-series-maint: #1baf7a;
+  --ia-series-milestone: #eda100;
+}
+.ia-series--TIME_AND_MATERIAL { fill: var(--ia-series-tm); background: var(--ia-series-tm); }
+.ia-series--FIXED_PRICE { fill: var(--ia-series-fixed); background: var(--ia-series-fixed); }
+.ia-series--MAINTENANCE { fill: var(--ia-series-maint); background: var(--ia-series-maint); }
+.ia-series--MILESTONE { fill: var(--ia-series-milestone); background: var(--ia-series-milestone); }
+.ia-chart-card { padding: 16px; margin-bottom: 16px; position: relative; }
+.ia-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 0 0 10px; padding: 0; list-style: none; }
+.ia-legend__item { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; letter-spacing: var(--track-sm); color: var(--ink); }
+.ia-legend__swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.ia-legend__line { width: 14px; height: 2px; background: var(--ink-strong); flex-shrink: 0; }
+.ia-chart-scroll { overflow-x: auto; overscroll-behavior-x: contain; }
+.ia-chart-scroll svg { display: block; }
+.ia-chart-grid { stroke: var(--line); stroke-width: 1; }
+.ia-chart-axis { font-family: var(--font-mono); font-size: 11px; fill: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.ia-chart-hit { fill: transparent; cursor: pointer; }
+.ia-chart-hit--active { fill: var(--surface-sunken); }
+.ia-chart-slot:focus { outline: none; }
+.ia-chart-slot:focus-visible .ia-chart-hit { fill: var(--surface-sunken); stroke: var(--ink-strong); stroke-width: 1; }
+.ia-chart-prev { stroke: var(--ink-strong); stroke-width: 2; }
+.ia-tooltip {
+  position: absolute; top: 48px; min-width: 200px; max-width: calc(100% - 32px);
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md);
+  padding: 10px 12px; box-shadow: var(--shadow-lg); font-size: 13.5px; pointer-events: none;
+  font-variant-numeric: tabular-nums; z-index: 2;
+}
+.ia-tooltip__row { display: flex; justify-content: space-between; gap: 12px; }
+.ia-tooltip__row--total { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 6px; }
+.ia-tooltip .ia-legend__swatch { display: inline-block; width: 8px; height: 8px; margin-right: 6px; }
+
+/* KPI dạng thẻ rời cũ (Revenue/Timesheet) quy về bảng chỉ số phân khoang chuẩn. */
+.ia-page .stat-card__value--md { font-variant-numeric: tabular-nums; }
+
+/* --- Bảng báo cáo ------------------------------------------------------- */
+.ia-table-card { overflow: hidden; }
+.ia-table-card > .table-responsive { border-radius: 0; }
+.ia-page .user-data-table tfoot td { font-weight: 600; color: var(--ink-strong); border-top: 1px solid var(--line); background: var(--surface-alt); }
+.ia-cell-stack { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.ia-cell-stack--end { align-items: flex-end; }
+.ia-warn-list { display: flex; flex-direction: column; gap: 4px; max-width: 260px; }
+.ia-warn-item { display: flex; align-items: flex-start; gap: 6px; font-size: 12.5px; letter-spacing: var(--track-xs); color: var(--pale-yellow-fg); }
+.ia-warn-item svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; }
+.ia-project-name { font-size: 13.5px; color: var(--ink-strong); letter-spacing: var(--track-sm); }
+
+/* ==========================================================================
+   ĐIỆN THOẠI (≤ 640px)
+   ========================================================================== */
+@media (max-width: 640px) {
+  .ia-head { flex-wrap: wrap; align-items: flex-start; }
+  .ia-page .page-header__actions { width: 100%; }
+  .ia-page .page-header__actions > .btn-primary,
+  .ia-page .page-header__actions > .btn-secondary { flex: 1 1 auto; justify-content: center; }
+  .ia-filter-card { padding: 16px; }
+  .ia-filter-card .filter-group,
+  .ia-filter-form > div { flex: 1 1 140px; min-width: 0; }
+  .ia-filter-card .form-input,
+  .ia-filter-form .form-input { width: 100%; min-width: 0; }
+  .ia-filter-card .toolbar-filters > button,
+  .ia-filter-form > button { flex: 1 1 100%; justify-content: center; min-height: 44px; }
+  /* Bảng chỉ số: 2 khoang một hàng thay vì 1 ô cao chót vót mỗi hàng. */
+  .ia-page .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ia-page .stat-card { padding: 14px; }
+  .ia-page .stat-card__value { font-size: 24px; letter-spacing: var(--track-2xl); overflow-wrap: anywhere; }
+  .ia-page .stat-card__value--md { font-size: 18px; letter-spacing: var(--track-lg); }
+  .ia-search { max-width: none; }
+  .ia-section-head > .form-input { flex: 1 1 100%; }
+  .ia-card-pad { padding: 16px; }
+  .ia-skeleton__row { gap: 10px; padding: 14px 12px; }
+  .ia-tooltip { left: 16px !important; right: 16px; min-width: 0; }
+}
+
+/* Nút "Quay lại" trong thẻ từ chối truy cập. */
+.ia-denied-back, .ia-mt-16 { margin-top: 16px; }
+
+/* --- Xác thực ------------------------------------------------------------- */
+/* Ô mã OTP: giãn chữ rộng để đếm được từng chữ số khi gõ (cùng lý do chức năng với
+   .totp-manual-entry code — ngoại lệ đã ghi trong DESIGN.md), số canh giữa, tabular. */
+.ia-otp-input {
+  letter-spacing: 0.4em; text-align: center; font-weight: 700;
+  font-variant-numeric: tabular-nums; font-size: 18px;
+}
+.ia-otp-input::placeholder { letter-spacing: var(--track-sm); font-weight: 400; font-size: 14.5px; }
+.ia-justify-center { justify-content: center; }
+.ia-narrow-card { max-width: 520px; margin: 0 auto; }
+.ia-mb-24 { margin-bottom: 24px; }
+.ia-table-empty-cell { text-align: center; padding: 32px 16px; color: var(--ink-muted); }
+
+/* --- Bảng tài khoản ------------------------------------------------------- */
+.ia-col-index { width: 46px; }
+.ia-col-status { width: 132px; }
+.ia-col-actions { width: 84px; }
+/* Ô họ tên là nút thật: xoá giao diện nút mặc định, giữ bố cục ô định danh. */
+button.ia-row-link {
+  appearance: none; background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit;
+  text-align: left; cursor: pointer; width: 100%; border-radius: var(--radius-sm);
+}
+button.ia-row-link:hover .user-profile-fullname { text-decoration: underline; text-underline-offset: 2px; }
+button.ia-row-link:focus-visible { outline: 2px solid var(--ink-strong); outline-offset: 2px; }
+.ia-tab-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ia-btn-compact { padding: 7px 14px; font-size: 13.5px; }
+@media (max-width: 640px) {
+  .ia-tab-row .status-tabs { overflow-x: auto; max-width: 100%; }
+}
+
+/* --- Cây tổ chức ---------------------------------------------------------- */
+.ia-tree-skel--child { margin-left: 24px; }
+.ia-tree-skel--grandchild { margin-left: 48px; }
+/* Ô định danh bộ phận: gốc = khối mực đặc, nhánh = cặp pastel thông tin (phân loại). */
+.avatar-circle.ia-dept-avatar--root { background: var(--ink-strong); color: var(--surface); border-color: var(--ink-strong); }
+.avatar-circle.ia-dept-avatar--branch { background: var(--pale-blue-bg); color: var(--pale-blue-fg); }
+/* Cảm ứng: nút mở/thu nhánh và menu ⋮ đủ 40px để chạm chắc bằng ngón tay. */
+@media (pointer: coarse) {
+  .department-tree-container .tree-toggle-btn { min-width: 40px; min-height: 40px; }
+  .department-tree-container .row-menu__trigger { min-width: 40px; min-height: 40px; }
+}
+@media (max-width: 640px) {
+  .department-tree-container .tree-children-container { margin-left: 8px; padding-left: 10px; }
+  .department-tree-container .tree-node-header { flex-wrap: wrap; row-gap: 4px; }
+}
+.ia-toolbar-card--attached { border-radius: var(--radius-lg) var(--radius-lg) 0 0; margin-bottom: 0; }
+.ia-input-180 { height: 38px; width: 180px; max-width: 100%; }
+@media (max-width: 640px) { .ia-input-180 { width: 100%; } }
+
+/* --- Nhân sự ---------------------------------------------------------------- */
+.ia-col-actions-lg { width: 110px; }
+.ia-ml-6 { margin-left: 6px; }
+.ia-mt-4 { margin-top: 4px; }
+.ia-mt-n4 { margin-top: -4px; }
+.ia-h-80 { height: 80px; }
+.ia-minw-180 { min-width: 180px; }
+.ia-form-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.ia-inline-form { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.ia-subheading { font-size: 13.5px; font-weight: 600; letter-spacing: var(--track-sm); color: var(--ink-strong); margin: 0 0 10px; }
+.ia-detail-skeleton__title { width: min(280px, 60%); height: 30px; }
+.ia-detail-skeleton__sub { width: min(180px, 40%); margin-top: 10px; }
+.ia-detail-skeleton__card {
+  margin-top: 24px; display: grid; gap: 20px 24px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+.ia-detail-skeleton__field { display: flex; flex-direction: column; gap: 8px; }
+.ia-detail-skeleton__field .skeleton-text--sm { width: 40%; }
+.ia-detail-skeleton__field .skeleton-text { width: 75%; }
+.ia-detail-skeleton__block { height: 200px; margin-top: 16px; border-radius: var(--radius-lg); }
+@media (max-width: 640px) {
+  .ia-minw-180 { min-width: 0; flex: 1 1 100%; }
+  .ia-inline-form > button { flex: 1 1 100%; min-height: 44px; }
+}
+
+/* --- Thông báo ---------------------------------------------------------------- */
+.ia-mb-16 { margin-bottom: 16px; }
+button.ia-notif-row { width: 100%; border: none; background: none; text-align: left; cursor: pointer; font: inherit; color: inherit; }
+button.ia-notif-row--read { cursor: default; }
+button.ia-notif-row:focus-visible { outline: 2px solid var(--ink-strong); outline-offset: -2px; }
+.ia-notif-skeleton { display: flex; flex-direction: column; }
+.ia-notif-skeleton__row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.ia-notif-skeleton__row .skeleton-text { width: 60%; }
+.ia-notif-skeleton__row .skeleton-text--sm { width: 30%; }
+.ia-notif-skeleton__row .skeleton { display: block; }
+
+/* --- So sánh kế hoạch / thực tế / dự báo -------------------------------------- */
+.ia-compare { display: flex; flex-direction: column; gap: 6px; margin: 0; width: 100%; }
+.ia-compare__row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.ia-compare__row dt, .ia-compare__row dd { margin: 0; }
+.ia-compare__actual, .ia-compare__planned { font-size: 14.5px; font-weight: 600; color: var(--ink-strong); font-variant-numeric: tabular-nums; text-align: right; }
+/* "Dự kiến"/"Dự báo" dùng cặp màu THÔNG TIN (thống kê) — đúng vai trò của nó trong DESIGN.md. */
+.ia-compare__planned { color: var(--pale-blue-fg); }
+.ia-compare__actual.ia-sub--bad, .ia-metric.ia-sub--bad { color: var(--pale-red-fg); }
+.ia-compare__actual.ia-sub--good, .ia-metric.ia-sub--good { color: var(--pale-green-fg); }
+.ia-metric-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; }
+.ia-metric { font-size: 16px; font-weight: 600; letter-spacing: var(--track-md); color: var(--ink-strong); font-variant-numeric: tabular-nums; }
+.ia-metric.ia-compare__planned { font-size: 16px; color: var(--pale-blue-fg); }
+.ia-mb-6 { margin-bottom: 6px; }
+.ia-mb-12 { margin-bottom: 12px; }
+h3.ia-section-title.ia-mb-12 { margin: 0 0 12px; }
+.ia-reason-list { margin: 0; padding-left: 20px; color: var(--ink-strong); font-size: 13.5px; }
+.ia-reason-list li + li { margin-top: 4px; }
+.ia-reason-list--inherit { color: inherit; font-size: inherit; }
+.ia-progress { height: 8px; border-radius: var(--radius-sm); background: var(--line); overflow: hidden; }
+.ia-progress__fill { height: 100%; background: var(--pale-blue-fg); }
+.ia-progress--over .ia-progress__fill { background: var(--pale-red-fg); }
+@media (max-width: 640px) {
+  .ia-metric-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.ia-narrow-card--left { max-width: 520px; }
+.ia-mb-8 { margin-bottom: 8px; }
+.ia-mb-20 { margin-bottom: 20px; }
+.ia-mt-6 { margin-top: 6px; }
+.ia-sep { margin: 0 10px; color: var(--ink-faint); }
+.ia-threshold-value { font-size: 30px; font-weight: 600; letter-spacing: var(--track-4xl); line-height: 1.15; color: var(--ink-strong); font-variant-numeric: tabular-nums; }

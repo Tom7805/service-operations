@@ -1,0 +1,120 @@
+/* ==========================================================================
+   TOKENS — nguồn DUY NHẤT của mọi biến thiết kế (DESIGN.md).
+   index.css nạp file này bằng @import ở dòng đầu, nên mọi quy tắc phía sau
+   (kể cả pages/*.css) đều tham chiếu được. Không viết mã màu hex trực tiếp
+   vào quy tắc thành phần — thêm token ở đây nếu thật sự cần một vai trò mới.
+   ========================================================================== */
+:root {
+  /* ---- Chữ hệ thống, không tải font qua mạng ---- */
+  --font-sans: -apple-system, 'SF Pro Text', 'Segoe UI Variable Text', 'Segoe UI',
+               system-ui, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'SF Mono', 'SFMono-Regular', 'Segoe UI Mono', 'JetBrains Mono',
+               Consolas, 'Liberation Mono', Menlo, monospace;
+
+  /* ---- Nền & bề mặt — đơn sắc ẤM ---- */
+  --canvas: #F7F6F3;
+  --surface: #FFFFFF;
+  --surface-alt: #F9F9F8;
+  --surface-sunken: #F1F0EE;
+  --surface-pressed: #EAE9E6;
+  /* Alias cho các quy tắc cũ đã tham chiếu tên này (trước đây chưa định nghĩa → rơi về fallback). */
+  --surface-muted: var(--surface-alt);
+
+  /* ---- Chữ — KHÔNG BAO GIỜ dùng #000000 thuần ----
+     --ink-muted / --ink-faint được làm đậm hơn bản DESIGN.md gốc để đạt AA cho chữ thường:
+     trên --surface: 6.9:1 và 5.4:1; trên --surface-sunken: 6.1:1 và 4.75:1. */
+  --ink-strong: #111111;
+  --ink: #2F3437;
+  --ink-soft: #5F5E5B;     /* chữ trên nền pastel xám — 5.7:1 trên --surface-sunken */
+  --ink-muted: #5B5A57;
+  --ink-faint: #6B6A67;
+  --ink-hover: #333333;    /* hover của nút chính */
+  /* Chỉ cho PHI VĂN BẢN (chấm, vạch, icon trang trí) — 2.8:1, trượt AA với chữ. */
+  --ink-decor: #9B9A97;
+  --on-ink: #FFFFFF;       /* chữ/icon đặt trên khối --ink-strong */
+
+  /* ---- Đường kẻ ---- */
+  --line: #EAEAEA;
+  --line-hover: #DCDCDC;
+  --line-soft: rgba(0,0,0,0.06);
+
+  /* ---- Thang phủ đen trung tính — 5 nấc, không tự thêm alpha mới ---- */
+  --overlay-hairline: rgba(0,0,0,0.06);
+  --overlay-subtle:   rgba(0,0,0,0.10);
+  --overlay-muted:    rgba(0,0,0,0.14);
+  --overlay-strong:   rgba(0,0,0,0.24);
+  --overlay-scrim:    rgba(0,0,0,0.32);
+
+  /* ---- Màu ngữ nghĩa: 4 cặp pastel (+ xám trung tính), dùng theo cặp ---- */
+  --pale-red-bg: #FDEBEC;    --pale-red-fg: #9F2F2D;
+  --pale-blue-bg: #E1F3FE;   --pale-blue-fg: #1F6C9F;
+  --pale-green-bg: #EDF3EC;  --pale-green-fg: #346538;
+  --pale-yellow-bg: #FBF3DB; --pale-yellow-fg: #956400;
+  --pale-gray-bg: #F1F0EE;   --pale-gray-fg: #5F5E5B;
+  /* Viền mảnh đi kèm từng cặp — trước đây mỗi nơi tự viết một alpha (.18 .20 .22 .24 .25). */
+  --pale-red-line: rgba(159,47,45,0.20);
+  --pale-blue-line: rgba(31,108,159,0.20);
+  --pale-green-line: rgba(52,101,56,0.20);
+  --pale-yellow-line: rgba(149,100,0,0.22);
+
+  /* ---- Bán kính: dứt khoát, tối đa 12px ---- */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 999px;   /* CHỈ pill trạng thái / nhãn phân loại */
+  --radius-xl: 12px;      /* alias cũ */
+
+  /* ---- Bóng đổ: gần như không tồn tại, độ mờ < 0.05 ---- */
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.03);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.04);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.05);
+  /* Quầng mềm quanh Ô NHẬP đang focus (đi kèm viền --ink-strong). */
+  --shadow-focus: 0 0 0 3px rgba(17,17,17,0.10);
+  --shadow-focus-danger: 0 0 0 3px var(--pale-red-line);
+
+  /* ---- Vòng focus bàn phím (nút, liên kết, mục menu…) ----
+     --shadow-focus 10% alpha chỉ đạt ~1.2:1 so với nền — không đủ làm chỉ báo focus
+     (WCAG 2.4.7 / 1.4.11 cần ≥3:1). Vòng này là outline 2px màu mực, cách mép 2px. */
+  --focus-ring-color: var(--ink-strong);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+
+  /* ---- Kích thước điều khiển ---- */
+  --control-h: 40px;
+  --control-h-sm: 32px;
+  --control-h-xs: 28px;
+  --touch-target: 44px;   /* tối thiểu cho con trỏ thô (ngón tay) — WCAG 2.5.5 / HIG */
+
+  /* ---- Giãn chữ: HÀM CỦA CỠ CHỮ ---- */
+  --track-display: -0.036em;
+  --track-4xl:     -0.032em;
+  --track-3xl:     -0.026em;
+  --track-2xl:     -0.02em;
+  --track-xl:      -0.016em;
+  --track-lg:      -0.012em;
+  --track-md:      -0.008em;
+  --track-base:    -0.004em;
+  --track-body:     0em;
+  --track-sm:       0.004em;
+  --track-xs:       0.008em;
+  --track-2xs:      0.012em;
+  --track-caps:     0.08em;
+  --track-caps-lg:  0.06em;
+  --track-mono:     0.03em;
+
+  /* ---- Chuyển động: ba đường cong, không tự chế thêm ---- */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-press: 160ms;
+  --dur-normal: var(--dur-base);  /* alias — trước đây được tham chiếu nhưng chưa định nghĩa */
+  --dur-enter: 200ms;
+  --stagger: 40ms;
+  /* Alias cũ */
+  --ease-gel: var(--ease-out);
+  --ease-soft: var(--ease-drawer);
+  --dur-gel: 200ms;
+}

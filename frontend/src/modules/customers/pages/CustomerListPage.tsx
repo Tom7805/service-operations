@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useDeferredValue, useRef } from 'react';
 import {
   createCustomer,
   createCustomerWithOverride,
@@ -56,26 +56,40 @@ export default function CustomerListPage({
     customerCode?: string;
   } | null>(null);
 
+  // Một bộ hẹn giờ duy nhất: toast mới huỷ hẹn giờ của toast cũ (không bị đóng sớm),
+  // và huỷ khi rời trang để không set state sau unmount.
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+  }, []);
+
   const showToast = (
     text: string,
     type: 'success' | 'error' | 'info' = 'success',
     customerCode?: string
   ) => {
     setToastMessage({ text, type, customerCode });
-    setTimeout(() => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => {
       setToastMessage(null);
     }, 6000);
   };
 
+  // Số thứ tự yêu cầu tải: bấm "Tải lại" liên tiếp thì chỉ phản hồi MỚI NHẤT được ghi vào
+  // state — phản hồi cũ về muộn không đè lên danh sách mới.
+  const loadReqRef = useRef(0);
+
   // NCL-02-CN-001 (bước D/P): tải danh sách hồ sơ khách hàng đã lưu trong hệ thống từ Backend.
   const loadCustomers = useCallback(async () => {
     if (!isAllowed) return;
+    const reqId = ++loadReqRef.current;
     setIsLoading(true);
     setLoadError(null);
     try {
       const data = await fetchCustomers();
-      setCustomers(data);
+      if (reqId === loadReqRef.current) setCustomers(data);
     } catch (err) {
+      if (reqId !== loadReqRef.current) return;
       const message =
         err instanceof CustomerApiError
           ? err.message
@@ -84,7 +98,7 @@ export default function CustomerListPage({
           : 'Không thể tải danh sách hồ sơ khách hàng từ máy chủ.';
       setLoadError(message);
     } finally {
-      setIsLoading(false);
+      if (reqId === loadReqRef.current) setIsLoading(false);
     }
   }, [isAllowed]);
 
@@ -190,31 +204,43 @@ export default function CustomerListPage({
     }
   };
 
+  // Lọc cục bộ: React ưu tiên cập nhật ô nhập trước, lọc bảng sau — gõ trên điện thoại
+  // không bị khựng khi danh sách dài.
+  const deferredSearchTerm = useDeferredValue(searchTerm);
+
   // Lọc danh sách theo từ khóa tìm kiếm, ngành nghề, quy mô và mức độ ưu tiên (NCL-02-CN-005, TC-01)
   const filteredCustomers = useMemo(() => {
+    // Chuẩn hoá từ khoá và giá trị lọc MỘT lần thay vì lặp lại cho mỗi hàng × mỗi trường.
+    const term = deferredSearchTerm.toLowerCase().trim();
+    const industry = industryFilter.toLowerCase();
+    const companySize = companySizeFilter.toLowerCase();
+    const priority = priorityFilter.toLowerCase();
     return customers.filter((cust) => {
       const matchSearch =
-        !searchTerm.trim() ||
-        cust.name.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
-        cust.code.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
-        (cust.taxCode && cust.taxCode.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
-        (cust.phone && cust.phone.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
-        (cust.industry && cust.industry.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
-        (cust.address && cust.address.toLowerCase().includes(searchTerm.toLowerCase().trim()));
+        !term ||
+        cust.name.toLowerCase().includes(term) ||
+        cust.code.toLowerCase().includes(term) ||
+        (cust.taxCode && cust.taxCode.toLowerCase().includes(term)) ||
+        (cust.phone && cust.phone.toLowerCase().includes(term)) ||
+        (cust.industry && cust.industry.toLowerCase().includes(term)) ||
+        (cust.address && cust.address.toLowerCase().includes(term));
 
-      const matchIndustry =
-        !industryFilter || (cust.industry && cust.industry.toLowerCase() === industryFilter.toLowerCase());
+      const matchIndustry = !industry || (cust.industry && cust.industry.toLowerCase() === industry);
 
       const matchCompanySize =
-        !companySizeFilter ||
-        (cust.companySize && cust.companySize.toLowerCase() === companySizeFilter.toLowerCase());
+        !companySize || (cust.companySize && cust.companySize.toLowerCase() === companySize);
 
-      const matchPriority =
-        !priorityFilter || (cust.priority && cust.priority.toLowerCase() === priorityFilter.toLowerCase());
+      const matchPriority = !priority || (cust.priority && cust.priority.toLowerCase() === priority);
 
       return matchSearch && matchIndustry && matchCompanySize && matchPriority;
     });
-  }, [customers, searchTerm, industryFilter, companySizeFilter, priorityFilter]);
+  }, [customers, deferredSearchTerm, industryFilter, companySizeFilter, priorityFilter]);
+
+  // "Hồ sơ tạo trong phiên" — trước đây tính lại (kèm tạo Date cho từng hồ sơ) ở MỌI lần render.
+  const createdTodayCount = useMemo(() => {
+    const today = new Date().toDateString();
+    return customers.filter((c) => c.createdAt && new Date(c.createdAt).toDateString() === today).length;
+  }, [customers]);
 
   // Danh sách ngành nghề duy nhất để làm filter
   const uniqueIndustries = useMemo(() => {
@@ -248,6 +274,26 @@ export default function CustomerListPage({
     setPriorityFilter('');
   };
 
+  // Callback ổn định cho các hàng memo của CustomerTable.
+  const handleSelectCustomer = useCallback(
+    (customer: Customer, tab: 'CONTACTS' | 'SEGMENT' = 'CONTACTS') => {
+      if (onNavigateDetail) {
+        onNavigateDetail(customer);
+      } else {
+        setDetailInitialTab(tab);
+        setSelectedCustomer(customer);
+      }
+    },
+    [onNavigateDetail]
+  );
+
+  // NCL-02-CN-005 (TC-01): mở thẳng tab "Phân nhóm" từ nút thao tác nhanh trên bảng danh sách.
+  const handleOpenSegment = useCallback(
+    (customer: Customer) => handleSelectCustomer(customer, 'SEGMENT'),
+    [handleSelectCustomer]
+  );
+  const openCreateModal = useCallback(() => setIsModalOpen(true), []);
+
   // TC-03: Từ chối truy cập nếu không có vai trò VT-04 hoặc VT-02
   if (!isAllowed) {
     return (
@@ -270,17 +316,6 @@ export default function CustomerListPage({
     );
   }
 
-  const handleSelectCustomer = (customer: Customer, tab: 'CONTACTS' | 'SEGMENT' = 'CONTACTS') => {
-    if (onNavigateDetail) {
-      onNavigateDetail(customer);
-    } else {
-      setDetailInitialTab(tab);
-      setSelectedCustomer(customer);
-    }
-  };
-
-  // NCL-02-CN-005 (TC-01): mở thẳng tab "Phân nhóm" từ nút thao tác nhanh trên bảng danh sách.
-  const handleOpenSegment = (customer: Customer) => handleSelectCustomer(customer, 'SEGMENT');
 
   // NCL-02-CN-005: đồng bộ nhãn phân nhóm mới nhất từ trang chi tiết trở lại danh sách.
   const handleCustomerUpdated = (updated: Customer) => {
@@ -369,7 +404,7 @@ export default function CustomerListPage({
           <div>
             <span className="stat-card__label">Hồ sơ tạo trong phiên</span>
             <div className="stat-card__value text-success">
-              {customers.filter((c) => c.createdAt && new Date(c.createdAt).toDateString() === new Date().toDateString()).length}
+              {createdTodayCount}
             </div>
           </div>
         </div>
@@ -377,7 +412,7 @@ export default function CustomerListPage({
           <div className="stat-card__icon stat-card__icon--purple">{ICONS.shield}</div>
           <div>
             <span className="stat-card__label">Vai trò thực hiện</span>
-            <div className="stat-card__value" style={{ fontSize: '16px' }}>
+            <div className="stat-card__value sl-stat-sm">
               {currentUserRoles.includes('VT-04') ? 'Nhân viên kinh doanh' : 'Quản lý dự án'}
             </div>
           </div>
@@ -518,7 +553,6 @@ export default function CustomerListPage({
               type="button"
               className="btn btn-secondary"
               onClick={clearAllFilters}
-              style={{ marginTop: '16px' }}
               data-testid="btn-clear-segment-filters"
             >
               Xóa toàn bộ bộ lọc
@@ -531,7 +565,7 @@ export default function CustomerListPage({
             customers={filteredCustomers}
             loading={isLoading}
             canCreate={isAllowed}
-            onOpenCreate={() => setIsModalOpen(true)}
+            onOpenCreate={openCreateModal}
             onNavigateDetail={handleSelectCustomer}
             canManageSegment={isAllowed}
             onOpenSegment={handleOpenSegment}
@@ -541,7 +575,7 @@ export default function CustomerListPage({
         )}
 
         <div className="table-footer">
-          <span>
+          <span aria-live="polite">
             {isLoading
               ? 'Đang tải danh sách hồ sơ khách hàng...'
               : (

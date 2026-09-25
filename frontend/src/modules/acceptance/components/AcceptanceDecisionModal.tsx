@@ -14,6 +14,7 @@ import {
   validateConfirmForm,
   validateRejectForm,
 } from '../validators/acceptanceValidators';
+import { useDialogA11y } from '../../projects/components/deliveryUi';
 
 export type AcceptanceDecisionMode = 'confirm' | 'reject';
 
@@ -64,6 +65,8 @@ export default function AcceptanceDecisionModal({ isOpen, mode, certificate, onC
     setStep('form');
     setSaveError(null);
   }, [isOpen, mode]);
+
+  const dialogRef = useDialogA11y(isOpen, onClose, submitting);
 
   if (!isOpen) return null;
 
@@ -135,7 +138,7 @@ export default function AcceptanceDecisionModal({ isOpen, mode, certificate, onC
         aria-modal="true"
         aria-labelledby={titleId}
       >
-        <div className="modal-card" style={{ width: 'min(100%, 600px)' }} data-testid="acceptance-decision-modal">
+        <div ref={dialogRef} className="modal-card dl-modal" style={{ width: 'min(100%, 600px)' }} data-testid="acceptance-decision-modal">
           <div className="modal-header">
             <div className="modal-header__title-wrap">
               <h3 id={titleId} className="modal-title">

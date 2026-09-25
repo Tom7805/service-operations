@@ -24,6 +24,7 @@ import ProjectMilestoneTimeline from './ProjectMilestoneTimeline';
 import ProjectRiskPage from '../pages/ProjectRiskPage';
 import ExpenseListPage from '../../expenses/pages/ExpenseListPage';
 import SubcontractorExpenseListPage from '../../expenses/pages/SubcontractorExpenseListPage';
+import { useDialogA11y } from './deliveryUi';
 
 type WbsSection = 'WBS' | 'MILESTONES' | 'RISKS' | 'EXPENSES' | 'SUBCONTRACTOR';
 
@@ -142,6 +143,8 @@ export default function ProjectWbsModal({
     }
   }, [isOpen, loadData]);
 
+  const dialogRef = useDialogA11y(isOpen, onClose, false);
+
   if (!isOpen) return null;
 
   const handleOpenAddRootPackage = () => {
@@ -238,7 +241,7 @@ export default function ProjectWbsModal({
       aria-modal="true"
       aria-labelledby="wbs-modal-title"
     >
-      <div className="modal-card project-modal-card" style={{ width: 'min(100%, 960px)' }}>
+      <div ref={dialogRef} className="modal-card dl-modal project-modal-card" style={{ width: 'min(100%, 960px)' }}>
         <div className="modal-header">
           <div className="modal-header__title-wrap">
             <h3 id="wbs-modal-title" className="modal-title">

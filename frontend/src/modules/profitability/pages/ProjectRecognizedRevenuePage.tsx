@@ -4,6 +4,7 @@ import type { ProjectRes } from '../../projects/types/projectTypes';
 import { getProject, ProjectsApiError } from '../../projects/api/projectsApi';
 import type { ContractType, RecognitionMethod, RecognizedRevenueRes } from '../types/profitabilityTypes';
 import { getProjectRecognizedRevenue, ProfitabilityApiError } from '../api/profitabilityApi';
+import { ReportSkeleton } from '../../reports/components/ReportStates';
 
 export interface ProjectRecognizedRevenuePageProps {
   projectId: number;
@@ -121,13 +122,13 @@ export default function ProjectRecognizedRevenuePage({
 
   if (!canViewScreen) {
     return (
-      <div className="user-management-page" data-testid="revenue-forbidden">
+      <div className="user-management-page ia-page" data-testid="revenue-forbidden">
         <div className="alert-box alert-box--danger" role="alert">
           Bạn không có quyền xem doanh thu ghi nhận dự án này (yêu cầu vai trò Ban giám đốc
           VT-01 hoặc Kế toán VT-05).
         </div>
         {onBack && (
-          <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
+          <button type="button" className="btn btn-secondary ia-denied-back" onClick={onBack}>
             {ICONS.arrowLeft} Quay lại
           </button>
         )}
@@ -139,9 +140,9 @@ export default function ProjectRecognizedRevenuePage({
   const isCompletion = revenue?.recognitionMethod === 'PERCENTAGE_OF_COMPLETION';
 
   return (
-    <div className="user-management-page" data-testid="revenue-page">
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+    <div className="user-management-page ia-page" data-testid="revenue-page">
+      <div className="page-header">
+        <div className="ia-head">
           {onBack && (
             <button
               type="button"
@@ -153,14 +154,14 @@ export default function ProjectRecognizedRevenuePage({
             </button>
           )}
           <div>
-            <h1 className="page-title" style={{ margin: '4px 0' }}>
+            <h1 className="page-title">
               Doanh thu ghi nhận dự án
             </h1>
             <p className="page-subtitle" data-testid="project-code">{project?.projectCode || `Mã: ${projectId}`}</p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="page-header__actions">
           <button
             type="button"
             className="btn btn-secondary btn-sm"
@@ -186,7 +187,6 @@ export default function ProjectRecognizedRevenuePage({
         <div
           className={`alert-box ${unsupported ? 'alert-box--warning' : 'alert-box--danger'}`}
           role="alert"
-          style={{ marginBottom: '16px' }}
           data-testid="revenue-error"
         >
           {error}
@@ -194,16 +194,13 @@ export default function ProjectRecognizedRevenuePage({
       )}
 
       {loading ? (
-        <div data-testid="revenue-loading" role="status" aria-label="Đang tải doanh thu ghi nhận...">
-            <div className="skeleton" style={{ height: '88px', marginBottom: '24px' }} />
-            <div className="skeleton" style={{ height: '240px' }} />
-          </div>
+        <ReportSkeleton testId="revenue-loading" label="Đang tải doanh thu ghi nhận..." kpis={4} tableColumns={7} />
       ) : !revenue ? (
         !error && (
           <div className="table-empty-state" data-testid="revenue-empty">
             <div className="table-empty-state__icon">{ICONS.chart}</div>
-            <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>Không có dữ liệu</h4>
-            <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
+            <h3>Không có dữ liệu</h3>
+            <p className="ia-inline-empty">
               Dự án này chưa có dữ liệu để tính doanh thu ghi nhận.
             </p>
           </div>
@@ -213,11 +210,10 @@ export default function ProjectRecognizedRevenuePage({
           <div
             className="alert-box alert-box--info"
             role="status"
-            style={{ marginBottom: '16px' }}
             data-testid="revenue-contract-info"
           >
             <strong>Loại hợp đồng:</strong> {CONTRACT_TYPE_LABELS[revenue.contractType]}
-            <span style={{ margin: '0 10px', color: 'var(--ink-faint)' }}>·</span>
+            <span className="ia-sep" aria-hidden="true">·</span>
             <strong>Phương thức ghi nhận:</strong> {RECOGNITION_METHOD_LABELS[revenue.recognitionMethod]}
           </div>
 
@@ -225,7 +221,6 @@ export default function ProjectRecognizedRevenuePage({
             <div
               className="alert-box alert-box--warning"
               role="alert"
-              style={{ marginBottom: '16px' }}
               data-testid="revenue-missing-alert"
             >
               <strong>Cảnh báo:</strong> Có {revenue.missingRateEntryCount} dòng giờ công đã duyệt và tính phí
@@ -277,15 +272,15 @@ export default function ProjectRecognizedRevenuePage({
           </div>
 
           {isHourly && (
-            <div className="user-table-card" style={{ padding: '20px' }} data-testid="revenue-detail-table">
-              <div style={{ marginBottom: '16px' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
+            <div className="user-table-card ia-card-pad" data-testid="revenue-detail-table">
+              <div className="ia-section-head">
+                <h3 className="ia-section-title">
                   Chi tiết từng dòng giờ công
                 </h3>
               </div>
 
               {revenue.lines.length === 0 ? (
-                <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }} data-testid="revenue-lines-empty">
+                <p className="ia-inline-empty" data-testid="revenue-lines-empty">
                   Dự án này chưa có giờ công đã duyệt để tính doanh thu.
                 </p>
               ) : (
@@ -295,9 +290,9 @@ export default function ProjectRecognizedRevenuePage({
                       <tr>
                         <th>Ngày công</th>
                         <th>Mã nhân sự</th>
-                        <th style={{ textAlign: 'right' }}>Số giờ</th>
-                        <th style={{ textAlign: 'right' }}>Đơn giá/giờ</th>
-                        <th style={{ textAlign: 'right' }}>Doanh thu</th>
+                        <th className="text-right">Số giờ</th>
+                        <th className="text-right">Đơn giá/giờ</th>
+                        <th className="text-right">Doanh thu</th>
                         <th>Tính phí</th>
                         <th>Trạng thái dữ liệu</th>
                       </tr>
@@ -307,9 +302,9 @@ export default function ProjectRecognizedRevenuePage({
                         <tr key={line.timeEntryId} data-testid={`revenue-line-${line.timeEntryId}`}>
                           <td>{line.workDate}</td>
                           <td>Mã nhân sự: {line.employeeId}</td>
-                          <td style={{ textAlign: 'right' }}>{formatHours(line.hours)}</td>
-                          <td style={{ textAlign: 'right' }}>{formatCurrency(line.appliedRate)}</td>
-                          <td style={{ textAlign: 'right' }}>{formatCurrency(line.lineRevenue)}</td>
+                          <td className="ia-num">{formatHours(line.hours)}</td>
+                          <td className="ia-num">{formatCurrency(line.appliedRate)}</td>
+                          <td className="ia-num">{formatCurrency(line.lineRevenue)}</td>
                           <td>
                             {line.billable ? (
                               <span className="badge badge--green" data-testid={`billable-${line.timeEntryId}`}>

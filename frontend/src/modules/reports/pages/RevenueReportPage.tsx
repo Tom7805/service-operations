@@ -1,27 +1,21 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { getMonthlyRevenue, ReportsApiError } from '../api/reportsApi';
 import {
   CONTRACT_TYPE_LABELS,
   CONTRACT_TYPE_ORDER,
-  type ContractType,
   type MonthlyRevenueReportRes,
   type MonthlyRevenueRes,
 } from '../types/reportTypes';
 import { ICONS } from '../../../components/common/icons';
+import { ReportErrorAlert, ReportSkeleton } from '../components/ReportStates';
 
 interface RevenueReportPageProps {
   currentUserRoles?: string[];
 }
 
-/** Bảng màu phân loại tham chiếu (4 ô đầu, thứ tự cố định — đã kiểm cho cột chồng liền kề). Màu theo loại hợp đồng,
- *  không theo thứ hạng, nên lọc kỳ không làm đổi màu của một loại. */
-const SERIES_COLOR: Record<ContractType, string> = {
-  TIME_AND_MATERIAL: '#2a78d6',
-  FIXED_PRICE: '#eb6834',
-  MAINTENANCE: '#1baf7a',
-  MILESTONE: '#eda100',
-};
+/* Màu loại hợp đồng nằm ở insight-admin.css (`.ia-series--<LOẠI>` trong `.ia-revenue`). Màu theo loại
+ * hợp đồng, không theo thứ hạng, nên lọc kỳ không làm đổi màu của một loại. */
 
 const MAX_MONTHS = 36;
 const CHART_HEIGHT = 240;
@@ -73,13 +67,20 @@ export default function RevenueReportPage({ currentUserRoles = [] }: RevenueRepo
   const [error, setError] = useState<string | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
 
+  /** Chỉ phản hồi của lần gọi mới nhất được ghi vào trang — đổi kỳ liên tiếp thì phản hồi cũ bị bỏ. */
+  const requestIdRef = useRef(0);
+
   const load = useCallback(async () => {
     if (!isAllowed) return;
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
     try {
-      setData(await getMonthlyRevenue(period.from, period.to));
+      const res = await getMonthlyRevenue(period.from, period.to);
+      if (requestId !== requestIdRef.current) return;
+      setData(res);
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       setData(null);
       setError(
         err instanceof ReportsApiError && err.code === 'FORBIDDEN'
@@ -89,7 +90,7 @@ export default function RevenueReportPage({ currentUserRoles = [] }: RevenueRepo
             : 'Không tải được báo cáo.'
       );
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   }, [isAllowed, period]);
 
@@ -115,7 +116,7 @@ export default function RevenueReportPage({ currentUserRoles = [] }: RevenueRepo
 
   if (!isAllowed) {
     return (
-      <div className="user-management-page">
+      <div className="user-management-page ia-page">
         <div className="alert-box alert-box--danger" role="alert">
           <span className="icon-xs">{ICONS.lock}</span> Chỉ Ban giám đốc hoặc Kế toán được xem báo cáo doanh thu.
         </div>
@@ -129,14 +130,9 @@ export default function RevenueReportPage({ currentUserRoles = [] }: RevenueRepo
   const hoveredMonth: MonthlyRevenueRes | null = hovered == null ? null : months[hovered] ?? null;
 
   return (
-    <div className="user-management-page">
+    <div className="user-management-page ia-page">
       <div className="page-header">
         <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.chart} BÁO CÁO</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">DOANH THU</span>
-          </div>
           <h1 className="page-title">Doanh thu theo tháng</h1>
           <p className="page-subtitle">
             Doanh thu ghi nhận từ giờ công tính phí đã duyệt, tách theo loại hợp đồng và so với cùng kỳ năm trước.
@@ -144,8 +140,7 @@ export default function RevenueReportPage({ currentUserRoles = [] }: RevenueRepo
         </div>
       </div>
 
-      <form onSubmit={applyPeriod} noValidate
-        style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'flex-end', marginBottom: '16px' }}>
+      <form onSubmit={applyPeriod} noValidate className="ia-filter-form" aria-busy={loading}>
         <div>
           <label className="form-label" htmlFor="revenue-from">Từ tháng</label>
           <input id="revenue-from" type="month" className="form-input" value={draft.from}
@@ -154,21 +149,21 @@ export default function RevenueReportPage({ currentUserRoles = [] }: RevenueRepo
         <div>
           <label className="form-label" htmlFor="revenue-to">Đến tháng</label>
           <input id="revenue-to" type="month" className={`form-input ${periodError ? 'form-input--error' : ''}`}
+            aria-invalid={periodError ? true : undefined}
+            aria-describedby={periodError ? 'revenue-period-error' : undefined}
             value={draft.to} onChange={(e) => setDraft((d) => ({ ...d, to: e.target.value }))} />
         </div>
         <button type="submit" className="btn-primary" disabled={loading}>
           {loading ? 'Đang tải…' : 'Xem báo cáo'}
         </button>
-        {periodError && <small className="field-error" style={{ flexBasis: '100%' }}>{periodError}</small>}
+        {periodError && <small className="field-error" id="revenue-period-error">{periodError}</small>}
       </form>
 
-      {error && (
-        <div className="alert-box alert-box--danger" role="alert">
-          <span className="icon-xs">{ICONS.alertTriangle}</span> {error}
-        </div>
-      )}
+      {error && <ReportErrorAlert message={error} onRetry={() => void load()} retryDisabled={loading} />}
 
-      {loading && !data && <p className="field-hint">Đang tải báo cáo…</p>}
+      {loading && !data && (
+        <ReportSkeleton label="Đang tải báo cáo…" kpis={3} chart tableColumns={8} tableRows={4} />
+      )}
 
       {data && !data.hasData && (
         <div className="alert-box alert-box--info" role="status" data-testid="revenue-empty">
@@ -179,50 +174,54 @@ export default function RevenueReportPage({ currentUserRoles = [] }: RevenueRepo
 
       {data && data.hasData && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px',
-            marginBottom: '16px' }}>
-            <div className="user-table-card" style={{ padding: '14px 16px' }}>
-              <div className="field-hint">Tổng doanh thu kỳ</div>
-              <div style={{ fontSize: '22px', fontWeight: 600 }} data-testid="revenue-total">{vnd.format(data.totalRevenue)}</div>
+          <div className="stats-grid">
+            <div className="stat-card">
+              <span className="stat-card__label">Tổng doanh thu kỳ</span>
+              <span className="stat-card__value stat-card__value--md" data-testid="revenue-total">{vnd.format(data.totalRevenue)}</span>
             </div>
-            <div className="user-table-card" style={{ padding: '14px 16px' }}>
-              <div className="field-hint">Cùng kỳ năm trước</div>
-              <div style={{ fontSize: '22px', fontWeight: 600 }}>{vnd.format(data.previousYearTotalRevenue)}</div>
+            <div className="stat-card">
+              <span className="stat-card__label">Cùng kỳ năm trước</span>
+              <span className="stat-card__value stat-card__value--md">{vnd.format(data.previousYearTotalRevenue)}</span>
             </div>
-            <div className="user-table-card" style={{ padding: '14px 16px' }}>
-              <div className="field-hint">Thay đổi so với năm trước</div>
-              <div style={{ fontSize: '22px', fontWeight: 600 }}>{formatChange(data.totalChangePercent)}</div>
+            <div className="stat-card">
+              <span className="stat-card__label">Thay đổi so với năm trước</span>
+              <span
+                className={`stat-card__value stat-card__value--md${
+                  data.totalChangePercent != null && data.totalChangePercent < 0 ? ' text-danger' : ''
+                }`}
+              >
+                {formatChange(data.totalChangePercent)}
+              </span>
             </div>
           </div>
 
           {data.warnings.map((warning) => (
-            <div key={warning} className="alert-box alert-box--warning" role="note" style={{ marginBottom: '8px' }}>
+            <div key={warning} className="alert-box alert-box--warning" role="note">
               <span className="icon-xs">{ICONS.alertTriangle}</span> {warning}
             </div>
           ))}
 
-          <div className="user-table-card" style={{ padding: '16px', marginBottom: '16px', position: 'relative' }}>
-            <div role="list" aria-label="Chú giải" style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', marginBottom: '10px' }}>
+          <div className="user-table-card ia-chart-card ia-revenue">
+            <ul aria-label="Chú giải" className="ia-legend">
               {CONTRACT_TYPE_ORDER.map((type) => (
-                <span key={type} role="listitem" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
-                  <span aria-hidden style={{ width: 10, height: 10, borderRadius: 2, background: SERIES_COLOR[type] }} />
+                <li key={type} className="ia-legend__item">
+                  <span aria-hidden className={`ia-legend__swatch ia-series--${type}`} />
                   {CONTRACT_TYPE_LABELS[type]}
-                </span>
+                </li>
               ))}
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
-                <span aria-hidden style={{ width: 14, height: 2, background: 'var(--ink, #0b0b0b)' }} />
+              <li className="ia-legend__item">
+                <span aria-hidden className="ia-legend__line" />
                 Cùng tháng năm trước
-              </span>
-            </div>
+              </li>
+            </ul>
 
-            <div style={{ overflowX: 'auto' }}>
-              <svg width={chartWidth} height={CHART_HEIGHT + 28} role="img"
+            <div className="ia-chart-scroll">
+              <svg width={chartWidth} height={CHART_HEIGHT + 28} role="group"
                 aria-label="Biểu đồ cột chồng doanh thu theo tháng và loại hợp đồng" onMouseLeave={() => setHovered(null)}>
                 {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
-                  <g key={ratio}>
-                    <line x1={AXIS_LEFT} x2={chartWidth} y1={y(yMax * ratio)} y2={y(yMax * ratio)}
-                      stroke="#e7e5e0" strokeWidth={1} />
-                    <text x={AXIS_LEFT - 6} y={y(yMax * ratio) + 4} textAnchor="end" fontSize="11" fill="#6b6a66">
+                  <g key={ratio} aria-hidden="true">
+                    <line x1={AXIS_LEFT} x2={chartWidth} y1={y(yMax * ratio)} y2={y(yMax * ratio)} className="ia-chart-grid" />
+                    <text x={AXIS_LEFT - 6} y={y(yMax * ratio) + 4} textAnchor="end" className="ia-chart-axis">
                       {compact.format(yMax * ratio)}
                     </text>
                   </g>
@@ -231,10 +230,16 @@ export default function RevenueReportPage({ currentUserRoles = [] }: RevenueRepo
                   const x = AXIS_LEFT + index * SLOT_WIDTH + (SLOT_WIDTH - BAR_WIDTH) / 2;
                   let base = 0;
                   return (
-                    <g key={month.month} onMouseEnter={() => setHovered(index)} data-testid="revenue-bar">
+                    // Mỗi cột nhận focus bằng bàn phím và chạm được trên điện thoại — tooltip không
+                    // chỉ dành cho người dùng chuột.
+                    <g key={month.month} onMouseEnter={() => setHovered(index)} data-testid="revenue-bar"
+                      className="ia-chart-slot" tabIndex={0} role="img"
+                      aria-label={`${monthLabel(month.month)}: ${vnd.format(month.revenue)}`}
+                      onFocus={() => setHovered(index)} onBlur={() => setHovered(null)}
+                      onClick={() => setHovered((h) => (h === index ? null : index))}>
                       {/* Vùng bắt chuột rộng hơn cột để dễ trỏ. */}
                       <rect x={AXIS_LEFT + index * SLOT_WIDTH} y={0} width={SLOT_WIDTH} height={CHART_HEIGHT}
-                        fill={hovered === index ? '#f1f0ee' : 'transparent'} />
+                        className={`ia-chart-hit${hovered === index ? ' ia-chart-hit--active' : ''}`} />
                       {CONTRACT_TYPE_ORDER.map((type) => {
                         const value = Math.max(month.byContractType[type] ?? 0, 0);
                         if (value === 0) return null;
@@ -244,14 +249,14 @@ export default function RevenueReportPage({ currentUserRoles = [] }: RevenueRepo
                         // Khe 2px màu nền giữa các đoạn chồng.
                         return (
                           <rect key={type} x={x} y={top} width={BAR_WIDTH} height={Math.max(height - 2, 1)}
-                            fill={SERIES_COLOR[type]} />
+                            className={`ia-series--${type}`} />
                         );
                       })}
                       {month.previousYearRevenue > 0 && (
                         <line x1={x - 4} x2={x + BAR_WIDTH + 4} y1={y(month.previousYearRevenue)}
-                          y2={y(month.previousYearRevenue)} stroke="#0b0b0b" strokeWidth={2} />
+                          y2={y(month.previousYearRevenue)} className="ia-chart-prev" />
                       )}
-                      <text x={x + BAR_WIDTH / 2} y={CHART_HEIGHT + 18} textAnchor="middle" fontSize="11" fill="#52514e">
+                      <text x={x + BAR_WIDTH / 2} y={CHART_HEIGHT + 18} textAnchor="middle" className="ia-chart-axis">
                         {monthLabel(month.month)}
                       </text>
                     </g>
@@ -261,54 +266,54 @@ export default function RevenueReportPage({ currentUserRoles = [] }: RevenueRepo
             </div>
 
             {hoveredMonth && (
-              <div role="tooltip" data-testid="revenue-tooltip" style={{
-                position: 'absolute', top: 48, left: Math.min(AXIS_LEFT + (hovered ?? 0) * SLOT_WIDTH + SLOT_WIDTH + 24, chartWidth - 180),
-                background: '#fff', border: '1px solid #e7e5e0', borderRadius: 8, padding: '10px 12px',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.08)', fontSize: 13, minWidth: 200, pointerEvents: 'none' }}>
+              <div role="tooltip" data-testid="revenue-tooltip" className="ia-tooltip" style={{
+                left: Math.max(16, Math.min(AXIS_LEFT + (hovered ?? 0) * SLOT_WIDTH + SLOT_WIDTH + 24, chartWidth - 180)) }}>
                 <strong>{monthLabel(hoveredMonth.month)}</strong>
                 {CONTRACT_TYPE_ORDER.map((type) => (
-                  <div key={type} style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                    <span><span aria-hidden style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2,
-                      background: SERIES_COLOR[type], marginRight: 6 }} />{CONTRACT_TYPE_LABELS[type]}</span>
+                  <div key={type} className="ia-tooltip__row">
+                    <span><span aria-hidden className={`ia-legend__swatch ia-series--${type}`} />{CONTRACT_TYPE_LABELS[type]}</span>
                     <span>{vnd.format(hoveredMonth.byContractType[type] ?? 0)}</span>
                   </div>
                 ))}
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, borderTop: '1px solid #e7e5e0',
-                  marginTop: 6, paddingTop: 6 }}>
+                <div className="ia-tooltip__row ia-tooltip__row--total">
                   <span>Tổng</span><strong>{vnd.format(hoveredMonth.revenue)}</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                <div className="ia-tooltip__row">
                   <span>Năm trước</span><span>{vnd.format(hoveredMonth.previousYearRevenue)} ({formatChange(hoveredMonth.changePercent)})</span>
                 </div>
               </div>
             )}
           </div>
 
-          <div className="user-table-card" style={{ overflowX: 'auto' }}>
-            <table className="user-data-table" data-testid="revenue-table">
-              <thead>
-                <tr>
-                  <th>Tháng</th>
-                  {CONTRACT_TYPE_ORDER.map((type) => <th key={type} style={{ textAlign: 'right' }}>{CONTRACT_TYPE_LABELS[type]}</th>)}
-                  <th style={{ textAlign: 'right' }}>Tổng</th>
-                  <th style={{ textAlign: 'right' }}>Cùng tháng năm trước</th>
-                  <th style={{ textAlign: 'right' }}>Thay đổi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {months.map((month) => (
-                  <tr key={month.month}>
-                    <td>{monthLabel(month.month)}</td>
-                    {CONTRACT_TYPE_ORDER.map((type) => (
-                      <td key={type} style={{ textAlign: 'right' }}>{vnd.format(month.byContractType[type] ?? 0)}</td>
-                    ))}
-                    <td style={{ textAlign: 'right', fontWeight: 600 }}>{vnd.format(month.revenue)}</td>
-                    <td style={{ textAlign: 'right' }}>{vnd.format(month.previousYearRevenue)}</td>
-                    <td style={{ textAlign: 'right' }}>{formatChange(month.changePercent)}</td>
+          <div className="user-table-card ia-table-card">
+            <div className="table-responsive">
+              <table className="user-data-table" data-testid="revenue-table">
+                <thead>
+                  <tr>
+                    <th>Tháng</th>
+                    {CONTRACT_TYPE_ORDER.map((type) => <th key={type} className="text-right">{CONTRACT_TYPE_LABELS[type]}</th>)}
+                    <th className="text-right">Tổng</th>
+                    <th className="text-right">Cùng tháng năm trước</th>
+                    <th className="text-right">Thay đổi</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {months.map((month) => (
+                    <tr key={month.month}>
+                      <td>{monthLabel(month.month)}</td>
+                      {CONTRACT_TYPE_ORDER.map((type) => (
+                        <td key={type} className="ia-num">{vnd.format(month.byContractType[type] ?? 0)}</td>
+                      ))}
+                      <td className="ia-num ia-strong">{vnd.format(month.revenue)}</td>
+                      <td className="ia-num">{vnd.format(month.previousYearRevenue)}</td>
+                      <td className={`ia-num${month.changePercent != null && month.changePercent < 0 ? ' text-danger' : ''}`}>
+                        {formatChange(month.changePercent)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </>
       )}

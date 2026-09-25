@@ -16,6 +16,7 @@ import {
   validateVersionForm,
   type VersionFormErrors,
 } from '../validators/acceptanceValidators';
+import { useDialogA11y } from '../../projects/components/deliveryUi';
 
 interface Props {
   isOpen: boolean;
@@ -52,6 +53,8 @@ export default function DeliverableVersionModal({ isOpen, deliverable, onClose, 
     setErrors({});
     setSaveError(null);
   }, [isOpen, deliverable]);
+
+  const dialogRef = useDialogA11y(isOpen, onClose, submitting);
 
   if (!isOpen) return null;
 
@@ -103,7 +106,7 @@ export default function DeliverableVersionModal({ isOpen, deliverable, onClose, 
         aria-modal="true"
         aria-labelledby="deliverable-version-title"
       >
-        <div className="modal-card" style={{ width: 'min(100%, 600px)' }} data-testid="deliverable-version-modal">
+        <div ref={dialogRef} className="modal-card dl-modal" style={{ width: 'min(100%, 600px)' }} data-testid="deliverable-version-modal">
           <div className="modal-header">
             <div className="modal-header__title-wrap">
               <h3 id="deliverable-version-title" className="modal-title">

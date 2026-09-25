@@ -165,7 +165,7 @@ export default function ResetPasswordForm({ email, onDone, onRequestNewCode }: R
         </button>
       </form>
 
-      <div className="form-options" style={{ justifyContent: 'center', marginTop: 16 }}>
+      <div className="form-options ia-mt-16 ia-justify-center">
         <button type="button" className="link-button" onClick={onRequestNewCode}>
           Chưa nhận được mã? Gửi lại
         </button>

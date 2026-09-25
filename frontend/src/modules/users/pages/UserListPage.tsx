@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createUser, getUsers, resetUserTwoFactor, updateUser, updateUserStatus, UserApiError } from '../api/usersApi';
 import RoleAssignModal from '../components/RoleAssignModal';
 import UserFormModal from '../components/UserFormModal';
@@ -42,14 +42,20 @@ export const UserListPage: React.FC<UserListPageProps> = ({
   // NCL-01-CN-009: xác nhận trước khi đặt lại 2FA — thao tác bắt buộc người dùng liên kết lại app mới.
   const [confirmResetTwoFactorUser, setConfirmResetTwoFactorUser] = useState<User | null>(null);
   const [resettingTwoFactor, setResettingTwoFactor] = useState(false);
+  // Chặn bấm "Xác nhận khóa/mở khóa" hai lần khi yêu cầu đầu còn đang chạy.
+  const [togglingStatus, setTogglingStatus] = useState(false);
 
   const statusConfirmBackdrop = useBackdropClick(() => setConfirmStatusUser(null));
   const resetTwoFactorConfirmBackdrop = useBackdropClick(() => setConfirmResetTwoFactorUser(null));
 
+  // Hẹn giờ ẩn toast dùng chung một tham chiếu: toast mới không bị hẹn giờ của toast cũ tắt sớm.
+  const toastTimerRef = useRef<number | undefined>(undefined);
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setToastMessage({ text, type });
-    setTimeout(() => setToastMessage(null), 4000);
+    window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => setToastMessage(null), 4000);
   };
+  useEffect(() => () => window.clearTimeout(toastTimerRef.current), []);
 
   const fetchUsersList = useCallback(async () => {
     if (!isAdmin) return;
@@ -75,15 +81,22 @@ export const UserListPage: React.FC<UserListPageProps> = ({
     setIsFormOpen(true);
   };
 
-  const handleOpenEditModal = (user: User) => {
+  // useCallback: các hàm này truyền xuống từng dòng (UserRow đã memo) — giữ tham chiếu ổn định
+  // để mở modal/toast không kéo cả bảng vẽ lại.
+  const handleOpenEditModal = useCallback((user: User) => {
     setEditingUser(user);
     setIsFormOpen(true);
-  };
+  }, []);
 
-  const handleOpenRoleModal = (user: User) => {
+  const handleOpenRoleModal = useCallback((user: User) => {
     setRoleTargetUser(user);
     setIsRoleModalOpen(true);
-  };
+  }, []);
+
+  const handleViewDetail = useCallback(
+    (u: User) => (onNavigateDetail ? onNavigateDetail(u.id) : handleOpenEditModal(u)),
+    [onNavigateDetail, handleOpenEditModal]
+  );
 
   const handleSubmitCreate = async (payload: CreateUserPayload) => {
     const created = await createUser(payload);
@@ -111,6 +124,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
     const target = confirmStatusUser;
     const nextStatus = target.status === 'LOCKED' ? 'ACTIVE' : 'LOCKED';
 
+    setTogglingStatus(true);
     try {
       const updated = await updateUserStatus(target.id, nextStatus);
       const actionText = nextStatus === 'LOCKED' ? 'Khóa tài khoản' : 'Mở khóa tài khoản';
@@ -124,6 +138,8 @@ export const UserListPage: React.FC<UserListPageProps> = ({
         showToast(err instanceof Error ? err.message : 'Không thể thay đổi trạng thái tài khoản', 'error');
       }
       setConfirmStatusUser(null);
+    } finally {
+      setTogglingStatus(false);
     }
   };
 
@@ -142,6 +158,22 @@ export const UserListPage: React.FC<UserListPageProps> = ({
       setResettingTwoFactor(false);
     }
   };
+
+  // Đếm 4 chỉ số trong MỘT lần duyệt, chỉ tính lại khi danh sách đổi (không phải mỗi lần mở modal/toast).
+  const { totalCount, activeCount, lockedCount, adminCount } = useMemo(() => {
+    let active = 0;
+    let locked = 0;
+    let admins = 0;
+    for (const u of users) {
+      if (u.status === 'ACTIVE') active += 1;
+      else if (u.status === 'LOCKED') locked += 1;
+      if (u.roleCodes.includes('VT-07')) admins += 1;
+    }
+    return { totalCount: users.length, activeCount: active, lockedCount: locked, adminCount: admins };
+  }, [users]);
+
+  const handleToggleStatusRequest = useCallback((u: User) => setConfirmStatusUser(u), []);
+  const handleResetTwoFactorRequest = useCallback((u: User) => setConfirmResetTwoFactorUser(u), []);
 
   // Render TC-04 Access Denied screen if non-admin user
   if (!isAdmin) {
@@ -163,14 +195,8 @@ export const UserListPage: React.FC<UserListPageProps> = ({
     );
   }
 
-  // Dashboard Stats Counter
-  const totalCount = users.length;
-  const activeCount = users.filter((u) => u.status === 'ACTIVE').length;
-  const lockedCount = users.filter((u) => u.status === 'LOCKED').length;
-  const adminCount = users.filter((u) => u.roleCodes.includes('VT-07')).length;
-
   return (
-    <div className="user-management-page">
+    <div className="user-management-page ia-page">
       {/* Toast Banner */}
       {toastMessage && (
         <div className={`toast-banner toast-banner--${toastMessage.type}`} role="status">
@@ -207,7 +233,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
           <div className="stat-card__icon stat-card__icon--green">{ICONS.userCheck}</div>
           <div>
             <span className="stat-card__label">Đang hoạt động</span>
-            <strong className="stat-card__value text-success">{activeCount}</strong>
+            <strong className="stat-card__value">{activeCount}</strong>
           </div>
         </div>
 
@@ -215,7 +241,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
           <div className="stat-card__icon stat-card__icon--red">{ICONS.lock}</div>
           <div>
             <span className="stat-card__label">Đang bị khóa</span>
-            <strong className="stat-card__value text-danger">{lockedCount}</strong>
+            <strong className={`stat-card__value${lockedCount > 0 ? ' text-danger' : ''}`}>{lockedCount}</strong>
           </div>
         </div>
 
@@ -233,7 +259,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
         <div className="alert alert--error mb-4" role="alert">
           <span className="alert__icon">{ICONS.alertTriangle}</span>
           <span>{error}</span>
-          <button type="button" className="btn-link text-white ml-auto" onClick={fetchUsersList}>
+          <button type="button" className="btn-secondary ml-auto" onClick={fetchUsersList} disabled={loading}>
             Thử lại
           </button>
         </div>
@@ -244,11 +270,11 @@ export const UserListPage: React.FC<UserListPageProps> = ({
         users={users}
         loading={loading}
         onEdit={handleOpenEditModal}
-        onToggleStatus={(u) => setConfirmStatusUser(u)}
+        onToggleStatus={handleToggleStatusRequest}
         onAssignRoles={handleOpenRoleModal}
-        onViewDetail={(u) => onNavigateDetail ? onNavigateDetail(u.id) : handleOpenEditModal(u)}
+        onViewDetail={handleViewDetail}
         onRefresh={fetchUsersList}
-        onResetTwoFactor={(u) => setConfirmResetTwoFactorUser(u)}
+        onResetTwoFactor={handleResetTwoFactorRequest}
       />
 
       {/* TC-05: nhật ký thao tác tài khoản giờ nằm ở trang riêng biệt "Nhật ký hệ thống" — lưu thật
@@ -284,10 +310,10 @@ export const UserListPage: React.FC<UserListPageProps> = ({
       {/* Status Toggle Confirmation Dialog (TC-03, TC-05) */}
       {confirmStatusUser && (
         <ModalPortal>
-        <div className="modal-backdrop" onMouseDown={statusConfirmBackdrop.onMouseDown} onClick={statusConfirmBackdrop.onClick} role="dialog">
+        <div className="modal-backdrop" onMouseDown={statusConfirmBackdrop.onMouseDown} onClick={statusConfirmBackdrop.onClick} role="dialog" aria-modal="true" aria-labelledby="user-status-confirm-title">
           <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title text-warning">
+              <h3 className="modal-title text-warning" id="user-status-confirm-title">
                 <span className="modal-title__icon">{confirmStatusUser.status === 'LOCKED' ? ICONS.unlock : ICONS.lock}</span>
                 {confirmStatusUser.status === 'LOCKED' ? 'Xác nhận mở khóa tài khoản' : 'Xác nhận khóa tài khoản'}
               </h3>
@@ -304,15 +330,21 @@ export const UserListPage: React.FC<UserListPageProps> = ({
               </div>
             </div>
             <div className="modal-footer">
-              <button type="button" className="btn-secondary" onClick={() => setConfirmStatusUser(null)}>
+              <button type="button" className="btn-secondary" onClick={() => setConfirmStatusUser(null)} disabled={togglingStatus} autoFocus>
                 Hủy bỏ
               </button>
               <button
                 type="button"
                 className={`btn-primary ${confirmStatusUser.status === 'LOCKED' ? 'btn-success' : 'btn-danger'}`}
                 onClick={handleConfirmToggleStatus}
+                disabled={togglingStatus}
+                aria-busy={togglingStatus}
               >
-                {confirmStatusUser.status === 'LOCKED' ? 'Xác nhận mở khóa' : 'Xác nhận khóa tài khoản'}
+                {togglingStatus
+                  ? 'Đang xử lý...'
+                  : confirmStatusUser.status === 'LOCKED'
+                    ? 'Xác nhận mở khóa'
+                    : 'Xác nhận khóa tài khoản'}
               </button>
             </div>
           </div>
@@ -323,10 +355,10 @@ export const UserListPage: React.FC<UserListPageProps> = ({
       {/* NCL-01-CN-009: xác nhận đặt lại xác thực hai bước (mất/đổi điện thoại) */}
       {confirmResetTwoFactorUser && (
         <ModalPortal>
-        <div className="modal-backdrop" onMouseDown={resetTwoFactorConfirmBackdrop.onMouseDown} onClick={resetTwoFactorConfirmBackdrop.onClick} role="dialog">
+        <div className="modal-backdrop" onMouseDown={resetTwoFactorConfirmBackdrop.onMouseDown} onClick={resetTwoFactorConfirmBackdrop.onClick} role="dialog" aria-modal="true" aria-labelledby="user-reset-2fa-title">
           <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title text-warning">
+              <h3 className="modal-title text-warning" id="user-reset-2fa-title">
                 <span className="modal-title__icon">{ICONS.resetTwoFactor}</span>
                 Xác nhận đặt lại xác thực hai bước
               </h3>
@@ -347,7 +379,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
               </div>
             </div>
             <div className="modal-footer">
-              <button type="button" className="btn-secondary" onClick={() => setConfirmResetTwoFactorUser(null)} disabled={resettingTwoFactor}>
+              <button type="button" className="btn-secondary" onClick={() => setConfirmResetTwoFactorUser(null)} disabled={resettingTwoFactor} autoFocus>
                 Hủy bỏ
               </button>
               <button type="button" className="btn-primary btn-danger" onClick={handleConfirmResetTwoFactor} disabled={resettingTwoFactor}>

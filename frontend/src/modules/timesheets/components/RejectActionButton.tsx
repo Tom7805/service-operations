@@ -5,6 +5,7 @@ import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import { rejectTimesheet, TimesheetsApiError } from '../api/timesheetsApi';
 import type { PendingTimesheetRes, TimesheetRejectRes } from '../types/timesheetTypes';
 import { validateRejectReason } from '../validators/timesheetValidators';
+import { useDialogA11y } from '../../projects/components/deliveryUi';
 
 interface RejectActionButtonProps {
   timesheet: PendingTimesheetRes;
@@ -36,6 +37,7 @@ export default function RejectActionButton({ timesheet, onRejected, onError }: R
   };
 
   const backdrop = useBackdropClick(closeModal, submitting);
+  const dialogRef = useDialogA11y(isOpen, closeModal, submitting);
 
   const handleReject = async () => {
     const error = validateRejectReason(reason);
@@ -79,7 +81,7 @@ export default function RejectActionButton({ timesheet, onRejected, onError }: R
             role="dialog"
             aria-modal="true"
           >
-            <div className="modal-card modal-card--sm" onClick={(e) => e.stopPropagation()}>
+            <div ref={dialogRef} className="modal-card dl-modal modal-card--sm" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
                 <h3 className="modal-title text-danger">
                   <span className="modal-title__icon">{ICONS.close}</span> Từ chối bảng chấm công

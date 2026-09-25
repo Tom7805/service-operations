@@ -18,6 +18,7 @@ import {
   validateAcceptanceForm,
   type AcceptanceFormErrors,
 } from '../validators/acceptanceValidators';
+import { useDialogA11y } from '../../projects/components/deliveryUi';
 
 interface Props {
   isOpen: boolean;
@@ -122,6 +123,8 @@ export default function AcceptanceFormModal({
     isAllowed && !projectClosed && readinessMatches && readiness.ready && !readinessLoading && !submitting;
   const defaultTitle = selectedWp ? `Nghiem thu hang muc ${selectedWp.name}` : '';
 
+  const dialogRef = useDialogA11y(isOpen, onClose, submitting);
+
   if (!isOpen) return null;
 
   const handleReview = (e: FormEvent) => {
@@ -173,7 +176,7 @@ export default function AcceptanceFormModal({
         aria-modal="true"
         aria-labelledby="acceptance-form-modal-title"
       >
-        <div className="modal-card" style={{ width: 'min(100%, 720px)' }} data-testid="acceptance-form-modal">
+        <div ref={dialogRef} className="modal-card dl-modal" style={{ width: 'min(100%, 720px)' }} data-testid="acceptance-form-modal">
           <div className="modal-header">
             <div className="modal-header__title-wrap">
               <h3 id="acceptance-form-modal-title" className="modal-title">

@@ -6,6 +6,7 @@ import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import { createBillRate, RatesApiError } from '../api/ratesApi';
 import type { BillRateRes } from '../types/rateTypes';
 import { validateBillRateForm, type BillRateFormValues } from '../validators/rateValidators';
+import { useDialogA11y } from '../../projects/components/deliveryUi';
 
 interface Props {
   isOpen: boolean;
@@ -47,6 +48,8 @@ export default function RateFormModal({ isOpen, onClose, onSaved, currentUserRol
   const [submitting, setSubmitting] = useState(false);
 
   const backdrop = useBackdropClick(onClose, submitting);
+
+  const dialogRef = useDialogA11y(isOpen, onClose, submitting);
 
   if (!isOpen) return null;
 
@@ -94,7 +97,7 @@ export default function RateFormModal({ isOpen, onClose, onSaved, currentUserRol
         role="dialog"
         aria-modal="true"
       >
-        <div className="modal-card">
+        <div ref={dialogRef} className="modal-card dl-modal">
           <div className="modal-header">
             <div className="modal-header__title-wrap">
               <h3 className="modal-title">

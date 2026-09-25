@@ -27,7 +27,7 @@ function rolesEqual(a: string[], b: string[]): boolean {
  * còn thiếu là giao diện — hook này gọi GET /auth/me khi:
  *  - vừa mount,
  *  - cửa sổ được focus lại / tab chuyển sang hiển thị (đúng thao tác test 2 trình duyệt),
- *  - và định kỳ mỗi 30s.
+ *  - và định kỳ mỗi 30s (tạm dừng khi tab bị ẩn, chạy lại ngay khi hiện lại).
  * An toàn khi hỏng: lỗi mạng bị nuốt, lần sau thử lại; chỉ 401 mới kích hoạt đăng xuất.
  */
 export function useSessionSync({ session, onRefresh, onExpired }: UseSessionSyncOptions): void {
@@ -61,17 +61,34 @@ export function useSessionSync({ session, onRefresh, onExpired }: UseSessionSync
 
     void sync();
 
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') void sync();
+    // Chi poll khi tab DANG HIEN: tab an (nguoi dung de may o hien truong, mo tab
+    // khac) khong can goi /auth/me moi 30s — ton pin, ton 3G. Quay lai tab thi
+    // dong bo NGAY roi moi chay lai nhip 30s.
+    let timer: number | undefined;
+    const start = () => {
+      if (timer === undefined) timer = window.setInterval(() => void sync(), POLL_INTERVAL_MS);
     };
-    window.addEventListener('focus', sync);
+    const stop = () => {
+      if (timer !== undefined) window.clearInterval(timer);
+      timer = undefined;
+    };
+    const onVisible = () => {
+      if (document.visibilityState === 'hidden') {
+        stop();
+      } else {
+        void sync();
+        start();
+      }
+    };
+    const onFocus = () => void sync();
+    window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisible);
-    const timer = window.setInterval(() => void sync(), POLL_INTERVAL_MS);
+    if (document.visibilityState !== 'hidden') start();
 
     return () => {
-      window.removeEventListener('focus', sync);
+      window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisible);
-      window.clearInterval(timer);
+      stop();
     };
     // Chỉ cần gắn lại khi chuyển giữa "có phiên" và "không phiên".
     // eslint-disable-next-line react-hooks/exhaustive-deps

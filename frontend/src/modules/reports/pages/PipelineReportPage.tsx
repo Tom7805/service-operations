@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getPipelineReport, ReportsApiError } from '../api/reportsApi';
 import type { PipelineReportRes, PipelineStageRes } from '../types/pipelineReportTypes';
 import { STAGE_CONFIGS, type OpportunityStage } from '../../opportunities/types/opportunityTypes';
 import { fetchOpportunities } from '../../opportunities/api/opportunitiesApi';
 import { ICONS } from '../../../components/common/icons';
+import { ReportErrorAlert, ReportSkeleton } from '../components/ReportStates';
 
 interface PipelineReportPageProps {
   currentUserRoles?: string[];
@@ -42,16 +43,10 @@ function stageLabel(stage: string): string {
  *    THUA — đúng tinh thần "một điểm nhấn màu, dùng đúng lúc" thay vì tô màu
  *    khắp nơi.
  */
-const STAGE_TONE: Record<string, { bg: string; fg: string; dot: string }> = {
-  APPROACH: { bg: '#F1F0EE', fg: 'var(--ink-muted)', dot: '#C9C6BF' },
-  PROPOSAL: { bg: '#E2DFDA', fg: 'var(--ink)', dot: '#A6A29A' },
-  NEGOTIATION: { bg: '#C9C5BC', fg: 'var(--ink-strong)', dot: '#7A756B' },
-  WON: { bg: 'var(--pale-green-bg)', fg: 'var(--pale-green-fg)', dot: '#346538' },
-  LOST: { bg: 'var(--pale-red-bg)', fg: 'var(--pale-red-fg)', dot: '#9F2F2D' },
-};
-
-function stageTone(stage: string): { bg: string; fg: string; dot: string } {
-  return STAGE_TONE[stage] ?? { bg: '#F1F0EE', fg: 'var(--ink-muted)', dot: '#C9C6BF' };
+/* Sắc độ theo giai đoạn nằm ở insight-admin.css (`.ia-stage-dot` / `.ia-stage-num` theo
+ * `data-stage`) — chỉ dùng token của hệ, không hex rời trong JSX. */
+function StageDot({ stage }: { stage: string }) {
+  return <span className="pipeline-share-legend__dot ia-stage-dot" data-stage={stage} aria-hidden="true" />;
 }
 
 export default function PipelineReportPage({
@@ -71,17 +66,23 @@ export default function PipelineReportPage({
    *  thao tác được thay vì in ra một dãy số vô nghĩa với người dùng. */
   const [opportunityNames, setOpportunityNames] = useState<Record<number, string>>({});
 
+  /** Bấm "Làm mới" liên tiếp: chỉ phản hồi của lần gọi mới nhất được ghi vào trang. */
+  const requestIdRef = useRef(0);
+
   const load = useCallback(
     async (isManualRefresh = false) => {
       if (!isAllowed) return;
+      const requestId = ++requestIdRef.current;
       if (isManualRefresh) setRefreshing(true);
       else setLoading(true);
       setError(null);
 
       try {
         const res = await getPipelineReport();
+        if (requestId !== requestIdRef.current) return;
         setData(res);
       } catch (err) {
+        if (requestId !== requestIdRef.current) return;
         const message =
           err instanceof ReportsApiError
             ? err.message
@@ -90,8 +91,10 @@ export default function PipelineReportPage({
             : 'Đã có lỗi khi tải báo cáo.';
         setError(message);
       } finally {
-        setLoading(false);
-        setRefreshing(false);
+        if (requestId === requestIdRef.current) {
+          setLoading(false);
+          setRefreshing(false);
+        }
       }
     },
     [isAllowed]
@@ -121,20 +124,39 @@ export default function PipelineReportPage({
     };
   }, [isAllowed]);
 
-  function opportunityLabel(id: number): string {
-    return opportunityNames[id] ?? `Cơ hội #${id}`;
-  }
+  const opportunityLabel = useCallback(
+    (id: number): string => opportunityNames[id] ?? `Cơ hội #${id}`,
+    [opportunityNames]
+  );
 
   /** Bấm cờ "X đọng lâu" ngay trên dải chỉ số thì cuộn xuống đúng nhóm cơ hội
    *  tương ứng trong khối cảnh báo phía trên và nháy nền một nhịp để dễ nhận ra
    *  — thay vì chỉ là một nhãn tĩnh không thao tác được gì thêm. */
   const [flashedStage, setFlashedStage] = useState<string | null>(null);
+  const flashTimerRef = useRef<number | undefined>(undefined);
   function jumpToStalledGroup(stage: string) {
     const el = document.getElementById(`stalled-group-${stage}`);
-    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const reduceMotion =
+      typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
     setFlashedStage(stage);
-    window.setTimeout(() => setFlashedStage((prev) => (prev === stage ? null : prev)), 1200);
+    window.clearTimeout(flashTimerRef.current);
+    flashTimerRef.current = window.setTimeout(() => setFlashedStage((prev) => (prev === stage ? null : prev)), 1200);
   }
+  useEffect(() => () => window.clearTimeout(flashTimerRef.current), []);
+
+  /** Gộp mọi phép tính trên danh sách giai đoạn vào một chỗ, chỉ chạy lại khi dữ liệu đổi. */
+  const { stages, stalledStages, totalStalledCount, shares } = useMemo(() => {
+    const list: PipelineStageRes[] = data?.stages ?? [];
+    const total = data?.totalOpportunityCount ?? 0;
+    const stalled = list.filter((s) => s.stalledCount > 0);
+    return {
+      stages: list,
+      stalledStages: stalled,
+      totalStalledCount: stalled.reduce((sum, s) => sum + s.stalledCount, 0),
+      shares: list.map((s) => (total > 0 ? (s.opportunityCount / total) * 100 : 0)),
+    };
+  }, [data]);
 
   if (!isAllowed) {
     return (
@@ -151,12 +173,8 @@ export default function PipelineReportPage({
     );
   }
 
-  const stages: PipelineStageRes[] = data?.stages ?? [];
-  const stalledStages = stages.filter((s) => s.stalledCount > 0);
-  const totalStalledCount = stalledStages.reduce((sum, s) => sum + s.stalledCount, 0);
-
   return (
-    <div className="user-management-page" data-testid="pipeline-report-page">
+    <div className="user-management-page ia-page" data-testid="pipeline-report-page">
       <div className="page-header">
         <div>
           <h1 className="page-title">Báo cáo đường ống bán hàng theo giai đoạn</h1>
@@ -182,21 +200,18 @@ export default function PipelineReportPage({
       </div>
 
       {error && (
-        <div className="alert-box alert-box--danger" style={{ justifyContent: 'space-between' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {ICONS.alertTriangle} {error}
-          </span>
-          <button type="button" className="btn-secondary" onClick={() => load()}>
-            Thử lại
-          </button>
-        </div>
+        <ReportErrorAlert message={error} onRetry={() => load()} retryDisabled={loading || refreshing} />
       )}
 
       {loading ? (
-        <div className="forecast-loading-state" data-testid="pipeline-loading-state">
-          <span className="spinner-lg" aria-hidden="true" />
-          <p>Đang tính toán báo cáo đường ống bán hàng...</p>
-        </div>
+        <ReportSkeleton
+          testId="pipeline-loading-state"
+          label="Đang tính toán báo cáo đường ống bán hàng..."
+          kpis={3}
+          chart
+          tableColumns={5}
+          tableRows={5}
+        />
       ) : data ? (
         <>
           {/* Thẻ chỉ số tổng quan */}
@@ -213,7 +228,7 @@ export default function PipelineReportPage({
                 <span className="stat-card__icon stat-card__icon--green">{ICONS.money}</span>
                 Tổng giá trị dự kiến
               </span>
-              <span className="stat-card__value text-success">{formatVND(data.totalExpectedValue)}</span>
+              <span className="stat-card__value stat-card__value--md">{formatVND(data.totalExpectedValue)}</span>
             </div>
             <div className="stat-card">
               <span className="stat-card__label">
@@ -245,7 +260,6 @@ export default function PipelineReportPage({
 
               <div className="pipeline-stalled-groups">
                 {stalledStages.map((s) => {
-                  const tone = stageTone(s.stage);
                   return (
                     <div
                       key={s.stage}
@@ -253,7 +267,7 @@ export default function PipelineReportPage({
                       className={`pipeline-stalled-group${flashedStage === s.stage ? ' pipeline-stalled-group--flash' : ''}`}
                     >
                       <div className="pipeline-stalled-group__head">
-                        <span className="pipeline-share-legend__dot" style={{ background: tone.dot }} />
+                        <StageDot stage={s.stage} />
                         <strong>{stageLabel(s.stage)}</strong>
                         <span className="pipeline-stalled-group__count">{s.stalledCount} quá hạn</span>
                       </div>
@@ -296,7 +310,6 @@ export default function PipelineReportPage({
 
               <div className="pipeline-flow">
                 {stages.map((s, i) => {
-                  const tone = stageTone(s.stage);
                   return (
                     <div key={s.stage} className="pipeline-flow__item-wrap">
                       <div className="pipeline-flow__item" data-testid={`pipeline-stage-row-${s.stage}`}>
@@ -311,7 +324,7 @@ export default function PipelineReportPage({
                           </button>
                         )}
                         <span className="pipeline-flow__label">{stageLabel(s.stage)}</span>
-                        <span className="pipeline-flow__number" style={{ color: tone.fg }}>
+                        <span className="pipeline-flow__number ia-stage-num" data-stage={s.stage}>
                           {s.opportunityCount}
                         </span>
                         <span className="pipeline-flow__value">{formatVND(s.totalExpectedValue)}</span>
@@ -329,27 +342,31 @@ export default function PipelineReportPage({
               {/* Một thanh tỷ trọng gộp duy nhất — trung thực với dữ liệu (không
                   ép thành hình phễu thu hẹp giả tạo, vì số liệu thực tế không
                   giảm dần đều qua từng giai đoạn). */}
-              <div className="pipeline-share-bar">
-                {stages.map((s) => {
-                  const tone = stageTone(s.stage);
-                  const pct = data.totalOpportunityCount > 0 ? (s.opportunityCount / data.totalOpportunityCount) * 100 : 0;
+              <div
+                className="pipeline-share-bar"
+                role="img"
+                aria-label={`Tỷ trọng cơ hội theo giai đoạn: ${stages
+                  .map((s, i) => `${stageLabel(s.stage)} ${Math.round(shares[i])}%`)
+                  .join(', ')}`}
+              >
+                {stages.map((s, i) => {
                   return (
                     <div
                       key={s.stage}
-                      className="pipeline-share-bar__segment"
-                      style={{ width: `${pct}%`, background: tone.dot }}
+                      className="pipeline-share-bar__segment ia-stage-dot"
+                      data-stage={s.stage}
+                      style={{ width: `${shares[i]}%` }}
                       title={`${stageLabel(s.stage)}: ${s.opportunityCount} cơ hội`}
                     />
                   );
                 })}
               </div>
-              <div className="pipeline-share-legend">
-                {stages.map((s) => {
-                  const tone = stageTone(s.stage);
-                  const pct = data.totalOpportunityCount > 0 ? Math.round((s.opportunityCount / data.totalOpportunityCount) * 100) : 0;
+              <div className="pipeline-share-legend" aria-hidden="true">
+                {stages.map((s, i) => {
+                  const pct = Math.round(shares[i]);
                   return (
                     <span key={s.stage} className="pipeline-share-legend__item">
-                      <span className="pipeline-share-legend__dot" style={{ background: tone.dot }} />
+                      <StageDot stage={s.stage} />
                       {stageLabel(s.stage)} · {pct}%
                     </span>
                   );
@@ -384,20 +401,19 @@ export default function PipelineReportPage({
                   </thead>
                   <tbody>
                     {stages.map((s) => {
-                      const tone = stageTone(s.stage);
                       return (
                         <tr key={s.stage}>
                           <td>
                             <span className="pipeline-stage-name">
-                              <span className="pipeline-share-legend__dot" style={{ background: tone.dot }} />
+                              <StageDot stage={s.stage} />
                               {stageLabel(s.stage)}
                             </span>
                           </td>
                           <td className="text-center">
                             <span className="count-chip">{s.opportunityCount}</span>
                           </td>
-                          <td className="text-right mono-cell">{formatVND(s.totalExpectedValue)}</td>
-                          <td className="text-center mono-cell">{s.averageDaysInStage} ngày</td>
+                          <td className="text-right ia-num">{formatVND(s.totalExpectedValue)}</td>
+                          <td className="text-center ia-num">{s.averageDaysInStage} ngày</td>
                           <td>
                             {s.stalledCount > 0 ? (
                               <button
@@ -409,7 +425,7 @@ export default function PipelineReportPage({
                                 {ICONS.alertTriangle} {s.stalledCount} quá hạn
                               </button>
                             ) : (
-                              <span style={{ color: 'var(--ink-faint)' }}>—</span>
+                              <span className="ia-dash">—</span>
                             )}
                           </td>
                         </tr>

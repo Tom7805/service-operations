@@ -1,4 +1,5 @@
 import type { NotificationRes } from '../types/notificationTypes';
+import { httpFetch } from '../../../utils/http';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -24,7 +25,7 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
 
   let response: Response;
   try {
-    response = await fetch(url, { ...options, headers });
+    response = await httpFetch(url, { ...options, headers });
   } catch {
     throw new NotificationsApiError('NETWORK_ERROR', `Không thể kết nối đến máy chủ Backend (${API_BASE_URL}).`, 503);
   }

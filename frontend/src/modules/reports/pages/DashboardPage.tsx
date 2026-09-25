@@ -1,8 +1,9 @@
-import { useCallback, useState, type FormEvent } from 'react';
+import { useCallback, useRef, useState, type FormEvent } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import { getDashboardSummary, ReportsApiError } from '../api/reportsApi';
 import type { DashboardSummaryRes } from '../types/reportTypes';
 import DashboardKpiRow from '../components/DashboardKpiRow';
+import { ReportErrorAlert, ReportSkeleton } from '../components/ReportStates';
 
 export interface DashboardPageProps {
   currentUserRoles?: string[];
@@ -48,23 +49,32 @@ export default function DashboardPage({
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
 
+  /** Chỉ nhận kết quả của lần gọi MỚI NHẤT — đổi kỳ rồi bấm lại liên tiếp thì phản hồi
+   *  về muộn của kỳ cũ không được ghi đè số liệu của kỳ mới. */
+  const requestIdRef = useRef(0);
+
   const loadSummary = useCallback(async (from: string, to: string, isManualRefresh = false) => {
+    const requestId = ++requestIdRef.current;
     if (isManualRefresh) setRefreshing(true);
     else setLoading(true);
     setError(null);
     try {
       const data = await getDashboardSummary(from, to);
+      if (requestId !== requestIdRef.current) return;
       setSummary(data);
       setHasSearched(true);
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       const message =
         err instanceof ReportsApiError || err instanceof Error
           ? err.message
           : 'Không thể tải bảng điều khiển vận hành.';
       setError(message);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, []);
 
@@ -95,7 +105,7 @@ export default function DashboardPage({
             Bảng điều khiển vận hành chỉ dành riêng cho vai trò <strong>Ban giám đốc</strong>.
           </p>
           {onBack && (
-            <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
+            <button type="button" className="btn btn-secondary ia-denied-back" onClick={onBack}>
               {ICONS.arrowLeft} Quay lại
             </button>
           )}
@@ -105,9 +115,9 @@ export default function DashboardPage({
   }
 
   return (
-    <div className="user-management-page" data-testid="dashboard-page">
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+    <div className="user-management-page ia-page" data-testid="dashboard-page">
+      <div className="page-header">
+        <div className="ia-head">
           {onBack && (
             <button
               type="button"
@@ -119,7 +129,7 @@ export default function DashboardPage({
             </button>
           )}
           <div>
-            <h1 className="page-title" style={{ margin: '4px 0' }}>
+            <h1 className="page-title">
               Bảng điều khiển vận hành
             </h1>
             <p className="page-subtitle">
@@ -129,8 +139,8 @@ export default function DashboardPage({
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} noValidate className="user-table-card" style={{ padding: '20px', marginBottom: '16px' }}>
-        <div className="toolbar-filters" style={{ display: 'flex', alignItems: 'flex-end', gap: '16px', flexWrap: 'wrap' }}>
+      <form onSubmit={handleSubmit} noValidate className="user-table-card ia-filter-card" aria-busy={loading || refreshing}>
+        <div className="toolbar-filters">
           <div className="filter-group">
             <label className="filter-label" htmlFor="dashboard-from">
               Từ ngày <span className="field-required">*</span>
@@ -139,9 +149,10 @@ export default function DashboardPage({
               id="dashboard-from"
               type="date"
               className="form-input"
-              style={{ height: 38 }}
               value={fromInput}
               onChange={(e) => setFromInput(e.target.value)}
+              aria-invalid={fieldError ? true : undefined}
+              aria-describedby={fieldError ? 'error-dashboard' : undefined}
               disabled={loading || refreshing}
               data-testid="dashboard-from-input"
             />
@@ -154,9 +165,10 @@ export default function DashboardPage({
               id="dashboard-to"
               type="date"
               className="form-input"
-              style={{ height: 38 }}
               value={toInput}
               onChange={(e) => setToInput(e.target.value)}
+              aria-invalid={fieldError ? true : undefined}
+              aria-describedby={fieldError ? 'error-dashboard' : undefined}
               disabled={loading || refreshing}
               data-testid="dashboard-to-input"
             />
@@ -183,42 +195,36 @@ export default function DashboardPage({
           )}
         </div>
         {fieldError && (
-          <p className="field-error" data-testid="error-dashboard" style={{ color: 'var(--pale-red-fg)', fontSize: '13.5px', marginTop: '8px' }}>
+          <p className="ia-field-error" id="error-dashboard" role="alert" data-testid="error-dashboard">
             {fieldError}
           </p>
         )}
       </form>
 
       {error && (
-        <div className="alert-box alert-box--danger" role="alert" style={{ marginBottom: '16px', justifyContent: 'space-between' }} data-testid="dashboard-error">
-          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {ICONS.alertTriangle} {error}
-          </span>
-          <button type="button" className="btn-secondary" onClick={() => loadSummary(fromInput, toInput)}>
-            Thử lại
-          </button>
-        </div>
+        <ReportErrorAlert
+          testId="dashboard-error"
+          message={error}
+          onRetry={() => loadSummary(fromInput, toInput)}
+          retryDisabled={loading || refreshing}
+        />
       )}
 
       {loading ? (
-        <div data-testid="dashboard-loading" role="status" aria-label="Đang tải bảng điều khiển...">
-          <div className="skeleton" style={{ height: '88px', marginBottom: '24px' }} />
-          <div className="skeleton" style={{ height: '160px' }} />
-        </div>
+        <ReportSkeleton testId="dashboard-loading" label="Đang tải bảng điều khiển..." kpis={5} tableColumns={0} />
       ) : !hasSearched ? (
         !error && (
           <div className="table-empty-state" data-testid="dashboard-prompt">
             <div className="table-empty-state__icon">{ICONS.chart}</div>
-            <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
-              Chọn khoảng thời gian rồi bấm "Xem bảng điều khiển" để xem các chỉ số vận hành.
-            </p>
+            <h3>Chưa chọn kỳ báo cáo</h3>
+            <p>Chọn khoảng thời gian rồi bấm "Xem bảng điều khiển" để xem các chỉ số vận hành.</p>
           </div>
         )
       ) : (
         summary && (
           <>
             {(summary.missingCostEntryCount > 0 || summary.missingRevenueEntryCount > 0) && (
-              <div className="alert-box alert-box--warning" role="alert" style={{ marginBottom: '16px' }} data-testid="dashboard-missing-alert">
+              <div className="alert-box alert-box--warning" role="alert" data-testid="dashboard-missing-alert">
                 <strong>Cảnh báo:</strong>{' '}
                 {summary.missingCostEntryCount > 0 && (
                   <>Có {summary.missingCostEntryCount} dòng giờ công đã duyệt thiếu đơn giá vốn. </>
@@ -233,8 +239,9 @@ export default function DashboardPage({
             {summary.kpis.recognizedRevenue === 0 &&
               summary.kpis.negativeMarginProjectCount === 0 &&
               summary.kpis.overdueInvoiceCount === 0 && (
-                <div className="alert-box" role="status" style={{ marginBottom: '16px' }} data-testid="dashboard-no-data-note">
-                  {ICONS.info} Kỳ đã chọn chưa có dữ liệu giờ công/hóa đơn nào — mọi chỉ số hiển thị bằng 0.
+                <div className="alert-box alert-box--info" role="status" data-testid="dashboard-no-data-note">
+                  <span className="ia-alert__icon" aria-hidden="true">{ICONS.info}</span>
+                  <span>Kỳ đã chọn chưa có dữ liệu giờ công/hóa đơn nào — mọi chỉ số hiển thị bằng 0.</span>
                 </div>
               )}
 
@@ -244,7 +251,7 @@ export default function DashboardPage({
               onViewOverdueInvoices={onViewOverdueInvoices}
             />
 
-            <p style={{ margin: 0, color: 'var(--ink-faint)', fontSize: '12.5px' }} data-testid="dashboard-period-note">
+            <p className="ia-note" data-testid="dashboard-period-note">
               Kỳ: {summary.from} → {summary.to}
             </p>
           </>

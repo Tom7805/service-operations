@@ -4,6 +4,7 @@ import ModalPortal from '../../../components/common/ModalPortal';
 import type { ProjectMilestoneReq, ProjectMilestoneRes, WorkBreakdownRes } from '../types/projectTypes';
 import { createMilestone, updateMilestone, ProjectsApiError } from '../api/projectsApi';
 import { validateMilestoneForm } from '../validators/projectValidators';
+import { useDialogA11y } from './deliveryUi';
 
 export interface MilestoneFormModalProps {
   isOpen: boolean;
@@ -67,6 +68,8 @@ export default function MilestoneFormModal({
     setServerError(null);
   }, [isOpen, milestone]);
 
+  const dialogRef = useDialogA11y(isOpen, onClose, submitting);
+
   if (!isOpen) return null;
 
   const toggleTask = (taskId: number) => {
@@ -124,7 +127,7 @@ export default function MilestoneFormModal({
       aria-modal="true"
       aria-labelledby="milestone-form-modal-title"
     >
-      <div className="modal-card project-modal-card">
+      <div ref={dialogRef} className="modal-card dl-modal project-modal-card">
         <div className="modal-header">
           <div className="modal-header__title-wrap">
             <h3 id="milestone-form-modal-title" className="modal-title">
