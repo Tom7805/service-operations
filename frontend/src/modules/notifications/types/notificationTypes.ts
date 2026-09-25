@@ -1,11 +1,17 @@
 /** Khớp enum NotificationType phía backend. */
 export type NotificationType =
   | 'TIMESHEET_SUBMITTED'
+  | 'TIMESHEET_REJECTED'
+  | 'TIMER_AUTO_STOPPED'
   | 'TIMESHEET_REMINDER'
   | 'EXPENSE_SUBMITTED'
   | 'PROJECT_MILESTONE_DUE'
   | 'CONTRACT_EXPIRING'
-  | 'NEGATIVE_MARGIN_ALERT';
+  | 'NEGATIVE_MARGIN_ALERT'
+  | 'INVOICE_PROPOSAL_CREATED'
+  | 'DUNNING_REMINDER'
+  | 'RECURRING_INVOICE_GENERATED'
+  | 'ACCEPTANCE_DECIDED_ON_PORTAL';
 
 /** Khớp enum NotificationChannel phía backend — hiện chỉ IN_APP thực sự gửi được. */
 export type NotificationChannel = 'IN_APP' | 'EMAIL' | 'SMS' | 'PUSH';
