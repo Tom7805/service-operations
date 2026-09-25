@@ -17,6 +17,8 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -99,6 +101,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest()
                 .body(ErrorResponse.of(ErrorCode.VALIDATION_ERROR.name(),
                         "Du lieu gui len thieu hoac sai dinh dang"));
+    }
+
+    // NCL-15-CN-004: tai tep nhap du lieu thieu phan "file" hoac vuot spring.servlet.multipart.max-file-size.
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ErrorResponse> handleMissingPart(MissingServletRequestPartException ex) {
+        return ResponseEntity.badRequest()
+                .body(ErrorResponse.of(ErrorCode.VALIDATION_ERROR.name(),
+                        "Thieu tep tai len: " + ex.getRequestPartName()));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUpload(MaxUploadSizeExceededException ex) {
+        return ResponseEntity.badRequest()
+                .body(ErrorResponse.of(ErrorCode.VALIDATION_ERROR.name(), "Tep vuot qua dung luong toi da 2 MB"));
     }
 
     @ExceptionHandler(Exception.class)

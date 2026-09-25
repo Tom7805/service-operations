@@ -35,3 +35,6 @@ build/
 # Cấu hình local không commit (chứa secret riêng máy)
 src/main/resources/application-local.yml
 src/main/resources/application-secret.yml
+
+### Epic NCL-15: tep sao luu du lieu ###
+data/backups/

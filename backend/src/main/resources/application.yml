@@ -7,6 +7,11 @@ spring:
     default-property-inclusion: non_null
     serialization:
       write-dates-as-timestamps: false
+  # NCL-15-CN-004: tep nhap du lieu toi da 2 MB (controller chan lai lan nua va tra VALIDATION_ERROR).
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 3MB
   # Thu dien tu — khai bao MOT lan o day cho MOI profile.
   #
   # `host` rong = chua cau hinh. Khi do:
@@ -70,6 +75,14 @@ app:
     rate-limit:
       max-attempts: ${TWO_FACTOR_RATE_LIMIT_MAX_ATTEMPTS:5}
       window-seconds: ${TWO_FACTOR_RATE_LIMIT_WINDOW_SECONDS:60}
+  backup:
+    # NCL-15-CN-003: thu muc chua tep sao luu (JSON). Nen tro ra ngoai thu muc ma nguon khi trien khai.
+    dir: ${BACKUP_DIR:./data/backups}
+    # Sao luu theo lich (cron 6 truong cua Spring). "-" = tat. VD moi ngay 02h00: "0 0 2 * * *".
+    schedule-cron: ${BACKUP_CRON:-}
+    # QTN-30: ma xac nhan phuc hoi (buoc 1) het han sau so phut nay; sai qua so lan nay thi yeu cau bi huy.
+    restore-token-ttl-minutes: ${BACKUP_RESTORE_TOKEN_TTL_MINUTES:5}
+    restore-max-attempts: ${BACKUP_RESTORE_MAX_ATTEMPTS:3}
 
 springdoc:
   api-docs:

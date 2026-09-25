@@ -6660,6 +6660,498 @@ Không có trong response cổng: ghi chú của kế toán trên hoá đơn/l�
 - Màn hình quản trị: chọn khách hàng (`GET /customers`) rồi gọi `GET /portal-accounts/candidates?customerId=` —
   người liên hệ có `portalAccountId = null` thì hiện nút "Cấp tài khoản".
 
+## Epic `NCL-15` — Quản trị hệ thống và danh mục
+
+Chung cho cả Epic:
+
+- **Vai trò:** mọi chức năng quản trị chỉ dành cho **Quản trị viên** (`VT-07`). Vai trò khác → `403 FORBIDDEN` và
+  Nhật ký hệ thống ghi "Từ chối truy cập" (`targetType = SYSTEM`) kèm tên chức năng: "Quản lý danh mục dịch vụ",
+  "Cấu hình công ty", "Kỳ tài chính", "Sao lưu và phục hồi dữ liệu", "Nhập dữ liệu từ tệp" — đây là TC "Không có
+  quyền" của cả 4 story. **Ngoại lệ chỉ đọc** (ghi rõ ở cột Vai trò bên dưới): danh sách dịch vụ chọn được và giá áp
+  dụng (cho người lập báo giá / hóa đơn), kỳ tài chính (cho người xem báo cáo).
+- **Lưu lịch sử (TC cuối của mỗi story):** mọi thao tác ghi Nhật ký hệ thống, lọc `GET /audit-logs?targetType=SYSTEM`.
+  Các `action`: "Tạo dịch vụ trong danh mục", "Cập nhật dịch vụ trong danh mục", "Ngừng dịch vụ trong danh mục",
+  "Mở lại dịch vụ trong danh mục", "Thêm mốc giá dịch vụ", "Cập nhật cấu hình công ty", "Sao lưu dữ liệu",
+  "Sao lưu dữ liệu thất bại", "Yêu cầu phục hồi dữ liệu", "Từ chối phục hồi dữ liệu",
+  "Xác nhận phục hồi dữ liệu thất bại", "Phục hồi dữ liệu", "Phục hồi dữ liệu thất bại", "Tải tệp nhập dữ liệu",
+  "Nhập dữ liệu từ tệp".
+- **Ngày tháng:** `yyyy-MM-dd` cho ngày, `yyyy-MM-ddTHH:mm:ss` cho thời điểm (giờ máy chủ).
+- **Trường `null` bị lược** khỏi JSON (cấu hình Jackson `non_null`) — Frontend coi trường vắng mặt là `null`.
+
+**Bản đồ endpoint:**
+
+| Story | Method & path | Vai trò |
+|---|---|---|
+| CN-001 | `GET /service-catalog?keyword=&active=&asOf=` | `VT-07` |
+| CN-001 | `GET /service-catalog/{id}?asOf=` | `VT-07` |
+| CN-001 | `POST /service-catalog` | `VT-07` |
+| CN-001 | `PUT /service-catalog/{id}` | `VT-07` |
+| CN-001 | `PATCH /service-catalog/{id}/status` | `VT-07` |
+| CN-001 | `POST /service-catalog/{id}/prices` | `VT-07` |
+| CN-001 | `GET /service-catalog/selectable?date=` | `VT-07`, `VT-01`, `VT-02`, `VT-04`, `VT-05` |
+| CN-001 | `GET /service-catalog/{id}/effective-price?date=` | `VT-07`, `VT-01`, `VT-02`, `VT-04`, `VT-05` |
+| CN-002 | `GET /company-settings` | `VT-07` |
+| CN-002 | `PUT /company-settings` | `VT-07` |
+| CN-002 | `GET /fiscal-periods/{fiscalYear}` | `VT-07`, `VT-01`, `VT-02`, `VT-05` |
+| CN-002 | `GET /fiscal-periods/current?date=` | `VT-07`, `VT-01`, `VT-02`, `VT-05` |
+| CN-003 | `GET /backups` | `VT-07` |
+| CN-003 | `GET /backups/{backupId}` | `VT-07` |
+| CN-003 | `POST /backups` | `VT-07` |
+| CN-003 | `POST /backups/{backupId}/restore-requests` (bước 1) | `VT-07` |
+| CN-003 | `POST /backups/restore-requests/{requestId}/confirm` (bước 2) | `VT-07` |
+| CN-004 | `GET /imports/templates/{targetType}` | `VT-07` |
+| CN-004 | `POST /imports/preview` (multipart) | `VT-07` |
+| CN-004 | `POST /imports/{jobId}/commit` | `VT-07` |
+| CN-004 | `GET /imports` | `VT-07` |
+| CN-004 | `GET /imports/{jobId}` | `VT-07` |
+
+### `NCL-15-CN-001` — Quản lý danh mục dịch vụ và giá
+
+Mỗi dịch vụ có **một tên duy nhất** và **một chuỗi mốc giá theo ngày hiệu lực** (QTN-28). Đổi giá **không sửa giá
+cũ** mà thêm một mốc giá mới; mọi mốc cũ giữ lại để báo giá / hóa đơn đã lập vẫn giải thích được. Giá áp dụng cho một
+ngày = mốc có `effectiveFrom` gần nhất **trước hoặc bằng** ngày đó.
+
+**Đối tượng `ServiceCatalogRes`** (dùng chung cho mọi API của story):
+
+```json
+{
+  "id": 3,
+  "code": "DV00003",
+  "name": "Tư vấn triển khai",
+  "unit": "giờ",
+  "description": "Tư vấn tại chỗ cho khách hàng",
+  "active": true,
+  "asOf": "2026-09-25",
+  "hasEffectivePrice": true,
+  "currentPrice": 450000.00,
+  "currentPriceEffectiveFrom": "2026-07-01",
+  "createdBy": "admin",
+  "createdAt": "2026-01-02T09:00:00",
+  "updatedAt": "2026-07-01T08:30:00",
+  "prices": [
+    { "id": 12, "price": 480000.00, "effectiveFrom": "2027-01-01", "current": false,
+      "createdBy": "admin", "createdAt": "2026-09-20T10:00:00" },
+    { "id": 9, "price": 450000.00, "effectiveFrom": "2026-07-01", "effectiveTo": "2026-12-31", "current": true,
+      "note": "Tăng giá giữa năm", "createdBy": "admin", "createdAt": "2026-06-25T10:00:00" },
+    { "id": 5, "price": 400000.00, "effectiveFrom": "2026-01-01", "effectiveTo": "2026-06-30", "current": false,
+      "note": "Gia khoi tao", "createdBy": "admin", "createdAt": "2026-01-02T09:00:00" }
+  ]
+}
+```
+
+| Trường | Ý nghĩa |
+|---|---|
+| `code` | Mã sinh tự động `DV` + 5 chữ số theo id — không nhập tay. |
+| `asOf` | Ngày dùng để tính `currentPrice` (tham số `asOf`/`date`, mặc định hôm nay). |
+| `hasEffectivePrice` | `false` khi chưa có mốc giá nào hiệu lực tại `asOf` (VD mốc đầu tiên ở tương lai) → **không được chọn** khi lập báo giá / hóa đơn. Khi đó không có `currentPrice`. |
+| `prices` | Lịch sử mốc giá, mới nhất trước. **Chỉ có ở `GET /service-catalog/{id}` và response của các API ghi**; danh sách không có trường này. `effectiveTo` = ngày trước mốc kế tiếp, vắng mặt = chưa có mốc sau. `current` đánh dấu mốc đang áp dụng tại `asOf`. |
+
+#### `GET /service-catalog?keyword=&active=&asOf=`
+
+Danh sách dịch vụ, sắp xếp theo tên. `keyword` tìm theo tên hoặc mã (không phân biệt hoa thường); `active=true|false`
+lọc trạng thái (bỏ trống = tất cả). Trả `ServiceCatalogRes[]` (không có `prices`).
+
+#### `GET /service-catalog/{id}?asOf=`
+
+Chi tiết + lịch sử mốc giá. `404 RESOURCE_NOT_FOUND` nếu id không tồn tại.
+
+#### `POST /service-catalog` (TC-01, TC-02)
+
+```json
+{
+  "name": "Tư vấn triển khai",
+  "unit": "giờ",
+  "description": "Tư vấn tại chỗ cho khách hàng",
+  "price": 400000,
+  "effectiveFrom": "2026-01-01"
+}
+```
+
+| Trường | Bắt buộc | Ràng buộc |
+|---|---|---|
+| `name` | ✔ | ≤ 255 ký tự |
+| `unit` | ✔ | ≤ 50 ký tự (giờ, ngày công, gói, buổi…) |
+| `description` | | ≤ 1000 ký tự |
+| `price` | ✔ | > 0, tối đa 16 chữ số nguyên + 2 chữ số thập phân |
+| `effectiveFrom` | ✔ | Ngày hiệu lực của mốc giá đầu tiên (được phép ở quá khứ hoặc tương lai) |
+
+- `200` — `message: "Tao dich vu thanh cong"`, `data`: `ServiceCatalogRes` (có `prices`). Dịch vụ xuất hiện ngay trong
+  danh mục dùng chung (TC-01).
+- `409 DUPLICATE_DATA` — đã có dịch vụ cùng tên (TC-02). So sánh **không phân biệt hoa thường và khoảng trắng thừa**
+  ("Tư vấn  triển khai" = "tư vấn triển khai"), nhưng **giữ dấu** ("Bảo trì" ≠ "Bao tri"). Không tạo gì cả.
+- `400 VALIDATION_ERROR` — thiếu/sai trường, xem `fieldErrors`.
+
+#### `PUT /service-catalog/{id}`
+
+Sửa mô tả dịch vụ — **không sửa giá ở đây**.
+
+```json
+{ "name": "Tư vấn triển khai hệ thống", "unit": "giờ", "description": null }
+```
+
+`200` (`"Cap nhat dich vu thanh cong"`) · `409 DUPLICATE_DATA` nếu tên mới trùng dịch vụ **khác** (giữ nguyên tên
+của chính nó thì được) · `404`.
+
+#### `PATCH /service-catalog/{id}/status`
+
+```json
+{ "active": false }
+```
+
+Ngừng / mở lại dịch vụ. Dịch vụ ngừng vẫn giữ lịch sử nhưng không còn trong `/selectable` và `effective-price` trả lỗi.
+`400 INVALID_STATE` nếu đặt đúng trạng thái đang có (ngừng dịch vụ đã ngừng, mở dịch vụ đang hoạt động).
+
+#### `POST /service-catalog/{id}/prices` (QTN-28)
+
+```json
+{ "price": 450000, "effectiveFrom": "2026-07-01", "note": "Tăng giá giữa năm" }
+```
+
+Thêm mốc giá mới; trả `ServiceCatalogRes` đã cập nhật. `409 DUPLICATE_DATA` nếu dịch vụ đã có mốc giá cùng
+`effectiveFrom` — chọn ngày khác. `note` ≤ 500 ký tự.
+
+#### `GET /service-catalog/selectable?date=` — dùng cho màn hình lập báo giá / hóa đơn (QTN-28)
+
+Chỉ trả dịch vụ **đang hoạt động VÀ có giá hiệu lực** tại `date` (mặc định hôm nay) — `date` nên là **ngày lập chứng
+từ**. Dịch vụ thiếu giá hiệu lực bị loại khỏi danh sách ("không cho chọn dịch vụ đó"). Trả `ServiceCatalogRes[]`.
+
+#### `GET /service-catalog/{id}/effective-price?date=` (QTN-28)
+
+```json
+{
+  "serviceItemId": 3, "code": "DV00003", "name": "Tư vấn triển khai", "unit": "giờ",
+  "date": "2026-09-25", "price": 450000.00, "effectiveFrom": "2026-07-01"
+}
+```
+
+`400 INVALID_STATE` khi dịch vụ đã ngừng hoặc **chưa có giá hiệu lực tại ngày lập** — message
+"Dich vu DV00003 chua co gia hieu luc tai ngay …, khong chon duoc khi lap bao gia/hoa don". Backend các module báo
+giá / hóa đơn gọi `ServiceCatalogService.resolveEffectivePrice(id, date)` để có cùng quy tắc.
+
+### `NCL-15-CN-002` — Cấu hình thông tin công ty và kỳ tài chính
+
+Một bộ cấu hình duy nhất cho toàn hệ thống.
+
+**Đối tượng `CompanySettingRes`:**
+
+```json
+{
+  "configured": true,
+  "companyName": "Công ty TNHH Mô Phỏng Dịch Vụ",
+  "taxCode": "0101234567",
+  "address": "Số 1 Đường Mô Phỏng, Hà Nội",
+  "phone": "02438123456",
+  "email": "lienhe@mophong.example",
+  "currency": "VND",
+  "fiscalYearStartMonth": 4,
+  "standardWorkingDaysPerMonth": 22,
+  "updatedBy": "admin",
+  "updatedAt": "2026-09-25T10:00:00"
+}
+```
+
+#### `GET /company-settings`
+
+Chưa cấu hình lần nào → `configured: false` kèm giá trị mặc định (`currency: "VND"`, `fiscalYearStartMonth: 1`,
+`standardWorkingDaysPerMonth: 22`, các trường khác vắng mặt). Frontend dùng cờ này để hiện lời nhắc "Chưa khai báo
+thông tin công ty".
+
+#### `PUT /company-settings` (TC-01, TC-02)
+
+```json
+{
+  "companyName": "Công ty TNHH Mô Phỏng Dịch Vụ",
+  "taxCode": "0101234567",
+  "address": "Số 1 Đường Mô Phỏng, Hà Nội",
+  "phone": "02438123456",
+  "email": "lienhe@mophong.example",
+  "currency": "VND",
+  "fiscalYearStartMonth": 4,
+  "standardWorkingDaysPerMonth": 22
+}
+```
+
+| Trường | Bắt buộc | Ràng buộc |
+|---|---|---|
+| `companyName` | ✔ | ≤ 255 ký tự, không được chỉ có khoảng trắng |
+| `taxCode` | | 10 chữ số, hoặc 10 số + `-` + 3 số (chi nhánh) |
+| `address` | | ≤ 500 ký tự |
+| `phone` | | 10–11 chữ số, bắt đầu bằng `0` |
+| `email` | | đúng định dạng email |
+| `currency` | ✔ | `VND` \| `USD` \| `EUR` |
+| `fiscalYearStartMonth` | ✔ | 1–12 |
+| `standardWorkingDaysPerMonth` | ✔ | 1–31 |
+
+- `200` — `"Luu cau hinh cong ty thanh cong"`, `data`: `CompanySettingRes`. Đổi `fiscalYearStartMonth` áp dụng
+  **ngay** cho lần chia kỳ kế tiếp (TC-01) — không có dữ liệu kỳ nào lưu sẵn cần đồng bộ lại.
+- `400 VALIDATION_ERROR` — thiếu tên công ty (TC-02, `fieldErrors[0].field = "companyName"`) hoặc trường sai ràng buộc.
+- Nhật ký ghi rõ các trường đã đổi, VD `"Thay doi: thang bat dau nam tai chinh: 1 -> 4"`.
+
+#### `GET /fiscal-periods/{fiscalYear}` · `GET /fiscal-periods/current?date=` (TC-01)
+
+Chia năm tài chính theo `fiscalYearStartMonth`. **Quy ước:** năm tài chính mang số của năm dương lịch chứa ngày bắt
+đầu. VD bắt đầu tháng 4 → năm tài chính 2026 = `2026-04-01` … `2027-03-31`. `current` trả năm tài chính chứa `date`
+(mặc định hôm nay). `fiscalYear` phải trong 2000–2100, ngoài khoảng → `400 VALIDATION_ERROR`.
+
+```json
+{
+  "fiscalYear": 2026,
+  "startMonth": 4,
+  "startDate": "2026-04-01",
+  "endDate": "2027-03-31",
+  "quarters": [
+    { "quarter": 1, "startDate": "2026-04-01", "endDate": "2026-06-30" },
+    { "quarter": 2, "startDate": "2026-07-01", "endDate": "2026-09-30" },
+    { "quarter": 3, "startDate": "2026-10-01", "endDate": "2026-12-31" },
+    { "quarter": 4, "startDate": "2027-01-01", "endDate": "2027-03-31" }
+  ],
+  "months": [
+    { "period": 1, "yearMonth": "2026-04", "startDate": "2026-04-01", "endDate": "2026-04-30" },
+    "… 12 phần tử …",
+    { "period": 12, "yearMonth": "2027-03", "startDate": "2027-03-01", "endDate": "2027-03-31" }
+  ]
+}
+```
+
+Màn hình báo cáo theo năm/quý lấy `startDate`/`endDate` của năm hoặc quý ở đây rồi truyền làm `from`/`to` cho các API
+báo cáo (`/reports/**`). Backend dùng `FiscalPeriodService.resolve(date)` cho cùng quy tắc.
+
+### `NCL-15-CN-003` — Sao lưu và phục hồi dữ liệu
+
+- **Nội dung bản sao:** toàn bộ dữ liệu vận hành (mọi bảng nghiệp vụ, kể cả bảng thêm ở các Epic sau). **Không** sao
+  lưu và **không** bị phục hồi đè: Nhật ký hệ thống (`audit_logs`), nhật ký truy cập dữ liệu nhạy cảm, danh sách bản
+  sao lưu / yêu cầu phục hồi, phiên nhập dữ liệu, phiên đăng nhập và mã khôi phục mật khẩu — nên dấu vết "ai đã phục
+  hồi lúc nào" luôn còn.
+- **Tệp:** JSON, lưu trong `app.backup.dir` (biến môi trường `BACKUP_DIR`, mặc định `./data/backups`), kèm SHA-256.
+- **Sao lưu theo lịch:** đặt `BACKUP_CRON` (cron 6 trường của Spring, VD `0 0 2 * * *` = 02h00 hằng ngày); mặc định
+  tắt. Bản sao theo lịch có `triggerType: "SCHEDULED"` và không có `createdBy`.
+- **Chỉ một thao tác sao lưu HOẶC phục hồi chạy cùng lúc** — gọi khi đang có thao tác khác → `400 INVALID_STATE`
+  "Dang sao luu du lieu / phuc hoi du lieu, vui long thu lai sau…".
+
+**Đối tượng `BackupRecordRes`:**
+
+```json
+{
+  "id": 8,
+  "code": "BK-20260925-100000-8",
+  "status": "COMPLETED",
+  "triggerType": "MANUAL",
+  "fileName": "BK-20260925-100000-8.json",
+  "sizeBytes": 482113,
+  "checksumSha256": "9f2c…64 ký tự hex…",
+  "tableCount": 71,
+  "rowCount": 5230,
+  "note": "Truoc khi nang cap",
+  "createdBy": "admin",
+  "startedAt": "2026-09-25T10:00:00",
+  "completedAt": "2026-09-25T10:00:02",
+  "restorable": true
+}
+```
+
+| `status` | Ý nghĩa | Phục hồi được? |
+|---|---|---|
+| `IN_PROGRESS` | Đang tạo, hoặc tiến trình chết giữa chừng (bản sao dở dang) | ✘ (TC-02) |
+| `COMPLETED` | Hoàn tất | ✔ — nếu tệp còn nguyên (kiểm checksum khi phục hồi) |
+| `FAILED` | Lỗi khi tạo, lý do ở `errorMessage` | ✘ (TC-02) |
+
+`restorable` = `status == COMPLETED` (dùng để bật/tắt nút "Phục hồi"). Tính toàn vẹn tệp chỉ kiểm khi tạo yêu cầu phục hồi.
+
+#### `GET /backups` · `GET /backups/{backupId}`
+
+Danh sách mới nhất trước / chi tiết. `404` nếu id không tồn tại.
+
+#### `POST /backups` (TC-01)
+
+Body tùy chọn: `{ "note": "Truoc khi nang cap" }` (≤ 500 ký tự; có thể gửi không body).
+
+- `200` + `status: "COMPLETED"`, `message: "Tao ban sao luu thanh cong"` — kèm thời điểm (`startedAt`/`completedAt`)
+  và dung lượng (`sizeBytes`).
+- Lỗi giữa chừng (hết dung lượng đĩa…) **vẫn trả `200`** với `status: "FAILED"`, `errorMessage`,
+  `message: "Tao ban sao luu that bai"` — Frontend phải kiểm tra `data.status`, không chỉ HTTP status.
+
+#### Phục hồi — xác nhận hai bước (QTN-30)
+
+**Bước 1 — `POST /backups/{backupId}/restore-requests`** (không body)
+
+Hệ thống kiểm tra bản sao: trạng thái `COMPLETED`, tệp còn tồn tại, SHA-256 khớp. Hợp lệ → cấp mã xác nhận:
+
+```json
+{
+  "requestId": 15,
+  "backupId": 8,
+  "backupCode": "BK-20260925-100000-8",
+  "backupCreatedAt": "2026-09-25T10:00:00",
+  "confirmationToken": "q3N0y…43 ký tự…",
+  "expiresAt": "2026-09-25T10:35:00",
+  "warning": "Phuc hoi se THAY TOAN BO du lieu van hanh hien tai bang du lieu tai thoi diem cua ban sao. …"
+}
+```
+
+- `confirmationToken` **chỉ trả về một lần ở đây** (CSDL chỉ lưu bản băm), hết hạn sau 5 phút
+  (`BACKUP_RESTORE_TOKEN_TTL_MINUTES`). Frontend giữ trong bộ nhớ của hộp thoại xác nhận, **không lưu localStorage**.
+- `400 INVALID_STATE` (TC-02) — bản sao không hợp lệ, message dạng
+  `"Ban sao luu BK-… khong hop le (ban sao con dang tao do dang | ban sao bi loi khi tao: … | khong tim thay tep sao luu | tep sao luu da bi thay doi hoac hong (sai checksum)), khong the phuc hoi"`.
+  Lượt bị chặn ghi nhật ký "Từ chối phục hồi dữ liệu".
+
+**Bước 2 — `POST /backups/restore-requests/{requestId}/confirm`**
+
+Hộp thoại hiện `warning`, bắt quản trị viên **nhập lại mật khẩu đăng nhập** rồi gửi kèm mã của bước 1:
+
+```json
+{ "confirmationToken": "q3N0y…", "password": "MatKhauCuaQuanTriVien" }
+```
+
+- `200` — `"Phuc hoi du lieu thanh cong"`:
+  ```json
+  {
+    "requestId": 15, "backupId": 8, "backupCode": "BK-20260925-100000-8", "status": "COMPLETED",
+    "tablesRestored": 71, "rowsRestored": 5230,
+    "restoredToPointInTime": "2026-09-25T10:00:00", "completedAt": "2026-09-25T10:31:12"
+  }
+  ```
+  Dữ liệu về đúng thời điểm `restoredToPointInTime`. Việc phục hồi chạy trong **một giao dịch**: lỗi giữa chừng thì
+  rollback, dữ liệu hiện tại giữ nguyên. Sau khi phục hồi, bảng tài khoản cũng về thời điểm bản sao — Frontend nên
+  tải lại trang; nếu tài khoản đang dùng không tồn tại ở thời điểm đó thì người dùng sẽ bị đăng xuất.
+- `400 VALIDATION_ERROR` — sai mã xác nhận hoặc sai mật khẩu (**không nói rõ sai cái nào**). Sai **3 lần**
+  (`BACKUP_RESTORE_MAX_ATTEMPTS`) → yêu cầu bị huỷ, message "…yeu cau phuc hoi da bi huy"; phải làm lại bước 1.
+- `400 INVALID_STATE` — mã đã hết hạn; yêu cầu đã kết thúc (`COMPLETED`/`FAILED`/`EXPIRED`); bản sao bị sửa trong lúc
+  chờ xác nhận; bản sao không khớp cấu trúc dữ liệu hiện tại (tạo trước một lần nâng cấp CSDL); đang có sao lưu/phục
+  hồi khác.
+- `403 FORBIDDEN` — quản trị viên **khác** người tạo yêu cầu (mỗi yêu cầu chỉ người tạo xác nhận được).
+- `404 RESOURCE_NOT_FOUND` — `requestId` không tồn tại.
+
+### `NCL-15-CN-004` — Nhập dữ liệu khách hàng và nhân sự từ tệp
+
+Luồng hai bước: **tải tệp → bảng xem trước → xác nhận nhập**. Bước xem trước **chưa ghi dữ liệu nào**. Bước xác nhận
+**kiểm tra lại** trên dữ liệu mới nhất (hồ sơ có thể vừa được tạo ở màn hình khác) rồi mới ghi.
+
+- **Định dạng tệp:** CSV (`.csv`, tối đa **2 MB**, tối đa **2000 dòng** dữ liệu). Từ Excel: *Lưu thành → CSV UTF-8*.
+  Chấp nhận dấu phân cách `,` `;` hoặc tab; mã hóa UTF-8 (có/không BOM) hoặc windows-1258. Tiêu đề cột so khớp không
+  phân biệt hoa thường, dấu và khoảng trắng; cột lạ → lỗi "Tệp không đúng mẫu". Dòng trống hoàn toàn bị bỏ qua.
+  Số dòng (`rowNumber`) tính theo tệp, **dòng tiêu đề là dòng 1**.
+- **`targetType`:** `CUSTOMER` | `EMPLOYEE`.
+- **QTN-04:** mọi response có `notice` nhắc chỉ dùng dữ liệu mô phỏng — Frontend hiện nổi bật trên màn hình nhập.
+
+**Cột của tệp** (tiêu đề chính · tên thay thế được chấp nhận):
+
+| `targetType` | Cột | Bắt buộc | Quy tắc (giống màn hình nhập tay) |
+|---|---|---|---|
+| `CUSTOMER` | Tên khách hàng · Tên công ty · `name` | ✔ | ≤ 255 ký tự; không trùng tên dòng khác trong tệp |
+| | Mã số thuế · MST · `taxCode` | | 10 số hoặc 10 số-3 số; không trùng dòng khác trong tệp |
+| | Số điện thoại · SĐT · `phone` | | di động 10 số hoặc cố định 02x |
+| | Lĩnh vực · Ngành nghề · `industry` | | ≤ 255 |
+| | Địa chỉ · `address` | | ≤ 500 |
+| `EMPLOYEE` | Tên đăng nhập · Tài khoản · `username` | ✔ | tài khoản **phải có sẵn** (tạo ở Quản lý tài khoản); không trùng dòng khác |
+| | Bộ phận · Phòng ban · `department` | | tên bộ phận đã có (không phân biệt hoa thường) |
+| | Vai trò chuyên môn · Chức danh · `professionalRole` | | ≤ 255 |
+| | Cấp bậc · `level` | | ≤ 100 |
+| | Ngày vào làm · `hireDate` | ✔ | `yyyy-MM-dd` hoặc `dd/MM/yyyy` |
+| | Ngày kết thúc · `endDate` | | không sớm hơn ngày vào làm |
+| | Giờ chuẩn/tuần · Giờ làm việc chuẩn · `standardHoursPerWeek` | | > 0 và ≤ 168; bỏ trống = 40 |
+
+**Trùng hồ sơ đã có (TC-03):** khách hàng — cùng thuật toán chống trùng `NCL-02-CN-002`, độ giống ≥ 0.9 (VD trùng mã
+số thuế); nhân sự — tài khoản đã có hồ sơ nhân sự.
+
+#### `GET /imports/templates/{targetType}`
+
+Tải tệp mẫu: `Content-Type: text/csv;charset=UTF-8`,
+`Content-Disposition: attachment; filename="mau-nhap-customer.csv"` (hoặc `mau-nhap-employee.csv`). Có BOM để Excel
+hiện đúng tiếng Việt, gồm dòng tiêu đề + 1 dòng dữ liệu mô phỏng. Gọi bằng `fetch`/axios với `responseType: 'blob'`
+(cần header `Authorization`, không mở link trực tiếp).
+
+#### `POST /imports/preview` — bước 1 (TC-02, TC-03)
+
+`Content-Type: multipart/form-data`, hai phần: `targetType` (text) và `file` (tệp).
+
+```json
+{
+  "jobId": 21,
+  "targetType": "CUSTOMER",
+  "fileName": "khach-hang.csv",
+  "status": "PREVIEWED",
+  "totalRows": 4,
+  "validRows": 2,
+  "invalidRows": 1,
+  "duplicateRows": 1,
+  "notice": "Chi nhap du lieu MO PHONG phuc vu trinh dien (QTN-04). Khong dua du lieu khach hang hay nhan su that vao he thong.",
+  "rows": [
+    { "rowNumber": 2, "status": "VALID", "data": { "name": "Công ty Mô Phỏng A", "taxCode": "0109999991" }, "errors": [] },
+    { "rowNumber": 3, "status": "INVALID", "data": { "taxCode": "0109999992" },
+      "errors": ["Ten khach hang khong duoc de trong"] },
+    { "rowNumber": 4, "status": "DUPLICATE", "data": { "name": "Công ty Đã Có", "taxCode": "0107777777" },
+      "errors": ["Trung ho so khach hang da co KH000007 - Công ty Đã Có (maSoThue)"],
+      "duplicateOfId": 7, "duplicateOfLabel": "KH000007 - Công ty Đã Có" },
+    { "rowNumber": 5, "status": "VALID", "data": { "name": "Công ty Mô Phỏng B" }, "errors": [] }
+  ]
+}
+```
+
+| `rows[].status` | Ý nghĩa | Khi xác nhận nhập |
+|---|---|---|
+| `VALID` | Hợp lệ | Tạo mới (TC-01) |
+| `INVALID` | Thiếu / sai dữ liệu, lý do trong `errors` (TC-02) | **Không bao giờ nhập** — liệt kê để sửa |
+| `DUPLICATE` | Trùng hồ sơ `duplicateOfId` (TC-03) | Bỏ qua hoặc cập nhật hồ sơ đó — theo lựa chọn ở bước 2 |
+
+`data` chỉ chứa ô có giá trị, khoá là tên trường chuẩn (`name`, `taxCode`, `phone`, `industry`, `address` /
+`username`, `department`, `professionalRole`, `level`, `hireDate`, `endDate`, `standardHoursPerWeek`).
+
+Lỗi: `400 VALIDATION_ERROR` — thiếu phần `file`, tệp rỗng, không phải `.csv`, vượt 2 MB / 2000 dòng, sai mẫu (cột
+lạ), chỉ có dòng tiêu đề, `targetType` không hợp lệ.
+
+#### `POST /imports/{jobId}/commit` — bước 2 (TC-01, TC-03)
+
+```json
+{
+  "duplicateAction": "SKIP",
+  "rowActions": [ { "rowNumber": 4, "action": "UPDATE" } ]
+}
+```
+
+- `duplicateAction` (`SKIP` | `UPDATE`): lựa chọn **mặc định** cho mọi dòng trùng. `rowActions`: lựa chọn riêng từng
+  dòng, ghi đè mặc định. Tệp không có dòng trùng thì gửi body rỗng / không body.
+- Còn dòng `DUPLICATE` chưa có lựa chọn → `400 VALIDATION_ERROR` "Tep co dong trung ho so da co [4], hay chon bo qua
+  (SKIP) hoac cap nhat (UPDATE) truoc khi nhap" — **không nhập dòng nào**.
+- `UPDATE` ghi đè hồ sơ đã có bằng dữ liệu trong tệp (khách hàng: tên, MST, SĐT, lĩnh vực, địa chỉ; nhân sự: bộ phận,
+  vai trò, cấp bậc, ngày vào làm/kết thúc, giờ chuẩn). Ô trống trong tệp = xoá giá trị cũ của trường đó (riêng giờ chuẩn/tuần trống = 40).
+- Mỗi dòng ghi độc lập: một dòng ghi thất bại **không** làm các dòng khác rollback — dòng đó vào `errors` với
+  `stage: "COMMIT"`.
+- `200` — `message: "Da nhap du lieu"`, `data`: `ImportResultRes`:
+
+```json
+{
+  "jobId": 21,
+  "targetType": "CUSTOMER",
+  "fileName": "khach-hang.csv",
+  "status": "COMMITTED",
+  "totalRows": 4, "validRows": 2, "invalidRows": 1, "duplicateRows": 1,
+  "createdCount": 2, "updatedCount": 1, "skippedCount": 0, "failedCount": 0,
+  "duplicateAction": "SKIP",
+  "createdBy": "admin", "createdAt": "2026-09-25T10:00:00",
+  "committedBy": "admin", "committedAt": "2026-09-25T10:02:00",
+  "notice": "Chi nhap du lieu MO PHONG …",
+  "errors": [
+    { "rowNumber": 3, "stage": "VALIDATION", "message": "Ten khach hang khong duoc de trong",
+      "rawData": " | 0109999992 |  |  | " }
+  ]
+}
+```
+
+| `status` | Ý nghĩa |
+|---|---|
+| `PREVIEWED` | Đã xem trước, chưa nhập |
+| `COMMITTED` | Đã nhập, không dòng nào ghi thất bại (có thể vẫn có dòng `INVALID` không được nhập) |
+| `COMMITTED_WITH_ERRORS` | Đã nhập nhưng có dòng ghi thất bại (`failedCount > 0`) — xem `errors` với `stage: "COMMIT"` |
+
+Các số liệu tổng (`validRows`…) là kết quả kiểm tra **lại** lúc nhập, có thể khác bảng xem trước.
+`400 INVALID_STATE` — phiên đã nhập rồi hoặc đang được xử lý (bấm hai lần); muốn nhập thêm thì tải tệp lên lại.
+`404` — `jobId` không tồn tại.
+
+#### `GET /imports` · `GET /imports/{jobId}`
+
+Lịch sử phiên nhập (mới nhất trước; danh sách **không** có `errors`, `notice`) / chi tiết một phiên kèm danh sách
+dòng lỗi để sửa lại.
+
 ## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)
 
 
