@@ -5,6 +5,9 @@ import UserListPage from './modules/users/pages/UserListPage';
 import UserDetailPage from './modules/users/pages/UserDetailPage';
 import RolePermissionPage from './modules/users/pages/RolePermissionPage';
 import PortalAccountPage from './modules/portal/pages/PortalAccountPage';
+import PortalApp from './modules/portal/PortalApp';
+import PortalAccessDeniedPage from './modules/portal/pages/PortalAccessDeniedPage';
+import { isPortalHash } from './modules/portal/utils/portalRoute';
 import DepartmentTreePage from './modules/departments/pages/DepartmentTreePage';
 import SensitiveAccessLogPage from './modules/auditLog/pages/SensitiveAccessLogPage';
 import AuditLogPage from './modules/auditLog/pages/AuditLogPage';
@@ -115,6 +118,18 @@ export default function App() {
    *  bán hàng" và tự mở đúng cơ hội đó lên để xử lý ngay (chuyển giai đoạn/
    *  chốt kết quả), thay vì chỉ biết mỗi con số ID không thao tác được gì. */
   const [focusOpportunityId, setFocusOpportunityId] = useState<number | null>(null);
+  /** Đường dẫn `#/portal/...` của cổng khách hàng — tài khoản nội bộ mở vào sẽ bị từ chối (NCL-13-CN-002-TC-04). */
+  const [portalHashRequested, setPortalHashRequested] = useState<boolean>(() => isPortalHash(window.location.hash));
+  useEffect(() => {
+    const onHash = () => setPortalHashRequested(isPortalHash(window.location.hash));
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  const leavePortalHash = () => {
+    if (!isPortalHash(window.location.hash)) return;
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    setPortalHashRequested(false);
+  };
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -183,7 +198,8 @@ export default function App() {
   // Nạp danh sách dự án cho các ô chọn dropdown (Giá vốn/Biên lợi nhuận) ngay khi đăng nhập —
   // trước đây các trang này dùng tạm mảng dữ liệu mẫu cố định nên không bao giờ thấy dự án thật.
   useEffect(() => {
-    if (!session) return;
+    // Tài khoản cổng (VT-09) không được gọi API nội bộ — backend sẽ trả 403 và ghi nhật ký từ chối.
+    if (!session || session.roles.includes('VT-09')) return;
     let cancelled = false;
     void (async () => {
       try {
@@ -263,6 +279,7 @@ export default function App() {
   // during the previous render" và toàn bộ ứng dụng trắng trang — chỉ tải lại
   // trang (mount mới) mới hết vì lúc đó không còn xảy ra chuyển trạng thái nữa.
   const currentRoles = session?.roles ?? [];
+  const isPortalUser = currentRoles.includes('VT-09');
 
   // Vai trò mới (đăng nhập / làm mới qua useSessionSync) → tab mở rộng mỗi lần
   // đổi trang. useSessionSync làm mới khi focus lại + poll 30s; 401 thì đăng xuất.
@@ -280,6 +297,9 @@ export default function App() {
   const navGroups = useMemo(() => navGroupsFor(currentRoles), [currentRoles]);
 
   if (!session) return <LoginPage onAuthenticated={handleAuthenticated} />;
+
+  // Epic NCL-13: tài khoản Khách hàng (VT-09) dùng giao diện cổng riêng — không vào giao diện nội bộ (QTN-26).
+  if (isPortalUser) return <PortalApp session={session} onLogout={handleLogout} />;
 
   const activeNavItem =
     ALL_NAV_ITEMS.find((item) => item.tab === activeTab) ??
@@ -299,7 +319,10 @@ export default function App() {
           type="button"
           className={`side-nav__item ${isActive ? 'side-nav__item--active' : ''}`}
           title={title}
-          onClick={() => setActiveTab(item.tab)}
+          onClick={() => {
+            leavePortalHash();
+            setActiveTab(item.tab);
+          }}
           aria-current={isActive ? 'page' : undefined}
         >
           <span className="side-nav__item__icon" aria-hidden="true">
@@ -329,7 +352,10 @@ export default function App() {
           { id: 'CHANGE_PASSWORD', label: 'Đổi mật khẩu', group: 'Tài khoản của tôi', icon: ICONS.key },
           { id: 'NOTIFICATIONS', label: 'Thông báo', group: 'Tài khoản của tôi', icon: ICONS.bell },
         ]}
-        onSelect={(id) => setActiveTab(id as Tab)}
+        onSelect={(id) => {
+          leavePortalHash();
+          setActiveTab(id as Tab);
+        }}
       />
 
       <div className="app-shell">
@@ -374,7 +400,7 @@ export default function App() {
         <div className="app-topbar-glow" aria-hidden="true" />
         <header className="app-topbar">
           <div className="app-topbar__brand">
-            <h1 className="app-topbar__title">{activeNavItem?.label ?? 'Vận hành dịch vụ'}</h1>
+            <h1 className="app-topbar__title">{portalHashRequested ? 'Cổng khách hàng' : activeNavItem?.label ?? 'Vận hành dịch vụ'}</h1>
           </div>
 
           <div className="app-topbar__actions">
@@ -507,7 +533,14 @@ export default function App() {
         {/* key doi theo tab: React thay toan bo cay con, nen hieu ung xo theo tang
             chay lai o MOI lan chuyen trang chu khong chi lan tai dau tien. */}
         <main className="app-content" id="noi-dung-chinh" tabIndex={-1} key={activeTab}>
-          {activeTab === 'CHANGE_PASSWORD' ? (
+          {portalHashRequested ? (
+            // NCL-13-CN-002-TC-04: tài khoản nội bộ mở đường dẫn cổng khách hàng → từ chối + backend ghi nhật ký.
+            <PortalAccessDeniedPage
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+              onLeave={leavePortalHash}
+            />
+          ) : activeTab === 'CHANGE_PASSWORD' ? (
             <ChangePasswordPage onBack={() => setActiveTab(defaultTab)} onPasswordChanged={handleLogout} />
           ) : activeTab === 'NOTIFICATIONS' ? (
             <NotificationCenterPage />
