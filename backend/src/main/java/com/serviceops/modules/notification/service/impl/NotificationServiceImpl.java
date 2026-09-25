@@ -6,10 +6,10 @@ import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.notification.dto.response.NotificationRes;
 import com.serviceops.modules.notification.entity.Notification;
-import com.serviceops.modules.notification.enums.NotificationChannel;
 import com.serviceops.modules.notification.enums.NotificationType;
 import com.serviceops.modules.notification.mapper.NotificationMapper;
 import com.serviceops.modules.notification.repository.NotificationRepository;
+import com.serviceops.modules.notification.service.NotificationDispatcher;
 import com.serviceops.modules.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -30,20 +30,14 @@ public class NotificationServiceImpl implements NotificationService {
 	private final NotificationRepository notificationRepository;
 	private final NotificationMapper notificationMapper;
 	private final AuditLogService auditLogService;
+	private final NotificationDispatcher notificationDispatcher;
 
 	@Override
 	public void sendInAppNotification(Long recipientId, NotificationType type, String title, String content, Long referenceId, String referenceType) {
-		Notification notification = new Notification();
-		notification.setRecipientId(recipientId);
-		notification.setType(type);
-		notification.setTitle(title);
-		notification.setContent(content);
-		notification.setChannel(NotificationChannel.IN_APP);
-		notification.setReferenceId(referenceId);
-		notification.setReferenceType(referenceType);
-		notification.setSentAt(LocalDateTime.now());
-		notification.setIsRead(false);
-		notificationRepository.save(notification);
+		// NCL-14-CN-002: ap dung cau hinh nhan thong bao (bat/tat theo nhom, nhan ngay hoac gop
+		// cuoi ngay) truoc khi luu — tat ca noi goi sendInAppNotification hien co (timesheet,
+		// invoice, profitability, portal...) deu tu dong duoc gate qua day, khong can sua tung noi.
+		notificationDispatcher.dispatch(recipientId, type, title, content, referenceId, referenceType);
 	}
 
 	@Override

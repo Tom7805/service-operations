@@ -3833,6 +3833,106 @@ thông báo được chọn đã đọc từ trước hoặc không thuộc về
 
 ---
 
+### `NCL-14-CN-002` — Cấu hình kênh và tần suất nhận thông báo
+
+Cho phép người dùng bật/tắt từng **nhóm thông báo** và chọn tần suất nhận: `IMMEDIATE` (nhận ngay,
+hành vi mặc định như trước giờ) hoặc `DAILY_DIGEST` (gộp thành một thông báo tổng hợp gửi cuối ngày —
+TC-02). Không có cấu hình cho một nhóm nghĩa là mặc định **bật + IMMEDIATE** (không đổi hành vi cho
+người dùng chưa từng cấu hình).
+
+Nhóm thông báo (`notificationGroup`) hiện có, gộp từ các `NotificationType` đang tồn tại
+(`NotificationType.group()`):
+
+| `notificationGroup` | Gồm các `type` |
+|---|---|
+| `TIMESHEET` | `TIMESHEET_SUBMITTED`, `TIMESHEET_REJECTED`, `TIMER_AUTO_STOPPED`, `TIMESHEET_REMINDER` |
+| `EXPENSE` | `EXPENSE_SUBMITTED` |
+| `PROJECT` | `PROJECT_MILESTONE_DUE`, `NEGATIVE_MARGIN_ALERT` |
+| `CONTRACT` | `CONTRACT_EXPIRING` |
+| `INVOICE` | `INVOICE_PROPOSAL_CREATED`, `DUNNING_REMINDER`, `RECURRING_INVOICE_GENERATED` |
+| `ACCEPTANCE` | `ACCEPTANCE_DECIDED_ON_PORTAL` |
+
+> Riêng `NotificationType.DAILY_DIGEST_SUMMARY` (bản tổng hợp cuối ngày, xem dưới) không thuộc nhóm
+> nào — không thể tắt hoặc gộp chính nó, tránh vòng lặp gộp-của-gộp.
+
+#### `GET /notifications/preferences`
+
+Trả cấu hình hiện tại của người gọi, luôn đủ cả 6 nhóm (điền mặc định cho nhóm chưa từng cấu hình).
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": [
+    { "notificationGroup": "TIMESHEET", "enabled": true, "frequency": "IMMEDIATE" },
+    { "notificationGroup": "EXPENSE", "enabled": true, "frequency": "IMMEDIATE" },
+    { "notificationGroup": "PROJECT", "enabled": true, "frequency": "IMMEDIATE" },
+    { "notificationGroup": "CONTRACT", "enabled": true, "frequency": "IMMEDIATE" },
+    { "notificationGroup": "INVOICE", "enabled": false, "frequency": "IMMEDIATE" },
+    { "notificationGroup": "ACCEPTANCE", "enabled": true, "frequency": "DAILY_DIGEST" }
+  ]
+}
+```
+
+#### `PUT /notifications/preferences`
+
+```json
+{
+  "preferences": [
+    { "notificationGroup": "INVOICE", "enabled": false, "frequency": "IMMEDIATE" },
+    { "notificationGroup": "ACCEPTANCE", "enabled": true, "frequency": "DAILY_DIGEST" }
+  ]
+}
+```
+
+Chỉ cần truyền các nhóm muốn thay đổi — nhóm không có trong `preferences` giữ nguyên cấu hình hiện
+tại (hoặc mặc định nếu chưa từng cấu hình). Ghi một dòng nhật ký hệ thống `Cap nhat cau hinh nhan
+thong bao` — người thực hiện, số nhóm đã cập nhật, thời điểm (TC-03).
+
+**Response thành công — `200 OK`:**
+
+```json
+{ "success": true, "message": "Da luu cau hinh nhan thong bao" }
+```
+
+**Response lỗi — `400 VALIDATION_ERROR`:** `preferences` rỗng, hoặc một phần tử thiếu
+`notificationGroup`/`frequency`, hoặc giá trị không thuộc các enum ở trên.
+
+#### Hành vi khi một nhóm bị tắt (TC-01)
+
+Thông báo thuộc nhóm bị tắt **không được tạo ra** — không xuất hiện trong `GET /notifications`,
+không tính vào `GET /notifications/unread-count`. Áp dụng ngay từ thời điểm tắt; không hồi tố các
+thông báo đã gửi trước đó (nếu sau đó bật lại, không có gì để "gửi bù").
+
+#### Hành vi khi tần suất là `DAILY_DIGEST` (TC-02)
+
+Thông báo thuộc nhóm này không xuất hiện ngay trong trung tâm thông báo khi phát sinh. Hệ thống gộp
+toàn bộ thông báo cùng nhóm, cùng người nhận, phát sinh trong ngày thành **một** thông báo tổng hợp
+duy nhất, tạo vào 20:00 mỗi ngày (`type = "DAILY_DIGEST_SUMMARY"`, `targetType = "NONE"` — không có
+đích điều hướng). Ngày không có thông báo nào thuộc nhóm đó thì không tạo bản tổng hợp nào.
+
+**Ví dụ một thông báo tổng hợp trong `GET /notifications`:**
+
+```json
+{
+  "id": 205,
+  "recipientId": 7,
+  "type": "DAILY_DIGEST_SUMMARY",
+  "title": "Tong hop 4 thong bao trong ngay (INVOICE)",
+  "content": "- Hoa don HD-102 toi han thanh toan hom nay: con phai thu 15.000.000\n- Hoa don HD-108 qua han 7 ngay: con phai thu 8.500.000",
+  "channel": "IN_APP",
+  "referenceId": null,
+  "referenceType": "Digest:7:INVOICE:2026-09-25",
+  "targetType": "NONE",
+  "isRead": false,
+  "readAt": null,
+  "sentAt": "2026-09-25T20:00:00"
+}
+```
+
+---
+
 ### `NCL-06-CN-003` — Duyệt bảng chấm công
 
 Yêu cầu token của **Quản lý dự án** (`VT-02`). PM duyệt các dòng giờ công `SUBMITTED` thuộc **dự án mình

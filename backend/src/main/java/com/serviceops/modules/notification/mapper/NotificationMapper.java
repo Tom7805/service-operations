@@ -41,6 +41,7 @@ public class NotificationMapper {
 			case INVOICE_PROPOSAL_CREATED -> NotificationTargetType.INVOICE_PROPOSAL;
 			case DUNNING_REMINDER, RECURRING_INVOICE_GENERATED -> NotificationTargetType.INVOICE;
 			case ACCEPTANCE_DECIDED_ON_PORTAL -> NotificationTargetType.ACCEPTANCE_CERTIFICATE;
+			case DAILY_DIGEST_SUMMARY -> NotificationTargetType.NONE;
 		};
 	}
 }
