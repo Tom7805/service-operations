@@ -11,6 +11,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -50,5 +51,14 @@ public class NotificationController {
 	public BaseRes<Void> markAsRead(@Valid @RequestBody NotificationMarkReadReq request) {
 		notificationService.markAsRead(currentUserScopeProvider.currentUserId(), request.notificationIds());
 		return BaseRes.ok("Da danh dau da doc", null);
+	}
+
+	/**
+	 * Mo mot thong bao cu the (NCL-14-CN-001 TC-02) — danh dau da doc va tra ve
+	 * referenceId/referenceType de FE dieu huong thang toi ban ghi lien quan.
+	 */
+	@PostMapping("/notifications/{id}/open")
+	public BaseRes<NotificationRes> open(@PathVariable("id") Long id) {
+		return BaseRes.ok(notificationService.openNotification(currentUserScopeProvider.currentUserId(), id));
 	}
 }

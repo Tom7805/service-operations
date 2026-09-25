@@ -17,4 +17,20 @@ public interface NotificationService {
 	void markAsRead(Long recipientId, List<Long> notificationIds);
 
 	long getUnreadCount(Long recipientId);
+
+	/**
+	 * Mo mot thong bao cu the cua chinh minh (NCL-14-CN-001 TC-02): danh dau da doc neu chua doc
+	 * va tra ve du lieu (kem referenceId/targetType) de FE dieu huong toi ban ghi lien quan.
+	 * Nem loi khong tim thay neu thong bao khong ton tai hoac khong thuoc ve recipientId.
+	 *
+	 * <p><b>Rule 3/4 (khong re-check quyen tren ban ghi duoc tham chieu):</b> method nay CHI xac
+	 * nhan quyen so huu thong bao, khong goi sang module khac (project/invoice/acceptance...) de
+	 * kiem tra nguoi dung con quyen xem ban ghi duoc referenceId tro toi hay khong — vi moi module
+	 * dich da tu bat buoc kiem tra quyen tren chinh API chi tiet cua no (qua
+	 * {@code CurrentUserScopeProvider}/scope rieng), nen khong can lam lai o day. Neu ban ghi da bi
+	 * xoa hoac nguoi dung khong con quyen, loi 403/404 se den tu chinh API do khi FE goi tiep — FE
+	 * chiu trach nhiem hien thi thong bao loi tuong ung; thong bao trong trung tam van duoc danh
+	 * dau da doc du sau do co mo duoc ban ghi hay khong.</p>
+	 */
+	NotificationRes openNotification(Long recipientId, Long notificationId);
 }

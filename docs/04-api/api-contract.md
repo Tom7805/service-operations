@@ -3721,6 +3721,7 @@ Trả về danh sách thông báo của người dùng hiện tại, phân trang
       "channel": "IN_APP",
       "referenceId": null,
       "referenceType": "Timesheet",
+      "targetType": "TIMESHEET",
       "isRead": false,
       "readAt": null,
       "sentAt": "2026-09-13T10:05:00"
@@ -3728,6 +3729,8 @@ Trả về danh sách thông báo của người dùng hiện tại, phân trang
   ]
 }
 ```
+
+> `targetType` bổ sung ở `NCL-14-CN-001` — xem chi tiết bên dưới.
 
 #### `GET /notifications/unread-count`
 
@@ -3755,6 +3758,78 @@ Trả về số lượng thông báo chưa đọc.
 ```json
 { "success": true, "message": "Da danh dau da doc" }
 ```
+
+---
+
+### `NCL-14-CN-001` — Trung tâm thông báo trong hệ thống
+
+Mở rộng Notification API ở trên (`NCL-06-CN-002`) để "bấm vào một thông báo là mở thẳng tới bản ghi
+liên quan và đánh dấu đã đọc" (TC-02), và ghi lại lịch sử thao tác trên trung tâm thông báo (TC-03).
+
+#### `targetType` — loại bản ghi để Frontend điều hướng
+
+Mỗi thông báo trong `GET /notifications` giờ có thêm trường `targetType`, suy ra **từ `type`** (không
+phải từ `referenceType`) nên áp dụng được cho cả thông báo đã gửi từ trước, không cần chạy migrate dữ
+liệu. Lý do không dùng `referenceType`: ở một số loại thông báo (`DUNNING_REMINDER`,
+`NEGATIVE_MARGIN_ALERT`), `referenceType` đang được dùng làm khóa chống gửi trùng (QTN-27, ví dụ
+`"Dunning:5:FIRST_REMINDER:2026-09-01"`), không phải tên loại bản ghi, nên không dùng để điều hướng được.
+
+| `type` | `targetType` | `referenceId` trỏ tới |
+|---|---|---|
+| `TIMESHEET_SUBMITTED`, `TIMESHEET_REJECTED` | `TIMESHEET` | id của Timesheet |
+| `TIMESHEET_REMINDER` | `TIMESHEET` | **userId của chính người nhận** (nhắc chung, không phải id một Timesheet cụ thể) |
+| `TIMER_AUTO_STOPPED` | `TASK` | id của Task |
+| `EXPENSE_SUBMITTED` | `EXPENSE` | (chưa có nơi gửi loại này) |
+| `PROJECT_MILESTONE_DUE`, `NEGATIVE_MARGIN_ALERT` | `PROJECT` | id của Project |
+| `CONTRACT_EXPIRING` | `CONTRACT` | (chưa có nơi gửi loại này) |
+| `INVOICE_PROPOSAL_CREATED` | `INVOICE_PROPOSAL` | id của InvoiceProposal |
+| `DUNNING_REMINDER`, `RECURRING_INVOICE_GENERATED` | `INVOICE` | id của Invoice |
+| `ACCEPTANCE_DECIDED_ON_PORTAL` | `ACCEPTANCE_CERTIFICATE` | id của AcceptanceCertificate |
+
+Frontend tự chịu trách nhiệm gọi API chi tiết tương ứng của module đích (vd `GET /tasks/{id}`,
+`GET /invoices/{id}`) sau khi có `targetType` + `referenceId` — API đó đã tự kiểm tra quyền truy cập
+của module đó rồi (`FORBIDDEN`/`RESOURCE_NOT_FOUND` sẽ đến từ chính API này nếu bản ghi đã bị xóa hoặc
+người dùng không còn quyền xem). `POST /notifications/{id}/open` **không** re-check quyền trên bản ghi
+được tham chiếu.
+
+#### `POST /notifications/{id}/open`
+
+Mở một thông báo cụ thể của chính mình: đánh dấu đã đọc (nếu chưa đọc) và trả về đầy đủ dữ liệu kèm
+`targetType`/`referenceId` để Frontend điều hướng. Ghi một dòng nhật ký `Mo thong bao` (TC-03) khi
+thông báo thực sự chuyển từ chưa đọc sang đã đọc.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 100,
+    "recipientId": 2,
+    "type": "ACCEPTANCE_DECIDED_ON_PORTAL",
+    "title": "Khach hang da xac nhan phieu nghiem thu",
+    "content": "...",
+    "channel": "IN_APP",
+    "referenceId": 45,
+    "referenceType": "ACCEPTANCE_CERTIFICATE",
+    "targetType": "ACCEPTANCE_CERTIFICATE",
+    "isRead": true,
+    "readAt": "2026-09-25T09:12:00",
+    "sentAt": "2026-09-25T09:00:00"
+  }
+}
+```
+
+**Response lỗi — `404 RESOURCE_NOT_FOUND`:** thông báo không tồn tại, hoặc tồn tại nhưng không thuộc về
+người gọi (cố tình trả cùng lỗi như "không tồn tại", không phân biệt 403, để không lộ thông tin thông
+báo của người khác).
+
+#### `POST /notifications/read` — ghi nhật ký (TC-03)
+
+Mỗi lần đánh dấu đã đọc (đơn lẻ qua `/open` hoặc hàng loạt qua `/read`) mà có ít nhất 1 thông báo thực
+sự chuyển trạng thái, hệ thống ghi 1 dòng nhật ký hệ thống (`Danh dau da doc thong bao` /
+`Mo thong bao`) — người thực hiện, nội dung (số lượng/tiêu đề), thời điểm. Không ghi nhật ký nếu tất cả
+thông báo được chọn đã đọc từ trước hoặc không thuộc về người gọi.
 
 ---
 
