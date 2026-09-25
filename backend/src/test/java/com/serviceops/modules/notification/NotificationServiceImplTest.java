@@ -11,6 +11,7 @@ import com.serviceops.modules.notification.enums.NotificationTargetType;
 import com.serviceops.modules.notification.enums.NotificationType;
 import com.serviceops.modules.notification.mapper.NotificationMapper;
 import com.serviceops.modules.notification.repository.NotificationRepository;
+import com.serviceops.modules.notification.service.NotificationDispatcher;
 import com.serviceops.modules.notification.service.impl.NotificationServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,12 +48,15 @@ class NotificationServiceImplTest {
 	private NotificationRepository notificationRepository;
 	@Mock
 	private AuditLogService auditLogService;
+	@Mock
+	private NotificationDispatcher notificationDispatcher;
 
 	private NotificationServiceImpl notificationService;
 
 	@BeforeEach
 	void setUp() {
-		notificationService = new NotificationServiceImpl(notificationRepository, new NotificationMapper(), auditLogService);
+		notificationService = new NotificationServiceImpl(notificationRepository, new NotificationMapper(),
+				auditLogService, notificationDispatcher);
 	}
 
 	private Notification buildNotification(Long id, boolean read) {
