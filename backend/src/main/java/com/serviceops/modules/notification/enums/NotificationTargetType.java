@@ -38,5 +38,8 @@ public enum NotificationTargetType {
 	EXPENSE,
 
 	/** Hop dong. */
-	CONTRACT
+	CONTRACT,
+
+	/** Khong co dich dieu huong cu the — ban tong hop (NCL-14-CN-002 DAILY_DIGEST_SUMMARY). */
+	NONE
 }
