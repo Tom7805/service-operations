@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import { resolveContractBillRate, RatesApiError } from '../api/ratesApi';
 import type { ResolvedContractBillRateRes } from '../types/rateTypes';
+import RateResultCard, { formatRateDate } from './RateResultCard';
 import { validateResolveBillRateForm, type ResolveBillRateFormValues } from '../validators/rateValidators';
 
 interface Props {
@@ -19,17 +20,6 @@ const EMPTY_FORM: ResolveBillRateFormValues = {
   asOf: '',
 };
 
-function formatDailyRate(value: number): string {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(
-    value
-  );
-}
-
-function formatDate(value: string): string {
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString('vi-VN');
-}
-
 /**
  * NCL-07-CN-003 — Tra đơn giá ÁP DỤNG cho một hợp đồng tại ngày phát sinh cụ
  * thể (`GET /contracts/{contractId}/bill-rates/resolve`), đã áp quy tắc ưu
@@ -42,6 +32,7 @@ export default function ContractRateResolveLookup({ contractId, roleOptions, lev
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ResolvedContractBillRateRes | null>(null);
+  const [queried, setQueried] = useState<ResolveBillRateFormValues>(EMPTY_FORM);
   const [notFoundMessage, setNotFoundMessage] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -63,6 +54,7 @@ export default function ContractRateResolveLookup({ contractId, roleOptions, lev
         level: values.level.trim(),
         asOf: values.asOf,
       });
+      setQueried({ ...values });
       setResult(resolved);
     } catch (err) {
       if (err instanceof RatesApiError && err.statusCode === 404) {
@@ -171,22 +163,27 @@ export default function ContractRateResolveLookup({ contractId, roleOptions, lev
       )}
 
       {result && (
-        <div
-          className="alert-box alert-box--success"
-          role="status"
-          style={{ marginTop: '14px' }}
-          data-testid="contract-rate-resolve-result"
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <strong>{formatDailyRate(result.dailyRate)} / ngày công</strong>
-            <span className={`badge ${result.isContractSpecific ? 'badge--blue' : 'badge--gray'}`}>
-              {result.isContractSpecific ? 'Đơn giá riêng hợp đồng' : 'Đơn giá chung công ty'}
-            </span>
-          </div>
-          <div className="field-hint" style={{ marginTop: '4px' }}>
-            Dòng áp dụng có hiệu lực từ {formatDate(result.effectiveFrom)}.
-          </div>
-        </div>
+        <RateResultCard
+          testId="contract-rate-resolve-result"
+          eyebrow="Đơn giá áp dụng cho hợp đồng"
+          title={queried.professionalRole}
+          level={queried.level}
+          badges={[
+            result.isContractSpecific
+              ? { label: 'Đơn giá riêng hợp đồng', tone: 'blue' }
+              : { label: 'Đơn giá chung công ty', tone: 'gray' },
+          ]}
+          dailyRate={result.dailyRate}
+          facts={[
+            { label: 'Ngày phát sinh tra cứu', value: formatRateDate(queried.asOf) },
+            { label: 'Hiệu lực từ', value: formatRateDate(result.effectiveFrom) },
+            {
+              label: 'Nguồn đơn giá',
+              value: result.isContractSpecific ? 'Khai báo riêng cho hợp đồng này' : 'Bảng đơn giá chung công ty',
+            },
+          ]}
+          footnote="Ưu tiên đơn giá riêng của hợp đồng; nếu chưa khai báo riêng, hệ thống rơi về đơn giá chung công ty (QTN-16)."
+        />
       )}
     </div>
   );

@@ -31,8 +31,8 @@ describe('canAccess — quy tắc phân quyền hiển thị', () => {
   it('cho phép khi tài khoản có ít nhất một trong các vai trò yêu cầu', () => {
     const unsubmitted = ALL_NAV_ITEMS.find((i) => i.tab === 'UNSUBMITTED_TIMESHEETS')!;
     expect(canAccess(unsubmitted, ['VT-02'])).toBe(true);
-    expect(canAccess(unsubmitted, ['VT-03'])).toBe(true);
     expect(canAccess(unsubmitted, ['VT-02', 'VT-05'])).toBe(true);
+    expect(canAccess(unsubmitted, ['VT-03'])).toBe(false); // nhân viên chuyên môn chỉ nhận nhắc, không theo dõi
     expect(canAccess(unsubmitted, ['VT-05'])).toBe(false);
   });
 });
@@ -44,12 +44,15 @@ describe('isItemVisible — sidebar chỉ hiện thị chức năng người dù
     expect(isItemVisible(departments, ['VT-07'])).toBe(true); // quản trị viên thấy
   });
 
-  it('vẫn hiện mục "chỉ xem" (viewOnlyHint) — người dùng vẫn tương tác bằng cách xem', () => {
+  it('Cơ hội bán hàng chỉ hiện với vai trò backend cho phép (VT-01/VT-02/VT-04), không hiện "chỉ xem" rồi báo 403', () => {
     const opportunities = ALL_NAV_ITEMS.find((i) => i.tab === 'OPPORTUNITIES')!;
-    expect(isItemVisible(opportunities, ['VT-01'])).toBe(true); // full quyền
-    expect(isItemVisible(opportunities, ['VT-03'])).toBe(true); // chỉ xem
-    expect(isItemVisible(opportunities, ['VT-08'])).toBe(true); // chỉ xem
-    expect(isItemVisible(opportunities, [])).toBe(true); // chỉ xem (mọi vai trò đều xem pipeline)
+    expect(isItemVisible(opportunities, ['VT-01'])).toBe(true);
+    expect(isItemVisible(opportunities, ['VT-02'])).toBe(true);
+    expect(isItemVisible(opportunities, ['VT-04'])).toBe(true);
+    for (const role of ['VT-03', 'VT-05', 'VT-06', 'VT-07', 'VT-08', 'VT-09']) {
+      expect(isItemVisible(opportunities, [role])).toBe(false);
+    }
+    expect(isItemVisible(opportunities, [])).toBe(false);
   });
 });
 
@@ -57,16 +60,16 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
   it('Quản lý dự án (VT-02) thấy đúng chức năng mình thao tác', () => {
     expect(tabsFor(['VT-02'])).toEqual([
       'MY_WORK',
+      'UNSUBMITTED_TIMESHEETS',
       'TIMESHEET_APPROVAL',
       'TIMESHEET_REJECT',
       'TIMESHEET_ADJUSTMENT',
-      'UNSUBMITTED_TIMESHEETS',
       'CUSTOMERS',
       'OPPORTUNITIES',
       'PROJECT_LABOR_COST',
+      'PROJECT_MARGIN',
       'PLANNED_VS_ACTUAL',
       'PROFIT_FORECAST',
-      'PROJECT_MARGIN',
       'MARGIN_ALERT_THRESHOLD',
     ]);
   });
@@ -89,7 +92,6 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'MY_WORK',
       'TIMESHEET_PERIOD',
       'CONTRACTS',
-      'OPPORTUNITIES',
       'BILL_RATES',
       'RATE_HISTORY',
       'INVOICES',
@@ -103,7 +105,7 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
   });
 
   it('Nhân sự (VT-06) thấy chấm công + nhân sự', () => {
-    expect(tabsFor(['VT-06'])).toEqual(['MY_WORK', 'OPPORTUNITIES', 'EMPLOYEES']);
+    expect(tabsFor(['VT-06'])).toEqual(['MY_WORK', 'EMPLOYEES']);
   });
 
   it('Nhân viên kinh doanh (VT-04) thấy trang trai của Kinh doanh', () => {
@@ -111,9 +113,9 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'MY_WORK',
       'CUSTOMERS',
       'OPPORTUNITIES',
+      'OPPORTUNITY_DETAIL',
       'REVENUE_FORECAST',
       'REPORTS',
-      'OPPORTUNITY_DETAIL',
     ]);
   });
 
@@ -123,7 +125,6 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
     // bảng chấm công... dù có toàn quyền quản trị hệ thống.
     expect(tabsFor(['VT-07'])).toEqual([
       'MY_WORK',
-      'OPPORTUNITIES',
       'CUSTOMER_MERGE',
       'BILL_RATES',
       'RATE_HISTORY',
@@ -137,50 +138,43 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
     ]);
   });
 
-  it('Nhân viên công ty (VT-08) chỉ thấy Công việc + Cơ hội (chỉ xem)', () => {
-    expect(tabsFor(['VT-08'])).toEqual(['MY_WORK', 'OPPORTUNITIES']);
+  it('Nhân viên công ty (VT-08) chỉ thấy Công việc', () => {
+    expect(tabsFor(['VT-08'])).toEqual(['MY_WORK']);
   });
 
-  it('Khách hàng (VT-09) chỉ thấy Công việc + Cơ hội (chỉ xem)', () => {
-    expect(tabsFor(['VT-09'])).toEqual(['MY_WORK', 'OPPORTUNITIES']);
+  it('Khách hàng (VT-09) chỉ thấy Công việc', () => {
+    expect(tabsFor(['VT-09'])).toEqual(['MY_WORK']);
   });
 
-  it('Tài khoản không vai trò nào vẫn thấy Công việc + Cơ hội (chỉ xem)', () => {
-    expect(tabsFor([])).toEqual(['MY_WORK', 'OPPORTUNITIES']);
+  it('Tài khoản không vai trò nào vẫn thấy Công việc', () => {
+    expect(tabsFor([])).toEqual(['MY_WORK']);
   });
 });
 
 describe('navGroupsFor — bỏ qua nhóm không có mục hiển thị', () => {
-  it('VT-08 chỉ còn 2 nhóm (Chấm công + Kinh doanh), các nhóm Quản trị/Bảo mật biến mất', () => {
+  it('VT-08 chỉ còn nhóm Chấm công, mọi nhóm khác biến mất', () => {
     const groups = navGroupsFor(['VT-08']);
-    expect(groups.map((g) => g.paletteLabel)).toEqual(['Chấm công', 'Kinh doanh']);
+    expect(groups.map((g) => g.paletteLabel)).toEqual(['Chấm công']);
     expect(groups[0].items.map((i) => i.tab)).toEqual(['MY_WORK']);
-    expect(groups[1].items.map((i) => i.tab)).toEqual(['OPPORTUNITIES']);
   });
 
-  it('VT-05 giữ nhóm Chấm công + Kinh doanh nhưng bỏ Quản trị/Bảo mật', () => {
+  it('VT-05 (Kế toán) thấy các nhóm nghiệp vụ tài chính nhưng bỏ Quản trị/Bảo mật', () => {
     const groups = navGroupsFor(['VT-05']);
-    expect(groups.map((g) => g.paletteLabel)).toEqual(['Chấm công', 'Kinh doanh']);
-    expect(groups[0].items.map((i) => i.tab)).toEqual(['MY_WORK', 'TIMESHEET_PERIOD']);
-    expect(groups[1].items.map((i) => i.tab)).toEqual([
-      'CONTRACTS',
-      'OPPORTUNITIES',
-      'BILL_RATES',
-      'RATE_HISTORY',
-      'INVOICES',
-      'EXPENSE_APPROVAL',
-      'OVERHEAD_ALLOCATION',
-      'PROJECT_LABOR_COST',
-      'PROJECT_RECOGNIZED_REVENUE',
-      'PROJECT_MARGIN',
-      'MARGIN_ALERT_THRESHOLD',
+    expect(groups.map((g) => g.paletteLabel)).toEqual([
+      'Chấm công',
+      'Hợp đồng & Đơn giá',
+      'Hóa đơn & Chi phí',
+      'Giá vốn & Lợi nhuận',
     ]);
+    expect(groups[1].items.map((i) => i.tab)).toEqual(['CONTRACTS', 'BILL_RATES', 'RATE_HISTORY']);
+    expect(groups[2].items.map((i) => i.tab)).toEqual(['INVOICES', 'EXPENSE_APPROVAL', 'OVERHEAD_ALLOCATION']);
   });
 
-  it('VT-07 (quản trị) giữ đủ 4 nhóm theo đúng thứ tự', () => {
+  it('VT-07 (quản trị) thấy nhóm Quản trị + Bảo mật, không thấy Hóa đơn/Giá vốn/Báo cáo', () => {
     expect(navGroupsFor(['VT-07']).map((g) => g.paletteLabel)).toEqual([
       'Chấm công',
-      'Kinh doanh',
+      'Bán hàng & Khách hàng',
+      'Hợp đồng & Đơn giá',
       'Quản trị & Tổ chức',
       'Bảo mật & Hệ thống',
     ]);
@@ -189,10 +183,19 @@ describe('navGroupsFor — bỏ qua nhóm không có mục hiển thị', () => 
   it('luôn duy trì đúng thứ tự nhóm (Chấm công trước)', () => {
     expect(NAV_GROUPS.map((g) => g.paletteLabel)).toEqual([
       'Chấm công',
-      'Kinh doanh',
+      'Bán hàng & Khách hàng',
+      'Hợp đồng & Đơn giá',
+      'Hóa đơn & Chi phí',
+      'Giá vốn & Lợi nhuận',
+      'Báo cáo',
       'Quản trị & Tổ chức',
       'Bảo mật & Hệ thống',
     ]);
+  });
+
+  it('mỗi mục điều hướng dùng một icon riêng, không trùng nhau', () => {
+    const icons = ALL_NAV_ITEMS.map((i) => i.icon);
+    expect(new Set(icons).size).toBe(icons.length);
   });
 });
 
@@ -225,7 +228,7 @@ describe('isTabVisible — tuần tự hóa lại khi vai trỏ đổi', () => {
   });
 
   it('tab con ẩn khi mục cha bị khóa', () => {
-    expect(isTabVisible('PIPELINE_REPORT', ['VT-02'])).toBe(false); // cha: Báo cáo bị khóa
+    expect(isTabVisible('PIPELINE_REPORT', ['VT-07'])).toBe(false); // cha: Báo cáo bị khóa
     expect(isTabVisible('DETAIL', ['VT-02'])).toBe(false); // cha: Tài khoản (VT-07)
     expect(isTabVisible('DEPARTMENTS', ['VT-02'])).toBe(false);
   });

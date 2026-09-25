@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import { resolveBillRate, RatesApiError } from '../api/ratesApi';
 import type { BillRateRes } from '../types/rateTypes';
+import RateResultCard, { formatRateDate } from './RateResultCard';
 import { validateResolveBillRateForm, type ResolveBillRateFormValues } from '../validators/rateValidators';
 
 const EMPTY_FORM: ResolveBillRateFormValues = {
@@ -16,17 +17,6 @@ interface Props {
   roleOptions: string[];
   /** Cấp bậc đã khai báo cho từng vai trò — dùng để lọc lựa chọn cấp bậc theo vai trò đã chọn. */
   levelsByRole: Record<string, string[]>;
-}
-
-function formatDailyRate(value: number): string {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(
-    value
-  );
-}
-
-function formatDate(value: string): string {
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString('vi-VN');
 }
 
 /**
@@ -43,6 +33,7 @@ export default function RateResolveLookup({ roleOptions, levelsByRole }: Props) 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<BillRateRes | null>(null);
+  const [asOfQueried, setAsOfQueried] = useState('');
   const [notFoundMessage, setNotFoundMessage] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -64,6 +55,7 @@ export default function RateResolveLookup({ roleOptions, levelsByRole }: Props) 
         level: values.level.trim(),
         asOf: values.asOf,
       });
+      setAsOfQueried(values.asOf);
       setResult(resolved);
     } catch (err) {
       if (err instanceof RatesApiError && err.statusCode === 404) {
@@ -172,18 +164,21 @@ export default function RateResolveLookup({ roleOptions, levelsByRole }: Props) 
       )}
 
       {result && (
-        <div className="alert-box alert-box--success" role="status" style={{ marginTop: '14px' }} data-testid="rate-resolve-result">
-          <div>
-            <strong>
-              {result.professionalRole} ({result.level})
-            </strong>{' '}
-            — {formatDailyRate(result.dailyRate)} / ngày công
-          </div>
-          <div className="field-hint" style={{ marginTop: '4px' }}>
-            Dòng áp dụng có hiệu lực từ {formatDate(result.effectiveFrom)}
-            {result.effectiveFrom !== values.asOf ? ' (khác ngày phát sinh bạn đã nhập, đây là dòng gần nhất trước đó)' : ''}.
-          </div>
-        </div>
+        <RateResultCard
+          testId="rate-resolve-result"
+          title={result.professionalRole}
+          level={result.level}
+          dailyRate={result.dailyRate}
+          facts={[
+            { label: 'Ngày phát sinh tra cứu', value: formatRateDate(asOfQueried) },
+            { label: 'Hiệu lực từ', value: formatRateDate(result.effectiveFrom) },
+            {
+              label: 'Dòng đơn giá được chọn',
+              value: result.effectiveFrom === asOfQueried ? 'Đúng ngày tra cứu' : 'Dòng gần nhất trước ngày tra cứu',
+            },
+          ]}
+          footnote="Hệ thống chọn dòng có hiệu lực gần nhất nhưng không vượt quá ngày phát sinh, kể cả khi đã có đơn giá mới hơn (QTN-15)."
+        />
       )}
     </div>
   );

@@ -46,7 +46,8 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+// Không readOnly: nhật ký xem dữ liệu nhạy cảm ghi cùng transaction (QTN-03); giao dịch chỉ đọc làm MySQL từ chối lệnh ghi và trả 500.
+@Transactional
 public class MarginReportServiceImpl implements MarginReportService {
 
 	private final TimeEntryRepository timeEntryRepository;

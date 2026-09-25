@@ -48,8 +48,7 @@ export default function QuoteBuilder({
 
   // Danh sách dòng công việc đang nhập
   const [items, setItems] = useState<QuoteItemReq[]>([
-    { professionalRole: 'Lập trình viên cao cấp', workDays: 20 },
-    { professionalRole: 'Kỹ sư kiểm thử phần mềm', workDays: 10 },
+    { professionalRole: '', workDays: '' as unknown as number },
   ]);
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -105,7 +104,7 @@ export default function QuoteBuilder({
   if (!isOpen) return null;
 
   const handleAddItem = () => {
-    setItems((prev) => [...prev, { professionalRole: '', workDays: 10 }]);
+    setItems((prev) => [...prev, { professionalRole: '', workDays: '' as unknown as number }]);
   };
 
   const handleRemoveItem = (index: number) => {
@@ -211,9 +210,6 @@ export default function QuoteBuilder({
               </span>
               Lập báo giá cho cơ hội
             </h3>
-            <p className="field-hint" style={{ marginTop: '4px' }}>
-              Dự toán nhân lực theo ngày công. Hệ thống tự động tra cứu đơn giá bán hiệu lực và tính thành tiền.
-            </p>
           </div>
           <button
             type="button"
@@ -576,9 +572,6 @@ export default function QuoteBuilder({
                 <span style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--ink-strong)' }}>
                   Bảng danh mục vị trí & số ngày công dự kiến
                 </span>
-                <span style={{ fontSize: '12px', color: 'var(--ink-muted)' }}>
-                  Đơn giá sẽ được máy chủ tự động tra cứu theo ngày hiệu lực
-                </span>
               </div>
 
               <div
@@ -700,7 +693,6 @@ export default function QuoteBuilder({
                               min="0.5"
                               step="0.5"
                               className={`form-input ${daysError ? 'form-input--error' : ''}`}
-                              placeholder="Ví dụ: 20"
                               value={item.workDays === ('' as unknown as number) ? '' : item.workDays}
                               onChange={(e) => handleItemChange(idx, 'workDays', e.target.value)}
                               disabled={submitting || !isProposalStage || !isAllowedRole}

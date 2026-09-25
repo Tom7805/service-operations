@@ -1126,6 +1126,7 @@ body { background: var(--canvas); }
 
 .app-content { flex: 1; min-width: 0; }
 
+
 /* Màn hẹp: cùng một khung cố định, chỉ thu gọn khoảng đệm.
    Khối cũ ở đây còn đặt `padding: 10px` + `border-radius: 22px` để giữ "cửa sổ kính nổi" —
    thứ đã bị gỡ khỏi thiết kế từ lâu, nên nó chỉ còn là CSS chết mô tả một hệ không còn tồn tại. */
@@ -3580,3 +3581,29 @@ body { background: var(--canvas); }
 .timesheet-week-nav__label { font-size: 16px; font-weight: 600; min-width: 220px; text-align: center; }
 .timesheet-week-nav__today { margin-left: auto; }
 
+
+
+/* Bản ghi kết quả tra đơn giá (RateResultCard). */
+.rate-card { margin-top: 16px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); overflow: hidden; }
+.rate-card__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px 24px; flex-wrap: wrap; padding: 18px 20px; background: var(--surface-alt); border-bottom: 1px solid var(--line); }
+.rate-card__eyebrow { font-family: var(--font-mono, monospace); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted); }
+.rate-card__title { margin: 4px 0 8px; font-size: 16px; font-weight: 600; color: var(--ink-strong); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rate-card__level { font-size: 12px; font-weight: 500; color: var(--ink-muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; background: var(--surface); }
+.rate-card__badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.rate-card__amount { text-align: right; }
+.rate-card__figure { font-size: 26px; font-weight: 600; letter-spacing: -0.01em; color: var(--ink-strong); font-variant-numeric: tabular-nums; }
+.rate-card__unit { margin-left: 6px; font-size: 13px; color: var(--ink-muted); }
+.rate-card__sub { margin-top: 2px; font-size: 12.5px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.rate-card__facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px 24px; margin: 0; padding: 16px 20px; }
+.rate-card__fact dt { font-size: 12px; color: var(--ink-muted); margin-bottom: 2px; }
+.rate-card__fact dd { margin: 0; font-size: 14px; font-weight: 500; color: var(--ink-strong); }
+.rate-card__ledger { padding: 6px 20px 14px; border-top: 1px solid var(--line); }
+.rate-card__ledger-row { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: baseline; padding: 7px 0; font-size: 13.5px; color: var(--ink-muted); }
+.rate-card__ledger-row--total { margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--ink-strong); font-weight: 600; }
+.rate-card__num { font-variant-numeric: tabular-nums; color: var(--ink-strong); }
+.rate-card__foot { padding: 12px 20px; border-top: 1px solid var(--line); background: var(--surface-alt); font-size: 12.5px; color: var(--ink-muted); }
+@media (max-width: 600px) { .rate-card__amount { text-align: left; } }
+
+/* Bảng dài cuộn trong khung của chính nó: hàng tiêu đề dính ở đầu khung, thao tác bên dưới luôn nằm gần. */
+.table-responsive--bounded { max-height: min(58vh, 520px); overflow: auto; overscroll-behavior: contain; }
+.table-responsive--bounded:focus-visible { outline: 2px solid var(--ink-strong); outline-offset: -2px; }
