@@ -18,7 +18,7 @@ vi.mock('../api/invoicesApi', () => {
   }
 
   return {
-    fetchInvoices: vi.fn(),
+    fetchInvoicesPage: vi.fn(),
     InvoicesApiError: MockInvoicesApiError,
   };
 });
@@ -56,22 +56,35 @@ const INVOICES: InvoiceDetailRes[] = [
   },
 ];
 
+/** Máy chủ giả cho GET /invoices/paged: lọc theo trạng thái/từ khoá như backend. */
+function serveInvoices(all: InvoiceDetailRes[]) {
+  vi.mocked(invoicesApi.fetchInvoicesPage).mockImplementation(async (query) => {
+    const q = (query.keyword ?? '').toLowerCase();
+    const content = all.filter(
+      (inv) =>
+        (!query.status || inv.status === query.status) &&
+        (!q || [inv.invoiceCode, inv.contractCode, inv.customerName].some((v) => (v ?? '').toLowerCase().includes(q)))
+    );
+    return { content, page: 0, size: 20, totalElements: content.length, totalPages: content.length === 0 ? 0 : 1 };
+  });
+}
+
 describe('InvoiceListPage (NCL-10-CN-003 — Ghi nhận thanh toán của khách hàng)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(invoicesApi.fetchInvoices).mockResolvedValue(INVOICES);
+    serveInvoices(INVOICES);
   });
 
   it('từ chối truy cập cho vai trò khác VT-05', () => {
     render(<InvoiceListPage currentUserRoles={['VT-02']} onOpenInvoice={vi.fn()} />);
     expect(screen.getByTestId('invoice-access-denied')).toBeInTheDocument();
-    expect(invoicesApi.fetchInvoices).not.toHaveBeenCalled();
+    expect(invoicesApi.fetchInvoicesPage).not.toHaveBeenCalled();
   });
 
   it('tải và hiển thị danh sách hóa đơn', async () => {
     render(<InvoiceListPage currentUserRoles={['VT-05']} onOpenInvoice={vi.fn()} />);
 
-    await waitFor(() => expect(invoicesApi.fetchInvoices).toHaveBeenCalled());
+    await waitFor(() => expect(invoicesApi.fetchInvoicesPage).toHaveBeenCalledWith({ keyword: '', status: '' }, 0, 20));
     const table = await screen.findByTestId('invoice-table');
     expect(table).toHaveTextContent('INV-0001');
     expect(table).toHaveTextContent('INV-0002');
@@ -83,7 +96,7 @@ describe('InvoiceListPage (NCL-10-CN-003 — Ghi nhận thanh toán của khách
     await screen.findByTestId('invoice-table');
     fireEvent.change(screen.getByLabelText('Trạng thái:'), { target: { value: 'PAID' } });
 
-    expect(screen.queryByText('INV-0001')).toBeNull();
+    await waitFor(() => expect(screen.queryByText('INV-0001')).toBeNull());
     expect(screen.getByText('INV-0002')).toBeInTheDocument();
   });
 
@@ -93,7 +106,13 @@ describe('InvoiceListPage (NCL-10-CN-003 — Ghi nhận thanh toán của khách
     await screen.findByTestId('invoice-table');
     fireEvent.change(screen.getByLabelText('Tìm kiếm hóa đơn'), { target: { value: 'Khach hang B' } });
 
-    expect(screen.queryByText('INV-0001')).toBeNull();
+    // Tìm kiếm chạy ở máy chủ, gửi sau khi ngừng gõ.
+    await waitFor(() => expect(screen.queryByText('INV-0001')).toBeNull());
+    expect(invoicesApi.fetchInvoicesPage).toHaveBeenLastCalledWith(
+      expect.objectContaining({ keyword: 'Khach hang B' }),
+      0,
+      20
+    );
     expect(screen.getByText('INV-0002')).toBeInTheDocument();
   });
 
@@ -109,7 +128,7 @@ describe('InvoiceListPage (NCL-10-CN-003 — Ghi nhận thanh toán của khách
   });
 
   it('hiển thị trạng thái trống khi chưa có hóa đơn nào', async () => {
-    vi.mocked(invoicesApi.fetchInvoices).mockResolvedValue([]);
+    serveInvoices([]);
     render(<InvoiceListPage currentUserRoles={['VT-05']} onOpenInvoice={vi.fn()} />);
 
     expect(await screen.findByTestId('invoice-empty')).toBeInTheDocument();

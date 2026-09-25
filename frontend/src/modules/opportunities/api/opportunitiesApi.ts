@@ -13,6 +13,8 @@ import type {
 } from '../types/opportunityTypes';
 import type { ContractCreateFromOpportunityReq, ContractRes } from '../../contracts/types/contractTypes';
 import { httpFetch } from '../../../utils/http';
+import { buildQueryString } from '../../../utils/buildQueryString';
+import type { PageResult } from '../../../types/pagination';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -308,5 +310,36 @@ export async function createContractFromOpportunity(
     }
   );
 
+  return res.data;
+}
+
+/** Số liệu tổng hợp của màn "Cơ hội bán hàng" — tính trên toàn bộ pipeline trong phạm vi người xem. */
+export interface OpportunityPageSummary {
+  total: number;
+  totalExpectedValue: number;
+  weightedForecastValue: number;
+  wonCount: number;
+}
+
+export interface OpportunityPageQuery {
+  keyword?: string;
+  stage?: string;
+  /** Chỉ lấy đúng cơ hội này (nếu nằm trong phạm vi người xem) — để mở thẳng một cơ hội. */
+  id?: number;
+}
+
+/**
+ * Một trang cơ hội bán hàng (GET /opportunities/paged), mới nhất trước: tìm theo tên cơ hội
+ * hoặc tên khách hàng, lọc giai đoạn — chạy ở máy chủ. Quyền như GET /opportunities.
+ */
+export async function fetchOpportunitiesPage(
+  query: OpportunityPageQuery,
+  page: number,
+  size: number
+): Promise<PageResult<Opportunity, OpportunityPageSummary>> {
+  const qs = buildQueryString({ ...query, page, size });
+  const res = await requestBackend<{ success: boolean; data: PageResult<Opportunity, OpportunityPageSummary> }>(
+    `${API_BASE_URL}/opportunities/paged${qs}`
+  );
   return res.data;
 }

@@ -21,6 +21,8 @@ import type {
   WorkPackageReq,
 } from '../types/projectTypes';
 import { httpFetch } from '../../../utils/http';
+import { buildQueryString } from '../../../utils/buildQueryString';
+import type { PageResult } from '../../../types/pagination';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -436,4 +438,13 @@ export async function deleteRisk(projectId: number, riskId: number): Promise<voi
   await requestBackend<null>(`${API_BASE_URL}/projects/${projectId}/risks/${riskId}`, {
     method: 'DELETE',
   });
+}
+
+/**
+ * Một trang dự án (GET /projects/paged), tìm theo mã hoặc tên — cho ô chọn dự án có tìm kiếm ở các
+ * màn Giá vốn/Biên lợi nhuận, thay cho việc nạp toàn bộ dự án ngay khi đăng nhập.
+ */
+export async function fetchProjectsPage(keyword: string, page: number, size: number): Promise<PageResult<ProjectRes>> {
+  const qs = buildQueryString({ keyword, page, size });
+  return requestBackend<PageResult<ProjectRes>>(`${API_BASE_URL}/projects/paged${qs}`, { method: 'GET' });
 }

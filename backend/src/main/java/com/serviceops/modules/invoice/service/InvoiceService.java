@@ -1,5 +1,6 @@
 package com.serviceops.modules.invoice.service;
 
+import com.serviceops.common.api.PageRes;
 import com.serviceops.modules.invoice.dto.response.InvoiceDetailRes;
 import com.serviceops.modules.invoice.dto.response.PaymentItemRes;
 import com.serviceops.modules.invoice.enums.InvoiceStatus;
@@ -18,6 +19,14 @@ public interface InvoiceService {
 	 * @param statuses   chi lay cac trang thai nay; {@code null} hoac rong = moi trang thai
 	 */
 	List<InvoiceDetailRes> list(Long contractId, Collection<InvoiceStatus> statuses);
+
+	/**
+	 * Danh sach hoa don phan trang phia may chu cho man "Hoa don", moi nhat truoc.
+	 *
+	 * @param keyword tim "chua" theo so hoa don, ma hop dong hoac ten khach hang; {@code null} = khong loc
+	 * @param status  chi lay trang thai nay; {@code null} = moi trang thai
+	 */
+	PageRes<InvoiceDetailRes, Void> listPage(String keyword, InvoiceStatus status, Integer page, Integer size);
 
 	/**
 	 * Hoa don da qua han thanh toan tai {@code today} (NCL-10-CN-004): dang phat hanh hoac thanh toan mot phan,

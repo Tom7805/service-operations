@@ -2,11 +2,12 @@ package com.serviceops.modules.customer.repository;
 
 import com.serviceops.modules.customer.entity.Customer;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.Collection;
 import java.util.List;
 
-public interface CustomerRepository extends JpaRepository<Customer, Long> {
+public interface CustomerRepository extends JpaRepository<Customer, Long>, JpaSpecificationExecutor<Customer> {
 
 	/**
 	 * NCL-13-CN-001: cac ho so da gop vao mot trong {@code targetIds} (NCL-02-CN-006) — de pham vi cong

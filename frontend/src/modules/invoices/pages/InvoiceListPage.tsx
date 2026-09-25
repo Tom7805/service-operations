@@ -1,16 +1,19 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import RowActionsMenu, { type RowAction } from '../../../components/common/RowActionsMenu';
 import { roleLabels } from '../../../utils/roleLabel';
 import type { InvoiceDetailRes, InvoiceStatus } from '../types/invoiceTypes';
-import { fetchInvoices, InvoicesApiError } from '../api/invoicesApi';
+import { fetchInvoicesPage, InvoicesApiError } from '../api/invoicesApi';
+import Pagination from '../../../components/common/Pagination';
+import TableSkeleton from '../../../components/common/TableSkeleton';
+import { useDebounce } from '../../../hooks/useDebounce';
+import { useServerPagedList } from '../../../hooks/usePagination';
 
 interface Props {
   currentUserRoles?: string[];
   currentUserName?: string;
   onOpenInvoice: (invoiceId: number) => void;
-  initialInvoices?: InvoiceDetailRes[];
 }
 
 const STATUS_META: Record<InvoiceStatus, { label: string; badge: string }> = {
@@ -62,42 +65,30 @@ export default function InvoiceListPage({
   currentUserRoles = [],
   currentUserName = 'Người dùng',
   onOpenInvoice,
-  initialInvoices,
 }: Props) {
   const isAllowed = currentUserRoles.includes('VT-05');
 
-  const [invoices, setInvoices] = useState<InvoiceDetailRes[]>(initialInvoices ?? []);
-  const [isLoading, setIsLoading] = useState(!initialInvoices);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
-  const loadInvoices = useCallback(async () => {
-    setIsLoading(true);
-    setLoadError(null);
-    try {
-      const data = await fetchInvoices();
-      setInvoices(data);
-    } catch (err) {
-      if (err instanceof InvoicesApiError && err.statusCode === 403) {
-        setInvoices([]);
-      } else {
-        setLoadError(
-          err instanceof InvoicesApiError ? err.message : 'Không tải được danh sách hóa đơn. Vui lòng thử lại.'
-        );
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  // Tìm kiếm + lọc trạng thái chạy ở máy chủ; từ khoá chờ 300ms sau lần gõ cuối mới gửi.
+  const debouncedSearch = useDebounce(searchTerm.trim(), 300);
+  const filters = useMemo(
+    () => ({ keyword: debouncedSearch, status: statusFilter === 'ALL' ? '' : statusFilter }),
+    [debouncedSearch, statusFilter]
+  );
 
-  useEffect(() => {
-    if (initialInvoices || !isAllowed) {
-      setIsLoading(false);
-      return;
-    }
-    void loadInvoices();
-  }, [initialInvoices, isAllowed, loadInvoices]);
+  // Danh sách hóa đơn phân trang phía máy chủ — chỉ tải đúng trang đang xem.
+  const list = useServerPagedList({ filters, fetchPage: fetchInvoicesPage, enabled: isAllowed });
+  const isLoading = list.isLoading;
+  const loadInvoices = list.reload;
+  const isForbidden = list.error instanceof InvoicesApiError && list.error.statusCode === 403;
+  const loadError =
+    list.error && !isForbidden
+      ? list.error instanceof InvoicesApiError
+        ? list.error.message
+        : 'Không tải được danh sách hóa đơn. Vui lòng thử lại.'
+      : null;
 
   const rowActions = (inv: InvoiceDetailRes): RowAction[] => [
     {
@@ -109,18 +100,9 @@ export default function InvoiceListPage({
     },
   ];
 
-  const filtered = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase();
-    return invoices.filter((inv) => {
-      const matchSearch =
-        !q ||
-        inv.invoiceCode.toLowerCase().includes(q) ||
-        (inv.contractCode ?? '').toLowerCase().includes(q) ||
-        (inv.customerName ?? '').toLowerCase().includes(q);
-      const matchStatus = statusFilter === 'ALL' || inv.status === statusFilter;
-      return matchSearch && matchStatus;
-    });
-  }, [invoices, searchTerm, statusFilter]);
+  // Máy chủ đã lọc sẵn: đây là các hóa đơn của trang hiện tại khớp bộ lọc.
+  const filtered: InvoiceDetailRes[] = list.items;
+  const hasActiveFilter = Boolean(debouncedSearch) || statusFilter !== 'ALL';
 
   if (!isAllowed) {
     return (
@@ -203,11 +185,12 @@ export default function InvoiceListPage({
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="table-loading-state">
-            <div className="spinner-lg" />
-            <p>Đang tải danh sách hóa đơn...</p>
-          </div>
+        {isLoading && !list.hasLoaded ? (
+          <table className="user-data-table" aria-label="Đang tải danh sách hóa đơn">
+            <tbody>
+              <TableSkeleton columns={9} rows={6} />
+            </tbody>
+          </table>
         ) : loadError ? (
           <div className="table-error-state" role="alert">
             <div className="table-error-state__icon">{ICONS.alertTriangle}</div>
@@ -222,15 +205,15 @@ export default function InvoiceListPage({
         ) : filtered.length === 0 ? (
           <div className="table-empty-state" data-testid="invoice-empty">
             <div className="table-empty-state__icon">{ICONS.receipt}</div>
-            <h3>{invoices.length === 0 ? 'Chưa có hóa đơn nào' : 'Không có hóa đơn khớp bộ lọc'}</h3>
+            <h3>{!hasActiveFilter ? 'Chưa có hóa đơn nào' : 'Không có hóa đơn khớp bộ lọc'}</h3>
             <p>
-              {invoices.length === 0
+              {!hasActiveFilter
                 ? 'Lập hóa đơn từ mốc thanh toán hợp đồng (trang Hợp đồng), đề xuất hóa đơn hoặc lịch định kỳ để bắt đầu.'
                 : 'Thử đổi từ khóa tìm kiếm hoặc bộ lọc trạng thái.'}
             </p>
           </div>
         ) : (
-          <div className="table-responsive">
+          <div className={`table-responsive${isLoading ? ' is-refreshing' : ''}`} aria-busy={isLoading}>
             <table className="user-data-table" data-testid="invoice-table">
               <thead>
                 <tr>
@@ -279,6 +262,19 @@ export default function InvoiceListPage({
               </tbody>
             </table>
           </div>
+        )}
+
+        {list.hasLoaded && !loadError && (
+          <Pagination
+            page={list.page}
+            totalPages={list.totalPages}
+            totalElements={list.totalElements}
+            pageSize={list.pageSize}
+            itemLabel="hóa đơn"
+            loading={isLoading}
+            onPageChange={list.setPage}
+            testIdPrefix="invoice-pagination"
+          />
         )}
       </div>
     </div>

@@ -7,7 +7,7 @@ import * as customersApi from '../api/customersApi';
 import type { Customer } from '../types/customerTypes';
 
 vi.mock('../api/customersApi', () => ({
-  fetchCustomers: vi.fn().mockResolvedValue([]),
+  fetchCustomersPage: vi.fn(),
   createCustomer: vi.fn(),
   checkCustomerDuplicate: vi.fn().mockResolvedValue([]),
   createCustomerWithOverride: vi.fn(),
@@ -33,9 +33,46 @@ vi.mock('../api/customersApi', () => ({
   },
 }));
 
+/**
+ * Máy chủ giả cho GET /customers/paged: lọc giống backend (từ khoá "chứa", phân khúc so khớp
+ * không phân biệt hoa thường) và trả số liệu tổng hợp trên toàn bộ tập dữ liệu.
+ */
+function serveCustomers(all: Customer[]) {
+  vi.mocked(customersApi.fetchCustomersPage).mockImplementation(async (query) => {
+    const eq = (value: string | null | undefined, expected?: string) =>
+      !expected || (value ?? '').trim().toLowerCase() === expected.toLowerCase();
+    const keyword = (query.keyword ?? '').toLowerCase();
+    const content = all.filter(
+      (c) =>
+        (!keyword ||
+          [c.name, c.code, c.taxCode, c.phone, c.industry, c.address].some((v) => (v ?? '').toLowerCase().includes(keyword))) &&
+        eq(c.industry, query.industry) &&
+        eq(c.companySize, query.companySize) &&
+        eq(c.priority, query.priority)
+    );
+    const distinct = (pick: (c: Customer) => string | null | undefined) =>
+      [...new Set(all.map((c) => pick(c)?.trim()).filter((v): v is string => Boolean(v)))];
+    return {
+      content,
+      page: 0,
+      size: 20,
+      totalElements: content.length,
+      totalPages: content.length === 0 ? 0 : 1,
+      summary: {
+        total: all.length,
+        createdToday: 0,
+        industries: distinct((c) => c.industry),
+        companySizes: distinct((c) => c.companySize),
+        priorities: distinct((c) => c.priority),
+      },
+    };
+  });
+}
+
 describe('Phân nhóm khách hàng theo ngành và quy mô (NCL-02-CN-005)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    serveCustomers([]);
   });
 
   const mockCustomer: Customer = {
@@ -108,7 +145,7 @@ describe('Phân nhóm khách hàng theo ngành và quy mô (NCL-02-CN-005)', () 
       expect(customersApi.updateCustomerSegment).not.toHaveBeenCalled();
     });
 
-    it('lọc danh sách khách hàng theo quy mô và mức độ ưu tiên đã gán', () => {
+    it('lọc danh sách khách hàng theo quy mô và mức độ ưu tiên đã gán (lọc ở máy chủ)', async () => {
       const initialCustomers: Customer[] = [
         {
           id: 1,
@@ -128,28 +165,32 @@ describe('Phân nhóm khách hàng theo ngành và quy mô (NCL-02-CN-005)', () 
         },
       ];
 
-      render(
-        <CustomerListPage currentUserRoles={['VT-04']} initialCustomers={initialCustomers} />
-      );
+      serveCustomers(initialCustomers);
+      render(<CustomerListPage currentUserRoles={['VT-04']} />);
 
-      expect(screen.getByText('Công ty Alpha')).toBeInTheDocument();
+      expect(await screen.findByText('Công ty Alpha')).toBeInTheDocument();
       expect(screen.getByText('Công ty Beta')).toBeInTheDocument();
 
       // Lọc theo quy mô "Lớn" -> chỉ còn Công ty Beta
       fireEvent.change(screen.getByLabelText(/Quy mô:/i), { target: { value: 'Lớn' } });
+      await waitFor(() => expect(screen.queryByText('Công ty Alpha')).toBeNull());
       expect(screen.getByText('Công ty Beta')).toBeInTheDocument();
-      expect(screen.queryByText('Công ty Alpha')).toBeNull();
+      expect(customersApi.fetchCustomersPage).toHaveBeenLastCalledWith(
+        expect.objectContaining({ companySize: 'Lớn' }),
+        0,
+        20
+      );
 
       // Đổi sang lọc theo mức ưu tiên "Thấp" -> chỉ còn Công ty Alpha
       fireEvent.change(screen.getByLabelText(/Quy mô:/i), { target: { value: '' } });
       fireEvent.change(screen.getByLabelText(/Ưu tiên:/i), { target: { value: 'Thấp' } });
+      await waitFor(() => expect(screen.queryByText('Công ty Beta')).toBeNull());
       expect(screen.getByText('Công ty Alpha')).toBeInTheDocument();
-      expect(screen.queryByText('Công ty Beta')).toBeNull();
     });
   });
 
   describe('NCL-02-CN-005-TC-02: Dữ liệu rỗng (Không có khách hàng thuộc nhóm được lọc)', () => {
-    it('lọc theo nhóm không tồn tại -> hệ thống báo không có kết quả phù hợp', () => {
+    it('lọc theo nhóm không tồn tại -> hệ thống báo không có kết quả phù hợp', async () => {
       const initialCustomers: Customer[] = [
         {
           id: 1,
@@ -161,9 +202,9 @@ describe('Phân nhóm khách hàng theo ngành và quy mô (NCL-02-CN-005)', () 
         },
       ];
 
-      render(
-        <CustomerListPage currentUserRoles={['VT-04']} initialCustomers={initialCustomers} />
-      );
+      serveCustomers(initialCustomers);
+      render(<CustomerListPage currentUserRoles={['VT-04']} />);
+      expect(await screen.findByText('Công ty Alpha')).toBeInTheDocument();
 
       fireEvent.change(screen.getByLabelText(/Quy mô:/i), { target: { value: 'Nhỏ' } });
       fireEvent.change(screen.getByLabelText(/Ưu tiên:/i), { target: { value: 'Thấp' } });
@@ -175,13 +216,13 @@ describe('Phân nhóm khách hàng theo ngành và quy mô (NCL-02-CN-005)', () 
         target: { value: 'Không tồn tại XYZ' },
       });
 
-      expect(screen.getByTestId('segment-filter-empty-state')).toBeInTheDocument();
+      expect(await screen.findByTestId('segment-filter-empty-state')).toBeInTheDocument();
       expect(screen.getByText(/Không có kết quả phù hợp/i)).toBeInTheDocument();
       expect(screen.queryByText('Công ty Alpha')).toBeNull();
 
       // Bấm "Xóa toàn bộ bộ lọc" -> khách hàng hiển thị trở lại
       fireEvent.click(screen.getByTestId('btn-clear-segment-filters'));
-      expect(screen.getByText('Công ty Alpha')).toBeInTheDocument();
+      expect(await screen.findByText('Công ty Alpha')).toBeInTheDocument();
       expect(screen.queryByTestId('segment-filter-empty-state')).toBeNull();
     });
   });
@@ -306,15 +347,12 @@ describe('Phân nhóm khách hàng theo ngành và quy mô (NCL-02-CN-005)', () 
   });
 
   describe('Tích hợp trang CustomerListPage', () => {
-    it('bấm nút "Phân nhóm" trên bảng danh sách -> mở trang chi tiết ngay tại tab Phân nhóm', () => {
-      const initialCustomers: Customer[] = [mockCustomer];
-
-      render(
-        <CustomerListPage currentUserRoles={['VT-04']} initialCustomers={initialCustomers} />
-      );
+    it('bấm nút "Phân nhóm" trên bảng danh sách -> mở trang chi tiết ngay tại tab Phân nhóm', async () => {
+      serveCustomers([mockCustomer]);
+      render(<CustomerListPage currentUserRoles={['VT-04']} />);
 
       // Thao tác nằm trong menu kebab (⋮) — mở menu của dòng rồi bấm "Phân nhóm".
-      fireEvent.click(screen.getByLabelText(`Thao tác cho ${mockCustomer.name}`));
+      fireEvent.click(await screen.findByLabelText(`Thao tác cho ${mockCustomer.name}`));
       fireEvent.click(screen.getByTestId(`btn-open-segment-${mockCustomer.id}`));
 
       expect(screen.getByTestId('customer-detail-page')).toBeInTheDocument();

@@ -1,6 +1,9 @@
 package com.serviceops.modules.invoice.service.impl;
 
+import com.serviceops.common.api.PageRes;
 import com.serviceops.common.exception.BusinessRuleException;
+import com.serviceops.common.util.PageRequests;
+import com.serviceops.common.util.SpecSupport;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.contract.entity.Contract;
 import com.serviceops.modules.contract.repository.ContractRepository;
@@ -13,13 +16,18 @@ import com.serviceops.modules.invoice.enums.InvoiceStatus;
 import com.serviceops.modules.invoice.repository.InvoiceRepository;
 import com.serviceops.modules.invoice.repository.PaymentRepository;
 import com.serviceops.modules.invoice.service.InvoiceService;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -44,6 +52,28 @@ public class InvoiceServiceImpl implements InvoiceService {
 				? EnumSet.allOf(InvoiceStatus.class)
 				: statuses;
 		return toResponses(invoiceRepository.search(contractId, filter));
+	}
+
+	@Override
+	public PageRes<InvoiceDetailRes, Void> listPage(String keyword, InvoiceStatus status, Integer page, Integer size) {
+		String normalized = SpecSupport.normalize(keyword);
+		Specification<Invoice> spec = (root, query, cb) -> {
+			List<Predicate> where = new ArrayList<>();
+			if (normalized != null) {
+				where.add(cb.or(
+						SpecSupport.containsIgnoreCase(cb, root.get("invoiceCode"), normalized),
+						SpecSupport.relatedNameContains(query, cb, root.get("contractId"), Contract.class,
+								"contractCode", normalized),
+						SpecSupport.relatedNameContains(query, cb, root.get("customerId"), Customer.class, "name",
+								normalized)));
+			}
+			if (status != null) {
+				where.add(cb.equal(root.get("status"), status));
+			}
+			return cb.and(where.toArray(Predicate[]::new));
+		};
+		Page<Invoice> result = invoiceRepository.findAll(spec, PageRequests.of(page, size, Sort.by(Sort.Order.desc("id"))));
+		return PageRes.of(result, toResponses(result.getContent()), null);
 	}
 
 	@Override

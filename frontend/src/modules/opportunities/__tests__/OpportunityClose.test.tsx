@@ -6,12 +6,24 @@ import * as opportunitiesApi from '../api/opportunitiesApi';
 import type { Opportunity } from '../types/opportunityTypes';
 
 // Giữ nguyên các export thật (OpportunityApiError, changeOpportunityStage, ...),
-// chỉ thay closeOpportunity bằng mock để kiểm soát phản hồi máy chủ.
+// chỉ thay closeOpportunity và danh sách phân trang bằng mock để kiểm soát phản hồi máy chủ.
 vi.mock('../api/opportunitiesApi', async (importOriginal) => {
   const actual =
     await importOriginal<typeof import('../api/opportunitiesApi')>();
-  return { ...actual, closeOpportunity: vi.fn() };
+  return { ...actual, closeOpportunity: vi.fn(), fetchOpportunitiesPage: vi.fn() };
 });
+
+/** Một trang kết quả giả lập của GET /opportunities/paged. */
+function pageOf(items: Opportunity[]) {
+  return {
+    content: items,
+    page: 0,
+    size: 20,
+    totalElements: items.length,
+    totalPages: 1,
+    summary: { total: items.length, totalExpectedValue: 0, weightedForecastValue: 0, wonCount: 0 },
+  };
+}
 
 const mockOpportunities: Opportunity[] = [
   {
@@ -59,6 +71,7 @@ const mockOpportunities: Opportunity[] = [
 describe('Ghi nhận kết quả thắng thua của cơ hội (NCL-03-CN-005)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(opportunitiesApi.fetchOpportunitiesPage).mockResolvedValue(pageOf(mockOpportunities));
   });
 
   describe('Luồng thành công — kết quả Thắng (TC-01)', () => {
@@ -124,14 +137,14 @@ describe('Ghi nhận kết quả thắng thua của cơ hội (NCL-03-CN-005)', 
         closedResponse,
       );
 
-      render(
-        <OpportunityListPage
-          currentUserRoles={['VT-04']}
-          initialOpportunities={mockOpportunities}
-        />,
+      render(<OpportunityListPage currentUserRoles={['VT-04']} />);
+
+      // Sau khi chốt, trang được tải lại từ máy chủ — máy chủ trả cơ hội đã đóng.
+      vi.mocked(opportunitiesApi.fetchOpportunitiesPage).mockResolvedValue(
+        pageOf([closedResponse, ...mockOpportunities.slice(1)]),
       );
 
-      fireEvent.click(screen.getByTestId('btn-close-opportunity-1'));
+      fireEvent.click(await screen.findByTestId('btn-close-opportunity-1'));
       expect(screen.getByTestId('opportunity-close-modal')).toBeInTheDocument();
 
       fireEvent.change(screen.getByTestId('select-loss-reason'), {
@@ -231,15 +244,11 @@ describe('Ghi nhận kết quả thắng thua của cơ hội (NCL-03-CN-005)', 
   });
 
   describe('Phân quyền vai trò (TC-03)', () => {
-    it('người dùng không thuộc VT-04 không thấy nút ghi nhận kết quả và thấy cảnh báo phân quyền', () => {
-      render(
-        <OpportunityListPage
-          currentUserRoles={['VT-02']}
-          currentUserName="Trần PM"
-          initialOpportunities={mockOpportunities}
-        />,
-      );
+    it('người dùng không thuộc VT-04 không thấy nút ghi nhận kết quả và thấy cảnh báo phân quyền', async () => {
+      render(<OpportunityListPage currentUserRoles={['VT-02']} currentUserName="Trần PM" />);
 
+      // Vai trò chỉ xem vẫn tải được danh sách (đường ống bán hàng).
+      expect(await screen.findByText(mockOpportunities[0].name)).toBeInTheDocument();
       expect(screen.getByText(/Chế độ chỉ xem/i)).toBeInTheDocument();
       expect(screen.queryByTestId('btn-close-opportunity-1')).toBeNull();
       expect(screen.queryByTestId('btn-disabled-close-2')).toBeNull();
@@ -247,28 +256,18 @@ describe('Ghi nhận kết quả thắng thua của cơ hội (NCL-03-CN-005)', 
   });
 
   describe('Quy tắc QTN-06 & khóa cơ hội đã đóng (TC-04)', () => {
-    it('vô hiệu hóa nút chốt khi cơ hội không ở giai đoạn Đàm phán', () => {
-      render(
-        <OpportunityListPage
-          currentUserRoles={['VT-04']}
-          initialOpportunities={mockOpportunities}
-        />,
-      );
+    it('vô hiệu hóa nút chốt khi cơ hội không ở giai đoạn Đàm phán', async () => {
+      render(<OpportunityListPage currentUserRoles={['VT-04']} />);
 
-      const disabled = screen.getByTestId('btn-disabled-close-2');
+      const disabled = await screen.findByTestId('btn-disabled-close-2');
       expect(disabled).toBeDisabled();
       expect(disabled).toHaveTextContent(/Chưa thể chốt/i);
     });
 
-    it('khóa thao tác với cơ hội đã đóng; lý do thua + đối thủ xem được qua tooltip trên hàng, đầy đủ hơn khi chọn cơ hội đó', () => {
-      render(
-        <OpportunityListPage
-          currentUserRoles={['VT-04']}
-          initialOpportunities={mockOpportunities}
-        />,
-      );
+    it('khóa thao tác với cơ hội đã đóng; lý do thua + đối thủ xem được qua tooltip trên hàng, đầy đủ hơn khi chọn cơ hội đó', async () => {
+      render(<OpportunityListPage currentUserRoles={['VT-04']} />);
 
-      const badge = screen.getByTestId('badge-closed-3');
+      const badge = await screen.findByTestId('badge-closed-3');
       expect(badge).toHaveTextContent('Đã hoàn tất');
       // Trên hàng chỉ còn nhãn gọn "Đã hoàn tất" + tooltip — chi tiết lý do thua
       // không lặp lại ở mọi hàng nữa, tránh rối bảng.

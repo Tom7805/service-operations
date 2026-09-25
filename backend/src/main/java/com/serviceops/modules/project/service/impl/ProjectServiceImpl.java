@@ -1,6 +1,9 @@
 package com.serviceops.modules.project.service.impl;
 
+import com.serviceops.common.api.PageRes;
 import com.serviceops.common.exception.BusinessRuleException;
+import com.serviceops.common.util.PageRequests;
+import com.serviceops.common.util.SpecSupport;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.contract.entity.Contract;
 import com.serviceops.modules.contract.enums.ContractStatus;
@@ -16,6 +19,9 @@ import com.serviceops.modules.project.logging.ProjectAuditLogger;
 import com.serviceops.modules.project.repository.ProjectRepository;
 import com.serviceops.modules.project.service.ProjectService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -107,6 +113,18 @@ public class ProjectServiceImpl implements ProjectService {
 		return projectRepository.findAll(org.springframework.data.domain.Sort.by(
 				org.springframework.data.domain.Sort.Direction.DESC, "id")).stream()
 				.map(this::toResponse).toList();
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public PageRes<ProjectRes, Void> listPage(String keyword, Integer page, Integer size) {
+		String normalized = SpecSupport.normalize(keyword);
+		Specification<Project> spec = (root, query, cb) -> normalized == null
+				? cb.conjunction()
+				: cb.or(SpecSupport.containsIgnoreCase(cb, root.get("projectCode"), normalized),
+						SpecSupport.containsIgnoreCase(cb, root.get("name"), normalized));
+		Page<Project> result = projectRepository.findAll(spec, PageRequests.of(page, size, Sort.by(Sort.Order.desc("id"))));
+		return PageRes.of(result, result.getContent().stream().map(this::toResponse).toList(), null);
 	}
 
 	private ProjectRes toResponse(Project project) {

@@ -14,6 +14,8 @@ import type {
 } from '../types/customerTypes';
 import { normalizePhone } from '../validators/customerValidators';
 import { httpFetch } from '../../../utils/http';
+import { buildQueryString } from '../../../utils/buildQueryString';
+import type { PageResult } from '../../../types/pagination';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -301,5 +303,36 @@ export async function mergeCustomers(payload: CustomerMergePayload): Promise<Cus
   return requestBackend<Customer>(`${API_BASE_URL}/customers/merge`, {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+}
+
+/** Số liệu tổng hợp của màn danh sách khách hàng — tính trên toàn bộ phạm vi người xem. */
+export interface CustomerPageSummary {
+  total: number;
+  createdToday: number;
+  industries: string[];
+  companySizes: string[];
+  priorities: string[];
+}
+
+export interface CustomerPageQuery {
+  keyword?: string;
+  industry?: string;
+  companySize?: string;
+  priority?: string;
+}
+
+/**
+ * Một trang hồ sơ khách hàng (GET /customers/paged): lọc, phạm vi dữ liệu và phân trang chạy ở
+ * máy chủ — chỉ tải đúng số dòng đang xem thay vì toàn bộ danh mục. Quyền như GET /customers.
+ */
+export async function fetchCustomersPage(
+  query: CustomerPageQuery,
+  page: number,
+  size: number
+): Promise<PageResult<Customer, CustomerPageSummary>> {
+  const qs = buildQueryString({ ...query, page, size });
+  return requestBackend<PageResult<Customer, CustomerPageSummary>>(`${API_BASE_URL}/customers/paged${qs}`, {
+    method: 'GET',
   });
 }

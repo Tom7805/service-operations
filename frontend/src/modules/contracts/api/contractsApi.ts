@@ -10,6 +10,8 @@ import type {
   RenewalRes,
 } from '../types/contractTypes';
 import { httpFetch } from '../../../utils/http';
+import { buildQueryString } from '../../../utils/buildQueryString';
+import type { PageResult } from '../../../types/pagination';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -239,3 +241,28 @@ export default {} as unknown as {
   createRenewal: typeof createRenewal;
   fetchRenewals: typeof fetchRenewals;
 };
+
+/** Số liệu tổng hợp của màn "Hợp đồng" — tính trên toàn bộ hợp đồng, không theo bộ lọc. */
+export interface ContractPageSummary {
+  total: number;
+  active: number;
+  draft: number;
+  noLimit: number;
+}
+
+export interface ContractPageQuery {
+  keyword?: string;
+  status?: string;
+}
+
+/** Một trang hợp đồng (GET /contracts/paged): tìm theo mã, tên hoặc tên khách hàng, lọc trạng thái. */
+export async function fetchContractsPage(
+  query: ContractPageQuery,
+  page: number,
+  size: number
+): Promise<PageResult<ContractRes, ContractPageSummary>> {
+  const qs = buildQueryString({ ...query, page, size });
+  return requestBackend<PageResult<ContractRes, ContractPageSummary>>(`${API_BASE_URL}/contracts/paged${qs}`, {
+    method: 'GET',
+  });
+}

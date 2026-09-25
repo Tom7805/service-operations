@@ -1,6 +1,7 @@
 package com.serviceops.modules.invoice.controller;
 
 import com.serviceops.common.api.BaseRes;
+import com.serviceops.common.api.PageRes;
 import com.serviceops.modules.invoice.dto.request.InvoiceFromMilestoneReq;
 import com.serviceops.modules.invoice.dto.response.InvoiceDetailRes;
 import com.serviceops.modules.invoice.dto.response.InvoiceRes;
@@ -35,6 +36,15 @@ public class InvoiceController {
 	public BaseRes<List<InvoiceDetailRes>> list(@RequestParam(required = false) Long contractId,
 			@RequestParam(required = false) List<InvoiceStatus> status) {
 		return BaseRes.ok(invoiceService.list(contractId, status));
+	}
+
+	/** Danh sach hoa don phan trang phia may chu cho man "Hoa don" (tim theo so HD/ma hop dong/ten khach hang). */
+	@GetMapping("/invoices/paged")
+	@PreAuthorize("hasRole('VT-05')")
+	public BaseRes<PageRes<InvoiceDetailRes, Void>> listPage(@RequestParam(required = false) String keyword,
+			@RequestParam(required = false) InvoiceStatus status, @RequestParam(required = false) Integer page,
+			@RequestParam(required = false) Integer size) {
+		return BaseRes.ok(invoiceService.listPage(keyword, status, page, size));
 	}
 
 	@GetMapping("/invoices/{invoiceId}")

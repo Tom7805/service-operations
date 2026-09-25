@@ -2,11 +2,12 @@ package com.serviceops.modules.project.repository;
 
 import com.serviceops.modules.project.entity.Project;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.Collection;
 import java.util.List;
 
-public interface ProjectRepository extends JpaRepository<Project, Long> {
+public interface ProjectRepository extends JpaRepository<Project, Long>, JpaSpecificationExecutor<Project> {
 
 	/** NCL-13-CN-002: du an cua cac khach hang trong pham vi cong khach hang, moi nhat truoc. */
 	List<Project> findByCustomerIdInOrderByIdDesc(Collection<Long> customerIds);

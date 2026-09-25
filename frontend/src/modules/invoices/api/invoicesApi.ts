@@ -17,6 +17,8 @@ import type {
   AgingBucket,
 } from '../types/invoiceTypes';
 import { httpFetch } from '../../../utils/http';
+import { buildQueryString } from '../../../utils/buildQueryString';
+import type { PageResult } from '../../../types/pagination';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -199,4 +201,19 @@ export async function fetchReceivableAging(customerId?: number, bucket?: AgingBu
   return requestBackend<ReceivableAgingRes>(`${API_BASE_URL}/receivables/overdue${qs ? `?${qs}` : ''}`, {
     method: 'GET',
   });
+}
+
+export interface InvoicePageQuery {
+  keyword?: string;
+  status?: string;
+}
+
+/** Một trang hóa đơn (GET /invoices/paged), mới nhất trước: tìm theo số HĐ, mã hợp đồng hoặc tên khách hàng. */
+export async function fetchInvoicesPage(
+  query: InvoicePageQuery,
+  page: number,
+  size: number
+): Promise<PageResult<InvoiceDetailRes>> {
+  const qs = buildQueryString({ ...query, page, size });
+  return requestBackend<PageResult<InvoiceDetailRes>>(`${API_BASE_URL}/invoices/paged${qs}`, { method: 'GET' });
 }

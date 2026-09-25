@@ -5,7 +5,7 @@ import * as contractsApi from '../api/contractsApi';
 import type { ContractRes } from '../types/contractTypes';
 
 vi.mock('../api/contractsApi', () => ({
-  fetchContracts: vi.fn(),
+  fetchContractsPage: vi.fn(),
   getContract: vi.fn(),
   activateContract: vi.fn(),
   fetchMilestones: vi.fn(),
@@ -55,6 +55,34 @@ const contracts: ContractRes[] = [
   },
 ];
 
+/**
+ * Máy chủ giả cho GET /contracts/paged: lọc theo trạng thái/từ khoá như backend, thống kê trên
+ * toàn bộ danh sách.
+ */
+function serveContracts(all: ContractRes[]) {
+  vi.mocked(contractsApi.fetchContractsPage).mockImplementation(async (query) => {
+    const q = (query.keyword ?? '').toLowerCase();
+    const content = all.filter(
+      (c) =>
+        (!query.status || c.status === query.status) &&
+        (!q || [c.contractCode, c.name, c.customerName].some((v) => (v ?? '').toLowerCase().includes(q)))
+    );
+    return {
+      content,
+      page: 0,
+      size: 20,
+      totalElements: content.length,
+      totalPages: content.length === 0 ? 0 : 1,
+      summary: {
+        total: all.length,
+        active: all.filter((c) => c.status === 'ACTIVE').length,
+        draft: all.filter((c) => c.status === 'DRAFT').length,
+        noLimit: all.filter((c) => c.limitValue == null).length,
+      },
+    };
+  });
+}
+
 describe('ContractListPage (NCL-04-CN-002 — lối vào cho Kế toán)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -64,15 +92,15 @@ describe('ContractListPage (NCL-04-CN-002 — lối vào cho Kế toán)', () =>
     render(<ContractListPage currentUserRoles={['VT-04']} currentUserName="Đỗ Thị Mai" />);
 
     expect(screen.getByTestId('contract-access-denied')).toBeInTheDocument();
-    expect(contractsApi.fetchContracts).not.toHaveBeenCalled();
+    expect(contractsApi.fetchContractsPage).not.toHaveBeenCalled();
   });
 
   it('TC-01: Kế toán (VT-05) xem được danh sách và thao tác gộp trong menu ⋮ của từng dòng', async () => {
-    vi.mocked(contractsApi.fetchContracts).mockResolvedValue(contracts);
+    serveContracts(contracts);
 
     render(<ContractListPage currentUserRoles={['VT-05']} currentUserName="Hoàng Văn Nam" />);
 
-    expect(contractsApi.fetchContracts).toHaveBeenCalledTimes(1);
+    expect(contractsApi.fetchContractsPage).toHaveBeenCalledTimes(1);
 
     await waitFor(() => {
       expect(screen.getByTestId('contract-table')).toBeInTheDocument();
@@ -100,7 +128,7 @@ describe('ContractListPage (NCL-04-CN-002 — lối vào cho Kế toán)', () =>
   });
 
   it('lọc theo trạng thái ACTIVE chỉ còn hợp đồng đang hiệu lực', async () => {
-    vi.mocked(contractsApi.fetchContracts).mockResolvedValue(contracts);
+    serveContracts(contracts);
 
     render(<ContractListPage currentUserRoles={['VT-05']} currentUserName="Hoàng Văn Nam" />);
 
@@ -108,12 +136,17 @@ describe('ContractListPage (NCL-04-CN-002 — lối vào cho Kế toán)', () =>
 
     fireEvent.change(screen.getByLabelText('Trạng thái:'), { target: { value: 'ACTIVE' } });
 
-    expect(screen.queryByText('HD-0001')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('HD-0001')).not.toBeInTheDocument());
     expect(screen.getByText('HD-0002')).toBeInTheDocument();
+    expect(contractsApi.fetchContractsPage).toHaveBeenLastCalledWith(
+      expect.objectContaining({ status: 'ACTIVE' }),
+      0,
+      20
+    );
   });
 
   it('chọn "Khai báo loại & hạn mức" trong menu ⋮ nạp chi tiết hợp đồng qua GET /contracts/{id} rồi mở modal', async () => {
-    vi.mocked(contractsApi.fetchContracts).mockResolvedValue(contracts);
+    serveContracts(contracts);
     vi.mocked(contractsApi.getContract).mockResolvedValue(contracts[0]);
 
     render(<ContractListPage currentUserRoles={['VT-05']} currentUserName="Hoàng Văn Nam" />);

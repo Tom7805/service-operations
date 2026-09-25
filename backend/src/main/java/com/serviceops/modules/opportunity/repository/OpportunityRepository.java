@@ -3,10 +3,11 @@ package com.serviceops.modules.opportunity.repository;
 import com.serviceops.modules.opportunity.entity.Opportunity;
 import com.serviceops.modules.opportunity.enums.OpportunityStage;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.List;
 
-public interface OpportunityRepository extends JpaRepository<Opportunity, Long> {
+public interface OpportunityRepository extends JpaRepository<Opportunity, Long>, JpaSpecificationExecutor<Opportunity> {
 
 	/** Lay cac co hoi cua mot khach hang (pipeline theo khach hang). */
 	List<Opportunity> findByCustomerId(Long customerId);

@@ -1,15 +1,19 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import RowActionsMenu, { type RowAction } from '../../../components/common/RowActionsMenu';
 import { roleLabels } from '../../../utils/roleLabel';
 import { CONTRACT_TYPE_LABEL, type ContractRes, type ContractStatus } from '../types/contractTypes';
 import {
-  fetchContracts,
+  fetchContractsPage,
   getContract,
   activateContract,
   ContractsApiError,
 } from '../api/contractsApi';
+import Pagination from '../../../components/common/Pagination';
+import TableSkeleton from '../../../components/common/TableSkeleton';
+import { useDebounce } from '../../../hooks/useDebounce';
+import { useServerPagedList } from '../../../hooks/usePagination';
 import ContractTypeLimitModal from '../components/ContractTypeLimitModal';
 import ContractMilestonesModal from '../components/ContractMilestonesModal';
 import ContractLimitAlert from '../components/ContractLimitAlert';
@@ -18,8 +22,6 @@ import ContractExpiryReminderModal from '../components/ContractExpiryReminderMod
 interface ContractListPageProps {
   currentUserRoles?: string[];
   currentUserName?: string;
-  /** Cho phép nạp sẵn dữ liệu trong test/SSR để bỏ qua bước gọi API. */
-  initialContracts?: ContractRes[];
   /** Mở trang chi tiết hợp đồng (gộp loại/hạn mức, mốc/đề xuất/định kỳ theo loại, hóa đơn, cảnh báo, gia hạn). */
   onOpenDetail?: (contractId: number) => void;
 }
@@ -73,14 +75,10 @@ const headStyle: CSSProperties = {
 export default function ContractListPage({
   currentUserRoles = [],
   currentUserName = 'Người dùng',
-  initialContracts,
   onOpenDetail,
 }: ContractListPageProps) {
   const isAllowed = currentUserRoles.includes('VT-05');
 
-  const [contracts, setContracts] = useState<ContractRes[]>(initialContracts ?? []);
-  const [isLoading, setIsLoading] = useState(!initialContracts);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -99,35 +97,27 @@ export default function ContractListPage({
     window.setTimeout(() => setToast(null), 4500);
   };
 
-  const loadContracts = useCallback(async () => {
-    setIsLoading(true);
-    setLoadError(null);
-    try {
-      const data = await fetchContracts();
-      setContracts(data);
-    } catch (err) {
-      if (err instanceof ContractsApiError && err.statusCode === 403) {
-        // Trang đã hiển thị màn từ chối quyền phía trên; không cần banner đỏ.
-        setContracts([]);
-      } else {
-        setLoadError(
-          err instanceof ContractsApiError
-            ? err.message
-            : 'Không tải được danh sách hợp đồng. Vui lòng thử lại.'
-        );
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  // Tìm kiếm + lọc trạng thái chạy ở máy chủ; từ khoá chờ 300ms sau lần gõ cuối mới gửi.
+  const debouncedSearch = useDebounce(searchTerm.trim(), 300);
+  const filters = useMemo(
+    () => ({ keyword: debouncedSearch, status: statusFilter === 'ALL' ? '' : statusFilter }),
+    [debouncedSearch, statusFilter]
+  );
 
-  useEffect(() => {
-    if (initialContracts || !isAllowed) {
-      setIsLoading(false);
-      return;
-    }
-    void loadContracts();
-  }, [initialContracts, isAllowed, loadContracts]);
+  // Danh sách hợp đồng phân trang phía máy chủ — chỉ tải đúng trang đang xem.
+  const list = useServerPagedList({ filters, fetchPage: fetchContractsPage, enabled: isAllowed });
+  const contracts = list.items;
+  const isLoading = list.isLoading;
+  const loadContracts = list.reload;
+  const setContracts = list.updateItems;
+  // 403: trang đã hiển thị màn từ chối quyền phía trên; không cần banner đỏ.
+  const isForbidden = list.error instanceof ContractsApiError && list.error.statusCode === 403;
+  const loadError =
+    list.error && !isForbidden
+      ? list.error instanceof ContractsApiError
+        ? list.error.message
+        : 'Không tải được danh sách hợp đồng. Vui lòng thử lại.'
+      : null;
 
   const openModalFor = useCallback(async (contractId: number, kind: 'type-limit' | 'milestones') => {
     setActionError(null);
@@ -154,6 +144,8 @@ export default function ContractListPage({
     try {
       const updated = await activateContract(contractId);
       setContracts((prev) => prev.map((c) => (c.id === contractId ? updated : c)));
+      // Đổi trạng thái làm đổi số liệu (Nháp/Đang hiệu lực) — tải lại để thẻ thống kê khớp.
+      loadContracts();
       showToast(`Đã kích hoạt hợp đồng ${updated.contractCode}.`);
     } catch (err) {
       const message =
@@ -163,10 +155,12 @@ export default function ContractListPage({
     } finally {
       setBusyContractId(null);
     }
-  }, []);
+  }, [setContracts, loadContracts]);
 
   const applySavedContract = (updated: ContractRes) => {
     setContracts((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+    // Khai báo hạn mức làm đổi số "Chưa khai báo hạn mức" — tải lại số liệu tổng hợp.
+    loadContracts();
   };
 
   // Gộp mọi thao tác theo dòng vào menu kebab (⋮) — mẫu chuẩn cho bảng dữ liệu
@@ -217,27 +211,16 @@ export default function ContractListPage({
     return actions;
   };
 
-  const filtered = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase();
-    return contracts.filter((c) => {
-      const matchSearch =
-        !q ||
-        c.contractCode.toLowerCase().includes(q) ||
-        (c.name ?? '').toLowerCase().includes(q) ||
-        (c.customerName ?? '').toLowerCase().includes(q);
-      const matchStatus = statusFilter === 'ALL' || c.status === statusFilter;
-      return matchSearch && matchStatus;
-    });
-  }, [contracts, searchTerm, statusFilter]);
-
-  const stats = useMemo(() => {
-    return {
-      total: contracts.length,
-      active: contracts.filter((c) => c.status === 'ACTIVE').length,
-      draft: contracts.filter((c) => c.status === 'DRAFT').length,
-      noLimit: contracts.filter((c) => c.limitValue == null).length,
-    };
-  }, [contracts]);
+  // Máy chủ đã lọc sẵn: `contracts` chính là các dòng của trang hiện tại khớp bộ lọc.
+  const filtered = contracts;
+  const hasActiveFilter = Boolean(debouncedSearch) || statusFilter !== 'ALL';
+  // Thẻ thống kê tính trên TOÀN BỘ hợp đồng (máy chủ), không chỉ trang đang xem.
+  const stats = {
+    total: list.summary?.total ?? 0,
+    active: list.summary?.active ?? 0,
+    draft: list.summary?.draft ?? 0,
+    noLimit: list.summary?.noLimit ?? 0,
+  };
 
   // NCL-04-CN-002 (TC-04): từ chối quyền cho vai trò khác Kế toán.
   if (!isAllowed) {
@@ -402,11 +385,12 @@ export default function ContractListPage({
           </div>
         )}
 
-        {isLoading ? (
-          <div className="table-loading-state">
-            <div className="spinner-lg" />
-            <p>Đang tải danh sách hợp đồng...</p>
-          </div>
+        {isLoading && !list.hasLoaded ? (
+          <table className="user-data-table" aria-label="Đang tải danh sách hợp đồng">
+            <tbody>
+              <TableSkeleton columns={9} rows={6} />
+            </tbody>
+          </table>
         ) : loadError ? (
           <div className="table-error-state" role="alert">
             <div className="table-error-state__icon">{ICONS.alertTriangle}</div>
@@ -421,15 +405,18 @@ export default function ContractListPage({
         ) : filtered.length === 0 ? (
           <div className="table-empty-state" data-testid="contract-empty">
             <div className="table-empty-state__icon">{ICONS.document}</div>
-            <h3>{contracts.length === 0 ? 'Chưa có hợp đồng nào' : 'Không có hợp đồng khớp bộ lọc'}</h3>
+            <h3>{!hasActiveFilter ? 'Chưa có hợp đồng nào' : 'Không có hợp đồng khớp bộ lọc'}</h3>
             <p>
-              {contracts.length === 0
+              {!hasActiveFilter
                 ? 'Hợp đồng được tạo từ cơ hội đã thắng (bởi Nhân viên kinh doanh). Khi có hợp đồng, danh sách sẽ hiển thị ở đây để bạn khai báo loại và hạn mức.'
                 : 'Thử đổi từ khóa tìm kiếm hoặc bộ lọc trạng thái.'}
             </p>
           </div>
         ) : (
-          <div className="table-responsive">
+          <div
+            className={`table-responsive${isLoading ? ' is-refreshing' : ''}`}
+            aria-busy={isLoading}
+          >
             <table className="user-data-table" data-testid="contract-table">
               <thead>
                 <tr>
@@ -487,6 +474,19 @@ export default function ContractListPage({
               </tbody>
             </table>
           </div>
+        )}
+
+        {list.hasLoaded && !loadError && (
+          <Pagination
+            page={list.page}
+            totalPages={list.totalPages}
+            totalElements={list.totalElements}
+            pageSize={list.pageSize}
+            itemLabel="hợp đồng"
+            loading={isLoading}
+            onPageChange={list.setPage}
+            testIdPrefix="contract-pagination"
+          />
         )}
       </div>
 

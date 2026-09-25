@@ -4063,3 +4063,57 @@ summary:focus-visible { outline: var(--focus-ring-width) solid var(--focus-ring-
   .side-nav, .side-nav--drawer-open { transition: none; }
   .side-nav-scrim { animation: none; }
 }
+
+/* === PHAN TRANG PHIA MAY CHU (Pagination) === */
+.pager { align-items: center; flex-wrap: wrap; }
+.pager__pages { display: inline-flex; align-items: center; gap: 4px; }
+.pager__page {
+  min-width: 32px; height: 32px; padding: 0 8px;
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--ink);
+  font: inherit; font-size: 13.5px; font-variant-numeric: tabular-nums; cursor: pointer;
+  transition: background-color .12s ease-out, border-color .12s ease-out;
+}
+.pager__page:hover:not(:disabled):not(.pager__page--current) { border-color: var(--line-hover); background: var(--surface-alt); }
+.pager__page--current { background: var(--ink-strong); border-color: var(--ink-strong); color: var(--on-ink); cursor: default; }
+.pager__page:disabled:not(.pager__page--current) { opacity: .5; cursor: not-allowed; }
+.pager__gap { color: var(--ink-muted); padding: 0 2px; }
+@media (pointer: coarse) {
+  .pager__page { min-width: var(--touch-target, 44px); height: var(--touch-target, 44px); }
+}
+@media (max-width: 640px) {
+  .table-footer--paginated { justify-content: center; text-align: center; }
+  .pager { justify-content: center; width: 100%; }
+  .pager__step-label { display: none; }
+}
+/* Dang tai trang moi: giu du lieu cu nhung lam mo de nguoi dung biet bang sap doi. */
+.is-refreshing { opacity: .55; transition: opacity .15s ease-out; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .is-refreshing, .pager__page { transition: none; } }
+
+/* === O CHON DU AN CO TIM KIEM (ProjectPicker) === */
+.project-picker-wrap { margin-top: 16px; max-width: 640px; }
+.project-picker { border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); overflow: hidden; }
+.project-picker__search { margin: 12px; }
+.project-picker__list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.project-picker__list > li + li { border-top: 1px solid var(--overlay-hairline); }
+.project-picker__option {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+  width: 100%; min-height: 48px; padding: 10px 16px; border: 0; background: transparent;
+  color: var(--ink); font: inherit; text-align: left; cursor: pointer;
+  transition: background-color .12s ease-out;
+}
+.project-picker__option:hover { background: var(--surface-alt); }
+.project-picker__code { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-muted); white-space: nowrap; }
+.project-picker__name { min-width: 0; overflow-wrap: anywhere; font-weight: 500; }
+.project-picker__chevron { color: var(--ink-faint); display: inline-flex; }
+.project-picker__skeleton { padding: 16px; }
+.project-picker__empty { margin: 0; padding: 16px; }
+.project-picker .table-footer--paginated { border-top: 1px solid var(--line); }
+@media (max-width: 640px) {
+  .project-picker-wrap { max-width: none; }
+  .project-picker__option { grid-template-columns: 1fr auto; }
+  .project-picker__code { grid-column: 1; }
+  .project-picker__name { grid-column: 1; }
+  .project-picker__chevron { grid-column: 2; grid-row: 1 / span 2; }
+}
+@media (prefers-reduced-motion: reduce) { .project-picker__option { transition: none; } }

@@ -1,6 +1,7 @@
 package com.serviceops.modules.project.service;
 
 import com.serviceops.modules.project.dto.request.ProjectCreateFromContractReq;
+import com.serviceops.common.api.PageRes;
 import com.serviceops.modules.project.dto.response.ProjectRes;
 
 import java.util.List;
@@ -25,4 +26,10 @@ public interface ProjectService {
 	 * (mockProjects) nen khong bao gio hien du an that.
 	 */
 	List<ProjectRes> listAll();
+
+	/**
+	 * Mot trang du an, moi nhat truoc, tim "chua" theo ma hoac ten du an — cho o chon du an co tim
+	 * kiem (khong con nap toan bo du an ngay khi dang nhap).
+	 */
+	PageRes<ProjectRes, Void> listPage(String keyword, Integer page, Integer size);
 }

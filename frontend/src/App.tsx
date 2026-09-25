@@ -80,6 +80,7 @@ import NotificationList from './modules/notifications/components/NotificationLis
 import { getNotifications, getUnreadCount, markNotificationsRead } from './modules/notifications/api/notificationsApi';
 import type { NotificationRes } from './modules/notifications/types/notificationTypes';
 import { getAllProjects } from './modules/projects/api/projectsApi';
+import ProjectPicker from './modules/projects/components/ProjectPicker';
 import type { ProjectRes } from './modules/projects/types/projectTypes';
 import { ICONS } from './components/common/icons';
 import CommandPalette, { type CommandItem } from './components/common/CommandPalette';
@@ -293,26 +294,8 @@ const PageContent = memo(function PageContent({
             </div>
           </div>
 
-          <div style={{ marginTop: '16px' }}>
-            <select
-              className="form-select"
-              style={{ padding: '8px 12px', fontSize: '14px', minWidth: '320px' }}
-              value=""
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val) setSelectedProjectId(Number(val));
-              }}
-              data-testid="project-selector-dropdown"
-            >
-              <option value="" disabled>
-                -- Chọn dự án --
-              </option>
-              {allProjects.map((proj) => (
-                <option key={proj.id} value={proj.id}>
-                  {proj.projectCode} — {proj.name}
-                </option>
-              ))}
-            </select>
+          <div className="project-picker-wrap">
+            <ProjectPicker onSelect={setSelectedProjectId} testId="project-selector-dropdown" />
           </div>
         </div>
       ) : activeTab === 'PROJECT_MARGIN' && selectedProjectId ? (
@@ -337,26 +320,8 @@ const PageContent = memo(function PageContent({
             </div>
           </div>
 
-          <div style={{ marginTop: '16px' }}>
-            <select
-              className="form-select"
-              style={{ padding: '8px 12px', fontSize: '14px', minWidth: '320px' }}
-              value=""
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val) setSelectedProjectId(Number(val));
-              }}
-              data-testid="project-selector-dropdown"
-            >
-              <option value="" disabled>
-                -- Chọn dự án --
-              </option>
-              {allProjects.map((proj) => (
-                <option key={proj.id} value={proj.id}>
-                  {proj.projectCode} — {proj.name}
-                </option>
-              ))}
-            </select>
+          <div className="project-picker-wrap">
+            <ProjectPicker onSelect={setSelectedProjectId} testId="project-selector-dropdown" />
           </div>
         </div>
       ) : activeTab === 'MARGIN_ALERT_THRESHOLD' ? (
@@ -665,26 +630,8 @@ const PageContent = memo(function PageContent({
             </div>
           </div>
 
-          <div style={{ marginTop: '16px' }}>
-            <select
-              className="form-select"
-              style={{ padding: '8px 12px', fontSize: '14px', minWidth: '320px' }}
-              value=""
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val) setSelectedProjectId(Number(val));
-              }}
-              data-testid="project-selector-dropdown"
-            >
-              <option value="" disabled>
-                -- Chọn dự án --
-              </option>
-              {allProjects.map((proj) => (
-                <option key={proj.id} value={proj.id}>
-                  {proj.projectCode} — {proj.name}
-                </option>
-              ))}
-            </select>
+          <div className="project-picker-wrap">
+            <ProjectPicker onSelect={setSelectedProjectId} testId="project-selector-dropdown" />
           </div>
         </div>
       ) : activeTab === 'PLANNED_VS_ACTUAL' && selectedProjectId ? (
@@ -709,26 +656,8 @@ const PageContent = memo(function PageContent({
             </div>
           </div>
 
-          <div style={{ marginTop: '16px' }}>
-            <select
-              className="form-select"
-              style={{ padding: '8px 12px', fontSize: '14px', minWidth: '320px' }}
-              value=""
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val) setSelectedProjectId(Number(val));
-              }}
-              data-testid="project-selector-dropdown-planned-vs-actual"
-            >
-              <option value="" disabled>
-                -- Chọn dự án --
-              </option>
-              {allProjects.map((proj) => (
-                <option key={proj.id} value={proj.id}>
-                  {proj.projectCode} — {proj.name}
-                </option>
-              ))}
-            </select>
+          <div className="project-picker-wrap">
+            <ProjectPicker onSelect={setSelectedProjectId} testId="project-selector-dropdown-planned-vs-actual" />
           </div>
         </div>
       ) : activeTab === 'PROFIT_FORECAST' && selectedProjectId ? (
@@ -753,26 +682,8 @@ const PageContent = memo(function PageContent({
             </div>
           </div>
 
-          <div style={{ marginTop: '16px' }}>
-            <select
-              className="form-select"
-              style={{ padding: '8px 12px', fontSize: '14px', minWidth: '320px' }}
-              value=""
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val) setSelectedProjectId(Number(val));
-              }}
-              data-testid="project-selector-dropdown-profit-forecast"
-            >
-              <option value="" disabled>
-                -- Chọn dự án --
-              </option>
-              {allProjects.map((proj) => (
-                <option key={proj.id} value={proj.id}>
-                  {proj.projectCode} — {proj.name}
-                </option>
-              ))}
-            </select>
+          <div className="project-picker-wrap">
+            <ProjectPicker onSelect={setSelectedProjectId} testId="project-selector-dropdown-profit-forecast" />
           </div>
         </div>
       ) : activeTab === 'OPPORTUNITY_DETAIL' ? (
@@ -858,9 +769,11 @@ export default function App() {
   const [acceptanceProjectId, setAcceptanceProjectId] = useState<number | null>(null);
   const [selectedAcceptanceId, setSelectedAcceptanceId] = useState<number | null>(null);
 
-  // Danh sách dự án dùng cho các ô chọn dạng dropdown ở màn hình Giá vốn/Biên lợi nhuận
-  // (NCL-09) — nạp một lần từ GET /projects khi đăng nhập.
+  // Danh sách dự án đầy đủ — chỉ còn màn Nghiệm thu / Sản phẩm bàn giao cần (lọc các dự án do
+  // chính người dùng quản lý). Nạp khi mở các màn đó lần đầu, KHÔNG nạp sẵn lúc đăng nhập; các
+  // màn Giá vốn/Biên lợi nhuận dùng ô chọn có tìm kiếm tải từng trang (ProjectPicker).
   const [allProjects, setAllProjects] = useState<ProjectRes[]>([]);
+  const [allProjectsLoaded, setAllProjectsLoaded] = useState(false);
   const [selectedOpportunityName, setSelectedOpportunityName] = useState<string | undefined>(undefined);
   /** Nhớ người dùng vào màn "Ghi nhận chăm sóc" từ đâu để nút quay lại trả về
    *  đúng chỗ: từ danh sách "Cơ hội bán hàng" thì về lại danh sách, còn tự tìm
@@ -966,16 +879,20 @@ export default function App() {
   // (làm mới khi focus lại + poll 30s), không bắt đăng nhập lại; 401 thì đăng xuất.
   useSessionSync({ session, onRefresh: persistSession, onExpired: handleLogout });
 
-  // Nạp danh sách dự án cho các ô chọn dropdown (Giá vốn/Biên lợi nhuận) ngay khi đăng nhập —
-  // trước đây các trang này dùng tạm mảng dữ liệu mẫu cố định nên không bao giờ thấy dự án thật.
+  // Nạp danh sách dự án đầy đủ khi lần đầu mở màn Nghiệm thu / Sản phẩm bàn giao.
+  const needsAllProjects =
+    activeTab === 'ACCEPTANCES' || activeTab === 'ACCEPTANCE_DETAIL' || activeTab === 'DELIVERABLES';
   useEffect(() => {
     // Tài khoản cổng (VT-09) không được gọi API nội bộ — backend sẽ trả 403 và ghi nhật ký từ chối.
-    if (!session || session.roles.includes('VT-09')) return;
+    if (!session || session.roles.includes('VT-09') || !needsAllProjects || allProjectsLoaded) return;
     let cancelled = false;
     void (async () => {
       try {
         const projects = await getAllProjects();
-        if (!cancelled) setAllProjects(projects);
+        if (!cancelled) {
+          setAllProjects(projects);
+          setAllProjectsLoaded(true);
+        }
       } catch {
         // Bỏ qua lỗi nạp danh sách dự án — các trang liên quan vẫn hoạt động, chỉ thiếu dropdown.
       }
@@ -983,7 +900,13 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [session]);
+  }, [session, needsAllProjects, allProjectsLoaded]);
+
+  // Đổi tài khoản (đăng xuất/đăng nhập lại) → bỏ danh sách dự án của phiên cũ.
+  useEffect(() => {
+    setAllProjects([]);
+    setAllProjectsLoaded(false);
+  }, [session?.userId]);
 
   // NCL-06-CN-009: chấm đỏ trên chuông thông báo phản ánh đúng số chưa đọc thật (gồm cả
   // TIMESHEET_REMINDER) — nạp ngay khi đăng nhập rồi làm mới định kỳ mỗi 30 giây.

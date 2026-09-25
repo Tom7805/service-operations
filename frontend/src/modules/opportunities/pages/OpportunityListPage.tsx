@@ -1,13 +1,16 @@
-import { useState, useMemo, useEffect, useRef, useCallback, useDeferredValue, memo } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback, memo } from 'react';
 import type { Opportunity, OpportunityStage, QuoteRes } from '../types/opportunityTypes';
 import { STAGE_CONFIGS, LOSS_REASON_OPTIONS } from '../types/opportunityTypes';
-import { fetchOpportunities, OpportunityApiError } from '../api/opportunitiesApi';
+import { fetchOpportunitiesPage, OpportunityApiError } from '../api/opportunitiesApi';
 import OpportunityFormModal from '../components/OpportunityFormModal';
 import StageTransitionControl from '../components/StageTransitionControl';
 import QuoteBuilder from '../components/QuoteBuilder';
 import OpportunityCloseModal from '../components/OpportunityCloseModal';
 import { ICONS } from '../../../components/common/icons';
 import TableSkeleton from '../../../components/common/TableSkeleton';
+import Pagination from '../../../components/common/Pagination';
+import { useDebounce } from '../../../hooks/useDebounce';
+import { useServerPagedList } from '../../../hooks/usePagination';
 
 /** NCL-03-CN-005 — nhãn tiếng Việt cho lý do thua đã lưu của cơ hội. */
 function lossReasonLabel(reason?: string | null): string | null {
@@ -33,7 +36,6 @@ const formatDate = (dateStr?: string | null): string => {
 interface OpportunityListPageProps {
   currentUserRoles?: string[];
   currentUserName?: string;
-  initialOpportunities?: Opportunity[];
   /** Mở màn "Ghi nhận hoạt động chăm sóc cơ hội" cho đúng cơ hội đang chọn —
    *  trước đây màn đó chỉ vào được bằng cách tự gõ tay mã số cơ hội, không ai
    *  đoán được mã số nếu không tra database. */
@@ -48,18 +50,12 @@ interface OpportunityListPageProps {
 
 export default function OpportunityListPage({
   currentUserRoles = ['VT-04'],
-  initialOpportunities = [],
   onOpenActivities,
   focusOpportunityId = null,
   onFocusConsumed,
 }: OpportunityListPageProps) {
   const isAllowed = currentUserRoles.includes('VT-04');
 
-  const [opportunities, setOpportunities] = useState<Opportunity[]>(initialOpportunities);
-  const [isLoading, setIsLoading] = useState(initialOpportunities.length === 0);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  /** Tăng lên mỗi lần bấm "Thử lại" để effect tải danh sách chạy lại. */
-  const [reloadKey, setReloadKey] = useState(0);
   const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
   // "Thu gọn thanh tiến trình" trước đây gọi setSelectedOpportunity(null), tức là BỎ CHỌN
   // hẳn cơ hội chứ không chỉ ẩn panel — muốn xem lại phải xuống bảng bấm "Chọn" từ đầu.
@@ -68,9 +64,27 @@ export default function OpportunityListPage({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [stageFilter, setStageFilter] = useState<string>('ALL');
-  // Lọc cục bộ trên danh sách đã tải: để React ưu tiên cập nhật ô nhập trước, lọc bảng sau
-  // (gõ nhanh trên máy yếu/điện thoại không bị khựng khi danh sách dài).
-  const deferredSearchTerm = useDeferredValue(searchTerm);
+  // Tìm kiếm + lọc giai đoạn chạy ở máy chủ; từ khoá chờ 300ms sau lần gõ cuối mới gửi.
+  const debouncedSearch = useDebounce(searchTerm.trim(), 300);
+  const filters = useMemo(
+    () => ({ keyword: debouncedSearch, stage: stageFilter === 'ALL' ? '' : stageFilter }),
+    [debouncedSearch, stageFilter]
+  );
+
+  // Danh sách cơ hội phân trang phía máy chủ — tải lại từ máy chủ mỗi lần mở trang, để cơ hội
+  // vừa tạo không biến mất khi chuyển trang rồi quay lại. Chỉ tải đúng trang đang xem.
+  const list = useServerPagedList({ filters, fetchPage: fetchOpportunitiesPage });
+  const opportunities = list.items;
+  const isLoading = list.isLoading;
+  // 403: tài khoản không có vai trò xem pipeline. Trang đã hiển thị sẵn cảnh báo phân quyền
+  // màu vàng, nên không cần thêm banner đỏ — coi như danh sách rỗng.
+  const isForbidden = list.error instanceof OpportunityApiError && list.error.statusCode === 403;
+  const loadError =
+    list.error && !isForbidden
+      ? list.error instanceof OpportunityApiError
+        ? list.error.message
+        : 'Không tải được danh sách cơ hội bán hàng. Vui lòng thử lại.'
+      : null;
 
   /** Bảng nằm dưới thấp, panel "Tiến trình bán hàng" nằm tận trên đầu trang —
    *  bấm chọn cơ hội từ bảng mà không cuộn lên thì người dùng không thấy gì
@@ -121,76 +135,52 @@ export default function OpportunityListPage({
     }, 5000);
   };
 
-  // Tải danh sách cơ hội từ máy chủ khi mở trang, để cơ hội vừa tạo không biến
-  // mất sau khi chuyển sang trang khác rồi quay lại (state trong bộ nhớ bị huỷ
-  // khi component unmount). Bỏ qua khi đã được truyền sẵn dữ liệu (test/SSR).
+  // Được điều hướng tới từ nơi khác kèm một ID cơ hội cụ thể (ví dụ từ Báo cáo
+  // đường ống, bấm vào một cơ hội đọng lâu) — cơ hội đó có thể không nằm ở trang
+  // đang xem, nên hỏi thẳng máy chủ đúng cơ hội đó (vẫn theo phạm vi dữ liệu) rồi
+  // tự mở lên, xoá bộ lọc đang áp dụng.
   useEffect(() => {
-    if (initialOpportunities.length > 0 && reloadKey === 0) return;
-
+    if (!focusOpportunityId) return;
     let cancelled = false;
-    setIsLoading(true);
-    setLoadError(null);
-
-    fetchOpportunities()
-      .then((data) => {
-        if (!cancelled) setOpportunities(data);
+    fetchOpportunitiesPage({ id: focusOpportunityId }, 0, 1)
+      .then((result) => {
+        const target = result.content.find((o) => o.id === focusOpportunityId);
+        if (cancelled || !target) return;
+        setSearchTerm('');
+        setStageFilter('ALL');
+        // Không dùng selectOpportunityFromRow ở đây: hàm đó kèm scrollIntoView để
+        // kéo trang xuống panel khi người dùng vừa bấm chọn 1 hàng ở giữa trang dài.
+        // Còn đây là tự khôi phục lựa chọn ngay sau khi trang MỚI mount lại (quay lại
+        // từ Ghi nhận chăm sóc / nhảy từ Báo cáo đường ống) — panel vốn đã nằm ngay
+        // đầu trang, cuộn thêm chỉ đẩy khuất tiêu đề trang lên trên, không cần thiết.
+        setSelectedOpportunity(target);
+        setIsProgressPanelCollapsed(false);
       })
-      .catch((err) => {
-        if (cancelled) return;
-        // 403: tài khoản không có vai trò xem pipeline (VT-04). Trang đã hiển thị
-        // sẵn cảnh báo phân quyền màu vàng, nên không cần thêm banner đỏ.
-        if (err instanceof OpportunityApiError && err.statusCode === 403) {
-          setOpportunities([]);
-          return;
-        }
-        const message =
-          err instanceof OpportunityApiError
-            ? err.message
-            : 'Không tải được danh sách cơ hội bán hàng. Vui lòng thử lại.';
-        setLoadError(message);
+      .catch(() => {
+        // Không mở được cơ hội (đã bị xoá / ngoài phạm vi) — danh sách vẫn dùng bình thường.
       })
       .finally(() => {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled) onFocusConsumed?.();
       });
-
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reloadKey]);
-
-  // Được điều hướng tới từ nơi khác kèm một ID cơ hội cụ thể (ví dụ từ Báo cáo
-  // đường ống, bấm vào một cơ hội đọng lâu) — chờ danh sách tải xong rồi tự mở
-  // đúng cơ hội đó lên, xoá bộ lọc đang áp dụng để chắc chắn hàng đó hiển thị.
-  useEffect(() => {
-    if (!focusOpportunityId || isLoading) return;
-    const target = opportunities.find((o) => o.id === focusOpportunityId);
-    if (target) {
-      setSearchTerm('');
-      setStageFilter('ALL');
-      // Không dùng selectOpportunityFromRow ở đây: hàm đó kèm scrollIntoView để
-      // kéo trang xuống panel khi người dùng vừa bấm chọn 1 hàng ở giữa trang dài.
-      // Còn đây là tự khôi phục lựa chọn ngay sau khi trang MỚI mount lại (quay lại
-      // từ Ghi nhận chăm sóc / nhảy từ Báo cáo đường ống) — panel vốn đã nằm ngay
-      // đầu trang, cuộn thêm chỉ đẩy khuất tiêu đề trang lên trên, không cần thiết.
-      setSelectedOpportunity(target);
-      setIsProgressPanelCollapsed(false);
-    }
-    onFocusConsumed?.();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusOpportunityId, isLoading, opportunities]);
+  }, [focusOpportunityId]);
 
   const handleCreatedSuccess = (newOpportunity: Opportunity) => {
-    setOpportunities((prev) => [newOpportunity, ...prev]);
+    // Cơ hội mới đứng đầu danh sách (mới nhất trước) → về trang đầu và tải lại kèm số liệu mới.
+    list.setPage(0);
+    list.reload();
     setSelectedOpportunity(newOpportunity);
     setIsProgressPanelCollapsed(false);
     showToast(`Tạo cơ hội bán hàng "${newOpportunity.name}" thành công!`, 'success');
   };
 
   const handleOpportunityUpdated = (updated: Opportunity) => {
-    setOpportunities((prev) =>
-      prev.map((o) => (o.id === updated.id ? updated : o))
-    );
+    list.updateItems((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+    // Đổi giai đoạn làm đổi xác suất/đếm WON — tải lại trang để số liệu tổng hợp khớp.
+    list.reload();
     setSelectedOpportunity(updated);
     setIsProgressPanelCollapsed(false);
     showToast(`Đã cập nhật giai đoạn cho "${updated.name}" thành công!`, 'success');
@@ -202,7 +192,8 @@ export default function OpportunityListPage({
   };
 
   const handleOpportunityClosed = (updated: Opportunity) => {
-    setOpportunities((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+    list.updateItems((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+    list.reload();
     // Ghi kết quả thắng/thua thường bấm thẳng từ hàng trong bảng, không cần chọn
     // trước — nhưng lý do thua (nếu có) chỉ hiện ở panel phía trên, nên sau khi
     // chốt xong phải TỰ mở panel đó lên để người dùng thấy ngay kết quả, không
@@ -220,34 +211,14 @@ export default function OpportunityListPage({
     showToast(`Đã ghi nhận kết quả ${outcome} cho "${updated.name}".`, 'success');
   };
 
-  const filteredOpportunities = useMemo(() => {
-    // Chuẩn hoá từ khoá MỘT lần thay vì lặp lại toLowerCase().trim() cho từng hàng.
-    const term = deferredSearchTerm.toLowerCase().trim();
-    return opportunities.filter((o) => {
-      const matchSearch =
-        !term ||
-        o.name.toLowerCase().includes(term) ||
-        (o.customerName && o.customerName.toLowerCase().includes(term));
-
-      const matchStage = stageFilter === 'ALL' || o.stage === stageFilter;
-
-      return matchSearch && matchStage;
-    });
-  }, [opportunities, deferredSearchTerm, stageFilter]);
-
-  // Thống kê số liệu — gộp 3 vòng lặp thành một lượt duyệt.
-  const { totalExpectedValue, weightedForecastValue, wonCount } = useMemo(() => {
-    let total = 0;
-    let weighted = 0;
-    let won = 0;
-    for (const o of opportunities) {
-      const value = o.expectedValue || 0;
-      total += value;
-      weighted += value * ((o.probability || 0) / 100);
-      if (o.stage === 'WON') won += 1;
-    }
-    return { totalExpectedValue: total, weightedForecastValue: weighted, wonCount: won };
-  }, [opportunities]);
+  // Thống kê do máy chủ tính trên TOÀN BỘ pipeline trong phạm vi người xem (không chỉ trang đang xem).
+  const summary = list.summary;
+  const totalOpportunities = summary?.total ?? 0;
+  const wonCount = summary?.wonCount ?? 0;
+  const totalExpectedValue = Number(summary?.totalExpectedValue ?? 0);
+  const weightedForecastValue = Number(summary?.weightedForecastValue ?? 0);
+  // Chỉ hiện khung xương ở lần tải đầu; chuyển trang/lọc thì giữ bảng cũ (mờ đi).
+  const showSkeleton = isLoading && !list.hasLoaded;
 
   const hasActiveFilter = Boolean(searchTerm) || stageFilter !== 'ALL';
 
@@ -375,7 +346,7 @@ export default function OpportunityListPage({
             <button
               type="button"
               className="btn btn-secondary sl-btn-sm"
-              onClick={() => setReloadKey((k) => k + 1)}
+              onClick={list.reload}
               disabled={isLoading}
             >
               <span className="icon-sm">{ICONS.refresh}</span>
@@ -389,11 +360,11 @@ export default function OpportunityListPage({
       <div className="stats-grid sl-stats">
         <div className="sl-stat">
           <div className="sl-stat__label">Tổng số cơ hội</div>
-          <div className="sl-stat__value">{isLoading ? '—' : opportunities.length}</div>
+          <div className="sl-stat__value" data-testid="opportunity-total-count">{showSkeleton ? '—' : totalOpportunities}</div>
         </div>
         <div className="sl-stat">
           <div className="sl-stat__label">Chốt thành công (WON)</div>
-          <div className="sl-stat__value sl-stat__value--success">{isLoading ? '—' : wonCount}</div>
+          <div className="sl-stat__value sl-stat__value--success">{showSkeleton ? '—' : wonCount}</div>
         </div>
         <div className="sl-stat">
           <div className="sl-stat__label">Tổng giá trị dự kiến</div>
@@ -438,13 +409,13 @@ export default function OpportunityListPage({
         </div>
 
         <div className="sl-toolbar__count" aria-live="polite">
-          Hiển thị <strong>{filteredOpportunities.length}</strong> cơ hội
+          Tìm thấy <strong>{list.totalElements}</strong> cơ hội
         </div>
       </div>
 
       {/* Bảng danh sách cơ hội — dưới 640px mỗi hàng thành một thẻ xếp chồng */}
       <div className="sl-table-card">
-        <div className="sl-table-scroll">
+        <div className={`sl-table-scroll${isLoading && list.hasLoaded ? ' is-refreshing' : ''}`} aria-busy={isLoading}>
           {/* table-layout auto trước đây khiến cột "Tên cơ hội" bị bóp hẹp bất cứ khi
               nào cột "Thao tác" có dòng lý do thua dài. Cố định % mỗi cột qua colgroup
               để chiều rộng luôn nhất quán bất kể nội dung dài ngắn ra sao. */}
@@ -466,9 +437,9 @@ export default function OpportunityListPage({
               </tr>
             </thead>
             <tbody>
-              {isLoading ? (
+              {showSkeleton ? (
                 <TableSkeleton columns={5} rows={6} />
-              ) : filteredOpportunities.length === 0 ? (
+              ) : opportunities.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="sl-td-empty">
                     <div className="sl-empty">
@@ -504,7 +475,7 @@ export default function OpportunityListPage({
                   </td>
                 </tr>
               ) : (
-                filteredOpportunities.map((opp) => (
+                opportunities.map((opp) => (
                   <OpportunityRow
                     key={opp.id}
                     opp={opp}
@@ -519,6 +490,18 @@ export default function OpportunityListPage({
             </tbody>
           </table>
         </div>
+        {list.hasLoaded && !loadError && (
+          <Pagination
+            page={list.page}
+            totalPages={list.totalPages}
+            totalElements={list.totalElements}
+            pageSize={list.pageSize}
+            itemLabel="cơ hội"
+            loading={isLoading}
+            onPageChange={list.setPage}
+            testIdPrefix="opportunity-pagination"
+          />
+        )}
       </div>
 
       {/* Modal tạo cơ hội */}
