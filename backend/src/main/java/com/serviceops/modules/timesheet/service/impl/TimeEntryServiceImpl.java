@@ -213,7 +213,17 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 			throw new AccessDeniedException("Chua xac thuc nguoi dung");
 		}
 
-		return assignmentRepository.findByUserIdOrderByIdAsc(currentUserId).stream()
+		var assignments = assignmentRepository.findByUserIdOrderByIdAsc(currentUserId);
+		// Hieu nang: nap truoc cong viec + du an bang 2 truy van IN; cac findById ben duoi lay tu
+		// persistence context (cung transaction) thay vi 2 truy van cho MOI phan cong. Ket qua khong doi.
+		List<Task> prefetchedTasks = taskRepository.findAllById(assignments.stream()
+				.map(assignment -> assignment.getTaskId()).filter(Objects::nonNull).distinct().toList());
+		if (prefetchedTasks != null && !prefetchedTasks.isEmpty()) {
+			projectRepository.findAllById(prefetchedTasks.stream()
+					.map(Task::getProjectId).filter(Objects::nonNull).distinct().toList());
+		}
+
+		return assignments.stream()
 				.map(assignment -> taskRepository.findById(assignment.getTaskId()).orElse(null))
 				.filter(Objects::nonNull)
 				.map(task -> projectRepository.findById(task.getProjectId())

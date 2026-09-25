@@ -97,7 +97,9 @@ public class CustomerServiceImpl implements CustomerService {
 		String industry = normalizeKeyword(request == null ? null : request.getIndustry());
 		String companySize = normalizeKeyword(request == null ? null : request.getCompanySize());
 		String priority = normalizeKeyword(request == null ? null : request.getPriority());
-		return customerRepository.findAllByOrderByCreatedAtDesc().stream()
+		List<Customer> customers = customerRepository.findAllByOrderByCreatedAtDesc();
+		prefetchOwnersForDepartmentScope(customers.stream().map(Customer::getOwnerId).toList());
+		return customers.stream()
 				.filter(this::inCurrentScope)
 				.filter(customer -> keyword == null || matchesKeyword(customer, keyword))
 				.filter(customer -> industry == null || equalsIgnoreCase(customer.getIndustry(), industry))
@@ -136,6 +138,22 @@ public class CustomerServiceImpl implements CustomerService {
 			return ownerDepartmentId != null && scope.departmentIds().contains(ownerDepartmentId);
 		}
 		return false;
+	}
+
+	/**
+	 * Hieu nang: voi pham vi DEPARTMENT, {@link #ownerDepartmentId} goi findById cho tung chu so huu.
+	 * Nap truoc tat ca chu so huu bang MOT truy van IN — cac lan findById sau do lay tu persistence
+	 * context (cung transaction), khong con N truy van. Ket qua loc khong doi.
+	 */
+	private void prefetchOwnersForDepartmentScope(List<Long> ownerIds) {
+		UserScope scope = currentUserScopeProvider.currentScope();
+		if (scope.isCompanyWide() || scope.type() != DataScopeType.DEPARTMENT) {
+			return;
+		}
+		List<Long> distinctOwnerIds = ownerIds.stream().filter(java.util.Objects::nonNull).distinct().toList();
+		if (!distinctOwnerIds.isEmpty()) {
+			userRepository.findAllById(distinctOwnerIds);
+		}
 	}
 
 	private Long ownerDepartmentId(Long ownerId) {

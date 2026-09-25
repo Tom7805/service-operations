@@ -47,6 +47,7 @@ public class NotificationServiceImpl implements NotificationService {
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public List<NotificationRes> getUnreadNotifications(Long recipientId) {
 		return notificationRepository.findByRecipientIdAndIsReadFalseOrderBySentAtDesc(recipientId)
 				.stream()
@@ -55,6 +56,7 @@ public class NotificationServiceImpl implements NotificationService {
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public List<NotificationRes> listNotifications(Long recipientId, boolean unreadOnly, Pageable pageable) {
 		Page<Notification> page = unreadOnly
 				? notificationRepository.findByRecipientIdAndIsReadFalse(recipientId, pageable)
@@ -84,6 +86,7 @@ public class NotificationServiceImpl implements NotificationService {
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public long getUnreadCount(Long recipientId) {
 		return notificationRepository.countUnreadByRecipientId(recipientId);
 	}

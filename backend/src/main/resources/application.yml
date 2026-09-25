@@ -3,6 +3,22 @@ spring:
     name: service-operations-backend
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
+  # Hieu nang (dung chung moi profile, ke ca test H2):
+  #  - default_batch_fetch_size: tai lazy proxy/collection theo lo (IN ...) thay vi tung dong -> giam N+1.
+  #  - in_clause_parameter_padding: gom so tham so IN ve luy thua 2 -> tai su dung execution plan/prepared stmt.
+  #  - jdbc.batch_size + order_*: gom INSERT/UPDATE thanh lo khi flush (khong doi ket qua nghiep vu).
+  # open-in-view GIU MAC DINH (true): Employee.user/department, UserRoleScope... la LAZY va con doc o
+  # ngoai transaction (controller/serializer) — tat di co the gay LazyInitializationException.
+  jpa:
+    properties:
+      hibernate:
+        default_batch_fetch_size: 50
+        query:
+          in_clause_parameter_padding: true
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
   jackson:
     default-property-inclusion: non_null
     serialization:
@@ -34,6 +50,12 @@ server:
   port: ${SERVER_PORT:8080}
   servlet:
     context-path: /api/v1
+  # Nen gzip phan hoi JSON/van ban >= 1KB (danh sach lon giam ~80-90% dung luong truyen).
+  # Khong gom file nhi phan (xlsx/pdf) — da nen san, nen lai chi ton CPU.
+  compression:
+    enabled: true
+    min-response-size: 1KB
+    mime-types: application/json,application/problem+json,application/xml,text/html,text/xml,text/plain,text/css,text/csv,application/javascript
 
 app:
   jwt:

@@ -57,7 +57,9 @@ public class OpportunityServiceImpl implements OpportunityService {
 	@Override
 	@Transactional(readOnly = true)
 	public List<OpportunityRes> list() {
-		List<Opportunity> opportunities = opportunityRepository.findAllByOrderByCreatedAtDesc().stream()
+		List<Opportunity> allOpportunities = opportunityRepository.findAllByOrderByCreatedAtDesc();
+		prefetchOwnersForDepartmentScope(allOpportunities.stream().map(Opportunity::getOwnerId).toList());
+		List<Opportunity> opportunities = allOpportunities.stream()
 				.filter(this::inCurrentScope)
 				.toList();
 		if (opportunities.isEmpty()) {
@@ -173,6 +175,18 @@ public class OpportunityServiceImpl implements OpportunityService {
 			return ownerDepartmentId != null && scope.departmentIds().contains(ownerDepartmentId);
 		}
 		return false;
+	}
+
+	/** Hieu nang: nap truoc chu so huu bang MOT truy van IN (xem CustomerServiceImpl), ket qua loc khong doi. */
+	private void prefetchOwnersForDepartmentScope(List<Long> ownerIds) {
+		UserScope scope = currentUserScopeProvider.currentScope();
+		if (scope.isCompanyWide() || scope.type() != DataScopeType.DEPARTMENT) {
+			return;
+		}
+		List<Long> distinctOwnerIds = ownerIds.stream().filter(java.util.Objects::nonNull).distinct().toList();
+		if (!distinctOwnerIds.isEmpty()) {
+			userRepository.findAllById(distinctOwnerIds);
+		}
 	}
 
 	private Long ownerDepartmentId(Long ownerId) {

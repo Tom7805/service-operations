@@ -135,6 +135,7 @@ public class RecurringInvoiceServiceImpl implements RecurringInvoiceService {
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public RecurringScheduleRes getSchedule(Long contractId) {
 		return toRes(requireSchedule(contractId));
 	}

@@ -44,6 +44,7 @@ public class CustomerContactServiceImpl implements CustomerContactService {
 	private final AuditLogService systemAuditLogService;
 
 	@Override
+	@Transactional(readOnly = true)
 	public List<CustomerContactRes> listByCustomer(Long customerId) {
 		requireCustomerExists(customerId);
 		return customerContactRepository.findByCustomerId(customerId).stream()

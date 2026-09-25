@@ -48,6 +48,7 @@ public class TimesheetReminderServiceImpl implements TimesheetReminderService {
 	private final AuditLogService auditLogService;
 
 	@Override
+	@Transactional(readOnly = true)
 	public List<Long> findUnsubmittedUserIds(LocalDate weekFrom, LocalDate weekTo) {
 		// Chi can con dong TimeEntry o trang thai DRAFT trong tuan la coi nhu "chua nop"
 		// dong do — khong con loai theo trang thai Timesheet cua tuan nua: tu khi cho

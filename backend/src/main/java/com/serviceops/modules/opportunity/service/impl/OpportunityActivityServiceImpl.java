@@ -41,6 +41,7 @@ public class OpportunityActivityServiceImpl implements OpportunityActivityServic
 	private final OpportunityAuditLogger auditLogger;
 
 	@Override
+	@Transactional(readOnly = true)
 	public List<ActivityRes> listByOpportunity(Long opportunityId) {
 		requireOpportunityExists(opportunityId);
 		return opportunityActivityRepository.findByOpportunityIdOrderByOccurredAtDescIdDesc(opportunityId).stream()

@@ -89,6 +89,7 @@ public class QuoteServiceImpl implements QuoteService {
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public List<QuoteRes> getHistory(Long opportunityId) {
 		if (!opportunityRepository.existsById(opportunityId)) {
 			throw new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,

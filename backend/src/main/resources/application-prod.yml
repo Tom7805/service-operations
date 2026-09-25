@@ -4,6 +4,24 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    # HikariCP: pool co dinh vua phai (MySQL phuc vu tot nhat voi it ket noi song song), cho lay ket noi
+    # toi da 20s roi bao loi thay vi treo request; tu thay ket noi truoc wait_timeout cua MySQL.
+    hikari:
+      pool-name: service-ops-pool
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      connection-timeout: ${DB_POOL_CONNECTION_TIMEOUT_MS:20000}
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      keepalive-time: 300000
+      leak-detection-threshold: ${DB_POOL_LEAK_DETECTION_MS:0}
+      data-source-properties:
+        cachePrepStmts: true
+        prepStmtCacheSize: 250
+        prepStmtCacheSqlLimit: 2048
+        rewriteBatchedStatements: true
+        useLocalSessionState: true
+        cacheServerConfiguration: true
   # Cau hinh thu dien tu nam o application.yml (dung chung moi profile).
   # Rieng o profile nay, THIEU SMTP_HOST la ung dung DUNG KHOI DONG — xem
   # PasswordResetMailRequiredConfig. Va ban gia lap ghi token ra log khong bao

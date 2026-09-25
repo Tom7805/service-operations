@@ -9,10 +9,17 @@ import com.serviceops.modules.rate.service.EmployeeHourlyRateService;
 import com.serviceops.modules.rate.service.WorkTypeRateService;
 import com.serviceops.modules.timesheet.entity.TimeEntry;
 import lombok.RequiredArgsConstructor;
+import com.serviceops.modules.timesheet.enums.WorkType;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * Tính giá vốn (QTN-17) và doanh thu (QTN-15/QTN-16) của MỘT dòng giờ công đã duyệt — dùng chung cho
@@ -42,7 +49,11 @@ public class EntryMarginCalculator {
 	 *                    doanh thu), khi đó doanh thu luôn trả về thiếu dữ liệu.
 	 */
 	public Result resolve(TimeEntry entry, Employee employee, Long contractId) {
-		ResolvedEmployeeHourlyRateRes costResolved = employeeHourlyRateService.resolve(employee.getId(), entry.getWorkDate());
+		Memo memo = currentMemo();
+		ResolvedEmployeeHourlyRateRes costResolved = memo == null
+				? employeeHourlyRateService.resolve(employee.getId(), entry.getWorkDate())
+				: memo.costRate(employee.getId(), entry.getWorkDate(),
+						() -> employeeHourlyRateService.resolve(employee.getId(), entry.getWorkDate()));
 		BigDecimal cost;
 		boolean missingCost = costResolved.missingCostData();
 		if (missingCost) {
@@ -60,9 +71,14 @@ public class EntryMarginCalculator {
 				missingRevenue = true;
 			} else {
 				try {
-					ResolvedContractBillRateRes billRate = contractBillRateService.resolve(
-							contractId, role, level, entry.getWorkDate());
-					BigDecimal factor = workTypeRateService.resolveFactor(entry.getWorkType());
+					ResolvedContractBillRateRes billRate = memo == null
+							? contractBillRateService.resolve(contractId, role, level, entry.getWorkDate())
+							: memo.billRate(contractId, role, level, entry.getWorkDate(),
+									() -> contractBillRateService.resolve(contractId, role, level, entry.getWorkDate()));
+					BigDecimal factor = memo == null
+							? workTypeRateService.resolveFactor(entry.getWorkType())
+							: memo.factor(entry.getWorkType(),
+									() -> workTypeRateService.resolveFactor(entry.getWorkType()));
 					BigDecimal hourlyRevenueRate = billRate.dailyRate().multiply(factor)
 							.divide(STANDARD_HOURS_PER_DAY, 4, RoundingMode.HALF_UP);
 					revenue = entry.getHours().multiply(hourlyRevenueRate).setScale(2, RoundingMode.HALF_UP);
@@ -75,6 +91,90 @@ public class EntryMarginCalculator {
 		}
 
 		return new Result(cost, missingCost, revenue, missingRevenue);
+	}
+
+	/**
+	 * Hieu nang: cac bao cao goi {@link #resolve} cho TUNG dong gio cong (hang nghin dong/ky), moi lan 3-6
+	 * truy van tra don gia. Trong CUNG mot transaction, cung (nhan su, ngay) / (hop dong, vai tro, cap bac,
+	 * ngay) / loai hinh cong viec luon cho cung ket qua (luong bao cao chi doc) nen ghi nho ket qua theo
+	 * transaction hien tai. Ngoai transaction (unit test, goi le) thi khong ghi nho — hanh vi y het truoc.
+	 * Bo nho gan vao TransactionSynchronization nen tu mat khi transaction ket thuc, va bi treo cung
+	 * transaction ngoai khi co REQUIRES_NEW (transaction trong khong dung chung bo nho).
+	 */
+	private Memo currentMemo() {
+		if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+			return null;
+		}
+		for (TransactionSynchronization synchronization : TransactionSynchronizationManager.getSynchronizations()) {
+			if (synchronization instanceof Memo memo && memo.owner == this) {
+				return memo;
+			}
+		}
+		Memo memo = new Memo(this);
+		TransactionSynchronizationManager.registerSynchronization(memo);
+		return memo;
+	}
+
+	private static final class Memo implements TransactionSynchronization {
+		private final EntryMarginCalculator owner;
+		private final Map<Object, Object> values = new HashMap<>();
+
+		private Memo(EntryMarginCalculator owner) {
+			this.owner = owner;
+		}
+
+		ResolvedEmployeeHourlyRateRes costRate(Long employeeId, LocalDate asOf,
+				Supplier<ResolvedEmployeeHourlyRateRes> loader) {
+			if (employeeId == null || asOf == null) {
+				return loader.get();
+			}
+			return get(new CostKey(employeeId, asOf), loader);
+		}
+
+		ResolvedContractBillRateRes billRate(Long contractId, String role, String level, LocalDate asOf,
+				Supplier<ResolvedContractBillRateRes> loader) {
+			if (asOf == null) {
+				return loader.get();
+			}
+			return get(new BillKey(contractId, role, level, asOf), loader);
+		}
+
+		BigDecimal factor(WorkType workType, Supplier<BigDecimal> loader) {
+			if (workType == null) {
+				return loader.get();
+			}
+			return get(new FactorKey(workType), loader);
+		}
+
+		/** Ghi nho ca BusinessRuleException (thieu don gia/he so) de nem lai y het o lan goi sau. */
+		@SuppressWarnings("unchecked")
+		private <T> T get(Object key, Supplier<T> loader) {
+			Object cached = values.get(key);
+			if (cached == null) {
+				try {
+					cached = loader.get();
+				} catch (BusinessRuleException ex) {
+					cached = ex;
+				}
+				if (cached == null) {
+					return null;
+				}
+				values.put(key, cached);
+			}
+			if (cached instanceof BusinessRuleException ex) {
+				throw ex;
+			}
+			return (T) cached;
+		}
+	}
+
+	private record CostKey(Long employeeId, LocalDate asOf) {
+	}
+
+	private record BillKey(Long contractId, String role, String level, LocalDate asOf) {
+	}
+
+	private record FactorKey(WorkType workType) {
 	}
 
 	public record Result(BigDecimal cost, boolean missingCost, BigDecimal revenue, boolean missingRevenue) {
