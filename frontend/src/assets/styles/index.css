@@ -3757,3 +3757,10 @@ tr.row--locked .portal-account-cell__name { color: var(--ink-muted); }
 @media (max-width: 900px) { .portal-two-col { grid-template-columns: 1fr; } }
 /* Hộp thông báo có chữ đậm nằm giữa câu (không phải tiêu đề) — cổng khách hàng. */
 .alert-box--inline .alert-box__content strong { display: inline; margin-bottom: 0; }
+
+/* ===== Cổng khách hàng — hóa đơn và công nợ (NCL-13-CN-004) ===== */
+.portal-money { font-size: 22px; font-family: var(--font-mono, monospace); letter-spacing: -0.01em; white-space: nowrap; }
+.portal-money-cell { text-align: right; white-space: nowrap; font-family: var(--font-mono, monospace); font-size: 13.5px; }
+.portal-invoice-row--overdue > td { background: #FDF5F4; }
+.portal-total-row > td { font-weight: 700; border-top: 1px solid var(--line, #EAEAEA); }
+@media (max-width: 600px) { .portal-money { font-size: 18px; } }

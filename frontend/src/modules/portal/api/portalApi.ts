@@ -2,6 +2,10 @@ import type {
   PortalAcceptanceDetail,
   PortalAcceptanceStatus,
   PortalAcceptanceSummary,
+  PortalDebtSummary,
+  PortalInvoice,
+  PortalInvoiceDetail,
+  PortalInvoiceStatus,
   PortalProjectProgressRes,
   PortalProjectRes,
 } from '../types/portalTypes';
@@ -95,4 +99,25 @@ export async function rejectPortalAcceptance(certificateId: number, reason: stri
     method: 'POST',
     body: JSON.stringify({ reason }),
   });
+}
+
+/** NCL-13-CN-004 (TC-01): hóa đơn đã phát hành của khách hàng, mới nhất trước. */
+export async function fetchPortalInvoices(
+  params: { status?: PortalInvoiceStatus | null; overdueOnly?: boolean } = {}
+): Promise<PortalInvoice[]> {
+  const query = new URLSearchParams();
+  if (params.status) query.set('status', params.status);
+  if (params.overdueOnly) query.set('overdueOnly', 'true');
+  const qs = query.toString();
+  return requestBackend<PortalInvoice[]>(`${API_BASE_URL}/portal/invoices${qs ? `?${qs}` : ''}`, { method: 'GET' });
+}
+
+/** Tổng hợp công nợ của khách hàng. */
+export async function fetchPortalInvoiceSummary(): Promise<PortalDebtSummary> {
+  return requestBackend<PortalDebtSummary>(`${API_BASE_URL}/portal/invoices/summary`, { method: 'GET' });
+}
+
+/** Chi tiết hóa đơn; hóa đơn của khách hàng khác, hóa đơn nháp hoặc không tồn tại → 403 (TC-02). */
+export async function fetchPortalInvoice(invoiceId: number): Promise<PortalInvoiceDetail> {
+  return requestBackend<PortalInvoiceDetail>(`${API_BASE_URL}/portal/invoices/${invoiceId}`, { method: 'GET' });
 }
