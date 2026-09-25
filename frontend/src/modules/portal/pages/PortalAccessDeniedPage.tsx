@@ -1,13 +1,14 @@
 import { useEffect } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import { roleLabels } from '../../../utils/roleLabel';
-import { fetchPortalAcceptances, fetchPortalProjects } from '../api/portalApi';
+import { fetchPortalAcceptances, fetchPortalInvoices, fetchPortalProjects } from '../api/portalApi';
+import type { PortalFeature } from '../utils/portalRoute';
 
 interface Props {
   currentUserRoles: string[];
   currentUserName: string;
   /** Chức năng cổng mà đường dẫn trỏ tới — quyết định API được gọi để backend ghi đúng tên chức năng bị từ chối. */
-  feature?: 'projects' | 'acceptances';
+  feature?: PortalFeature;
   onLeave: () => void;
 }
 
@@ -20,6 +21,10 @@ const FEATURE_TEXT = {
     title: 'Duyệt phiếu nghiệm thu trên cổng chỉ dành cho khách hàng',
     hint: 'Quản lý dự án ghi nhận quyết định của khách hàng ở màn hình Nghiệm thu nội bộ.',
   },
+  invoices: {
+    title: 'Xem hóa đơn và công nợ trên cổng chỉ dành cho khách hàng',
+    hint: 'Kế toán theo dõi hóa đơn và công nợ ở màn hình Hóa đơn nội bộ.',
+  },
 } as const;
 
 /**
@@ -28,7 +33,9 @@ const FEATURE_TEXT = {
  */
 export default function PortalAccessDeniedPage({ currentUserRoles, currentUserName, feature = 'projects', onLeave }: Props) {
   useEffect(() => {
-    (feature === 'acceptances' ? fetchPortalAcceptances() : fetchPortalProjects()).catch(() => undefined);
+    const call =
+      feature === 'acceptances' ? fetchPortalAcceptances() : feature === 'invoices' ? fetchPortalInvoices() : fetchPortalProjects();
+    call.catch(() => undefined);
   }, [feature]);
 
   const text = FEATURE_TEXT[feature];

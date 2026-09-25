@@ -9,6 +9,9 @@ export type PortalRoute =
   | { view: 'acceptances'; projectId?: number | null }
   | { view: 'acceptance'; certificateId: number }
   | { view: 'invalid-acceptance'; raw: string }
+  | { view: 'invoices' }
+  | { view: 'invoice'; invoiceId: number }
+  | { view: 'invalid-invoice'; raw: string }
   | { view: 'change-password' };
 
 export const PORTAL_HASH_PREFIX = '#/portal';
@@ -39,6 +42,14 @@ export function parsePortalHash(hash: string): PortalRoute {
     }
     return { view: 'acceptances', projectId: positiveId(query.get('project') ?? '') };
   }
+  if (segments[0] === 'invoices') {
+    if (segments.length >= 2) {
+      const raw = decodeURIComponent(segments[1]);
+      const id = positiveId(raw);
+      return id ? { view: 'invoice', invoiceId: id } : { view: 'invalid-invoice', raw };
+    }
+    return { view: 'invoices' };
+  }
   if (segments[0] === 'change-password') return { view: 'change-password' };
   return { view: 'projects' };
 }
@@ -51,6 +62,10 @@ export function portalHash(route: PortalRoute): string {
       return `${PORTAL_HASH_PREFIX}/acceptances${route.projectId ? `?project=${route.projectId}` : ''}`;
     case 'acceptance':
       return `${PORTAL_HASH_PREFIX}/acceptances/${route.certificateId}`;
+    case 'invoices':
+      return `${PORTAL_HASH_PREFIX}/invoices`;
+    case 'invoice':
+      return `${PORTAL_HASH_PREFIX}/invoices/${route.invoiceId}`;
     case 'change-password':
       return `${PORTAL_HASH_PREFIX}/change-password`;
     default:
@@ -59,7 +74,11 @@ export function portalHash(route: PortalRoute): string {
 }
 
 /** Chức năng cổng mà đường dẫn trỏ tới — để màn từ chối (tài khoản nội bộ) gọi đúng API, ghi đúng tên chức năng. */
-export function portalFeatureOf(hash: string): 'acceptances' | 'projects' {
+export type PortalFeature = 'projects' | 'acceptances' | 'invoices';
+
+export function portalFeatureOf(hash: string): PortalFeature {
   const view = parsePortalHash(hash).view;
-  return view === 'acceptances' || view === 'acceptance' || view === 'invalid-acceptance' ? 'acceptances' : 'projects';
+  if (view === 'acceptances' || view === 'acceptance' || view === 'invalid-acceptance') return 'acceptances';
+  if (view === 'invoices' || view === 'invoice' || view === 'invalid-invoice') return 'invoices';
+  return 'projects';
 }

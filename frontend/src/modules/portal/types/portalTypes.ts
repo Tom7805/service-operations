@@ -156,3 +156,60 @@ export const PORTAL_CHANNEL_LABEL: Record<PortalConfirmationChannel, string> = {
 };
 
 export const PORTAL_REJECT_REASON_MAX = 1000;
+
+/* ===== NCL-13-CN-004 — Khách hàng xem hóa đơn và công nợ ===== */
+
+/** Cổng chỉ nhận hóa đơn đã phát hành — không có DRAFT. */
+export type PortalInvoiceStatus = 'ISSUED' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED';
+export type PortalPaymentMethod = 'BANK_TRANSFER' | 'CASH' | 'OTHER';
+
+export interface PortalInvoice {
+  id: number;
+  invoiceCode: string;
+  contractId?: number | null;
+  contractCode?: string | null;
+  invoiceDate?: string | null;
+  dueDate?: string | null;
+  status: PortalInvoiceStatus | string;
+  totalAmount: number;
+  paidAmount: number;
+  /** = tổng − đã trả; 0 với hóa đơn đã hủy. */
+  remainingAmount: number;
+  /** Còn phải trả và đã qua hạn thanh toán. */
+  overdue: boolean;
+  daysOverdue: number;
+}
+
+export interface PortalInvoiceDetail {
+  invoice: PortalInvoice;
+  lines: Array<{ description: string; amount: number }>;
+  payments: Array<{ paymentDate?: string | null; amount: number; method?: PortalPaymentMethod | string | null }>;
+}
+
+/** Tổng hợp công nợ (không tính hóa đơn đã hủy). */
+export interface PortalDebtSummary {
+  customerId?: number | null;
+  customerCode?: string | null;
+  customerName?: string | null;
+  invoiceCount: number;
+  totalInvoiced: number;
+  totalPaid: number;
+  totalOutstanding: number;
+  overdueInvoiceCount: number;
+  totalOverdue: number;
+  nextDueDate?: string | null;
+  nextDueAmount?: number | null;
+}
+
+export const PORTAL_INVOICE_STATUS_LABEL: Record<PortalInvoiceStatus, string> = {
+  ISSUED: 'Chưa thanh toán',
+  PARTIALLY_PAID: 'Thanh toán một phần',
+  PAID: 'Đã thanh toán',
+  CANCELLED: 'Đã hủy',
+};
+
+export const PORTAL_PAYMENT_METHOD_LABEL: Record<PortalPaymentMethod, string> = {
+  BANK_TRANSFER: 'Chuyển khoản',
+  CASH: 'Tiền mặt',
+  OTHER: 'Khác',
+};
