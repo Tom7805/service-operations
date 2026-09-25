@@ -1,4 +1,10 @@
-import type { PortalProjectProgressRes, PortalProjectRes } from '../types/portalTypes';
+import type {
+  PortalAcceptanceDetail,
+  PortalAcceptanceStatus,
+  PortalAcceptanceSummary,
+  PortalProjectProgressRes,
+  PortalProjectRes,
+} from '../types/portalTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -56,4 +62,37 @@ export async function fetchPortalProjects(): Promise<PortalProjectRes[]> {
  */
 export async function fetchPortalProjectProgress(projectId: number): Promise<PortalProjectProgressRes> {
   return requestBackend<PortalProjectProgressRes>(`${API_BASE_URL}/portal/projects/${projectId}`, { method: 'GET' });
+}
+
+/** NCL-13-CN-003: phiếu nghiệm thu của các dự án của khách hàng, mới nhất trước. */
+export async function fetchPortalAcceptances(
+  params: { projectId?: number | null; status?: PortalAcceptanceStatus | null } = {}
+): Promise<PortalAcceptanceSummary[]> {
+  const query = new URLSearchParams();
+  if (params.projectId != null) query.set('projectId', String(params.projectId));
+  if (params.status) query.set('status', params.status);
+  const qs = query.toString();
+  return requestBackend<PortalAcceptanceSummary[]>(`${API_BASE_URL}/portal/acceptances${qs ? `?${qs}` : ''}`, {
+    method: 'GET',
+  });
+}
+
+/** Chi tiết phiếu; phiếu của khách hàng khác hoặc không tồn tại → 403. */
+export async function fetchPortalAcceptance(certificateId: number): Promise<PortalAcceptanceDetail> {
+  return requestBackend<PortalAcceptanceDetail>(`${API_BASE_URL}/portal/acceptances/${certificateId}`, { method: 'GET' });
+}
+
+/** TC-01: khách hàng xác nhận nghiệm thu — phiếu → ACCEPTED, người ký = người liên hệ đang đăng nhập, ngày ký = hôm nay. */
+export async function confirmPortalAcceptance(certificateId: number): Promise<PortalAcceptanceDetail> {
+  return requestBackend<PortalAcceptanceDetail>(`${API_BASE_URL}/portal/acceptances/${certificateId}/confirm`, {
+    method: 'POST',
+  });
+}
+
+/** TC-02: từ chối bắt buộc có lý do (≤ 1000 ký tự) — phiếu → NEEDS_REVISION. */
+export async function rejectPortalAcceptance(certificateId: number, reason: string): Promise<PortalAcceptanceDetail> {
+  return requestBackend<PortalAcceptanceDetail>(`${API_BASE_URL}/portal/acceptances/${certificateId}/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
 }

@@ -13,6 +13,7 @@ vi.mock('../api/portalApi', async () => {
     PortalApiError: actual.PortalApiError,
     fetchPortalProjects: vi.fn(),
     fetchPortalProjectProgress: vi.fn(),
+    fetchPortalAcceptances: vi.fn(() => Promise.resolve([])),
   };
 });
 

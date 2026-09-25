@@ -20,6 +20,8 @@ interface Props {
   /** Mã dự án lấy từ đường dẫn — có thể là dự án của khách hàng khác nếu khách hàng tự nhập (TC-02). */
   projectId: number;
   onBack: () => void;
+  /** Mở danh sách phiếu nghiệm thu của dự án (NCL-13-CN-003). */
+  onOpenAcceptances?: (projectId: number) => void;
 }
 
 const headStyle: CSSProperties = {
@@ -70,7 +72,7 @@ export function orderWorkPackages(items: PortalWorkPackageProgress[]): Array<Por
  * Dự án của khách hàng khác hoặc mã không tồn tại → màn từ chối, backend ghi nhật ký lần từ chối (TC-02); mỗi lượt xem
  * thành công cũng được ghi nhật ký (TC-05).
  */
-export default function PortalProjectDetailPage({ projectId, onBack }: Props) {
+export default function PortalProjectDetailPage({ projectId, onBack, onOpenAcceptances }: Props) {
   const [data, setData] = useState<PortalProjectProgressRes | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<{ forbidden: boolean; message: string } | null>(null);
@@ -163,6 +165,7 @@ export default function PortalProjectDetailPage({ projectId, onBack }: Props) {
   const { project, milestones, deliverables } = data;
   const closed = project.status === 'CLOSED';
   const lateCount = milestones.filter((m) => m.status === 'LATE').length;
+  const pendingWps = workPackages.filter((w) => w.acceptanceStatus === 'PENDING_CONFIRMATION').length;
 
   return (
     <div className="portal-page" data-testid="portal-project-detail">
@@ -184,9 +187,22 @@ export default function PortalProjectDetailPage({ projectId, onBack }: Props) {
             {formatPortalDate(project.expectedEndDate)}
           </p>
         </div>
-        <button type="button" className="btn btn-secondary" onClick={() => void load()}>
-          <span className="icon-xs">{ICONS.refresh}</span> Làm mới
-        </button>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {onOpenAcceptances && (
+            <button
+              type="button"
+              className={`btn ${pendingWps > 0 ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => onOpenAcceptances(project.id)}
+              data-testid="portal-detail-open-acceptances"
+            >
+              <span className="icon-xs">{ICONS.checkCircle}</span> Phiếu nghiệm thu
+              {pendingWps > 0 ? ` (${pendingWps} chờ xác nhận)` : ''}
+            </button>
+          )}
+          <button type="button" className="btn btn-secondary" onClick={() => void load()}>
+            <span className="icon-xs">{ICONS.refresh}</span> Làm mới
+          </button>
+        </div>
       </div>
 
       <div className="user-table-card portal-overview">

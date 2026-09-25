@@ -284,7 +284,7 @@ export default function PortalAccountGrantModal({
 
           {created ? (
             <div className="modal-body" data-testid="portal-grant-success">
-              <div className="alert-box alert-box--success" role="status">
+              <div className="alert-box alert-box--success alert-box--inline" role="status">
                 <span className="alert-box__icon">{ICONS.checkCircle}</span>
                 <div className="alert-box__content">
                   Đã cấp tài khoản cổng cho <strong>{created.account.contactName ?? created.account.fullName}</strong> —
@@ -442,7 +442,7 @@ export default function PortalAccountGrantModal({
                       </div>
                     </div>
                   ) : candidates.length === 0 ? (
-                    <div className="alert-box alert-box--warning" data-testid="portal-grant-no-contacts">
+                    <div className="alert-box alert-box--warning alert-box--inline" data-testid="portal-grant-no-contacts">
                       <span className="alert-box__icon">{ICONS.info}</span>
                       <div className="alert-box__content">
                         Khách hàng <strong>{customer.name}</strong> chưa có người liên hệ nào. Nhân viên kinh doanh cần thêm

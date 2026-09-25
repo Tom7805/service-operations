@@ -7,6 +7,8 @@ export interface PortalNavItem {
   label: string;
   icon: ReactNode;
   active: boolean;
+  /** Số hiển thị trên mục (vd phiếu chờ xác nhận); 0/không đặt thì ẩn. */
+  badge?: number;
   onSelect: () => void;
 }
 
@@ -63,6 +65,11 @@ export default function PortalLayout({ fullName, username, navItems, onChangePas
                 onClick={item.onSelect}
               >
                 <span className="icon-xs">{item.icon}</span> {item.label}
+                {item.badge ? (
+                  <span className="portal-topbar__badge" data-testid={`portal-nav-badge-${item.key}`}>
+                    {item.badge}
+                  </span>
+                ) : null}
               </button>
             ))}
           </nav>
