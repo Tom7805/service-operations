@@ -3634,3 +3634,76 @@ tr.row--locked .portal-account-cell__name { color: var(--ink-muted); }
   .portal-detail-grid { grid-template-columns: 1fr; }
   .portal-credential-row { grid-template-columns: 1fr; gap: 4px; }
 }
+
+/* ===== Cổng khách hàng — xem tiến độ dự án (NCL-13-CN-002) ===== */
+.portal-shell { min-height: 100vh; background: var(--canvas); display: flex; flex-direction: column; }
+.portal-topbar { position: sticky; top: 0; z-index: 30; background: var(--surface, #ffffff); border-bottom: 1px solid var(--line, #EAEAEA); }
+.portal-topbar__inner { max-width: 1200px; margin: 0 auto; padding: 10px 24px; display: flex; align-items: center; gap: 24px; }
+.portal-topbar__brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.portal-topbar__brand strong { display: block; font-size: 15px; line-height: 1.2; }
+.portal-topbar__sub { display: block; font-size: 12px; color: var(--ink-muted); }
+.portal-topbar__mark { width: 34px; height: 34px; border-radius: var(--radius-md); background: var(--ink, #111111); color: #ffffff; display: inline-flex; align-items: center; justify-content: center; }
+.portal-topbar__mark svg { width: 18px; height: 18px; }
+.portal-topbar__nav { display: flex; gap: 4px; flex: 1; min-width: 0; overflow-x: auto; }
+.portal-topbar__link { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--ink-muted); font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background-color var(--dur-fast, .12s) var(--ease-out, ease-out), color var(--dur-fast, .12s) var(--ease-out, ease-out); }
+.portal-topbar__link:hover { background: var(--overlay-hairline, #F1F0EE); color: var(--ink, #111111); }
+.portal-topbar__link--active { background: var(--overlay-hairline, #F1F0EE); color: var(--ink, #111111); }
+.portal-content { flex: 1; width: 100%; max-width: 1200px; margin: 0 auto; padding: 28px 24px 48px; box-sizing: border-box; }
+.portal-page { display: flex; flex-direction: column; }
+.portal-toolbar { display: flex; flex-wrap: wrap; gap: 12px 16px; justify-content: space-between; align-items: center; margin: 4px 0 16px; }
+.portal-project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.portal-project-card { display: flex; flex-direction: column; gap: 10px; padding: 18px 20px; background: var(--surface, #ffffff); border: 1px solid var(--line, #EAEAEA); border-radius: var(--radius-lg); }
+.portal-project-card--closed { background: var(--surface-muted, #F9F9F8); }
+.portal-project-card__head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.portal-project-card__code { font-family: var(--font-mono, monospace); font-size: 12.5px; color: var(--ink-muted); letter-spacing: var(--track-caps); }
+.portal-project-card__name { margin: 0; font-size: 17px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+.portal-project-card__meta { margin: 0; font-size: 13.5px; color: var(--ink-muted); }
+.portal-project-card__progress { display: flex; flex-direction: column; gap: 6px; }
+.portal-project-card__progress-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13.5px; color: var(--ink-muted); }
+.portal-project-card__progress-head strong { color: var(--ink, #111111); font-family: var(--font-mono, monospace); font-size: 15px; }
+.portal-project-card__sub { font-size: 12.5px; color: var(--ink-muted); }
+.portal-project-card__facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; margin: 4px 0 0; padding-top: 10px; border-top: 1px solid var(--overlay-hairline, #F1F0EE); }
+.portal-project-card__facts dt { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: var(--track-caps); color: var(--ink-muted); margin-bottom: 2px; }
+.portal-project-card__facts dd { margin: 0; font-size: 13.5px; display: flex; align-items: center; flex-wrap: wrap; }
+.portal-project-card__facts-full { grid-column: 1 / -1; }
+.portal-project-card__action { margin-top: auto; align-self: flex-start; }
+.portal-progress { width: 100%; background: var(--overlay-hairline, #F1F0EE); border-radius: 999px; overflow: hidden; }
+.portal-progress--md { height: 8px; }
+.portal-progress--sm { height: 6px; }
+.portal-progress__bar { height: 100%; border-radius: inherit; background: #2F6FB3; transition: width var(--dur-base, .2s) var(--ease-out, ease-out); }
+.portal-progress__bar--done { background: var(--pale-green-fg, #346538); }
+.portal-overview { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr); gap: 24px; padding: 20px; margin-bottom: 16px; align-items: center; }
+.portal-overview__progress { display: flex; flex-direction: column; gap: 6px; }
+.portal-overview__facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.portal-overview__facts dt { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: var(--track-caps); color: var(--ink-muted); margin-bottom: 4px; }
+.portal-overview__facts dd { margin: 0; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.portal-section { margin-bottom: 16px; }
+.portal-section__head { padding: 14px 20px; border-bottom: 1px solid var(--overlay-hairline, #F1F0EE); }
+.portal-section__head h2 { margin: 0; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
+.portal-section__empty { padding: 16px 20px; margin: 0; }
+.portal-milestones { list-style: none; margin: 0; padding: 12px 20px 16px; display: flex; flex-direction: column; }
+.portal-milestone { position: relative; display: flex; gap: 12px; padding: 10px 0; }
+.portal-milestone + .portal-milestone { border-top: 1px dashed var(--overlay-hairline, #F1F0EE); }
+.portal-milestone__dot { width: 26px; height: 26px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; background: #E8F0FA; color: #2F6FB3; }
+.portal-milestone__dot svg { width: 14px; height: 14px; }
+.portal-milestone--done .portal-milestone__dot { background: var(--pale-green-bg, #EDF3EC); color: var(--pale-green-fg, #346538); }
+.portal-milestone--late .portal-milestone__dot { background: #FBECEB; color: #9F2F2D; }
+.portal-milestone__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.portal-milestone__title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.portal-milestone__dates { font-size: 13px; color: var(--ink-muted); }
+.portal-wp-progress { display: flex; align-items: center; gap: 10px; }
+.portal-wp-progress__value { font-family: var(--font-mono, monospace); font-size: 13px; min-width: 40px; text-align: right; }
+.portal-footnote { display: flex; align-items: center; gap: 6px; }
+.portal-footnote svg { width: 14px; height: 14px; flex-shrink: 0; }
+@media (max-width: 900px) {
+  .portal-overview { grid-template-columns: 1fr; }
+  .portal-overview__facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .portal-topbar__inner { padding: 10px 16px; gap: 12px; flex-wrap: wrap; }
+  .portal-topbar__nav { order: 3; flex-basis: 100%; }
+  .portal-topbar .user-chip { margin-left: auto; }
+  .portal-topbar .user-chip__name { display: none; }
+  .portal-content { padding: 20px 16px 40px; }
+  .portal-project-grid { grid-template-columns: 1fr; }
+}
