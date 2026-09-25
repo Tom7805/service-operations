@@ -24,5 +24,8 @@ public enum AuditTargetType {
 	ACCEPTANCE,
 
 	/** Tai khoan cong khach hang va cac luot khach hang tra cuu tren cong (Epic NCL-13). */
-	PORTAL
+	PORTAL,
+
+	/** Trung tam thong bao trong he thong — danh dau da doc, mo thong bao (NCL-14-CN-001). */
+	NOTIFICATION
 }
