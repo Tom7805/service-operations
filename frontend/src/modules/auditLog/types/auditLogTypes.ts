@@ -56,7 +56,8 @@ export type AuditTargetType =
   | 'CUSTOMER'
   | 'MASKING'
   | 'GENERAL'
-  | 'ACCEPTANCE';
+  | 'ACCEPTANCE'
+  | 'PORTAL';
 
 export interface AuditLogEntry {
   id: number;
@@ -99,6 +100,7 @@ export const TARGET_TYPE_LABELS: Record<AuditTargetType, string> = {
   MASKING: 'Che dữ liệu',
   GENERAL: 'Khác',
   ACCEPTANCE: 'Nghiệm thu',
+  PORTAL: 'Cổng khách hàng',
 };
 
 // Tên vai trò dùng chung toàn dự án — xem `src/utils/roleLabel.ts`.

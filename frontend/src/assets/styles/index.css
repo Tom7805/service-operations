@@ -3610,3 +3610,56 @@ body { background: var(--canvas); }
 .deliverable-history-row > td { background: var(--surface-muted, #F9F9F8); padding: 12px 16px 16px 32px; }
 .deliverable-version-table { background: var(--surface, #ffffff); border: 1px solid var(--line); border-radius: var(--radius-md); }
 .deliverable-version-row--new > td { background: var(--pale-green-bg); }
+/* ===== Cấp tài khoản cổng khách hàng (NCL-13-CN-001) ===== */
+.portal-modal-heading { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.portal-modal-heading .field-hint { margin-top: 2px; }
+.portal-step { padding: 14px 0; border-bottom: 1px solid var(--overlay-hairline, #F1F0EE); }
+.portal-step:first-child { padding-top: 0; }
+.portal-step__head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.portal-step__num { width: 22px; height: 22px; border-radius: 999px; background: var(--ink, #111111); color: #ffffff; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-mono, monospace); flex-shrink: 0; }
+.portal-step__title { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: var(--track-caps); color: var(--ink-muted); }
+.portal-contact-list { display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto; }
+.portal-contact-option { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--line, #EAEAEA); border-radius: var(--radius-md); cursor: pointer; transition: border-color var(--dur-base, .2s) var(--ease-out, ease-out), box-shadow var(--dur-base, .2s) var(--ease-out, ease-out); }
+.portal-contact-option input { margin-top: 3px; flex-shrink: 0; }
+.portal-contact-option:hover { border-color: var(--ink-muted); }
+.portal-contact-option.is-selected { border-color: var(--ink, #111111); box-shadow: 0 0 0 1px var(--ink, #111111); }
+.portal-contact-option.is-disabled { opacity: .6; cursor: not-allowed; background: var(--surface-muted, #F9F9F8); }
+.portal-contact-option.is-disabled:hover { border-color: var(--line, #EAEAEA); }
+.portal-contact-option__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.portal-contact-option__name { font-weight: 600; display: flex; align-items: center; flex-wrap: wrap; }
+.portal-contact-option__meta { font-size: 13px; color: var(--ink-muted); overflow-wrap: anywhere; }
+.portal-contact-option__state { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.portal-password-toggle { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 0; border-radius: var(--radius-sm); color: var(--ink-muted); cursor: pointer; }
+.portal-password-toggle:hover:not(:disabled) { background: var(--overlay-hairline, #F1F0EE); color: var(--ink, #111111); }
+.portal-password-toggle svg { width: 16px; height: 16px; }
+.portal-password-rules { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--ink-muted); }
+.portal-password-rules li { display: inline-flex; align-items: center; gap: 4px; }
+.portal-password-rules li.is-ok { color: var(--pale-green-fg, #346538); }
+.portal-credential-list { margin: 16px 0 0; border: 1px solid var(--line, #EAEAEA); border-radius: var(--radius-md); }
+.portal-credential-row { display: grid; grid-template-columns: 150px 1fr; gap: 12px; padding: 10px 14px; align-items: center; }
+.portal-credential-row + .portal-credential-row { border-top: 1px solid var(--overlay-hairline, #F1F0EE); }
+.portal-credential-row dt { font-size: 13px; color: var(--ink-muted); }
+.portal-credential-row dd { margin: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.portal-credential-row code { font-family: var(--font-mono, monospace); font-size: 14.5px; background: var(--surface-muted, #F9F9F8); padding: 2px 8px; border-radius: var(--radius-sm); overflow-wrap: anywhere; }
+.portal-consequence-list { margin: 8px 0 0; padding-left: 20px; font-size: 14px; color: var(--ink-muted); display: flex; flex-direction: column; gap: 4px; }
+.portal-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; margin: 0; }
+.portal-detail-grid dt { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: var(--track-caps); color: var(--ink-muted); margin-bottom: 2px; }
+.portal-detail-grid dd { margin: 0; font-size: 14.5px; overflow-wrap: anywhere; }
+.portal-detail-grid__full { grid-column: 1 / -1; }
+.portal-history { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--overlay-hairline, #F1F0EE); }
+.portal-history__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.portal-history__head h4 { margin: 0; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+.portal-history__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; max-height: 260px; overflow-y: auto; }
+.portal-history__item { padding: 10px 12px; border: 1px solid var(--line, #EAEAEA); border-radius: var(--radius-md); }
+.portal-history__line { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; }
+.portal-history__actor { font-size: 13.5px; font-weight: 600; margin-top: 4px; }
+.portal-history__detail { font-size: 13px; color: var(--ink-muted); margin-top: 2px; overflow-wrap: anywhere; }
+.portal-account-cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.portal-account-cell__name { font-weight: 600; }
+.portal-account-cell__sub { font-size: 12.5px; color: var(--ink-muted); overflow-wrap: anywhere; }
+.portal-account-row--new > td { background: var(--pale-green-bg); }
+tr.row--locked .portal-account-cell__name { color: var(--ink-muted); }
+@media (max-width: 600px) {
+  .portal-detail-grid { grid-template-columns: 1fr; }
+  .portal-credential-row { grid-template-columns: 1fr; gap: 4px; }
+}
