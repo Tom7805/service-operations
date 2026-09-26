@@ -52,11 +52,15 @@ class ProjectServiceImplTest {
 	@Mock
 	private ProjectAuditLogger auditLogger;
 
+	@Mock
+	private com.serviceops.modules.project.security.ProjectDataScopeGuard projectDataScopeGuard;
+
 	private ProjectServiceImpl service;
 
 	@BeforeEach
 	void setUp() {
-		service = new ProjectServiceImpl(contractRepository, userRepository, projectRepository, auditLogger);
+		service = new ProjectServiceImpl(contractRepository, userRepository, projectRepository, auditLogger,
+				projectDataScopeGuard);
 		SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken("pm01", "n/a"));
 	}
 
