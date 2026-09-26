@@ -49,6 +49,9 @@ class PasswordServiceTest {
     private UserRepository userRepository;
 
     @Mock
+    private com.serviceops.common.audit.service.AuditLogService auditLogService;
+
+    @Mock
     private PasswordResetTokenRepository passwordResetTokenRepository;
 
     @Mock
@@ -79,7 +82,8 @@ class PasswordServiceTest {
     void setUp() {
         passwordService = new PasswordServiceImpl(userRepository, passwordResetTokenRepository,
                 passwordEncoder, new PasswordPolicyValidator(), passwordResetNotifier,
-                new PasswordResetAttemptRecorder(passwordResetTokenRepository));
+                new PasswordResetAttemptRecorder(passwordResetTokenRepository),
+                auditLogService);
         ReflectionTestUtils.setField(passwordService, "resetTokenTtlMinutes", 10L);
 
         user = new User();
@@ -106,6 +110,11 @@ class PasswordServiceTest {
         assertThat(user.getPasswordHash()).isEqualTo("hashed-new-password");
         assertThat(user.getTokenVersion()).isEqualTo(1);
         verify(userRepository).save(user);
+        // TC-03: thao tac doi mat khau duoc ghi vao Nhat ky he thong.
+        verify(auditLogService).record(org.mockito.ArgumentMatchers.eq("Đổi mật khẩu"),
+                org.mockito.ArgumentMatchers.eq(com.serviceops.common.audit.AuditTargetType.AUTH),
+                org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.eq("nhanvien01"),
+                org.mockito.ArgumentMatchers.anyString());
     }
 
     @Test

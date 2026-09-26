@@ -14,6 +14,7 @@ import com.serviceops.modules.project.entity.Project;
 import com.serviceops.modules.project.enums.ProjectStatus;
 import com.serviceops.modules.project.logging.ProjectAuditLogger;
 import com.serviceops.modules.project.repository.ProjectRepository;
+import com.serviceops.modules.project.security.ProjectDataScopeGuard;
 import com.serviceops.modules.project.service.ProjectService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -32,6 +33,7 @@ public class ProjectServiceImpl implements ProjectService {
 	private final UserRepository userRepository;
 	private final ProjectRepository projectRepository;
 	private final ProjectAuditLogger auditLogger;
+	private final ProjectDataScopeGuard projectDataScopeGuard;
 
 	@Override
 	@Transactional
@@ -89,9 +91,12 @@ public class ProjectServiceImpl implements ProjectService {
 	@Override
 	@Transactional(readOnly = true)
 	public ProjectRes getProject(Long projectId) {
-		return projectRepository.findById(projectId).map(this::toResponse)
+		Project project = projectRepository.findById(projectId)
 				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
 						"Khong tim thay du an voi id=" + projectId));
+		// NCL-01-CN-004-TC-02: mo du an ngoai pham vi bang duong dan truc tiep -> 403 + ghi nhat ky.
+		projectDataScopeGuard.requireVisible(project);
+		return toResponse(project);
 	}
 
 	@Override
@@ -104,8 +109,9 @@ public class ProjectServiceImpl implements ProjectService {
 	@Override
 	@Transactional(readOnly = true)
 	public List<ProjectRes> listAll() {
-		return projectRepository.findAll(org.springframework.data.domain.Sort.by(
-				org.springframework.data.domain.Sort.Direction.DESC, "id")).stream()
+		// NCL-01-CN-004-TC-01: chi tra ve du an thuoc pham vi du lieu duoc phan (QTN-01).
+		return projectDataScopeGuard.filterVisible(projectRepository.findAll(org.springframework.data.domain.Sort.by(
+				org.springframework.data.domain.Sort.Direction.DESC, "id"))).stream()
 				.map(this::toResponse).toList();
 	}
 

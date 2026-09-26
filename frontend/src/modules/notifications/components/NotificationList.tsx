@@ -9,11 +9,20 @@ interface NotificationListProps {
 
 const TYPE_ICON: Record<NotificationType, ReactNode> = {
   TIMESHEET_SUBMITTED: ICONS.checkCircle,
+  TIMESHEET_REJECTED: ICONS.alertTriangle,
+  TIMER_AUTO_STOPPED: ICONS.clock,
   TIMESHEET_REMINDER: ICONS.clock,
   EXPENSE_SUBMITTED: ICONS.money,
   PROJECT_MILESTONE_DUE: ICONS.target,
   CONTRACT_EXPIRING: ICONS.receipt,
   NEGATIVE_MARGIN_ALERT: ICONS.alertTriangle,
+  INVOICE_PROPOSAL_CREATED: ICONS.receipt,
+  DUNNING_REMINDER: ICONS.alertTriangle,
+  RECURRING_INVOICE_GENERATED: ICONS.receipt,
+  ACCEPTANCE_DECIDED_ON_PORTAL: ICONS.checkCircle,
+  DAILY_DIGEST_SUMMARY: ICONS.bell,
+  TASK_BUDGET_EXCEEDED: ICONS.hourglass,
+  SECURITY_ALERT: ICONS.shield,
 };
 
 /** Hiển thị tương đối kiểu "5 phút trước" / "Hôm qua" cho gần, còn lại dùng ngày giờ đầy đủ. */

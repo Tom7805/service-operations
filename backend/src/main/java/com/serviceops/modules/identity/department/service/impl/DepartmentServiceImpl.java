@@ -1,5 +1,7 @@
 package com.serviceops.modules.identity.department.service.impl;
 
+import com.serviceops.common.audit.AuditTargetType;
+import com.serviceops.common.audit.service.AuditLogService;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.identity.department.dto.request.DepartmentCreateReq;
@@ -14,6 +16,7 @@ import com.serviceops.modules.identity.department.service.DepartmentService;
 import com.serviceops.modules.identity.department.validator.DepartmentCycleValidator;
 import com.serviceops.modules.identity.department.validator.DepartmentHierarchyValidator;
 import com.serviceops.modules.identity.user.entity.User;
+import com.serviceops.modules.identity.user.enums.UserStatus;
 import com.serviceops.modules.identity.user.repository.UserRepository;
 import com.serviceops.security.scope.CurrentUserScopeProvider;
 import com.serviceops.security.scope.UserScope;
@@ -39,6 +42,7 @@ public class DepartmentServiceImpl implements DepartmentService {
 	private final DepartmentCycleValidator cycleValidator;
 	private final DepartmentHierarchyValidator hierarchyValidator;
 	private final CurrentUserScopeProvider currentUserScopeProvider;
+	private final AuditLogService auditLogService;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -105,7 +109,12 @@ public class DepartmentServiceImpl implements DepartmentService {
 		department.setParent(findParent(request.parentId()));
 		department.setManager(getManager(request.managerId()));
 		department.setType(request.unitType());
-		return departmentMapper.toResponse(departmentRepository.save(department));
+		Department saved = departmentRepository.save(department);
+		// NCL-01-CN-003-TC-05: moi thay doi cau truc to chuc deu de lai dau vet.
+		auditLogService.record("Tạo bộ phận", AuditTargetType.DEPARTMENT, saved.getId(), saved.getName(),
+				"Tạo " + unitLabel(saved) + " \"" + saved.getName() + "\" thuộc " + parentLabel(saved.getParent())
+						+ ", người quản lý: " + managerLabel(saved.getManager()));
+		return departmentMapper.toResponse(saved);
 	}
 
 	@Override
@@ -114,11 +123,15 @@ public class DepartmentServiceImpl implements DepartmentService {
 		cycleValidator.validate(id, request.parentId());
 		ensureUniqueName(request.name().trim(), request.parentId(), id);
 		hierarchyValidator.validate(request.unitType(), request.parentId());
+		String before = describe(department);
 		department.setName(request.name().trim());
 		department.setParent(findParent(request.parentId()));
 		department.setManager(getManager(request.managerId()));
 		department.setType(request.unitType());
-		return departmentMapper.toResponse(departmentRepository.save(department));
+		Department saved = departmentRepository.save(department);
+		auditLogService.record("Cập nhật bộ phận", AuditTargetType.DEPARTMENT, saved.getId(), saved.getName(),
+				"Trước: " + before + ". Sau: " + describe(saved) + ".");
+		return departmentMapper.toResponse(saved);
 	}
 
 	@Override
@@ -127,20 +140,52 @@ public class DepartmentServiceImpl implements DepartmentService {
 		cycleValidator.validate(id, request.parentId());
 		ensureUniqueName(department.getName(), request.parentId(), id);
 		hierarchyValidator.validate(department.getType(), request.parentId());
+		String fromParent = parentLabel(department.getParent());
 		department.setParent(findParent(request.parentId()));
-		return departmentMapper.toResponse(departmentRepository.save(department));
+		Department saved = departmentRepository.save(department);
+		auditLogService.record("Di chuyển bộ phận", AuditTargetType.DEPARTMENT, saved.getId(), saved.getName(),
+				"Chuyển \"" + saved.getName() + "\" từ " + fromParent + " sang " + parentLabel(saved.getParent()));
+		return departmentMapper.toResponse(saved);
 	}
 
 	@Override
 	public void delete(Long id) {
 		Department department = getDepartment(id);
 		if (departmentRepository.findByParentId(id).stream().findAny().isPresent()) {
-			throw new BusinessRuleException(ErrorCode.INVALID_STATE, "Khong the xoa bo phan dang co bo phan con");
+			throw new BusinessRuleException(ErrorCode.INVALID_STATE, "Không thể xóa bộ phận đang có bộ phận con");
 		}
 		if (userRepository.countByDepartmentId(id) > 0) {
-			throw new BusinessRuleException(ErrorCode.INVALID_STATE, "Khong the xoa bo phan dang duoc su dung");
+			throw new BusinessRuleException(ErrorCode.INVALID_STATE, "Không thể xóa bộ phận đang có nhân sự trực thuộc");
 		}
+		String description = describe(department);
 		departmentRepository.delete(department);
+		auditLogService.record("Xóa bộ phận", AuditTargetType.DEPARTMENT, id, department.getName(),
+				"Xóa bộ phận: " + description);
+	}
+
+	private String describe(Department department) {
+		return unitLabel(department) + " \"" + department.getName() + "\" thuộc " + parentLabel(department.getParent())
+				+ ", người quản lý " + managerLabel(department.getManager());
+	}
+
+	private static String unitLabel(Department department) {
+		if (department.getType() == null) {
+			return "bộ phận";
+		}
+		return switch (department.getType()) {
+			case TRUNG_TAM -> "Trung tâm";
+			case BAN -> "Ban";
+			case PHONG -> "Phòng";
+			case TO -> "Tổ/Nhóm";
+		};
+	}
+
+	private static String parentLabel(Department parent) {
+		return parent == null ? "gốc cây tổ chức" : "\"" + parent.getName() + "\"";
+	}
+
+	private static String managerLabel(User manager) {
+		return manager == null ? "(chưa có)" : manager.getFullName() + " (@" + manager.getUsername() + ")";
 	}
 
 	private DepartmentTreeRes toTree(Department department, Map<Long, List<Department>> childrenByParent) {
@@ -159,8 +204,13 @@ public class DepartmentServiceImpl implements DepartmentService {
 	}
 
 	private User getManager(Long managerId) {
-		return userRepository.findById(managerId)
-				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Khong tim thay nguoi quan ly"));
+		User manager = userRepository.findById(managerId)
+				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy người quản lý"));
+		if (manager.getStatus() != UserStatus.ACTIVE) {
+			throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR,
+					"Người quản lý đã bị khóa tài khoản, vui lòng chọn người khác");
+		}
+		return manager;
 	}
 
 	private void ensureUniqueName(String name, Long parentId, Long currentId) {

@@ -37,7 +37,8 @@ import java.util.Set;
  */
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+// Không readOnly: nhật ký xem dữ liệu nhạy cảm ghi cùng transaction (QTN-03); giao dịch chỉ đọc làm MySQL từ chối lệnh ghi và trả 500.
+@Transactional
 public class UtilizationReportServiceImpl implements UtilizationReportService {
 
 	static final String UNASSIGNED_DEPARTMENT_NAME = "Chưa gán bộ phận";

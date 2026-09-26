@@ -15,6 +15,14 @@ public interface AuditLogService {
 	 */
 	void record(String action, AuditTargetType targetType, Long targetId, String targetLabel, String detail);
 
+	/**
+	 * Giống {@link #record} nhưng người thực hiện được truyền tường minh — dùng cho thao tác xảy ra khi
+	 * CHƯA có phiên đăng nhập (đăng nhập, khôi phục mật khẩu), lúc {@code SecurityContextHolder} còn
+	 * trống. {@code actorUserId}/{@code actorUsername} được phép null (ví dụ gõ sai tên tài khoản).
+	 */
+	void recordAs(Long actorUserId, String actorUsername, String action, AuditTargetType targetType,
+			Long targetId, String targetLabel, String detail);
+
 	AuditLogPageRes search(AuditLogSearchReq request);
 
 	/**

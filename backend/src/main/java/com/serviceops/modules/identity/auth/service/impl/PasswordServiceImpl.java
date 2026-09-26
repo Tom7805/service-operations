@@ -1,5 +1,7 @@
 package com.serviceops.modules.identity.auth.service.impl;
 
+import com.serviceops.common.audit.AuditTargetType;
+import com.serviceops.common.audit.service.AuditLogService;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.identity.auth.dto.request.ChangePasswordReq;
@@ -49,6 +51,7 @@ public class PasswordServiceImpl implements PasswordService {
     private final PasswordPolicyValidator passwordPolicyValidator;
     private final PasswordResetNotifier passwordResetNotifier;
     private final PasswordResetAttemptRecorder attemptRecorder;
+    private final AuditLogService auditLogService;
 
     @Value("${app.password-reset.token-ttl-minutes:30}")
     private long resetTokenTtlMinutes;
@@ -60,13 +63,13 @@ public class PasswordServiceImpl implements PasswordService {
                 .orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Khong tim thay nguoi dung"));
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
-            throw new BusinessRuleException(ErrorCode.INVALID_CREDENTIALS, "Mat khau hien tai khong dung");
+            throw new BusinessRuleException(ErrorCode.INVALID_CREDENTIALS, "Mật khẩu hiện tại không đúng");
         }
 
         passwordPolicyValidator.validate(request.getNewPassword());
 
         if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
-            throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR, "Mat khau moi phai khac mat khau hien tai");
+            throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR, "Mật khẩu mới phải khác mật khẩu hiện tại");
         }
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
@@ -74,6 +77,9 @@ public class PasswordServiceImpl implements PasswordService {
         userRepository.save(user);
 
         log.info("PASSWORD_CHANGED userId={} username={}", user.getId(), user.getUsername());
+        // NCL-01-CN-008-TC-03: ghi lai nguoi thuc hien, noi dung va thoi diem.
+        auditLogService.record("Đổi mật khẩu", AuditTargetType.AUTH, user.getId(), user.getUsername(),
+                "Người dùng tự đổi mật khẩu; mọi phiên đăng nhập cũ đã bị chấm dứt.");
     }
 
     @Override
@@ -126,6 +132,15 @@ public class PasswordServiceImpl implements PasswordService {
             }
 
             log.info("FORGOT_PASSWORD_REQUESTED userId={} username={}", user.getId(), user.getUsername());
+            // Cung ly do nhu khoi try/catch ben tren: loi ghi nhat ky khong duoc lot ra ngoai, neu khong
+            // ma trang thai HTTP se khac nhau giua email co that va email khong ton tai.
+            try {
+                auditLogService.recordAs(user.getId(), user.getUsername(), "Yêu cầu khôi phục mật khẩu",
+                        AuditTargetType.AUTH, user.getId(), user.getUsername(),
+                        "Gửi mã khôi phục có hiệu lực " + resetTokenTtlMinutes + " phút tới email đã đăng ký.");
+            } catch (RuntimeException ex) {
+                log.warn("FORGOT_PASSWORD_AUDIT_FAILED userId={}", user.getId());
+            }
         }, () -> log.info("FORGOT_PASSWORD_REQUESTED email khong ton tai - bo qua de tranh lo thong tin tai khoan"));
         // Co y khong phan biet "email khong ton tai" voi "da gui lien ket" ra ngoai API
         // de tranh ke tan cong do danh sach tai khoan hop le.
@@ -156,7 +171,7 @@ public class PasswordServiceImpl implements PasswordService {
         // se tro thanh cong cu do: "email nay khong ton tai" vs "ma sai" la du de
         // dung danh sach tai khoan hop le.
         BusinessRuleException loiChung = new BusinessRuleException(ErrorCode.RESET_TOKEN_INVALID,
-                "Ma khoi phuc khong dung hoac da het han, vui long gui yeu cau moi");
+                "Mã khôi phục không đúng hoặc đã hết hạn, vui lòng gửi yêu cầu mới");
 
         User user = userRepository.findByEmailIgnoreCase(request.getEmail()).orElseThrow(() -> loiChung);
 
@@ -194,6 +209,9 @@ public class PasswordServiceImpl implements PasswordService {
         passwordResetTokenRepository.save(resetToken);
 
         log.info("PASSWORD_RESET userId={} username={}", user.getId(), user.getUsername());
+        auditLogService.recordAs(user.getId(), user.getUsername(), "Khôi phục mật khẩu", AuditTargetType.AUTH,
+                user.getId(), user.getUsername(),
+                "Đặt lại mật khẩu bằng mã khôi phục; mọi phiên đăng nhập cũ đã bị chấm dứt.");
     }
 
     /**

@@ -40,9 +40,11 @@ o thu muc goc).
 | `DB_PASSWORD` | Password backend dung de ket noi DB | Rong (XAMPP mac dinh) hoac `changeme` (Docker) |
 | `JWT_SECRET` | Chuoi bi mat ky JWT (>= 32 ky tu, random) | *(tu tao)* |
 | `JWT_EXPIRATION` | Thoi gian song cua access token (ms) | `86400000` (24h) |
+| `LOGIN_LOCK_SECONDS` | So giay tam khoa dang nhap sau 5 lan sai mat khau (NCL-01-CN-001-TC-02) | `300` (5 phut) |
 | `SERVER_PORT` | Port backend Spring Boot lang nghe | `8080` |
 | `FRONTEND_BASE_URL` | Goc dia chi frontend, dat vao lien ket khoi phuc mat khau | `http://localhost:5173` |
 | `VITE_API_BASE_URL` | Base URL API ma frontend goi toi | `http://localhost:8080/api/v1` |
+| `VITE_SESSION_IDLE_MINUTES` | So phut khong thao tac truoc khi tu dong dang xuat (NCL-01-CN-001-TC-03) | `30` |
 
 ## Thu dien tu (khoi phuc mat khau) — `NCL-01-CN-008`
 

@@ -16,7 +16,7 @@ public class DepartmentCycleValidator {
 		Long currentId = parentId;
 		while (currentId != null) {
 			if (currentId.equals(departmentId)) {
-				throw new BusinessRuleException(ErrorCode.INVALID_STATE, "Khong the tao vong lap trong cay to chuc");
+				throw new BusinessRuleException(ErrorCode.INVALID_STATE, "Không thể di chuyển: bộ phận cha không được nằm bên trong chính bộ phận con của nó (tạo vòng lặp trong cây tổ chức)");
 			}
 			Department current = departmentRepository.findById(currentId)
 					.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Khong tim thay bo phan cha"));

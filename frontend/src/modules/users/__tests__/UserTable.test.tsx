@@ -41,6 +41,14 @@ vi.mock('../api/usersApi', () => ({
   createUser: vi.fn((payload: CreateUserPayload) => Promise.resolve({ id: 99, ...payload, status: 'ACTIVE', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() })),
   updateUser: vi.fn((id: number, payload: UpdateUserPayload) => Promise.resolve({ id, ...payload, updatedAt: new Date().toISOString() })),
   updateUserStatus: vi.fn((id: number, status: string) => Promise.resolve({ id, status, updatedAt: new Date().toISOString() })),
+  updateUserRoleScope: vi.fn((id: number, payload: UpdateUserPayload) => Promise.resolve({ id, ...payload })),
+  resetUserTwoFactor: vi.fn(() => Promise.resolve()),
+  getDepartmentsList: vi.fn(() =>
+    Promise.resolve([
+      { id: 1, name: 'Ban Giám Đốc', parentId: null },
+      { id: 2, name: 'Phòng Quản Lý Dự Án', parentId: 1 },
+    ])
+  ),
   UserApiError: class UserApiError extends Error {
     constructor(public code: string, message: string) {
       super(message);

@@ -12,6 +12,9 @@ import {
   MapPin, Sparkle, FileText, Question, SignOut,
   SidebarSimple, CaretDown, Hash, Copy, GitMerge,
   Check, ArrowLeft, ArrowRight,
+  Prohibit, HourglassMedium, TrendUp, Handshake, Coins,
+  ListChecks, ChartPieSlice, ChartLineUp, Percent, Scales,
+  Gauge, UserList,
 } from '@phosphor-icons/react';
 
 /**
@@ -99,4 +102,16 @@ export const ICONS = {
   hash: <Hash weight={W} />,
   copy: <Copy weight={W} />,
   merge: <GitMerge weight={W} />,
+  prohibit: <Prohibit weight={W} />,
+  hourglass: <HourglassMedium weight={W} />,
+  trendUp: <TrendUp weight={W} />,
+  handshake: <Handshake weight={W} />,
+  coins: <Coins weight={W} />,
+  listChecks: <ListChecks weight={W} />,
+  chartPie: <ChartPieSlice weight={W} />,
+  chartLine: <ChartLineUp weight={W} />,
+  percent: <Percent weight={W} />,
+  scales: <Scales weight={W} />,
+  gauge: <Gauge weight={W} />,
+  userList: <UserList weight={W} />,
 };

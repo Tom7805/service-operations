@@ -108,6 +108,7 @@ public class AccessDeniedAuditRecorder {
         RULES.add(rule("/activities", new Feature(AuditTargetType.GENERAL, "Hoạt động chăm sóc cơ hội")));
         RULES.add(rule("/quotes", new Feature(AuditTargetType.GENERAL, "Báo giá cơ hội")));
         RULES.add(rule("/margin-alert-threshold", new Feature(AuditTargetType.GENERAL, "Ngưỡng cảnh báo dự án âm biên")));
+        RULES.add(rule("/dedup-configs", new Feature(AuditTargetType.NOTIFICATION, "Cấu hình chống gửi trùng thông báo")));
         RULES.add(rule("/bill-rates", new Feature(AuditTargetType.GENERAL, "Khai báo bảng đơn giá theo vai trò")));
         RULES.add(rule("/overhead-allocations", new Feature(AuditTargetType.EXPENSE, "Phân bổ chi phí chung cho dự án")));
         RULES.add(rule("/timesheet-periods", new Feature(AuditTargetType.TIMESHEET, "Khóa kỳ chấm công")));
@@ -134,6 +135,9 @@ public class AccessDeniedAuditRecorder {
         RULES.add(rule("/employees", new Feature(AuditTargetType.USER, "Quản lý nhân sự")));
         RULES.add(rule("/departments", new Feature(AuditTargetType.DEPARTMENT, "Quản lý tổ chức")));
         RULES.add(rule("/auth/two-factor", new Feature(AuditTargetType.TWO_FACTOR, "Xác thực hai bước")));
+        // NCL-01-CN-004-TC-02: mở danh sách / chi tiết dự án ngoài phạm vi dữ liệu được phân.
+        RULES.add(rule(uri -> uri.matches(".*/projects(/\\d+)?/?$"),
+                new Feature(AuditTargetType.ROLE_SCOPE, "Xem dự án ngoài phạm vi dữ liệu")));
     }
 
     private static Rule rule(String substring, Feature feature) {

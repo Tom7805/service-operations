@@ -35,6 +35,7 @@ export default function EmployeeFormModal({
   const [userId, setUserId] = useState<number | ''>('');
   const [departmentId, setDepartmentId] = useState<number | ''>('');
   const [professionalRole, setProfessionalRole] = useState('');
+  const [level, setLevel] = useState('');
   const [hireDate, setHireDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [standardHoursPerWeek, setStandardHoursPerWeek] = useState('');
@@ -65,6 +66,7 @@ export default function EmployeeFormModal({
       setUserId(editingEmployee.userId);
       setDepartmentId(editingEmployee.departmentId ?? '');
       setProfessionalRole(editingEmployee.professionalRole ?? '');
+      setLevel(editingEmployee.level ?? '');
       setHireDate(editingEmployee.hireDate);
       setEndDate(editingEmployee.endDate ?? '');
       setStandardHoursPerWeek(String(editingEmployee.standardHoursPerWeek ?? ''));
@@ -72,6 +74,7 @@ export default function EmployeeFormModal({
       setUserId('');
       setDepartmentId('');
       setProfessionalRole('');
+      setLevel('');
       setHireDate('');
       setEndDate('');
       setStandardHoursPerWeek('');
@@ -96,6 +99,7 @@ export default function EmployeeFormModal({
         userId: userId === '' ? (undefined as unknown as number) : Number(userId),
         departmentId: deptVal,
         professionalRole: professionalRole.trim() || undefined,
+        level: level.trim() || undefined,
         hireDate,
         endDate: endDate || undefined,
         standardHoursPerWeek: hoursVal,
@@ -118,6 +122,7 @@ export default function EmployeeFormModal({
       const payload: EmployeeUpdatePayload = {
         departmentId: deptVal,
         professionalRole: professionalRole.trim() || undefined,
+        level: level.trim() || undefined,
         hireDate,
         endDate: endDate || undefined,
         standardHoursPerWeek: hoursVal,
@@ -236,6 +241,20 @@ export default function EmployeeFormModal({
                   disabled={submitting}
                 />
                 {errors.professionalRole && <span className="field-error">{errors.professionalRole}</span>}
+              </div>
+
+              {/* Cấp bậc — cùng vai trò chuyên môn dùng để tra đơn giá bán */}
+              <div className="form-field">
+                <label htmlFor="employee-level-input" className="form-label">Cấp bậc</label>
+                <input
+                  id="employee-level-input"
+                  type="text"
+                  className="form-input"
+                  value={level}
+                  onChange={(e) => setLevel(e.target.value)}
+                  placeholder="Ví dụ: Cao cấp"
+                  disabled={submitting}
+                />
               </div>
 
               {/* Ngày vào làm */}

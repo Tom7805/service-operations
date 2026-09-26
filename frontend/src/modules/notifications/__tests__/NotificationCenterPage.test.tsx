@@ -35,6 +35,7 @@ function notif(overrides: Partial<NotificationRes> = {}): NotificationRes {
     channel: 'IN_APP',
     referenceId: null,
     referenceType: null,
+    targetType: 'TIMESHEET',
     isRead: false,
     readAt: null,
     sentAt: '2026-09-13T20:00:00',

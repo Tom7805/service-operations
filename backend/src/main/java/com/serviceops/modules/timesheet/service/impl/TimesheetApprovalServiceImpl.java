@@ -10,6 +10,7 @@ import com.serviceops.modules.project.entity.Project;
 import com.serviceops.modules.project.entity.Task;
 import com.serviceops.modules.project.repository.ProjectRepository;
 import com.serviceops.modules.project.repository.TaskRepository;
+import com.serviceops.modules.project.service.TaskBudgetAlertService;
 import com.serviceops.modules.timesheet.dto.request.TimesheetApproveReq;
 import com.serviceops.modules.timesheet.dto.request.TimesheetRejectReq;
 import com.serviceops.modules.timesheet.dto.response.PendingTimesheetRes;
@@ -69,6 +70,7 @@ public class TimesheetApprovalServiceImpl implements TimesheetApprovalService {
 	private final TimesheetMapper timesheetMapper;
 	private final NotificationService notificationService;
 	private final UserRepository userRepository;
+	private final TaskBudgetAlertService taskBudgetAlertService;
 	private final Clock clock;
 
 	@Override
@@ -122,6 +124,10 @@ public class TimesheetApprovalServiceImpl implements TimesheetApprovalService {
 		targets.forEach(entry -> entry.setStatus(TimeEntryStatus.APPROVED));
 		timeEntryRepository.saveAll(targets);
 		List<String> warnings = updateTaskApprovedHours(targets);
+		// NCL-06-CN-003 TC-03 / NCL-14-CN-003: gui canh bao vuot ngan sach ngay khi duyet (sau commit,
+		// qua co che chong gui trung — tac vu nen chay lai sau do se khong gui trung cho cung dot).
+		taskBudgetAlertService.evaluateAfterCommit(
+				targets.stream().map(TimeEntry::getTaskId).collect(Collectors.toCollection(LinkedHashSet::new)));
 
 		boolean anyPendingLeft = entries.stream()
 				.anyMatch(entry -> entry.getStatus() == TimeEntryStatus.SUBMITTED);

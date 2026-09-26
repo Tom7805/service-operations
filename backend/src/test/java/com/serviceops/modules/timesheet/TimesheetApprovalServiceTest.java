@@ -81,6 +81,8 @@ class TimesheetApprovalServiceTest {
 	private NotificationService notificationService;
 	@Mock
 	private UserRepository userRepository;
+	@Mock
+	private com.serviceops.modules.project.service.TaskBudgetAlertService taskBudgetAlertService;
 
 	private TimesheetApprovalServiceImpl service;
 	private Timesheet timesheet;
@@ -90,7 +92,7 @@ class TimesheetApprovalServiceTest {
 		Clock clock = Clock.fixed(Instant.parse("2026-09-14T10:00:00Z"), ZoneId.of("UTC"));
 		service = new TimesheetApprovalServiceImpl(timeEntryRepository, timesheetRepository, taskRepository,
 				projectRepository, currentUserScopeProvider, auditLogService, auditLogRepository,
-				new TimesheetMapper(), notificationService, userRepository, clock);
+				new TimesheetMapper(), notificationService, userRepository, taskBudgetAlertService, clock);
 
 		timesheet = new Timesheet();
 		timesheet.setId(50L);
@@ -176,6 +178,8 @@ class TimesheetApprovalServiceTest {
 		assertEquals(1, result.overBudgetWarnings().size());
 		assertTrue(result.overBudgetWarnings().get(0).contains("80% ngan sach"));
 		assertEquals(TimesheetStatus.APPROVED, result.timesheet().status());
+		// NCL-14-CN-003: canh bao vuot ngan sach duoc gui ngay khi duyet (sau commit, qua chong gui trung).
+		verify(taskBudgetAlertService).evaluateAfterCommit(java.util.Set.of(20L));
 	}
 
 	@Test

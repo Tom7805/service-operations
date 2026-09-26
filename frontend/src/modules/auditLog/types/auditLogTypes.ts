@@ -50,14 +50,20 @@ export const DATA_TYPE_LABELS: Record<SensitiveDataTypeCode, string> = {
  * nhúng tạm thời, chỉ lưu trên trình duyệt, đã dùng trước đây ở từng trang. */
 export type AuditTargetType =
   | 'USER'
+  | 'AUTH'
+  | 'EMPLOYEE'
   | 'ROLE_SCOPE'
   | 'TWO_FACTOR'
   | 'DEPARTMENT'
   | 'CUSTOMER'
   | 'MASKING'
   | 'GENERAL'
+  | 'TIMESHEET'
+  | 'EXPENSE'
+  | 'INVOICE'
   | 'ACCEPTANCE'
-  | 'PORTAL';
+  | 'PORTAL'
+  | 'NOTIFICATION';
 
 export interface AuditLogEntry {
   id: number;
@@ -93,15 +99,30 @@ export interface AuditLogSearchParams {
 
 export const TARGET_TYPE_LABELS: Record<AuditTargetType, string> = {
   USER: 'Tài khoản',
+  AUTH: 'Đăng nhập & mật khẩu',
+  EMPLOYEE: 'Hồ sơ nhân sự',
   ROLE_SCOPE: 'Vai trò & phạm vi',
   TWO_FACTOR: 'Xác thực hai bước',
   DEPARTMENT: 'Tổ chức',
   CUSTOMER: 'Khách hàng',
   MASKING: 'Che dữ liệu',
-  GENERAL: 'Khác',
+  TIMESHEET: 'Chấm công',
+  EXPENSE: 'Chi phí',
+  INVOICE: 'Hóa đơn',
   ACCEPTANCE: 'Nghiệm thu',
   PORTAL: 'Cổng khách hàng',
+  NOTIFICATION: 'Thông báo',
+  GENERAL: 'Khác',
 };
+
+/** Quy tắc che dữ liệu lương/giá vốn đang hiệu lực (GET /masking-rules — QTN-02). */
+export type MaskingLevelCode = 'SALARY' | 'COST';
+
+export interface MaskingRule {
+  level: MaskingLevelCode;
+  levelLabel: string;
+  allowedRoles: string[];
+}
 
 // Tên vai trò dùng chung toàn dự án — xem `src/utils/roleLabel.ts`.
 export { ROLE_LABELS, roleLabel, roleLabels } from '../../../utils/roleLabel';

@@ -13,6 +13,7 @@ const UNREAD: NotificationRes = {
   channel: 'IN_APP',
   referenceId: null,
   referenceType: null,
+  targetType: 'TIMESHEET',
   isRead: false,
   readAt: null,
   sentAt: new Date().toISOString(),

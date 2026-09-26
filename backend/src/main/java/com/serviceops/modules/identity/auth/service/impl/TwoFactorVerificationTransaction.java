@@ -127,11 +127,14 @@ public class TwoFactorVerificationTransaction {
                 loginAttemptService.lockForTwoFactor(user, lockSeconds);
                 log.warn("TWO_FACTOR_MAX_ATTEMPTS userId={} username={} - tam khoa dang nhap. Canh bao quan tri vien (TC-02).",
                         user.getId(), user.getUsername());
-                return TwoFactorVerifyOutcome.loi(ErrorCode.ACCOUNT_LOCKED,
-                        "Nhap sai ma xac thuc qua so lan cho phep. Tai khoan tam khoa, vui long thu lai sau.");
+                return TwoFactorVerifyOutcome.vuaTamKhoa(
+                        "Nhập sai mã xác thực quá số lần cho phép. Tài khoản tạm khóa, quản trị viên đã được cảnh báo.",
+                        user.getId(), user.getUsername());
             }
 
-            return TwoFactorVerifyOutcome.loi(ErrorCode.TWO_FACTOR_INVALID, "Ma xac thuc khong dung");
+            int remaining = maxOtpAttempts - session.getOtpAttempts();
+            return TwoFactorVerifyOutcome.loi(ErrorCode.TWO_FACTOR_INVALID,
+                    "Mã xác thực không đúng. Còn " + remaining + " lần thử.");
         }
 
         session.setVerifiedAt(LocalDateTime.now());
