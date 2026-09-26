@@ -51,6 +51,13 @@ public class AccessDeniedAuditRecorder {
         RULES.add(rule("/portal/projects", new Feature(AuditTargetType.PORTAL, "Cổng theo dõi dự án")));
         RULES.add(rule(uri -> uri.contains("/portal/") || uri.endsWith("/portal"),
                 new Feature(AuditTargetType.PORTAL, "Cổng khách hàng")));
+        // Epic NCL-15 (quản trị hệ thống): tiền tố riêng, không trùng chuỗi con của quy tắc nào bên dưới —
+        // nhưng đặt sớm để "/imports/..." (nhập khách hàng/nhân sự) không bị các quy tắc sau bắt nhầm.
+        RULES.add(rule("/service-catalog", new Feature(AuditTargetType.SYSTEM, "Quản lý danh mục dịch vụ")));
+        RULES.add(rule("/company-settings", new Feature(AuditTargetType.SYSTEM, "Cấu hình công ty")));
+        RULES.add(rule("/fiscal-periods", new Feature(AuditTargetType.SYSTEM, "Kỳ tài chính")));
+        RULES.add(rule("/backups", new Feature(AuditTargetType.SYSTEM, "Sao lưu và phục hồi dữ liệu")));
+        RULES.add(rule("/imports", new Feature(AuditTargetType.SYSTEM, "Nhập dữ liệu từ tệp")));
         // Epic NCL-12 đứng đầu danh sách: "/acceptances/{id}/reject" chứa "/reject" (từ chối bảng chấm công),
         // "/contracts/{id}/milestone-acceptances" chứa "/contracts", "/projects/{id}/work-packages/..." v.v.
         RULES.add(rule(uri -> uri.contains("/acceptances/") && (uri.endsWith("/confirm") || uri.endsWith("/reject")),

@@ -33,6 +33,9 @@ public enum AuditTargetType {
 	/** Tai khoan cong khach hang va cac luot khach hang tra cuu tren cong (Epic NCL-13). */
 	PORTAL,
 
+	/** Quan tri he thong: danh muc dich vu, cau hinh cong ty, sao luu/phuc hoi, nhap du lieu (Epic NCL-15). */
+	SYSTEM,
+
 	/** Trung tam thong bao trong he thong — danh dau da doc, mo thong bao (NCL-14-CN-001). */
 	NOTIFICATION
 }
