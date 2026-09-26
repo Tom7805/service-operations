@@ -3933,6 +3933,64 @@ duy nhất, tạo vào 20:00 mỗi ngày (`type = "DAILY_DIGEST_SUMMARY"`, `targ
 
 ---
 
+### `NCL-14-CN-003` — Chống gửi trùng thông báo
+
+Mỗi thông báo phát sinh từ tác vụ nền rà soát định kỳ được gắn khóa gồm loại sự kiện + bản ghi liên
+quan + người nhận + **đợt cảnh báo (episode)** — lần rà soát sau bỏ qua nếu khóa đã tồn tại (`QTN-27`).
+Cơ chế này áp dụng cho những sự kiện **mới** dùng nó (hiện tại: `TASK_BUDGET_EXCEEDED`, dùng để minh
+họa/kiểm thử) — **không thay thế** các cơ chế chống trùng riêng đã ổn định của cảnh báo âm biên
+(`NCL-09-CN-004`), nhắc nộp bảng chấm công (`NCL-06-CN-009`), nhắc thu nợ (`NCL-10-CN-006`).
+
+Một "đợt cảnh báo" (episode) bắt đầu khi bản ghi chuyển từ bình thường sang trạng thái cần cảnh báo
+(hoặc hết cooldown mà vẫn còn cảnh báo); trong cùng một đợt, mỗi người nhận chỉ được gửi **đúng một
+lần** (TC-01). Nếu bản ghi thoát rồi vượt ngưỡng lại, hệ thống coi là đợt mới và gửi lại (TC-02).
+
+#### `GET /notifications/dedup-configs`
+
+Danh sách cấu hình chống gửi trùng theo loại sự kiện. **Quyền**: chỉ `VT-07` (Quản trị viên, TC-03) —
+vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối tự động. Chỉ liệt kê những loại sự
+kiện thực sự dùng cơ chế này (hiện tại chỉ `TASK_BUDGET_EXCEEDED`) — sửa cấu hình cho loại khác (margin
+alert/timesheet reminder/dunning...) sẽ không có tác dụng gì nên không hiển thị.
+
+**Response `200 OK`:**
+```json
+{
+  "success": true,
+  "data": [
+    { "eventType": "TASK_BUDGET_EXCEEDED", "dedupEnabled": true, "cooldownHours": null, "updatedBy": null, "updatedAt": null }
+  ]
+}
+```
+Loại sự kiện chưa từng được cấu hình riêng trả về mặc định: `dedupEnabled = true`, `cooldownHours = null`.
+
+#### `PUT /notifications/dedup-configs/{eventType}`
+
+Đặt/đổi cấu hình cho một loại sự kiện. **Quyền**: chỉ `VT-07`.
+
+**Request:**
+```json
+{ "dedupEnabled": false, "cooldownHours": 24 }
+```
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `dedupEnabled` | boolean | có | `false` = luôn gửi, không chiếm khóa (tắt chống trùng cho loại này). |
+| `cooldownHours` | number | không | Số giờ tối thiểu giữa 2 lần nhắc trong cùng một đợt cảnh báo nếu sự kiện kéo dài; `null`/bỏ qua = không nhắc lại trong đợt. Nếu có, phải ≥ 1. |
+
+**Response thành công:** `{ "success": true, "message": "Da luu cau hinh chong gui trung thong bao" }`.
+Mỗi lần đổi ghi một dòng nhật ký hệ thống — người thực hiện, nội dung, thời điểm (TC-04).
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 403 | `FORBIDDEN` | Không phải Quản trị viên (`VT-07`) — ghi nhật ký lần từ chối (TC-03) |
+| 400 | `VALIDATION_ERROR` | Thiếu `dedupEnabled`, `cooldownHours` < 1, hoặc `eventType` không thuộc loại sự kiện dùng cơ chế này |
+
+**Lưu ý cho Frontend:** đây là cơ chế nội bộ, không có API riêng để tra "đợt cảnh báo hiện tại" của
+một bản ghi — thông báo tạo ra vẫn đọc qua API có sẵn của Epic thông báo (`GET /notifications`).
+
+---
+
 ### `NCL-06-CN-003` — Duyệt bảng chấm công
 
 Yêu cầu token của **Quản lý dự án** (`VT-02`). PM duyệt các dòng giờ công `SUBMITTED` thuộc **dự án mình
