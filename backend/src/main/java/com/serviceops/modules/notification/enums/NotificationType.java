@@ -40,7 +40,15 @@ public enum NotificationType {
 	 * {@code NotificationDispatcher}) nen khong thuoc bat ky {@link NotificationGroup} nao —
 	 * tranh vong lap gop-cua-gop.
 	 */
-	DAILY_DIGEST_SUMMARY;
+	DAILY_DIGEST_SUMMARY,
+
+	/**
+	 * NCL-14-CN-003: dung de kiem thu co che chong gui trung theo dot canh bao (episode) cho cac
+	 * su kien duoc tac vu nen ra soat dinh ky (QTN-27-TC-02) — vi du minh hoa "cong viec vuot
+	 * nguong ngan sach". KHONG di kem job quet thuc te trong pham vi story nay (xem
+	 * {@code NotificationAntiDuplicateService}); mo phong detector o tang service/test.
+	 */
+	TASK_BUDGET_EXCEEDED;
 
 	/**
 	 * Nhom nghiep vu (NCL-14-CN-002) dung de tra cau hinh nhan thong bao — null cho
@@ -51,7 +59,7 @@ public enum NotificationType {
 			case TIMESHEET_SUBMITTED, TIMESHEET_REJECTED, TIMER_AUTO_STOPPED, TIMESHEET_REMINDER ->
 					NotificationGroup.TIMESHEET;
 			case EXPENSE_SUBMITTED -> NotificationGroup.EXPENSE;
-			case PROJECT_MILESTONE_DUE, NEGATIVE_MARGIN_ALERT -> NotificationGroup.PROJECT;
+			case PROJECT_MILESTONE_DUE, NEGATIVE_MARGIN_ALERT, TASK_BUDGET_EXCEEDED -> NotificationGroup.PROJECT;
 			case CONTRACT_EXPIRING -> NotificationGroup.CONTRACT;
 			case INVOICE_PROPOSAL_CREATED, DUNNING_REMINDER, RECURRING_INVOICE_GENERATED -> NotificationGroup.INVOICE;
 			case ACCEPTANCE_DECIDED_ON_PORTAL -> NotificationGroup.ACCEPTANCE;
