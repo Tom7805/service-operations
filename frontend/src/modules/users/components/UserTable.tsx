@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import type { User, UserStatus } from '../types/userTypes';
-import { SYSTEM_DEPARTMENTS, SYSTEM_ROLES } from '../types/userTypes';
+import { SYSTEM_ROLES } from '../types/userTypes';
+import type { DepartmentInfo } from '../types/userTypes';
+import { departmentName } from '../hooks/useDepartmentOptions';
 import { ICONS } from './icons';
 import RowActionsMenu from '../../../components/common/RowActionsMenu';
 import TableSkeleton from '../../../components/common/TableSkeleton';
@@ -15,6 +17,8 @@ interface UserTableProps {
   onRefresh: () => void;
   /** NCL-01-CN-009: mất/đổi điện thoại — đặt lại thiết lập TOTP để bắt buộc liên kết app mới. */
   onResetTwoFactor?: (user: User) => void;
+  /** Danh sách bộ phận thật (GET /departments) để hiện tên bộ phận của từng tài khoản. */
+  departments?: DepartmentInfo[];
 }
 
 export const UserTable: React.FC<UserTableProps> = ({
@@ -26,6 +30,7 @@ export const UserTable: React.FC<UserTableProps> = ({
   onViewDetail,
   onRefresh,
   onResetTwoFactor,
+  departments = [],
 }) => {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
@@ -46,11 +51,7 @@ export const UserTable: React.FC<UserTableProps> = ({
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  const getDepartmentName = (deptId: number | null) => {
-    if (!deptId) return 'Chưa gán bộ phận';
-    const dept = SYSTEM_DEPARTMENTS.find((d) => d.id === deptId);
-    return dept ? dept.name : `Bộ phận #${deptId}`;
-  };
+  const getDepartmentName = (deptId: number | null) => departmentName(departments, deptId);
 
   const getRoleBadge = (code: string) => {
     const role = SYSTEM_ROLES.find((r) => r.code === code);

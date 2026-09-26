@@ -30,6 +30,7 @@ export type Tab =
   | 'OPPORTUNITY_DETAIL'
   | 'CHANGE_PASSWORD'
   | 'TWO_FACTOR_SETTINGS'
+  | 'MASKING_RULES'
   | 'REPORTS'
   | 'PIPELINE_REPORT'
   | 'OPERATIONAL_DASHBOARD'
@@ -272,6 +273,11 @@ export const SYSTEM_NAV_ITEMS: NavItem[] = [
   { tab: 'TWO_FACTOR_SETTINGS', icon: ICONS.key, label: '2FA', requires: ['VT-07'] },
   { tab: 'SYSTEM_AUDIT_LOG', icon: ICONS.clipboardList, label: 'Nhật ký hệ thống', requires: ['VT-07'] },
   { tab: 'AUDIT_LOG', icon: ICONS.shieldOff, label: 'Dữ liệu nhạy cảm', requires: ['VT-07'] },
+  {
+    tab: 'MASKING_RULES', icon: ICONS.eyeOff, label: 'Quy tắc che dữ liệu', requires: ['VT-01', 'VT-05', 'VT-06'],
+    // NCL-01-CN-005 (TC-04, QTN-02): chỉ Nhân sự, Kế toán và Ban giám đốc — đúng nhóm được xem số liệu
+    // lương/giá vốn thật — mở được màn hình quy tắc che dữ liệu; khớp @PreAuthorize của /masking-rules.
+  },
 ];
 
 /** Tất cả nhóm điều hướng, theo thứ tự hiển thị trên sidebar. */

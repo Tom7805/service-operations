@@ -64,6 +64,8 @@ import CommandPalette from './components/common/CommandPalette';
 import useScrollReveal from './hooks/useScrollReveal';
 import { roleLabels } from './utils/roleLabel';
 import { useSessionSync } from './hooks/useSessionSync';
+import { LAST_ACTIVITY_KEY, SESSION_IDLE_MINUTES, markActivity, useIdleLogout } from './hooks/useIdleLogout';
+import MaskingRulePage from './modules/auditLog/pages/MaskingRulePage';
 import {
   Tab,
   NavItem,
@@ -177,6 +179,9 @@ export default function App() {
     return () => document.removeEventListener('dragstart', preventTextDrag);
   }, []);
 
+  // Lý do phiên vừa kết thúc ngoài ý người dùng (hết hạn / không thao tác) — hiện trên màn đăng nhập.
+  const [loginNotice, setLoginNotice] = useState<string | null>(null);
+
   function persistSession(next: AuthSession) {
     localStorage.setItem('token', next.accessToken);
     localStorage.setItem('session', JSON.stringify(next));
@@ -184,18 +189,39 @@ export default function App() {
   }
 
   function handleAuthenticated(newSession: AuthSession) {
+    markActivity();
+    setLoginNotice(null);
     persistSession(newSession);
   }
 
   function handleLogout() {
     localStorage.removeItem('token');
     localStorage.removeItem('session');
+    localStorage.removeItem(LAST_ACTIVITY_KEY);
     setSession(null);
+  }
+
+  function handleSessionExpired(reason: string) {
+    handleLogout();
+    setLoginNotice(reason);
   }
 
   // NCL-01-CN-004 TC-03: admin đổi vai trò ở tab/máy khác → phiên này áp dụng ngay
   // (làm mới khi focus lại + poll 30s), không bắt đăng nhập lại; 401 thì đăng xuất.
-  useSessionSync({ session, onRefresh: persistSession, onExpired: handleLogout });
+  useSessionSync({
+    session,
+    onRefresh: persistSession,
+    onExpired: () => handleSessionExpired('Phiên đăng nhập đã hết hiệu lực. Vui lòng đăng nhập lại.'),
+  });
+
+  // NCL-01-CN-001 TC-03: để quá lâu không thao tác thì bắt đăng nhập lại.
+  useIdleLogout({
+    enabled: session !== null,
+    onIdle: () =>
+      handleSessionExpired(
+        `Phiên làm việc đã kết thúc do không thao tác trong ${SESSION_IDLE_MINUTES} phút. Vui lòng đăng nhập lại.`,
+      ),
+  });
 
   // Nạp danh sách dự án cho các ô chọn dropdown (Giá vốn/Biên lợi nhuận) ngay khi đăng nhập —
   // trước đây các trang này dùng tạm mảng dữ liệu mẫu cố định nên không bao giờ thấy dự án thật.
@@ -298,7 +324,7 @@ export default function App() {
   // (có quyền, hoặc ở chế độ chỉ xem). Các mục bị khóa hoàn toàn không hiện ra.
   const navGroups = useMemo(() => navGroupsFor(currentRoles), [currentRoles]);
 
-  if (!session) return <LoginPage onAuthenticated={handleAuthenticated} />;
+  if (!session) return <LoginPage onAuthenticated={handleAuthenticated} notice={loginNotice} />;
 
   // Epic NCL-13: tài khoản Khách hàng (VT-09) dùng giao diện cổng riêng — không vào giao diện nội bộ (QTN-26).
   if (isPortalUser) return <PortalApp session={session} onLogout={handleLogout} />;
@@ -386,7 +412,7 @@ export default function App() {
             </button>
           </div>
 
-          <nav className="side-nav__list" aria-label="Điều hưừng chính">
+          <nav className="side-nav__list" aria-label="Điều hướng chính">
             {navGroups.map((group) => (
               <Fragment key={group.id}>
                 {group.label !== null && (
@@ -926,6 +952,8 @@ export default function App() {
             <AuditLogPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'AUDIT_LOG' ? (
             <SensitiveAccessLogPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+          ) : activeTab === 'MASKING_RULES' ? (
+            <MaskingRulePage currentUserRoles={currentRoles} />
           ) : activeTab === 'TWO_FACTOR_SETTINGS' ? (
             <TwoFactorSetupPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'EMPLOYEE_DETAIL' && selectedEmployeeId ? (

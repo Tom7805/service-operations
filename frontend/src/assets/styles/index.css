@@ -268,6 +268,8 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
 
 .form-error { border-radius: var(--radius-md); background: var(--pale-red-bg); color: var(--pale-red-fg); }
 .form-error span { background: var(--pale-red-fg); }
+.form-error.form-notice { background: var(--pale-yellow-bg); color: var(--pale-yellow-fg); }
+.form-error.form-notice span { background: var(--pale-yellow-fg); }
 .form-options { gap: 12px; flex-wrap: wrap; }
 .form-options a, .login-card__privacy a { color: var(--ink-strong); font-weight: 500; text-decoration: underline; text-underline-offset: 2px; }
 .checkbox input { accent-color: var(--ink-strong); }

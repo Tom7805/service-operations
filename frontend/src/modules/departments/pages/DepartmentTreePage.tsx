@@ -102,12 +102,15 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
       setTreeData(treeRes);
       setFlatData(flatRes);
 
-      const managerOpts: ManagerUserOption[] = usersRes.map((u) => ({
-        id: u.id,
-        fullName: u.fullName,
-        username: u.username,
-        departmentId: u.departmentId,
-      }));
+      // Chỉ tài khoản nội bộ đang hoạt động mới được làm người quản lý bộ phận (backend cũng chặn).
+      const managerOpts: ManagerUserOption[] = usersRes
+        .filter((u) => u.status === 'ACTIVE' && !u.roleCodes.includes('VT-09'))
+        .map((u) => ({
+          id: u.id,
+          fullName: u.fullName,
+          username: u.username,
+          departmentId: u.departmentId,
+        }));
       setManagersList(managerOpts);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không thể tải cấu trúc cây tổ chức từ máy chủ.');

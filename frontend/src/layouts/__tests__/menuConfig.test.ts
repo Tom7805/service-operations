@@ -106,13 +106,16 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'PROJECT_MARGIN',
       'MARGIN_ALERT_THRESHOLD',
       'REPORTS',
+      // NCL-01-CN-005 TC-04: Kế toán nằm trong nhóm được xem quy tắc che dữ liệu lương/giá vốn.
+      'MASKING_RULES',
     ]);
   });
 
-  it('Nhân sự (VT-06) thấy chấm công + nhân sự', () => {
+  it('Nhân sự (VT-06) thấy chấm công + nhân sự + quy tắc che dữ liệu', () => {
     expect(tabsFor(['VT-06'])).toEqual([
       'MY_WORK',
       'EMPLOYEES',
+      'MASKING_RULES',
     ]);
   });
 
@@ -167,7 +170,7 @@ describe('navGroupsFor — bỏ qua nhóm không có mục hiển thị', () => 
     expect(groups[0].items.map((i) => i.tab)).toEqual(['MY_WORK']);
   });
 
-  it('VT-05 (Kế toán) thấy các nhóm nghiệp vụ tài chính nhưng bỏ Quản trị/Bảo mật', () => {
+  it('VT-05 (Kế toán) thấy các nhóm nghiệp vụ tài chính, bỏ Quản trị, nhóm Bảo mật chỉ có quy tắc che dữ liệu', () => {
     const groups = navGroupsFor(['VT-05']);
     expect(groups.map((g) => g.paletteLabel)).toEqual([
       'Chấm công',
@@ -175,7 +178,9 @@ describe('navGroupsFor — bỏ qua nhóm không có mục hiển thị', () => 
       'Hóa đơn & Chi phí',
       'Giá vốn & Lợi nhuận',
       'Báo cáo',
+      'Bảo mật & Hệ thống',
     ]);
+    expect(groups[5].items.map((i) => i.tab)).toEqual(['MASKING_RULES']);
     expect(groups[1].items.map((i) => i.tab)).toEqual(['CONTRACTS', 'BILL_RATES', 'RATE_HISTORY']);
     expect(groups[2].items.map((i) => i.tab)).toEqual(['INVOICES', 'EXPENSE_APPROVAL', 'OVERHEAD_ALLOCATION']);
   });

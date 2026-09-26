@@ -1,6 +1,7 @@
 import React, { FormEvent, useEffect, useState } from 'react';
 import type { CreateUserPayload, UpdateUserPayload, User } from '../types/userTypes';
-import { SYSTEM_DEPARTMENTS, SYSTEM_ROLES } from '../types/userTypes';
+import { SYSTEM_ROLES } from '../types/userTypes';
+import type { DepartmentInfo } from '../types/userTypes';
 import { validateCreateUser, validateUpdateUser, FormErrors } from '../validators/userValidators';
 import { ICONS } from './icons';
 import ModalPortal from '../../../components/common/ModalPortal';
@@ -12,6 +13,8 @@ interface UserFormModalProps {
   onClose: () => void;
   onSubmitCreate: (payload: CreateUserPayload) => Promise<void>;
   onSubmitUpdate: (id: number, payload: UpdateUserPayload) => Promise<void>;
+  /** Bộ phận thật từ cây tổ chức (GET /departments) — NCL-01-CN-002-TC-01 gán tài khoản vào bộ phận. */
+  departments?: DepartmentInfo[];
 }
 
 export const UserFormModal: React.FC<UserFormModalProps> = ({
@@ -20,6 +23,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   onClose,
   onSubmitCreate,
   onSubmitUpdate,
+  departments = [],
 }) => {
   const isEdit = Boolean(editingUser);
 
@@ -222,9 +226,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                   disabled={submitting}
                 >
                   <option value="">-- Chưa gán phòng ban --</option>
-                  {SYSTEM_DEPARTMENTS.map((dept) => (
+                  {departments.map((dept) => (
                     <option key={dept.id} value={dept.id}>
-                      [{dept.code}] {dept.name}
+                      {dept.name}
                     </option>
                   ))}
                 </select>

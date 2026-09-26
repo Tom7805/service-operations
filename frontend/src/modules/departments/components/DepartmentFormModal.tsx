@@ -56,7 +56,8 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
       } else {
         setName('');
         setParentId(defaultParentId);
-        setManagerId(managersList.length > 0 ? managersList[0].id : '');
+        // NCL-01-CN-003-TC-03: không chọn sẵn ai — người dùng phải chủ động chọn người quản lý.
+        setManagerId('');
         setUnitType('PHONG');
       }
       setFieldErrors({});

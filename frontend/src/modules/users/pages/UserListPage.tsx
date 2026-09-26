@@ -1,12 +1,21 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { createUser, getUsers, resetUserTwoFactor, updateUser, updateUserStatus, UserApiError } from '../api/usersApi';
-import RoleAssignModal from '../components/RoleAssignModal';
+import {
+  createUser,
+  getUsers,
+  resetUserTwoFactor,
+  updateUser,
+  updateUserRoleScope,
+  updateUserStatus,
+  UserApiError,
+} from '../api/usersApi';
+import RoleScopeModal from '../components/RoleScopeModal';
 import UserFormModal from '../components/UserFormModal';
 import UserTable from '../components/UserTable';
 import { ICONS } from '../components/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
 import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import type { CreateUserPayload, ScopeType, UpdateUserPayload, User } from '../types/userTypes';
+import { useDepartmentOptions } from '../hooks/useDepartmentOptions';
 
 interface UserListPageProps {
   currentUserRoles?: string[];
@@ -26,6 +35,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
   const isAdmin = currentUserRoles.includes('VT-07');
 
   const [users, setUsers] = useState<User[]>([]);
+  const { departments } = useDepartmentOptions();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -97,10 +107,24 @@ export const UserListPage: React.FC<UserListPageProps> = ({
     await fetchUsersList();
   };
 
-  const handleSaveRoles = async (userId: number, roleCodes: string[], scopeType: ScopeType) => {
+  const handleSaveRoles = async (
+    userId: number,
+    roleCodes: string[],
+    scopeType: ScopeType,
+    scopeDepartmentId?: number | null
+  ) => {
     const target = users.find((u) => u.id === userId);
     if (!target) return;
-    const updated = await updateUser(userId, { fullName: target.fullName, roleCodes, scopeType });
+    // Gửi kèm đủ email + bộ phận hiện có: PUT /users/{id} ghi đè toàn bộ hồ sơ, thiếu trường nào là
+    // trường đó bị xóa trắng. Dùng chung hàm với màn Phân quyền để ánh xạ phạm vi đúng (PERSONAL -> SELF).
+    const updated = await updateUserRoleScope(userId, {
+      fullName: target.fullName,
+      email: target.email,
+      departmentId: target.departmentId,
+      roleCodes,
+      scopeType,
+      scopeDepartmentId,
+    });
     showToast(`Đã gán ${roleCodes.length} vai trò cho tài khoản @${updated.username}`);
     await fetchUsersList();
   };
@@ -249,6 +273,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
         onViewDetail={(u) => onNavigateDetail ? onNavigateDetail(u.id) : handleOpenEditModal(u)}
         onRefresh={fetchUsersList}
         onResetTwoFactor={(u) => setConfirmResetTwoFactorUser(u)}
+        departments={departments}
       />
 
       {/* TC-05: nhật ký thao tác tài khoản giờ nằm ở trang riêng biệt "Nhật ký hệ thống" — lưu thật
@@ -271,12 +296,14 @@ export const UserListPage: React.FC<UserListPageProps> = ({
         onClose={() => setIsFormOpen(false)}
         onSubmitCreate={handleSubmitCreate}
         onSubmitUpdate={handleSubmitUpdate}
+        departments={departments}
       />
 
       {/* Role Assign Modal */}
-      <RoleAssignModal
+      <RoleScopeModal
         isOpen={isRoleModalOpen}
         user={roleTargetUser}
+        departmentsList={departments}
         onClose={() => setIsRoleModalOpen(false)}
         onSave={handleSaveRoles}
       />

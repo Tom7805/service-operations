@@ -24,7 +24,7 @@ bổ sung thêm 1 mục theo đúng Epic/Story tương ứng bên dưới — Fr
   {
     "success": false,
     "errorCode": "INVALID_CREDENTIALS",
-    "message": "Ten tai khoan hoac mat khau khong dung",
+    "message": "Tên tài khoản hoặc mật khẩu không đúng.",
     "timestamp": "2026-08-20T16:44:42.4065497",
     "fieldErrors": null
   }

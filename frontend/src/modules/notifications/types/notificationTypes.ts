@@ -11,7 +11,11 @@ export type NotificationType =
   | 'INVOICE_PROPOSAL_CREATED'
   | 'DUNNING_REMINDER'
   | 'RECURRING_INVOICE_GENERATED'
-  | 'ACCEPTANCE_DECIDED_ON_PORTAL';
+  | 'ACCEPTANCE_DECIDED_ON_PORTAL'
+  | 'DAILY_DIGEST_SUMMARY'
+  | 'TASK_BUDGET_EXCEEDED'
+  /** NCL-01-CN-009-TC-02: cảnh báo bảo mật gửi quản trị viên (tài khoản bị tạm khóa do sai mã 2FA). */
+  | 'SECURITY_ALERT';
 
 /** Khớp enum NotificationChannel phía backend — hiện chỉ IN_APP thực sự gửi được. */
 export type NotificationChannel = 'IN_APP' | 'EMAIL' | 'SMS' | 'PUSH';
@@ -29,7 +33,8 @@ export type NotificationTargetType =
   | 'INVOICE_PROPOSAL'
   | 'ACCEPTANCE_CERTIFICATE'
   | 'EXPENSE'
-  | 'CONTRACT';
+  | 'CONTRACT'
+  | 'NONE';
 
 /**
  * Một thông báo in-app của chính người dùng hiện tại. Khớp NotificationRes —

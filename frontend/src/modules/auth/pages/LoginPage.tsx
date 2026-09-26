@@ -6,7 +6,11 @@ import ForgotPasswordForm from '../components/ForgotPasswordForm';
 import ResetPasswordForm from '../components/ResetPasswordForm';
 import TwoFactorVerifyForm from '../components/TwoFactorVerifyForm';
 
-interface LoginPageProps { onAuthenticated: (session: AuthSession) => void }
+interface LoginPageProps {
+  onAuthenticated: (session: AuthSession) => void;
+  /** Lý do phiên trước kết thúc ngoài ý người dùng (hết hạn, không thao tác) — NCL-01-CN-001-TC-03. */
+  notice?: string | null;
+}
 
 const HIGHLIGHTS = [
   { number: '01', title: 'Sức khỏe dự án', caption: 'Nhìn rõ tiến độ và biên lợi nhuận theo thời gian thực.', detail: 'Quyết định sớm, đúng thời điểm.' },
@@ -45,7 +49,7 @@ function Highlights() {
 
 type AuthView = 'LOGIN' | 'FORGOT' | 'RESET' | 'TWO_FACTOR';
 
-export default function LoginPage({ onAuthenticated }: LoginPageProps) {
+export default function LoginPage({ onAuthenticated, notice }: LoginPageProps) {
   const [view, setView] = useState<AuthView>('LOGIN');
   /** Email đang khôi phục — mã được tra cứu theo người dùng nên phải mang theo. */
   const [resetEmail, setResetEmail] = useState<string | null>(null);
@@ -84,6 +88,7 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
       <section className="login-panel">
         {view === 'LOGIN' && (
           <LoginForm
+            notice={notice}
             onAuthenticated={onAuthenticated}
             onForgotPassword={() => setView('FORGOT')}
             onTwoFactorRequired={(challenge) => {
