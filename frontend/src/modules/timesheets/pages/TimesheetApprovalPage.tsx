@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
+import { notifyNotificationsChanged } from '../../notifications/utils/notificationEvents';
 import ModalPortal from '../../../components/common/ModalPortal';
 import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import { roleLabels } from '../../../utils/roleLabel';
@@ -237,6 +238,8 @@ export default function TimesheetApprovalPage({
                         onApproved={(result) => {
                           const label = t.userName ?? `Nhân sự #${t.userId}`;
                           const warnings = result.overBudgetWarnings;
+                          // NCL-14-CN-003: cảnh báo vượt ngân sách được gửi ngay sau khi duyệt — cập nhật chuông luôn.
+                          notifyNotificationsChanged();
                           const base = `Đã duyệt bảng chấm công của ${label} thành công.`;
                           showToast(
                             warnings.length > 0 ? `${base} Cảnh báo: ${warnings.join('; ')}` : base,

@@ -1,4 +1,11 @@
-import type { NotificationGroup, NotificationPreference, NotificationRes } from '../types/notificationTypes';
+import type {
+  NotificationDedupConfig,
+  NotificationDedupConfigReq,
+  NotificationGroup,
+  NotificationPreference,
+  NotificationRes,
+  NotificationType,
+} from '../types/notificationTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -131,5 +138,28 @@ export async function updateNotificationPreferences(preferences: NotificationPre
   await requestBackend<null>(`${API_BASE_URL}/notifications/preferences`, {
     method: 'PUT',
     body: JSON.stringify({ preferences }),
+  });
+}
+
+/**
+ * Cấu hình chống gửi trùng theo loại sự kiện (NCL-14-CN-003). Chỉ VT-07 — vai trò khác nhận `403`
+ * và backend tự ghi nhật ký lần từ chối (TC-03), nên màn hình luôn gọi API thật thay vì tự chặn.
+ * GET /notifications/dedup-configs
+ */
+export async function getDedupConfigs(): Promise<NotificationDedupConfig[]> {
+  return requestBackend<NotificationDedupConfig[]>(`${API_BASE_URL}/notifications/dedup-configs`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * Đặt/đổi cấu hình chống gửi trùng của một loại sự kiện — backend ghi nhật ký người thực hiện,
+ * nội dung, thời điểm (TC-04). `400` nếu `cooldownHours` < 1 hoặc loại sự kiện không dùng cơ chế này.
+ * PUT /notifications/dedup-configs/{eventType}
+ */
+export async function updateDedupConfig(eventType: NotificationType, payload: NotificationDedupConfigReq): Promise<void> {
+  await requestBackend<null>(`${API_BASE_URL}/notifications/dedup-configs/${eventType}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
   });
 }

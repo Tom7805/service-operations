@@ -147,6 +147,7 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'TWO_FACTOR_SETTINGS',
       'SYSTEM_AUDIT_LOG',
       'AUDIT_LOG',
+      'NOTIFICATION_DEDUP',
     ]);
   });
 
@@ -235,6 +236,9 @@ describe('isTabVisible — tuần tự hóa lại khi vai trỏ đổi', () => {
     expect(isTabVisible('CHANGE_PASSWORD', [])).toBe(true);
     expect(isTabVisible('NOTIFICATIONS', [])).toBe(true);
     expect(isTabVisible('NOTIFICATION_PREFERENCES', [])).toBe(true);
+    // NCL-14-CN-003 TC-03: màn chống gửi trùng chỉ hiện cho Quản trị viên.
+    expect(isTabVisible('NOTIFICATION_DEDUP', ['VT-07'])).toBe(true);
+    expect(isTabVisible('NOTIFICATION_DEDUP', ['VT-02'])).toBe(false);
     expect(isTabVisible('CHANGE_PASSWORD', ['VT-03'])).toBe(true);
   });
 
