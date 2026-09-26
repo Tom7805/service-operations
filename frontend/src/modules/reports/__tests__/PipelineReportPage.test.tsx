@@ -56,11 +56,13 @@ describe('PipelineReportPage Component (NCL-03-CN-007)', () => {
       });
     });
 
-    it('từ chối vai trò khác và không gọi API báo cáo', () => {
+    it('từ chối vai trò khác; chỉ gửi request để máy chủ ghi nhật ký lần từ chối', async () => {
       render(<PipelineReportPage currentUserRoles={['VT-03']} />);
 
       expect(screen.getByTestId('pipeline-report-access-denied')).toBeInTheDocument();
-      expect(reportsApi.getPipelineReport).not.toHaveBeenCalled();
+      // TC-03: request thật để máy chủ từ chối (403) và ghi nhật ký; màn hình không hiện dữ liệu.
+      await waitFor(() => expect(reportsApi.getPipelineReport).toHaveBeenCalledTimes(1));
+      expect(screen.queryByText('Báo cáo đường ống bán hàng theo giai đoạn')).toBeNull();
     });
   });
 

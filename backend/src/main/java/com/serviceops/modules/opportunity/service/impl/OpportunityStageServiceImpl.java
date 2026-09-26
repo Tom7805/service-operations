@@ -2,6 +2,8 @@ package com.serviceops.modules.opportunity.service.impl;
 
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
+import com.serviceops.modules.customer.entity.Customer;
+import com.serviceops.modules.customer.repository.CustomerRepository;
 import com.serviceops.modules.opportunity.dto.request.OpportunityCloseReq;
 import com.serviceops.modules.opportunity.dto.request.StageChangeReq;
 import com.serviceops.modules.opportunity.dto.response.OpportunityRes;
@@ -25,9 +27,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -36,15 +36,16 @@ import java.util.List;
  * <p>Kiem soat chuyen giai doan ({@link #changeStage}): (TC-01) cap nhat xac suat tuong
  * ung giai doan moi; (TC-02) chuyen theo dung thu tu (QTN-06), tu choi neu nhay coc va
  * neu giai doan hop le ke tiep; (TC-03) khong cho mo lai co hoi da dong (CLOSED); (TC-05)
- * ghi lich su moi lan chuyen. Tu choi thang gia tri dich WON/LOST — chot ket qua thang/thua
- * chi duoc phep qua {@link #closeOpportunity}, de khong the bo qua buoc bat buoc ly do khi
- * thua (QTN-06).</p>
+ * ghi lich su chuyen giai doan va nhat ky co hoi. Tu choi thang gia tri dich WON/LOST — chot
+ * ket qua chi duoc phep qua {@link #closeOpportunity}, de khong the bo qua buoc bat buoc ly
+ * do khi thua.</p>
  *
- * <p>Kiem soat dong co hoi voi ket qua thang/thua ({@link #closeOpportunity}): dung
- * chung co che thu tu giai doan noi tren (chi tu NEGOTIATION moi duoc chot sang
- * WON/LOST) — dieu kien bat dau cua NCL-03-CN-005 la co hoi dang o giai doan dam
- * phan; ket qua LOST bat buoc phai co ly do (TC-02); moi lan dong deu duoc ghi lich
- * su chuyen giai doan va ghi nhat ky rieng {@code CLOSE_WON}/{@code CLOSE_LOST} (TC-04).</p>
+ * <p>Ghi nhan ket qua ({@link #closeOpportunity}): THANG chi tu giai doan dam phan; THUA
+ * tu bat ky giai doan dang mo nao (QTN-06: "giai doan dich la lien ke hoac la thua"), bat
+ * buoc co ly do (TC-02). Moi lan dong deu ghi lich su giai doan va nhat ky rieng
+ * {@code CLOSE_WON}/{@code CLOSE_LOST} (TC-04).</p>
+ *
+ * <p>Moi thao tac tren mot co hoi cu the deu kiem tra pham vi du lieu (QTN-01).</p>
  */
 @Slf4j
 @Service
@@ -58,13 +59,12 @@ public class OpportunityStageServiceImpl implements OpportunityStageService {
 	private final OpportunityMapper opportunityMapper;
 	private final CurrentUserScopeProvider currentUserScopeProvider;
 	private final OpportunityAuditLogger auditLogger;
+	private final OpportunityScopeGuard scopeGuard;
+	private final CustomerRepository customerRepository;
 
 	@Override
 	public OpportunityRes changeStage(StageChangeReq request) {
-		Opportunity opportunity = opportunityRepository.findById(request.opportunityId())
-				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
-						"Khong tim thay co hoi voi id=" + request.opportunityId()));
-
+		Opportunity opportunity = findInScope(request.opportunityId());
 		OpportunityStage target = request.targetStage();
 
 		// TC-03: khong mo lai co hoi da dong (thang/thua).
@@ -73,10 +73,8 @@ public class OpportunityStageServiceImpl implements OpportunityStageService {
 					"Co hoi da dong (thang hoac thua) - khong the mo lai");
 		}
 
-		// Chot ket qua thang/thua phai di qua closeOpportunity() - day la API duy nhat
-		// bat buoc ly do khi LOST (QTN-06, NCL-03-CN-005 TC-02) va ghi nhat ky rieng
-		// CLOSE_WON/CLOSE_LOST (TC-04). Cho phep WON/LOST o day se lam mat hoan toan
-		// buoc bat buoc ly do, nen tu choi thang tai day thay vi de lot qua im lang.
+		// Chot ket qua thang/thua phai di qua closeOpportunity() - API duy nhat bat buoc ly do
+		// khi LOST (NCL-03-CN-005 TC-02) va ghi nhat ky rieng CLOSE_WON/CLOSE_LOST (TC-04).
 		if (target == OpportunityStage.WON || target == OpportunityStage.LOST) {
 			throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR,
 					"Khong the chot ket qua Thang/Thua qua chuc nang chuyen giai doan."
@@ -84,10 +82,14 @@ public class OpportunityStageServiceImpl implements OpportunityStageService {
 		}
 
 		OpportunityStage current = opportunity.getStage();
+		if (current == target) {
+			throw new BusinessRuleException(ErrorCode.INVALID_STATE,
+					"Co hoi da o giai doan " + current + " - khong co gi de chuyen");
+		}
 
-		// TC-02: chuyen theo dung thu tu (QTN-06), tu choi neu nhay coc / lui / khong hop le.
+		// TC-02: chuyen theo dung thu tu (QTN-06), tu choi neu nhay coc / lui.
 		if (!stageTransitionValidator.canTransition(current, target)) {
-			String next = nextStageName(current);
+			OpportunityStage next = stageTransitionValidator.nextActiveStage(current);
 			throw new BusinessRuleException(ErrorCode.INVALID_STATE,
 					"Giai doan khong hop le. Giai doan hien tai: " + current
 							+ (next == null ? "" : " — giai doan hop le ke tiep: " + next)
@@ -96,40 +98,37 @@ public class OpportunityStageServiceImpl implements OpportunityStageService {
 
 		// TC-01: cap nhat xac suat tuong ung.
 		opportunity.setStage(target);
-		opportunity.setProbability(probabilityFor(target));
+		opportunity.setProbability(stageTransitionValidator.probabilityFor(target));
 		opportunityRepository.save(opportunity);
 
-		// TC-05: ghi lich su chuyen giai doan.
+		// TC-05: ghi lich su chuyen giai doan va nhat ky co hoi.
 		recordHistory(opportunity.getId(), current, target);
+		auditLogger.recordStageChange(opportunity.getId(),
+				"Chuyen giai doan " + current + " -> " + target
+						+ " (xac suat " + opportunity.getProbability().stripTrailingZeros().toPlainString() + "%)");
 
 		log.info("OPPORTUNITY_STAGE_CHANGED id={} {} -> {} by={}",
 				opportunity.getId(), current, target, currentUserScopeProvider.currentUserId());
 
-		return opportunityMapper.toResponse(opportunity, null);
+		// Vua vao giai doan moi nen so ngay o giai doan = 0.
+		return opportunityMapper.toResponse(opportunity, customerName(opportunity), 0L);
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public List<StageHistoryRes> history(Long opportunityId) {
-		if (!opportunityRepository.existsById(opportunityId)) {
-			throw new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
-					"Khong tim thay co hoi voi id=" + opportunityId);
-		}
-		List<StageHistoryRes> result = new ArrayList<>();
-		for (OpportunityStageHistory h : stageHistoryRepository.findByOpportunityIdOrderByChangedAtDesc(opportunityId)) {
-			result.add(new StageHistoryRes(h.getId(), h.getOpportunityId(),
-					h.getFromStage() == null ? null : h.getFromStage().name(),
-					h.getToStage().name(),
-					h.getChangedByUsername(), h.getChangedAt()));
-		}
-		return result;
+		findInScope(opportunityId);
+		return stageHistoryRepository.findByOpportunityIdOrderByChangedAtDesc(opportunityId).stream()
+				.map(h -> new StageHistoryRes(h.getId(), h.getOpportunityId(),
+						h.getFromStage() == null ? null : h.getFromStage().name(),
+						h.getToStage().name(),
+						h.getChangedByUsername(), h.getChangedAt()))
+				.toList();
 	}
 
 	@Override
 	public OpportunityRes closeOpportunity(Long opportunityId, OpportunityCloseReq request) {
-		Opportunity opportunity = opportunityRepository.findById(opportunityId)
-				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
-						"Khong tim thay co hoi voi id=" + opportunityId));
+		Opportunity opportunity = findInScope(opportunityId);
 
 		OpportunityStage result = request.result();
 		// Ket qua dong co hoi chi co the la WON hoac LOST (khong the "dong" o giai doan trung gian).
@@ -152,43 +151,59 @@ public class OpportunityStageServiceImpl implements OpportunityStageService {
 
 		OpportunityStage current = opportunity.getStage();
 
-		// Dieu kien bat dau cua NCL-03-CN-005: chi duoc ghi nhan ket qua khi co hoi dang
-		// o giai doan dam phan (NEGOTIATION) — StageTransitionValidator (QTN-06) chi cho
-		// phep WON/LOST tiep noi tu NEGOTIATION nen tai su dung dung luat nay.
+		// QTN-06: THANG chi tu giai doan dam phan; THUA duoc chot tu moi giai doan dang mo.
 		if (!stageTransitionValidator.canTransition(current, result)) {
 			throw new BusinessRuleException(ErrorCode.INVALID_STATE,
-					"Chi duoc ghi nhan ket qua thang/thua khi co hoi dang o giai doan dam phan (NEGOTIATION)."
+					"Chi duoc ghi nhan ket qua THANG khi co hoi dang o giai doan dam phan (NEGOTIATION)."
 							+ " Giai doan hien tai: " + current);
 		}
 
 		opportunity.setStage(result);
 		opportunity.setStatus(OpportunityStatus.CLOSED);
-		opportunity.setProbability(probabilityFor(result));
+		opportunity.setProbability(stageTransitionValidator.probabilityFor(result));
 		opportunity.setLossReason(result == OpportunityStage.LOST ? request.lossReason() : null);
 		opportunity.setCloseReasonDetail(trimToNull(request.reasonDetail()));
 		opportunity.setCompetitorName(trimToNull(request.competitorName()));
 		opportunity.setClosedAt(LocalDateTime.now());
 		opportunityRepository.save(opportunity);
 
-		// Dung chung nhat ky chuyen giai doan voi changeStage (van thay doi tu NEGOTIATION -> WON/LOST).
+		// Dung chung lich su chuyen giai doan voi changeStage.
 		recordHistory(opportunity.getId(), current, result);
 
 		// TC-04: ghi nhat ky rieng cho ket qua dong co hoi, kem ly do/doi thu de phuc vu bao cao.
 		auditLogger.recordClose(opportunity.getId(),
 				result == OpportunityStage.WON ? OpportunityAuditAction.CLOSE_WON : OpportunityAuditAction.CLOSE_LOST,
-				closeAuditDetail(result, opportunity.getLossReason(), opportunity.getCompetitorName()));
+				closeAuditDetail(result, current, opportunity.getLossReason(), opportunity.getCompetitorName()));
 
 		log.info("OPPORTUNITY_CLOSED id={} result={} lossReason={} by={}",
 				opportunity.getId(), result, opportunity.getLossReason(), currentUserScopeProvider.currentUserId());
 
-		return opportunityMapper.toResponse(opportunity, null);
+		return opportunityMapper.toResponse(opportunity, customerName(opportunity));
 	}
 
-	private String closeAuditDetail(OpportunityStage result, LossReason lossReason, String competitorName) {
+	/** QTN-01: tim co hoi va chan neu nam ngoai pham vi du lieu cua nguoi thao tac. */
+	private Opportunity findInScope(Long opportunityId) {
+		Opportunity opportunity = opportunityRepository.findById(opportunityId)
+				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
+						"Khong tim thay co hoi voi id=" + opportunityId));
+		scopeGuard.requireInScope(opportunity);
+		return opportunity;
+	}
+
+	private String customerName(Opportunity opportunity) {
+		if (opportunity.getCustomerId() == null) {
+			return null;
+		}
+		return customerRepository.findById(opportunity.getCustomerId()).map(Customer::getName).orElse(null);
+	}
+
+	private String closeAuditDetail(OpportunityStage result, OpportunityStage from, LossReason lossReason,
+			String competitorName) {
 		if (result == OpportunityStage.WON) {
 			return "Dong co hoi voi ket qua THANG";
 		}
-		StringBuilder detail = new StringBuilder("Dong co hoi voi ket qua THUA - ly do: ").append(lossReason);
+		StringBuilder detail = new StringBuilder("Dong co hoi voi ket qua THUA tu giai doan ").append(from)
+				.append(" - ly do: ").append(lossReason);
 		if (competitorName != null) {
 			detail.append("; doi thu: ").append(competitorName);
 		}
@@ -212,25 +227,6 @@ public class OpportunityStageServiceImpl implements OpportunityStageService {
 		history.setChangedByUsername(currentUsername());
 		history.setChangedAt(LocalDateTime.now());
 		stageHistoryRepository.save(history);
-	}
-
-	/** Giai doan ke tiep hop le cua {@code current} trong thu tu (dung cho thong bao TC-02). */
-	private String nextStageName(OpportunityStage current) {
-		OpportunityStage[] stages = OpportunityStage.values();
-		int idx = java.util.Arrays.asList(stages).indexOf(current);
-		return (idx >= 0 && idx + 1 < stages.length) ? stages[idx + 1].name() : null;
-	}
-
-	/** Xac suat tuong ung (TC-01) theo tu giai doan. */
-	private BigDecimal probabilityFor(OpportunityStage stage) {
-		switch (stage) {
-			case APPROACH:    return new BigDecimal("10");
-			case PROPOSAL:    return new BigDecimal("40");
-			case NEGOTIATION: return new BigDecimal("70");
-			case WON:         return new BigDecimal("100");
-			case LOST:        return BigDecimal.ZERO;
-			default:          return new BigDecimal("20");
-		}
 	}
 
 	private String currentUsername() {

@@ -11,6 +11,11 @@ import com.serviceops.modules.opportunity.repository.OpportunityRepository;
 import com.serviceops.modules.opportunity.repository.OpportunityStageHistoryRepository;
 import com.serviceops.modules.opportunity.service.impl.OpportunityStageDurationCalculator;
 import com.serviceops.modules.opportunity.service.impl.SalesPipelineReportServiceImpl;
+import com.serviceops.modules.opportunity.service.impl.OpportunityScopeGuard;
+import com.serviceops.modules.opportunity.validator.StageTransitionValidator;
+import com.serviceops.modules.identity.user.repository.UserRepository;
+import com.serviceops.security.scope.CurrentUserScopeProvider;
+import com.serviceops.security.scope.UserScope;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -53,13 +58,21 @@ class SalesPipelineReportServiceTest {
 	@Mock
 	private OpportunityAuditLogger auditLogger;
 
+	@Mock
+	private CurrentUserScopeProvider currentUserScopeProvider;
+
+	@Mock
+	private UserRepository userRepository;
+
 	private SalesPipelineReportServiceImpl service;
 
 	@BeforeEach
 	void setUp() {
 		OpportunityStageDurationCalculator stageDurationCalculator =
 				new OpportunityStageDurationCalculator(stageHistoryRepository);
-		service = new SalesPipelineReportServiceImpl(opportunityRepository, stageDurationCalculator, auditLogger);
+		service = new SalesPipelineReportServiceImpl(opportunityRepository, stageDurationCalculator, auditLogger,
+				new OpportunityScopeGuard(currentUserScopeProvider, userRepository), new StageTransitionValidator());
+		org.mockito.Mockito.lenient().when(currentUserScopeProvider.currentScope()).thenReturn(UserScope.company());
 		when(stageHistoryRepository.findAllByOrderByChangedAtDesc()).thenReturn(List.of());
 	}
 
@@ -80,7 +93,7 @@ class SalesPipelineReportServiceTest {
 		assertThat(report.totalExpectedValue()).isEqualByComparingTo("1150000000");
 		assertThat(report.stalledThresholdDays()).isEqualTo(60);
 		assertThat(report.stages()).extracting(PipelineStageRes::stage)
-				.containsExactly("APPROACH", "PROPOSAL", "NEGOTIATION", "WON", "LOST");
+				.containsExactly("APPROACH", "SURVEY", "PROPOSAL", "NEGOTIATION", "WON", "LOST");
 
 		Map<String, PipelineStageRes> byStage = report.stages().stream()
 				.collect(Collectors.toMap(PipelineStageRes::stage, Function.identity()));

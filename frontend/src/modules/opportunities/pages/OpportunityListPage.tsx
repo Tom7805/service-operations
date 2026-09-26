@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import type { Opportunity, OpportunityStage, QuoteRes } from '../types/opportunityTypes';
-import { STAGE_CONFIGS, LOSS_REASON_OPTIONS } from '../types/opportunityTypes';
+import { STAGE_CONFIGS, LOSS_REASON_OPTIONS, ALL_STAGES_ORDER } from '../types/opportunityTypes';
 import { fetchOpportunities, OpportunityApiError } from '../api/opportunitiesApi';
 import OpportunityFormModal from '../components/OpportunityFormModal';
 import StageTransitionControl from '../components/StageTransitionControl';
@@ -65,7 +65,8 @@ export default function OpportunityListPage({
     });
   };
 
-  // Lập báo giá cho cơ hội (NCL-03-CN-003) — chưa có API GET nên lưu tạm theo phiên
+  // Báo giá (NCL-03-CN-003): QuoteBuilder tự tải phiên bản mới nhất từ máy chủ khi mở;
+  // sessionQuotes chỉ giữ bản vừa lập để nhãn nút hiện đúng số phiên bản ngay lập tức.
   const [quoteTargetOpportunity, setQuoteTargetOpportunity] = useState<Opportunity | null>(null);
   const [sessionQuotes, setSessionQuotes] = useState<Record<number, QuoteRes>>({});
 
@@ -209,8 +210,10 @@ export default function OpportunityListPage({
     return opportunities.reduce((acc, o) => acc + (o.expectedValue || 0), 0);
   }, [opportunities]);
 
+  // QTN-07: dự báo theo xác suất chỉ cộng các cơ hội còn mở — cơ hội đã thắng/thua
+  // không còn là "dự báo" (trước đây cộng cả WON 100% làm số dự báo bị thổi phồng).
   const weightedForecastValue = useMemo(() => {
-    return opportunities.reduce((acc, o) => {
+    return opportunities.filter((o) => o.status === 'OPEN').reduce((acc, o) => {
       const prob = o.probability || 0;
       return acc + (o.expectedValue || 0) * (prob / 100);
     }, 0);
@@ -424,7 +427,7 @@ export default function OpportunityListPage({
                   <span>
                     {sessionQuotes[selectedOpportunity.id]
                       ? `Xem báo giá (v${sessionQuotes[selectedOpportunity.id].version})`
-                      : 'Lập báo giá'}
+                      : 'Báo giá'}
                   </span>
                 </button>
               )}
@@ -655,11 +658,11 @@ export default function OpportunityListPage({
             style={{ width: 'auto', minWidth: '200px' }}
           >
             <option value="ALL">Tất cả giai đoạn</option>
-            <option value="APPROACH">Tiếp cận (10%)</option>
-            <option value="PROPOSAL">Đề xuất (40%)</option>
-            <option value="NEGOTIATION">Đàm phán (70%)</option>
-            <option value="WON">Chốt thành công (100%)</option>
-            <option value="LOST">Đóng thất bại (0%)</option>
+            {ALL_STAGES_ORDER.map((stage) => (
+              <option key={stage} value={stage}>
+                {STAGE_CONFIGS[stage].shortLabel} ({STAGE_CONFIGS[stage].defaultProbability}%)
+              </option>
+            ))}
           </select>
         </div>
 
@@ -923,29 +926,24 @@ export default function OpportunityListPage({
                               </span>
                             </div>
                           ) : (
-                            isAllowed &&
-                            (opp.stage === 'NEGOTIATION' ? (
+                            isAllowed && (
+                              // QTN-06: mọi cơ hội đang mở đều ghi nhận được kết quả — Thua ở bất kỳ
+                              // giai đoạn nào, Thắng chỉ khi đang Đàm phán (modal tự khóa lựa chọn Thắng).
                               <button
                                 type="button"
                                 className="btn btn-secondary"
                                 onClick={() => openCloseModal(opp)}
                                 data-testid={`btn-close-opportunity-${opp.id}`}
+                                title={
+                                  opp.stage === 'NEGOTIATION'
+                                    ? 'Ghi nhận kết quả Thắng hoặc Thua'
+                                    : 'Chưa tới Đàm phán: chỉ ghi nhận được kết quả Thua'
+                                }
                                 style={{ fontSize: '12.5px', padding: '4px 10px', whiteSpace: 'nowrap' }}
                               >
                                 Ghi nhận kết quả
                               </button>
-                            ) : (
-                              <button
-                                type="button"
-                                className="btn btn-secondary"
-                                disabled
-                                data-testid={`btn-disabled-close-${opp.id}`}
-                                title="Cơ hội phải ở giai đoạn Đàm phán mới ghi nhận được kết quả thắng/thua"
-                                style={{ fontSize: '12.5px', padding: '4px 10px', opacity: 0.55, whiteSpace: 'nowrap' }}
-                              >
-                                Chưa thể chốt
-                              </button>
-                            ))
+                            )
                           )}
                           <button
                             type="button"

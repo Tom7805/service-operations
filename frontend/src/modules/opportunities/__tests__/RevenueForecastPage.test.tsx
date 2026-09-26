@@ -121,7 +121,7 @@ describe("RevenueForecastPage Component (NCL-03-CN-004)", () => {
       });
     });
 
-    it("từ chối truy cập (Access Denied) khi người dùng có vai trò khác như Quản lý dự án (VT-02)", () => {
+    it("từ chối truy cập (Access Denied) khi người dùng có vai trò khác như Quản lý dự án (VT-02)", async () => {
       render(
         <RevenueForecastPage
           currentUserRoles={["VT-02"]}
@@ -134,10 +134,11 @@ describe("RevenueForecastPage Component (NCL-03-CN-004)", () => {
         screen.getByText(/Bạn không có thẩm quyền truy cập màn hình này/i),
       ).toBeInTheDocument();
       expect(screen.queryByTestId("btn-refresh-forecast")).toBeNull();
-      expect(opportunitiesApi.fetchRevenueForecast).not.toHaveBeenCalled();
+      // TC-03: vẫn gửi đúng một request để máy chủ từ chối (403) và ghi nhật ký lần từ chối.
+      await waitFor(() => expect(opportunitiesApi.fetchRevenueForecast).toHaveBeenCalledTimes(1));
     });
 
-    it("từ chối truy cập khi người dùng là Quản trị viên (VT-07) không kiêm nhiệm VT-01/VT-04", () => {
+    it("từ chối truy cập khi người dùng là Quản trị viên (VT-07) không kiêm nhiệm VT-01/VT-04", async () => {
       render(
         <RevenueForecastPage
           currentUserRoles={["VT-07"]}
@@ -146,7 +147,8 @@ describe("RevenueForecastPage Component (NCL-03-CN-004)", () => {
       );
 
       expect(screen.getByTestId("forecast-access-denied")).toBeInTheDocument();
-      expect(opportunitiesApi.fetchRevenueForecast).not.toHaveBeenCalled();
+      // TC-03: vẫn gửi đúng một request để máy chủ từ chối (403) và ghi nhật ký lần từ chối.
+      await waitFor(() => expect(opportunitiesApi.fetchRevenueForecast).toHaveBeenCalledTimes(1));
     });
 
     it("từ chối truy cập khi người dùng là Nhân sự (VT-06) hoặc Chuyên môn (VT-03)", () => {

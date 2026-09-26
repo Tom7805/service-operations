@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import QuoteBuilder from '../components/QuoteBuilder';
 import * as quotesApi from '../api/quotesApi';
@@ -9,6 +9,8 @@ vi.mock('../api/quotesApi', async () => {
   return {
     ...actual,
     createOpportunityQuote: vi.fn(),
+    fetchOpportunityQuoteHistory: vi.fn(),
+    fetchCurrentBillRates: vi.fn(),
   };
 });
 
@@ -107,6 +109,67 @@ function fillDefaultQuoteRows() {
 describe('QuoteBuilder Component (NCL-03-CN-003-CV-03 & CV-05)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(quotesApi.fetchOpportunityQuoteHistory).mockResolvedValue([]);
+    vi.mocked(quotesApi.fetchCurrentBillRates).mockResolvedValue([]);
+  });
+
+  it('TC-03: mở lại cửa sổ thì hiện phiên bản mới nhất đã lập, lịch sử giữ mọi phiên bản và đánh dấu bản mới nhất', async () => {
+    const v2: QuoteRes = { ...mockSuccessQuoteRes, id: 502, version: 2, latest: true, totalAmount: 40_000_000 };
+    const v1: QuoteRes = { ...mockSuccessQuoteRes, id: 501, version: 1, latest: false };
+    vi.mocked(quotesApi.fetchOpportunityQuoteHistory).mockResolvedValue([v2, v1]);
+
+    render(
+      <QuoteBuilder
+        opportunity={mockOpportunityProposal}
+        isOpen={true}
+        onClose={vi.fn()}
+        currentUserRoles={['VT-04']}
+      />
+    );
+
+    expect(await screen.findByText(/Báo giá Phiên bản #2/i)).toBeInTheDocument();
+    expect(quotesApi.fetchOpportunityQuoteHistory).toHaveBeenCalledWith(101);
+
+    fireEvent.click(screen.getByRole('button', { name: /Lịch sử báo giá/i }));
+    const latestItem = await screen.findByTestId('quote-history-item-2');
+    expect(latestItem).toHaveTextContent(/Mới nhất/);
+    expect(screen.getByTestId('quote-history-item-1')).not.toHaveTextContent(/Mới nhất/);
+
+    // Xem lại phiên bản cũ — vẫn tra cứu được, gắn nhãn "Phiên bản cũ".
+    fireEvent.click(within(screen.getByTestId('quote-history-item-1')).getByRole('button', { name: /Xem chi tiết/i }));
+    expect(await screen.findByText(/Báo giá Phiên bản #1/i)).toBeInTheDocument();
+    expect(screen.getByTestId('quote-older-version-badge')).toBeInTheDocument();
+  });
+
+  it('TC-01: chọn chức danh theo cấp bậc từ bảng đơn giá và gửi kèm cấp bậc', async () => {
+    vi.mocked(quotesApi.fetchCurrentBillRates).mockResolvedValue([
+      { professionalRole: 'Lập trình viên', level: 'Junior', dailyRate: 1_000_000, effectiveFrom: '2026-01-01' },
+      { professionalRole: 'Lập trình viên', level: 'Senior', dailyRate: 2_000_000, effectiveFrom: '2026-01-01' },
+    ]);
+    vi.mocked(quotesApi.createOpportunityQuote).mockResolvedValueOnce(mockSuccessQuoteRes);
+
+    render(
+      <QuoteBuilder
+        opportunity={mockOpportunityProposal}
+        isOpen={true}
+        onClose={vi.fn()}
+        currentUserRoles={['VT-04']}
+      />
+    );
+
+    // Chờ danh mục đơn giá tải xong: mỗi cặp (chức danh, cấp bậc) là một lựa chọn riêng.
+    const seniorOption = await screen.findByRole('option', { name: /Senior/ });
+    const roleSelect = seniorOption.closest('select') as HTMLSelectElement;
+    expect(within(roleSelect).getAllByRole('option', { name: /Lập trình viên/ })).toHaveLength(2);
+    fireEvent.change(roleSelect, { target: { value: (seniorOption as HTMLOptionElement).value } });
+    fireEvent.change(screen.getByLabelText(/Số ngày công dòng 1/i), { target: { value: '10' } });
+    fireEvent.click(screen.getByRole('button', { name: /Lưu & Tạo báo giá/i }));
+
+    await waitFor(() => {
+      expect(quotesApi.createOpportunityQuote).toHaveBeenCalledWith(101, {
+        items: [{ professionalRole: 'Lập trình viên', level: 'Senior', workDays: 10 }],
+      });
+    });
   });
 
   it('không hiển thị khi isOpen = false', () => {
@@ -153,7 +216,7 @@ describe('QuoteBuilder Component (NCL-03-CN-003-CV-03 & CV-05)', () => {
 
     // Cảnh báo giai đoạn không hợp lệ
     expect(
-      screen.getByText(/Báo giá chỉ được phép khởi tạo khi cơ hội ở giai đoạn/i)
+      screen.getByText(/Báo giá chỉ được phép lập khi cơ hội/i)
     ).toBeInTheDocument();
 
     // Nút submit bị vô hiệu hoá

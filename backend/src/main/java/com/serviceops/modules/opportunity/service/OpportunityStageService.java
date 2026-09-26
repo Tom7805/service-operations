@@ -29,10 +29,9 @@ public interface OpportunityStageService {
 	/**
 	 * Ghi nhan ket qua thang/thua khi dong mot co hoi (NCL-03-CN-005).
 	 *
-	 * <p>Dieu kien bat dau: co hoi dang o giai doan {@code NEGOTIATION} — kiem soat
-	 * qua cung co che thu tu giai doan voi {@link #changeStage} (QTN-06): chi tu
-	 * NEGOTIATION moi duoc chot sang WON/LOST, sai giai doan hoac co hoi da dong deu
-	 * bi tu choi voi {@code INVALID_STATE}. Ket qua {@code LOST} bat buoc phai co ly
+	 * <p>Kiem soat qua cung co che thu tu giai doan voi {@link #changeStage} (QTN-06):
+	 * WON chi tu {@code NEGOTIATION}; LOST tu moi giai doan dang mo. Sai giai doan hoac
+	 * co hoi da dong deu bi tu choi voi {@code INVALID_STATE}. Ket qua {@code LOST} bat buoc phai co ly
 	 * do (TC-02) — thieu ly do bi tu choi voi {@code VALIDATION_ERROR}. Sau khi dong,
 	 * lich su chuyen giai doan van duoc ghi (giong {@link #changeStage}) va thao tac
 	 * duoc ghi nhat ky rieng {@code CLOSE_WON}/{@code CLOSE_LOST} (TC-04).</p>

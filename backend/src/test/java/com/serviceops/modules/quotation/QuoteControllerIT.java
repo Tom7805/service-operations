@@ -62,9 +62,9 @@ class QuoteControllerIT {
 	@DisplayName("Nhan vien kinh doanh (VT-04) lap bao gia thanh cong")
 	@WithMockUser(authorities = "ROLE_VT-04")
 	void allowsSalesRoleToCreateQuote() throws Exception {
-		QuoteCreateReq req = new QuoteCreateReq(List.of(new QuoteItemReq("Lap trinh vien", new BigDecimal("20"))));
-		QuoteRes res = new QuoteRes(1L, 12L, 1, new BigDecimal("100000000"),
-				List.of(new QuoteItemRes("Lap trinh vien", new BigDecimal("20"), new BigDecimal("5000000"),
+		QuoteCreateReq req = new QuoteCreateReq(List.of(new QuoteItemReq("Lap trinh vien", null, new BigDecimal("20"))));
+		QuoteRes res = new QuoteRes(1L, 12L, 1, true, new BigDecimal("100000000"),
+				List.of(new QuoteItemRes("Lap trinh vien", null, new BigDecimal("20"), new BigDecimal("5000000"),
 						new BigDecimal("100000000"), true)),
 				List.of(), "sale01", LocalDateTime.now());
 		when(quoteService.create(eq(12L), any())).thenReturn(res);
@@ -83,7 +83,7 @@ class QuoteControllerIT {
 	@DisplayName("Vai tro khong phai Nhan vien kinh doanh bi tu choi lap bao gia (403)")
 	@WithMockUser(authorities = "ROLE_VT-02")
 	void deniesOtherRoles() throws Exception {
-		QuoteCreateReq req = new QuoteCreateReq(List.of(new QuoteItemReq("Lap trinh vien", new BigDecimal("20"))));
+		QuoteCreateReq req = new QuoteCreateReq(List.of(new QuoteItemReq("Lap trinh vien", null, new BigDecimal("20"))));
 
 		mockMvc.perform(post("/opportunities/12/quotes")
 						.contentType("application/json")
@@ -109,7 +109,7 @@ class QuoteControllerIT {
 	@DisplayName("Vai tro chuyen mon de trong thi bao 400")
 	@WithMockUser(authorities = "ROLE_VT-04")
 	void rejectsBlankProfessionalRole() throws Exception {
-		QuoteCreateReq req = new QuoteCreateReq(List.of(new QuoteItemReq(" ", new BigDecimal("20"))));
+		QuoteCreateReq req = new QuoteCreateReq(List.of(new QuoteItemReq(" ", null, new BigDecimal("20"))));
 
 		mockMvc.perform(post("/opportunities/12/quotes")
 						.contentType("application/json")
@@ -122,7 +122,7 @@ class QuoteControllerIT {
 	@DisplayName("So ngay cong khong duong thi bao 400")
 	@WithMockUser(authorities = "ROLE_VT-04")
 	void rejectsNonPositiveWorkDays() throws Exception {
-		QuoteCreateReq req = new QuoteCreateReq(List.of(new QuoteItemReq("Lap trinh vien", BigDecimal.ZERO)));
+		QuoteCreateReq req = new QuoteCreateReq(List.of(new QuoteItemReq("Lap trinh vien", null, BigDecimal.ZERO)));
 
 		mockMvc.perform(post("/opportunities/12/quotes")
 						.contentType("application/json")
@@ -135,7 +135,7 @@ class QuoteControllerIT {
 	@DisplayName("Khong tim thay co hoi thi bao 404")
 	@WithMockUser(authorities = "ROLE_VT-04")
 	void returnsNotFoundWhenOpportunityMissing() throws Exception {
-		QuoteCreateReq req = new QuoteCreateReq(List.of(new QuoteItemReq("Lap trinh vien", new BigDecimal("20"))));
+		QuoteCreateReq req = new QuoteCreateReq(List.of(new QuoteItemReq("Lap trinh vien", null, new BigDecimal("20"))));
 		when(quoteService.create(eq(99L), any())).thenThrow(
 				new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Khong tim thay co hoi voi id=99"));
 
@@ -150,7 +150,7 @@ class QuoteControllerIT {
 	@DisplayName("Co hoi chua o giai doan PROPOSAL thi bao 400 INVALID_STATE")
 	@WithMockUser(authorities = "ROLE_VT-04")
 	void rejectsOpportunityOutsideProposalStage() throws Exception {
-		QuoteCreateReq req = new QuoteCreateReq(List.of(new QuoteItemReq("Lap trinh vien", new BigDecimal("20"))));
+		QuoteCreateReq req = new QuoteCreateReq(List.of(new QuoteItemReq("Lap trinh vien", null, new BigDecimal("20"))));
 		when(quoteService.create(eq(12L), any())).thenThrow(new BusinessRuleException(ErrorCode.INVALID_STATE,
 				"Chi co hoi o giai doan PROPOSAL moi duoc lap bao gia"));
 

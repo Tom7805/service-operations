@@ -77,6 +77,21 @@ public class OpportunityAuditLogger {
 		record(opportunityId, OpportunityAuditAction.CONTRACT_CREATE, detail);
 	}
 
+	/** Ghi nhat ky chuyen giai doan co hoi (NCL-03-CN-002, TC-05), cung transaction voi thay doi. */
+	public void recordStageChange(Long opportunityId, String detail) {
+		record(opportunityId, OpportunityAuditAction.STAGE_CHANGE, detail);
+	}
+
+	/** Ghi nhat ky lap phien ban bao gia (NCL-03-CN-003, TC-05), cung transaction voi bao gia. */
+	public void recordQuoteCreate(Long opportunityId, String detail) {
+		record(opportunityId, OpportunityAuditAction.QUOTE_CREATE, detail);
+	}
+
+	/** Ghi nhat ky moi lan xem bao cao du bao doanh thu (NCL-03-CN-004, TC-04). */
+	public void recordForecastView(String detail) {
+		record(null, OpportunityAuditAction.FORECAST_VIEW, detail);
+	}
+
 	private void record(Long opportunityId, OpportunityAuditAction action, String detail) {
 		OpportunityAuditLog audit = new OpportunityAuditLog();
 		audit.setOpportunityId(opportunityId);

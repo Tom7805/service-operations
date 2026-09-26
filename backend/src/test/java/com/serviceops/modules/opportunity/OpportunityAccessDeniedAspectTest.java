@@ -59,4 +59,12 @@ class OpportunityAccessDeniedAspectTest {
 		assertThatCode(() -> aspect.logDenied(joinPoint, new AccessDeniedException("Forbidden")))
 				.doesNotThrowAnyException();
 	}
+
+	@Test
+	@DisplayName("QTN-01: tu choi vi co hoi ngoai pham vi thi nhat ky ghi ro ly do pham vi")
+	void logsScopeReasonWhenOutsideScope() {
+		aspect.logDenied(joinPoint, new AccessDeniedException("Co hoi nam ngoai pham vi du lieu duoc phan quyen"));
+
+		verify(logger).logDeniedAccess(anyString(), org.mockito.ArgumentMatchers.contains("pham vi"));
+	}
 }

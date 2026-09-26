@@ -8,6 +8,7 @@ import com.serviceops.modules.opportunity.enums.OpportunityStatus;
 import com.serviceops.modules.opportunity.logging.OpportunityAuditLogger;
 import com.serviceops.modules.opportunity.repository.OpportunityRepository;
 import com.serviceops.modules.opportunity.service.SalesPipelineReportService;
+import com.serviceops.modules.opportunity.validator.StageTransitionValidator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,7 +30,7 @@ import java.util.Map;
  * neu co hoi chua tung chuyen giai doan thi tinh tu {@code createdAt}.</p>
  *
  * <p><b>TC-02</b> — co hoi con mo ({@code status = OPEN}) o mot giai doan trung gian
- * ({@code APPROACH}/{@code PROPOSAL}/{@code NEGOTIATION}) da nam qua
+ * ({@code APPROACH}/{@code SURVEY}/{@code PROPOSAL}/{@code NEGOTIATION}) da nam qua
  * {@link #STALLED_THRESHOLD_DAYS} ngay duoc danh dau "dong lau bat thuong":
  * {@code stalledCount} tang len va id cua no nam trong {@code stalledOpportunityIds}
  * de giao dien mo tang chi tiet. Giai doan ket thuc ({@code WON}/{@code LOST}) khong
@@ -53,20 +54,27 @@ public class SalesPipelineReportServiceImpl implements SalesPipelineReportServic
 	private final OpportunityRepository opportunityRepository;
 	private final OpportunityStageDurationCalculator stageDurationCalculator;
 	private final OpportunityAuditLogger auditLogger;
+	private final OpportunityScopeGuard scopeGuard;
+	private final StageTransitionValidator stageTransitionValidator;
 
 	public SalesPipelineReportServiceImpl(OpportunityRepository opportunityRepository,
 			OpportunityStageDurationCalculator stageDurationCalculator,
-			OpportunityAuditLogger auditLogger) {
+			OpportunityAuditLogger auditLogger,
+			OpportunityScopeGuard scopeGuard,
+			StageTransitionValidator stageTransitionValidator) {
 		this.opportunityRepository = opportunityRepository;
 		this.stageDurationCalculator = stageDurationCalculator;
 		this.auditLogger = auditLogger;
+		this.scopeGuard = scopeGuard;
+		this.stageTransitionValidator = stageTransitionValidator;
 	}
 
 	@Override
 	@Transactional
 	public PipelineReportRes generate() {
 		final LocalDateTime now = LocalDateTime.now();
-		final List<Opportunity> opportunities = opportunityRepository.findAll();
+		// QTN-01: chi dua vao bao cao cac co hoi thuoc pham vi du lieu cua nguoi xem.
+		final List<Opportunity> opportunities = scopeGuard.filter(opportunityRepository.findAll());
 
 		final Map<Long, Long> daysInStageByOpportunity =
 				stageDurationCalculator.daysInCurrentStageByOpportunity(opportunities, now);
@@ -124,10 +132,7 @@ public class SalesPipelineReportServiceImpl implements SalesPipelineReportServic
 			return false;
 		}
 		OpportunityStage stage = opportunity.getStage();
-		boolean intermediateStage = stage == OpportunityStage.APPROACH
-				|| stage == OpportunityStage.PROPOSAL
-				|| stage == OpportunityStage.NEGOTIATION;
-		return intermediateStage && daysInStage > STALLED_THRESHOLD_DAYS;
+		return stageTransitionValidator.isActive(stage) && daysInStage > STALLED_THRESHOLD_DAYS;
 	}
 
 	private static final class StageAccumulator {

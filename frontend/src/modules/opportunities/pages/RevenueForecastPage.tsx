@@ -122,8 +122,13 @@ export default function RevenueForecastPage({
 
   useEffect(() => {
     if (initialData) return;
+    // TC-03: vai trò không được xem vẫn gửi request thật để máy chủ từ chối (403) và ghi nhật ký.
+    if (!isAllowed) {
+      Promise.resolve().then(() => fetchRevenueForecast({})).catch(() => undefined);
+      return;
+    }
     loadForecast(appliedFilters);
-  }, [appliedFilters, loadForecast, initialData]);
+  }, [appliedFilters, loadForecast, initialData, isAllowed]);
 
   // Xử lý áp dụng bộ lọc (TC-01, TC-02)
   const handleFilterSubmit = (e: FormEvent) => {

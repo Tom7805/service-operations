@@ -510,4 +510,41 @@ class OpportunityControllerIT {
 						.content("{\"contractType\":\"FIXED_PRICE\"}"))
 				.andExpect(status().isUnauthorized());
 	}
+
+	// --- GET /opportunities/{id}: chi tiet co hoi (man hinh cham soc co hoi) ---
+
+	@Test
+	@DisplayName("Quan ly du an (VT-02) xem chi tiet co hoi trong pham vi")
+	@WithMockUser(authorities = "ROLE_VT-02")
+	void allowsViewersToGetOpportunityDetail() throws Exception {
+		when(opportunityService.get(1L)).thenReturn(new OpportunityRes(
+				1L, "Trien khai ERP", 10L, "Cong ty TNHH ABC", new BigDecimal("500000000"),
+				LocalDate.now().plusMonths(1), "SURVEY", "OPEN", new BigDecimal("25"),
+				42L, "sale01", LocalDateTime.now(), null, null, null, null, 3L, 60));
+
+		mockMvc.perform(get("/opportunities/1"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.stage").value("SURVEY"))
+				.andExpect(jsonPath("$.data.customerName").value("Cong ty TNHH ABC"));
+	}
+
+	@Test
+	@DisplayName("QTN-01: co hoi ngoai pham vi du lieu bi tu choi 403")
+	@WithMockUser(authorities = "ROLE_VT-04")
+	void deniesOpportunityOutsideScope() throws Exception {
+		when(opportunityService.get(5L)).thenThrow(
+				new org.springframework.security.access.AccessDeniedException("Co hoi nam ngoai pham vi du lieu duoc phan quyen"));
+
+		mockMvc.perform(get("/opportunities/5"))
+				.andExpect(status().isForbidden());
+
+	}
+
+	@Test
+	@DisplayName("Vai tro khong duoc xem co hoi (VT-05) bi tu choi 403")
+	@WithMockUser(authorities = "ROLE_VT-05")
+	void deniesOtherRolesForOpportunityDetail() throws Exception {
+		mockMvc.perform(get("/opportunities/1"))
+				.andExpect(status().isForbidden());
+	}
 }

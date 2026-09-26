@@ -4,8 +4,6 @@ import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.customer.entity.Customer;
 import com.serviceops.modules.customer.repository.CustomerRepository;
-import com.serviceops.modules.identity.user.entity.User;
-import com.serviceops.modules.identity.user.repository.UserRepository;
 import com.serviceops.modules.opportunity.dto.request.OpportunityCreateReq;
 import com.serviceops.modules.opportunity.dto.response.OpportunityRes;
 import com.serviceops.modules.opportunity.entity.Opportunity;
@@ -17,8 +15,6 @@ import com.serviceops.modules.opportunity.repository.OpportunityRepository;
 import com.serviceops.modules.opportunity.service.OpportunityService;
 import com.serviceops.modules.opportunity.validator.StageTransitionValidator;
 import com.serviceops.security.scope.CurrentUserScopeProvider;
-import com.serviceops.security.scope.DataScopeType;
-import com.serviceops.security.scope.UserScope;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -29,7 +25,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -47,7 +42,7 @@ public class OpportunityServiceImpl implements OpportunityService {
 
 	private final OpportunityRepository opportunityRepository;
 	private final CustomerRepository customerRepository;
-	private final UserRepository userRepository;
+	private final OpportunityScopeGuard scopeGuard;
 	private final OpportunityMapper opportunityMapper;
 	private final OpportunityAuditLogger auditLogger;
 	private final StageTransitionValidator stageTransitionValidator;
@@ -57,9 +52,8 @@ public class OpportunityServiceImpl implements OpportunityService {
 	@Override
 	@Transactional(readOnly = true)
 	public List<OpportunityRes> list() {
-		List<Opportunity> opportunities = opportunityRepository.findAllByOrderByCreatedAtDesc().stream()
-				.filter(this::inCurrentScope)
-				.toList();
+		// QTN-01: chi hien co hoi thuoc pham vi du lieu cua nguoi xem.
+		List<Opportunity> opportunities = scopeGuard.filter(opportunityRepository.findAllByOrderByCreatedAtDesc());
 		if (opportunities.isEmpty()) {
 			return List.of();
 		}
@@ -85,6 +79,21 @@ public class OpportunityServiceImpl implements OpportunityService {
 				.map(o -> opportunityMapper.toResponse(
 						o, customerNameById.get(o.getCustomerId()), daysInStageById.get(o.getId())))
 				.toList();
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public OpportunityRes get(Long opportunityId) {
+		Opportunity opportunity = opportunityRepository.findById(opportunityId)
+				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
+						"Khong tim thay co hoi voi id=" + opportunityId));
+		scopeGuard.requireInScope(opportunity);
+		String customerName = customerRepository.findById(opportunity.getCustomerId())
+				.map(Customer::getName).orElse(null);
+		Long daysInStage = stageDurationCalculator
+				.daysInCurrentStageByOpportunity(List.of(opportunity), LocalDateTime.now())
+				.get(opportunity.getId());
+		return opportunityMapper.toResponse(opportunity, customerName, daysInStage);
 	}
 
 	@Override
@@ -147,35 +156,4 @@ public class OpportunityServiceImpl implements OpportunityService {
 		return authentication == null ? null : authentication.getName();
 	}
 
-	/**
-	 * QTN-01: ap dung cho danh sach co hoi giong het CustomerServiceImpl dang lam cho
-	 * khach hang (trang "Cơ hội bán hàng" truoc day goi thang repository, khong loc
-	 * theo pham vi — moi tai khoan deu thay TOAN BO co hoi cua ca cong ty, phat hien
-	 * khi doi chieu voi trang "Khách hàng" cua sale01 chi thay 2/6 khach hang nhung
-	 * lai thay co hoi cua ca 6). COMPANY luon qua. SELF: chi hien co hoi do CHINH
-	 * nguoi xem phu trach (ownerId). DEPARTMENT: pham vi suy GIAN TIEP tu phong ban
-	 * cua chu so huu tai thoi diem goi. Co hoi khong xac dinh ownerId bi loai khoi ca
-	 * SELF lan DEPARTMENT, an toan hon la lo nham cho nguoi khong lien quan.
-	 */
-	private boolean inCurrentScope(Opportunity opportunity) {
-		UserScope scope = currentUserScopeProvider.currentScope();
-		if (scope.isCompanyWide()) {
-			return true;
-		}
-		if (opportunity.getOwnerId() == null) {
-			return false;
-		}
-		if (scope.type() == DataScopeType.SELF) {
-			return opportunity.getOwnerId().equals(currentUserScopeProvider.currentUserId());
-		}
-		if (scope.type() == DataScopeType.DEPARTMENT) {
-			Long ownerDepartmentId = ownerDepartmentId(opportunity.getOwnerId());
-			return ownerDepartmentId != null && scope.departmentIds().contains(ownerDepartmentId);
-		}
-		return false;
-	}
-
-	private Long ownerDepartmentId(Long ownerId) {
-		return userRepository.findById(ownerId).map(User::getDepartmentId).orElse(null);
-	}
 }

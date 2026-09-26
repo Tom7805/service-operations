@@ -108,6 +108,18 @@ export async function fetchOpportunities(): Promise<Opportunity[]> {
 }
 
 /**
+ * Chi tiết một cơ hội (GET /opportunities/{id}) — màn hình Ghi nhận chăm sóc dùng để
+ * lấy trạng thái, giai đoạn và khách hàng mới nhất. Cơ hội ngoài phạm vi dữ liệu
+ * bị máy chủ từ chối 403 và ghi nhật ký (QTN-01).
+ */
+export async function fetchOpportunity(opportunityId: number): Promise<Opportunity> {
+  const res = await requestBackend<{ success: boolean; data: Opportunity }>(
+    `${API_BASE_URL}/opportunities/${opportunityId}`
+  );
+  return res.data;
+}
+
+/**
  * NCL-03-CN-001: Tạo cơ hội bán hàng mới
  * Yêu cầu vai trò Nhân viên kinh doanh (VT-04).
  */

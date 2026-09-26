@@ -1721,7 +1721,7 @@ Migration `V85` chuyển bù dữ liệu của các lần gộp đã thực hi�
 Yêu cầu token của **Ban giám đốc** (`VT-01`) hoặc **Nhân viên kinh doanh** (`VT-04`).
 API chỉ tính các cơ hội có `status = OPEN` và có `expectedCloseDate`; cơ hội đã
 đóng, bao gồm cơ hội `LOST`, và cơ hội chưa có ngày dự kiến ký sẽ được loại khỏi
-dự báo (TC-02).
+dự báo (TC-02). Chỉ tính cơ hội thuộc phạm vi dữ liệu của người xem (QTN-01).
 
 #### `GET /opportunities/revenue-forecast`
 
@@ -1775,8 +1775,9 @@ dùng giá trị `0`.
 | 403 | `FORBIDDEN` | Không phải Ban giám đốc hoặc Nhân viên kinh doanh |
 | 400 | `VALIDATION_ERROR` | `from` sau `to` hoặc sai định dạng ngày |
 
-API không làm thay đổi dữ liệu cơ hội và không cần endpoint riêng để tính lại; mỗi
-lần gọi sẽ đọc stage, status, probability và expected close date hiện tại.
+API không làm thay đổi dữ liệu cơ hội và không cần endpoint riêng để tính lại; mỗi lần gọi đọc stage, status,
+probability và expected close date hiện tại. Mỗi lần xem được ghi nhật ký cơ hội `FORECAST_VIEW` (người xem, khoảng
+lọc, số tháng, tổng dự báo — TC-04); lần bị từ chối (`403`) cũng được ghi nhật ký.
 
 ---
 
@@ -1840,7 +1841,7 @@ không truyền lên được, hệ thống tự gán.
 | HTTP | `errorCode` | Khi nào xảy ra |
 |---|---|---|
 | 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
-| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh, hoặc cơ hội ngoài phạm vi dữ liệu (QTN-01) — hệ thống ghi nhật ký lần từ chối (TC-03) |
 | 400 | `VALIDATION_ERROR` | Thiếu/để trống `name`, thiếu `customerId`, hoặc `expectedValue` để trống/bằng 0/âm (TC-02) |
 | 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy hồ sơ khách hàng ứng với `customerId` (TC-01) |
 
@@ -1850,8 +1851,10 @@ không truyền lên được, hệ thống tự gán.
 - `stage`/`status` chỉ hiển thị, không có ô nhập trên form tạo — mọi cơ hội mới đều bắt đầu ở `APPROACH`/`OPEN`.
 - Mọi lần tạo và mọi lần bị từ chối truy cập đều được backend tự ghi nhật ký (TC-04) — Frontend không cần gọi
   thêm API nào để việc ghi log này xảy ra.
-- Chuyển giai đoạn cơ hội (kanban) xem mục `NCL-03-CN-002` bên dưới. Chưa có API xem danh sách/chi tiết cơ hội
-  (`GET /opportunities`, `GET /opportunities/{id}`) trong phạm vi Epic `NCL-03` hiện tại.
+- Chuyển giai đoạn cơ hội xem mục `NCL-03-CN-002` bên dưới. Danh sách cơ hội: `GET /opportunities`; chi tiết một
+  cơ hội: `GET /opportunities/{id}` (VT-01/VT-02/VT-04, cùng cấu trúc `OpportunityRes`, kèm `daysInCurrentStage`).
+  Cả hai chỉ trả cơ hội thuộc **phạm vi dữ liệu** của người xem (QTN-01: COMPANY / DEPARTMENT theo phòng ban người
+  phụ trách / SELF theo `ownerId`); mở chi tiết cơ hội ngoài phạm vi trả `403 FORBIDDEN` và được ghi nhật ký.
 
 ---
 
@@ -1868,43 +1871,47 @@ Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`) — cùng phân quy�
 
 | Trường | Kiểu | Bắt buộc | Ghi chú |
 |---|---|---|---|
-| `targetStage` | string | có | Một trong `APPROACH` · `PROPOSAL` · `NEGOTIATION` · `WON` · `LOST` |
+| `targetStage` | string | có | Một trong `APPROACH` · `SURVEY` · `PROPOSAL` · `NEGOTIATION` (chốt `WON`/`LOST` phải dùng `POST .../close`) |
 
 **Quy tắc chuyển giai đoạn (QTN-06, TC-02):**
 - Chỉ được chuyển sang giai đoạn **kế tiếp liền kề** theo đúng thứ tự
-  `APPROACH → PROPOSAL → NEGOTIATION → (WON | LOST)` — **không được nhảy cóc** (ví dụ `APPROACH` → `NEGOTIATION`
-  hoặc `APPROACH` → `WON` đều bị từ chối) và **không được chuyển lùi**.
-- Từ `NEGOTIATION` được chốt sang **`WON`** hoặc **`LOST`** — hai giai đoạn này ngang hàng nhau, không phải bước
-  nối tiếp nhau.
-- Khi giai đoạn đích là `WON` hoặc `LOST`, hệ thống tự động **đóng cơ hội** (`status` chuyển sang `CLOSED`) —
-  sau đó **không thể chuyển giai đoạn tiếp** cho cơ hội này nữa dù gọi lại API (TC-03).
+  `APPROACH (tiếp cận) → SURVEY (khảo sát) → PROPOSAL (báo giá) → NEGOTIATION (đàm phán)` — **không được nhảy
+  cóc** (ví dụ `APPROACH` → `PROPOSAL` hay `APPROACH` → `NEGOTIATION` đều bị từ chối, `message` nêu giai đoạn hợp
+  lệ kế tiếp) và **không được chuyển lùi**.
+- Kết quả cuối (`WON`/`LOST`) chỉ ghi nhận qua `POST .../close` (bắt buộc lý do khi thua): **`LOST` được chốt từ
+  mọi giai đoạn đang mở** (QTN-06: "giai đoạn đích là liền kề hoặc là thua"), **`WON` chỉ từ `NEGOTIATION`**.
+  Gửi `WON`/`LOST` vào `PATCH .../stage` bị từ chối `VALIDATION_ERROR`.
+- Cơ hội đã đóng (`status = CLOSED`) **không thể mở lại hay chuyển giai đoạn tiếp** (TC-03).
+- Mỗi lần chuyển ghi lịch sử giai đoạn (`GET .../stage-history`) và nhật ký cơ hội `STAGE_CHANGE` (TC-05).
 
 **Xác suất trúng (`probability`) được hệ thống tự cập nhật theo giai đoạn mới (TC-01), không truyền lên được:**
 
 | `stage` | `probability` |
 |---|---|
 | `APPROACH` | 10 |
+| `SURVEY` | 25 |
 | `PROPOSAL` | 40 |
 | `NEGOTIATION` | 70 |
 | `WON` | 100 |
 | `LOST` | 0 |
 
 **Response thành công — `200 OK`:** giống hệt cấu trúc `OpportunityRes` của `POST /opportunities`, với `stage`,
-`status`, `probability` đã cập nhật theo giai đoạn mới.
+`status`, `probability` đã cập nhật theo giai đoạn mới, kèm `customerName` và `daysInCurrentStage = 0`.
 
 **Response lỗi:**
 
 | HTTP | `errorCode` | Khi nào xảy ra |
 |---|---|---|
 | 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
-| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh, hoặc cơ hội ngoài phạm vi dữ liệu (QTN-01) — hệ thống ghi nhật ký lần từ chối (TC-03) |
 | 400 | `VALIDATION_ERROR` | Thiếu `targetStage` |
 | 400 | `INVALID_STATE` | Chuyển giai đoạn không hợp lệ (nhảy cóc/lùi, TC-02) hoặc cơ hội đã đóng (TC-03) — xem `message` để biết giai đoạn hợp lệ kế tiếp |
 | 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy cơ hội ứng với `opportunityId` |
 
 #### `GET /opportunities/{opportunityId}/stage-history`
 
-Lịch sử mọi lần chuyển giai đoạn của một cơ hội (TC-05), mới nhất lên đầu.
+Lịch sử mọi lần chuyển giai đoạn của một cơ hội (TC-05), mới nhất lên đầu. Chỉ đọc — cho phép VT-01 / VT-02 / VT-04
+(cùng nhóm được xem danh sách, để panel tiến trình ở chế độ chỉ xem vẫn xem được lịch sử).
 
 **Response thành công — `200 OK`:**
 ```json
@@ -1939,7 +1946,7 @@ Lịch sử mọi lần chuyển giai đoạn của một cơ hội (TC-05), m�
 | HTTP | `errorCode` | Khi nào xảy ra |
 |---|---|---|
 | 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
-| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh (hoặc với lịch sử giai đoạn: không thuộc VT-01/VT-02/VT-04), hoặc cơ hội ngoài phạm vi dữ liệu |
 | 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy cơ hội ứng với `opportunityId` |
 
 **Lưu ý cho Frontend:**
@@ -1955,15 +1962,15 @@ Lịch sử mọi lần chuyển giai đoạn của một cơ hội (TC-05), m�
 
 ### `NCL-03-CN-003` — Lập báo giá cho cơ hội
 
-Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`). Cơ hội phải đang ở giai đoạn
-`PROPOSAL`; mỗi lần lập báo giá tạo một phiên bản mới và không ghi đè phiên bản cũ.
+Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`). Cơ hội phải đang ở giai đoạn báo giá
+`PROPOSAL`; mỗi lần lập báo giá tạo một phiên bản mới và không ghi đè phiên bản cũ (TC-03).
 
 #### `POST /opportunities/{opportunityId}/quotes`
 
 ```json
 {
   "items": [
-    { "professionalRole": "Lap trinh vien cao cap", "workDays": 20 },
+    { "professionalRole": "Lap trinh vien", "level": "Cao cap", "workDays": 20 },
     { "professionalRole": "Kiem thu", "workDays": 10 }
   ]
 }
@@ -1972,13 +1979,14 @@ Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`). Cơ hội phải đ
 | Trường | Kiểu | Bắt buộc | Ghi chú |
 |---|---|---|---|
 | `items` | array | có | Ít nhất một dòng báo giá |
-| `items[].professionalRole` | string | có | Vai trò chuyên môn, không để trống |
+| `items[].professionalRole` | string | có | Vai trò chuyên môn, không để trống (tối đa 255 ký tự) |
+| `items[].level` | string | không | Cấp bậc (tối đa 100 ký tự). Có thì tra đơn giá của đúng cặp (vai trò, cấp bậc); không có thì lấy đơn giá hiệu lực gần nhất của vai trò |
 | `items[].workDays` | number | có | Số ngày công dự kiến, phải lớn hơn 0 |
 
-Backend tra đơn giá bán có `effectiveFrom <= ngày lập`, chọn bản ghi mới nhất của
-từng vai trò rồi tính `amount = workDays * dailyRate`. Vai trò chưa có đơn giá
-được trả trong `missingRates`, dòng đó có `unitRate: null`, `amount: null` và không
-được cộng vào `totalAmount` (TC-02). Đơn giá không nhận từ request.
+Backend tra đơn giá bán có `effectiveFrom <= ngày lập` (QTN-15), chọn bản ghi mới nhất rồi tính
+`amount = workDays * dailyRate`. Vai trò chưa có đơn giá được trả trong `missingRates`, dòng đó có
+`unitRate: null`, `amount: null`, `priced: false` và không được cộng vào `totalAmount` (TC-02). Đơn giá không nhận
+từ request. Danh mục (vai trò, cấp bậc, đơn giá) đang hiệu lực để dựng ô chọn: `GET /bill-rates/current`.
 
 **Response thành công — `200 OK`:**
 ```json
@@ -1989,17 +1997,27 @@ từng vai trò rồi tính `amount = workDays * dailyRate`. Vai trò chưa có 
     "id": 1,
     "opportunityId": 12,
     "version": 1,
-    "totalAmount": 150000000,
+    "latest": true,
+    "totalAmount": 100000000,
     "items": [
       {
-        "professionalRole": "Lap trinh vien cao cap",
+        "professionalRole": "Lap trinh vien",
+        "level": "Cao cap",
         "workDays": 20,
         "unitRate": 5000000,
         "amount": 100000000,
         "priced": true
+      },
+      {
+        "professionalRole": "Kiem thu",
+        "level": null,
+        "workDays": 10,
+        "unitRate": null,
+        "amount": null,
+        "priced": false
       }
     ],
-    "missingRates": [],
+    "missingRates": ["Kiem thu"],
     "createdBy": "sale01",
     "createdAt": "2026-09-03T10:00:00"
   }
@@ -2011,22 +2029,24 @@ từng vai trò rồi tính `amount = workDays * dailyRate`. Vai trò chưa có 
 | HTTP | `errorCode` | Khi nào xảy ra |
 |---|---|---|
 | 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
-| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh, hoặc cơ hội ngoài phạm vi dữ liệu — ghi nhật ký lần từ chối (TC-04) |
 | 400 | `VALIDATION_ERROR` | Không có dòng, vai trò trống hoặc số ngày công không dương |
 | 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy cơ hội |
 | 400 | `INVALID_STATE` | Cơ hội chưa ở giai đoạn `PROPOSAL` |
 
-Mọi lần lập báo giá được ghi vào nhật ký cơ hội. `version` tăng tuần tự theo từng
-cơ hội; phiên bản trước vẫn giữ nguyên để đối chiếu khi khách hàng yêu cầu giảm giá.
+Mọi lần lập báo giá được ghi nhật ký cơ hội `QUOTE_CREATE` (phiên bản, tổng tiền, vai trò thiếu đơn giá — TC-05).
+
+#### `GET /opportunities/{opportunityId}/quotes`
+
+Lịch sử mọi phiên bản báo giá của cơ hội, phiên bản mới nhất lên đầu; đúng một phần tử có `latest: true` (TC-03).
+`missingRates` được suy lại từ các dòng chưa có đơn giá nên cảnh báo TC-02 vẫn hiện khi xem lại. Cùng phân quyền
+và phạm vi dữ liệu với `POST`.
 
 **Lưu ý cho Frontend:**
-- Chưa có API xem lại các phiên bản báo giá đã lập (`GET .../quotes`) trong phạm vi Epic `NCL-03` hiện tại —
-  Frontend cần tự lưu response của lần gọi `POST` gần nhất nếu muốn hiển thị lại trong phiên làm việc.
-- Dòng nào rơi vào `missingRates` (chưa có đơn giá hiệu lực cho vai trò đó) vẫn được trả về trong `items` với
-  `unitRate`/`amount` là `null` và `priced: false` — nên hiển thị cảnh báo thay vì ẩn dòng, vì dòng đó **không**
-  được cộng vào `totalAmount`.
-- Mọi lần lập báo giá và mọi lần bị từ chối truy cập đều được backend tự ghi nhật ký — Frontend không cần gọi
-  thêm API nào để việc ghi log này xảy ra.
+- Mở cửa sổ báo giá nên gọi `GET .../quotes` để hiện ngay phiên bản mới nhất đã lập, tránh người dùng tưởng chưa
+  có báo giá và lập trùng.
+- Dòng nào rơi vào `missingRates` vẫn được trả về trong `items` với `priced: false` — nên hiển thị cảnh báo thay vì
+  ẩn dòng, vì dòng đó **không** được cộng vào `totalAmount`.
 
 ---
 
@@ -2037,9 +2057,9 @@ nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối (TC-03, dùng c
 
 #### `POST /opportunities/{opportunityId}/close`
 
-Điều kiện bắt đầu: **cơ hội phải đang ở giai đoạn đàm phán (`NEGOTIATION`)** — dùng chung luật thứ tự giai đoạn
-với `NCL-03-CN-002` (QTN-06: chỉ từ `NEGOTIATION` mới được chốt sang `WON`/`LOST`). Đây là API **chuyên dụng** để
-đóng cơ hội kèm ghi nhận lý do — khác với `PATCH .../stage` (dùng cho kéo-thả Kanban qua các giai đoạn trung
+Điều kiện: cơ hội đang mở. Theo QTN-06, **`WON` chỉ chốt được từ giai đoạn đàm phán (`NEGOTIATION`)**, còn
+**`LOST` chốt được từ mọi giai đoạn đang mở** (`APPROACH`/`SURVEY`/`PROPOSAL`/`NEGOTIATION`). Đây là API
+**chuyên dụng** để đóng cơ hội kèm ghi nhận lý do — khác với `PATCH .../stage` (chỉ dùng cho các giai đoạn trung
 gian), API này **bắt buộc** phải nhập lý do khi kết quả là thua.
 
 ```json
@@ -2053,14 +2073,14 @@ gian), API này **bắt buộc** phải nhập lý do khi kết quả là thua.
 
 | Trường | Kiểu | Bắt buộc | Ghi chú |
 |---|---|---|---|
-| `result` | string | có | Chỉ chấp nhận `WON` hoặc `LOST` — giá trị khác (`APPROACH`/`PROPOSAL`/`NEGOTIATION`) bị từ chối |
+| `result` | string | có | Chỉ chấp nhận `WON` hoặc `LOST` — giá trị khác (`APPROACH`/`SURVEY`/`PROPOSAL`/`NEGOTIATION`) bị từ chối |
 | `lossReason` | string | **có, chỉ khi `result = LOST`** | Một trong `PRICE_TOO_HIGH` · `LOST_TO_COMPETITOR` · `BUDGET_CUT` · `TIMING_NOT_RIGHT` · `REQUIREMENT_MISMATCH` · `NO_RESPONSE` · `OTHER` — để trống khi thua bị từ chối (TC-02). Bỏ qua/không lưu khi `result = WON` |
 | `reasonDetail` | string | không | Ghi chú chi tiết thêm (tối đa 500 ký tự), dùng được cho cả hai kết quả |
 | `competitorName` | string | không | Tên đối thủ cạnh tranh nếu có (tối đa 255 ký tự) |
 
 Khi đóng thành công, hệ thống tự động: cập nhật `stage` = `result`, `status` = `CLOSED`, `probability` = `100`
 (nếu `WON`) hoặc `0` (nếu `LOST`) — giống bảng xác suất ở mục `NCL-03-CN-002`; ghi thêm một bản ghi vào lịch sử
-chuyển giai đoạn (`GET .../stage-history`, `fromStage = NEGOTIATION`); và ghi nhật ký riêng `CLOSE_WON`/`CLOSE_LOST`
+chuyển giai đoạn (`GET .../stage-history`, `fromStage` = giai đoạn lúc đóng); và ghi nhật ký riêng `CLOSE_WON`/`CLOSE_LOST`
 kèm lý do/đối thủ (TC-04). Sau khi đóng, cơ hội **không thể mở lại hay đóng lần nữa** (gọi lại API này hay
 `PATCH .../stage` đều bị từ chối `INVALID_STATE`, giống `NCL-03-CN-002` TC-03).
 
@@ -2104,7 +2124,7 @@ mới (luôn có mặt trên `OpportunityRes` kể từ story này, `null` nếu
 | HTTP | `errorCode` | Khi nào xảy ra |
 |---|---|---|
 | 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
-| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh, hoặc cơ hội ngoài phạm vi dữ liệu (QTN-01) — hệ thống ghi nhật ký lần từ chối (TC-03) |
 | 400 | `VALIDATION_ERROR` | Thiếu `result`, hoặc `result` không phải `WON`/`LOST`, hoặc `result = LOST` mà thiếu `lossReason` (TC-02) |
 | 400 | `INVALID_STATE` | Cơ hội chưa ở giai đoạn `NEGOTIATION` (điều kiện bắt đầu của story), hoặc cơ hội đã đóng từ trước — không cho đóng lại |
 | 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy cơ hội ứng với `opportunityId` |
@@ -2249,6 +2269,7 @@ Không có tham số. Báo cáo là ảnh chụp **hiện tại** của toàn b�
     "generatedAt": "2026-09-04T11:20:31",
     "stages": [
       { "stage": "APPROACH",    "opportunityCount": 4, "totalExpectedValue": 700000000,  "averageDaysInStage": 18, "stalledCount": 0, "stalledOpportunityIds": [] },
+       { "stage": "SURVEY",      "opportunityCount": 2, "totalExpectedValue": 400000000,  "averageDaysInStage": 12, "stalledCount": 0, "stalledOpportunityIds": [] },
       { "stage": "PROPOSAL",    "opportunityCount": 3, "totalExpectedValue": 900000000,  "averageDaysInStage": 25, "stalledCount": 0, "stalledOpportunityIds": [] },
       { "stage": "NEGOTIATION", "opportunityCount": 2, "totalExpectedValue": 800000000,  "averageDaysInStage": 47, "stalledCount": 1, "stalledOpportunityIds": [2007] },
       { "stage": "WON",         "opportunityCount": 2, "totalExpectedValue": 600000000,  "averageDaysInStage": 5,  "stalledCount": 0, "stalledOpportunityIds": [] },
@@ -2264,7 +2285,7 @@ Không có tham số. Báo cáo là ảnh chụp **hiện tại** của toàn b�
 | `totalExpectedValue` | number | Tổng `expectedValue` của tất cả cơ hội. |
 | `stalledThresholdDays` | number | Ngưỡng (ngày) để coi một cơ hội còn mở là "đọng lâu bất thường" — hiện cố định `60` (TC-02). |
 | `generatedAt` | string (`date-time`) | Thời điểm máy chủ sinh báo cáo — cũng là mốc tính `averageDaysInStage`. |
-| `stages` | array | **Luôn đủ 5 dòng** theo đúng thứ tự `APPROACH → PROPOSAL → NEGOTIATION → WON → LOST`; giai đoạn không có cơ hội trả về các số `0` / mảng rỗng (không bị bỏ khỏi danh sách). |
+| `stages` | array | **Luôn đủ 6 dòng** theo đúng thứ tự `APPROACH → SURVEY → PROPOSAL → NEGOTIATION → WON → LOST`; giai đoạn không có cơ hội trả về các số `0` / mảng rỗng (không bị bỏ khỏi danh sách). Chỉ tính cơ hội thuộc phạm vi dữ liệu của người xem (QTN-01). |
 | `stages[].opportunityCount` | number | Số cơ hội đang ở giai đoạn đó (TC-01). |
 | `stages[].totalExpectedValue` | number | Tổng giá trị dự kiến của các cơ hội trong giai đoạn (TC-01). |
 | `stages[].averageDaysInStage` | number | Số ngày trung bình (làm tròn) mỗi cơ hội đã nằm ở giai đoạn hiện tại; `0` khi không có cơ hội. Mốc bắt đầu là lần **chuyển vào** giai đoạn hiện tại (bản ghi `opportunity_stage_history` mới nhất có `toStage` = giai đoạn hiện tại), hoặc `createdAt` nếu cơ hội chưa từng chuyển giai đoạn (TC-01). |

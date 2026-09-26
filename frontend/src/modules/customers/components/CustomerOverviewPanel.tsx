@@ -67,6 +67,7 @@ function formatDate(value: string | null): string {
 /** Nhãn tiếng Việt cho mã trạng thái backend (cơ hội, hợp đồng, dự án, hóa đơn, công nợ). */
 const STATUS_LABELS: Record<string, string> = {
   APPROACH: 'Tiếp cận',
+  SURVEY: 'Khảo sát',
   PROPOSAL: 'Báo giá',
   NEGOTIATION: 'Đàm phán',
   WON: 'Thắng',

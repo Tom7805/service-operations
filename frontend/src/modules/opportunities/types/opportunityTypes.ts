@@ -3,10 +3,12 @@
  * Tuân thủ Backend API Contract NCL-03-CN-001 & NCL-03-CN-002
  */
 
+/** Giai đoạn cơ hội theo đúng thứ tự QTN-06: tiếp cận → khảo sát → báo giá → đàm phán → thắng/thua. */
 export type OpportunityStage =
   | 'APPROACH'    // Tiếp cận (10% xác suất) - giai đoạn khởi tạo (QTN-06)
-  | 'PROPOSAL'    // Đề xuất giải pháp (40% xác suất)
-  | 'NEGOTIATION' // Đàm phán thương thảo (70% xác suất)
+  | 'SURVEY'      // Khảo sát nhu cầu (25% xác suất)
+  | 'PROPOSAL'    // Báo giá (40% xác suất) — giai đoạn được phép lập báo giá (NCL-03-CN-003)
+  | 'NEGOTIATION' // Đàm phán (70% xác suất)
   | 'WON'         // Chốt thành công (100% xác suất, đóng cơ hội)
   | 'LOST';       // Thất bại (0% xác suất, đóng cơ hội)
 
@@ -25,7 +27,7 @@ export interface Opportunity {
   expectedCloseDate?: string | null;
   stage: OpportunityStage | string;
   status: OpportunityStatus | string;
-  probability: number; // Xác suất trúng % (10, 40, 70, 100, 0)
+  probability: number; // Xác suất trúng % (10, 25, 40, 70, 100, 0)
   ownerId?: number | null;
   createdBy?: string;
   createdAt?: string;
@@ -106,12 +108,19 @@ export const STAGE_CONFIGS: Record<OpportunityStage, StageMeta> = {
     defaultProbability: 10,
     description: 'Xác định nhu cầu sơ bộ và thiết lập liên hệ với khách hàng',
   },
+  SURVEY: {
+    key: 'SURVEY',
+    label: 'Khảo sát nhu cầu',
+    shortLabel: 'Khảo sát',
+    defaultProbability: 25,
+    description: 'Khảo sát hiện trạng, phạm vi và yêu cầu chi tiết của khách hàng',
+  },
   PROPOSAL: {
     key: 'PROPOSAL',
-    label: 'Đề xuất giải pháp',
-    shortLabel: 'Đề xuất',
+    label: 'Báo giá',
+    shortLabel: 'Báo giá',
     defaultProbability: 40,
-    description: 'Trình bày giải pháp kỹ thuật, báo giá và phạm vi dịch vụ',
+    description: 'Lập và gửi báo giá theo số ngày công và bảng đơn giá đang hiệu lực',
   },
   NEGOTIATION: {
     key: 'NEGOTIATION',
@@ -136,8 +145,11 @@ export const STAGE_CONFIGS: Record<OpportunityStage, StageMeta> = {
   },
 };
 
-/** Thứ tự các giai đoạn đang hoạt động (ACTIVE) */
-export const ACTIVE_STAGES_ORDER: OpportunityStage[] = ['APPROACH', 'PROPOSAL', 'NEGOTIATION'];
+/** Thứ tự các giai đoạn đang hoạt động (ACTIVE) — QTN-06 */
+export const ACTIVE_STAGES_ORDER: OpportunityStage[] = ['APPROACH', 'SURVEY', 'PROPOSAL', 'NEGOTIATION'];
+
+/** Toàn bộ giai đoạn theo đúng thứ tự hiển thị (bộ lọc, báo cáo đường ống). */
+export const ALL_STAGES_ORDER: OpportunityStage[] = [...ACTIVE_STAGES_ORDER, 'WON', 'LOST'];
 
 /* -------------------------------------------------------------------------- */
 /*  Lập báo giá cho cơ hội (NCL-03-CN-003)                                     */
@@ -146,6 +158,8 @@ export const ACTIVE_STAGES_ORDER: OpportunityStage[] = ['APPROACH', 'PROPOSAL', 
 /** Dòng báo giá gửi lên máy chủ (POST /opportunities/{id}/quotes) */
 export interface QuoteItemReq {
   professionalRole: string;
+  /** Cấp bậc (tùy chọn) — có thì máy chủ tra đúng đơn giá của (vai trò, cấp bậc). */
+  level?: string | null;
   workDays: number;
 }
 
@@ -158,6 +172,7 @@ export interface QuoteCreateReq {
 export interface QuoteItemRes {
   id?: number;
   professionalRole: string;
+  level?: string | null;
   workDays: number;
   unitRate: number | null;
   amount: number | null;
@@ -169,6 +184,8 @@ export interface QuoteRes {
   id: number;
   opportunityId: number;
   version: number;
+  /** TC-03: true với phiên bản mới nhất của cơ hội. */
+  latest?: boolean;
   totalAmount: number;
   currency?: string;
   effectiveDate?: string;

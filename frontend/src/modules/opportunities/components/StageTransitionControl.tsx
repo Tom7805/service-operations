@@ -9,7 +9,7 @@ import {
   ACTIVE_STAGES_ORDER,
   LOSS_REASON_OPTIONS,
 } from '../types/opportunityTypes';
-import { canTransitionStage } from '../validators/opportunityValidators';
+import { canTransitionStage, getNextActiveStage } from '../validators/opportunityValidators';
 import {
   changeOpportunityStage,
   fetchOpportunityStageHistory,
@@ -42,6 +42,7 @@ export default function StageTransitionControl({
 }: StageTransitionControlProps) {
   const isAllowedRole = currentUserRoles.includes('VT-04');
   const isClosed = opportunity.status === 'CLOSED' || opportunity.stage === 'WON' || opportunity.stage === 'LOST';
+  const nextStage = isClosed ? null : getNextActiveStage(opportunity.stage);
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -281,7 +282,7 @@ export default function StageTransitionControl({
         className="stage-stepper"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
+          gridTemplateColumns: `repeat(${ACTIVE_STAGES_ORDER.length + 1}, minmax(0, 1fr))`,
           gap: '8px',
           marginBottom: '20px',
         }}
@@ -360,7 +361,7 @@ export default function StageTransitionControl({
           );
         })}
 
-        {/* Cột thứ 4: Kết quả chốt (WON / LOST) */}
+        {/* Cột cuối: Kết quả chốt (WON / LOST) */}
         <div
           style={{
             border:
@@ -435,7 +436,7 @@ export default function StageTransitionControl({
               color: 'var(--ink-muted)',
             }}
           >
-            {isClosed ? 'Đã đóng hồ sơ' : 'Chốt từ Đàm phán'}
+            {isClosed ? 'Đã đóng hồ sơ' : 'Thắng từ Đàm phán · Thua mọi lúc'}
           </div>
         </div>
       </div>
@@ -465,37 +466,38 @@ export default function StageTransitionControl({
             </span>
           ) : (
             <span>
-              Quy tắc: Chỉ được chuyển tuần tự sang bước kế tiếp liền kề, không nhảy cóc hay chuyển lùi.
+              Quy tắc QTN-06: chỉ chuyển tuần tự sang bước kế tiếp liền kề, không nhảy cóc hay chuyển lùi. Có thể đóng Thất bại ở bất kỳ bước nào; chốt Thành công chỉ từ Đàm phán.
             </span>
           )}
         </div>
 
-        {/* Nhóm nút bấm chuyển giai đoạn */}
+        {/* Nhóm nút bấm chuyển giai đoạn: bước kế tiếp liền kề (QTN-06), đóng Thất bại ở
+            mọi bước đang mở, chốt Thành công chỉ khi đang Đàm phán. */}
         {isAllowedRole && !isClosed && (
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            {opportunity.stage === 'APPROACH' && (
-              <button
-                type="button"
-                className="btn btn-primary"
-                disabled={loading}
-                onClick={() => handleTransition('PROPOSAL')}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
-              >
-                {loading ? (
-                  <span className="spinner-sm" aria-hidden="true" />
-                ) : (
-                  <span className="icon-sm">{ICONS.arrowRight}</span>
-                )}
-                <span>Chuyển sang Đề xuất (40%)</span>
-              </button>
-            )}
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={loading}
+              onClick={() => onRequestClose?.('LOST')}
+              style={{
+                color: 'var(--pale-red-fg)',
+                borderColor: 'rgba(159, 47, 45, 0.3)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <span className="icon-sm">{ICONS.close}</span>
+              <span>Đóng Thất bại</span>
+            </button>
 
-            {opportunity.stage === 'PROPOSAL' && (
+            {nextStage && (
               <button
                 type="button"
                 className="btn btn-primary"
                 disabled={loading}
-                onClick={() => handleTransition('NEGOTIATION')}
+                onClick={() => handleTransition(nextStage)}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
               >
                 {loading ? (
@@ -503,46 +505,23 @@ export default function StageTransitionControl({
                 ) : (
                   <span className="icon-sm">{ICONS.arrowRight}</span>
                 )}
-                <span>Chuyển sang Đàm phán (70%)</span>
+                <span>
+                  Chuyển sang {STAGE_CONFIGS[nextStage].shortLabel} ({STAGE_CONFIGS[nextStage].defaultProbability}%)
+                </span>
               </button>
             )}
 
             {opportunity.stage === 'NEGOTIATION' && (
-              <>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  disabled={loading}
-                  onClick={() => onRequestClose?.('LOST')}
-                  style={{
-                    color: 'var(--pale-red-fg)',
-                    borderColor: 'rgba(159, 47, 45, 0.3)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <span className="icon-sm">{ICONS.close}</span>
-                  <span>Đóng Thất bại (Lost)</span>
-                </button>
-
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  disabled={loading}
-                  onClick={() => onRequestClose?.('WON')}
-                  style={{
-                    background: '#1F6C9F',
-                    borderColor: '#1F6C9F',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <span className="icon-sm">{ICONS.checkCircle}</span>
-                  <span>Chốt Thành công (Won)</span>
-                </button>
-              </>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={loading}
+                onClick={() => onRequestClose?.('WON')}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <span className="icon-sm">{ICONS.checkCircle}</span>
+                <span>Chốt Thành công</span>
+              </button>
             )}
           </div>
         )}

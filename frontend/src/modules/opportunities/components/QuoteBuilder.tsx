@@ -26,6 +26,11 @@ import { useBackdropClick } from '../../../hooks/useBackdropClick';
 /** Giá trị đặc biệt của ô chọn chức danh khi người dùng muốn tự gõ tay thay vì chọn từ danh mục có sẵn. */
 const MANUAL_ROLE_ENTRY = '__manual__';
 
+/** Khóa duy nhất của một dòng đơn giá: bảng đơn giá khai báo theo (vai trò, cấp bậc) — NCL-07-CN-001. */
+function rateKey(role: string, level?: string | null): string {
+  return `${role}::${level ?? ''}`;
+}
+
 interface QuoteBuilderProps {
   opportunity: Opportunity;
   isOpen: boolean;
@@ -73,9 +78,32 @@ export default function QuoteBuilder({
     };
   }, [isOpen]);
 
-  // Kết quả báo giá vừa tạo hoặc truyền sẵn
+  // Kết quả báo giá đang xem: bản vừa tạo, bản truyền sẵn, hoặc bản chọn từ lịch sử
   const [latestQuote, setLatestQuote] = useState<QuoteRes | null>(initialQuote);
   const [isEditingNewVersion, setIsEditingNewVersion] = useState(false);
+  const [loadingLatest, setLoadingLatest] = useState(false);
+
+  // TC-03: mở lại cửa sổ (kể cả sau khi tải lại trang) phải thấy phiên bản mới nhất đã lập,
+  // thay vì form trống khiến người dùng tưởng chưa có báo giá nào và lập trùng.
+  useEffect(() => {
+    if (!isOpen || initialQuote) return;
+    let cancelled = false;
+    setLoadingLatest(true);
+    fetchOpportunityQuoteHistory(opportunity.id)
+      .then((history) => {
+        if (cancelled || history.length === 0) return;
+        setLatestQuote(history.find((q) => q.latest) ?? history[0]);
+      })
+      .catch(() => {
+        // Không tải được lịch sử thì vẫn cho lập báo giá mới; máy chủ tự tăng số phiên bản.
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingLatest(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, initialQuote, opportunity.id]);
 
   const backdrop = useBackdropClick(onClose, submitting);
 
@@ -139,6 +167,19 @@ export default function QuoteBuilder({
     }
   };
 
+  /** Chọn một dòng đơn giá từ danh mục: đặt cùng lúc chức danh và cấp bậc của dòng báo giá. */
+  const handleRateSelect = (index: number, role: string, level: string | null) => {
+    setItems((prev) => prev.map((item, i) => (i === index ? { ...item, professionalRole: role, level } : item)));
+    const errorKey = `items[${index}].professionalRole`;
+    if (fieldErrors[errorKey]) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[errorKey];
+        return next;
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setServerError(null);
@@ -147,7 +188,7 @@ export default function QuoteBuilder({
     // Kiểm tra điều kiện giai đoạn bắt buộc PROPOSAL (NCL-03-CN-003)
     if (!isProposalStage) {
       setGeneralError(
-        `Cơ hội phải đang ở giai đoạn Đề xuất giải pháp để lập báo giá. Cơ hội hiện tại đang ở giai đoạn "${STAGE_CONFIGS[opportunity.stage as keyof typeof STAGE_CONFIGS]?.shortLabel ?? opportunity.stage}".`
+        `Cơ hội phải đang ở giai đoạn Báo giá để lập báo giá. Cơ hội hiện tại đang ở giai đoạn "${STAGE_CONFIGS[opportunity.stage as keyof typeof STAGE_CONFIGS]?.shortLabel ?? opportunity.stage}".`
       );
       return;
     }
@@ -304,9 +345,9 @@ export default function QuoteBuilder({
             >
               <span style={{ flexShrink: 0, marginTop: '2px' }}>{ICONS.alertTriangle}</span>
               <div>
-                <strong>Quy định nghiệp vụ:</strong> Báo giá chỉ được phép khởi tạo khi cơ hội
-                ở giai đoạn <strong>Đề xuất giải pháp</strong>. Cơ hội hiện tại đang ở giai đoạn{' '}
-                <code>{opportunity.stage}</code>. Vui lòng chuyển giai đoạn cơ hội sang Đề xuất trước khi tạo báo giá.
+                <strong>Quy định nghiệp vụ:</strong> Báo giá chỉ được phép lập khi cơ hội
+                ở giai đoạn <strong>Báo giá</strong>. Cơ hội hiện tại đang ở giai đoạn{' '}
+                <strong>{STAGE_CONFIGS[opportunity.stage as keyof typeof STAGE_CONFIGS]?.shortLabel ?? opportunity.stage}</strong>. Bạn vẫn xem được lịch sử báo giá đã lập.
               </div>
             </div>
           )}
@@ -360,6 +401,16 @@ export default function QuoteBuilder({
           )}
 
           {/* Hiển thị kết quả báo giá vừa tạo (nếu có và không trong chế độ chỉnh sửa tạo mới) */}
+          {loadingLatest && !latestQuote && (
+            <div
+              data-testid="quote-loading-latest"
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--ink-muted)', marginBottom: '12px' }}
+            >
+              <span className="spinner-sm" aria-hidden="true" />
+              <span>Đang tải báo giá đã lập…</span>
+            </div>
+          )}
+
           {latestQuote && !isEditingNewVersion ? (
             <div>
               <div
@@ -383,22 +434,51 @@ export default function QuoteBuilder({
                   >
                     Báo giá Phiên bản #{latestQuote.version}
                   </span>
+                  {latestQuote.latest === false && (
+                    <span
+                      data-testid="quote-older-version-badge"
+                      style={{
+                        padding: '3px 10px',
+                        background: 'var(--surface-sunken)',
+                        color: 'var(--ink-muted)',
+                        borderRadius: '999px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Phiên bản cũ
+                    </span>
+                  )}
+                  {latestQuote.latest && (
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--pale-green-fg)' }}>Mới nhất</span>
+                  )}
                   <span style={{ fontSize: '13px', color: 'var(--ink-muted)' }}>
-                    Lập bởi @{latestQuote.createdBy || 'sale01'}
+                    Lập bởi {latestQuote.createdBy ? `@${latestQuote.createdBy}` : '—'}
                   </span>
                 </div>
 
-                {isProposalStage && isAllowedRole && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   <button
                     type="button"
                     className="btn btn-secondary"
-                    onClick={() => setIsEditingNewVersion(true)}
+                    onClick={handleOpenHistory}
                     style={{ fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   >
-                    <span className="icon-sm">{ICONS.plus}</span>
-                    <span>Tạo phiên bản báo giá mới</span>
+                    <span className="icon-sm">{ICONS.history}</span>
+                    <span>Lịch sử báo giá</span>
                   </button>
-                )}
+                  {isProposalStage && isAllowedRole && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => setIsEditingNewVersion(true)}
+                      style={{ fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <span className="icon-sm">{ICONS.plus}</span>
+                      <span>Tạo phiên bản báo giá mới</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Cảnh báo missingRates nếu có */}
@@ -422,8 +502,8 @@ export default function QuoteBuilder({
                     <strong>Cảnh báo chưa có đơn giá hiệu lực:</strong>
                     <p style={{ margin: '4px 0 0' }}>
                       Các vị trí sau chưa được cấu hình đơn giá bán:{' '}
-                      <strong>{latestQuote.missingRates.join(', ')}</strong>. Các dòng này được đánh dấu{' '}
-                      <code>priced: false</code> và <strong>không được cộng vào tổng tiền báo giá</strong>.
+                      <strong>{latestQuote.missingRates.join(', ')}</strong>. Các dòng này
+                      <strong>không được cộng vào tổng tiền báo giá</strong> cho tới khi kế toán khai báo đơn giá.
                     </p>
                   </div>
                 </div>
@@ -461,7 +541,10 @@ export default function QuoteBuilder({
                           {idx + 1}
                         </td>
                         <td style={{ padding: '10px 14px' }}>
-                          <div style={{ fontWeight: 600, color: 'var(--ink-strong)' }}>{item.professionalRole}</div>
+                          <div style={{ fontWeight: 600, color: 'var(--ink-strong)' }}>
+                            {item.professionalRole}
+                            {item.level ? <span style={{ fontWeight: 500, color: 'var(--ink-muted)' }}> · {item.level}</span> : null}
+                          </div>
                           {!item.priced && (
                             <span
                               style={{
@@ -608,28 +691,32 @@ export default function QuoteBuilder({
                           <td style={{ padding: '10px 12px' }}>
                             {(() => {
                               const hasBillRateOptions = billRates.length > 0;
+                              const itemKey = rateKey(item.professionalRole, item.level);
                               const isKnownRole = billRates.some(
-                                (r) => r.professionalRole === item.professionalRole
+                                (r) => rateKey(r.professionalRole, r.level) === itemKey
                               );
                               const isManual =
                                 !hasBillRateOptions || manualRoleRows.has(idx) || (item.professionalRole !== '' && !isKnownRole);
 
                               if (!isManual) {
-                                // Chế độ chọn: chỉ liệt kê chức danh ĐANG có đơn giá bán hiệu lực
-                                // trong bảng bill_rates, nên chọn xong là chắc chắn tra được đơn giá,
-                                // không còn tình trạng gõ sai tên khiến hệ thống báo "chưa có đơn giá".
+                                // Chế độ chọn: chỉ liệt kê cặp (chức danh, cấp bậc) ĐANG có đơn giá bán
+                                // hiệu lực trong bảng bill_rates, nên chọn xong là chắc chắn tra được đúng
+                                // đơn giá của cấp bậc đó, không còn tình trạng gõ sai tên.
                                 return (
                                   <>
                                     <select
                                       className={`form-input ${roleError ? 'form-input--error' : ''}`}
-                                      value={item.professionalRole}
+                                      value={item.professionalRole ? itemKey : ''}
                                       onChange={(e) => {
                                         if (e.target.value === MANUAL_ROLE_ENTRY) {
                                           setManualRoleRows((prev) => new Set(prev).add(idx));
-                                          handleItemChange(idx, 'professionalRole', '');
+                                          handleRateSelect(idx, '', null);
                                           return;
                                         }
-                                        handleItemChange(idx, 'professionalRole', e.target.value);
+                                        const picked = billRates.find(
+                                          (r) => rateKey(r.professionalRole, r.level) === e.target.value
+                                        );
+                                        if (picked) handleRateSelect(idx, picked.professionalRole, picked.level ?? null);
                                       }}
                                       disabled={submitting || !isProposalStage || !isAllowedRole}
                                       aria-label={`Vị trí / chức danh dòng ${idx + 1}`}
@@ -638,8 +725,12 @@ export default function QuoteBuilder({
                                         — Chọn chức danh có sẵn —
                                       </option>
                                       {billRates.map((rate) => (
-                                        <option key={rate.professionalRole} value={rate.professionalRole}>
-                                          {rate.professionalRole} — {formatCurrency(rate.dailyRate)}/ngày
+                                        <option
+                                          key={rateKey(rate.professionalRole, rate.level)}
+                                          value={rateKey(rate.professionalRole, rate.level)}
+                                        >
+                                          {rate.professionalRole}
+                                          {rate.level ? ` · ${rate.level}` : ''} — {formatCurrency(rate.dailyRate)}/ngày
                                         </option>
                                       ))}
                                       <option value={MANUAL_ROLE_ENTRY}>✎ Nhập chức danh khác (thủ công)…</option>
@@ -676,7 +767,7 @@ export default function QuoteBuilder({
                                           next.delete(idx);
                                           return next;
                                         });
-                                        handleItemChange(idx, 'professionalRole', '');
+                                        handleRateSelect(idx, '', null);
                                       }}
                                       disabled={submitting || !isProposalStage || !isAllowedRole}
                                     >
@@ -863,8 +954,9 @@ export default function QuoteBuilder({
                   {historyQuotes.map((quote) => (
                     <div
                       key={quote.id}
+                      data-testid={`quote-history-item-${quote.version}`}
                       style={{
-                        border: '1px solid var(--line)',
+                        border: quote.latest ? '1px solid var(--pale-green-fg)' : '1px solid var(--line)',
                         borderRadius: 'var(--radius-md)',
                         padding: '12px 14px',
                         display: 'flex',
@@ -875,23 +967,60 @@ export default function QuoteBuilder({
                       }}
                     >
                       <div>
-                        <div style={{ fontWeight: 600, color: 'var(--ink-strong)', fontSize: '13.5px' }}>
+                        <div
+                          style={{
+                            fontWeight: 600,
+                            color: 'var(--ink-strong)',
+                            fontSize: '13.5px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                          }}
+                        >
                           Phiên bản #{quote.version}
+                          {quote.latest && (
+                            <span
+                              style={{
+                                padding: '1px 8px',
+                                borderRadius: '999px',
+                                fontSize: '11.5px',
+                                background: 'var(--pale-green-bg)',
+                                color: 'var(--pale-green-fg)',
+                              }}
+                            >
+                              Mới nhất
+                            </span>
+                          )}
                         </div>
                         <div style={{ fontSize: '12.5px', color: 'var(--ink-muted)' }}>
-                          Lập bởi @{quote.createdBy || 'sale01'}
+                          Lập bởi {quote.createdBy ? `@${quote.createdBy}` : '—'}
                           {quote.createdAt && ` — ${new Date(quote.createdAt).toLocaleString('vi-VN')}`}
+                          {quote.missingRates?.length > 0 && ` · ${quote.missingRates.length} vị trí thiếu đơn giá`}
                         </div>
                       </div>
-                      <div
-                        style={{
-                          fontFamily: 'var(--font-mono, monospace)',
-                          fontWeight: 700,
-                          fontSize: '15px',
-                          color: 'var(--ink-strong)',
-                        }}
-                      >
-                        {formatCurrency(quote.totalAmount)}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span
+                          style={{
+                            fontFamily: 'var(--font-mono, monospace)',
+                            fontWeight: 700,
+                            fontSize: '15px',
+                            color: 'var(--ink-strong)',
+                          }}
+                        >
+                          {formatCurrency(quote.totalAmount)}
+                        </span>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          style={{ fontSize: '12.5px', padding: '4px 10px' }}
+                          onClick={() => {
+                            setLatestQuote(quote);
+                            setIsEditingNewVersion(false);
+                            setIsHistoryOpen(false);
+                          }}
+                        >
+                          Xem chi tiết
+                        </button>
                       </div>
                     </div>
                   ))}

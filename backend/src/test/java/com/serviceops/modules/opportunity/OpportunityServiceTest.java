@@ -13,6 +13,7 @@ import com.serviceops.modules.opportunity.enums.OpportunityStatus;
 import com.serviceops.modules.opportunity.logging.OpportunityAuditLogger;
 import com.serviceops.modules.opportunity.mapper.OpportunityMapper;
 import com.serviceops.modules.opportunity.repository.OpportunityRepository;
+import com.serviceops.modules.opportunity.service.impl.OpportunityScopeGuard;
 import com.serviceops.modules.opportunity.service.impl.OpportunityServiceImpl;
 import com.serviceops.modules.opportunity.service.impl.OpportunityStageDurationCalculator;
 import com.serviceops.modules.opportunity.validator.StageTransitionValidator;
@@ -73,7 +74,8 @@ class OpportunityServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		service = new OpportunityServiceImpl(opportunityRepository, customerRepository, userRepository,
+		service = new OpportunityServiceImpl(opportunityRepository, customerRepository,
+				new OpportunityScopeGuard(currentUserScopeProvider, userRepository),
 				opportunityMapper, auditLogger, stageTransitionValidator, currentUserScopeProvider,
 				stageDurationCalculator);
 

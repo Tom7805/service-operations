@@ -247,7 +247,7 @@ describe('Ghi nhận kết quả thắng thua của cơ hội (NCL-03-CN-005)', 
   });
 
   describe('Quy tắc QTN-06 & khóa cơ hội đã đóng (TC-04)', () => {
-    it('vô hiệu hóa nút chốt khi cơ hội không ở giai đoạn Đàm phán', () => {
+    it('QTN-06: cơ hội chưa tới Đàm phán vẫn ghi nhận được kết quả Thua, nhưng không chốt Thắng được', () => {
       render(
         <OpportunityListPage
           currentUserRoles={['VT-04']}
@@ -255,9 +255,46 @@ describe('Ghi nhận kết quả thắng thua của cơ hội (NCL-03-CN-005)', 
         />,
       );
 
-      const disabled = screen.getByTestId('btn-disabled-close-2');
-      expect(disabled).toBeDisabled();
-      expect(disabled).toHaveTextContent(/Chưa thể chốt/i);
+      fireEvent.click(screen.getByTestId('btn-close-opportunity-2'));
+
+      // Mặc định chọn Thua, nút xác nhận dùng được (chỉ còn chờ chọn lý do — TC-02).
+      expect(screen.getByTestId('lost-reason-section')).toBeInTheDocument();
+      expect(screen.queryByTestId('ineligible-stage-alert')).toBeNull();
+
+      // Chọn Thắng ở giai đoạn Báo giá thì bị chặn kèm giải thích.
+      fireEvent.click(screen.getByTestId('btn-select-won'));
+      expect(screen.getByTestId('ineligible-stage-alert')).toHaveTextContent(/Đàm phán/);
+    });
+
+    it('QTN-06: gửi kết quả Thua từ giai đoạn Báo giá lên máy chủ', async () => {
+      vi.mocked(opportunitiesApi.closeOpportunity).mockResolvedValue({
+        ...mockOpportunities[1],
+        stage: 'LOST',
+        status: 'CLOSED',
+        probability: 0,
+        lossReason: 'BUDGET_CUT',
+      });
+      const onSuccess = vi.fn();
+      render(
+        <OpportunityCloseModal
+          isOpen
+          opportunity={mockOpportunities[1]}
+          currentUserRoles={['VT-04']}
+          onClose={() => undefined}
+          onSuccess={onSuccess}
+        />,
+      );
+
+      fireEvent.change(screen.getByTestId('select-loss-reason'), { target: { value: 'BUDGET_CUT' } });
+      fireEvent.click(screen.getByTestId('btn-submit-close-opportunity'));
+
+      await waitFor(() => {
+        expect(opportunitiesApi.closeOpportunity).toHaveBeenCalledWith(2, expect.objectContaining({
+          result: 'LOST',
+          lossReason: 'BUDGET_CUT',
+        }));
+        expect(onSuccess).toHaveBeenCalled();
+      });
     });
 
     it('khóa thao tác với cơ hội đã đóng; lý do thua + đối thủ xem được qua tooltip trên hàng, đầy đủ hơn khi chọn cơ hội đó', () => {

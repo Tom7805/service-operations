@@ -80,12 +80,12 @@ describe('StageTransitionControl Component (NCL-03-CN-002 & FE-QA CV-05)', () =>
     expect(screen.getAllByText(/10% xác suất/i).length).toBeGreaterThan(0);
   });
 
-  it('TC-02: chuyển sang giai đoạn hợp lệ kế tiếp liền kề (APPROACH -> PROPOSAL)', async () => {
+  it('TC-01/TC-02: chuyển sang giai đoạn hợp lệ kế tiếp liền kề (APPROACH -> SURVEY)', async () => {
     const handleUpdated = vi.fn();
     const updatedOpp: Opportunity = {
       ...mockOpenOpportunity,
-      stage: 'PROPOSAL',
-      probability: 40,
+      stage: 'SURVEY',
+      probability: 25,
     };
     vi.mocked(opportunitiesApi.changeOpportunityStage).mockResolvedValue(updatedOpp);
 
@@ -96,13 +96,13 @@ describe('StageTransitionControl Component (NCL-03-CN-002 & FE-QA CV-05)', () =>
       />
     );
 
-    const advanceBtn = screen.getByRole('button', { name: /Chuyển sang Đề xuất \(40%\)/i });
+    const advanceBtn = screen.getByRole('button', { name: /Chuyển sang Khảo sát \(25%\)/i });
     expect(advanceBtn).toBeInTheDocument();
 
     fireEvent.click(advanceBtn);
 
     await waitFor(() => {
-      expect(opportunitiesApi.changeOpportunityStage).toHaveBeenCalledWith(1, 'PROPOSAL');
+      expect(opportunitiesApi.changeOpportunityStage).toHaveBeenCalledWith(1, 'SURVEY');
       expect(handleUpdated).toHaveBeenCalledWith(updatedOpp);
     });
   });
@@ -119,19 +119,28 @@ describe('StageTransitionControl Component (NCL-03-CN-002 & FE-QA CV-05)', () =>
       />
     );
 
-    expect(screen.getByRole('button', { name: /Chốt Thành công \(Won\)/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Đóng Thất bại \(Lost\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Chốt Thành công/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Đóng Thất bại/i })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Chốt Thành công \(Won\)/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Chốt Thành công/i }));
     expect(handleRequestClose).toHaveBeenCalledWith('WON');
 
-    fireEvent.click(screen.getByRole('button', { name: /Đóng Thất bại \(Lost\)/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Đóng Thất bại/i }));
     expect(handleRequestClose).toHaveBeenCalledWith('LOST');
 
     // Không tự gọi API đổi giai đoạn nữa — bắt buộc đi qua màn Ghi nhận kết quả
     // để đảm bảo lý do thất bại được nhập (QTN-06).
     expect(opportunitiesApi.changeOpportunityStage).not.toHaveBeenCalled();
     expect(handleUpdated).not.toHaveBeenCalled();
+  });
+
+  it('QTN-06: giai đoạn sớm được Đóng Thất bại nhưng chưa được Chốt Thành công', () => {
+    const handleRequestClose = vi.fn();
+    render(<StageTransitionControl opportunity={mockOpenOpportunity} onRequestClose={handleRequestClose} />);
+
+    expect(screen.queryByRole('button', { name: /Chốt Thành công/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Đóng Thất bại/i }));
+    expect(handleRequestClose).toHaveBeenCalledWith('LOST');
   });
 
   it('TC-03: khóa hoàn toàn chức năng chuyển giai đoạn khi cơ hội đã đóng (status = CLOSED)', () => {
@@ -164,7 +173,7 @@ describe('StageTransitionControl Component (NCL-03-CN-002 & FE-QA CV-05)', () =>
 
     render(<StageTransitionControl opportunity={mockOpenOpportunity} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Chuyển sang Đề xuất/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Chuyển sang Khảo sát/i }));
 
     await waitFor(() => {
       expect(screen.getByRole('alert')).toBeInTheDocument();

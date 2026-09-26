@@ -4,7 +4,10 @@ import ModalPortal from '../../../components/common/ModalPortal';
 import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import { closeOpportunity, OpportunityApiError } from "../api/opportunitiesApi";
 import {
+  ACTIVE_STAGES_ORDER,
   LOSS_REASON_OPTIONS,
+  STAGE_CONFIGS,
+  type OpportunityStage,
   type LossReason,
   type Opportunity,
 } from "../types/opportunityTypes";
@@ -65,9 +68,14 @@ export default function OpportunityCloseModal({
 
   if (!isOpen || !opportunity) return null;
 
-  // QTN-06 & NCL-03-CN-005: Chỉ cho phép chốt khi cơ hội đang ở giai đoạn đàm phán (NEGOTIATION) và đang mở
-  const isEligibleToClose =
-    opportunity.stage === "NEGOTIATION" && opportunity.status === "OPEN";
+  // QTN-06 & NCL-03-CN-005: cơ hội phải đang mở. Chốt THẮNG chỉ khi đang Đàm phán;
+  // chốt THUA được phép ở mọi giai đoạn đang mở ("giai đoạn đích là liền kề hoặc là thua").
+  const isOpenOpportunity =
+    opportunity.status === "OPEN" && ACTIVE_STAGES_ORDER.includes(opportunity.stage as OpportunityStage);
+  const canWin = isOpenOpportunity && opportunity.stage === "NEGOTIATION";
+  const isEligibleToClose = isOpenOpportunity && (result === "LOST" || canWin);
+  const stageLabel =
+    STAGE_CONFIGS[opportunity.stage as OpportunityStage]?.label ?? opportunity.stage;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -194,15 +202,13 @@ export default function OpportunityCloseModal({
                 <span>
                   Giai đoạn hiện tại:{" "}
                   <strong style={{ color: "var(--ink-strong)" }}>
-                    {opportunity.stage === "NEGOTIATION"
-                      ? "Thương lượng / Đàm phán (NEGOTIATION)"
-                      : opportunity.stage}
+                    {stageLabel}
                   </strong>
                 </span>
               </div>
             </div>
 
-            {/* Kiểm tra điều kiện giai đoạn bắt đầu (QTN-06) */}
+            {/* Kiểm tra điều kiện giai đoạn (QTN-06) */}
             {!isEligibleToClose && (
               <div
                 className="alert-box alert-box--danger"
@@ -211,11 +217,11 @@ export default function OpportunityCloseModal({
               >
                 <span className="alert-box__icon">{ICONS.alertTriangle}</span>
                 <div className="alert-box__content">
-                  <strong>Không thể ghi nhận kết quả:</strong> Cơ hội phải đang ở
-                  giai đoạn <strong>Thương lượng / Đàm phán (NEGOTIATION)</strong>{" "}
-                  và đang mở để chốt kết quả thắng hoặc thua.
-                  {opportunity.status === "CLOSED" &&
-                    " Cơ hội này đã đóng và không thể mở lại."}
+                  <strong>Không thể ghi nhận kết quả:</strong>{" "}
+                  {opportunity.status === "CLOSED" || !isOpenOpportunity
+                    ? "Cơ hội này đã đóng và không thể mở lại."
+                    : <>Chỉ được chốt <strong>Thành công</strong> khi cơ hội đang ở giai đoạn{" "}
+                        <strong>Đàm phán</strong>. Ở giai đoạn hiện tại chỉ có thể đóng Thất bại.</>}
                 </div>
               </div>
             )}
@@ -237,10 +243,13 @@ export default function OpportunityCloseModal({
                     setValidationErrors({});
                   }}
                   data-testid="btn-select-won"
+                  aria-pressed={result === "WON"}
+                  title={canWin ? undefined : "Chỉ chốt Thành công khi cơ hội đang ở giai đoạn Đàm phán"}
                   style={{
                     ...cardBaseStyle,
                     borderColor: result === "WON" ? "var(--pale-green-fg)" : "var(--line)",
                     background: result === "WON" ? "var(--pale-green-bg)" : "var(--surface-alt)",
+                    opacity: canWin ? 1 : 0.55,
                   }}
                 >
                   <strong
@@ -266,6 +275,7 @@ export default function OpportunityCloseModal({
                     setValidationErrors({});
                   }}
                   data-testid="btn-select-lost"
+                  aria-pressed={result === "LOST"}
                   style={{
                     ...cardBaseStyle,
                     borderColor: result === "LOST" ? "var(--pale-red-fg)" : "var(--line)",

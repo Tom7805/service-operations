@@ -3805,3 +3805,11 @@ tr.row--locked .portal-account-cell__name { color: var(--ink-muted); }
 /* Bảng dài cuộn trong khung của chính nó: hàng tiêu đề dính ở đầu khung, thao tác bên dưới luôn nằm gần. */
 .table-responsive--bounded { max-height: min(58vh, 520px); overflow: auto; overscroll-behavior: contain; }
 .table-responsive--bounded:focus-visible { outline: 2px solid var(--ink-strong); outline-offset: -2px; }
+
+/* NCL-03-CN-002: thanh tiến trình cơ hội có 5 cột (4 giai đoạn + kết quả) — màn hình hẹp
+   xếp thành 2 cột để không tràn ngang (inline style đặt số cột theo cấu hình giai đoạn). */
+@media (max-width: 720px) {
+  .stage-stepper {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}

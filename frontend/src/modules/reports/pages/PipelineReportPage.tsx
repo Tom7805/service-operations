@@ -35,7 +35,7 @@ function stageLabel(stage: string): string {
  * Màu có CHỦ ĐÍCH ngữ nghĩa thay vì tô mỗi giai đoạn một màu cầu vồng tùy
  * tiện (5 màu pastel khác nhau chỉ để phân biệt là kiểu biểu đồ mặc định của
  * AI, không mang ý nghĩa gì). Ở đây:
- *  - 3 giai đoạn còn đang xử lý (Tiếp cận → Đề xuất → Đàm phán) dùng MỘT thang
+ *  - 4 giai đoạn còn đang xử lý (Tiếp cận → Khảo sát → Báo giá → Đàm phán) dùng MỘT thang
  *    xám đậm dần — càng đi sâu vào đường ống, khối càng đậm, gợi đúng ý "cơ
  *    hội càng chắc chắn hơn" mà không cần thêm màu mới.
  *  - Chỉ 2 màu thật sự mang nghĩa: xanh lá cho kết quả THẮNG, đỏ cho kết quả
@@ -44,6 +44,7 @@ function stageLabel(stage: string): string {
  */
 const STAGE_TONE: Record<string, { bg: string; fg: string; dot: string }> = {
   APPROACH: { bg: '#F1F0EE', fg: 'var(--ink-muted)', dot: '#C9C6BF' },
+  SURVEY: { bg: '#EAE8E4', fg: 'var(--ink-soft)', dot: '#B8B4AC' },
   PROPOSAL: { bg: '#E2DFDA', fg: 'var(--ink)', dot: '#A6A29A' },
   NEGOTIATION: { bg: '#C9C5BC', fg: 'var(--ink-strong)', dot: '#7A756B' },
   WON: { bg: 'var(--pale-green-bg)', fg: 'var(--pale-green-fg)', dot: '#346538' },
@@ -98,8 +99,14 @@ export default function PipelineReportPage({
   );
 
   useEffect(() => {
+    // TC-03: vai trò không được xem vẫn gửi request thật để máy chủ từ chối (403) và ghi
+    // nhật ký lần từ chối; kết quả bị bỏ qua vì màn hình đã hiện thông báo không có quyền.
+    if (!isAllowed) {
+      Promise.resolve().then(() => getPipelineReport()).catch(() => undefined);
+      return;
+    }
     load();
-  }, [load]);
+  }, [load, isAllowed]);
 
   useEffect(() => {
     if (!isAllowed) return;

@@ -55,6 +55,16 @@ public class OpportunityController {
 		return BaseRes.ok(opportunityService.list());
 	}
 
+	/**
+	 * Chi tiet mot co hoi (man hinh cham soc co hoi). Cung nhom vai tro duoc xem danh sach;
+	 * co hoi ngoai pham vi du lieu bi tu choi 403 va ghi nhat ky (QTN-01).
+	 */
+	@GetMapping("/{opportunityId:\\d+}")
+	@PreAuthorize("hasAnyRole('VT-01', 'VT-02', 'VT-04')")
+	public BaseRes<OpportunityRes> get(@PathVariable Long opportunityId) {
+		return BaseRes.ok(opportunityService.get(opportunityId));
+	}
+
 	/** Tao co hoi ban hang moi, gan voi khach hang da co ho so (TC-01). */
 	@PostMapping
 	@PreAuthorize("hasRole('VT-04')")
@@ -73,9 +83,12 @@ public class OpportunityController {
 						request.targetStage())));
 	}
 
-	/** Lich su chuyen giai doan cua mot co hoi (NCL-03-CN-002, TC-05). */
+	/**
+	 * Lich su chuyen giai doan cua mot co hoi (NCL-03-CN-002, TC-05). Chi doc — cung nhom vai
+	 * tro duoc xem danh sach (VT-01/VT-02 xem duoc panel tien trinh o che do chi xem).
+	 */
 	@GetMapping("/{opportunityId}/stage-history")
-	@PreAuthorize("hasRole('VT-04')")
+	@PreAuthorize("hasAnyRole('VT-01', 'VT-02', 'VT-04')")
 	public BaseRes<List<StageHistoryRes>> stageHistory(@PathVariable Long opportunityId) {
 		return BaseRes.ok(opportunityStageService.history(opportunityId));
 	}
