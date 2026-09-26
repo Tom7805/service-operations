@@ -36,6 +36,15 @@ export type NotificationTargetType =
   | 'CONTRACT'
   | 'NONE';
 
+/** Mức độ của thông báo (NCL-14-CN-001) — suy ra từ `type` phía backend. */
+export type NotificationSeverity = 'CRITICAL' | 'WARNING' | 'INFO';
+
+/**
+ * Nhóm thông báo (NCL-14-CN-001) — dùng cho bộ lọc `group` của `GET /notifications`.
+ * `null` với `DAILY_DIGEST_SUMMARY` và `SECURITY_ALERT`.
+ */
+export type NotificationGroup = 'TIMESHEET' | 'EXPENSE' | 'PROJECT' | 'CONTRACT' | 'INVOICE' | 'ACCEPTANCE';
+
 /**
  * Một thông báo in-app của chính người dùng hiện tại. Khớp NotificationRes —
  * `GET /notifications` luôn chỉ trả thông báo của chính mình, không nhận `recipientId` từ client.
@@ -53,4 +62,7 @@ export interface NotificationRes {
   isRead: boolean;
   readAt: string | null;
   sentAt: string;
+  /** Bổ sung ở NCL-14-CN-001 — để tùy chọn vì dữ liệu mô phỏng cũ có thể chưa có. */
+  severity?: NotificationSeverity;
+  notificationGroup?: NotificationGroup | null;
 }

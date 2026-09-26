@@ -210,4 +210,13 @@ describe('WorkBreakdownTree Component (NCL-05-CN-002)', () => {
 
     expect(screen.getByText('Thiết kế giao diện Figma')).toBeInTheDocument();
   });
+
+  it('NCL-14-CN-001 TC-02: tô sáng công việc được mở từ thông báo', () => {
+    render(<WorkBreakdownTree projectId={1} items={mockWbsData} focusTaskId={201} />);
+
+    expect(screen.getByTestId('task-row-201')).toHaveAttribute('data-focused', 'true');
+    expect(screen.getByTestId('task-row-201')).toHaveClass('wbs-task-row--focus');
+    expect(screen.getByTestId('task-row-202')).not.toHaveAttribute('data-focused');
+    expect(screen.getByText('Mở từ thông báo')).toBeInTheDocument();
+  });
 });

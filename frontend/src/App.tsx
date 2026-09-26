@@ -55,10 +55,20 @@ import ProjectMarginPage from './modules/profitability/pages/ProjectMarginPage';
 import MarginAlertThresholdPage from './modules/profitability/pages/MarginAlertThresholdPage';
 import NotificationCenterPage from './modules/notifications/pages/NotificationCenterPage';
 import NotificationList from './modules/notifications/components/NotificationList';
-import { getNotifications, getUnreadCount, markNotificationsRead } from './modules/notifications/api/notificationsApi';
+import {
+  getNotifications,
+  getUnreadCount,
+  markAllNotificationsRead,
+  markNotificationsRead,
+  NotificationsApiError,
+  openNotification,
+} from './modules/notifications/api/notificationsApi';
 import type { NotificationRes } from './modules/notifications/types/notificationTypes';
-import { getAllProjects } from './modules/projects/api/projectsApi';
+import { resolveNotificationDestination } from './modules/notifications/utils/notificationTarget';
+import { getAllProjects, getWorkBreakdown } from './modules/projects/api/projectsApi';
 import type { ProjectRes } from './modules/projects/types/projectTypes';
+import type { WorkBreakdownRes } from './modules/projects/types/taskTypes';
+import ProjectWbsModal from './modules/projects/components/ProjectWbsModal';
 import { ICONS } from './components/common/icons';
 import CommandPalette from './components/common/CommandPalette';
 import useScrollReveal from './hooks/useScrollReveal';
@@ -84,6 +94,12 @@ function readStoredSession(): AuthSession | null {
   } catch {
     return null;
   }
+}
+
+function wbsContainsTask(items: WorkBreakdownRes[], taskId: number): boolean {
+  return items.some(
+    (wp) => (wp.tasks ?? []).some((t) => t.id === taskId) || wbsContainsTask(wp.children ?? [], taskId)
+  );
 }
 
 function getInitials(fullName: string): string {
@@ -141,7 +157,20 @@ export default function App() {
   const [notifications, setNotifications] = useState<NotificationRes[]>([]);
   const [notifLoading, setNotifLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notifOpeningId, setNotifOpeningId] = useState<number | null>(null);
   const notifRef = useRef<HTMLDivElement>(null);
+  // NCL-14-CN-001 TC-02: công việc/dự án được mở từ một thông báo — hiển thị cấu trúc công việc
+  // của dự án ngay trên màn hình hiện tại, tô sáng đúng công việc liên quan.
+  const [wbsFocus, setWbsFocus] = useState<{ project: ProjectRes | null; projectId: number; taskId: number | null } | null>(
+    null
+  );
+  const [appToast, setAppToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const appToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function showAppToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
+    if (appToastTimer.current) clearTimeout(appToastTimer.current);
+    setAppToast({ message, type });
+    appToastTimer.current = setTimeout(() => setAppToast(null), 5000);
+  }
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(
     () => localStorage.getItem('sidebarCollapsed') === '1'
   );
@@ -297,6 +326,104 @@ export default function App() {
     }
   }
 
+  async function refreshUnreadCount() {
+    try {
+      setUnreadCount(await getUnreadCount());
+    } catch {
+      // Bỏ qua — lần poll 30s kế tiếp sẽ tự đồng bộ lại.
+    }
+  }
+
+  /** Tìm dự án chứa công việc — thông báo chỉ mang id công việc (TASK_BUDGET_EXCEEDED, TIMER_AUTO_STOPPED). */
+  async function findProjectOfTask(taskId: number): Promise<ProjectRes | null> {
+    const projects = allProjects.length > 0 ? allProjects : await getAllProjects().catch(() => [] as ProjectRes[]);
+    const results = await Promise.allSettled(
+      projects.map(async (p) => (wbsContainsTask(await getWorkBreakdown(p.id), taskId) ? p : null))
+    );
+    for (const r of results) {
+      if (r.status === 'fulfilled' && r.value) return r.value;
+    }
+    return null;
+  }
+
+  /**
+   * NCL-14-CN-001 TC-02: sau khi mở một thông báo, chuyển thẳng tới bản ghi liên quan. Màn hình
+   * đích vẫn tự kiểm tra quyền qua API của chính nó; ở đây chỉ chặn sớm màn hình người dùng không thấy.
+   */
+  async function navigateToNotification(opened: NotificationRes) {
+    const dest = resolveNotificationDestination(opened);
+    const roles = session?.roles ?? [];
+    if (dest.kind === 'NONE') {
+      showAppToast('Đã đánh dấu đã đọc. Thông báo này không gắn với bản ghi cụ thể nào.', 'info');
+      return;
+    }
+    if (dest.kind === 'TAB') {
+      if (!isTabVisible(dest.tab, roles)) {
+        showAppToast(`Bạn không có quyền mở màn hình "${dest.label}" liên quan tới thông báo này.`, 'error');
+        return;
+      }
+      if (dest.recordId != null) {
+        if (dest.tab === 'INVOICE_DETAIL') setSelectedInvoiceId(dest.recordId);
+        if (dest.tab === 'ACCEPTANCE_DETAIL') setSelectedAcceptanceId(dest.recordId);
+        if (dest.tab === 'CONTRACT_DETAIL') setSelectedContractId(dest.recordId);
+        if (dest.tab === 'PROJECT_MARGIN') setSelectedProjectId(dest.recordId);
+      }
+      leavePortalHash();
+      setActiveTab(dest.tab);
+      return;
+    }
+    if (dest.kind === 'PROJECT_WBS') {
+      const project = allProjects.find((p) => p.id === dest.projectId) ?? null;
+      setWbsFocus({ project, projectId: dest.projectId, taskId: null });
+      return;
+    }
+    showAppToast('Đang tìm công việc liên quan…', 'info');
+    const project = await findProjectOfTask(dest.taskId);
+    if (!project) {
+      showAppToast(
+        `Không tìm thấy công việc #${dest.taskId} — có thể công việc đã bị xóa hoặc bạn không còn quyền xem dự án chứa nó.`,
+        'error'
+      );
+      return;
+    }
+    setAppToast(null);
+    setWbsFocus({ project, projectId: project.id, taskId: dest.taskId });
+  }
+
+  /** Bấm một thông báo trong ô chuông: mở (đánh dấu đã đọc + ghi nhật ký) rồi điều hướng. */
+  async function handleOpenNotificationFromBell(notification: NotificationRes) {
+    if (notifOpeningId != null) return;
+    setNotifOpeningId(notification.id);
+    try {
+      const opened = await openNotification(notification.id);
+      setNotifications((prev) => prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n)));
+      void refreshUnreadCount();
+      setNotifOpen(false);
+      void navigateToNotification(opened);
+    } catch (err) {
+      showAppToast(
+        err instanceof NotificationsApiError && err.statusCode === 404
+          ? 'Thông báo không còn tồn tại hoặc không thuộc về bạn.'
+          : err instanceof Error
+            ? err.message
+            : 'Không thể mở thông báo.',
+        'error'
+      );
+    } finally {
+      setNotifOpeningId(null);
+    }
+  }
+
+  async function handleMarkAllFromBell() {
+    try {
+      await markAllNotificationsRead();
+      setNotifications((prev) => (notifTab === 'UNREAD' ? [] : prev.map((n) => ({ ...n, isRead: true }))));
+      setUnreadCount(0);
+    } catch (err) {
+      showAppToast(err instanceof Error ? err.message : 'Không thể đánh dấu tất cả đã đọc.', 'error');
+    }
+  }
+
   // Quyền truy cập luôn theo vai trò thật của tài khoản đang đăng nhập (trả về từ backend lúc dang nhap),
   // khong dung bat ky co che gia lap nao o phia giao dien.
   // Dùng mảng rỗng khi chưa đăng nhập (không được `return` sớm ở đây) — các hook
@@ -428,7 +555,11 @@ export default function App() {
         <div className="app-topbar-glow" aria-hidden="true" />
         <header className="app-topbar">
           <div className="app-topbar__brand">
-            <h1 className="app-topbar__title">{portalHashRequested ? 'Cổng khách hàng' : activeNavItem?.label ?? 'Vận hành dịch vụ'}</h1>
+            <h1 className="app-topbar__title">{portalHashRequested
+                ? 'Cổng khách hàng'
+                : activeTab === 'NOTIFICATIONS'
+                  ? 'Thông báo'
+                  : activeNavItem?.label ?? 'Vận hành dịch vụ'}</h1>
           </div>
 
           <div className="app-topbar__actions">
@@ -485,6 +616,15 @@ export default function App() {
                       Chưa đọc
                     </button>
                     <span className="notif-panel__tabs-spacer" />
+                    <button
+                      type="button"
+                      className="notif-panel__mark-all"
+                      onClick={handleMarkAllFromBell}
+                      disabled={unreadCount === 0}
+                      data-testid="notif-panel-mark-all"
+                    >
+                      Đánh dấu tất cả đã đọc
+                    </button>
                   </div>
 
                   {notifLoading ? (
@@ -492,7 +632,13 @@ export default function App() {
                       <p>Đang tải…</p>
                     </div>
                   ) : (
-                    <NotificationList notifications={notifications} onMarkRead={handleMarkNotificationRead} />
+                    <NotificationList
+                      notifications={notifications}
+                      onOpen={handleOpenNotificationFromBell}
+                      onMarkRead={handleMarkNotificationRead}
+                      openingId={notifOpeningId}
+                      emptyText={notifTab === 'UNREAD' ? 'Bạn đã đọc hết thông báo' : 'Chưa có thông báo nào'}
+                    />
                   )}
 
                   <button
@@ -572,7 +718,7 @@ export default function App() {
           ) : activeTab === 'CHANGE_PASSWORD' ? (
             <ChangePasswordPage onBack={() => setActiveTab(defaultTab)} onPasswordChanged={handleLogout} />
           ) : activeTab === 'NOTIFICATIONS' ? (
-            <NotificationCenterPage />
+            <NotificationCenterPage onNavigate={navigateToNotification} onUnreadCountChange={setUnreadCount} />
           ) : activeTab === 'MY_WORK' ? (
             <MyWorkPage currentUserRoles={currentRoles} currentUserName={session.fullName} currentUserId={session.userId} />
           ) : activeTab === 'TIMESHEET_APPROVAL' ? (
@@ -1170,6 +1316,43 @@ export default function App() {
         </main>
         </div>
       </div>
+
+      {wbsFocus && (
+        <ProjectWbsModal
+          isOpen
+          onClose={() => setWbsFocus(null)}
+          projectId={wbsFocus.projectId}
+          projectCode={wbsFocus.project?.projectCode}
+          projectName={wbsFocus.project?.name}
+          currentUserRoles={currentRoles}
+          currentUserId={session.userId}
+          focusTaskId={wbsFocus.taskId}
+        />
+      )}
+
+      {appToast && (
+        <div
+          className={`toast-notification toast-notification--${appToast.type}`}
+          role="alert"
+          aria-live="polite"
+          data-testid="app-toast"
+        >
+          <div className="toast-notification__content">
+            <span className="toast-notification__icon">
+              {appToast.type === 'success' ? ICONS.checkCircle : appToast.type === 'error' ? ICONS.alertTriangle : ICONS.info}
+            </span>
+            <span className="toast-notification__text">{appToast.message}</span>
+          </div>
+          <button
+            type="button"
+            className="toast-notification__close"
+            onClick={() => setAppToast(null)}
+            aria-label="Đóng thông báo"
+          >
+            <span className="icon-sm">{ICONS.close}</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

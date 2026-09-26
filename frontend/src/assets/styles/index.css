@@ -3813,3 +3813,121 @@ tr.row--locked .portal-account-cell__name { color: var(--ink-muted); }
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
+
+/* ==========================================================================
+   NCL-14-CN-001 — Trung tâm thông báo: mức độ, dấu chưa đọc, lọc nhóm
+   ========================================================================== */
+.notif-panel { width: min(400px, calc(100vw - 24px)); }
+.notif-panel__mark-all {
+  border: none; background: none; padding: 0 0 12px; cursor: pointer;
+  font-size: 12.5px; font-weight: 500; color: var(--ink-muted);
+}
+.notif-panel__mark-all:hover:not(:disabled) { color: var(--ink-strong); text-decoration: underline; }
+.notif-panel__mark-all:disabled { opacity: .45; cursor: default; }
+
+ul.notif-panel__list { list-style: none; margin: 0; padding: 0; }
+
+.notif-row {
+  position: relative; display: flex; align-items: stretch;
+  border-top: 1px solid #F1F0EE; border-left: 3px solid transparent;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.notif-row:hover { background: #F9F9F8; }
+.notif-row--unread { background: #FBFBFA; }
+.notif-row--unread.notif-row--critical { border-left-color: var(--pale-red-fg); }
+.notif-row--unread.notif-row--warning { border-left-color: var(--pale-yellow-fg); }
+.notif-row--unread.notif-row--info { border-left-color: var(--pale-gray-fg); }
+
+.notif-row__main {
+  flex: 1; min-width: 0; display: flex; align-items: flex-start; gap: 12px;
+  padding: 13px 14px 13px 13px; border: none; background: none; text-align: left;
+  cursor: pointer; color: inherit; font: inherit;
+}
+.notif-row__main:disabled { cursor: progress; opacity: .7; }
+.notif-row__main:focus-visible { outline: 2px solid var(--ink-strong); outline-offset: -2px; border-radius: var(--radius-sm); }
+
+.notif-row__icon {
+  width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--pale-gray-bg); color: var(--pale-gray-fg);
+}
+.notif-row__icon svg { width: 16px; height: 16px; }
+.notif-row__icon--critical { background: var(--pale-red-bg); color: var(--pale-red-fg); }
+.notif-row__icon--warning { background: var(--pale-yellow-bg); color: var(--pale-yellow-fg); }
+
+.notif-row__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.notif-row__title-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.notif-row__title { font-size: 14.5px; font-weight: 500; color: var(--ink-muted); }
+.notif-row--unread .notif-row__title { font-weight: 700; color: var(--ink-strong); }
+.notif-row__content { font-size: 13.5px; color: #6B6A67; overflow-wrap: anywhere; }
+.notif-row__meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 3px; font-size: 12.5px; color: #6B6A67; }
+.notif-row__goto { display: inline-flex; align-items: center; gap: 4px; font-weight: 500; color: var(--ink-strong); }
+.notif-row__goto svg { width: 12px; height: 12px; }
+.notif-row__dot {
+  width: 9px; height: 9px; border-radius: 50%; background: var(--pale-red-fg);
+  flex-shrink: 0; margin-top: 6px;
+}
+.notif-row__mark {
+  align-self: center; margin-right: 10px; width: 30px; height: 30px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line); border-radius: 50%; background: var(--surface);
+  color: var(--ink-muted); cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.notif-row__mark svg { width: 14px; height: 14px; }
+.notif-row__mark:hover:not(:disabled) { color: var(--pale-green-fg); border-color: var(--pale-green-fg); }
+.notif-row__mark:disabled { opacity: .5; cursor: default; }
+
+.notif-sev {
+  display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 600; line-height: 18px; white-space: nowrap;
+  background: var(--pale-gray-bg); color: var(--pale-gray-fg);
+}
+.notif-sev--critical { background: var(--pale-red-bg); color: var(--pale-red-fg); }
+.notif-sev--warning { background: var(--pale-yellow-bg); color: var(--pale-yellow-fg); }
+
+/* Trang Trung tâm thông báo */
+.notif-center .notif-panel__list { max-height: none; }
+.notif-center__toolbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.notif-center__legend { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.notif-center__count {
+  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px;
+  background: var(--pale-red-fg); color: #fff; font-size: 11px; font-weight: 600;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.notif-center__groups { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+.notif-chip {
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink-muted);
+  padding: 5px 12px; border-radius: 999px; font-size: 13px; cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+.notif-chip:hover { color: var(--ink-strong); border-color: var(--ink-muted); }
+.notif-chip--active { background: var(--ink-strong); border-color: var(--ink-strong); color: #fff; }
+.notif-chip--active:hover { color: #fff; }
+.notif-chip:focus-visible { outline: 2px solid var(--ink-strong); outline-offset: 2px; }
+.notif-center__clear { font-size: 13px; margin-left: 4px; }
+.notif-center__card { overflow: hidden; }
+.notif-center__card .notif-row:first-child { border-top: none; }
+.notif-center__footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.notif-center__pager { display: flex; gap: 8px; }
+
+/* Công việc được mở từ thông báo trong cây WBS */
+.wbs-task-row--focus {
+  border-color: var(--pale-red-fg);
+  box-shadow: 0 0 0 3px var(--pale-red-bg);
+  background: #FFFCFC;
+}
+.wbs-focus-tag {
+  font-size: 11.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px;
+  background: var(--pale-red-bg); color: var(--pale-red-fg); white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .notif-row__main { padding: 12px 10px; gap: 10px; }
+  .notif-row__icon { width: 32px; height: 32px; }
+  .notif-center__pager { width: 100%; }
+  .notif-center__pager .btn-secondary { flex: 1; }
+}

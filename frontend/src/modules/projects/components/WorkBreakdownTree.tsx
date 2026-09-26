@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import RowActionsMenu from '../../../components/common/RowActionsMenu';
 import type { TaskRes, WorkBreakdownRes, TaskStatus } from '../types/taskTypes';
@@ -19,6 +19,8 @@ export interface WorkBreakdownTreeProps {
   onAssign?: (task: TaskRes) => void;
   /** NCL-06-CN-001: mở màn ghi giờ công (TimeEntryPage) cho một công việc. */
   onLogTime?: (task: TaskRes) => void;
+  /** NCL-14-CN-001 TC-02: công việc được mở từ một thông báo — tô sáng và cuộn tới dòng đó. */
+  focusTaskId?: number | null;
 }
 
 const statusBadgeConfig: Record<TaskStatus, { label: string; className: string }> = {
@@ -70,9 +72,16 @@ export default function WorkBreakdownTree({
   onSetBudget,
   onAssign,
   onLogTime,
+  focusTaskId = null,
 }: WorkBreakdownTreeProps) {
   // Trạng thái thu gọn/mở rộng từng hạng mục (mặc định mở tất cả)
   const [collapsed, setCollapsed] = useState<Record<number, boolean>>({});
+
+  const focusRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    // jsdom không có scrollIntoView — kiểm tra trước khi gọi.
+    focusRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+  }, [focusTaskId, items]);
 
   const toggleCollapse = (id: number) => {
     setCollapsed((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -99,6 +108,7 @@ export default function WorkBreakdownTree({
     const badge = statusBadgeConfig[task.status] || { label: task.status, className: 'wbs-badge--todo' };
     const assignments = task.assignments || [];
     const isAssigned = assignments.length > 0;
+    const isFocused = focusTaskId != null && task.id === focusTaskId;
 
     const menuActions = canEdit && isProjectOpen
       ? [
@@ -127,11 +137,20 @@ export default function WorkBreakdownTree({
       : [];
 
     return (
-      <div key={task.id} className="wbs-task-row" style={{ marginLeft: `${level * 20}px` }} data-testid={`task-row-${task.id}`}>
+      <div
+        key={task.id}
+        ref={isFocused ? focusRef : undefined}
+        className={`wbs-task-row ${isFocused ? 'wbs-task-row--focus' : ''}`}
+        style={{ marginLeft: `${level * 20}px` }}
+        data-testid={`task-row-${task.id}`}
+        data-focused={isFocused || undefined}
+        aria-current={isFocused ? 'true' : undefined}
+      >
         <div className="wbs-task-top">
           <span className="wbs-task-bullet">▪</span>
           <span className="wbs-task-name" title={task.name}>{task.name}</span>
           <span className={`wbs-badge ${badge.className}`}>{badge.label}</span>
+          {isFocused && <span className="wbs-focus-tag">Mở từ thông báo</span>}
 
           <div className="wbs-task-top-actions">
             {canLogTime && isProjectOpen && (
