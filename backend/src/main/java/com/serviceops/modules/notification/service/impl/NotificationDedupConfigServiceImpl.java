@@ -2,11 +2,14 @@ package com.serviceops.modules.notification.service.impl;
 
 import com.serviceops.common.audit.AuditTargetType;
 import com.serviceops.common.audit.service.AuditLogService;
+import com.serviceops.common.exception.BusinessRuleException;
+import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.notification.dto.request.NotificationDedupConfigReq;
 import com.serviceops.modules.notification.dto.response.NotificationDedupConfigRes;
 import com.serviceops.modules.notification.entity.NotificationDedupConfig;
 import com.serviceops.modules.notification.enums.NotificationType;
 import com.serviceops.modules.notification.repository.NotificationDedupConfigRepository;
+import com.serviceops.modules.notification.service.NotificationAntiDuplicateService;
 import com.serviceops.modules.notification.service.NotificationDedupConfigService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -25,6 +28,11 @@ import java.util.stream.Collectors;
  * Cau hinh chong gui trung theo loai su kien (NCL-14-CN-003, QTN-27) — chi Quan tri vien (VT-07)
  * duoc sua (chan quyen o {@code NotificationDedupConfigController}, TC-03), moi thay doi deu ghi
  * Nhat ky he thong (TC-04).
+ *
+ * <p>Chi liet ke/cho sua cau hinh cho nhung loai su kien thuc su di qua
+ * {@link NotificationAntiDuplicateService} ({@code supportedEventTypes()}) — nhung loai con lai
+ * (margin alert/timesheet reminder/dunning...) dung co che chong trung rieng, khong doc bang
+ * {@code notification_dedup_configs} nay, nen sua cau hinh cho chung se khong co tac dung gi.</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -34,6 +42,7 @@ public class NotificationDedupConfigServiceImpl implements NotificationDedupConf
 	private static final String TARGET_LABEL = "Cau hinh chong gui trung thong bao";
 
 	private final NotificationDedupConfigRepository notificationDedupConfigRepository;
+	private final NotificationAntiDuplicateService notificationAntiDuplicateService;
 	private final AuditLogService auditLogService;
 	private final Clock clock;
 
@@ -44,7 +53,7 @@ public class NotificationDedupConfigServiceImpl implements NotificationDedupConf
 				.collect(Collectors.toMap(NotificationDedupConfig::getEventType, c -> c));
 
 		return Arrays.stream(NotificationType.values())
-				.filter(type -> type.group() != null)
+				.filter(notificationAntiDuplicateService.supportedEventTypes()::contains)
 				.map(type -> {
 					NotificationDedupConfig config = saved.get(type);
 					return config != null
@@ -57,6 +66,10 @@ public class NotificationDedupConfigServiceImpl implements NotificationDedupConf
 
 	@Override
 	public void updateConfig(NotificationType eventType, NotificationDedupConfigReq request) {
+		if (!notificationAntiDuplicateService.supportedEventTypes().contains(eventType)) {
+			throw new BusinessRuleException(ErrorCode.VALIDATION_ERROR,
+					"Loai su kien " + eventType + " khong dung co che chong gui trung nay");
+		}
 		NotificationDedupConfig config = notificationDedupConfigRepository.findByEventType(eventType)
 				.orElseGet(() -> {
 					NotificationDedupConfig created = new NotificationDedupConfig();

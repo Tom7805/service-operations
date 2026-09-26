@@ -4,9 +4,11 @@ import com.serviceops.common.audit.AuditTargetType;
 import com.serviceops.common.audit.service.AuditLogService;
 import com.serviceops.modules.notification.dto.request.NotificationDedupConfigReq;
 import com.serviceops.modules.notification.dto.response.NotificationDedupConfigRes;
+import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.modules.notification.entity.NotificationDedupConfig;
 import com.serviceops.modules.notification.enums.NotificationType;
 import com.serviceops.modules.notification.repository.NotificationDedupConfigRepository;
+import com.serviceops.modules.notification.service.NotificationAntiDuplicateService;
 import com.serviceops.modules.notification.service.impl.NotificationDedupConfigServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,14 +22,17 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -44,6 +49,8 @@ class NotificationDedupConfigServiceTest {
 	@Mock
 	private NotificationDedupConfigRepository notificationDedupConfigRepository;
 	@Mock
+	private NotificationAntiDuplicateService notificationAntiDuplicateService;
+	@Mock
 	private AuditLogService auditLogService;
 
 	private NotificationDedupConfigServiceImpl configService;
@@ -51,7 +58,9 @@ class NotificationDedupConfigServiceTest {
 	@BeforeEach
 	void setUp() {
 		Clock clock = Clock.fixed(Instant.parse("2026-09-26T08:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
-		configService = new NotificationDedupConfigServiceImpl(notificationDedupConfigRepository, auditLogService, clock);
+		configService = new NotificationDedupConfigServiceImpl(
+				notificationDedupConfigRepository, notificationAntiDuplicateService, auditLogService, clock);
+		when(notificationAntiDuplicateService.supportedEventTypes()).thenReturn(Set.of(EVENT_TYPE));
 	}
 
 	@Test
@@ -112,5 +121,16 @@ class NotificationDedupConfigServiceTest {
 
 		assertEquals(6, existing.getCooldownHours());
 		verify(notificationDedupConfigRepository, times(1)).save(existing);
+	}
+
+	@Test
+	void updateConfig_loaiSuKienKhongDuocCoCheNayHoTro_nemLoiVaKhongLuu() {
+		NotificationDedupConfigReq request = new NotificationDedupConfigReq(false, null);
+
+		assertThrows(BusinessRuleException.class,
+				() -> configService.updateConfig(NotificationType.NEGATIVE_MARGIN_ALERT, request));
+
+		verify(notificationDedupConfigRepository, never()).save(any());
+		verify(auditLogService, never()).record(any(), any(), any(), any(), any());
 	}
 }

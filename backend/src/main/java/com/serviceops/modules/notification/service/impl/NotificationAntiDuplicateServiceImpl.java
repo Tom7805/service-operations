@@ -17,16 +17,25 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class NotificationAntiDuplicateServiceImpl implements NotificationAntiDuplicateService {
 
+	/** Chi TASK_BUDGET_EXCEEDED dung co che nay trong pham vi NCL-14-CN-003 (xem NotificationType). */
+	private static final Set<NotificationType> SUPPORTED_EVENT_TYPES = Set.of(NotificationType.TASK_BUDGET_EXCEEDED);
+
 	private final NotificationDedupConfigRepository notificationDedupConfigRepository;
 	private final NotificationAlertStateRepository notificationAlertStateRepository;
 	private final NotificationAlertDedupLogRepository notificationAlertDedupLogRepository;
 	private final Clock clock;
+
+	@Override
+	public Set<NotificationType> supportedEventTypes() {
+		return SUPPORTED_EVENT_TYPES;
+	}
 
 	@Override
 	public List<Long> resolveRecipientsToNotify(NotificationType eventType, Long referenceId,

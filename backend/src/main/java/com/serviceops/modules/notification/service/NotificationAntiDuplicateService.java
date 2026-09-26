@@ -3,6 +3,7 @@ package com.serviceops.modules.notification.service;
 import com.serviceops.modules.notification.enums.NotificationType;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Chong gui trung thong bao cho cac su kien duoc tac vu nen ra soat dinh ky (NCL-14-CN-003,
@@ -12,6 +13,14 @@ import java.util.List;
  * giu nguyen (khong bi thay the boi service nay).
  */
 public interface NotificationAntiDuplicateService {
+
+	/**
+	 * Loai su kien thuc su di qua co che chong trung theo dot canh bao (episode) nay — dung de
+	 * {@code NotificationDedupConfigService} gioi han danh sach hien thi/cho phep sua cho Admin,
+	 * tranh hien thi cau hinh cho nhung loai ma sua vao khong co tac dung gi (margin
+	 * alert/timesheet reminder/dunning van dung co che rieng, khong doc cau hinh nay).
+	 */
+	Set<NotificationType> supportedEventTypes();
 
 	/**
 	 * Goi moi lan tac vu ra soat kiem tra lai mot ban ghi.
