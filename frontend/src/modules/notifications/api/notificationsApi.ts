@@ -1,4 +1,4 @@
-import type { NotificationRes } from '../types/notificationTypes';
+import type { NotificationGroup, NotificationRes } from '../types/notificationTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -47,18 +47,21 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
 
 /**
  * Danh sách thông báo in-app của chính mình, phân trang, mới nhất trước.
- * GET /notifications?unreadOnly=...&page=...&size=...
+ * GET /notifications?unreadOnly=...&group=...&page=...&size=...
+ * `group` bỏ trống = không lọc theo nhóm (NCL-14-CN-001).
  */
 export async function getNotifications(
   unreadOnly = false,
   page = 0,
-  size = 20
+  size = 20,
+  group?: NotificationGroup | null
 ): Promise<NotificationRes[]> {
   const params = new URLSearchParams({
     unreadOnly: String(unreadOnly),
     page: String(page),
     size: String(size),
   });
+  if (group) params.set('group', group);
   return requestBackend<NotificationRes[]>(`${API_BASE_URL}/notifications?${params.toString()}`, {
     method: 'GET',
   });
@@ -82,5 +85,27 @@ export async function markNotificationsRead(notificationIds: number[]): Promise<
   await requestBackend<null>(`${API_BASE_URL}/notifications/read`, {
     method: 'POST',
     body: JSON.stringify({ notificationIds }),
+  });
+}
+
+/**
+ * Đánh dấu tất cả thông báo chưa đọc của chính mình là đã đọc (NCL-14-CN-001).
+ * POST /notifications/read-all — trả về số thông báo thực sự đổi trạng thái.
+ */
+export async function markAllNotificationsRead(): Promise<number> {
+  const changed = await requestBackend<number | null>(`${API_BASE_URL}/notifications/read-all`, {
+    method: 'POST',
+  });
+  return changed ?? 0;
+}
+
+/**
+ * Mở một thông báo (NCL-14-CN-001 TC-02): đánh dấu đã đọc và trả về `targetType`/`referenceId`
+ * để điều hướng thẳng tới bản ghi liên quan. Backend ghi nhật ký "Mo thong bao" (TC-03).
+ * POST /notifications/{id}/open — `404` nếu thông báo không tồn tại hoặc không thuộc về mình.
+ */
+export async function openNotification(id: number): Promise<NotificationRes> {
+  return requestBackend<NotificationRes>(`${API_BASE_URL}/notifications/${id}/open`, {
+    method: 'POST',
   });
 }

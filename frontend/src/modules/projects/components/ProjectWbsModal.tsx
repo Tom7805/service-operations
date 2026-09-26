@@ -38,6 +38,8 @@ export interface ProjectWbsModalProps {
    * mới được sửa & nộp lại phiếu chi phí bị từ chối của chính mình). */
   currentUserId?: number;
   onUpdated?: () => void;
+  /** NCL-14-CN-001 TC-02: mở từ thông báo — tô sáng và cuộn tới công việc này trong cây WBS. */
+  focusTaskId?: number | null;
 }
 
 export default function ProjectWbsModal({
@@ -49,6 +51,7 @@ export default function ProjectWbsModal({
   currentUserId,
   currentUserRoles = ['VT-02'],
   onUpdated,
+  focusTaskId = null,
 }: ProjectWbsModalProps) {
   const isAllowedToView =
     currentUserRoles.includes('VT-01') ||
@@ -401,6 +404,7 @@ export default function ProjectWbsModal({
                     onDeletePackage={handleDeletePackage}
                     onSetBudget={handleOpenSetBudget}
                     onAssign={handleOpenAssign}
+                    focusTaskId={focusTaskId}
                   />
                 </>
               ) : activeSection === 'MILESTONES' ? (
