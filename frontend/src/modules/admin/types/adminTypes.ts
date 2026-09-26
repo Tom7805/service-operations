@@ -129,3 +129,52 @@ export interface FiscalPeriodRes {
   quarters: FiscalQuarter[];
   months: FiscalMonth[];
 }
+
+/* ---------- NCL-15-CN-003 — Sao lưu và phục hồi dữ liệu ---------- */
+
+/** `IN_PROGRESS` còn đang tạo hoặc dở dang, `FAILED` lỗi khi tạo — cả hai KHÔNG phục hồi được (TC-02). */
+export type BackupStatus = 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
+export type BackupTrigger = 'MANUAL' | 'SCHEDULED';
+export type RestoreStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'EXPIRED';
+
+export interface BackupRecordRes {
+  id: number;
+  code: string;
+  status: BackupStatus;
+  triggerType: BackupTrigger;
+  fileName?: string | null;
+  sizeBytes?: number | null;
+  checksumSha256?: string | null;
+  tableCount?: number | null;
+  rowCount?: number | null;
+  note?: string | null;
+  errorMessage?: string | null;
+  /** Vắng mặt với bản sao theo lịch. */
+  createdBy?: string | null;
+  startedAt: string;
+  completedAt?: string | null;
+  /** `status == COMPLETED` — bật/tắt nút "Phục hồi". Tính toàn vẹn tệp chỉ kiểm khi tạo yêu cầu phục hồi. */
+  restorable: boolean;
+}
+
+/** Bước 1 — mã xác nhận chỉ trả về MỘT lần, giữ trong bộ nhớ hộp thoại, không lưu localStorage. */
+export interface RestoreChallengeRes {
+  requestId: number;
+  backupId: number;
+  backupCode: string;
+  backupCreatedAt: string;
+  confirmationToken: string;
+  expiresAt: string;
+  warning: string;
+}
+
+export interface RestoreResultRes {
+  requestId: number;
+  backupId: number;
+  backupCode: string;
+  status: RestoreStatus;
+  tablesRestored: number;
+  rowsRestored: number;
+  restoredToPointInTime: string;
+  completedAt: string;
+}

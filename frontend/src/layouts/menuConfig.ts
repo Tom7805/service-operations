@@ -61,7 +61,8 @@ export type Tab =
   | 'NOTIFICATION_DEDUP'
   | 'SERVICE_CATALOG'
   | 'COMPANY_SETTINGS'
-  | 'FISCAL_PERIODS';
+  | 'FISCAL_PERIODS'
+  | 'BACKUP_RESTORE';
 
 export interface NavItem {
   tab: Tab;
@@ -297,6 +298,11 @@ export const SYSTEM_NAV_ITEMS: NavItem[] = [
   {
     tab: 'NOTIFICATION_DEDUP', icon: ICONS.bell, label: 'Chống gửi trùng', requires: ['VT-07'],
     // NCL-14-CN-003 (QTN-27): chỉ Quản trị viên — khớp @PreAuthorize của /notifications/dedup-configs.
+  },
+  {
+    tab: 'BACKUP_RESTORE', icon: ICONS.save, label: 'Sao lưu & phục hồi', requires: ['VT-07'],
+    // NCL-15-CN-003 (QTN-30): chỉ Quản trị viên sao lưu / phục hồi — khớp @PreAuthorize của /backups
+    // (màn hình vẫn gọi API để backend ghi nhật ký lần từ chối).
   },
   {
     tab: 'MASKING_RULES', icon: ICONS.eyeOff, label: 'Quy tắc che dữ liệu', requires: ['VT-01', 'VT-05', 'VT-06'],

@@ -152,6 +152,7 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'SYSTEM_AUDIT_LOG',
       'AUDIT_LOG',
       'NOTIFICATION_DEDUP',
+      'BACKUP_RESTORE',
     ]);
   });
 
@@ -252,6 +253,9 @@ describe('isTabVisible — tuần tự hóa lại khi vai trỏ đổi', () => {
     expect(isTabVisible('FISCAL_PERIODS', ['VT-05'])).toBe(true);
     expect(isTabVisible('FISCAL_PERIODS', ['VT-07'])).toBe(true);
     expect(isTabVisible('FISCAL_PERIODS', ['VT-03'])).toBe(false);
+    // NCL-15-CN-003 TC-03 (QTN-30): sao lưu / phục hồi chỉ dành cho Quản trị viên.
+    expect(isTabVisible('BACKUP_RESTORE', ['VT-07'])).toBe(true);
+    expect(isTabVisible('BACKUP_RESTORE', ['VT-01'])).toBe(false);
     expect(isTabVisible('CHANGE_PASSWORD', ['VT-03'])).toBe(true);
   });
 
