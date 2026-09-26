@@ -55,6 +55,8 @@ import ProjectMarginPage from './modules/profitability/pages/ProjectMarginPage';
 import MarginAlertThresholdPage from './modules/profitability/pages/MarginAlertThresholdPage';
 import NotificationCenterPage from './modules/notifications/pages/NotificationCenterPage';
 import NotificationPreferencePage from './modules/notifications/pages/NotificationPreferencePage';
+import NotificationDedupConfigPage from './modules/notifications/pages/NotificationDedupConfigPage';
+import { NOTIFICATIONS_CHANGED_EVENT } from './modules/notifications/utils/notificationEvents';
 import NotificationList from './modules/notifications/components/NotificationList';
 import {
   getNotifications,
@@ -290,9 +292,13 @@ export default function App() {
     };
     void fetchUnread();
     const interval = setInterval(fetchUnread, 30000);
+    // NCL-14-CN-003: thao tác sinh thông báo tức thì (vd duyệt bảng chấm công) báo qua sự kiện này.
+    const onChanged = () => void fetchUnread();
+    window.addEventListener(NOTIFICATIONS_CHANGED_EVENT, onChanged);
     return () => {
       cancelled = true;
       clearInterval(interval);
+      window.removeEventListener(NOTIFICATIONS_CHANGED_EVENT, onChanged);
     };
   }, [session]);
 
@@ -746,6 +752,11 @@ export default function App() {
             />
           ) : activeTab === 'NOTIFICATION_PREFERENCES' ? (
             <NotificationPreferencePage onBack={() => setActiveTab('NOTIFICATIONS')} />
+          ) : activeTab === 'NOTIFICATION_DEDUP' ? (
+            <NotificationDedupConfigPage
+              currentUserRoles={currentRoles}
+              onViewAuditLog={() => setActiveTab('SYSTEM_AUDIT_LOG')}
+            />
           ) : activeTab === 'MY_WORK' ? (
             <MyWorkPage currentUserRoles={currentRoles} currentUserName={session.fullName} currentUserId={session.userId} />
           ) : activeTab === 'TIMESHEET_APPROVAL' ? (

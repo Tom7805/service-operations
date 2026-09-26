@@ -82,3 +82,25 @@ export interface NotificationRes {
   severity?: NotificationSeverity;
   notificationGroup?: NotificationGroup | null;
 }
+
+/**
+ * Cấu hình chống gửi trùng của một loại sự kiện (NCL-14-CN-003, QTN-27) — khớp
+ * NotificationDedupConfigRes. Chỉ Quản trị viên (VT-07) đọc/ghi được.
+ * - `dedupEnabled = false`: luôn gửi, không chiếm khóa chống trùng.
+ * - `cooldownHours`: số giờ tối thiểu giữa 2 lần nhắc trong cùng một đợt cảnh báo; `null` = không
+ *   nhắc lại trong đợt (chỉ gửi lại khi bản ghi thoát rồi vượt ngưỡng lần nữa).
+ * - `updatedBy`/`updatedAt`: `null` nếu loại sự kiện chưa từng được cấu hình riêng (đang dùng mặc định).
+ */
+export interface NotificationDedupConfig {
+  eventType: NotificationType;
+  dedupEnabled: boolean;
+  cooldownHours: number | null;
+  updatedBy: string | null;
+  updatedAt: string | null;
+}
+
+/** Payload PUT /notifications/dedup-configs/{eventType}. */
+export interface NotificationDedupConfigReq {
+  dedupEnabled: boolean;
+  cooldownHours: number | null;
+}

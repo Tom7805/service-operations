@@ -57,7 +57,8 @@ export type Tab =
   | 'MARGIN_ALERT_THRESHOLD'
   | 'PORTAL_ACCOUNTS'
   | 'NOTIFICATIONS'
-  | 'NOTIFICATION_PREFERENCES';
+  | 'NOTIFICATION_PREFERENCES'
+  | 'NOTIFICATION_DEDUP';
 
 export interface NavItem {
   tab: Tab;
@@ -274,6 +275,10 @@ export const SYSTEM_NAV_ITEMS: NavItem[] = [
   { tab: 'TWO_FACTOR_SETTINGS', icon: ICONS.key, label: '2FA', requires: ['VT-07'] },
   { tab: 'SYSTEM_AUDIT_LOG', icon: ICONS.clipboardList, label: 'Nhật ký hệ thống', requires: ['VT-07'] },
   { tab: 'AUDIT_LOG', icon: ICONS.shieldOff, label: 'Dữ liệu nhạy cảm', requires: ['VT-07'] },
+  {
+    tab: 'NOTIFICATION_DEDUP', icon: ICONS.bell, label: 'Chống gửi trùng', requires: ['VT-07'],
+    // NCL-14-CN-003 (QTN-27): chỉ Quản trị viên — khớp @PreAuthorize của /notifications/dedup-configs.
+  },
   {
     tab: 'MASKING_RULES', icon: ICONS.eyeOff, label: 'Quy tắc che dữ liệu', requires: ['VT-01', 'VT-05', 'VT-06'],
     // NCL-01-CN-005 (TC-04, QTN-02): chỉ Nhân sự, Kế toán và Ban giám đốc — đúng nhóm được xem số liệu
