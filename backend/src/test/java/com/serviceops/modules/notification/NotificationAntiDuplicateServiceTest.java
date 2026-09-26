@@ -6,6 +6,7 @@ import com.serviceops.modules.notification.enums.NotificationType;
 import com.serviceops.modules.notification.repository.NotificationAlertDedupLogRepository;
 import com.serviceops.modules.notification.repository.NotificationAlertStateRepository;
 import com.serviceops.modules.notification.repository.NotificationDedupConfigRepository;
+import com.serviceops.modules.notification.service.NotificationService;
 import com.serviceops.modules.notification.service.impl.NotificationAntiDuplicateServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,14 +48,16 @@ class NotificationAntiDuplicateServiceTest {
 	private NotificationAlertStateRepository notificationAlertStateRepository;
 	@Mock
 	private NotificationAlertDedupLogRepository notificationAlertDedupLogRepository;
+	@Mock
+	private NotificationService notificationService;
 
 	private NotificationAntiDuplicateServiceImpl service;
 
 	@BeforeEach
 	void setUp() {
 		Clock clock = Clock.fixed(Instant.parse("2026-09-26T08:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
-		service = new NotificationAntiDuplicateServiceImpl(
-				notificationDedupConfigRepository, notificationAlertStateRepository, notificationAlertDedupLogRepository, clock);
+		service = new NotificationAntiDuplicateServiceImpl(notificationDedupConfigRepository,
+				notificationAlertStateRepository, notificationAlertDedupLogRepository, notificationService, clock);
 	}
 
 	/** Mac dinh: chua co ban ghi cau hinh rieng cho loai su kien nay (dedup mac dinh bat). */
@@ -170,6 +173,25 @@ class NotificationAntiDuplicateServiceTest {
 		assertEquals(List.of(1L), result);
 		verify(notificationAlertDedupLogRepository).existsByEventTypeAndReferenceIdAndRecipientIdAndEpisodeNo(
 				EVENT_TYPE, TASK_ID, 1L, 1);
+	}
+
+	@Test
+	void evaluateAndNotify_guiThongBaoThatChoNguoiDuocDuyet_boQuaNguoiDaNhan() {
+		noConfigOverride();
+		stateSaveReturnsItsArgument();
+		NotificationAlertState existing = state(true, 1);
+		when(notificationAlertStateRepository.findByEventTypeAndReferenceId(EVENT_TYPE, TASK_ID))
+				.thenReturn(Optional.of(existing));
+		when(notificationAlertDedupLogRepository.existsByEventTypeAndReferenceIdAndRecipientIdAndEpisodeNo(
+				EVENT_TYPE, TASK_ID, 1L, 1)).thenReturn(true);
+		when(notificationAlertDedupLogRepository.existsByEventTypeAndReferenceIdAndRecipientIdAndEpisodeNo(
+				EVENT_TYPE, TASK_ID, 2L, 1)).thenReturn(false);
+
+		List<Long> result = service.evaluateAndNotify(EVENT_TYPE, TASK_ID, List.of(1L, 2L), true, "Tieu de", "Noi dung");
+
+		assertEquals(List.of(2L), result);
+		verify(notificationService, times(1)).sendInAppNotification(2L, EVENT_TYPE, "Tieu de", "Noi dung", TASK_ID, null);
+		verify(notificationService, never()).sendInAppNotification(eq(1L), any(), any(), any(), any(), any());
 	}
 
 	@Test

@@ -35,4 +35,15 @@ public interface NotificationAntiDuplicateService {
 	 */
 	List<Long> resolveRecipientsToNotify(NotificationType eventType, Long referenceId,
 			List<Long> candidateRecipientIds, boolean breached);
+
+	/**
+	 * NCL-14-CN-003 CV-02: noi ket qua chong trung voi dich vu gui thong bao — goi
+	 * {@code NotificationService.sendInAppNotification} cho dung nhung nguoi duoc
+	 * {@link #resolveRecipientsToNotify} duyet, bo qua nhung nguoi da nhan roi trong cung dot
+	 * canh bao (TC-01).
+	 *
+	 * @return danh sach recipientId da thuc su duoc gui (giong ket qua cua resolveRecipientsToNotify)
+	 */
+	List<Long> evaluateAndNotify(NotificationType eventType, Long referenceId, List<Long> candidateRecipientIds,
+			boolean breached, String title, String content);
 }

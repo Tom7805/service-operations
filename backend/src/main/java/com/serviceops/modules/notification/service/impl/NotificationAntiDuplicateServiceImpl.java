@@ -8,6 +8,7 @@ import com.serviceops.modules.notification.repository.NotificationAlertDedupLogR
 import com.serviceops.modules.notification.repository.NotificationAlertStateRepository;
 import com.serviceops.modules.notification.repository.NotificationDedupConfigRepository;
 import com.serviceops.modules.notification.service.NotificationAntiDuplicateService;
+import com.serviceops.modules.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -30,11 +31,22 @@ public class NotificationAntiDuplicateServiceImpl implements NotificationAntiDup
 	private final NotificationDedupConfigRepository notificationDedupConfigRepository;
 	private final NotificationAlertStateRepository notificationAlertStateRepository;
 	private final NotificationAlertDedupLogRepository notificationAlertDedupLogRepository;
+	private final NotificationService notificationService;
 	private final Clock clock;
 
 	@Override
 	public Set<NotificationType> supportedEventTypes() {
 		return SUPPORTED_EVENT_TYPES;
+	}
+
+	@Override
+	public List<Long> evaluateAndNotify(NotificationType eventType, Long referenceId, List<Long> candidateRecipientIds,
+			boolean breached, String title, String content) {
+		List<Long> toNotify = resolveRecipientsToNotify(eventType, referenceId, candidateRecipientIds, breached);
+		for (Long recipientId : toNotify) {
+			notificationService.sendInAppNotification(recipientId, eventType, title, content, referenceId, null);
+		}
+		return toNotify;
 	}
 
 	@Override
