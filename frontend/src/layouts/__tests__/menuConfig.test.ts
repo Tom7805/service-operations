@@ -234,6 +234,7 @@ describe('isTabVisible — tuần tự hóa lại khi vai trỏ đổi', () => {
   it('mục tính (Đổi mật khẩu, Thông báo) luôn hiển thị qua menu tài khoản', () => {
     expect(isTabVisible('CHANGE_PASSWORD', [])).toBe(true);
     expect(isTabVisible('NOTIFICATIONS', [])).toBe(true);
+    expect(isTabVisible('NOTIFICATION_PREFERENCES', [])).toBe(true);
     expect(isTabVisible('CHANGE_PASSWORD', ['VT-03'])).toBe(true);
   });
 

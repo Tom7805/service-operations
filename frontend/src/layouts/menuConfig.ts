@@ -56,7 +56,8 @@ export type Tab =
   | 'PROJECT_MARGIN'
   | 'MARGIN_ALERT_THRESHOLD'
   | 'PORTAL_ACCOUNTS'
-  | 'NOTIFICATIONS';
+  | 'NOTIFICATIONS'
+  | 'NOTIFICATION_PREFERENCES';
 
 export interface NavItem {
   tab: Tab;
@@ -349,8 +350,8 @@ export function defaultTabFor(roles: readonly string[] = []): Tab {
  * "Không có thẩm quyền".
  */
 export function isTabVisible(tab: Tab, roles: readonly string[] = []): boolean {
-  // Hai mục tính luôn truy cập được qua menu tài khoản, không nằm trong NAV_ITEMS.
-  if (tab === 'CHANGE_PASSWORD' || tab === 'NOTIFICATIONS') return true;
+  // Các mục luôn truy cập được qua menu tài khoản, không nằm trong NAV_ITEMS.
+  if (tab === 'CHANGE_PASSWORD' || tab === 'NOTIFICATIONS' || tab === 'NOTIFICATION_PREFERENCES') return true;
   const direct = ALL_NAV_ITEMS.find((item) => item.tab === tab);
   if (direct) return isItemVisible(direct, roles);
   // Tab con (chi tiết KH, nhân viên, báo cáo đường ống) — dựa trên mục cha.

@@ -3859,7 +3859,7 @@ ul.notif-panel__list { list-style: none; margin: 0; padding: 0; }
 .notif-row__title-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .notif-row__title { font-size: 14.5px; font-weight: 500; color: var(--ink-muted); }
 .notif-row--unread .notif-row__title { font-weight: 700; color: var(--ink-strong); }
-.notif-row__content { font-size: 13.5px; color: #6B6A67; overflow-wrap: anywhere; }
+.notif-row__content { font-size: 13.5px; color: #6B6A67; overflow-wrap: anywhere; white-space: pre-line; }
 .notif-row__meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 3px; font-size: 12.5px; color: #6B6A67; }
 .notif-row__goto { display: inline-flex; align-items: center; gap: 4px; font-weight: 500; color: var(--ink-strong); }
 .notif-row__goto svg { width: 12px; height: 12px; }
@@ -3930,4 +3930,105 @@ ul.notif-panel__list { list-style: none; margin: 0; padding: 0; }
   .notif-row__icon { width: 32px; height: 32px; }
   .notif-center__pager { width: 100%; }
   .notif-center__pager .btn-secondary { flex: 1; }
+}
+
+/* ==========================================================================
+   NCL-14-CN-002 — Cài đặt nhận thông báo: bật/tắt theo nhóm và tần suất
+   ========================================================================== */
+.pref-page__back { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; margin-bottom: 10px; }
+.pref-page__back svg { width: 14px; height: 14px; }
+
+.pref-summary {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;
+  font-size: 13.5px; color: var(--ink-muted);
+}
+.pref-summary__item { padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+.pref-summary__item strong { color: var(--ink-strong); }
+.pref-summary__spacer { flex: 1; }
+
+.pref-card { overflow: hidden; }
+.pref-list { list-style: none; margin: 0; padding: 0; }
+.pref-row {
+  display: flex; align-items: flex-start; gap: 14px; padding: 18px 20px;
+  border-top: 1px solid #F1F0EE; border-left: 3px solid transparent;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.pref-row:first-child { border-top: none; }
+.pref-row--dirty { border-left-color: var(--pale-blue-fg); background: #FAFCFE; }
+.pref-row__icon {
+  width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--pale-gray-bg); color: var(--ink-strong);
+}
+.pref-row__icon svg { width: 17px; height: 17px; }
+.pref-row--off .pref-row__icon { color: var(--ink-muted); opacity: .6; }
+.pref-row__body { flex: 1; min-width: 0; }
+.pref-row__title-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pref-row__title { font-size: 15px; font-weight: 600; color: var(--ink-strong); cursor: pointer; }
+.pref-row--off .pref-row__title { color: var(--ink-muted); }
+.pref-row__dirty {
+  font-size: 11.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px;
+  background: var(--pale-blue-bg); color: var(--pale-blue-fg);
+}
+.pref-row__desc { margin: 3px 0 10px; font-size: 13.5px; color: #6B6A67; }
+.pref-row__note { margin: 8px 0 0; font-size: 12.5px; color: var(--ink-muted); }
+
+.pref-freq {
+  display: inline-flex; padding: 3px; gap: 2px; border-radius: var(--radius-md, 8px);
+  background: var(--pale-gray-bg); flex-wrap: wrap;
+}
+.pref-freq[aria-disabled="true"] { opacity: .5; }
+.pref-freq__option {
+  position: relative; display: inline-flex; align-items: center; padding: 6px 12px;
+  border-radius: var(--radius-sm, 6px); font-size: 13px; color: var(--ink-muted); cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.pref-freq[aria-disabled="true"] .pref-freq__option { cursor: not-allowed; }
+.pref-freq__option input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none; }
+.pref-freq__option--checked { background: var(--surface); color: var(--ink-strong); font-weight: 500; box-shadow: var(--shadow-xs); }
+.pref-freq__option:has(input:focus-visible) { outline: 2px solid var(--ink-strong); outline-offset: 1px; }
+
+.pref-switch {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 8px; margin-top: 4px;
+  border: none; background: none; padding: 0; cursor: pointer; font: inherit;
+}
+.pref-switch::before {
+  content: ''; order: 0; width: 40px; height: 22px; border-radius: 999px; background: #CFCDC8;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.pref-switch__thumb {
+  position: absolute; top: 50%; left: 2px; width: 18px; height: 18px; margin-top: -9px; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: transform var(--dur-fast) var(--ease-out);
+}
+.pref-switch { position: relative; }
+.pref-switch--on::before { background: var(--pale-green-fg); }
+.pref-switch--on .pref-switch__thumb { transform: translateX(18px); }
+.pref-switch__text { font-size: 12.5px; color: var(--ink-muted); min-width: 56px; }
+.pref-switch--on .pref-switch__text { color: var(--pale-green-fg); font-weight: 500; }
+.pref-switch:focus-visible { outline: 2px solid var(--ink-strong); outline-offset: 3px; border-radius: 999px; }
+.pref-switch:disabled { cursor: progress; opacity: .6; }
+
+.pref-page__callout { margin-top: 16px; }
+
+.pref-actionbar {
+  position: sticky; bottom: 0; z-index: 5; margin-top: 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--radius-lg, 10px);
+  background: var(--surface); box-shadow: var(--shadow-md);
+}
+.pref-actionbar--dirty { border-color: var(--pale-blue-fg); }
+.pref-actionbar__status { font-size: 13.5px; color: var(--ink-muted); }
+.pref-actionbar--dirty .pref-actionbar__status { color: var(--pale-blue-fg); font-weight: 500; }
+.pref-actionbar__buttons { display: flex; gap: 8px; }
+
+@media (max-width: 640px) {
+  .pref-row { padding: 14px 12px; gap: 10px; flex-wrap: wrap; }
+  .pref-row__icon { display: none; }
+  .pref-switch { order: -1; width: 100%; margin: 0 0 4px; }
+  .pref-actionbar__buttons { width: 100%; }
+  .pref-actionbar__buttons button { flex: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pref-switch::before, .pref-switch__thumb { transition: none; }
 }
