@@ -34,7 +34,7 @@ public class NotificationMapper {
 	private NotificationTargetType resolveTargetType(NotificationType type) {
 		return switch (type) {
 			case TIMESHEET_SUBMITTED, TIMESHEET_REJECTED, TIMESHEET_REMINDER -> NotificationTargetType.TIMESHEET;
-			case TIMER_AUTO_STOPPED -> NotificationTargetType.TASK;
+			case TIMER_AUTO_STOPPED, TASK_BUDGET_EXCEEDED -> NotificationTargetType.TASK;
 			case EXPENSE_SUBMITTED -> NotificationTargetType.EXPENSE;
 			case PROJECT_MILESTONE_DUE, NEGATIVE_MARGIN_ALERT -> NotificationTargetType.PROJECT;
 			case CONTRACT_EXPIRING -> NotificationTargetType.CONTRACT;

@@ -101,6 +101,7 @@ public class AccessDeniedAuditRecorder {
         RULES.add(rule("/activities", new Feature(AuditTargetType.GENERAL, "Hoạt động chăm sóc cơ hội")));
         RULES.add(rule("/quotes", new Feature(AuditTargetType.GENERAL, "Báo giá cơ hội")));
         RULES.add(rule("/margin-alert-threshold", new Feature(AuditTargetType.GENERAL, "Ngưỡng cảnh báo dự án âm biên")));
+        RULES.add(rule("/dedup-configs", new Feature(AuditTargetType.NOTIFICATION, "Cấu hình chống gửi trùng thông báo")));
         RULES.add(rule("/bill-rates", new Feature(AuditTargetType.GENERAL, "Khai báo bảng đơn giá theo vai trò")));
         RULES.add(rule("/overhead-allocations", new Feature(AuditTargetType.EXPENSE, "Phân bổ chi phí chung cho dự án")));
         RULES.add(rule("/timesheet-periods", new Feature(AuditTargetType.TIMESHEET, "Khóa kỳ chấm công")));
