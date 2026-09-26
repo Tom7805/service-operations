@@ -22,7 +22,9 @@ public class NotificationMapper {
 				resolveTargetType(notification.getType()),
 				notification.getIsRead(),
 				notification.getReadAt(),
-				notification.getSentAt()
+				notification.getSentAt(),
+				notification.getType().group(),
+				notification.getType().severity()
 		);
 	}
 

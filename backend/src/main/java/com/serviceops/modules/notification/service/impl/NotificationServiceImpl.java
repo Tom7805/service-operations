@@ -6,6 +6,7 @@ import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.notification.dto.response.NotificationRes;
 import com.serviceops.modules.notification.entity.Notification;
+import com.serviceops.modules.notification.enums.NotificationGroup;
 import com.serviceops.modules.notification.enums.NotificationType;
 import com.serviceops.modules.notification.mapper.NotificationMapper;
 import com.serviceops.modules.notification.repository.NotificationRepository;
@@ -54,6 +55,30 @@ public class NotificationServiceImpl implements NotificationService {
 				? notificationRepository.findByRecipientIdAndIsReadFalse(recipientId, pageable)
 				: notificationRepository.findByRecipientId(recipientId, pageable);
 		return page.stream().map(notificationMapper::toResponse).toList();
+	}
+
+	@Override
+	public List<NotificationRes> listNotifications(Long recipientId, boolean unreadOnly, NotificationGroup group,
+			Pageable pageable) {
+		if (group == null) {
+			return listNotifications(recipientId, unreadOnly, pageable);
+		}
+		List<NotificationType> types = NotificationType.ofGroup(group);
+		Page<Notification> page = unreadOnly
+				? notificationRepository.findByRecipientIdAndIsReadFalseAndTypeIn(recipientId, types, pageable)
+				: notificationRepository.findByRecipientIdAndTypeIn(recipientId, types, pageable);
+		return page.stream().map(notificationMapper::toResponse).toList();
+	}
+
+	@Override
+	public int markAllAsRead(Long recipientId) {
+		int marked = notificationRepository.markAllReadByRecipientId(recipientId, LocalDateTime.now());
+		// TC-03: chi ghi nhat ky khi thuc su co thong bao doi trang thai.
+		if (marked > 0) {
+			auditLogService.record("Danh dau tat ca thong bao da doc", AuditTargetType.NOTIFICATION, recipientId,
+					TARGET_LABEL, "Da danh dau da doc " + marked + " thong bao");
+		}
+		return marked;
 	}
 
 	@Override

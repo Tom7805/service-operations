@@ -73,4 +73,21 @@ public enum NotificationType {
 			case DAILY_DIGEST_SUMMARY, SECURITY_ALERT -> null;
 		};
 	}
+
+	/** Muc do hien thi tren trung tam thong bao (NCL-14-CN-001). */
+	public NotificationSeverity severity() {
+		return switch (this) {
+			case NEGATIVE_MARGIN_ALERT, TASK_BUDGET_EXCEEDED, DUNNING_REMINDER, CONTRACT_EXPIRING ->
+					NotificationSeverity.CRITICAL;
+			case TIMESHEET_SUBMITTED, TIMESHEET_REJECTED, TIMER_AUTO_STOPPED, TIMESHEET_REMINDER, EXPENSE_SUBMITTED,
+					PROJECT_MILESTONE_DUE, INVOICE_PROPOSAL_CREATED, ACCEPTANCE_DECIDED_ON_PORTAL ->
+					NotificationSeverity.WARNING;
+			case RECURRING_INVOICE_GENERATED, DAILY_DIGEST_SUMMARY -> NotificationSeverity.INFO;
+		};
+	}
+
+	/** Cac loai thuoc mot nhom — dung cho bo loc {@code group} cua {@code GET /notifications}. */
+	public static java.util.List<NotificationType> ofGroup(NotificationGroup group) {
+		return java.util.Arrays.stream(values()).filter(t -> t.group() == group).toList();
+	}
 }

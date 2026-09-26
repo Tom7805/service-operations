@@ -3,6 +3,7 @@ package com.serviceops.modules.notification.controller;
 import com.serviceops.common.api.BaseRes;
 import com.serviceops.modules.notification.dto.request.NotificationMarkReadReq;
 import com.serviceops.modules.notification.dto.response.NotificationRes;
+import com.serviceops.modules.notification.enums.NotificationGroup;
 import com.serviceops.modules.notification.service.NotificationService;
 import com.serviceops.security.scope.CurrentUserScopeProvider;
 import jakarta.validation.Valid;
@@ -35,11 +36,21 @@ public class NotificationController {
 	@GetMapping("/notifications")
 	public BaseRes<List<NotificationRes>> list(
 			@RequestParam(defaultValue = "false") boolean unreadOnly,
+			@RequestParam(required = false) NotificationGroup group,
 			@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "20") int size) {
-		Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "sentAt"));
+		// Chan page/size bat thuong tu client (size toi da 100) thay vi de PageRequest nem 500.
+		Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100),
+				Sort.by(Sort.Direction.DESC, "sentAt").and(Sort.by(Sort.Direction.DESC, "id")));
 		return BaseRes.ok(notificationService.listNotifications(
-				currentUserScopeProvider.currentUserId(), unreadOnly, pageable));
+				currentUserScopeProvider.currentUserId(), unreadOnly, group, pageable));
+	}
+
+	/** NCL-14-CN-001: danh dau tat ca thong bao chua doc cua chinh minh; data = so thong bao da doi. */
+	@PostMapping("/notifications/read-all")
+	public BaseRes<Integer> markAllAsRead() {
+		return BaseRes.ok("Da danh dau tat ca thong bao da doc",
+				notificationService.markAllAsRead(currentUserScopeProvider.currentUserId()));
 	}
 
 	@GetMapping("/notifications/unread-count")

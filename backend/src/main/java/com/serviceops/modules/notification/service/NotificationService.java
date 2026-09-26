@@ -1,6 +1,7 @@
 package com.serviceops.modules.notification.service;
 
 import com.serviceops.modules.notification.dto.response.NotificationRes;
+import com.serviceops.modules.notification.enums.NotificationGroup;
 import com.serviceops.modules.notification.enums.NotificationType;
 import org.springframework.data.domain.Pageable;
 
@@ -14,7 +15,14 @@ public interface NotificationService {
 
 	List<NotificationRes> listNotifications(Long recipientId, boolean unreadOnly, Pageable pageable);
 
+	/** NCL-14-CN-001: nhu tren, loc them theo nhom thong bao ({@code group = null} = khong loc). */
+	List<NotificationRes> listNotifications(Long recipientId, boolean unreadOnly, NotificationGroup group,
+			Pageable pageable);
+
 	void markAsRead(Long recipientId, List<Long> notificationIds);
+
+	/** NCL-14-CN-001: danh dau tat ca thong bao chua doc cua chinh minh la da doc; tra ve so thong bao da doi. */
+	int markAllAsRead(Long recipientId);
 
 	long getUnreadCount(Long recipientId);
 
