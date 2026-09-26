@@ -59,7 +59,9 @@ export type Tab =
   | 'NOTIFICATIONS'
   | 'NOTIFICATION_PREFERENCES'
   | 'NOTIFICATION_DEDUP'
-  | 'SERVICE_CATALOG';
+  | 'SERVICE_CATALOG'
+  | 'COMPANY_SETTINGS'
+  | 'FISCAL_PERIODS';
 
 export interface NavItem {
   tab: Tab;
@@ -253,6 +255,11 @@ export const REPORT_NAV_ITEMS: NavItem[] = [
     // NCL-11-CN-004: Quản lý dự án chọn báo cáo + kỳ rồi xuất tệp bảng tính. Backend
     // tự bỏ cột giá vốn theo quyền người xuất (QTN-02) và ghi nhật ký mỗi lần xuất.
   },
+  {
+    tab: 'FISCAL_PERIODS', icon: ICONS.calendar, label: 'Kỳ tài chính', requires: ['VT-01', 'VT-02', 'VT-05'],
+    // NCL-15-CN-002 TC-01: năm/quý tài chính chia theo tháng bắt đầu đã cấu hình — chỉ đọc, cho người xem
+    // báo cáo; khớp @PreAuthorize của /fiscal-periods. Quản trị viên (VT-07) mở từ "Cấu hình công ty".
+  },
 ];
 
 /** Quản trị & Tổ chức — cơ cấu tổ chức, tài khoản, nhân sự, phân quyền. Tách
@@ -272,6 +279,12 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     tab: 'SERVICE_CATALOG', icon: ICONS.tag, label: 'Danh mục dịch vụ', requires: ['VT-07'],
     // NCL-15-CN-001 (QTN-28): danh mục dịch vụ và giá dùng chung cho báo giá / hóa đơn. Chỉ VT-07 —
     // khớp @PreAuthorize của /service-catalog (màn hình vẫn gọi API để backend ghi nhật ký lần từ chối).
+  },
+  {
+    tab: 'COMPANY_SETTINGS', icon: ICONS.settings, label: 'Cấu hình công ty', requires: ['VT-07'],
+    matches: ['FISCAL_PERIODS'],
+    // NCL-15-CN-002: thông tin công ty + tháng bắt đầu năm tài chính. Chỉ VT-07 — khớp @PreAuthorize của
+    // /company-settings (màn hình vẫn gọi API để backend ghi nhật ký lần từ chối).
   },
 ];
 
@@ -364,8 +377,11 @@ export function isTabVisible(tab: Tab, roles: readonly string[] = []): boolean {
   // Các mục luôn truy cập được qua menu tài khoản, không nằm trong NAV_ITEMS.
   if (tab === 'CHANGE_PASSWORD' || tab === 'NOTIFICATIONS' || tab === 'NOTIFICATION_PREFERENCES') return true;
   const direct = ALL_NAV_ITEMS.find((item) => item.tab === tab);
-  if (direct) return isItemVisible(direct, roles);
   // Tab con (chi tiết KH, nhân viên, báo cáo đường ống) — dựa trên mục cha.
-  const parent = ALL_NAV_ITEMS.find((item) => (item.matches ?? []).includes(tab));
-  return parent ? isItemVisible(parent, roles) : true;
+  const parents = ALL_NAV_ITEMS.filter((item) => (item.matches ?? []).includes(tab));
+  if (direct && isItemVisible(direct, roles)) return true;
+  // Một tab vừa là mục riêng vừa là trang con (vd "Kỳ tài chính": mục Báo cáo của VT-01/02/05, đồng thời
+  // mở từ "Cấu hình công ty" của VT-07) — thấy được nếu thấy một trong các mục cha.
+  if (parents.some((p) => isItemVisible(p, roles))) return true;
+  return !direct && parents.length === 0;
 }

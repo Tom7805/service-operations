@@ -57,6 +57,8 @@ import NotificationCenterPage from './modules/notifications/pages/NotificationCe
 import NotificationPreferencePage from './modules/notifications/pages/NotificationPreferencePage';
 import NotificationDedupConfigPage from './modules/notifications/pages/NotificationDedupConfigPage';
 import ServiceCatalogPage from './modules/admin/pages/ServiceCatalogPage';
+import CompanySettingPage from './modules/admin/pages/CompanySettingPage';
+import FiscalPeriodPage from './modules/admin/pages/FiscalPeriodPage';
 import { NOTIFICATIONS_CHANGED_EVENT } from './modules/notifications/utils/notificationEvents';
 import NotificationList from './modules/notifications/components/NotificationList';
 import {
@@ -753,6 +755,17 @@ export default function App() {
             />
           ) : activeTab === 'NOTIFICATION_PREFERENCES' ? (
             <NotificationPreferencePage onBack={() => setActiveTab('NOTIFICATIONS')} />
+          ) : activeTab === 'COMPANY_SETTINGS' ? (
+            <CompanySettingPage
+              currentUserRoles={currentRoles}
+              onViewAuditLog={() => setActiveTab('SYSTEM_AUDIT_LOG')}
+              onViewFiscalPeriods={() => setActiveTab('FISCAL_PERIODS')}
+            />
+          ) : activeTab === 'FISCAL_PERIODS' ? (
+            <FiscalPeriodPage
+              currentUserRoles={currentRoles}
+              onOpenCompanySettings={currentRoles.includes('VT-07') ? () => setActiveTab('COMPANY_SETTINGS') : undefined}
+            />
           ) : activeTab === 'SERVICE_CATALOG' ? (
             <ServiceCatalogPage currentUserRoles={currentRoles} onViewAuditLog={() => setActiveTab('SYSTEM_AUDIT_LOG')} />
           ) : activeTab === 'NOTIFICATION_DEDUP' ? (
