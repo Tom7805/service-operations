@@ -73,11 +73,27 @@ public class NotificationAntiDuplicateServiceImpl implements NotificationAntiDup
 		}
 		state.setActive(true);
 		state.setLastAlertAt(now);
-		notificationAlertStateRepository.save(state);
+		state = saveState(state, eventType, referenceId);
 
+		Integer episodeNo = state.getEpisodeNo();
 		return candidateRecipientIds.stream()
-				.filter(recipientId -> tryClaim(eventType, referenceId, recipientId, state.getEpisodeNo()))
+				.filter(recipientId -> tryClaim(eventType, referenceId, recipientId, episodeNo))
 				.toList();
+	}
+
+	/**
+	 * Luu trang thai; neu day la ban ghi MOI (lan dau vuot nguong) va mot luot ra soat khac da
+	 * chiem dung (event_type, reference_id) nay giua luc doc va luu (race condition) -> doc lai
+	 * ban ghi ma luot do da luu de tiep tuc (dung episodeNo thuc te trong DB), khong nem loi len
+	 * tren. Giong chot chan cua {@link #tryClaim}.
+	 */
+	private NotificationAlertState saveState(NotificationAlertState state, NotificationType eventType, Long referenceId) {
+		try {
+			return notificationAlertStateRepository.save(state);
+		} catch (DataIntegrityViolationException concurrentInsert) {
+			return notificationAlertStateRepository.findByEventTypeAndReferenceId(eventType, referenceId)
+					.orElseThrow(() -> concurrentInsert);
+		}
 	}
 
 	/** Het cooldown ma van dang vuot nguong -> coi nhu mot dot nhac lai (dung lai co che tang episodeNo). */

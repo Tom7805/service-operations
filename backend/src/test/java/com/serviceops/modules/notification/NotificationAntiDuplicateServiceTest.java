@@ -62,6 +62,11 @@ class NotificationAntiDuplicateServiceTest {
 		when(notificationDedupConfigRepository.findByEventType(EVENT_TYPE)).thenReturn(Optional.empty());
 	}
 
+	/** Mo phong save() cua JPA repository: tra ve dung ban ghi da truyen vao (khong tra ve null). */
+	private void stateSaveReturnsItsArgument() {
+		when(notificationAlertStateRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+	}
+
 	private NotificationAlertState state(boolean active, int episodeNo) {
 		NotificationAlertState state = new NotificationAlertState();
 		state.setEventType(EVENT_TYPE);
@@ -74,6 +79,7 @@ class NotificationAntiDuplicateServiceTest {
 	@Test
 	void lanDauVuotNguong_taoDotCanhBaoDau_guiChoTatCaUngVien() {
 		noConfigOverride();
+		stateSaveReturnsItsArgument();
 		when(notificationAlertStateRepository.findByEventTypeAndReferenceId(EVENT_TYPE, TASK_ID))
 				.thenReturn(Optional.empty());
 
@@ -87,6 +93,7 @@ class NotificationAntiDuplicateServiceTest {
 	@Test
 	void tc01_daGuiRoiTrongCungDot_boQuaNguoiDaNhanChiGuiNguoiChuaNhan() {
 		noConfigOverride();
+		stateSaveReturnsItsArgument();
 		NotificationAlertState existing = state(true, 1);
 		when(notificationAlertStateRepository.findByEventTypeAndReferenceId(EVENT_TYPE, TASK_ID))
 				.thenReturn(Optional.of(existing));
@@ -104,6 +111,7 @@ class NotificationAntiDuplicateServiceTest {
 	@Test
 	void tc02_thoatNguongRoiVuotLai_coiLaDotCanhBaoMoiVaGuiLaiChoNguoiDaNhan() {
 		noConfigOverride();
+		stateSaveReturnsItsArgument();
 		NotificationAlertState existing = state(true, 1);
 		when(notificationAlertStateRepository.findByEventTypeAndReferenceId(EVENT_TYPE, TASK_ID))
 				.thenReturn(Optional.of(existing));
@@ -137,6 +145,7 @@ class NotificationAntiDuplicateServiceTest {
 	@Test
 	void raceCondition_chiemKhoaThatBaiViTrungLap_khongTinhLaGuiThanhCong() {
 		noConfigOverride();
+		stateSaveReturnsItsArgument();
 		when(notificationAlertStateRepository.findByEventTypeAndReferenceId(EVENT_TYPE, TASK_ID))
 				.thenReturn(Optional.empty());
 		when(notificationAlertDedupLogRepository.existsByEventTypeAndReferenceIdAndRecipientIdAndEpisodeNo(
@@ -146,6 +155,21 @@ class NotificationAntiDuplicateServiceTest {
 		List<Long> result = service.resolveRecipientsToNotify(EVENT_TYPE, TASK_ID, List.of(1L), true);
 
 		assertTrue(result.isEmpty());
+	}
+
+	@Test
+	void raceConditionKhiTaoTrangThaiMoi_doiThuKhacDaChiemTruoc_docLaiVaTiepTucDungEpisode() {
+		noConfigOverride();
+		NotificationAlertState winnerState = state(true, 1);
+		when(notificationAlertStateRepository.findByEventTypeAndReferenceId(EVENT_TYPE, TASK_ID))
+				.thenReturn(Optional.empty(), Optional.of(winnerState));
+		when(notificationAlertStateRepository.save(any())).thenThrow(new DataIntegrityViolationException("dup"));
+
+		List<Long> result = service.resolveRecipientsToNotify(EVENT_TYPE, TASK_ID, List.of(1L), true);
+
+		assertEquals(List.of(1L), result);
+		verify(notificationAlertDedupLogRepository).existsByEventTypeAndReferenceIdAndRecipientIdAndEpisodeNo(
+				EVENT_TYPE, TASK_ID, 1L, 1);
 	}
 
 	@Test
