@@ -1,4 +1,4 @@
-import type { NotificationGroup, NotificationRes } from '../types/notificationTypes';
+import type { NotificationGroup, NotificationPreference, NotificationRes } from '../types/notificationTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -107,5 +107,29 @@ export async function markAllNotificationsRead(): Promise<number> {
 export async function openNotification(id: number): Promise<NotificationRes> {
   return requestBackend<NotificationRes>(`${API_BASE_URL}/notifications/${id}/open`, {
     method: 'POST',
+  });
+}
+
+/**
+ * Cấu hình nhận thông báo của chính mình (NCL-14-CN-002) — luôn đủ 6 nhóm, nhóm chưa từng cấu
+ * hình được điền mặc định bật + nhận ngay.
+ * GET /notifications/preferences
+ */
+export async function getNotificationPreferences(): Promise<NotificationPreference[]> {
+  return requestBackend<NotificationPreference[]>(`${API_BASE_URL}/notifications/preferences`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * Lưu cấu hình nhận thông báo — chỉ cần gửi các nhóm thay đổi, nhóm không gửi giữ nguyên.
+ * Backend ghi nhật ký "Cap nhat cau hinh nhan thong bao" (TC-03). `400` nếu danh sách rỗng
+ * hoặc giá trị ngoài enum.
+ * PUT /notifications/preferences
+ */
+export async function updateNotificationPreferences(preferences: NotificationPreference[]): Promise<void> {
+  await requestBackend<null>(`${API_BASE_URL}/notifications/preferences`, {
+    method: 'PUT',
+    body: JSON.stringify({ preferences }),
   });
 }

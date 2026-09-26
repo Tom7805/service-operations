@@ -46,6 +46,22 @@ export type NotificationSeverity = 'CRITICAL' | 'WARNING' | 'INFO';
 export type NotificationGroup = 'TIMESHEET' | 'EXPENSE' | 'PROJECT' | 'CONTRACT' | 'INVOICE' | 'ACCEPTANCE';
 
 /**
+ * Tần suất nhận của một nhóm (NCL-14-CN-002): nhận ngay, hoặc gộp thành một bản tổng hợp
+ * (`DAILY_DIGEST_SUMMARY`) tạo lúc 20:00 mỗi ngày.
+ */
+export type NotificationFrequency = 'IMMEDIATE' | 'DAILY_DIGEST';
+
+/**
+ * Cấu hình nhận của một nhóm thông báo — khớp NotificationPreferenceRes và từng phần tử
+ * `preferences` của PUT /notifications/preferences. GET luôn trả đủ 6 nhóm.
+ */
+export interface NotificationPreference {
+  notificationGroup: NotificationGroup;
+  enabled: boolean;
+  frequency: NotificationFrequency;
+}
+
+/**
  * Một thông báo in-app của chính người dùng hiện tại. Khớp NotificationRes —
  * `GET /notifications` luôn chỉ trả thông báo của chính mình, không nhận `recipientId` từ client.
  */

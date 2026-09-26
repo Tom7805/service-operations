@@ -33,6 +33,8 @@ export interface NotificationCenterPageProps {
   onNavigate?: (opened: NotificationRes) => void;
   /** Đồng bộ số trên chuông thông báo ở thanh trên cùng mỗi khi số chưa đọc thay đổi (TC-01). */
   onUnreadCountChange?: (count: number) => void;
+  /** Mở màn cấu hình nhận thông báo (NCL-14-CN-002). Bỏ trống thì ẩn nút. */
+  onOpenPreferences?: () => void;
 }
 
 function errorMessage(err: unknown, fallback: string): string {
@@ -45,7 +47,11 @@ function errorMessage(err: unknown, fallback: string): string {
  * liên quan và đánh dấu đã đọc; mọi thao tác đọc/đánh dấu đều đi qua API để backend ghi nhật ký
  * người thực hiện, nội dung và thời điểm (TC-03).
  */
-export default function NotificationCenterPage({ onNavigate, onUnreadCountChange }: NotificationCenterPageProps = {}) {
+export default function NotificationCenterPage({
+  onNavigate,
+  onUnreadCountChange,
+  onOpenPreferences,
+}: NotificationCenterPageProps = {}) {
   const [notifications, setNotifications] = useState<NotificationRes[]>([]);
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [group, setGroup] = useState<NotificationGroup | null>(null);
@@ -207,6 +213,16 @@ export default function NotificationCenterPage({ onNavigate, onUnreadCountChange
           </p>
         </div>
         <div className="page-header__actions">
+          {onOpenPreferences && (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={onOpenPreferences}
+              data-testid="btn-open-preferences"
+            >
+              {ICONS.settings} Cài đặt nhận thông báo
+            </button>
+          )}
           <button
             type="button"
             className="btn-secondary"

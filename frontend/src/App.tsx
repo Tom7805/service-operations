@@ -54,6 +54,7 @@ import ProjectRecognizedRevenuePage from './modules/profitability/pages/ProjectR
 import ProjectMarginPage from './modules/profitability/pages/ProjectMarginPage';
 import MarginAlertThresholdPage from './modules/profitability/pages/MarginAlertThresholdPage';
 import NotificationCenterPage from './modules/notifications/pages/NotificationCenterPage';
+import NotificationPreferencePage from './modules/notifications/pages/NotificationPreferencePage';
 import NotificationList from './modules/notifications/components/NotificationList';
 import {
   getNotifications,
@@ -506,6 +507,12 @@ export default function App() {
           ),
           { id: 'CHANGE_PASSWORD', label: 'Đổi mật khẩu', group: 'Tài khoản của tôi', icon: ICONS.key },
           { id: 'NOTIFICATIONS', label: 'Thông báo', group: 'Tài khoản của tôi', icon: ICONS.bell },
+          {
+            id: 'NOTIFICATION_PREFERENCES',
+            label: 'Cài đặt nhận thông báo',
+            group: 'Tài khoản của tôi',
+            icon: ICONS.settings,
+          },
         ]}
         onSelect={(id) => {
           leavePortalHash();
@@ -559,7 +566,9 @@ export default function App() {
                 ? 'Cổng khách hàng'
                 : activeTab === 'NOTIFICATIONS'
                   ? 'Thông báo'
-                  : activeNavItem?.label ?? 'Vận hành dịch vụ'}</h1>
+                  : activeTab === 'NOTIFICATION_PREFERENCES'
+                    ? 'Cài đặt nhận thông báo'
+                    : activeNavItem?.label ?? 'Vận hành dịch vụ'}</h1>
           </div>
 
           <div className="app-topbar__actions">
@@ -692,6 +701,18 @@ export default function App() {
                   </button>
                   <button
                     type="button"
+                    className="user-chip__menu-item"
+                    role="menuitem"
+                    onClick={() => {
+                      setActiveTab('NOTIFICATION_PREFERENCES');
+                      setUserMenuOpen(false);
+                    }}
+                    data-testid="menu-notification-preferences"
+                  >
+                    {ICONS.settings} Cài đặt nhận thông báo
+                  </button>
+                  <button
+                    type="button"
                     className="user-chip__menu-item user-chip__menu-item--danger"
                     role="menuitem"
                     onClick={handleLogout}
@@ -718,7 +739,13 @@ export default function App() {
           ) : activeTab === 'CHANGE_PASSWORD' ? (
             <ChangePasswordPage onBack={() => setActiveTab(defaultTab)} onPasswordChanged={handleLogout} />
           ) : activeTab === 'NOTIFICATIONS' ? (
-            <NotificationCenterPage onNavigate={navigateToNotification} onUnreadCountChange={setUnreadCount} />
+            <NotificationCenterPage
+              onNavigate={navigateToNotification}
+              onUnreadCountChange={setUnreadCount}
+              onOpenPreferences={() => setActiveTab('NOTIFICATION_PREFERENCES')}
+            />
+          ) : activeTab === 'NOTIFICATION_PREFERENCES' ? (
+            <NotificationPreferencePage onBack={() => setActiveTab('NOTIFICATIONS')} />
           ) : activeTab === 'MY_WORK' ? (
             <MyWorkPage currentUserRoles={currentRoles} currentUserName={session.fullName} currentUserId={session.userId} />
           ) : activeTab === 'TIMESHEET_APPROVAL' ? (
