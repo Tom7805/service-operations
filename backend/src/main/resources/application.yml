@@ -39,6 +39,11 @@ app:
   jwt:
     secret: ${JWT_SECRET:changeme_please_use_a_long_random_string}
     expiration-ms: ${JWT_EXPIRATION:86400000}
+  security:
+    login:
+      # NCL-01-CN-001-TC-02: sai mat khau 5 lan lien tiep thi tam khoa dang nhap trong
+      # khoang nay (giay). Dat nho (vi du 10) qua LOGIN_LOCK_SECONDS khi can demo nhanh.
+      lock-seconds: ${LOGIN_LOCK_SECONDS:300}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
   password-reset:

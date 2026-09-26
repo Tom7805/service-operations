@@ -13,6 +13,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.context.annotation.Import;
 
@@ -36,6 +37,10 @@ class SensitiveAccessLogServiceTest {
 
     @Autowired
     private SensitiveAccessLogServiceImpl service;
+
+    /** Moi lan tra cuu trang dau ghi Nhat ky he thong (NCL-01-CN-006-TC-04) — ngoai pham vi test JPA nay. */
+    @MockBean
+    private AuditLogService auditLogService;
 
     private final LocalDateTime t1 = LocalDateTime.of(2026, 8, 1, 9, 0);
     private final LocalDateTime t2 = LocalDateTime.of(2026, 8, 2, 10, 30);

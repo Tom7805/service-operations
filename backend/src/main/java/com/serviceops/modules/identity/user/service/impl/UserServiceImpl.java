@@ -27,6 +27,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -68,6 +71,7 @@ public class UserServiceImpl implements UserService {
         if (userRepository.existsByUsernameIgnoreCase(request.username().trim())) {
             throw new BusinessRuleException(ErrorCode.DUPLICATE_DATA, "Ten tai khoan da ton tai");
         }
+        ensureDepartmentExists(request.departmentId());
         User user = new User();
         user.setUsername(request.username().trim());
         user.setPasswordHash(passwordEncoder.encode(request.password()));
@@ -86,24 +90,54 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserRes update(Long id, UpdateUserReq request) {
         User user = getUser(id);
+        ensureDepartmentExists(request.departmentId());
+        boolean profileChanged = !Objects.equals(user.getFullName(), request.fullName().trim())
+                || !Objects.equals(user.getEmail(), normalize(request.email()))
+                || !Objects.equals(user.getDepartmentId(), request.departmentId());
         user.setFullName(request.fullName().trim());
         user.setEmail(normalize(request.email()));
         user.setDepartmentId(request.departmentId());
-        if (request.password() != null && !request.password().isBlank()) {
+        boolean passwordReset = request.password() != null && !request.password().isBlank();
+        if (passwordReset) {
             user.setPasswordHash(passwordEncoder.encode(request.password()));
+            // Quan tri vien dat lai mat khau thi cac phien dang mo bang mat khau cu phai cham dut.
+            user.bumpTokenVersion();
         }
-        boolean roleScopeChanged = request.roleCodes() != null && !request.roleCodes().isEmpty();
-        if (roleScopeChanged) {
-            replaceRoles(user, request.roleCodes(), request.scopeType(), request.scopeDepartmentId());
+
+        // Form "Sua tai khoan" luon gui lai danh sach vai tro nhung khong gui pham vi du lieu: khi do phai
+        // GIU NGUYEN pham vi dang co, khong duoc am tham doi ve COMPANY (mo rong quyen ngoai y muon).
+        List<UserRoleScope> currentScopes = userRoleScopeRepository.findByUser_Id(user.getId());
+        String currentScopeType = currentScopes.isEmpty() ? null : currentScopes.get(0).getScopeType();
+        Long currentScopeDepartmentId = currentScopes.isEmpty() ? null : currentScopes.get(0).getScopeDepartmentId();
+        boolean scopeProvided = request.scopeType() != null && !request.scopeType().isBlank();
+        String targetScopeType = scopeProvided ? request.scopeType() : currentScopeType;
+        Long targetScopeDepartmentId = scopeProvided ? request.scopeDepartmentId() : currentScopeDepartmentId;
+
+        boolean roleScopeChanged = false;
+        if (request.roleCodes() != null && !request.roleCodes().isEmpty()) {
+            Set<String> currentRoles = currentScopes.stream().map(s -> s.getRole().getCode()).collect(Collectors.toSet());
+            Set<String> targetRoles = request.roleCodes().stream().map(String::trim).collect(Collectors.toSet());
+            DataScopeType currentType = DataScopeType.fromCode(currentScopeType);
+            DataScopeType targetType = DataScopeType.fromCode(targetScopeType);
+            roleScopeChanged = !currentRoles.equals(targetRoles)
+                    || currentType != targetType
+                    || (targetType == DataScopeType.DEPARTMENT
+                        && !Objects.equals(currentScopeDepartmentId, targetScopeDepartmentId));
+            if (roleScopeChanged) {
+                replaceRoles(user, request.roleCodes(), targetScopeType, targetScopeDepartmentId);
+            }
         }
         log.info("USER_UPDATED userId={} username={}", user.getId(), user.getUsername());
         UserRes result = toResponse(userRepository.save(user));
         if (roleScopeChanged) {
             auditLogService.record("Cấu hình phân quyền", AuditTargetType.ROLE_SCOPE, user.getId(), user.getUsername(),
-                "Gán vai trò [" + roleNames(request.roleCodes()) + "] với phạm vi " + request.scopeType());
-        } else {
+                "Gán vai trò [" + roleNames(request.roleCodes()) + "] với phạm vi "
+                    + scopeLabel(targetScopeType, targetScopeDepartmentId));
+        }
+        if (profileChanged || passwordReset || !roleScopeChanged) {
             auditLogService.record("Cập nhật tài khoản", AuditTargetType.USER, user.getId(), user.getUsername(),
-                "Cập nhật thông tin tài khoản " + user.getFullName());
+                "Cập nhật thông tin tài khoản " + user.getFullName()
+                    + (passwordReset ? " (đặt lại mật khẩu, các phiên đăng nhập cũ bị chấm dứt)" : ""));
         }
         return result;
     }
@@ -112,7 +146,12 @@ public class UserServiceImpl implements UserService {
     public UserRes updateStatus(Long id, UserStatusReq request) {
         User user = getUser(id);
         if (user.getStatus() == request.status()) {
-            throw new BusinessRuleException(ErrorCode.INVALID_STATE, "Tai khoan da o trang thai nay");
+            // NCL-01-CN-002-TC-03: khoa lai tai khoan dang bi khoa -> bao ro "da bi khoa".
+            throw new BusinessRuleException(ErrorCode.INVALID_STATE, switch (request.status()) {
+                case LOCKED -> "Tài khoản đã bị khóa.";
+                case ACTIVE -> "Tài khoản đang hoạt động, không cần mở khóa.";
+                case INACTIVE -> "Tài khoản đã ngừng hoạt động.";
+            });
         }
         UserStatus previousStatus = user.getStatus();
         user.setStatus(request.status());
@@ -186,6 +225,22 @@ public class UserServiceImpl implements UserService {
                         .map(Role::getName)
                         .orElse(code))
                 .collect(java.util.stream.Collectors.joining(", "));
+    }
+
+    private void ensureDepartmentExists(Long departmentId) {
+        if (departmentId != null && !departmentRepository.existsById(departmentId)) {
+            throw new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy bộ phận đã chọn");
+        }
+    }
+
+    private String scopeLabel(String scopeType, Long scopeDepartmentId) {
+        DataScopeType type = DataScopeType.fromCode(scopeType);
+        if (type == DataScopeType.DEPARTMENT) {
+            String name = scopeDepartmentId == null ? null
+                    : departmentRepository.findById(scopeDepartmentId).map(d -> d.getName()).orElse(null);
+            return "một nhánh tổ chức" + (name != null ? " (" + name + ")" : "");
+        }
+        return type == DataScopeType.SELF ? "chỉ dữ liệu cá nhân" : "toàn công ty";
     }
 
     private User getUser(Long id) {

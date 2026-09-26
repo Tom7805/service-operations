@@ -48,7 +48,14 @@ public enum NotificationType {
 	 * nguong ngan sach". KHONG di kem job quet thuc te trong pham vi story nay (xem
 	 * {@code NotificationAntiDuplicateService}); mo phong detector o tang service/test.
 	 */
-	TASK_BUDGET_EXCEEDED;
+	TASK_BUDGET_EXCEEDED,
+
+	/**
+	 * NCL-01-CN-009-TC-02: canh bao bao mat gui quan tri vien (vi du mot tai khoan bi tam khoa do nhap
+	 * sai ma xac thuc hai buoc qua so lan). Khong thuoc {@link NotificationGroup} nao — nguoi nhan
+	 * KHONG duoc tat hay gop cuoi ngay loai canh bao nay.
+	 */
+	SECURITY_ALERT;
 
 	/**
 	 * Nhom nghiep vu (NCL-14-CN-002) dung de tra cau hinh nhan thong bao — null cho
@@ -63,7 +70,7 @@ public enum NotificationType {
 			case CONTRACT_EXPIRING -> NotificationGroup.CONTRACT;
 			case INVOICE_PROPOSAL_CREATED, DUNNING_REMINDER, RECURRING_INVOICE_GENERATED -> NotificationGroup.INVOICE;
 			case ACCEPTANCE_DECIDED_ON_PORTAL -> NotificationGroup.ACCEPTANCE;
-			case DAILY_DIGEST_SUMMARY -> null;
+			case DAILY_DIGEST_SUMMARY, SECURITY_ALERT -> null;
 		};
 	}
 }

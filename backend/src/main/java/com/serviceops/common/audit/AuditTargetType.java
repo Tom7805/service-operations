@@ -6,6 +6,13 @@ package com.serviceops.common.audit;
  */
 public enum AuditTargetType {
 	USER,
+
+	/** Dang nhap va doi/khoi phuc mat khau (NCL-01-CN-001 TC-04, NCL-01-CN-008 TC-03). */
+	AUTH,
+
+	/** Ho so nhan su, hop dong lao dong va gio lam viec chuan (NCL-01-CN-007 TC-05). */
+	EMPLOYEE,
+
 	ROLE_SCOPE,
 	TWO_FACTOR,
 	DEPARTMENT,

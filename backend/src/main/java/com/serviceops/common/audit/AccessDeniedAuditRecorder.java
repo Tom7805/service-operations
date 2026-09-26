@@ -128,6 +128,9 @@ public class AccessDeniedAuditRecorder {
         RULES.add(rule("/employees", new Feature(AuditTargetType.USER, "Quản lý nhân sự")));
         RULES.add(rule("/departments", new Feature(AuditTargetType.DEPARTMENT, "Quản lý tổ chức")));
         RULES.add(rule("/auth/two-factor", new Feature(AuditTargetType.TWO_FACTOR, "Xác thực hai bước")));
+        // NCL-01-CN-004-TC-02: mở danh sách / chi tiết dự án ngoài phạm vi dữ liệu được phân.
+        RULES.add(rule(uri -> uri.matches(".*/projects(/\\d+)?/?$"),
+                new Feature(AuditTargetType.ROLE_SCOPE, "Xem dự án ngoài phạm vi dữ liệu")));
     }
 
     private static Rule rule(String substring, Feature feature) {

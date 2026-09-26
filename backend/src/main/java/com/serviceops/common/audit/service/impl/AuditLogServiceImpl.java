@@ -62,6 +62,22 @@ public class AuditLogServiceImpl implements AuditLogService {
 	}
 
 	@Override
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	public void recordAs(Long actorUserId, String actorUsername, String action, AuditTargetType targetType,
+			Long targetId, String targetLabel, String detail) {
+		AuditLog log = new AuditLog();
+		log.setAction(action);
+		log.setTargetType(targetType);
+		log.setTargetId(targetId);
+		log.setTargetLabel(targetLabel);
+		log.setDetail(detail);
+		log.setPerformedAt(LocalDateTime.now());
+		log.setActorUserId(actorUserId);
+		log.setActorUsername(actorUsername);
+		repository.save(log);
+	}
+
+	@Override
 	@Transactional(readOnly = true)
 	public Optional<AuditLogRes> findFirstForTarget(AuditTargetType targetType, Long targetId) {
 		return repository.findFirstByTargetTypeAndTargetIdOrderByPerformedAtAsc(targetType, targetId)
