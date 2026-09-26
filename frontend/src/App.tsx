@@ -59,6 +59,7 @@ import NotificationDedupConfigPage from './modules/notifications/pages/Notificat
 import ServiceCatalogPage from './modules/admin/pages/ServiceCatalogPage';
 import CompanySettingPage from './modules/admin/pages/CompanySettingPage';
 import FiscalPeriodPage from './modules/admin/pages/FiscalPeriodPage';
+import BackupRestorePage from './modules/admin/pages/BackupRestorePage';
 import { NOTIFICATIONS_CHANGED_EVENT } from './modules/notifications/utils/notificationEvents';
 import NotificationList from './modules/notifications/components/NotificationList';
 import {
@@ -755,6 +756,8 @@ export default function App() {
             />
           ) : activeTab === 'NOTIFICATION_PREFERENCES' ? (
             <NotificationPreferencePage onBack={() => setActiveTab('NOTIFICATIONS')} />
+          ) : activeTab === 'BACKUP_RESTORE' ? (
+            <BackupRestorePage currentUserRoles={currentRoles} onViewAuditLog={() => setActiveTab('SYSTEM_AUDIT_LOG')} />
           ) : activeTab === 'COMPANY_SETTINGS' ? (
             <CompanySettingPage
               currentUserRoles={currentRoles}
