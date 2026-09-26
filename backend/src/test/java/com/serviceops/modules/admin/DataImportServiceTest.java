@@ -246,6 +246,28 @@ class DataImportServiceTest {
 	}
 
 	@Test
+	@DisplayName("Dong ghi that bai voi loi khong co message van duoc ghi vao danh sach loi, khong lam vo ca lan nhap")
+	void rowFailureWithoutMessageStillRecorded() {
+		doAnswer(inv -> {
+			CustomerCreateReq req = inv.getArgument(0);
+			if (req.name().equals("Cong ty Loi")) {
+				throw new BusinessRuleException(ErrorCode.INVALID_STATE, null);
+			}
+			return new CustomerRes(1L, "KH000001", req.name(), null, null, null, null, null);
+		}).when(customerService).create(any());
+		ImportPreviewRes preview = importService.preview(ImportTargetType.CUSTOMER, "kh.csv",
+				bytes(CUSTOMER_HEADER + "Cong ty Loi,,,,\nCong ty Binh Thuong,,,,\n"));
+
+		ImportResultRes result = importService.commit(preview.jobId(), null);
+		assertThat(result.status()).isEqualTo(ImportStatus.COMMITTED_WITH_ERRORS);
+		assertThat(result.createdCount()).isEqualTo(1);
+		assertThat(result.errors()).singleElement().satisfies(error -> {
+			assertThat(error.stage()).isEqualTo(ImportErrorStage.COMMIT);
+			assertThat(error.message()).isEqualTo("Loi khi ghi du lieu: BusinessRuleException");
+		});
+	}
+
+	@Test
 	@DisplayName("Tep Excel luu dang cham phay + ma windows-1258 van doc dung tieu de tieng Viet")
 	void excelSemicolonAndLegacyEncoding() {
 		// Chi dung ky tu co san trong windows-1258 (ê, á, à, ô) — dung nhu tep Excel tieng Viet xuat ra.

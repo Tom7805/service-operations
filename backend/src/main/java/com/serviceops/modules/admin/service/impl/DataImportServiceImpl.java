@@ -33,6 +33,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -166,8 +167,9 @@ public class DataImportServiceImpl implements DataImportService {
 				}
 			} catch (RuntimeException failure) {
 				log.warn("IMPORT_ROW_FAILED jobId={} row={} reason={}", jobId, row.rowNumber(), failure.getMessage());
-				errors.add(error(job.getId(), row, ImportErrorStage.COMMIT, failure instanceof BusinessRuleException
-						? failure.getMessage() : "Loi khi ghi du lieu: " + failure.getClass().getSimpleName()));
+				errors.add(error(job.getId(), row, ImportErrorStage.COMMIT,
+						failure instanceof BusinessRuleException && failure.getMessage() != null
+								? failure.getMessage() : "Loi khi ghi du lieu: " + failure.getClass().getSimpleName()));
 			}
 		}
 		int failed = (int) errors.stream().filter(e -> e.getStage() == ImportErrorStage.COMMIT).count();
@@ -259,7 +261,8 @@ public class DataImportServiceImpl implements DataImportService {
 		error.setImportJobId(jobId);
 		error.setRowNumber(row.rowNumber());
 		error.setStage(stage);
-		error.setMessage(truncate(message, 1000));
+		// Cot message NOT NULL: exception khong co message ma de null thi saveAll vo SAU khi cac dong khac da ghi.
+		error.setMessage(Objects.requireNonNullElse(truncate(message, 1000), "Loi khong xac dinh"));
 		error.setRawData(truncate(row.raw(), 2000));
 		return error;
 	}
