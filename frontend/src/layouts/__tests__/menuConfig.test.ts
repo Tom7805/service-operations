@@ -75,6 +75,7 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'MARGIN_ALERT_THRESHOLD',
       'REPORTS',
       'REPORT_EXPORT',
+      'FISCAL_PERIODS',
     ]);
   });
 
@@ -106,6 +107,7 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'PROJECT_MARGIN',
       'MARGIN_ALERT_THRESHOLD',
       'REPORTS',
+      'FISCAL_PERIODS',
       // NCL-01-CN-005 TC-04: Kế toán nằm trong nhóm được xem quy tắc che dữ liệu lương/giá vốn.
       'MASKING_RULES',
     ]);
@@ -145,6 +147,7 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'PERMISSIONS',
       'PORTAL_ACCOUNTS',
       'SERVICE_CATALOG',
+      'COMPANY_SETTINGS',
       'TWO_FACTOR_SETTINGS',
       'SYSTEM_AUDIT_LOG',
       'AUDIT_LOG',
@@ -243,6 +246,12 @@ describe('isTabVisible — tuần tự hóa lại khi vai trỏ đổi', () => {
     // NCL-15-CN-001 TC-03: danh mục dịch vụ chỉ hiện cho Quản trị viên.
     expect(isTabVisible('SERVICE_CATALOG', ['VT-07'])).toBe(true);
     expect(isTabVisible('SERVICE_CATALOG', ['VT-04'])).toBe(false);
+    // NCL-15-CN-002: cấu hình công ty chỉ VT-07; kỳ tài chính cho người xem báo cáo và VT-07 (mở từ cấu hình).
+    expect(isTabVisible('COMPANY_SETTINGS', ['VT-07'])).toBe(true);
+    expect(isTabVisible('COMPANY_SETTINGS', ['VT-05'])).toBe(false);
+    expect(isTabVisible('FISCAL_PERIODS', ['VT-05'])).toBe(true);
+    expect(isTabVisible('FISCAL_PERIODS', ['VT-07'])).toBe(true);
+    expect(isTabVisible('FISCAL_PERIODS', ['VT-03'])).toBe(false);
     expect(isTabVisible('CHANGE_PASSWORD', ['VT-03'])).toBe(true);
   });
 

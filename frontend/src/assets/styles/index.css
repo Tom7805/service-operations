@@ -4233,3 +4233,79 @@ ul.notif-panel__list { list-style: none; margin: 0; padding: 0; }
   .svc-page .toolbar-filters .filter-group { flex-wrap: wrap; width: 100%; }
   .svc-page .svc-asof { flex: 1; min-width: 0; }
 }
+
+/* ==========================================================================
+   NCL-15-CN-002 — Cấu hình công ty và kỳ tài chính
+   ========================================================================== */
+.company-layout {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); gap: 16px; align-items: start;
+}
+.company-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.company-side { position: sticky; top: 12px; }
+.company-actionbar { grid-column: 1 / -1; margin-top: 0; }
+.company-card {
+  border: 1px solid var(--line); border-radius: var(--radius-lg, 10px); background: var(--surface);
+  padding: 18px 20px; box-shadow: var(--shadow-xs);
+}
+.company-card__title { margin: 0 0 14px; font-size: 15px; font-weight: 600; color: var(--ink-strong); }
+.company-card .form-group { margin-bottom: 14px; }
+.company-card .form-group:last-child { margin-bottom: 0; }
+.company-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+.company-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.company-grid .form-group:last-child { margin-bottom: 14px; }
+.company-grid--3 .form-group { margin-bottom: 0 !important; }
+.company-banner {
+  display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: var(--radius-md, 8px);
+  background: var(--pale-blue-bg); color: var(--pale-blue-fg); font-size: 13.5px; line-height: 1.5;
+}
+.company-banner svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; }
+.company-change {
+  margin: 0 0 12px; padding: 10px 12px; border-radius: var(--radius-md, 8px);
+  background: var(--pale-yellow-bg); color: var(--pale-yellow-fg); font-size: 13px; line-height: 1.5;
+}
+
+.fy-overview { display: flex; flex-direction: column; gap: 12px; }
+.fy-overview__range { font-size: 13.5px; color: var(--ink-muted); }
+.fy-overview__range strong { color: var(--ink-strong); }
+.fy-quarters { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fiscal-page .fy-quarters { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.fy-quarter {
+  display: flex; flex-direction: column; gap: 2px; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: var(--radius-md, 8px); background: #FBFBFA;
+}
+.fy-quarter--current { border-color: var(--pale-green-fg); background: var(--pale-green-bg); }
+.fy-quarter__name { display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; color: var(--ink-strong); }
+.fy-quarter__now { font-size: 11px; font-weight: 600; padding: 0 6px; border-radius: 999px; background: var(--pale-green-fg); color: #fff; }
+.fy-quarter__range { font-size: 13px; color: var(--ink-strong); }
+.fy-quarter__dates { font-size: 12px; color: var(--ink-muted); }
+.fy-months { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.fy-month {
+  display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 8px 4px;
+  border: 1px solid var(--line); border-radius: var(--radius-sm, 6px); font-size: 12.5px;
+}
+.fy-month--current { border-color: var(--pale-green-fg); background: var(--pale-green-bg); }
+.fy-month__period { color: var(--ink-muted); font-size: 11.5px; }
+.fy-month__label { font-weight: 600; color: var(--ink-strong); }
+
+.fiscal-nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.fiscal-nav__label { font-size: 13.5px; color: var(--ink-muted); margin: 0 0 0 4px; font-weight: 500; }
+.fiscal-nav__input { width: 96px; text-align: center; height: 38px; }
+.fiscal-nav .btn-secondary { height: 38px; display: inline-flex; align-items: center; gap: 6px; }
+.fiscal-nav__error { flex-basis: 100%; margin: 0; }
+
+.fiscal-quickpick { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: -4px 0 16px; }
+.fiscal-quickpick__label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-muted); margin-right: 4px; }
+.fiscal-quickpick__label svg { width: 14px; height: 14px; }
+.fiscal-quickpick__sep { width: 1px; height: 20px; background: var(--line); margin: 0 4px; }
+
+@media (max-width: 1100px) {
+  .company-layout { grid-template-columns: minmax(0, 1fr); }
+  .company-side { position: static; }
+  .fiscal-page .fy-quarters { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 640px) {
+  .company-grid, .company-grid--3 { grid-template-columns: 1fr; }
+  .company-grid--3 .form-group { margin-bottom: 14px !important; }
+  .fy-months { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .company-card { padding: 14px; }
+}

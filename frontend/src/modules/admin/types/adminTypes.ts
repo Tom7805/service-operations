@@ -69,3 +69,63 @@ export interface ServiceCatalogSearchParams {
   /** Ngày tính giá hiện hành (yyyy-MM-dd), mặc định hôm nay ở backend. */
   asOf?: string;
 }
+
+/* ---------- NCL-15-CN-002 — Cấu hình công ty và kỳ tài chính ---------- */
+
+export type CompanyCurrency = 'VND' | 'USD' | 'EUR';
+
+/** Một bộ cấu hình duy nhất cho toàn hệ thống — GET/PUT /company-settings. */
+export interface CompanySettingRes {
+  /** `false` khi chưa cấu hình lần nào — các trường tùy chọn vắng mặt, còn lại là mặc định. */
+  configured: boolean;
+  companyName?: string | null;
+  taxCode?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  currency: CompanyCurrency;
+  /** 1–12 — tháng bắt đầu năm tài chính, quyết định cách chia kỳ báo cáo theo năm/quý (TC-01). */
+  fiscalYearStartMonth: number;
+  standardWorkingDaysPerMonth: number;
+  updatedBy?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface CompanySettingReq {
+  companyName: string;
+  taxCode: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  currency: CompanyCurrency;
+  fiscalYearStartMonth: number;
+  standardWorkingDaysPerMonth: number;
+}
+
+export interface FiscalQuarter {
+  quarter: number;
+  startDate: string;
+  endDate: string;
+}
+
+export interface FiscalMonth {
+  /** Kỳ thứ 1–12 trong năm tài chính. */
+  period: number;
+  /** yyyy-MM */
+  yearMonth: string;
+  startDate: string;
+  endDate: string;
+}
+
+/**
+ * Năm tài chính mang số của năm dương lịch chứa ngày bắt đầu — VD bắt đầu tháng 4 thì năm tài chính
+ * 2026 = 2026-04-01 … 2027-03-31. GET /fiscal-periods/{fiscalYear} · /fiscal-periods/current?date=
+ */
+export interface FiscalPeriodRes {
+  fiscalYear: number;
+  startMonth: number;
+  startDate: string;
+  endDate: string;
+  quarters: FiscalQuarter[];
+  months: FiscalMonth[];
+}

@@ -9,6 +9,8 @@ import {
   type MonthlyRevenueRes,
 } from '../types/reportTypes';
 import { ICONS } from '../../../components/common/icons';
+import { getCurrentFiscalPeriod, getFiscalPeriod } from '../../admin/api/companySettingApi';
+import type { FiscalPeriodRes } from '../../admin/types/adminTypes';
 
 interface RevenueReportPageProps {
   currentUserRoles?: string[];
@@ -61,6 +63,16 @@ function niceMax(value: number): number {
   return step * pow;
 }
 
+function minMonth(a: string, b: string): string {
+  return a < b ? a : b;
+}
+
+/** Bảo vệ khi máy chủ trả dữ liệu không đúng dạng kỳ tài chính. */
+function isFiscalPeriod(value: unknown): value is FiscalPeriodRes {
+  const v = value as FiscalPeriodRes | null;
+  return !!v && typeof v.fiscalYear === 'number' && Array.isArray(v.months) && v.months.length === 12 && Array.isArray(v.quarters);
+}
+
 /** NCL-11-CN-005 — Báo cáo doanh thu theo tháng. Ban giám đốc (VT-01) và Kế toán (VT-05) được xem (TC-03). */
 export default function RevenueReportPage({ currentUserRoles = [] }: RevenueReportPageProps) {
   const isAllowed = currentUserRoles.includes('VT-01') || currentUserRoles.includes('VT-05');
@@ -72,9 +84,60 @@ export default function RevenueReportPage({ currentUserRoles = [] }: RevenueRepo
   const [loading, setLoading] = useState(isAllowed);
   const [error, setError] = useState<string | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
+  // NCL-15-CN-002 TC-01: báo cáo theo năm chia kỳ theo tháng bắt đầu năm tài chính đã cấu hình.
+  const [fiscal, setFiscal] = useState<FiscalPeriodRes | null>(null);
+  const [currentFiscalYear, setCurrentFiscalYear] = useState<number | null>(null);
+  const [fiscalReady, setFiscalReady] = useState(false);
+  const [fiscalLoading, setFiscalLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isAllowed) return;
+    let cancelled = false;
+    void getCurrentFiscalPeriod()
+      .then((fy) => {
+        if (cancelled || !isFiscalPeriod(fy)) return;
+        setFiscal(fy);
+        setCurrentFiscalYear(fy.fiscalYear);
+        // Mặc định: từ đầu năm tài chính hiện tại tới tháng này.
+        const next = { from: fy.months[0].yearMonth, to: minMonth(currentMonth(), fy.months[11].yearMonth) };
+        setDraft(next);
+        setPeriod(next);
+      })
+      .catch(() => {
+        // Chưa lấy được kỳ tài chính → giữ mặc định theo năm dương lịch, báo cáo vẫn xem được.
+      })
+      .finally(() => {
+        if (!cancelled) setFiscalReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAllowed]);
+
+  function applyRange(from: string, to: string) {
+    const next = { from, to };
+    setPeriodError(null);
+    setDraft(next);
+    setPeriod(next);
+  }
+
+  async function pickFiscalYear(year: number) {
+    if (fiscal?.fiscalYear === year) return applyRange(fiscal.months[0].yearMonth, fiscal.months[11].yearMonth);
+    setFiscalLoading(true);
+    try {
+      const fy = await getFiscalPeriod(year);
+      if (!isFiscalPeriod(fy)) return;
+      setFiscal(fy);
+      applyRange(fy.months[0].yearMonth, fy.months[11].yearMonth);
+    } catch (err) {
+      setPeriodError(err instanceof Error ? err.message : 'Không tải được kỳ tài chính.');
+    } finally {
+      setFiscalLoading(false);
+    }
+  }
 
   const load = useCallback(async () => {
-    if (!isAllowed) return;
+    if (!isAllowed || !fiscalReady) return;
     setLoading(true);
     setError(null);
     try {
@@ -91,7 +154,7 @@ export default function RevenueReportPage({ currentUserRoles = [] }: RevenueRepo
     } finally {
       setLoading(false);
     }
-  }, [isAllowed, period]);
+  }, [isAllowed, fiscalReady, period]);
 
   useEffect(() => {
     void load();
@@ -161,6 +224,72 @@ export default function RevenueReportPage({ currentUserRoles = [] }: RevenueRepo
         </button>
         {periodError && <small className="field-error" style={{ flexBasis: '100%' }}>{periodError}</small>}
       </form>
+
+      {fiscal && (
+        <div className="fiscal-quickpick" role="group" aria-label="Chọn nhanh theo kỳ tài chính" data-testid="revenue-fiscal-quickpick">
+          <span className="fiscal-quickpick__label">
+            {ICONS.calendar} Năm tài chính {fiscal.fiscalYear} (từ T{fiscal.startMonth}):
+          </span>
+          {currentFiscalYear === fiscal.fiscalYear && (
+            <button
+              type="button"
+              className={`notif-chip ${period.from === fiscal.months[0].yearMonth && period.to === minMonth(currentMonth(), fiscal.months[11].yearMonth) ? 'notif-chip--active' : ''}`}
+              onClick={() => applyRange(fiscal.months[0].yearMonth, minMonth(currentMonth(), fiscal.months[11].yearMonth))}
+              disabled={loading}
+              data-testid="revenue-fy-ytd"
+            >
+              Từ đầu năm đến nay
+            </button>
+          )}
+          <button
+            type="button"
+            className={`notif-chip ${period.from === fiscal.months[0].yearMonth && period.to === fiscal.months[11].yearMonth ? 'notif-chip--active' : ''}`}
+            onClick={() => applyRange(fiscal.months[0].yearMonth, fiscal.months[11].yearMonth)}
+            disabled={loading}
+            data-testid="revenue-fy-full"
+          >
+            Cả năm
+          </button>
+          {fiscal.quarters.map((q) => {
+            const from = q.startDate.slice(0, 7);
+            const to = q.endDate.slice(0, 7);
+            return (
+              <button
+                key={q.quarter}
+                type="button"
+                className={`notif-chip ${period.from === from && period.to === to ? 'notif-chip--active' : ''}`}
+                onClick={() => applyRange(from, to)}
+                disabled={loading}
+                title={`${from} → ${to}`}
+                data-testid={`revenue-fy-q${q.quarter}`}
+              >
+                Quý {q.quarter}
+              </button>
+            );
+          })}
+          <span className="fiscal-quickpick__sep" aria-hidden="true" />
+          <button
+            type="button"
+            className="btn-link"
+            onClick={() => void pickFiscalYear(fiscal.fiscalYear - 1)}
+            disabled={loading || fiscalLoading}
+            data-testid="revenue-fy-prev"
+          >
+            ← Năm TC {fiscal.fiscalYear - 1}
+          </button>
+          {currentFiscalYear != null && fiscal.fiscalYear !== currentFiscalYear && (
+            <button
+              type="button"
+              className="btn-link"
+              onClick={() => void pickFiscalYear(currentFiscalYear)}
+              disabled={loading || fiscalLoading}
+              data-testid="revenue-fy-current"
+            >
+              Năm TC hiện tại
+            </button>
+          )}
+        </div>
+      )}
 
       {error && (
         <div className="alert-box alert-box--danger" role="alert">
