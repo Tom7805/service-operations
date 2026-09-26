@@ -3783,11 +3783,11 @@ liệu. Lý do không dùng `referenceType`: ở một số loại thông báo (
 | `TIMER_AUTO_STOPPED` | `TASK` | id của Task |
 | `TASK_BUDGET_EXCEEDED` | `TASK` | id của Task (cảnh báo vượt 80% ngân sách giờ — ví dụ của TC-02) |
 | `DAILY_DIGEST_SUMMARY` | `NONE` | `null` — không điều hướng, chỉ đánh dấu đã đọc |
-| `EXPENSE_SUBMITTED` | `EXPENSE` | (chưa có nơi gửi loại này) |
-| `PROJECT_MILESTONE_DUE`, `NEGATIVE_MARGIN_ALERT` | `PROJECT` | id của Project |
-| `CONTRACT_EXPIRING` | `CONTRACT` | (chưa có nơi gửi loại này) |
+| `EXPENSE_SUBMITTED` || `notificationGroup` | `TIMESHEET` | `EXPENSE` | `PROJECT` | `CONTRACT` | `INVOICE` | `ACCEPTANCE` | `null` | `null` với `DAILY_DIGEST_SUMMARY` và `SECURITY_ALERT` || (chưa có nơi gửi loại này) |
+| `PROJECT_MILESTONE_DUE`, `NEGATIVE_MARGIN_ALERT` || `notificationGroup` | `TIMESHEET` | `EXPENSE` | `PROJECT` | `CONTRACT` | `INVOICE` | `ACCEPTANCE` | `null` | `null` với `DAILY_DIGEST_SUMMARY` và `SECURITY_ALERT` || id của Project |
+| `CONTRACT_EXPIRING` || `notificationGroup` | `TIMESHEET` | `EXPENSE` | `PROJECT` | `CONTRACT` | `INVOICE` | `ACCEPTANCE` | `null` | `null` với `DAILY_DIGEST_SUMMARY` và `SECURITY_ALERT` || (chưa có nơi gửi loại này) |
 | `INVOICE_PROPOSAL_CREATED` | `INVOICE_PROPOSAL` | id của InvoiceProposal |
-| `DUNNING_REMINDER`, `RECURRING_INVOICE_GENERATED` | `INVOICE` | id của Invoice |
+| `DUNNING_REMINDER`, `RECURRING_INVOICE_GENERATED` || `notificationGroup` | `TIMESHEET` | `EXPENSE` | `PROJECT` | `CONTRACT` | `INVOICE` | `ACCEPTANCE` | `null` | `null` với `DAILY_DIGEST_SUMMARY` và `SECURITY_ALERT` || id của Invoice |
 | `ACCEPTANCE_DECIDED_ON_PORTAL` | `ACCEPTANCE_CERTIFICATE` | id của AcceptanceCertificate |
 
 Frontend tự chịu trách nhiệm gọi API chi tiết tương ứng của module đích (vd `GET /tasks/{id}`,
@@ -3836,11 +3836,11 @@ Mỗi phần tử của `GET /notifications` và `POST /notifications/{id}/open`
 | Trường | Giá trị | Ghi chú cho FE |
 |---|---|---|
 | `severity` | `CRITICAL` \| `WARNING` \| `INFO` | Tô màu/biểu tượng: đỏ / vàng / xám |
-| `notificationGroup` | `TIMESHEET` \| `EXPENSE` \| `PROJECT` \| `CONTRACT` \| `INVOICE` \| `ACCEPTANCE` \| `null` | `null` chỉ với `DAILY_DIGEST_SUMMARY` |
+| `notificationGroup` | `TIMESHEET` | `EXPENSE` | `PROJECT` | `CONTRACT` | `INVOICE` | `ACCEPTANCE` | `null` | `null` với `DAILY_DIGEST_SUMMARY` và `SECURITY_ALERT` |\| `EXPENSE` \| `PROJECT` \| `CONTRACT` \| `INVOICE` \| `ACCEPTANCE` \| `null` | `null` chỉ với `DAILY_DIGEST_SUMMARY` |
 
 | `severity` | Gồm các `type` |
 |---|---|
-| `CRITICAL` | `NEGATIVE_MARGIN_ALERT`, `TASK_BUDGET_EXCEEDED`, `DUNNING_REMINDER`, `CONTRACT_EXPIRING` |
+| `CRITICAL` | `NEGATIVE_MARGIN_ALERT`, `TASK_BUDGET_EXCEEDED`, `DUNNING_REMINDER`, `CONTRACT_EXPIRING`, `SECURITY_ALERT` |
 | `WARNING` | `TIMESHEET_SUBMITTED`, `TIMESHEET_REJECTED`, `TIMER_AUTO_STOPPED`, `TIMESHEET_REMINDER`, `EXPENSE_SUBMITTED`, `PROJECT_MILESTONE_DUE`, `INVOICE_PROPOSAL_CREATED`, `ACCEPTANCE_DECIDED_ON_PORTAL` |
 | `INFO` | `RECURRING_INVOICE_GENERATED`, `DAILY_DIGEST_SUMMARY` |
 
@@ -3890,11 +3890,11 @@ Nhóm thông báo (`notificationGroup`) hiện có, gộp từ các `Notificatio
 | `notificationGroup` | Gồm các `type` |
 |---|---|
 | `TIMESHEET` | `TIMESHEET_SUBMITTED`, `TIMESHEET_REJECTED`, `TIMER_AUTO_STOPPED`, `TIMESHEET_REMINDER` |
-| `EXPENSE` | `EXPENSE_SUBMITTED` |
-| `PROJECT` | `PROJECT_MILESTONE_DUE`, `NEGATIVE_MARGIN_ALERT`, `TASK_BUDGET_EXCEEDED` |
-| `CONTRACT` | `CONTRACT_EXPIRING` |
-| `INVOICE` | `INVOICE_PROPOSAL_CREATED`, `DUNNING_REMINDER`, `RECURRING_INVOICE_GENERATED` |
-| `ACCEPTANCE` | `ACCEPTANCE_DECIDED_ON_PORTAL` |
+|| `notificationGroup` | `TIMESHEET` | `EXPENSE` | `PROJECT` | `CONTRACT` | `INVOICE` | `ACCEPTANCE` | `null` | `null` với `DAILY_DIGEST_SUMMARY` và `SECURITY_ALERT` || `EXPENSE_SUBMITTED` |
+|| `notificationGroup` | `TIMESHEET` | `EXPENSE` | `PROJECT` | `CONTRACT` | `INVOICE` | `ACCEPTANCE` | `null` | `null` với `DAILY_DIGEST_SUMMARY` và `SECURITY_ALERT` || `PROJECT_MILESTONE_DUE`, `NEGATIVE_MARGIN_ALERT`, `TASK_BUDGET_EXCEEDED` |
+|| `notificationGroup` | `TIMESHEET` | `EXPENSE` | `PROJECT` | `CONTRACT` | `INVOICE` | `ACCEPTANCE` | `null` | `null` với `DAILY_DIGEST_SUMMARY` và `SECURITY_ALERT` || `CONTRACT_EXPIRING` |
+|| `notificationGroup` | `TIMESHEET` | `EXPENSE` | `PROJECT` | `CONTRACT` | `INVOICE` | `ACCEPTANCE` | `null` | `null` với `DAILY_DIGEST_SUMMARY` và `SECURITY_ALERT` || `INVOICE_PROPOSAL_CREATED`, `DUNNING_REMINDER`, `RECURRING_INVOICE_GENERATED` |
+|| `notificationGroup` | `TIMESHEET` | `EXPENSE` | `PROJECT` | `CONTRACT` | `INVOICE` | `ACCEPTANCE` | `null` | `null` với `DAILY_DIGEST_SUMMARY` và `SECURITY_ALERT` || `ACCEPTANCE_DECIDED_ON_PORTAL` |
 
 > Kênh (`channel`): hiện chỉ có `IN_APP` được gửi thật (thư điện tử/SMS ngoài phạm vi, chỉ có trong enum).
 > FE chỉ cần hiển thị bật/tắt + tần suất, không cần chọn kênh.
@@ -4065,8 +4065,8 @@ một bản ghi — thông báo tạo ra vẫn đọc qua API có sẵn của Ep
 | CN-003 TC-04 | Hiển thị `updatedBy` / `updatedAt` trên màn cấu hình | `GET /notifications/dedup-configs` |
 
 Gợi ý bảng điều hướng theo `targetType` (dùng route FE hiện có): `TIMESHEET` → màn bảng chấm công,
-`TASK` / `PROJECT` → chi tiết dự án/công việc, `INVOICE` / `INVOICE_PROPOSAL` → hóa đơn/đề nghị,
-`ACCEPTANCE_CERTIFICATE` → phiếu nghiệm thu, `CONTRACT` → hợp đồng, `EXPENSE` → chi phí, `NONE` → ở lại trang.
+`TASK` /| `notificationGroup` | `TIMESHEET` | `EXPENSE` | `PROJECT` | `CONTRACT` | `INVOICE` | `ACCEPTANCE` | `null` | `null` với `DAILY_DIGEST_SUMMARY` và `SECURITY_ALERT` |→ chi tiết dự án/công việc, `INVOICE` / `INVOICE_PROPOSAL` → hóa đơn/đề nghị,
+`ACCEPTANCE_CERTIFICATE` → phiếu nghiệm thu,| `notificationGroup` | `TIMESHEET` | `EXPENSE` | `PROJECT` | `CONTRACT` | `INVOICE` | `ACCEPTANCE` | `null` | `null` với `DAILY_DIGEST_SUMMARY` và `SECURITY_ALERT` |→ hợp đồng, `EXPENSE` → chi phí, `NONE` → ở lại trang.
 Kiểu TypeScript `NotificationRes` cần thêm 2 trường tuỳ chọn: `notificationGroup`, `severity`.
 
 ---
@@ -5014,7 +5014,7 @@ Dòng đảo/điều chỉnh đã duyệt (bút toán đảo, QTN-11) mang giờ
 
 **Phiếu chi phí tính lại cho khách hàng:** cùng lượt gom, các phiếu chi phí của dự án có `expenseDate` trong kỳ,
 đã được duyệt (`APPROVED`), đã được đánh dấu tính lại (`billable=true`, `NCL-08-CN-003`) và chưa nằm trong đề nghị
-nào (`invoiced=false`) cũng được đưa vào đề nghị dưới dạng dòng `EXPENSE` (thành tiền = số tiền phiếu). Các phiếu này
+nào (`invoiced=false`) cũng được đưa vào đề nghị dưới dạng dòng| `notificationGroup` | `TIMESHEET` | `EXPENSE` | `PROJECT` | `CONTRACT` | `INVOICE` | `ACCEPTANCE` | `null` | `null` với `DAILY_DIGEST_SUMMARY` và `SECURITY_ALERT` |(thành tiền = số tiền phiếu). Các phiếu này
 được đặt `invoiced=true`, nên từ đó `PUT /expenses/{expenseId}/billable` với `billable=false` bị từ chối
 (`400 INVALID_STATE`, xem `NCL-08-CN-003`).
 
@@ -6240,7 +6240,7 @@ Chung cho cả Epic:
 - **Phạm vi dữ liệu (QTN-01):** Quản lý dự án (`VT-02`) chỉ thao tác trên dự án mình là `projectManagerId`. Đúng vai
   trò nhưng khác dự án cũng nhận `403 FORBIDDEN`. Mọi lượt 403 được ghi Nhật ký hệ thống "Từ chối truy cập" kèm tên
   chức năng (TC-03 của cả 4 story).
-- **Lưu lịch sử (TC-04):** mọi thao tác thay đổi ghi Nhật ký hệ thống với `targetType` = `ACCEPTANCE` (lọc được trên
+- **Lưu lịch sử (TC-04):** mọi thao tác thay đổi ghi Nhật ký hệ thống với `targetType` =| `notificationGroup` | `TIMESHEET` | `EXPENSE` | `PROJECT` | `CONTRACT` | `INVOICE` | `ACCEPTANCE` | `null` | `null` với `DAILY_DIGEST_SUMMARY` và `SECURITY_ALERT` |(lọc được trên
   trang Nhật ký); lịch sử xác nhận/từ chối của khách hàng còn được trả trong `decisions` của chi tiết phiếu.
 - Tệp (biên bản nghiệm thu, tệp bàn giao) là **đường dẫn mô phỏng** dạng chuỗi — giống `receiptUrl` của chi phí.
 
@@ -6645,7 +6645,7 @@ Chung cho cả Epic:
 - **Không lộ dữ liệu nội bộ:** response cổng là DTO riêng, chỉ gồm các trường liệt kê dưới đây — không có mô tả/ghi
   chú nội bộ, giờ công, ngân sách, giá vốn, rủi ro, hạn mức hợp đồng, tài khoản nhân viên đã thao tác.
 - **Lưu lịch sử:** mọi thao tác của quản trị viên và mọi lượt khách hàng xem/duyệt ghi Nhật ký hệ thống — lọc
-  `targetType = PORTAL` (xem/cấp/khoá) hoặc `ACCEPTANCE` (xác nhận/từ chối phiếu). Các `action` phía khách hàng:
+  `targetType = PORTAL` (xem/cấp/khoá) hoặc| `notificationGroup` | `TIMESHEET` | `EXPENSE` | `PROJECT` | `CONTRACT` | `INVOICE` | `ACCEPTANCE` | `null` | `null` với `DAILY_DIGEST_SUMMARY` và `SECURITY_ALERT` |(xác nhận/từ chối phiếu). Các `action` phía khách hàng:
   "Khách hàng xem danh sách dự án", "Khách hàng xem tiến độ dự án", "Khách hàng xem danh sách phiếu nghiệm thu",
   "Khách hàng xem phiếu nghiệm thu", "Khách hàng xem hóa đơn và công nợ" (danh sách + chi tiết),
   "Khách hàng xem tổng hợp công nợ".

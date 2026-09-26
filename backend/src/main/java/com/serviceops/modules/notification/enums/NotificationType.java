@@ -45,8 +45,8 @@ public enum NotificationType {
 	/**
 	 * NCL-14-CN-003: dung de kiem thu co che chong gui trung theo dot canh bao (episode) cho cac
 	 * su kien duoc tac vu nen ra soat dinh ky (QTN-27-TC-02) — vi du minh hoa "cong viec vuot
-	 * nguong ngan sach". KHONG di kem job quet thuc te trong pham vi story nay (xem
-	 * {@code NotificationAntiDuplicateService}); mo phong detector o tang service/test.
+	 * nguong ngan sach" (QTN-20). Duoc gui boi {@code TaskBudgetAlertService}: ngay khi duyet bang
+	 * cham cong va boi tac vu nen {@code TaskBudgetAlertScheduler} ra soat moi gio.
 	 */
 	TASK_BUDGET_EXCEEDED,
 
@@ -77,7 +77,7 @@ public enum NotificationType {
 	/** Muc do hien thi tren trung tam thong bao (NCL-14-CN-001). */
 	public NotificationSeverity severity() {
 		return switch (this) {
-			case NEGATIVE_MARGIN_ALERT, TASK_BUDGET_EXCEEDED, DUNNING_REMINDER, CONTRACT_EXPIRING ->
+			case NEGATIVE_MARGIN_ALERT, TASK_BUDGET_EXCEEDED, DUNNING_REMINDER, CONTRACT_EXPIRING, SECURITY_ALERT ->
 					NotificationSeverity.CRITICAL;
 			case TIMESHEET_SUBMITTED, TIMESHEET_REJECTED, TIMER_AUTO_STOPPED, TIMESHEET_REMINDER, EXPENSE_SUBMITTED,
 					PROJECT_MILESTONE_DUE, INVOICE_PROPOSAL_CREATED, ACCEPTANCE_DECIDED_ON_PORTAL ->
