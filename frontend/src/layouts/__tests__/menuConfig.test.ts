@@ -144,6 +144,7 @@ describe('visibleNavItems — thanh sidebar theo vai trò', () => {
       'EMPLOYEES',
       'PERMISSIONS',
       'PORTAL_ACCOUNTS',
+      'SERVICE_CATALOG',
       'TWO_FACTOR_SETTINGS',
       'SYSTEM_AUDIT_LOG',
       'AUDIT_LOG',
@@ -239,6 +240,9 @@ describe('isTabVisible — tuần tự hóa lại khi vai trỏ đổi', () => {
     // NCL-14-CN-003 TC-03: màn chống gửi trùng chỉ hiện cho Quản trị viên.
     expect(isTabVisible('NOTIFICATION_DEDUP', ['VT-07'])).toBe(true);
     expect(isTabVisible('NOTIFICATION_DEDUP', ['VT-02'])).toBe(false);
+    // NCL-15-CN-001 TC-03: danh mục dịch vụ chỉ hiện cho Quản trị viên.
+    expect(isTabVisible('SERVICE_CATALOG', ['VT-07'])).toBe(true);
+    expect(isTabVisible('SERVICE_CATALOG', ['VT-04'])).toBe(false);
     expect(isTabVisible('CHANGE_PASSWORD', ['VT-03'])).toBe(true);
   });
 

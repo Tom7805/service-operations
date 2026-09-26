@@ -58,7 +58,8 @@ export type Tab =
   | 'PORTAL_ACCOUNTS'
   | 'NOTIFICATIONS'
   | 'NOTIFICATION_PREFERENCES'
-  | 'NOTIFICATION_DEDUP';
+  | 'NOTIFICATION_DEDUP'
+  | 'SERVICE_CATALOG';
 
 export interface NavItem {
   tab: Tab;
@@ -266,6 +267,11 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     tab: 'PORTAL_ACCOUNTS', icon: ICONS.globe, label: 'Tài khoản cổng KH', requires: ['VT-07'],
     // NCL-13-CN-001: Quản trị viên cấp tài khoản cổng cho người liên hệ của khách hàng (gắn cố định với
     // khách hàng đó — QTN-26) và khoá khi người liên hệ nghỉ việc. Chỉ VT-07 — khớp @PreAuthorize backend.
+  },
+  {
+    tab: 'SERVICE_CATALOG', icon: ICONS.tag, label: 'Danh mục dịch vụ', requires: ['VT-07'],
+    // NCL-15-CN-001 (QTN-28): danh mục dịch vụ và giá dùng chung cho báo giá / hóa đơn. Chỉ VT-07 —
+    // khớp @PreAuthorize của /service-catalog (màn hình vẫn gọi API để backend ghi nhật ký lần từ chối).
   },
 ];
 

@@ -56,6 +56,7 @@ import MarginAlertThresholdPage from './modules/profitability/pages/MarginAlertT
 import NotificationCenterPage from './modules/notifications/pages/NotificationCenterPage';
 import NotificationPreferencePage from './modules/notifications/pages/NotificationPreferencePage';
 import NotificationDedupConfigPage from './modules/notifications/pages/NotificationDedupConfigPage';
+import ServiceCatalogPage from './modules/admin/pages/ServiceCatalogPage';
 import { NOTIFICATIONS_CHANGED_EVENT } from './modules/notifications/utils/notificationEvents';
 import NotificationList from './modules/notifications/components/NotificationList';
 import {
@@ -752,6 +753,8 @@ export default function App() {
             />
           ) : activeTab === 'NOTIFICATION_PREFERENCES' ? (
             <NotificationPreferencePage onBack={() => setActiveTab('NOTIFICATIONS')} />
+          ) : activeTab === 'SERVICE_CATALOG' ? (
+            <ServiceCatalogPage currentUserRoles={currentRoles} onViewAuditLog={() => setActiveTab('SYSTEM_AUDIT_LOG')} />
           ) : activeTab === 'NOTIFICATION_DEDUP' ? (
             <NotificationDedupConfigPage
               currentUserRoles={currentRoles}
