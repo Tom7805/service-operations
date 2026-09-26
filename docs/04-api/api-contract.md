@@ -1225,6 +1225,24 @@ Bỏ trống hết → trả toàn bộ. Không có hồ sơ nào khớp → `da
 - `data` là mảng thuần, **không phân trang** — Frontend tự lọc/sắp trên máy khách nếu cần.
 - Khi `data` rỗng → hiển thị trạng thái rỗng (“Chưa có hồ sơ khách hàng nào”), không phải lỗi.
 - Đây là nguồn dữ liệu để mở màn hình Xem hồ sơ tổng hợp (`GET /customers/{customerId}/overview`, `NCL-02-CN-004`).
+- `GET /customers/access-check` (`VT-04`/`VT-02`): không làm gì ngoài kiểm tra quyền, trả `200` hoặc `403`. Màn hình
+  "Không có thẩm quyền" gọi endpoint này để lần từ chối được backend ghi nhật ký thật (TC-03).
+
+#### `GET /customers/{customerId}/overview` (`NCL-02-CN-004`)
+
+Token `VT-04` hoặc `VT-02`. Trả `CustomerOverviewRes` gồm `customer` và năm nhóm `opportunities`, `contracts`,
+`projects`, `invoices`, `receivables` — mỗi phần tử là `CustomerOverviewItemRes`
+(`id, code, name, status, amount, date, contractType, endDate`), đã sắp theo `date` tăng dần (TC-01).
+
+- `invoices`: hóa đơn đã phát hành (`ISSUED`, `PARTIALLY_PAID`, `PAID`) — `amount` là tổng hóa đơn, `date` là ngày
+  lập, `endDate` là hạn thanh toán.
+- `receivables`: hóa đơn còn phải thu — `amount` là **số còn phải thu**, `date` là hạn thanh toán, `status` là
+  `OVERDUE` khi đã quá hạn.
+- **Phạm vi dữ liệu (TC-02, QTN-01)** — người có phạm vi toàn công ty thấy hết; người còn lại chỉ thấy: dự án trong
+  phạm vi (cùng quy tắc với danh sách dự án); hợp đồng chưa có dự án hoặc có ít nhất một dự án trong phạm vi;
+  hóa đơn/công nợ của các hợp đồng đó; cơ hội do chính mình (SELF) hoặc người thuộc nhánh được phân (DEPARTMENT)
+  phụ trách.
+- Mỗi lần gọi backend ghi nhật ký `VIEW_OVERVIEW` (người xem, thời điểm) — TC-03.
 
 ---
 
@@ -1276,6 +1294,10 @@ Body giống hệt `POST /customers` (dùng lại `CustomerCreateReq`).
 - `matchedFields` cho biết trường nào khớp: `"ten"`, `"maSoThue"`, `"soDienThoai"` — dùng để giải thích lý do
   nghi trùng cho người dùng (ví dụ tô đậm ô mã số thuế nếu `matchedFields` chứa `"maSoThue"`).
 - Danh sách sắp xếp giảm dần theo `similarity`.
+- Tập so khớp là **mọi hồ sơ còn hiệu lực** (bỏ qua hồ sơ đã gộp `MERGED`); tên được so gần đúng (Levenshtein)
+  sau khi bỏ dấu tiếng Việt và dấu câu — "Công ty Ánh Dương" và "Cong ty Anh Duong." được coi là gần giống (TC-01).
+- Frontend hiển thị `similarity` dạng phần trăm cạnh từng hồ sơ và cho người dùng **chọn dùng hồ sơ đã có**
+  thay vì tạo mới (mở hồ sơ đó), hoặc xác nhận tạo mới kèm lý do.
 
 **Response lỗi:**
 
@@ -1396,6 +1418,7 @@ người dùng nhập lý do → gọi `POST /customers/{customerId}/update-with
 
 Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`) — khác với `NCL-02-CN-001`/`002`, vai trò **Quản lý dự án
 không được truy cập** nhóm API này; vai trò khác (kể cả `VT-02`) nhận `403 FORBIDDEN` (TC-03).
+Hồ sơ đã gộp (`status = MERGED`) chỉ còn để tra cứu: thêm người liên hệ / đổi đầu mối chính trả `400 INVALID_STATE`.
 
 Mỗi khách hàng có thể có nhiều người liên hệ nhưng **chỉ duy nhất một người là đầu mối chính** tại một thời điểm
 (`isPrimary = true`). Có hai cách để một người liên hệ trở thành đầu mối chính, cả hai đều tự động chuyển đầu
@@ -1573,9 +1596,10 @@ thống nhất, gợi ý:
 | HTTP | `errorCode` | Khi nào xảy ra |
 |---|---|---|
 | 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
-| 403 | `FORBIDDEN` | Không phải `VT-04`/`VT-02` — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh (`VT-04`) — kể cả Quản lý dự án; hệ thống ghi nhật ký lần từ chối (TC-03) |
 | 400 | `VALIDATION_ERROR` | Thiếu / để trống một trong ba nhãn, hoặc vượt quá độ dài cho phép |
 | 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy `customerId` |
+| 400 | `VALIDATION_ERROR` | Hồ sơ đã bị gộp (`status = MERGED`) — không thể phân nhóm tiếp |
 
 **Lưu ý cho Frontend:**
 - Sau khi gán nhãn, lọc danh sách bằng `GET /customers?industry=...&companySize=...&priority=...` (khớp **chính
@@ -1583,6 +1607,8 @@ thống nhất, gợi ý:
 - Nhóm lọc không có khách hàng nào → `data: []`; Frontend hiển thị trạng thái "không có kết quả phù hợp" (TC-02).
 - Mỗi lần cập nhật phân nhóm được backend tự ghi nhật ký (`SEGMENT_UPDATE`: người thực hiện · nội dung · thời
   điểm) vào bảng nhật ký khách hàng dùng chung với `NCL-02-CN-002` (TC-04) — Frontend không cần gọi thêm API.
+- `GET /customers/segment/access-check` (chỉ `VT-04`): không làm gì ngoài kiểm tra quyền, trả `200` hoặc `403`.
+  Màn hình "Không có quyền phân nhóm" gọi endpoint này để lần từ chối được ghi nhật ký thật (TC-03).
 
 ---
 
@@ -1612,13 +1638,16 @@ Xem trước ảnh hưởng trước khi gộp thật — **không làm thay đ�
   "data": {
     "targetCustomer": { "id": 1, "code": "KH-000001", "name": "Cong ty TNHH ABC", "...": "..." },
     "sourceCustomer": { "id": 2, "code": "KH-000002", "name": "Cong ty TNHH ABC (chi nhanh)", "...": "..." },
-    "relatedRecordCount": 3
+    "relatedRecordCount": 3,
+    "relatedRecordBreakdown": { "co hoi": 0, "hop dong": 1, "du an": 1, "hoa don": 1, "de nghi xuat hoa don": 0, "nhat ky khach hang": 0, "nhat ky bo qua canh bao trung": 0 }
   }
 }
 ```
 
 - `relatedRecordCount`: tổng số bản ghi hiện có của hồ sơ bị gộp sẽ được chuyển về hồ sơ giữ lại khi gộp thật —
   cơ hội, hợp đồng, dự án, hoá đơn, đề nghị xuất hoá đơn, nhật ký khách hàng và lý do bỏ qua cảnh báo trùng.
+- `relatedRecordBreakdown`: số bản ghi theo từng loại (khóa là nhãn không dấu, thứ tự cố định) để màn hình xác nhận
+  hiển thị rõ sẽ chuyển những gì.
 
 **Response lỗi:**
 

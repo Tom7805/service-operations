@@ -507,3 +507,25 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
   });
 });
 
+
+describe('CustomerOverviewPanel — nhãn trạng thái & cột công nợ (NCL-02-CN-004)', () => {
+  it('hiển thị trạng thái bằng tiếng Việt thay vì mã enum và đổi tiêu đề cột ở nhóm công nợ', () => {
+    render(
+      <CustomerOverviewPanel
+        customerId={1}
+        customerName="Công ty ABC"
+        currentUserRoles={['VT-04']}
+        initialOverview={fullOverview}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Hóa đơn \(/ }));
+    expect(screen.getAllByText('Đã thanh toán').length).toBeGreaterThan(0);
+    expect(screen.queryByText('PAID')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Công nợ phải thu \(/ }));
+    expect(screen.getByText('Hạn thanh toán')).toBeInTheDocument();
+    expect(screen.getByText('Còn phải thu')).toBeInTheDocument();
+    expect(screen.getAllByText('Quá hạn').length).toBeGreaterThan(0);
+  });
+});

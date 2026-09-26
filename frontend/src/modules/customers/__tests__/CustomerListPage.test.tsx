@@ -5,6 +5,7 @@ import * as customersApi from '../api/customersApi';
 
 vi.mock('../api/customersApi', () => ({
   fetchCustomers: vi.fn().mockResolvedValue([]),
+  checkCustomerAccess: vi.fn().mockRejectedValue(new Error('403')),
   createCustomer: vi.fn(),
   checkCustomerDuplicate: vi.fn().mockResolvedValue([]),
   createCustomerWithOverride: vi.fn(),
@@ -178,6 +179,8 @@ describe('CustomerListPage Component (NCL-02-CN-001-CV-05)', () => {
 
       expect(customersApi.fetchCustomers).not.toHaveBeenCalled();
       expect(screen.getByTestId('access-denied-view')).toBeInTheDocument();
+      // TC-03: van gui yeu cau kiem tra quyen de backend ghi nhat ky lan tu choi that.
+      expect(customersApi.checkCustomerAccess).toHaveBeenCalled();
     });
   });
 

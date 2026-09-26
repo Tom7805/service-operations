@@ -15,6 +15,17 @@ import type {
   CustomerMergeFormErrors,
 } from '../types/customerTypes';
 
+/** Nhãn hiển thị cho khóa loại bản ghi trong `relatedRecordBreakdown` (backend dùng chuỗi không dấu). */
+const MERGE_RECORD_LABELS: Record<string, string> = {
+  'co hoi': 'Cơ hội',
+  'hop dong': 'Hợp đồng',
+  'du an': 'Dự án',
+  'hoa don': 'Hóa đơn',
+  'de nghi xuat hoa don': 'Đề nghị xuất hóa đơn',
+  'nhat ky khach hang': 'Nhật ký khách hàng',
+  'nhat ky bo qua canh bao trung': 'Nhật ký bỏ qua cảnh báo trùng',
+};
+
 interface CustomerMergePageProps {
   currentUserRoles?: string[];
   currentUserName?: string;
@@ -477,8 +488,17 @@ export default function CustomerMergePage({
             <div className="alert alert--warning" data-testid="merge-related-record-count">
               <span className="alert__icon">{ICONS.alertTriangle}</span>
               <div>
-                Có <strong>{preview.relatedRecordCount}</strong> bản ghi liên quan của hồ sơ bị gộp (nhật ký khách
-                hàng, lý do bỏ qua cảnh báo trùng) sẽ được chuyển về hồ sơ giữ lại và giữ dấu vết nguồn gốc.
+                Có <strong>{preview.relatedRecordCount}</strong> bản ghi liên quan của hồ sơ bị gộp sẽ được chuyển
+                về hồ sơ giữ lại và giữ dấu vết nguồn gốc. Công nợ chưa thanh toán vẫn được giữ nguyên.
+                {preview.relatedRecordBreakdown && (
+                  <ul className="merge-breakdown-list" data-testid="merge-related-record-breakdown">
+                    {Object.entries(preview.relatedRecordBreakdown).map(([key, count]) => (
+                      <li key={key}>
+                        {MERGE_RECORD_LABELS[key] ?? key}: <strong>{count}</strong>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
 

@@ -28,6 +28,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -240,6 +242,34 @@ class CustomerControllerIT {
 	}
 
 	@Test
+	@DisplayName("NCL-02-CN-001 TC-03: vai tro khac Sales/PM mo chuc nang khach hang bi tu choi (403)")
+	@WithMockUser(authorities = "ROLE_VT-05")
+	void accessCheckDeniesOtherRoles() throws Exception {
+		mockMvc.perform(get("/customers/access-check")).andExpect(status().isForbidden());
+	}
+
+	@Test
+	@DisplayName("NCL-02-CN-001: PM duoc mo chuc nang khach hang")
+	@WithMockUser(authorities = "ROLE_VT-02")
+	void accessCheckAllowsProjectManager() throws Exception {
+		mockMvc.perform(get("/customers/access-check")).andExpect(status().isOk());
+	}
+
+	@Test
+	@DisplayName("NCL-02-CN-005 TC-03: chi Sales mo duoc chuc nang phan nhom")
+	@WithMockUser(authorities = "ROLE_VT-02")
+	void segmentAccessCheckDeniesNonSales() throws Exception {
+		mockMvc.perform(get("/customers/segment/access-check")).andExpect(status().isForbidden());
+	}
+
+	@Test
+	@DisplayName("NCL-02-CN-005 TC-01: Sales mo duoc chuc nang phan nhom")
+	@WithMockUser(authorities = "ROLE_VT-04")
+	void segmentAccessCheckAllowsSales() throws Exception {
+		mockMvc.perform(get("/customers/segment/access-check")).andExpect(status().isOk());
+	}
+
+	@Test
 	@DisplayName("NCL-02-CN-005 TC-01: Sales cap nhat phan nhom khach hang")
 	@WithMockUser(authorities = "ROLE_VT-04")
 	void salesCanUpdateCustomerSegment() throws Exception {
@@ -258,20 +288,16 @@ class CustomerControllerIT {
 	}
 
 	@Test
-	@DisplayName("NCL-02-CN-005: Quan ly du an (VT-02) cung duoc cap nhat phan nhom")
+	@DisplayName("NCL-02-CN-005 TC-03: Quan ly du an (VT-02) khong thuoc vai tro Nhan vien kinh doanh -> bi tu choi")
 	@WithMockUser(authorities = "ROLE_VT-02")
-	void projectManagerCanUpdateCustomerSegment() throws Exception {
-		when(customerService.updateSegment(any(Long.class), any(CustomerSegmentReq.class))).thenReturn(
-				new CustomerRes(1L, "KH-000001", "Cong ty ABC", null, null,
-						"Tai chinh", null, null, "Lon", "Cao"));
-
+	void projectManagerCannotUpdateCustomerSegment() throws Exception {
 		mockMvc.perform(patch("/customers/1/segment")
 					.contentType("application/json")
 					.content(objectMapper.writeValueAsString(
 							new CustomerSegmentReq("Tai chinh", "Lon", "Cao"))))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.companySize").value("Lon"))
-				.andExpect(jsonPath("$.data.priority").value("Cao"));
+				.andExpect(status().isForbidden());
+
+		verify(customerService, never()).updateSegment(any(Long.class), any(CustomerSegmentReq.class));
 	}
 
 	@Test

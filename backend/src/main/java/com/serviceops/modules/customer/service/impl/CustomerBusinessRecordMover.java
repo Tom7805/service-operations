@@ -38,12 +38,20 @@ public class CustomerBusinessRecordMover {
 
 	/** So ban ghi nghiep vu con gan voi ho so — dung cho man hinh xem truoc khi gop. */
 	public long countRecords(Long customerId) {
-		return ENTITIES.keySet().stream()
-				.mapToLong(entity -> entityManager
-						.createQuery("SELECT COUNT(e) FROM " + entity + " e WHERE e.customerId = :customerId", Long.class)
-						.setParameter("customerId", customerId)
-						.getSingleResult())
-				.sum();
+		return countRecordsByLabel(customerId).values().stream().mapToLong(Long::longValue).sum();
+	}
+
+	/** So ban ghi nghiep vu con gan voi ho so, theo nhan hien thi (co hoi, hop dong, ...) - giu thu tu ENTITIES. */
+	public Map<String, Long> countRecordsByLabel(Long customerId) {
+		Map<String, Long> counts = new LinkedHashMap<>();
+		for (Map.Entry<String, String> entry : ENTITIES.entrySet()) {
+			counts.put(entry.getValue(), entityManager
+					.createQuery("SELECT COUNT(e) FROM " + entry.getKey() + " e WHERE e.customerId = :customerId",
+							Long.class)
+					.setParameter("customerId", customerId)
+					.getSingleResult());
+		}
+		return counts;
 	}
 
 	/** Chuyen toan bo ban ghi nghiep vu tu {@code sourceId} sang {@code targetId}; tra so ban ghi da chuyen theo loai. */

@@ -36,7 +36,7 @@ export default function CustomerDetailPage({
   onBack,
   initialContacts,
   onCustomerUpdated,
-  initialTab = 'CONTACTS',
+  initialTab,
 }: CustomerDetailPageProps) {
   const [customer, setCustomer] = useState<Customer>(
     propCustomer || {
@@ -51,7 +51,10 @@ export default function CustomerDetailPage({
     }
   );
 
-  const [activeTab, setActiveTab] = useState<CustomerDetailTab>(initialTab);
+  const [activeTab, setActiveTab] = useState<CustomerDetailTab>(
+    // PM (VT-02) khong quan ly nguoi lien he (NCL-02-CN-003) -> mac dinh mo Ho so tong hop (NCL-02-CN-004).
+    initialTab ?? (currentUserRoles.includes('VT-04') ? 'CONTACTS' : 'SUMMARY')
+  );
   const [copiedCode, setCopiedCode] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
@@ -160,6 +163,19 @@ export default function CustomerDetailPage({
         </div>
       </div>
 
+      {isMerged && (
+        <div className="alert-box alert-box--warning" role="status" data-testid="customer-merged-notice">
+          <span className="alert-box__icon">{ICONS.info}</span>
+          <div className="alert-box__content">
+            <strong>Hồ sơ đã được gộp</strong>
+            <p>
+              Hồ sơ này đã gộp vào hồ sơ {customer.mergedIntoId ? `#${customer.mergedIntoId}` : 'khác'} và chỉ còn để
+              tra cứu — không thể chỉnh sửa, phân nhóm hay thay đổi người liên hệ.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Thẻ thông tin tổng quan doanh nghiệp */}
       <div className="customer-overview-card">
         <div className="customer-overview-header">
@@ -266,6 +282,7 @@ export default function CustomerDetailPage({
             currentUserRoles={currentUserRoles}
             currentUserName={currentUserName}
             initialContacts={initialContacts}
+            readOnly={isMerged}
           />
         )}
 
@@ -275,6 +292,7 @@ export default function CustomerDetailPage({
             currentUserRoles={currentUserRoles}
             currentUserName={currentUserName}
             onSegmentUpdated={handleSegmentUpdated}
+            readOnly={isMerged}
           />
         )}
 

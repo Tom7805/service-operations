@@ -5,6 +5,7 @@ import {
   updateCustomer,
   updateCustomerWithOverride,
   fetchCustomers,
+  checkCustomerAccess,
   CustomerApiError,
 } from '../api/customersApi';
 import CustomerFormModal from '../components/CustomerFormModal';
@@ -17,6 +18,7 @@ import type {
   CustomerCreatePayload,
   CustomerCreateWithOverridePayload,
   CustomerUpdateWithOverridePayload,
+  DuplicateCandidate,
 } from '../types/customerTypes';
 
 interface CustomerListPageProps {
@@ -36,12 +38,14 @@ export default function CustomerListPage({
 }: CustomerListPageProps) {
   // NCL-02-CN-001: Chỉ Nhân viên kinh doanh (VT-04) hoặc Quản lý dự án (VT-02) được phép thao tác.
   const isAllowed = currentUserRoles.includes('VT-04') || currentUserRoles.includes('VT-02');
+  // NCL-02-CN-005 TC-03: chỉ Nhân viên kinh doanh (VT-04) được phân nhóm khách hàng.
+  const canManageSegment = currentUserRoles.includes('VT-04');
 
   const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
   const [isLoading, setIsLoading] = useState(initialCustomers.length === 0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [detailInitialTab, setDetailInitialTab] = useState<'CONTACTS' | 'SEGMENT'>('CONTACTS');
+  const [detailInitialTab, setDetailInitialTab] = useState<'CONTACTS' | 'SEGMENT' | 'SUMMARY'>('CONTACTS');
   const [searchTerm, setSearchTerm] = useState('');
   const [industryFilter, setIndustryFilter] = useState('');
   // NCL-02-CN-005 (TC-01, TC-02): lọc danh mục khách hàng theo quy mô và mức độ ưu tiên đã gán.
@@ -98,6 +102,14 @@ export default function CustomerListPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadCustomers]);
 
+  // TC-03: vai trò không được phép -> gửi yêu cầu kiểm tra quyền lên backend để lần từ chối (403)
+  // được ghi vào Nhật ký hệ thống thật, đúng như thông báo trên màn hình.
+  useEffect(() => {
+    if (!isAllowed) {
+      checkCustomerAccess().catch(() => undefined);
+    }
+  }, [isAllowed]);
+
   const handleCreateCustomer = async (payload: CustomerCreatePayload) => {
     try {
       const newCustomer = await createCustomer(payload);
@@ -118,6 +130,22 @@ export default function CustomerListPage({
       showToast(message, 'error');
       throw err;
     }
+  };
+
+  // NCL-02-CN-002: người dùng chọn dùng hồ sơ đã có trong cảnh báo trùng -> mở thẳng hồ sơ đó.
+  // Hồ sơ nằm ngoài danh sách đang thấy (ngoài phạm vi dữ liệu) thì lọc danh sách theo mã để tra cứu.
+  const handleSelectExisting = (candidate: DuplicateCandidate) => {
+    const existing = customers.find((c) => c.id === candidate.id);
+    if (existing) {
+      setDetailInitialTab(currentUserRoles.includes('VT-04') ? 'CONTACTS' : 'SUMMARY');
+      setSelectedCustomer(existing);
+      return;
+    }
+    setSearchTerm(candidate.code);
+    showToast(
+      `Không tạo hồ sơ mới. Hồ sơ  () không thuộc danh sách bạn đang quản lý — vui lòng liên hệ người phụ trách hồ sơ đó.`,
+      'info'
+    );
   };
 
   const handleCreateCustomerWithOverride = async (
@@ -270,7 +298,11 @@ export default function CustomerListPage({
     );
   }
 
-  const handleSelectCustomer = (customer: Customer, tab: 'CONTACTS' | 'SEGMENT' = 'CONTACTS') => {
+  const handleSelectCustomer = (
+    customer: Customer,
+    // PM (VT-02) không quản lý người liên hệ (NCL-02-CN-003) -> mở thẳng Hồ sơ tổng hợp (NCL-02-CN-004).
+    tab: 'CONTACTS' | 'SEGMENT' | 'SUMMARY' = currentUserRoles.includes('VT-04') ? 'CONTACTS' : 'SUMMARY'
+  ) => {
     if (onNavigateDetail) {
       onNavigateDetail(customer);
     } else {
@@ -533,7 +565,7 @@ export default function CustomerListPage({
             canCreate={isAllowed}
             onOpenCreate={() => setIsModalOpen(true)}
             onNavigateDetail={handleSelectCustomer}
-            canManageSegment={isAllowed}
+            canManageSegment={canManageSegment}
             onOpenSegment={handleOpenSegment}
             canEdit={isAllowed}
             onEdit={setEditingCustomer}
@@ -559,6 +591,7 @@ export default function CustomerListPage({
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleCreateCustomer}
         onOverrideSubmit={handleCreateCustomerWithOverride}
+        onSelectExisting={handleSelectExisting}
       />
 
       {/* Modal chỉnh sửa hồ sơ khách hàng */}

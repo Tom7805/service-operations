@@ -8,6 +8,7 @@ import type { Customer } from '../types/customerTypes';
 
 vi.mock('../api/customersApi', () => ({
   fetchCustomers: vi.fn().mockResolvedValue([]),
+  checkCustomerSegmentAccess: vi.fn().mockRejectedValue(new Error('403')),
   createCustomer: vi.fn(),
   checkCustomerDuplicate: vi.fn().mockResolvedValue([]),
   createCustomerWithOverride: vi.fn(),
@@ -187,19 +188,27 @@ describe('Phân nhóm khách hàng theo ngành và quy mô (NCL-02-CN-005)', () 
   });
 
   describe('NCL-02-CN-005-TC-03: Không có quyền truy cập', () => {
-    it('từ chối truy cập chức năng phân nhóm khi người dùng không phải Sales/PM', () => {
+    it('từ chối truy cập chức năng phân nhóm khi người dùng không phải Nhân viên kinh doanh', () => {
       render(<CustomerSegmentPanel customer={mockCustomer} currentUserRoles={['VT-05']} />);
 
       expect(screen.getByTestId('segment-access-denied')).toBeInTheDocument();
       expect(screen.getByText(/Không có quyền phân nhóm khách hàng/i)).toBeInTheDocument();
       expect(screen.queryByTestId('btn-open-segment-modal')).toBeNull();
+      expect(customersApi.checkCustomerSegmentAccess).toHaveBeenCalled();
     });
 
-    it('cho phép Quản lý dự án (VT-02) truy cập chức năng phân nhóm', () => {
+    it('từ chối Quản lý dự án (VT-02) vì TC-03 chỉ cho phép Nhân viên kinh doanh', () => {
       render(<CustomerSegmentPanel customer={mockCustomer} currentUserRoles={['VT-02']} />);
 
-      expect(screen.queryByTestId('segment-access-denied')).toBeNull();
-      expect(screen.getByTestId('btn-open-segment-modal')).toBeInTheDocument();
+      expect(screen.getByTestId('segment-access-denied')).toBeInTheDocument();
+      expect(screen.queryByTestId('btn-open-segment-modal')).toBeNull();
+    });
+
+    it('hồ sơ đã gộp chỉ xem nhãn, không có nút cập nhật', () => {
+      render(<CustomerSegmentPanel customer={mockCustomer} currentUserRoles={['VT-04']} readOnly />);
+
+      expect(screen.getByTestId('segment-manager-section')).toBeInTheDocument();
+      expect(screen.queryByTestId('btn-open-segment-modal')).toBeNull();
     });
   });
 

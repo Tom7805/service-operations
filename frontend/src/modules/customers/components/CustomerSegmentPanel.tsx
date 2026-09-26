@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { Customer, CustomerSegmentPayload } from '../types/customerTypes';
-import { updateCustomerSegment, CustomerApiError } from '../api/customersApi';
+import { updateCustomerSegment, checkCustomerSegmentAccess, CustomerApiError } from '../api/customersApi';
 import CustomerSegmentModal from './CustomerSegmentModal';
 import { roleLabels } from '../../../utils/roleLabel';
 import { ICONS } from '../../../components/common/icons';
@@ -11,6 +11,8 @@ interface CustomerSegmentPanelProps {
   currentUserRoles?: string[];
   currentUserName?: string;
   onSegmentUpdated?: (updated: Customer) => void;
+  /** Hồ sơ đã gộp (NCL-02-CN-006): chỉ xem nhãn phân nhóm, không cập nhật. */
+  readOnly?: boolean;
 }
 
 /** Trả về sắc thái hiển thị (màu) tương ứng mức độ ưu tiên đã chọn. */
@@ -23,7 +25,7 @@ function priorityTone(priority?: string | null): 'low' | 'medium' | 'high' {
 
 /**
  * NCL-02-CN-005 — Phân nhóm khách hàng theo ngành và quy mô.
- * Cho phép Nhân viên kinh doanh (VT-04) hoặc Quản lý dự án (VT-02) gán ngành nghề, quy mô công ty
+ * Cho phép Nhân viên kinh doanh (VT-04) gán ngành nghề, quy mô công ty
  * và mức độ ưu tiên cho một khách hàng để lọc và phân tích theo nhóm (TC-01).
  */
 export default function CustomerSegmentPanel({
@@ -31,9 +33,10 @@ export default function CustomerSegmentPanel({
   currentUserRoles = ['VT-04'],
   currentUserName = 'Người dùng',
   onSegmentUpdated,
+  readOnly = false,
 }: CustomerSegmentPanelProps) {
-  // NCL-02-CN-005 / TC-03: chỉ Nhân viên kinh doanh (VT-04) hoặc Quản lý dự án (VT-02) được phân nhóm khách hàng.
-  const isAllowed = currentUserRoles.includes('VT-04') || currentUserRoles.includes('VT-02');
+  // NCL-02-CN-005 / TC-03: chỉ Nhân viên kinh doanh (VT-04) được phân nhóm khách hàng.
+  const isAllowed = currentUserRoles.includes('VT-04');
 
   const [currentCustomer, setCurrentCustomer] = useState<Customer>(customer);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -46,6 +49,13 @@ export default function CustomerSegmentPanel({
     setToastMessage({ text, type });
     setTimeout(() => setToastMessage(null), 5000);
   };
+
+  // TC-03: vai trò không được phép -> gửi yêu cầu kiểm tra quyền để backend ghi nhật ký lần từ chối thật.
+  useEffect(() => {
+    if (!isAllowed) {
+      checkCustomerSegmentAccess().catch(() => undefined);
+    }
+  }, [isAllowed]);
 
   // TC-01: Gán nhãn phân nhóm rồi lưu. Nhật ký thao tác do backend ghi vào Nhật ký hệ thống (/audit-logs).
   const handleSubmit = async (payload: CustomerSegmentPayload) => {
@@ -67,7 +77,7 @@ export default function CustomerSegmentPanel({
     }
   };
 
-  // TC-03: Kiểm tra quyền truy cập (chỉ VT-04 hoặc VT-02 được phép)
+  // TC-03: Kiểm tra quyền truy cập (chỉ VT-04 được phép)
   if (!isAllowed) {
     return (
       <div className="access-denied-card segment-access-denied" data-testid="segment-access-denied">
@@ -75,8 +85,7 @@ export default function CustomerSegmentPanel({
         <h3>Không có quyền phân nhóm khách hàng</h3>
         <p>
           Theo quy định phân quyền, chức năng Phân nhóm khách
-          hàng chỉ dành riêng cho <strong>Nhân viên kinh doanh</strong> hoặc{' '}
-          <strong>Quản lý dự án</strong>.
+          hàng chỉ dành riêng cho <strong>Nhân viên kinh doanh</strong>.
         </p>
         <div className="security-log-badge">
           <span className="security-log-badge__item">{ICONS.shield} Ghi nhận Audit Log: {new Date().toLocaleString('vi-VN')}</span>
@@ -131,6 +140,7 @@ export default function CustomerSegmentPanel({
         </div>
 
         <div className="contact-header-actions">
+          {!readOnly && (
           <button
             type="button"
             className="btn btn-primary"
@@ -140,6 +150,7 @@ export default function CustomerSegmentPanel({
             <span className="icon-sm">{ICONS.tag}</span>
             <span>Cập nhật phân nhóm</span>
           </button>
+          )}
         </div>
       </div>
 

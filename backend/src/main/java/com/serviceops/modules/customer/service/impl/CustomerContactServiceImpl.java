@@ -11,6 +11,7 @@ import com.serviceops.modules.customer.entity.CustomerAuditLog;
 import com.serviceops.modules.customer.entity.CustomerContact;
 import com.serviceops.modules.customer.enums.ContactRole;
 import com.serviceops.modules.customer.enums.CustomerAuditAction;
+import com.serviceops.modules.customer.enums.CustomerStatus;
 import com.serviceops.modules.customer.mapper.CustomerContactMapper;
 import com.serviceops.modules.customer.repository.CustomerAuditLogRepository;
 import com.serviceops.modules.customer.repository.CustomerContactRepository;
@@ -55,7 +56,7 @@ public class CustomerContactServiceImpl implements CustomerContactService {
 
 	@Override
 	public CustomerContactRes addContact(Long customerId, CustomerContactReq request) {
-		requireCustomerExists(customerId);
+		requireActiveCustomer(customerId);
 
 		String fullName = request.fullName().trim();
 		if (fullName.isEmpty()) {
@@ -91,7 +92,7 @@ public class CustomerContactServiceImpl implements CustomerContactService {
 
 	@Override
 	public CustomerContactRes setPrimary(Long customerId, Long contactId) {
-		requireCustomerExists(customerId);
+		requireActiveCustomer(customerId);
 		CustomerContact contact = customerContactRepository.findById(contactId)
 				.filter(c -> c.getCustomerId().equals(customerId))
 				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
@@ -121,6 +122,16 @@ public class CustomerContactServiceImpl implements CustomerContactService {
 	private void requireCustomerExists(Long customerId) {
 		if (!customerRepository.existsById(customerId)) {
 			throw new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Khong tim thay khach hang");
+		}
+	}
+
+	/** Ho so da gop (NCL-02-CN-006) chi con de tra cuu, khong nhan them thay doi nguoi lien he. */
+	private void requireActiveCustomer(Long customerId) {
+		Customer customer = customerRepository.findById(customerId)
+				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Khong tim thay khach hang"));
+		if (customer.getStatus() == CustomerStatus.MERGED) {
+			throw new BusinessRuleException(ErrorCode.INVALID_STATE,
+					"Ho so da bi gop, khong the thay doi nguoi lien he");
 		}
 	}
 

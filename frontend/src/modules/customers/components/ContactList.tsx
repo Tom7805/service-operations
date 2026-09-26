@@ -17,6 +17,8 @@ interface ContactListProps {
   currentUserRoles?: string[];
   currentUserName?: string;
   initialContacts?: CustomerContact[];
+  /** Hồ sơ đã gộp (NCL-02-CN-006): chỉ xem danh sách, không thêm hay đổi đầu mối chính. */
+  readOnly?: boolean;
 }
 
 export default function ContactList({
@@ -25,6 +27,7 @@ export default function ContactList({
   currentUserRoles = ['VT-04'],
   currentUserName = 'Người dùng',
   initialContacts,
+  readOnly = false,
 }: ContactListProps) {
   // NCL-02-CN-003 / TC-03: Chỉ Nhân viên kinh doanh (VT-04) được quyền quản lý người liên hệ
   const isAllowed = currentUserRoles.includes('VT-04');
@@ -73,6 +76,14 @@ export default function ContactList({
   useEffect(() => {
     if (!initialContacts && customerId && isAllowed) {
       loadContacts();
+    }
+  }, [customerId, isAllowed]);
+
+  // TC-03: vai trò không được phép -> vẫn gửi yêu cầu lên backend để lần từ chối (403) được ghi
+  // vào Nhật ký hệ thống thật, đúng như thông báo "Ghi nhận Audit Log" trên màn hình.
+  useEffect(() => {
+    if (!isAllowed && customerId) {
+      fetchCustomerContacts(customerId).catch(() => undefined);
     }
   }, [customerId, isAllowed]);
 
@@ -224,6 +235,7 @@ export default function ContactList({
         </div>
 
         <div className="contact-header-actions">
+          {!readOnly && (
           <button
             type="button"
             className="btn btn-primary btn-add-contact"
@@ -233,6 +245,7 @@ export default function ContactList({
             <span>+</span>
             <span>Thêm người liên hệ</span>
           </button>
+          )}
         </div>
       </div>
 
@@ -315,6 +328,7 @@ export default function ContactList({
           <p>
             Hồ sơ khách hàng này chưa có người liên hệ được ghi nhận. Hãy thêm người liên hệ đầu tiên để thiết lập kênh kết nối.
           </p>
+          {!readOnly && (
           <button
             type="button"
             className="btn btn-primary"
@@ -324,6 +338,7 @@ export default function ContactList({
             <span>+</span>
             <span>Thêm người liên hệ đầu tiên</span>
           </button>
+          )}
         </div>
       ) : filteredContacts.length === 0 ? (
         <div className="table-empty-state contact-empty-state">
@@ -476,6 +491,8 @@ export default function ContactList({
                         <span className="is-primary-indicator" data-testid={`current-primary-tag-${contact.id}`}>
                           <span className="icon-sm">{ICONS.check}</span> Đang là đầu mối chính
                         </span>
+                      ) : readOnly ? (
+                        <span className="cell-muted">—</span>
                       ) : (
                         <button
                           type="button"

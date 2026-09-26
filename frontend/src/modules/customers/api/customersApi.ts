@@ -250,7 +250,7 @@ export async function setPrimaryCustomerContact(
 
 /**
  * NCL-02-CN-005 (TC-01): Gán ngành nghề, quy mô và mức độ ưu tiên cho khách hàng
- * (PATCH /customers/{id}/segment). Bắt buộc vai trò VT-04 hoặc VT-02.
+ * (PATCH /customers/{id}/segment). Bắt buộc vai trò VT-04 (TC-03).
  * Backend ghi Audit Log hành động `SEGMENT_UPDATE` (TC-04).
  */
 export async function updateCustomerSegment(
@@ -267,6 +267,23 @@ export async function updateCustomerSegment(
     method: 'PATCH',
     body: JSON.stringify(cleanPayload),
   });
+}
+
+/**
+ * NCL-02-CN-001 (TC-03): Kiểm tra quyền mở chức năng Hồ sơ khách hàng qua backend
+ * (GET /customers/access-check). Màn hình "Không có thẩm quyền" gọi endpoint này để lần từ chối
+ * (403) được backend ghi vào Nhật ký hệ thống thật, không chỉ hiển thị chữ "đã ghi nhật ký".
+ */
+export async function checkCustomerAccess(): Promise<void> {
+  await requestBackend<void>(`${API_BASE_URL}/customers/access-check`, { method: 'GET' });
+}
+
+/**
+ * NCL-02-CN-005 (TC-03): Kiểm tra quyền mở chức năng Phân nhóm khách hàng (chỉ VT-04)
+ * — cùng mục đích ghi nhật ký lần từ chối như {@link checkCustomerAccess}.
+ */
+export async function checkCustomerSegmentAccess(): Promise<void> {
+  await requestBackend<void>(`${API_BASE_URL}/customers/segment/access-check`, { method: 'GET' });
 }
 
 /**

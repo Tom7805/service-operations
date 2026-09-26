@@ -1,6 +1,7 @@
 package com.serviceops.modules.customer.repository;
 
 import com.serviceops.modules.customer.entity.Customer;
+import com.serviceops.modules.customer.enums.CustomerStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Collection;
@@ -16,8 +17,8 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
 	boolean existsByCode(String code);
 
-	/** Tim ho so theo ten gan dung (chong trung ho so - NCL-02-CN-002, TC-01). */
-	List<Customer> findByNameContainingIgnoreCase(String name);
+	/** Ho so con hieu luc (khac MERGED) - tap ung vien so khop ten gan giong khi chong trung (NCL-02-CN-002, TC-01). */
+	List<Customer> findByStatusNot(CustomerStatus status);
 
 	/**
 	 * Tim toan bo ho so theo ma so thue chinh xac (chong trung ho so - TC-01).

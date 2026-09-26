@@ -30,7 +30,7 @@ public class CustomerDuplicateAccessDeniedAspect {
     public void logDenied(JoinPoint joinPoint, AccessDeniedException ex) {
         try {
             logger.logDeniedAccess(joinPoint.getSignature().toShortString(),
-                    "Tu choi truy cap chuc nang khach hang (can Sales hoac PM)");
+                    "Tu choi truy cap chuc nang khach hang: vai tro hien tai khong du quyen");
         } catch (RuntimeException loggingFailure) {
             // Khong duoc lam hong trai nghiem tra ve 403 cua request goc.
             log.warn("Khong ghi duoc nhat ky lan tu choi truy cap chuc nang khach hang", loggingFailure);

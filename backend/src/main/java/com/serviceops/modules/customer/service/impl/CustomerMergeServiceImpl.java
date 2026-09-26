@@ -28,7 +28,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * NCL-02-CN-006: Gop hai ho so khach hang trung thanh mot (QTN-05).
@@ -62,12 +64,15 @@ public class CustomerMergeServiceImpl implements CustomerMergeService {
 		Customer source = requireMergeableCustomer(request.sourceCustomerId(), "bi gop");
 		requireDifferentCustomers(target, source);
 
-		long relatedRecordCount = auditLogRepository.findByCustomerIdOrderByCreatedAtDesc(source.getId()).size()
-				+ overrideLogRepository.findByCustomerId(source.getId()).size()
-				+ businessRecordMover.countRecords(source.getId());
+		Map<String, Long> breakdown = new LinkedHashMap<>(businessRecordMover.countRecordsByLabel(source.getId()));
+		breakdown.put("nhat ky khach hang",
+				(long) auditLogRepository.findByCustomerIdOrderByCreatedAtDesc(source.getId()).size());
+		breakdown.put("nhat ky bo qua canh bao trung",
+				(long) overrideLogRepository.findByCustomerId(source.getId()).size());
+		long relatedRecordCount = breakdown.values().stream().mapToLong(Long::longValue).sum();
 
 		return new MergePreviewRes(customerMapper.toResponse(target), customerMapper.toResponse(source),
-				relatedRecordCount);
+				relatedRecordCount, breakdown);
 	}
 
 	@Override

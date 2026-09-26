@@ -64,14 +64,38 @@ function formatDate(value: string | null): string {
   return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+/** Nhãn tiếng Việt cho mã trạng thái backend (cơ hội, hợp đồng, dự án, hóa đơn, công nợ). */
+const STATUS_LABELS: Record<string, string> = {
+  APPROACH: 'Tiếp cận',
+  PROPOSAL: 'Báo giá',
+  NEGOTIATION: 'Đàm phán',
+  WON: 'Thắng',
+  LOST: 'Thua',
+  DRAFT: 'Nháp',
+  ACTIVE: 'Đang hiệu lực',
+  COMPLETED: 'Hoàn thành',
+  TERMINATED: 'Đã chấm dứt',
+  RUNNING: 'Đang chạy',
+  CLOSED: 'Đã đóng',
+  ISSUED: 'Đã phát hành',
+  PARTIALLY_PAID: 'Thanh toán một phần',
+  PAID: 'Đã thanh toán',
+  CANCELLED: 'Đã hủy',
+  OVERDUE: 'Quá hạn',
+};
+
+function statusLabel(status: string | null): string {
+  if (!status) return '—';
+  return STATUS_LABELS[status.toUpperCase()] ?? status;
+}
+
+const POSITIVE_STATUSES = new Set(['WON', 'ACTIVE', 'PAID', 'COMPLETED', 'RUNNING']);
+const NEGATIVE_STATUSES = new Set(['LOST', 'CANCELLED', 'OVERDUE', 'CLOSED', 'TERMINATED']);
+
 function statusClass(status: string | null): string {
   const s = (status ?? '').toUpperCase();
-  if (['WON', 'ACTIVE', 'PAID', 'DONE', 'COMPLETED', 'SIGNED', 'RUNNING'].some((k) => s.includes(k))) {
-    return 'status-pill status-pill--active';
-  }
-  if (['LOST', 'CANCELLED', 'OVERDUE', 'CLOSED', 'REJECTED'].some((k) => s.includes(k))) {
-    return 'status-pill status-pill--locked';
-  }
+  if (POSITIVE_STATUSES.has(s)) return 'status-pill status-pill--active';
+  if (NEGATIVE_STATUSES.has(s)) return 'status-pill status-pill--locked';
   return 'status-pill';
 }
 
@@ -452,7 +476,7 @@ export default function CustomerOverviewPanel({
                       {item.name || '(không có tên)'}
                       {item.code && <span className="customer-timeline__code"> · {item.code}</span>}
                     </span>
-                    {item.status && <span className={statusClass(item.status)}>{item.status}</span>}
+                    {item.status && <span className={statusClass(item.status)}>{statusLabel(item.status)}</span>}
                     <span className="customer-timeline__amount">{formatAmount(item.amount)}</span>
                   </li>
                 ))}
@@ -497,17 +521,13 @@ export default function CustomerOverviewPanel({
                     <table className="user-data-table">
                           <thead>
                             <tr>
-                              <th style={{ width: '120px' }}>Ngày</th>
-                              {/* Chỉ hợp đồng mới có mã (contractCode) — cơ hội bán hàng không có mã
-                                  riêng theo đúng phạm vi backlog NCL-03, ẩn cột này ở các mục khác để
-                                  không hiện một cột toàn dấu gạch ngang vô nghĩa. */}
-                              {section.key === 'contracts' && <th style={{ width: '140px' }}>Mã</th>}
+                              <th style={{ width: '120px' }}>{section.key === 'receivables' ? 'Hạn thanh toán' : 'Ngày'}</th>
+                              {/* Cơ hội bán hàng không có mã riêng (phạm vi NCL-03) nên ẩn cột Mã ở nhóm đó. */}
+                              {section.key !== 'opportunities' && <th style={{ width: '140px' }}>Mã</th>}
                               <th>Tên</th>
                               <th style={{ width: '140px' }}>Trạng thái</th>
-                              <th style={{ width: '160px', textAlign: 'right' }}>Giá trị</th>
-                              {/* Chỉ hợp đồng và dự án có hành động thật ở đây — cơ hội bán hàng đã có
-                                  trang riêng để thao tác (chuyển giai đoạn, chốt kết quả...), hóa đơn/
-                                  công nợ (NCL-10) chưa triển khai nên chưa có hành động nào để hiện. */}
+                              <th style={{ width: '160px', textAlign: 'right' }}>{section.key === 'receivables' ? 'Còn phải thu' : 'Giá trị'}</th>
+                              {/* Chỉ hợp đồng và dự án có hành động ở đây — hóa đơn/công nợ thao tác tại màn hình Hóa đơn (NCL-10). */}
                               {(section.key === 'contracts' || section.key === 'projects') && (
                                 <th style={{ width: '160px', textAlign: 'right' }}>Hành động</th>
                               )}
@@ -517,11 +537,11 @@ export default function CustomerOverviewPanel({
                         {items.map((item) => (
                           <tr key={item.id}>
                             <td>{formatDate(item.date)}</td>
-                            {section.key === 'contracts' && <td>{item.code || '—'}</td>}
+                            {section.key !== 'opportunities' && <td>{item.code || '—'}</td>}
                             <td>{item.name || '—'}</td>
                             <td>
                               {item.status ? (
-                                <span className={statusClass(item.status)}>{item.status}</span>
+                                <span className={statusClass(item.status)}>{statusLabel(item.status)}</span>
                               ) : (
                                 <span className="cell-muted">—</span>
                               )}

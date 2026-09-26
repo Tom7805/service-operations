@@ -65,6 +65,11 @@ class CustomerContactServiceTest {
 				customerContactMapper, auditLogRepository, systemAuditLogService);
 
 		lenient().when(customerRepository.existsById(anyLong())).thenReturn(true);
+		lenient().when(customerRepository.findById(anyLong())).thenAnswer(inv -> {
+			com.serviceops.modules.customer.entity.Customer customer = new com.serviceops.modules.customer.entity.Customer();
+			customer.setId(inv.getArgument(0));
+			return java.util.Optional.of(customer);
+		});
 		lenient().when(customerContactRepository.save(any(CustomerContact.class))).thenAnswer(inv -> {
 			CustomerContact contact = inv.getArgument(0);
 			if (contact.getId() == null) {
@@ -164,9 +169,26 @@ class CustomerContactServiceTest {
 	}
 
 	@Test
+	@DisplayName("Ho so da gop (NCL-02-CN-006) khong nhan them nguoi lien he")
+	void rejectsAddingContactToMergedCustomer() {
+		com.serviceops.modules.customer.entity.Customer merged = new com.serviceops.modules.customer.entity.Customer();
+		merged.setId(7L);
+		merged.setStatus(com.serviceops.modules.customer.enums.CustomerStatus.MERGED);
+		when(customerRepository.findById(7L)).thenReturn(Optional.of(merged));
+		CustomerContactReq req = new CustomerContactReq("Nguyen Van A", null, null, null, false);
+
+		assertThatThrownBy(() -> service.addContact(7L, req))
+				.isInstanceOf(BusinessRuleException.class)
+				.extracting(ex -> ((BusinessRuleException) ex).getErrorCode())
+				.isEqualTo(ErrorCode.INVALID_STATE);
+
+		verify(customerContactRepository, never()).save(any());
+	}
+
+	@Test
 	@DisplayName("Khong tim thay khach hang thi bao loi va khong luu")
 	void rejectsWhenCustomerNotFound() {
-		when(customerRepository.existsById(99L)).thenReturn(false);
+		when(customerRepository.findById(99L)).thenReturn(java.util.Optional.empty());
 		CustomerContactReq req = new CustomerContactReq("Nguyen Van A", null, null, null, false);
 
 		assertThatThrownBy(() -> service.addContact(99L, req))

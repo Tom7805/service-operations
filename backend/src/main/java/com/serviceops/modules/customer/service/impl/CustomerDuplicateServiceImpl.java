@@ -2,11 +2,13 @@ package com.serviceops.modules.customer.service.impl;
 
 import com.serviceops.modules.customer.dto.response.DuplicateCandidateRes;
 import com.serviceops.modules.customer.entity.Customer;
+import com.serviceops.modules.customer.enums.CustomerStatus;
 import com.serviceops.modules.customer.repository.CustomerRepository;
 import com.serviceops.modules.customer.service.CustomerDuplicateService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -15,6 +17,11 @@ import java.util.Map;
 
 /**
  * NCL-02-CN-002: thuat toan chong trung ho so khach hang.
+ *
+ * <p>So khop tren toan bo ho so con hieu luc (bo qua ho so da gop - NCL-02-CN-006) thay vi chi tim
+ * {@code LIKE %ten%}: ten "gan giong" (sai chinh ta, thieu dau, them/bot ky tu) khong phai chuoi con
+ * cua nhau nen tim theo LIKE se bo sot (TC-01). Quy mo doanh nghiep vua va nho nen so ho so du nho
+ * de so khop trong bo nho.</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -58,12 +65,14 @@ public class CustomerDuplicateServiceImpl implements CustomerDuplicateService {
 
     private List<Customer> collectCandidates(String normalizedName, String normalizedTax) {
         Map<Long, Customer> map = new LinkedHashMap<>();
-        for (Customer c : customerRepository.findByNameContainingIgnoreCase(normalizedName)) {
+        for (Customer c : customerRepository.findByStatusNot(CustomerStatus.MERGED)) {
             map.put(c.getId(), c);
         }
         if (!isEmpty(normalizedTax)) {
             for (Customer c : customerRepository.findByTaxCode(normalizedTax)) {
-                map.put(c.getId(), c);
+                if (c.getStatus() != CustomerStatus.MERGED) {
+                    map.put(c.getId(), c);
+                }
             }
         }
         return new ArrayList<>(map.values());
@@ -127,11 +136,20 @@ public class CustomerDuplicateServiceImpl implements CustomerDuplicateService {
         return prev[b.length()];
     }
 
+    /**
+     * Chuan hoa ten de so khop: bo dau tieng Viet, bo dau cau, gop khoang trang - "Công ty ABC" va
+     * "Cong ty A.B.C" duoc coi la gan giong nhau.
+     */
     private String normalizeName(String value) {
         if (value == null) {
             return null;
         }
-        return value.trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
+        String noAccent = Normalizer.normalize(value.replace('đ', 'd').replace('Đ', 'D'), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "");
+        return noAccent.toLowerCase(Locale.ROOT)
+                .replaceAll("[^\\p{L}\\p{N}]+", " ")
+                .trim()
+                .replaceAll("\\s+", " ");
     }
 
     private String normalizeTaxCode(String value) {

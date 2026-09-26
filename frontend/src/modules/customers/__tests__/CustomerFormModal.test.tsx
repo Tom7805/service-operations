@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import CustomerFormModal from '../components/CustomerFormModal';
+import DuplicateWarningModal from '../components/DuplicateWarningModal';
 import * as customersApi from '../api/customersApi';
 
 vi.mock('../api/customersApi', async () => {
@@ -304,3 +305,46 @@ describe('CustomerFormModal Component (NCL-02-CN-001 & NCL-02-CN-002)', () => {
   });
 });
 
+
+describe('DuplicateWarningModal — mức độ giống & chọn hồ sơ đã có (NCL-02-CN-002)', () => {
+  const candidate = {
+    id: 7,
+    code: 'KH-000007',
+    name: 'Công ty TNHH ABC',
+    taxCode: '0101234567',
+    phone: null,
+    similarity: 0.95,
+    matchedFields: ['ten', 'maSoThue'],
+  };
+
+  it('TC-01: hiện danh sách hồ sơ nghi trùng kèm mức độ giống nhau', () => {
+    render(
+      <DuplicateWarningModal
+        isOpen
+        currentPayload={{ name: 'Cong ty TNHH ABC', taxCode: '0101234567' }}
+        candidates={[candidate]}
+        onBackToEdit={vi.fn()}
+        onConfirmOverride={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId('candidate-similarity-7')).toHaveTextContent('Giống 95%');
+  });
+
+  it('người dùng chọn dùng hồ sơ đã có thay vì tạo mới', () => {
+    const onSelectExisting = vi.fn();
+    render(
+      <DuplicateWarningModal
+        isOpen
+        currentPayload={{ name: 'Cong ty TNHH ABC', taxCode: '0101234567' }}
+        candidates={[candidate]}
+        onBackToEdit={vi.fn()}
+        onConfirmOverride={vi.fn()}
+        onSelectExisting={onSelectExisting}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('btn-use-existing-7'));
+    expect(onSelectExisting).toHaveBeenCalledWith(candidate);
+  });
+});

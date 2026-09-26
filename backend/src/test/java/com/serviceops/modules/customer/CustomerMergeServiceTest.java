@@ -280,13 +280,15 @@ class CustomerMergeServiceTest {
 	void previewReturnsCountsWithoutMutatingData() {
 		when(auditLogRepository.findByCustomerIdOrderByCreatedAtDesc(2L)).thenReturn(List.of(auditLogOf(2L)));
 		when(overrideLogRepository.findByCustomerId(2L)).thenReturn(List.of(overrideLogOf(2L), overrideLogOf(2L)));
-		when(businessRecordMover.countRecords(2L)).thenReturn(4L);
+		when(businessRecordMover.countRecordsByLabel(2L)).thenReturn(java.util.Map.of("hop dong", 4L));
 
 		MergePreviewRes preview = service.preview(new CustomerMergeReq(1L, 2L));
 
 		assertThat(preview.targetCustomer().id()).isEqualTo(1L);
 		assertThat(preview.sourceCustomer().id()).isEqualTo(2L);
 		assertThat(preview.relatedRecordCount()).isEqualTo(7L);
+		assertThat(preview.relatedRecordBreakdown()).containsEntry("hop dong", 4L)
+				.containsEntry("nhat ky khach hang", 1L).containsEntry("nhat ky bo qua canh bao trung", 2L);
 		verify(businessRecordMover, never()).moveRecords(any(), any());
 
 		assertThat(source.getStatus()).isEqualTo(CustomerStatus.ACTIVE);

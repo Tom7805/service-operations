@@ -34,7 +34,8 @@ public class CustomerAuditLogger {
     public void logDeniedAccess(String targetRef, String detail) {
         CustomerAuditLog log = new CustomerAuditLog();
         log.setActionType(CustomerAuditAction.DENIED_ACCESS);
-        log.setDetail(detail);
+        // Ghi kem chuc nang bi chan (vd CustomerMergeController.merge(..)) de tra cuu duoc lan tu choi thuoc man hinh nao.
+        log.setDetail(targetRef == null ? detail : detail + " [" + targetRef + "]");
         log.setCustomerId(null);
         currentUser().ifPresent(user -> {
             log.setActorUserId(user.getId());

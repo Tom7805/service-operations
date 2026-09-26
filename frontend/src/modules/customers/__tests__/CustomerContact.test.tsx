@@ -238,6 +238,11 @@ describe('Customer Contact Management Frontend (NCL-02-CN-003)', () => {
   });
 
   describe('NCL-02-CN-003-TC-03: Không có quyền (Phân quyền bảo mật)', () => {
+    beforeEach(() => {
+      // Backend tra 403 cho vai tro khong phai VT-04 - man hinh van gui request de lan tu choi duoc ghi nhat ky.
+      vi.mocked(customersApi.fetchCustomerContacts).mockRejectedValue(new Error('403'));
+    });
+
     it('người dùng không có vai trò Nhân viên kinh doanh (VT-04) bị từ chối truy cập và ghi nhận nhật ký', () => {
       render(
         <ContactList
@@ -254,6 +259,7 @@ describe('Customer Contact Management Frontend (NCL-02-CN-003)', () => {
       expect(screen.getByText(/Trần Nhân Sự/i)).toBeInTheDocument();
       expect(screen.queryByTestId('btn-open-add-contact')).toBeNull();
       expect(screen.queryByTestId('contact-table')).toBeNull();
+      expect(customersApi.fetchCustomerContacts).toHaveBeenCalledWith(10);
     });
 
     it('từ chối truy cập đối với vai trò Kế toán (VT-05)', () => {

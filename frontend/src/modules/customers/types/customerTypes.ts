@@ -193,6 +193,8 @@ export interface CustomerMergePreview {
   targetCustomer: Customer;
   sourceCustomer: Customer;
   relatedRecordCount: number;
+  /** Số bản ghi sẽ chuyển theo từng loại — khóa là nhãn backend (vd "hop dong", "hoa don"). */
+  relatedRecordBreakdown?: Record<string, number>;
 }
 
 export interface CustomerMergeFormErrors {

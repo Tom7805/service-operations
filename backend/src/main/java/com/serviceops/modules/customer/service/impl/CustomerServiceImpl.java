@@ -144,9 +144,7 @@ public class CustomerServiceImpl implements CustomerService {
 
 	@Override
 	public CustomerRes updateSegment(Long customerId, CustomerSegmentReq request) {
-		Customer customer = customerRepository.findById(customerId)
-				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
-						"Khong tim thay ho so khach hang"));
+		Customer customer = loadEditableCustomer(customerId);
 		customer.setIndustry(request.industry().trim());
 		customer.setCompanySize(request.companySize().trim());
 		customer.setPriority(request.priority().trim());
