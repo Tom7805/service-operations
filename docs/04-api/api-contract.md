@@ -3724,13 +3724,15 @@ Trả về danh sách thông báo của người dùng hiện tại, phân trang
       "targetType": "TIMESHEET",
       "isRead": false,
       "readAt": null,
-      "sentAt": "2026-09-13T10:05:00"
+      "sentAt": "2026-09-13T10:05:00",
+      "notificationGroup": "TIMESHEET",
+      "severity": "WARNING"
     }
   ]
 }
 ```
 
-> `targetType` bổ sung ở `NCL-14-CN-001` — xem chi tiết bên dưới.
+> `targetType`, `notificationGroup`, `severity` và tham số `group` bổ sung ở `NCL-14-CN-001` — xem chi tiết bên dưới.
 
 #### `GET /notifications/unread-count`
 
@@ -3779,6 +3781,8 @@ liệu. Lý do không dùng `referenceType`: ở một số loại thông báo (
 | `TIMESHEET_SUBMITTED`, `TIMESHEET_REJECTED` | `TIMESHEET` | id của Timesheet |
 | `TIMESHEET_REMINDER` | `TIMESHEET` | **userId của chính người nhận** (nhắc chung, không phải id một Timesheet cụ thể) |
 | `TIMER_AUTO_STOPPED` | `TASK` | id của Task |
+| `TASK_BUDGET_EXCEEDED` | `TASK` | id của Task (cảnh báo vượt 80% ngân sách giờ — ví dụ của TC-02) |
+| `DAILY_DIGEST_SUMMARY` | `NONE` | `null` — không điều hướng, chỉ đánh dấu đã đọc |
 | `EXPENSE_SUBMITTED` | `EXPENSE` | (chưa có nơi gửi loại này) |
 | `PROJECT_MILESTONE_DUE`, `NEGATIVE_MARGIN_ALERT` | `PROJECT` | id của Project |
 | `CONTRACT_EXPIRING` | `CONTRACT` | (chưa có nơi gửi loại này) |
@@ -3824,6 +3828,46 @@ thông báo thực sự chuyển từ chưa đọc sang đã đọc.
 người gọi (cố tình trả cùng lỗi như "không tồn tại", không phân biệt 403, để không lộ thông tin thông
 báo của người khác).
 
+#### Phân loại theo mức độ và nhóm — `severity`, `notificationGroup` (bổ sung)
+
+Mỗi phần tử của `GET /notifications` và `POST /notifications/{id}/open` có thêm 2 trường (suy ra từ `type`,
+áp dụng cả cho dữ liệu cũ — các trường cũ giữ nguyên, `data` vẫn là **mảng**, không đổi shape):
+
+| Trường | Giá trị | Ghi chú cho FE |
+|---|---|---|
+| `severity` | `CRITICAL` \| `WARNING` \| `INFO` | Tô màu/biểu tượng: đỏ / vàng / xám |
+| `notificationGroup` | `TIMESHEET` \| `EXPENSE` \| `PROJECT` \| `CONTRACT` \| `INVOICE` \| `ACCEPTANCE` \| `null` | `null` chỉ với `DAILY_DIGEST_SUMMARY` |
+
+| `severity` | Gồm các `type` |
+|---|---|
+| `CRITICAL` | `NEGATIVE_MARGIN_ALERT`, `TASK_BUDGET_EXCEEDED`, `DUNNING_REMINDER`, `CONTRACT_EXPIRING` |
+| `WARNING` | `TIMESHEET_SUBMITTED`, `TIMESHEET_REJECTED`, `TIMER_AUTO_STOPPED`, `TIMESHEET_REMINDER`, `EXPENSE_SUBMITTED`, `PROJECT_MILESTONE_DUE`, `INVOICE_PROPOSAL_CREATED`, `ACCEPTANCE_DECIDED_ON_PORTAL` |
+| `INFO` | `RECURRING_INVOICE_GENERATED`, `DAILY_DIGEST_SUMMARY` |
+
+#### `GET /notifications` — tham số đầy đủ
+
+| Tham số | Kiểu | Mặc định | Ghi chú |
+|---|---|---|---|
+| `unreadOnly` | boolean | `false` | Chỉ lấy chưa đọc |
+| `group` | enum `notificationGroup` | (không lọc) | Lọc theo nhóm — sai giá trị enum → `400` |
+| `page` | int | `0` | < 0 được ép về 0 |
+| `size` | int | `20` | Kẹp trong khoảng 1–100 |
+
+Sắp xếp: `sentAt` giảm dần, rồi `id` giảm dần (ổn định khi phân trang). Không trả tổng số bản ghi — FE coi
+"còn trang sau" khi số phần tử trả về bằng `size`. Số đếm trên biểu tượng chuông lấy từ
+`GET /notifications/unread-count` (TC-01), **không** tự đếm từ trang đang hiển thị.
+
+#### `POST /notifications/read-all` (bổ sung)
+
+Đánh dấu **tất cả** thông báo chưa đọc của chính người gọi là đã đọc. Không có body.
+
+```json
+{ "success": true, "message": "Da danh dau tat ca thong bao da doc", "data": 5 }
+```
+
+`data` = số thông báo thực sự đổi trạng thái (0 nếu không có gì). Ghi nhật ký `Danh dau tat ca thong bao da
+doc` khi `data > 0` (TC-03). Sau khi gọi, FE đặt lại badge về 0 hoặc gọi lại `unread-count`.
+
 #### `POST /notifications/read` — ghi nhật ký (TC-03)
 
 Mỗi lần đánh dấu đã đọc (đơn lẻ qua `/open` hoặc hàng loạt qua `/read`) mà có ít nhất 1 thông báo thực
@@ -3847,10 +3891,13 @@ Nhóm thông báo (`notificationGroup`) hiện có, gộp từ các `Notificatio
 |---|---|
 | `TIMESHEET` | `TIMESHEET_SUBMITTED`, `TIMESHEET_REJECTED`, `TIMER_AUTO_STOPPED`, `TIMESHEET_REMINDER` |
 | `EXPENSE` | `EXPENSE_SUBMITTED` |
-| `PROJECT` | `PROJECT_MILESTONE_DUE`, `NEGATIVE_MARGIN_ALERT` |
+| `PROJECT` | `PROJECT_MILESTONE_DUE`, `NEGATIVE_MARGIN_ALERT`, `TASK_BUDGET_EXCEEDED` |
 | `CONTRACT` | `CONTRACT_EXPIRING` |
 | `INVOICE` | `INVOICE_PROPOSAL_CREATED`, `DUNNING_REMINDER`, `RECURRING_INVOICE_GENERATED` |
 | `ACCEPTANCE` | `ACCEPTANCE_DECIDED_ON_PORTAL` |
+
+> Kênh (`channel`): hiện chỉ có `IN_APP` được gửi thật (thư điện tử/SMS ngoài phạm vi, chỉ có trong enum).
+> FE chỉ cần hiển thị bật/tắt + tần suất, không cần chọn kênh.
 
 > Riêng `NotificationType.DAILY_DIGEST_SUMMARY` (bản tổng hợp cuối ngày, xem dưới) không thuộc nhóm
 > nào — không thể tắt hoặc gộp chính nó, tránh vòng lặp gộp-của-gộp.
@@ -3937,13 +3984,27 @@ duy nhất, tạo vào 20:00 mỗi ngày (`type = "DAILY_DIGEST_SUMMARY"`, `targ
 
 Mỗi thông báo phát sinh từ tác vụ nền rà soát định kỳ được gắn khóa gồm loại sự kiện + bản ghi liên
 quan + người nhận + **đợt cảnh báo (episode)** — lần rà soát sau bỏ qua nếu khóa đã tồn tại (`QTN-27`).
-Cơ chế này áp dụng cho những sự kiện **mới** dùng nó (hiện tại: `TASK_BUDGET_EXCEEDED`, dùng để minh
-họa/kiểm thử) — **không thay thế** các cơ chế chống trùng riêng đã ổn định của cảnh báo âm biên
+Cơ chế này áp dụng cho những sự kiện **mới** dùng nó (hiện tại: `TASK_BUDGET_EXCEEDED`) — **không thay thế** các cơ chế chống trùng riêng đã ổn định của cảnh báo âm biên
 (`NCL-09-CN-004`), nhắc nộp bảng chấm công (`NCL-06-CN-009`), nhắc thu nợ (`NCL-10-CN-006`).
 
 Một "đợt cảnh báo" (episode) bắt đầu khi bản ghi chuyển từ bình thường sang trạng thái cần cảnh báo
 (hoặc hết cooldown mà vẫn còn cảnh báo); trong cùng một đợt, mỗi người nhận chỉ được gửi **đúng một
 lần** (TC-01). Nếu bản ghi thoát rồi vượt ngưỡng lại, hệ thống coi là đợt mới và gửi lại (TC-02).
+
+#### Tác vụ nền `TaskBudgetAlertScheduler` (bổ sung — nguồn phát thật của `TASK_BUDGET_EXCEEDED`)
+
+- Chạy **mỗi giờ, phút thứ 5** (`0 5 * * * *`); quét các công việc có `budgetHours > 0` thuộc dự án `RUNNING`.
+- `approvedHours / budgetHours ≥ 0.80` (QTN-20) → đang vượt ngưỡng; người nhận là PM của dự án.
+- Thông báo: `type = TASK_BUDGET_EXCEEDED`, `targetType = TASK`, `referenceId = taskId`, `severity = CRITICAL`,
+  `notificationGroup = PROJECT` (nên tuân theo cấu hình bật/tắt/gộp của `NCL-14-CN-002`).
+- Kịch bản TC-01: lần chạy sau 1 giờ công việc vẫn vượt → không gửi lại. TC-02: PM tăng ngân sách (tỷ lệ < 80%)
+  ở một lần quét, sau đó duyệt thêm giờ làm vượt lại → lần quét kế tiếp gửi cảnh báo mới.
+- **Cảnh báo ngay khi duyệt:** `POST` duyệt bảng chấm công (`NCL-06-CN-003`) đánh giá lại các công việc vừa duyệt và
+  gửi `TASK_BUDGET_EXCEEDED` ngay **sau khi giao dịch duyệt commit** — dùng chung cơ chế chống trùng, nên lần quét
+  định kỳ sau đó không gửi lại cho cùng đợt (TC-01). Lỗi khi gửi cảnh báo không làm hỏng việc duyệt; tác vụ nền sẽ
+  gửi bù ở lần quét kế tiếp. Response duyệt vẫn trả `overBudgetWarnings` như trước để FE hiện toast ngay.
+- Tác vụ nền vẫn cần cho các thay đổi không đi qua luồng duyệt (PM đổi ngân sách, bút toán đảo) — tức TC-02.
+- FE: sau khi duyệt thành công, gọi lại `GET /notifications/unread-count` để badge của PM cập nhật.
 
 #### `GET /notifications/dedup-configs`
 
@@ -3988,6 +4049,25 @@ Mỗi lần đổi ghi một dòng nhật ký hệ thống — người thực h
 
 **Lưu ý cho Frontend:** đây là cơ chế nội bộ, không có API riêng để tra "đợt cảnh báo hiện tại" của
 một bản ghi — thông báo tạo ra vẫn đọc qua API có sẵn của Epic thông báo (`GET /notifications`).
+
+### Ghi chú tích hợp Frontend — Epic `NCL-14` (đối chiếu tiêu chí chấp nhận)
+
+| Tiêu chí | Màn hình / hành vi FE cần có | API |
+|---|---|---|
+| CN-001 TC-01 | Danh sách thông báo có dấu chưa đọc; badge số đếm trên biểu tượng chuông; màu theo `severity`; bộ lọc "chưa đọc" và theo nhóm | `GET /notifications`, `GET /notifications/unread-count` |
+| CN-001 TC-02 | Bấm 1 thông báo → gọi `/open` → điều hướng theo `targetType` + `referenceId` (`NONE` thì không điều hướng); giảm badge | `POST /notifications/{id}/open` |
+| CN-001 TC-03 | Không cần UI riêng — backend tự ghi nhật ký khi đánh dấu đã đọc / mở / đọc tất cả | `POST /notifications/read`, `/read-all` |
+| CN-002 TC-01 | Màn cấu hình: 6 nhóm, công tắc bật/tắt | `GET`/`PUT /notifications/preferences` |
+| CN-002 TC-02 | Mỗi nhóm chọn `IMMEDIATE` / `DAILY_DIGEST`; hiển thị thông báo tổng hợp (`DAILY_DIGEST_SUMMARY`, `content` nhiều dòng `\n`) | như trên |
+| CN-002 TC-03 | Toast "Da luu..." — nhật ký do backend ghi | `PUT /notifications/preferences` |
+| CN-003 TC-01/02 | Không cần UI — hành vi do tác vụ nền; kiểm thử bằng cách quan sát `GET /notifications` | — |
+| CN-003 TC-03 | Màn cấu hình chống trùng chỉ hiện cho `VT-07`; vai trò khác nhận `403` → hiện trang "không có quyền" | `GET`/`PUT /notifications/dedup-configs` |
+| CN-003 TC-04 | Hiển thị `updatedBy` / `updatedAt` trên màn cấu hình | `GET /notifications/dedup-configs` |
+
+Gợi ý bảng điều hướng theo `targetType` (dùng route FE hiện có): `TIMESHEET` → màn bảng chấm công,
+`TASK` / `PROJECT` → chi tiết dự án/công việc, `INVOICE` / `INVOICE_PROPOSAL` → hóa đơn/đề nghị,
+`ACCEPTANCE_CERTIFICATE` → phiếu nghiệm thu, `CONTRACT` → hợp đồng, `EXPENSE` → chi phí, `NONE` → ở lại trang.
+Kiểu TypeScript `NotificationRes` cần thêm 2 trường tuỳ chọn: `notificationGroup`, `severity`.
 
 ---
 
