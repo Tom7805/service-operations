@@ -120,12 +120,18 @@ const fullContract: ContractRes = {
   createdAt: '2026-03-01T08:00:00',
 };
 
-/** Các khối (dòng thời gian, cơ hội, hợp đồng, dự án, hóa đơn, công nợ) giờ thu gọn mặc
- *  định để đỡ rối mắt — bấm vào tiêu đề mới mở ra. Test cần mở đúng khối trước khi tìm
- *  hàng/nút bên trong nó. */
+/** Ô tóm tắt là bộ chọn nhóm: bấm ô nào thì danh sách nhóm đó hiện ngay bên dưới (một nhóm một lúc).
+ *  Nhận testId của khối (customer-summary-section-<key>) để giữ cách đọc của các test bên dưới. */
 function expandSection(testId: string) {
-  const section = screen.getByTestId(testId);
-  fireEvent.click(within(section).getByRole('button', { expanded: false }));
+  const key = testId.replace('customer-summary-section-', '');
+  fireEvent.click(screen.getByTestId(`customer-summary-card-${key}`));
+}
+
+/** Thao tác phụ của một dòng hợp đồng nằm trong menu ⋮ — mở menu (của dòng đầu tiên) rồi lấy mục. */
+function openContractMenuItem(name: RegExp): HTMLElement {
+  const section = screen.getByTestId('customer-summary-section-contracts');
+  fireEvent.click(within(section).getAllByRole('button', { name: /^Thao tác với hợp đồng/ })[0]);
+  return screen.getByRole('menuitem', { name });
 }
 
 describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
@@ -144,21 +150,20 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
       expect(screen.getByTestId('customer-summary-panel')).toBeInTheDocument();
     });
 
-    // Đủ 5 nhóm chi tiết — mặc định thu gọn, phải mở ra mới thấy bản ghi bên trong
+    // Đủ 5 ô nhóm; Quản lý dự án mở sẵn nhóm Dự án, bấm ô khác thì danh sách nhóm đó hiện ngay
     for (const key of ['opportunities', 'contracts', 'projects', 'invoices', 'receivables']) {
-      expect(screen.getByTestId(`customer-summary-section-${key}`)).toBeInTheDocument();
+      expect(screen.getByTestId(`customer-summary-card-${key}`)).toBeInTheDocument();
     }
+    expect(
+      within(screen.getByTestId('customer-summary-section-projects')).getByText('Dự án ERP giai đoạn 1')
+    ).toBeInTheDocument();
     expandSection('customer-summary-section-opportunities');
-    expandSection('customer-summary-section-contracts');
-    expandSection('customer-summary-section-projects');
     expect(
       within(screen.getByTestId('customer-summary-section-opportunities')).getByText('Cơ hội triển khai ERP')
     ).toBeInTheDocument();
+    expandSection('customer-summary-section-contracts');
     expect(
       within(screen.getByTestId('customer-summary-section-contracts')).getByText('Hợp đồng triển khai ERP')
-    ).toBeInTheDocument();
-    expect(
-      within(screen.getByTestId('customer-summary-section-projects')).getByText('Dự án ERP giai đoạn 1')
     ).toBeInTheDocument();
 
     // Dòng thời gian hợp nhất: 5 mục, sắp tăng dần theo ngày (02/2026 -> 05/2026)
@@ -272,9 +277,7 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
       });
 
       expandSection('customer-summary-section-contracts');
-      const alertBtn = within(screen.getByTestId('customer-summary-section-contracts')).getByRole('button', {
-        name: /Cảnh báo hạn mức/i,
-      });
+      const alertBtn = openContractMenuItem(/Cảnh báo hạn mức/i);
       expect(alertBtn).toBeInTheDocument();
 
       fireEvent.click(alertBtn);
@@ -313,11 +316,7 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
       });
 
       expandSection('customer-summary-section-contracts');
-      expect(
-        within(screen.getByTestId('customer-summary-section-contracts')).getByRole('button', {
-          name: /Gia hạn hợp đồng/i,
-        })
-      ).toBeInTheDocument();
+      expect(openContractMenuItem(/Gia hạn hợp đồng/i)).toBeInTheDocument();
     });
 
     it('ẩn nút "Gia hạn hợp đồng" khi không có vai trò VT-04', async () => {
@@ -329,11 +328,11 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
         expect(screen.getByTestId('customer-summary-panel')).toBeInTheDocument();
       });
 
-      expect(
-        within(screen.getByTestId('customer-summary-section-contracts')).queryByRole('button', {
-          name: /Gia hạn hợp đồng/i,
-        })
-      ).toBeNull();
+      expandSection('customer-summary-section-contracts');
+      // Kế toán không có thao tác nào ở dòng hợp đồng: không nút, không menu ⋮.
+      const section = screen.getByTestId('customer-summary-section-contracts');
+      expect(within(section).queryByRole('button', { name: /^Thao tác với hợp đồng/ })).toBeNull();
+      expect(screen.queryByRole('menuitem', { name: /Gia hạn hợp đồng/i })).toBeNull();
     });
 
     it('bấm nút "Gia hạn hợp đồng" thì gọi getContract và mở RenewalModal', async () => {
@@ -348,7 +347,7 @@ describe('CustomerOverviewPanel (NCL-02-CN-004)', () => {
       });
 
       expandSection('customer-summary-section-contracts');
-      fireEvent.click(screen.getByRole('button', { name: /Gia hạn hợp đồng/i }));
+      fireEvent.click(openContractMenuItem(/Gia hạn hợp đồng/i));
 
       expect(contractsApi.getContract).toHaveBeenCalledWith(2);
 
@@ -519,13 +518,53 @@ describe('CustomerOverviewPanel — nhãn trạng thái & cột công nợ (NCL-
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Hóa đơn \(/ }));
+    fireEvent.click(screen.getByTestId('customer-summary-card-invoices'));
     expect(screen.getAllByText('Đã thanh toán').length).toBeGreaterThan(0);
     expect(screen.queryByText('PAID')).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: /Công nợ phải thu \(/ }));
+    fireEvent.click(screen.getByTestId('customer-summary-card-receivables'));
     expect(screen.getByText('Hạn thanh toán')).toBeInTheDocument();
     expect(screen.getByText('Còn phải thu')).toBeInTheDocument();
     expect(screen.getAllByText('Quá hạn').length).toBeGreaterThan(0);
+  });
+});
+
+describe('CustomerOverviewPanel — đi thẳng từ Lịch sử hợp tác', () => {
+  it('Quản lý dự án mở sẵn nhóm Dự án; bấm dòng dự án mở trang dự án (không qua hộp thoại)', () => {
+    const onOpenProject = vi.fn();
+    render(
+      <CustomerOverviewPanel
+        customerId={10}
+        customerName="Công ty Cổ phần Alpha"
+        currentUserRoles={['VT-02']}
+        initialOverview={fullOverview}
+        onOpenProject={onOpenProject}
+      />
+    );
+
+    expect(screen.getByTestId('customer-summary-card-projects')).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(screen.getByTestId('customer-summary-row-projects-3'));
+    expect(onOpenProject).toHaveBeenCalledWith(3);
+    // Có trang dự án thì không còn nút mở hộp thoại công việc trên dòng.
+    expect(
+      within(screen.getByTestId('customer-summary-section-projects')).queryByRole('button', { name: /Quản lý dự án/i })
+    ).toBeNull();
+  });
+
+  it('Kinh doanh mở sẵn nhóm Cơ hội; bấm tên cơ hội mở màn Cơ hội đúng cơ hội đó', () => {
+    const onOpenOpportunity = vi.fn();
+    render(
+      <CustomerOverviewPanel
+        customerId={10}
+        customerName="Công ty Cổ phần Alpha"
+        currentUserRoles={['VT-04']}
+        initialOverview={fullOverview}
+        onOpenOpportunity={onOpenOpportunity}
+      />
+    );
+
+    expect(screen.getByTestId('customer-summary-card-opportunities')).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Cơ hội triển khai ERP' }));
+    expect(onOpenOpportunity).toHaveBeenCalledWith(1);
   });
 });

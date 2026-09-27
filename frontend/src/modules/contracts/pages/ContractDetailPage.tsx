@@ -318,7 +318,7 @@ export default function ContractDetailPage({ contractId, currentUserRoles = [], 
                     style={{
                       height: '100%',
                       width: `${Math.min(100, usage.usedPercentage ?? 0)}%`,
-                      background: usage.overLimit ? 'var(--pale-red-fg)' : usage.nearLimit ? '#956400' : 'var(--pale-green-fg)',
+                      background: usage.overLimit ? 'var(--pale-red-fg)' : usage.nearLimit ? 'var(--pale-yellow-fg)' : 'var(--pale-green-fg)',
                     }}
                   />
                 </div>
@@ -338,7 +338,7 @@ export default function ContractDetailPage({ contractId, currentUserRoles = [], 
               {formatDate(contract.startDate)} → {formatDate(contract.endDate)}
             </div>
             {isExpiringSoon && (
-              <span className="cell-muted" style={{ fontSize: '11.5px', color: remaining! < 0 ? 'var(--pale-red-fg)' : '#956400' }}>
+              <span className="cell-muted" style={{ fontSize: '11.5px', color: remaining! < 0 ? 'var(--pale-red-fg)' : 'var(--pale-yellow-fg)' }}>
                 {remaining! < 0 ? `Đã quá hạn ${Math.abs(remaining!)} ngày` : `Còn ${remaining} ngày`}
               </span>
             )}

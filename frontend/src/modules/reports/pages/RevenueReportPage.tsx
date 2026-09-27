@@ -339,8 +339,8 @@ export default function RevenueReportPage({ currentUserRoles = [] }: RevenueRepo
                 {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
                   <g key={ratio}>
                     <line x1={AXIS_LEFT} x2={chartWidth} y1={y(yMax * ratio)} y2={y(yMax * ratio)}
-                      stroke="#e7e5e0" strokeWidth={1} />
-                    <text x={AXIS_LEFT - 6} y={y(yMax * ratio) + 4} textAnchor="end" fontSize="11" fill="#6b6a66">
+                      stroke="var(--line)" strokeWidth={1} />
+                    <text x={AXIS_LEFT - 6} y={y(yMax * ratio) + 4} textAnchor="end" fontSize="11" fill="var(--ink-faint)">
                       {compact.format(yMax * ratio)}
                     </text>
                   </g>
@@ -352,7 +352,7 @@ export default function RevenueReportPage({ currentUserRoles = [] }: RevenueRepo
                     <g key={month.month} onMouseEnter={() => setHovered(index)} data-testid="revenue-bar">
                       {/* Vùng bắt chuột rộng hơn cột để dễ trỏ. */}
                       <rect x={AXIS_LEFT + index * SLOT_WIDTH} y={0} width={SLOT_WIDTH} height={CHART_HEIGHT}
-                        fill={hovered === index ? '#f1f0ee' : 'transparent'} />
+                        fill={hovered === index ? 'var(--surface-sunken)' : 'transparent'} />
                       {CONTRACT_TYPE_ORDER.map((type) => {
                         const value = Math.max(month.byContractType[type] ?? 0, 0);
                         if (value === 0) return null;
@@ -367,9 +367,9 @@ export default function RevenueReportPage({ currentUserRoles = [] }: RevenueRepo
                       })}
                       {month.previousYearRevenue > 0 && (
                         <line x1={x - 4} x2={x + BAR_WIDTH + 4} y1={y(month.previousYearRevenue)}
-                          y2={y(month.previousYearRevenue)} stroke="#0b0b0b" strokeWidth={2} />
+                          y2={y(month.previousYearRevenue)} stroke="var(--ink-strong)" strokeWidth={2} />
                       )}
-                      <text x={x + BAR_WIDTH / 2} y={CHART_HEIGHT + 18} textAnchor="middle" fontSize="11" fill="#52514e">
+                      <text x={x + BAR_WIDTH / 2} y={CHART_HEIGHT + 18} textAnchor="middle" fontSize="11" fill="var(--ink-muted)">
                         {monthLabel(month.month)}
                       </text>
                     </g>
@@ -381,7 +381,7 @@ export default function RevenueReportPage({ currentUserRoles = [] }: RevenueRepo
             {hoveredMonth && (
               <div role="tooltip" data-testid="revenue-tooltip" style={{
                 position: 'absolute', top: 48, left: Math.min(AXIS_LEFT + (hovered ?? 0) * SLOT_WIDTH + SLOT_WIDTH + 24, chartWidth - 180),
-                background: '#fff', border: '1px solid #e7e5e0', borderRadius: 8, padding: '10px 12px',
+                background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 8, padding: '10px 12px',
                 boxShadow: '0 4px 16px rgba(0,0,0,0.08)', fontSize: 13, minWidth: 200, pointerEvents: 'none' }}>
                 <strong>{monthLabel(hoveredMonth.month)}</strong>
                 {CONTRACT_TYPE_ORDER.map((type) => (
@@ -391,7 +391,7 @@ export default function RevenueReportPage({ currentUserRoles = [] }: RevenueRepo
                     <span>{vnd.format(hoveredMonth.byContractType[type] ?? 0)}</span>
                   </div>
                 ))}
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, borderTop: '1px solid #e7e5e0',
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, borderTop: '1px solid var(--line)',
                   marginTop: 6, paddingTop: 6 }}>
                   <span>Tổng</span><strong>{vnd.format(hoveredMonth.revenue)}</strong>
                 </div>

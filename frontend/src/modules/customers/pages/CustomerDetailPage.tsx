@@ -26,6 +26,9 @@ interface CustomerDetailPageProps {
   onCustomerUpdated?: (updated: Customer) => void;
   // NCL-02-CN-005: cho phép mở thẳng tab "Phân nhóm" từ nút thao tác nhanh ở danh sách.
   initialTab?: CustomerDetailTab;
+  /** Từ "Lịch sử hợp tác": mở thẳng trang dự án / cơ hội (App điều hướng). */
+  onOpenProject?: (projectId: number) => void;
+  onOpenOpportunity?: (opportunityId: number) => void;
 }
 
 export default function CustomerDetailPage({
@@ -38,6 +41,8 @@ export default function CustomerDetailPage({
   initialContacts,
   onCustomerUpdated,
   initialTab,
+  onOpenProject,
+  onOpenOpportunity,
 }: CustomerDetailPageProps) {
   const [customer, setCustomer] = useState<Customer>(
     propCustomer || {
@@ -279,6 +284,8 @@ export default function CustomerDetailPage({
             customerName={customer.name}
             currentUserRoles={currentUserRoles}
             currentUserId={currentUserId}
+            onOpenProject={onOpenProject}
+            onOpenOpportunity={onOpenOpportunity}
           />
         )}
 

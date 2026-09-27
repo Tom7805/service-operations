@@ -283,7 +283,7 @@ export default function EmployeeDetailPage({ employeeId, onBack, currentUserRole
           <h3 className="section-title">Hợp đồng lao động</h3>
 
           {employee.contracts.length === 0 ? (
-            <p style={{ color: '#5B5A57', fontSize: 13.5 }}>Chưa có hợp đồng lao động nào được ghi nhận.</p>
+            <p style={{ color: 'var(--ink-muted)', fontSize: 13.5 }}>Chưa có hợp đồng lao động nào được ghi nhận.</p>
           ) : (
             <div className="table-responsive">
               <table className="user-data-table">
@@ -392,7 +392,7 @@ export default function EmployeeDetailPage({ employeeId, onBack, currentUserRole
 
             <div className="detail-section" data-testid="hourly-rate-section">
               <h3 className="section-title">Chi phí giờ công nội bộ</h3>
-              <p style={{ color: '#5B5A57', fontSize: 13.5, marginTop: '-4px' }}>
+              <p style={{ color: 'var(--ink-muted)', fontSize: 13.5, marginTop: '-4px' }}>
                 Dữ liệu nhạy cảm — mỗi lần xem hoặc khai báo đều được ghi nhật ký.
               </p>
 
@@ -407,7 +407,7 @@ export default function EmployeeDetailPage({ employeeId, onBack, currentUserRole
                   </button>
                 </div>
               ) : hourlyRates.length === 0 ? (
-                <p style={{ color: '#5B5A57', fontSize: 13.5 }}>Chưa có mốc chi phí giờ công nào được khai báo.</p>
+                <p style={{ color: 'var(--ink-muted)', fontSize: 13.5 }}>Chưa có mốc chi phí giờ công nào được khai báo.</p>
               ) : (
                 <div className="table-responsive">
                   <table className="user-data-table" data-testid="hourly-rate-table">

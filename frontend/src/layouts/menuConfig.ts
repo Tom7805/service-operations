@@ -29,6 +29,7 @@ export type Tab =
   | 'EMPLOYEE_DETAIL'
   | 'OPPORTUNITY_DETAIL'
   | 'CHANGE_PASSWORD'
+  | 'MY_SETTINGS'
   | 'TWO_FACTOR_SETTINGS'
   | 'MASKING_RULES'
   | 'REPORTS'
@@ -221,7 +222,9 @@ const ADMIN: NavItem[] = [
     ],
   },
   {
-    id: 'settings', tab: 'COMPANY_SETTINGS', icon: ICONS.settings, label: 'Cài đặt',
+    // "Cài đặt" (chân thanh bên) là tùy chọn CÁ NHÂN của mọi người dùng; mục này là cấu hình cả hệ thống
+    // của Quản trị viên — đặt tên khác để hai thứ không lẫn vào nhau.
+    id: 'settings', tab: 'COMPANY_SETTINGS', icon: ICONS.wrench, label: 'Cấu hình hệ thống',
     tabs: [
       { tab: 'COMPANY_SETTINGS', label: 'Công ty', requires: ['VT-07'], matches: ['FISCAL_PERIODS'] },
       { tab: 'NOTIFICATION_DEDUP', label: 'Thông báo', requires: ['VT-07'] },
@@ -246,7 +249,7 @@ export const ALL_NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((group) => group.item
 export const ALL_NAV_LEAVES: NavLeaf[] = ALL_NAV_ITEMS.flatMap((item) => item.tabs ?? [item]);
 
 /** Màn hình luôn mở được qua menu tài khoản, không nằm trên sidebar. */
-const ACCOUNT_TABS: Tab[] = ['CHANGE_PASSWORD', 'NOTIFICATIONS', 'NOTIFICATION_PREFERENCES'];
+const ACCOUNT_TABS: Tab[] = ['CHANGE_PASSWORD', 'NOTIFICATIONS', 'NOTIFICATION_PREFERENCES', 'MY_SETTINGS'];
 
 /**
  * Màn hình của menu tài khoản chỉ dành cho một số vai trò.

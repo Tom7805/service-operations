@@ -240,7 +240,7 @@ export default function SensitiveAccessLogPage({
               ) : entries.length === 0 ? (
                 <tr>
                   {/* TC-02: không có bản ghi nào thỏa bộ lọc */}
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#5B5A57' }}>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: 'var(--ink-muted)' }}>
                     Không tìm thấy nhật ký truy cập nào thỏa bộ lọc đã chọn.
                   </td>
                 </tr>

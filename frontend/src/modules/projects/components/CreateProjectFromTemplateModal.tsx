@@ -604,7 +604,7 @@ export default function CreateProjectFromTemplateModal({
                 {loadingWbs ? (
                   <div className="field-hint">Đang tải cây WBS của dự án…</div>
                 ) : (
-                  <div style={{ border: '1px solid var(--line)', borderRadius: '8px', background: '#FFFFFF', maxHeight: '350px', overflowY: 'auto' }}>
+                  <div style={{ border: '1px solid var(--line)', borderRadius: '8px', background: 'var(--surface)', maxHeight: '350px', overflowY: 'auto' }}>
                     <WorkBreakdownTree
                       projectId={createdProject.id}
                       items={wbs}

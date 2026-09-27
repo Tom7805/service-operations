@@ -1,4 +1,4 @@
-import { Fragment, Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Fragment, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import LoginPage from './modules/auth/pages/LoginPage';
 import type { AuthSession } from './modules/auth/types/authTypes';
 import { isPortalHash, portalFeatureOf } from './modules/portal/utils/portalRoute';
@@ -25,6 +25,16 @@ import { roleLabels } from './utils/roleLabel';
 import { useSessionSync } from './hooks/useSessionSync';
 import { LAST_ACTIVITY_KEY, SESSION_IDLE_MINUTES, markActivity, useIdleLogout } from './hooks/useIdleLogout';
 import HubFrame from './layouts/components/HubFrame';
+import {
+  applyPreferences,
+  cachePreferences,
+  readCachedPreferences,
+  watchSystemTheme,
+  type UiPreferences,
+} from './utils/preferences';
+import { getPreferences, savePreferences } from './modules/settings/api/preferencesApi';
+import { SETTINGS_SECTION_LABELS, type SettingsSection } from './modules/settings/settingsSections';
+import type { SaveState } from './modules/settings/pages/SettingsPage';
 import Breadcrumb, { type Crumb } from './layouts/components/Breadcrumb';
 import {
   Tab,
@@ -57,7 +67,6 @@ const PAGE_LOADERS = {
   AuditLogPage: () => import('./modules/auditLog/pages/AuditLogPage'),
   EmployeeListPage: () => import('./modules/employees/pages/EmployeeListPage'),
   EmployeeDetailPage: () => import('./modules/employees/pages/EmployeeDetailPage'),
-  ChangePasswordPage: () => import('./modules/auth/pages/ChangePasswordPage'),
   TwoFactorSetupPage: () => import('./modules/auth/pages/TwoFactorSetupPage'),
   CustomerListPage: () => import('./modules/customers/pages/CustomerListPage'),
   CustomerMergePage: () => import('./modules/customers/pages/CustomerMergePage'),
@@ -82,6 +91,7 @@ const PAGE_LOADERS = {
   TimesheetReportPage: () => import('./modules/reports/pages/TimesheetReportPage'),
   ReportCatalogPage: () => import('./modules/reports/pages/ReportCatalogPage'),
   MyWorkPage: () => import('./modules/mytasks/pages/MyWorkPage'),
+  SettingsPage: () => import('./modules/settings/pages/SettingsPage'),
   ProjectListPage: () => import('./modules/projects/pages/ProjectListPage'),
   ProjectDetailPage: () => import('./modules/projects/pages/ProjectDetailPage'),
   ProjectRiskPage: () => import('./modules/projects/pages/ProjectRiskPage'),
@@ -100,14 +110,12 @@ const PAGE_LOADERS = {
   ProjectMarginPage: () => import('./modules/profitability/pages/ProjectMarginPage'),
   MarginAlertThresholdPage: () => import('./modules/profitability/pages/MarginAlertThresholdPage'),
   NotificationCenterPage: () => import('./modules/notifications/pages/NotificationCenterPage'),
-  NotificationPreferencePage: () => import('./modules/notifications/pages/NotificationPreferencePage'),
   NotificationDedupConfigPage: () => import('./modules/notifications/pages/NotificationDedupConfigPage'),
   ServiceCatalogPage: () => import('./modules/admin/pages/ServiceCatalogPage'),
   CompanySettingPage: () => import('./modules/admin/pages/CompanySettingPage'),
   FiscalPeriodPage: () => import('./modules/admin/pages/FiscalPeriodPage'),
   BackupRestorePage: () => import('./modules/admin/pages/BackupRestorePage'),
   DataImportPage: () => import('./modules/admin/pages/DataImportPage'),
-  MaskingRulePage: () => import('./modules/auditLog/pages/MaskingRulePage'),
   PortalApp: () => import('./modules/portal/PortalApp'),
 };
 
@@ -140,7 +148,6 @@ const SensitiveAccessLogPage = lazy(PAGE_LOADERS.SensitiveAccessLogPage);
 const AuditLogPage = lazy(PAGE_LOADERS.AuditLogPage);
 const EmployeeListPage = lazy(PAGE_LOADERS.EmployeeListPage);
 const EmployeeDetailPage = lazy(PAGE_LOADERS.EmployeeDetailPage);
-const ChangePasswordPage = lazy(PAGE_LOADERS.ChangePasswordPage);
 const TwoFactorSetupPage = lazy(PAGE_LOADERS.TwoFactorSetupPage);
 const CustomerListPage = lazy(PAGE_LOADERS.CustomerListPage);
 const CustomerMergePage = lazy(PAGE_LOADERS.CustomerMergePage);
@@ -165,6 +172,7 @@ const RevenueReportPage = lazy(PAGE_LOADERS.RevenueReportPage);
 const TimesheetReportPage = lazy(PAGE_LOADERS.TimesheetReportPage);
 const ReportCatalogPage = lazy(PAGE_LOADERS.ReportCatalogPage);
 const MyWorkPage = lazy(PAGE_LOADERS.MyWorkPage);
+const SettingsPage = lazy(PAGE_LOADERS.SettingsPage);
 const ProjectListPage = lazy(PAGE_LOADERS.ProjectListPage);
 const ProjectDetailPage = lazy(PAGE_LOADERS.ProjectDetailPage);
 const ProjectRiskPage = lazy(PAGE_LOADERS.ProjectRiskPage);
@@ -183,14 +191,12 @@ const ProjectRecognizedRevenuePage = lazy(PAGE_LOADERS.ProjectRecognizedRevenueP
 const ProjectMarginPage = lazy(PAGE_LOADERS.ProjectMarginPage);
 const MarginAlertThresholdPage = lazy(PAGE_LOADERS.MarginAlertThresholdPage);
 const NotificationCenterPage = lazy(PAGE_LOADERS.NotificationCenterPage);
-const NotificationPreferencePage = lazy(PAGE_LOADERS.NotificationPreferencePage);
 const NotificationDedupConfigPage = lazy(PAGE_LOADERS.NotificationDedupConfigPage);
 const ServiceCatalogPage = lazy(PAGE_LOADERS.ServiceCatalogPage);
 const CompanySettingPage = lazy(PAGE_LOADERS.CompanySettingPage);
 const FiscalPeriodPage = lazy(PAGE_LOADERS.FiscalPeriodPage);
 const BackupRestorePage = lazy(PAGE_LOADERS.BackupRestorePage);
 const DataImportPage = lazy(PAGE_LOADERS.DataImportPage);
-const MaskingRulePage = lazy(PAGE_LOADERS.MaskingRulePage);
 const PortalApp = lazy(PAGE_LOADERS.PortalApp);
 
 /** Vai trò được backend cho liệt kê dự án (GET /projects). */
@@ -214,6 +220,13 @@ const CHILD_LABELS: Partial<Record<Tab, string>> = {
   EMPLOYEE_DETAIL: 'Hồ sơ nhân sự',
   DETAIL: 'Chi tiết tài khoản',
   OPPORTUNITY_DETAIL: 'Hoạt động chăm sóc',
+};
+
+/** Màn hình tài khoản cũ (mở từ thông báo, bảng lệnh, liên kết) giờ là một mục của trang Cài đặt. */
+const SETTINGS_TAB_SECTION: Partial<Record<Tab, SettingsSection>> = {
+  CHANGE_PASSWORD: 'security',
+  NOTIFICATION_PREFERENCES: 'notifications',
+  MASKING_RULES: 'access',
 };
 
 function readStoredSession(): AuthSession | null {
@@ -303,13 +316,45 @@ export default function App() {
     setAppToast({ message, type });
     appToastTimer.current = setTimeout(() => setAppToast(null), 5000);
   }
-  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(
-    () => localStorage.getItem('sidebarCollapsed') === '1'
-  );
-
+  // Tùy chọn giao diện (Cài đặt › Giao diện). Áp ngay từ bản lưu trên máy (không nháy khi dùng giao diện
+  // tối), đồng bộ với máy chủ sau khi đăng nhập để đi theo tài khoản sang máy khác.
+  const [prefs, setPrefs] = useState<UiPreferences>(readCachedPreferences);
+  const prefsRef = useRef(prefs);
+  const [prefsSaveState, setPrefsSaveState] = useState<SaveState>('idle');
+  const prefsSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Người dùng đã đổi tùy chọn trong phiên này — bản trên máy chủ về muộn không được đè lên. */
+  const prefsDirtyRef = useRef(false);
   useEffect(() => {
-    localStorage.setItem('sidebarCollapsed', sidebarCollapsed ? '1' : '0');
-  }, [sidebarCollapsed]);
+    applyPreferences(prefs);
+    cachePreferences(prefs);
+    if (prefs.theme !== 'SYSTEM') return undefined;
+    // Chủ đề "Theo hệ thống": đổi theo ngay khi hệ điều hành chuyển Sáng/Tối.
+    return watchSystemTheme(() => applyPreferences(prefs));
+  }, [prefs]);
+  const updatePrefs = useCallback((patch: Partial<UiPreferences>) => {
+    const next = { ...prefsRef.current, ...patch };
+    prefsRef.current = next;
+    setPrefs(next);
+    if (!localStorage.getItem('token')) return;
+    prefsDirtyRef.current = true;
+    setPrefsSaveState('saving');
+    if (prefsSaveTimer.current) clearTimeout(prefsSaveTimer.current);
+    // Gộp các lần đổi liên tiếp (vd bấm qua lại Sáng/Tối) thành một lần lưu.
+    prefsSaveTimer.current = setTimeout(() => {
+      prefsSaveTimer.current = null;
+      savePreferences(next)
+        .then(() => setPrefsSaveState('saved'))
+        .catch(() => setPrefsSaveState('local'));
+    }, 450);
+  }, []);
+  const sidebarCollapsed = prefs.sidebarCollapsed;
+  const toggleSidebar = useCallback(
+    () => updatePrefs({ sidebarCollapsed: !prefsRef.current.sidebarCollapsed }),
+    [updatePrefs],
+  );
+  const [settingsSection, setSettingsSection] = useState<SettingsSection>('account');
+  /** Vừa đăng nhập: khi tùy chọn trên máy chủ về tới, mở "Màn hình mở đầu" người dùng đã chọn. */
+  const landingPendingRef = useRef(false);
 
   // Quet lai cac khoi "he lo khi cuon toi" moi lan doi trang.
   useScrollReveal(activeTab);
@@ -352,10 +397,20 @@ export default function App() {
   function handleAuthenticated(newSession: AuthSession) {
     markActivity();
     setLoginNotice(null);
+    const landing = prefsRef.current.landingTab as Tab | null;
+    setActiveTab(landing && isTabVisible(landing, newSession.roles) ? landing : defaultTabFor(newSession.roles));
+    landingPendingRef.current = true;
     persistSession(newSession);
   }
 
   function handleLogout() {
+    // Còn một lần lưu tùy chọn đang chờ gộp: gửi ngay khi token vẫn còn, kẻo mất thay đổi cuối.
+    if (prefsSaveTimer.current) {
+      clearTimeout(prefsSaveTimer.current);
+      prefsSaveTimer.current = null;
+      savePreferences(prefsRef.current).catch(() => undefined);
+    }
+    setPrefsSaveState('idle');
     localStorage.removeItem('token');
     localStorage.removeItem('session');
     localStorage.removeItem(LAST_ACTIVITY_KEY);
@@ -383,6 +438,55 @@ export default function App() {
         `Phiên làm việc đã kết thúc do không thao tác trong ${SESSION_IDLE_MINUTES} phút. Vui lòng đăng nhập lại.`,
       ),
   });
+
+  // Tùy chọn giao diện trên máy chủ (đi theo tài khoản) — nạp khi đăng nhập / đổi tài khoản.
+  const sessionUserId = session?.userId;
+  useEffect(() => {
+    if (!sessionUserId) return undefined;
+    let cancelled = false;
+    prefsDirtyRef.current = false;
+    getPreferences()
+      .then((server) => {
+        if (cancelled) return;
+        if (!prefsDirtyRef.current) {
+          prefsRef.current = server;
+          setPrefs(server);
+        }
+        if (landingPendingRef.current) {
+          landingPendingRef.current = false;
+          const landing = server.landingTab as Tab | null;
+          const roles = readStoredSession()?.roles ?? [];
+          if (landing && isTabVisible(landing, roles)) setActiveTab(landing);
+        }
+      })
+      // Máy chủ chưa có /me/preferences hoặc mất mạng: dùng tiếp bản lưu trên máy.
+      .catch(() => {
+        landingPendingRef.current = false;
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionUserId]);
+
+  // Phím tắt toàn cục: Ctrl/⌘+B thu gọn thanh bên, "?" mở Trợ giúp & phím tắt. Không bắt khi đang gõ.
+  useEffect(() => {
+    if (!sessionUserId) return undefined;
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      const typing = !!el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
+      if (typing || e.altKey) return;
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        toggleSidebar();
+      } else if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setSettingsSection('help');
+        setActiveTab('MY_SETTINGS');
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [sessionUserId, toggleSidebar]);
 
   // Nạp danh sách dự án cho các ô chọn dropdown (Giá vốn/Biên lợi nhuận) ngay khi đăng nhập —
   // trước đây các trang này dùng tạm mảng dữ liệu mẫu cố định nên không bao giờ thấy dự án thật.
@@ -623,6 +727,16 @@ export default function App() {
     setActiveTab(tab);
   }
 
+  function openSettings(section: SettingsSection) {
+    leavePortalHash();
+    setSettingsSection(section);
+    setActiveTab('MY_SETTINGS');
+    setUserMenuOpen(false);
+  }
+
+  const inSettings = activeTab === 'MY_SETTINGS' || Boolean(SETTINGS_TAB_SECTION[activeTab]);
+  const currentSettingsSection = SETTINGS_TAB_SECTION[activeTab] ?? settingsSection;
+
   const renderNavGroup = (items: NavItem[]) =>
     items.map((item) => {
       const isActive = activeNavItem?.id === item.id;
@@ -648,10 +762,10 @@ export default function App() {
   function breadcrumbFor(): Crumb[] {
     if (portalHashRequested) return [{ label: 'Cổng khách hàng' }];
     if (activeTab === 'NOTIFICATIONS') return [{ label: 'Thông báo' }];
-    if (activeTab === 'NOTIFICATION_PREFERENCES') {
-      return [{ label: 'Thông báo', onClick: () => goTo('NOTIFICATIONS') }, { label: 'Cài đặt nhận thông báo' }];
+    if (activeTab === 'MY_SETTINGS' || SETTINGS_TAB_SECTION[activeTab]) {
+      const section = SETTINGS_TAB_SECTION[activeTab] ?? settingsSection;
+      return [{ label: 'Cài đặt', onClick: () => openSettings('account') }, { label: SETTINGS_SECTION_LABELS[section] }];
     }
-    if (activeTab === 'CHANGE_PASSWORD') return [{ label: 'Tài khoản của tôi' }, { label: 'Đổi mật khẩu' }];
     if (activeTab === 'PROJECT_DETAIL' || activeTab === 'PROJECT_RISKS') {
       const projectName = allProjects.find((p) => p.id === selectedProjectId)?.name ?? 'Chi tiết dự án';
       const crumbs: Crumb[] = [{ label: 'Dự án', onClick: () => goTo('PROJECTS') }];
@@ -662,8 +776,6 @@ export default function App() {
       }
       return crumbs;
     }
-    const accountLeaf = accountLeaves.find((leaf) => leaf.tab === activeTab);
-    if (accountLeaf) return [{ label: 'Tài khoản của tôi' }, { label: accountLeaf.label }];
     if (!activeNavItem) return [{ label: 'Vận hành dịch vụ' }];
     const crumbs: Crumb[] = [];
     const group = groupOf(activeNavItem);
@@ -727,18 +839,22 @@ export default function App() {
                 : [{ id: entryTabOf(i, currentRoles), label: i.label, group: group.paletteLabel, icon: i.icon }],
             ),
           ),
-          { id: 'CHANGE_PASSWORD', label: 'Đổi mật khẩu', group: 'Tài khoản của tôi', icon: ICONS.key },
           { id: 'NOTIFICATIONS', label: 'Thông báo', group: 'Tài khoản của tôi', icon: ICONS.bell },
-          {
-            id: 'NOTIFICATION_PREFERENCES',
-            label: 'Cài đặt nhận thông báo',
-            group: 'Tài khoản của tôi',
-            icon: ICONS.settings,
-          },
-          ...accountLeaves.map((leaf) => ({ id: leaf.tab, label: leaf.label, group: 'Tài khoản của tôi', icon: ICONS.shield })),
+          { id: 'SETTINGS:account', label: 'Cài đặt tài khoản', group: 'Cài đặt', icon: ICONS.settings },
+          { id: 'SETTINGS:appearance', label: 'Giao diện — sáng/tối, mật độ', group: 'Cài đặt', icon: ICONS.sun },
+          { id: 'SETTINGS:notifications', label: 'Cài đặt nhận thông báo', group: 'Cài đặt', icon: ICONS.bell },
+          { id: 'SETTINGS:security', label: 'Đổi mật khẩu', group: 'Cài đặt', icon: ICONS.key },
+          ...(accountLeaves.length > 0
+            ? [{ id: 'SETTINGS:access', label: 'Quyền xem dữ liệu', group: 'Cài đặt', icon: ICONS.shield }]
+            : []),
+          { id: 'SETTINGS:help', label: 'Trợ giúp & phím tắt', group: 'Cài đặt', icon: ICONS.helpCircle },
         ]}
         onSelect={(id) => {
           leavePortalHash();
+          if (id.startsWith('SETTINGS:')) {
+            openSettings(id.slice('SETTINGS:'.length) as SettingsSection);
+            return;
+          }
           setActiveTab(id as Tab);
         }}
       />
@@ -761,26 +877,116 @@ export default function App() {
             <button
               type="button"
               className="side-nav__toggle"
-              onClick={() => setSidebarCollapsed((v) => !v)}
-              title={sidebarCollapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
+              onClick={toggleSidebar}
+              title={`${sidebarCollapsed ? 'Mở rộng' : 'Thu gọn'} thanh bên (Ctrl B)`}
               aria-label={sidebarCollapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
             >
               {ICONS.panelToggle}
             </button>
           </div>
 
+          {/* Các nhóm ngăn bằng đường kẻ mảnh, không nhãn chữ (tên nhóm vẫn có trong bảng lệnh Ctrl K). */}
           <nav className="side-nav__list" aria-label="Điều hướng chính">
             {navGroups.map((group, index) => (
               <Fragment key={group.id}>
-                {group.label !== null ? (
-                  <div className="side-nav__group-label">{!sidebarCollapsed ? group.label : ''}</div>
-                ) : (
-                  index > 0 && <div className="side-nav__group-gap" aria-hidden="true" />
-                )}
-                {renderNavGroup(group.items)}
+                {index > 0 && <div className="side-nav__divider" aria-hidden="true" />}
+                <div className="side-nav__group" role="group" aria-label={group.paletteLabel}>
+                  {renderNavGroup(group.items)}
+                </div>
               </Fragment>
             ))}
           </nav>
+
+          {/* Chân thanh bên: tùy chọn cá nhân, trợ giúp, tài khoản — như ảnh mẫu. Sáng/Tối nằm trong Cài đặt › Giao diện. */}
+          <div className="side-nav__footer">
+            <button
+              type="button"
+              className={`side-nav__item ${inSettings && currentSettingsSection !== 'help' ? 'side-nav__item--active' : ''}`}
+              title={sidebarCollapsed ? 'Cài đặt' : undefined}
+              onClick={() => openSettings(inSettings && currentSettingsSection !== 'help' ? currentSettingsSection : 'account')}
+              aria-current={inSettings && currentSettingsSection !== 'help' ? 'page' : undefined}
+              data-testid="nav-my-settings"
+            >
+              <span className="side-nav__item__icon" aria-hidden="true">{ICONS.settings}</span>
+              {!sidebarCollapsed && <span className="side-nav__item__label">Cài đặt</span>}
+            </button>
+            <button
+              type="button"
+              className={`side-nav__item ${inSettings && currentSettingsSection === 'help' ? 'side-nav__item--active' : ''}`}
+              title={sidebarCollapsed ? 'Trợ giúp' : undefined}
+              onClick={() => openSettings('help')}
+              aria-current={inSettings && currentSettingsSection === 'help' ? 'page' : undefined}
+              data-testid="nav-help"
+            >
+              <span className="side-nav__item__icon" aria-hidden="true">{ICONS.helpCircle}</span>
+              {!sidebarCollapsed && <span className="side-nav__item__label">Trợ giúp</span>}
+            </button>
+
+            <div className="side-nav__divider" aria-hidden="true" />
+
+            <div className="side-nav__account" ref={userMenuRef}>
+              <button
+                type="button"
+                className={`side-nav__account-trigger ${userMenuOpen ? 'side-nav__account-trigger--open' : ''}`}
+                onClick={() => setUserMenuOpen((open) => !open)}
+                aria-haspopup="menu"
+                aria-expanded={userMenuOpen}
+                aria-label={`Tài khoản: ${session.fullName}`}
+                title={sidebarCollapsed ? session.fullName : undefined}
+                data-testid="account-menu-trigger"
+              >
+                <span className="avatar-circle">{getInitials(session.fullName)}</span>
+                {!sidebarCollapsed && (
+                  <>
+                    <span className="side-nav__account-text">
+                      <strong>{session.fullName}</strong>
+                      <span>{roleLabels(currentRoles)}</span>
+                    </span>
+                    <span className="side-nav__account-more" aria-hidden="true">{ICONS.moreHorizontal}</span>
+                  </>
+                )}
+              </button>
+
+              {userMenuOpen && (
+                <div className="user-chip__menu side-nav__account-menu" role="menu">
+                  <div className="user-chip__menu-header">
+                    <strong>{session.fullName}</strong>
+                    <span>@{session.username}</span>
+                  </div>
+                  <button type="button" className="user-chip__menu-item" role="menuitem" onClick={() => openSettings('account')}>
+                    {ICONS.settings} Cài đặt
+                  </button>
+                  <button
+                    type="button"
+                    className="user-chip__menu-item"
+                    role="menuitem"
+                    onClick={() => openSettings('security')}
+                  >
+                    {ICONS.key} Đổi mật khẩu
+                  </button>
+                  {accountLeaves.length > 0 && (
+                    <button
+                      type="button"
+                      className="user-chip__menu-item"
+                      role="menuitem"
+                      onClick={() => openSettings('access')}
+                      data-testid="menu-masking_rules"
+                    >
+                      {ICONS.shield} Quyền xem dữ liệu
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="user-chip__menu-item user-chip__menu-item--danger"
+                    role="menuitem"
+                    onClick={handleLogout}
+                  >
+                    {ICONS.logout} Đăng xuất
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </aside>
 
         <div className="app-main">
@@ -884,86 +1090,13 @@ export default function App() {
                   <button
                     type="button"
                     className="btn-link"
-                    style={{ width: '100%', textAlign: 'center', padding: '12px', borderTop: '1px solid #F1F0EE' }}
+                    style={{ width: '100%', textAlign: 'center', padding: '12px', borderTop: '1px solid var(--hairline)' }}
                     onClick={() => {
                       setNotifOpen(false);
                       setActiveTab('NOTIFICATIONS');
                     }}
                   >
                     Xem tất cả thông báo
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="user-chip" ref={userMenuRef}>
-              <button
-                type="button"
-                className={`user-chip__trigger ${userMenuOpen ? 'user-chip__trigger--open' : ''}`}
-                onClick={() => setUserMenuOpen((open) => !open)}
-                aria-haspopup="menu"
-                aria-expanded={userMenuOpen}
-              >
-                <span className="avatar-circle">{getInitials(session.fullName)}</span>
-                <span className="user-chip__name">{session.fullName}</span>
-                <span className="user-chip__chevron">{ICONS.chevronDown}</span>
-              </button>
-
-              {userMenuOpen && (
-                <div className="user-chip__menu" role="menu">
-                  <div className="user-chip__menu-header">
-                    <strong>{session.fullName}</strong>
-                    <span>@{session.username}</span>
-                    <div className="user-chip__role-badge">
-                      <span className="user-chip__role-dot" />
-                      <span>{roleLabels(currentRoles)}</span>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className="user-chip__menu-item"
-                    role="menuitem"
-                    onClick={() => {
-                      setActiveTab('CHANGE_PASSWORD');
-                      setUserMenuOpen(false);
-                    }}
-                  >
-                    {ICONS.key} Đổi mật khẩu
-                  </button>
-                  <button
-                    type="button"
-                    className="user-chip__menu-item"
-                    role="menuitem"
-                    onClick={() => {
-                      setActiveTab('NOTIFICATION_PREFERENCES');
-                      setUserMenuOpen(false);
-                    }}
-                    data-testid="menu-notification-preferences"
-                  >
-                    {ICONS.settings} Cài đặt nhận thông báo
-                  </button>
-                  {accountLeaves.map((leaf) => (
-                    <button
-                      key={leaf.tab}
-                      type="button"
-                      className="user-chip__menu-item"
-                      role="menuitem"
-                      onClick={() => {
-                        goTo(leaf.tab);
-                        setUserMenuOpen(false);
-                      }}
-                      data-testid={`menu-${leaf.tab.toLowerCase()}`}
-                    >
-                      {ICONS.shield} {leaf.label}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    className="user-chip__menu-item user-chip__menu-item--danger"
-                    role="menuitem"
-                    onClick={handleLogout}
-                  >
-                    {ICONS.logout} Đăng xuất
                   </button>
                 </div>
               )}
@@ -984,16 +1117,30 @@ export default function App() {
               feature={portalFeatureOf(portalHashValue)}
               onLeave={leavePortalHash}
             />
-          ) : activeTab === 'CHANGE_PASSWORD' ? (
-            <ChangePasswordPage onBack={() => setActiveTab(defaultTab)} onPasswordChanged={handleLogout} />
+          ) : inSettings ? (
+            <SettingsPage
+              section={currentSettingsSection}
+              onSectionChange={openSettings}
+              fullName={session.fullName}
+              username={session.username}
+              roles={currentRoles}
+              prefs={prefs}
+              onChangePrefs={updatePrefs}
+              saveState={prefsSaveState}
+              landingOptions={navGroups.flatMap((g) =>
+                g.items.map((item) => ({ tab: entryTabOf(item, currentRoles), label: item.label })),
+              )}
+              showAccess={accountLeaves.length > 0}
+              idleMinutes={SESSION_IDLE_MINUTES}
+              onLogout={handleLogout}
+              onPasswordChanged={handleLogout}
+            />
           ) : activeTab === 'NOTIFICATIONS' ? (
             <NotificationCenterPage
               onNavigate={navigateToNotification}
               onUnreadCountChange={setUnreadCount}
               onOpenPreferences={() => setActiveTab('NOTIFICATION_PREFERENCES')}
             />
-          ) : activeTab === 'NOTIFICATION_PREFERENCES' ? (
-            <NotificationPreferencePage onBack={() => setActiveTab('NOTIFICATIONS')} />
           ) : activeTab === 'BACKUP_RESTORE' ? (
             <BackupRestorePage currentUserRoles={currentRoles} onViewAuditLog={() => setActiveTab('SYSTEM_AUDIT_LOG')} />
           ) : activeTab === 'DATA_IMPORT' ? (
@@ -1096,6 +1243,24 @@ export default function App() {
               currentUserRoles={currentRoles}
               currentUserName={session.fullName}
               currentUserId={session.userId}
+              // Từ "Lịch sử hợp tác" đi thẳng tới trang dự án (chỉ vai trò mở được trang dự án từ mục
+              // "Dự án") và tới cơ hội ở màn Cơ hội (mở sẵn khung tiến trình của đúng cơ hội đó).
+              onOpenProject={
+                isTabVisible('PROJECT_DETAIL', currentRoles) && canOpenProjectDetail
+                  ? (projectId) => {
+                      setSelectedProjectId(projectId);
+                      goTo('PROJECT_DETAIL');
+                    }
+                  : undefined
+              }
+              onOpenOpportunity={
+                isTabVisible('OPPORTUNITIES', currentRoles)
+                  ? (opportunityId) => {
+                      setFocusOpportunityId(opportunityId);
+                      goTo('OPPORTUNITIES');
+                    }
+                  : undefined
+              }
             />
           ) : activeTab === 'CONTRACTS' ? (
             <ContractListPage
@@ -1236,8 +1401,6 @@ export default function App() {
             <AuditLogPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'AUDIT_LOG' ? (
             <SensitiveAccessLogPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
-          ) : activeTab === 'MASKING_RULES' ? (
-            <MaskingRulePage currentUserRoles={currentRoles} />
           ) : activeTab === 'TWO_FACTOR_SETTINGS' ? (
             <TwoFactorSetupPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'EMPLOYEE_DETAIL' && selectedEmployeeId ? (

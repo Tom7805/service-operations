@@ -110,7 +110,7 @@ export default function MaskingRulePage({ currentUserRoles }: MaskingRulePagePro
                 <TableSkeleton columns={4} />
               ) : rules.length === 0 ? (
                 <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', padding: '40px', color: '#5B5A57' }}>
+                  <td colSpan={4} style={{ textAlign: 'center', padding: '40px', color: 'var(--ink-muted)' }}>
                     Chưa có quy tắc che dữ liệu nào.
                   </td>
                 </tr>

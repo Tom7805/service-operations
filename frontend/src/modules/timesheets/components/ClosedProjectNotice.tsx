@@ -23,11 +23,11 @@ export default function ClosedProjectNotice({ project }: ClosedProjectNoticeProp
       role="alert"
       data-testid="time-entry-project-closed-alert"
     >
-      <div style={{ fontSize: '36px', color: '#9F2F2D', marginBottom: '10px', display: 'flex', justifyContent: 'center' }}>
+      <div style={{ fontSize: '36px', color: 'var(--pale-red-fg)', marginBottom: '10px', display: 'flex', justifyContent: 'center' }}>
         {ICONS.lock}
       </div>
       <h3 style={{ margin: '0 0 8px', fontSize: '17px', fontWeight: 600 }}>Dự án đã đóng — không thể ghi giờ công</h3>
-      <p style={{ margin: '0 auto 14px', maxWidth: '540px', color: '#5B5A57', fontSize: '14px', lineHeight: 1.6 }}>
+      <p style={{ margin: '0 auto 14px', maxWidth: '540px', color: 'var(--ink-muted)', fontSize: '14px', lineHeight: 1.6 }}>
         <strong>{project.projectCode} — {project.name}</strong>. Bạn vẫn xem được giờ công cũ bên dưới; liên hệ
         Quản lý dự án nếu cần mở lại.
       </p>

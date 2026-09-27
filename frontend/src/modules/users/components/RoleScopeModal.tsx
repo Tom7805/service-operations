@@ -137,7 +137,7 @@ export const RoleScopeModal: React.FC<RoleScopeModalProps> = ({
             <div className="user-assign-summary">
               <div className="avatar-circle avatar-circle--lg">{user.fullName.charAt(0).toUpperCase()}</div>
               <div className="user-profile-meta">
-                <strong style={{ fontSize: '15px', color: '#111111' }}>{user.fullName}</strong>
+                <strong style={{ fontSize: '15px', color: 'var(--ink-strong)' }}>{user.fullName}</strong>
                 <span className="user-profile-username">@{user.username} • {user.email || 'Chưa có email'}</span>
               </div>
             </div>

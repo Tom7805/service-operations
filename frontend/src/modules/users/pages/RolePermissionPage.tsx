@@ -275,7 +275,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
                   <TableSkeleton columns={5} />
                 ) : filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#5B5A57' }}>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--ink-muted)' }}>
                       Không tìm thấy tài khoản nào khớp với bộ lọc.
                     </td>
                   </tr>

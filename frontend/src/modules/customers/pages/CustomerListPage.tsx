@@ -28,6 +28,9 @@ interface CustomerListPageProps {
   currentUserId?: number;
   initialCustomers?: Customer[];
   onNavigateDetail?: (customer: Customer) => void;
+  /** Từ "Lịch sử hợp tác": mở thẳng trang dự án / cơ hội (App điều hướng). */
+  onOpenProject?: (projectId: number) => void;
+  onOpenOpportunity?: (opportunityId: number) => void;
 }
 
 export default function CustomerListPage({
@@ -36,6 +39,8 @@ export default function CustomerListPage({
   currentUserId,
   initialCustomers = [],
   onNavigateDetail,
+  onOpenProject,
+  onOpenOpportunity,
 }: CustomerListPageProps) {
   // NCL-02-CN-001: Chỉ Nhân viên kinh doanh (VT-04) hoặc Quản lý dự án (VT-02) được phép thao tác.
   const isAllowed = currentUserRoles.includes('VT-04') || currentUserRoles.includes('VT-02');
@@ -327,6 +332,8 @@ export default function CustomerListPage({
         onBack={() => setSelectedCustomer(null)}
         initialTab={detailInitialTab}
         onCustomerUpdated={handleCustomerUpdated}
+        onOpenProject={onOpenProject}
+        onOpenOpportunity={onOpenOpportunity}
       />
     );
   }

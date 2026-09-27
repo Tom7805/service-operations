@@ -44,16 +44,16 @@ function stageLabel(stage: string): string {
  *    khắp nơi.
  */
 const STAGE_TONE: Record<string, { bg: string; fg: string; dot: string }> = {
-  APPROACH: { bg: '#F1F0EE', fg: 'var(--ink-muted)', dot: '#C9C6BF' },
-  SURVEY: { bg: '#EAE8E4', fg: 'var(--ink-soft)', dot: '#B8B4AC' },
-  PROPOSAL: { bg: '#E2DFDA', fg: 'var(--ink)', dot: '#A6A29A' },
-  NEGOTIATION: { bg: '#C9C5BC', fg: 'var(--ink-strong)', dot: '#7A756B' },
-  WON: { bg: 'var(--pale-green-bg)', fg: 'var(--pale-green-fg)', dot: '#346538' },
-  LOST: { bg: 'var(--pale-red-bg)', fg: 'var(--pale-red-fg)', dot: '#9F2F2D' },
+  APPROACH: { bg: 'color-mix(in srgb, var(--ink-strong) 6%, var(--surface))', fg: 'var(--ink-muted)', dot: 'color-mix(in srgb, var(--ink-strong) 25%, var(--surface))' },
+  SURVEY: { bg: 'color-mix(in srgb, var(--ink-strong) 10%, var(--surface))', fg: 'var(--ink)', dot: 'color-mix(in srgb, var(--ink-strong) 35%, var(--surface))' },
+  PROPOSAL: { bg: 'color-mix(in srgb, var(--ink-strong) 14%, var(--surface))', fg: 'var(--ink)', dot: 'color-mix(in srgb, var(--ink-strong) 45%, var(--surface))' },
+  NEGOTIATION: { bg: 'color-mix(in srgb, var(--ink-strong) 22%, var(--surface))', fg: 'var(--ink-strong)', dot: 'color-mix(in srgb, var(--ink-strong) 65%, var(--surface))' },
+  WON: { bg: 'var(--pale-green-bg)', fg: 'var(--pale-green-fg)', dot: 'var(--pale-green-fg)' },
+  LOST: { bg: 'var(--pale-red-bg)', fg: 'var(--pale-red-fg)', dot: 'var(--pale-red-fg)' },
 };
 
 function stageTone(stage: string): { bg: string; fg: string; dot: string } {
-  return STAGE_TONE[stage] ?? { bg: '#F1F0EE', fg: 'var(--ink-muted)', dot: '#C9C6BF' };
+  return STAGE_TONE[stage] ?? { bg: 'color-mix(in srgb, var(--ink-strong) 6%, var(--surface))', fg: 'var(--ink-muted)', dot: 'color-mix(in srgb, var(--ink-strong) 25%, var(--surface))' };
 }
 
 export default function PipelineReportPage({

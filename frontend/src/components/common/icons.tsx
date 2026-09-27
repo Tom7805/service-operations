@@ -15,6 +15,7 @@ import {
   Prohibit, HourglassMedium, TrendUp, Handshake, Coins,
   ListChecks, ChartPieSlice, ChartLineUp, Percent, Scales,
   Gauge, UserList,
+  Sun, DotsThree,
 } from '@phosphor-icons/react';
 
 /**
@@ -97,6 +98,8 @@ export const ICONS = {
   document: <FileText weight={W} />,
   helpCircle: <Question weight={W} />,
   logout: <SignOut weight={W} />,
+  sun: <Sun weight={W} />,
+  moreHorizontal: <DotsThree weight={W} />,
   panelToggle: <SidebarSimple weight={W} />,
   chevronDown: <CaretDown weight={W} />,
   hash: <Hash weight={W} />,

@@ -137,7 +137,7 @@ export default function ContractExpiryReminderModal({
               {/* Bộ lọc khoảng thời gian rà soát */}
               <div className="expiry-filter-bar">
                 <div className="expiry-filter-pills">
-                  <span style={{ fontSize: '13px', color: '#5B5A57', marginRight: '4px' }}>
+                  <span style={{ fontSize: '13px', color: 'var(--ink-muted)', marginRight: '4px' }}>
                     Khung thời gian:
                   </span>
                   {PRESET_DAYS.map((preset) => (
@@ -153,7 +153,7 @@ export default function ContractExpiryReminderModal({
                 </div>
 
                 <form onSubmit={handleApplyCustomDays} className="expiry-days-input-wrap">
-                  <label htmlFor="custom-days-input" style={{ fontSize: '13px', color: '#5B5A57' }}>
+                  <label htmlFor="custom-days-input" style={{ fontSize: '13px', color: 'var(--ink-muted)' }}>
                     Tùy chỉnh:
                   </label>
                   <input
@@ -165,7 +165,7 @@ export default function ContractExpiryReminderModal({
                     onChange={(e) => setDaysInput(e.target.value)}
                     aria-label="Số ngày rà soát"
                   />
-                  <span style={{ fontSize: '13px', color: '#5B5A57' }}>ngày</span>
+                  <span style={{ fontSize: '13px', color: 'var(--ink-muted)' }}>ngày</span>
                   <button
                     type="submit"
                     className="btn btn-secondary btn-sm"
@@ -227,7 +227,7 @@ export default function ContractExpiryReminderModal({
                           <tbody>
                             {overdueContracts.map((c, index) => (
                               <tr key={c.contractId}>
-                                <td style={{ textAlign: 'center', color: '#6B6966' }}>{index + 1}</td>
+                                <td style={{ textAlign: 'center', color: 'var(--ink-faint)' }}>{index + 1}</td>
                                 <td>
                                   <span style={{ fontWeight: 500, fontFamily: 'monospace' }}>{c.contractCode}</span>
                                 </td>
@@ -256,7 +256,7 @@ export default function ContractExpiryReminderModal({
                       <p style={{ fontWeight: 600, color: 'var(--pale-green-fg)', margin: '4px 0' }}>
                         Không có hợp đồng nào sắp hết hiệu lực trong vòng {days} ngày tới.
                       </p>
-                      <p style={{ fontSize: '13px', color: '#6B6966', margin: 0 }}>
+                      <p style={{ fontSize: '13px', color: 'var(--ink-faint)', margin: 0 }}>
                         Tất cả hợp đồng đang hiệu lực đều có thời hạn vượt quá mốc thời gian này.
                       </p>
                     </div>
@@ -285,7 +285,7 @@ export default function ContractExpiryReminderModal({
 
                             return (
                               <tr key={c.contractId}>
-                                <td style={{ textAlign: 'center', color: '#6B6966' }}>{index + 1}</td>
+                                <td style={{ textAlign: 'center', color: 'var(--ink-faint)' }}>{index + 1}</td>
                                 <td>
                                   <span style={{ fontWeight: 500, fontFamily: 'monospace' }}>
                                     {c.contractCode}

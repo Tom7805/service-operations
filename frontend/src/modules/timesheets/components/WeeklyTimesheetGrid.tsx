@@ -65,7 +65,7 @@ export default function WeeklyTimesheetGrid({ weekFrom, summaries }: WeeklyTimes
                   return (
                     <td
                       key={day}
-                      style={{ textAlign: 'center', color: pending ? '#1F6C9F' : undefined }}
+                      style={{ textAlign: 'center', color: pending ? 'var(--pale-blue-fg)' : undefined }}
                       data-testid={`weekly-grid-cell-${s.taskId}-${day}`}
                       title={
                         entry
