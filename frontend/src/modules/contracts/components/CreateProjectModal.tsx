@@ -96,7 +96,7 @@ export default function CreateProjectModal({
   // Khởi tạo giá trị mặc định khi mở modal
   useEffect(() => {
     if (isOpen) {
-      const defaultName = contract.name ? `Dự án: ${contract.name}` : '';
+      const defaultName = contract.name ?? '';
       setName(defaultName);
 
       const today = new Date().toISOString().split('T')[0];
@@ -213,14 +213,14 @@ export default function CreateProjectModal({
           {/* Kiểm tra phân quyền vai trò VT-02 (TC-04) */}
           {!isAllowed && (
             <div className="alert-box alert-box--danger" role="alert" data-testid="project-role-alert">
-              Yêu cầu vai trò Quản lý dự án (VT-02).
+              Yêu cầu vai trò Quản lý dự án.
             </div>
           )}
 
           {/* Kiểm tra trạng thái hợp đồng không còn hiệu lực (TC-02) */}
           {isAllowed && !isActive && (
             <div className="alert-box alert-box--warning" role="alert" data-testid="project-inactive-alert">
-              Chỉ cho phép tạo dự án từ hợp đồng đang còn hiệu lực (ACTIVE).
+              Chỉ tạo được dự án từ hợp đồng đang hiệu lực.
             </div>
           )}
 
@@ -378,11 +378,7 @@ export default function CreateProjectModal({
                   <p className="field-error" style={{ fontSize: '12px', marginTop: '4px', color: 'var(--pale-red-fg)' }}>
                     {managerLoadError}
                   </p>
-                ) : (
-                  <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px', color: 'var(--ink-muted)' }}>
-                    Chỉ hiện người dùng đang hoạt động (ACTIVE) trong hệ thống.
-                  </p>
-                )}
+                ) : null}
                 {errors.projectManagerId && (
                   <p className="field-error" data-testid="error-project-manager" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                     {errors.projectManagerId}
@@ -398,7 +394,7 @@ export default function CreateProjectModal({
                   onClick={onClose}
                   disabled={submitting}
                 >
-                  Hủy bỏ
+                  Hủy
                 </button>
                 <button
                   type="submit"

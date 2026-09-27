@@ -5,6 +5,7 @@ import { AdminApiError, getCurrentFiscalPeriod, getFiscalPeriod } from '../api/c
 import FiscalYearOverview from '../components/FiscalYearOverview';
 import type { FiscalPeriodRes } from '../types/adminTypes';
 import { todayIso } from '../utils/serviceCatalogUtils';
+import PageHeader from '../../../components/common/PageHeader';
 
 export const MIN_FISCAL_YEAR = 2000;
 export const MAX_FISCAL_YEAR = 2100;
@@ -65,8 +66,8 @@ export default function FiscalPeriodPage({ currentUserRoles = [], onOpenCompanyS
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Kỳ tài chính dành cho Quản trị viên, Ban giám đốc, Quản lý dự án và Kế toán. Lần truy cập này đã được ghi vào nhật
-            ký hệ thống.
+            Trang này dành cho <strong>Quản trị viên</strong>, <strong>Ban giám đốc</strong>, <strong>Quản lý dự án</strong> và
+            <strong>Kế toán</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">Vai trò hiện tại: {roleLabels(currentUserRoles) || '—'}</span>
@@ -80,29 +81,21 @@ export default function FiscalPeriodPage({ currentUserRoles = [], onOpenCompanyS
 
   return (
     <div className="user-management-page fiscal-page" data-testid="fiscal-period-page">
-      <div className="page-header">
-        <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.calendar} KỲ TÀI CHÍNH</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta" data-testid="fiscal-start-month">
-              {period ? `BẮT ĐẦU TỪ THÁNG ${period.startMonth}` : '—'}
-            </span>
-          </div>
-          <h1 className="page-title">Kỳ tài chính</h1>
-          <p className="page-subtitle">
-            Năm tài chính mang số của năm dương lịch chứa ngày bắt đầu. Báo cáo theo năm và theo quý dùng đúng các mốc dưới
-            đây.
-          </p>
-        </div>
-        {onOpenCompanySettings && (
-          <div className="page-header__actions">
+      <PageHeader
+        title="Kỳ tài chính"
+        meta={
+          <span data-testid="fiscal-start-month">
+            {period ? `Năm tài chính bắt đầu từ tháng ${period.startMonth}` : '—'}
+          </span>
+        }
+        actions={
+          onOpenCompanySettings && (
             <button type="button" className="btn-secondary" onClick={onOpenCompanySettings} data-testid="fiscal-btn-settings">
               {ICONS.settings} Đổi tháng bắt đầu
             </button>
-          </div>
-        )}
-      </div>
+          )
+        }
+      />
 
       <form
         className="fiscal-nav"

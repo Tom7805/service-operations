@@ -119,9 +119,6 @@ export default function AcceptanceHistoryModal({ isOpen, certificateId, onClose 
                     </tbody>
                   </table>
                 </div>
-                <p className="field-hint" style={{ marginTop: '10px' }}>
-                  Toàn bộ thao tác (kể cả gỡ phiếu khỏi mốc) được lưu ở Nhật ký hệ thống, loại đối tượng "Nghiệm thu".
-                </p>
               </>
             ) : null}
           </div>

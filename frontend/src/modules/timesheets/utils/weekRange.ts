@@ -1,6 +1,6 @@
 /**
  * Tiện ích tính tuần chấm công (thứ Hai → Chủ nhật) dùng chung cho `TimeEntryPage` và
- * `MyTimesheetPage` (NCL-06-CN-001) — khớp khoảng `weekFrom`/`weekTo` 7 ngày liên tiếp mà
+ * `MyWorkPage` (NCL-06-CN-001) — khớp khoảng `weekFrom`/`weekTo` 7 ngày liên tiếp mà
  * `GET /me/time-entries` và `POST /me/timesheets/{weekStartDate}/submit` (NCL-06-CN-002)
  * cùng dùng.
  */

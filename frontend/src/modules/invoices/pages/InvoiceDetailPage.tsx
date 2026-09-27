@@ -5,6 +5,7 @@ import type { DunningLogRes, InvoiceDetailRes, InvoiceStatus, PaymentItemRes } f
 import { fetchDunningLogs, getInvoice, InvoicesApiError } from '../api/invoicesApi';
 import { fetchPayments, PaymentsApiError } from '../api/paymentsApi';
 import PaymentFormModal from '../components/PaymentFormModal';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface Props {
   invoiceId: number;
@@ -104,7 +105,9 @@ export default function InvoiceDetailPage({ invoiceId, onBack, currentUserRoles 
         <div className="access-denied-card">
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền xem chi tiết hóa đơn</h2>
-          <p>Chức năng này chỉ dành riêng cho <strong>Kế toán</strong> (VT-05).</p>
+          <p>
+            Trang này dành cho <strong>Kế toán</strong>.
+          </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">Tài khoản: {currentUserName}</span>
             <span className="security-log-badge__item">
@@ -134,19 +137,39 @@ export default function InvoiceDetailPage({ invoiceId, onBack, currentUserRoles 
         </div>
       )}
 
-      <div className="page-header">
-        <div>
-          <button type="button" className="btn-icon-refresh" onClick={onBack} aria-label="Quay lại danh sách hóa đơn" style={{ marginBottom: '8px' }}>
-            {ICONS.arrowLeft}
-          </button>
-          <h1 className="page-title">{invoice ? invoice.invoiceCode : 'Chi tiết hóa đơn'}</h1>
-          {invoice && (
-            <p className="page-subtitle">
-              {invoice.contractCode || '—'} · {invoice.customerName || '—'}
-            </p>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        back={{ label: 'Hóa đơn', onClick: onBack, ariaLabel: 'Quay lại danh sách hóa đơn' }}
+        title={
+          invoice ? (
+            <span className="page-title__row">
+              {invoice.invoiceCode}
+              <span className={`badge ${STATUS_META[invoice.status]?.badge ?? 'badge--gray'}`}>
+                {STATUS_META[invoice.status]?.label ?? invoice.status}
+              </span>
+            </span>
+          ) : (
+            'Chi tiết hóa đơn'
+          )
+        }
+        meta={
+          invoice && (
+            <>
+              <span>{invoice.contractCode || '—'}</span>
+              <span>{invoice.customerName || '—'}</span>
+              {invoice.note && <span>{invoice.note}</span>}
+            </>
+          )
+        }
+        actions={
+          invoice &&
+          invoice.status !== 'PAID' &&
+          invoice.status !== 'CANCELLED' && (
+            <button type="button" className="btn btn-primary" onClick={() => setIsPaymentOpen(true)}>
+              <span className="icon-xs">{ICONS.money}</span> Ghi nhận thanh toán
+            </button>
+          )
+        }
+      />
 
       {isLoading ? (
         <div className="table-loading-state">
@@ -192,22 +215,6 @@ export default function InvoiceDetailPage({ invoiceId, onBack, currentUserRoles 
                 <span className="stat-card__label">Hạn thanh toán</span>
                 <div className="stat-card__value" style={{ fontSize: '18px' }}>{formatDate(invoice.dueDate)}</div>
               </div>
-            </div>
-          </div>
-
-          <div className="user-table-card" style={{ padding: '20px', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-              <div>
-                <span className={`badge ${STATUS_META[invoice.status]?.badge ?? 'badge--gray'}`}>
-                  {STATUS_META[invoice.status]?.label ?? invoice.status}
-                </span>
-                {invoice.note && <p className="field-hint" style={{ marginTop: '8px' }}>{invoice.note}</p>}
-              </div>
-              {invoice.status !== 'PAID' && invoice.status !== 'CANCELLED' && (
-                <button type="button" className="btn btn-primary" onClick={() => setIsPaymentOpen(true)}>
-                  <span className="icon-xs">{ICONS.money}</span> Ghi nhận thanh toán
-                </button>
-              )}
             </div>
           </div>
 

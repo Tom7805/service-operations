@@ -17,7 +17,7 @@ describe('ContractDetailPage — NCL-12-CN-003 TC-03', () => {
 
   it('người không phải Kế toán bị từ chối và có request thật để backend ghi nhật ký lần từ chối', async () => {
     render(<ContractDetailPage contractId={3} currentUserRoles={['VT-02']} currentUserName="PM" onBack={vi.fn()} />);
-    expect(screen.getByTestId('contract-detail-access-denied')).toHaveTextContent('gắn phiếu nghiệm thu với mốc thanh toán');
+    expect(screen.getByTestId('contract-detail-access-denied')).toHaveTextContent('Trang này dành cho Kế toán');
     await waitFor(() => expect(acceptanceApi.checkMilestoneLinkAccess).toHaveBeenCalledWith(3));
     expect(acceptanceApi.fetchMilestoneAcceptances).not.toHaveBeenCalled();
   });

@@ -150,7 +150,7 @@ describe('CreateProjectModal (NCL-05-CN-001 — Tạo dự án từ hợp đồn
 
     // Xác nhận hiển thị cảnh báo hợp đồng không còn hiệu lực
     expect(screen.getByTestId('project-inactive-alert')).toHaveTextContent(
-      /Chỉ cho phép tạo dự án từ hợp đồng đang còn hiệu lực \(ACTIVE\)/i
+      /Chỉ tạo được dự án từ hợp đồng đang hiệu lực/i
     );
     // Form tạo dự án không hiển thị
     expect(screen.queryByTestId('create-project-form')).not.toBeInTheDocument();
@@ -254,7 +254,7 @@ describe('CreateProjectModal (NCL-05-CN-001 — Tạo dự án từ hợp đồn
     );
 
     expect(screen.getByTestId('project-role-alert')).toHaveTextContent(
-      /Yêu cầu vai trò Quản lý dự án \(VT-02\)/i
+      /Yêu cầu vai trò Quản lý dự án/i
     );
     expect(screen.queryByTestId('create-project-form')).not.toBeInTheDocument();
   });

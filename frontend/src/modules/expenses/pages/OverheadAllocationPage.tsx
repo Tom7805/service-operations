@@ -4,6 +4,7 @@ import { roleLabels } from '../../../utils/roleLabel';
 import { runOverheadAllocation, ExpensesApiError } from '../api/expensesApi';
 import type { OverheadAllocationRes } from '../types/expenseTypes';
 import { validateOverheadAllocationForm, type OverheadAllocationFormErrors } from '../validators/expenseValidators';
+import PageHeader from '../../../components/common/PageHeader';
 
 export interface OverheadAllocationPageProps {
   currentUserRoles?: string[];
@@ -100,8 +101,7 @@ export default function OverheadAllocationPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Chức năng Phân bổ chi phí chung chỉ dành riêng cho vai trò <strong>Kế toán</strong>. Hệ thống đã
-            ghi lại lần truy cập bị từ chối này vào nhật ký bảo mật.
+            Trang này dành cho <strong>Kế toán</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">{ICONS.shield} Thời điểm: {new Date().toLocaleString('vi-VN')}</span>
@@ -125,18 +125,10 @@ export default function OverheadAllocationPage({
         </div>
       )}
 
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Phân bổ chi phí chung</h1>
-          <p className="page-subtitle">
-            Chia tổng chi phí chung phát sinh trong kỳ (tháng) cho các dự án theo tỷ trọng giờ công đã
-            duyệt. Mỗi kỳ chỉ phân bổ được một lần và không thể hoàn tác.
-          </p>
-        </div>
-      </div>
+      <PageHeader title="Phân bổ chi phí chung" />
 
       <div className="user-table-card" style={{ padding: '20px', marginBottom: '16px' }}>
-        <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 700 }}>Chạy phân bổ theo kỳ</h3>
+        <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 600 }}>Chạy phân bổ theo kỳ</h3>
         <div className="form-grid">
           <div>
             <label className="form-label" htmlFor="overhead-year">
@@ -220,14 +212,14 @@ export default function OverheadAllocationPage({
             {ICONS.chart} {submitting ? 'Đang phân bổ…' : 'Phân bổ chi phí chung'}
           </button>
           <p className="field-hint" style={{ marginTop: '8px', fontSize: '12.5px' }}>
-            Chỉ các dự án có giờ công đã duyệt phát sinh trong kỳ mới nhận được một phần chi phí chung.
+            Chỉ dự án có giờ công đã duyệt trong kỳ mới được phân bổ.
           </p>
         </div>
       </div>
 
       <div className="user-table-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px 0' }}>
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--ink-strong)' }}>
             Kết quả các lần đã chạy trong phiên này
           </h3>
         </div>

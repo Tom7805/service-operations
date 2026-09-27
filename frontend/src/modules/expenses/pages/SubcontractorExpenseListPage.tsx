@@ -6,6 +6,7 @@ import { getProjectSubcontractorExpenses, ExpensesApiError } from '../api/expens
 import SubcontractorExpenseFormModal from '../components/SubcontractorExpenseFormModal';
 import type { SubcontractorExpenseRes } from '../types/expenseTypes';
 import { EXPENSE_STATUS_LABELS, EXPENSE_STATUS_PILL_CLASS } from '../types/expenseTypes';
+import PageHeader from '../../../components/common/PageHeader';
 
 export interface SubcontractorExpenseListPageProps {
   projectId: number;
@@ -83,8 +84,7 @@ export default function SubcontractorExpenseListPage({
     return (
       <div className="user-management-page" data-testid="subcontractor-expense-forbidden">
         <div className="alert-box alert-box--danger" role="alert">
-          Bạn không có quyền xem chi phí thuê ngoài của dự án này (yêu cầu vai trò Quản lý dự
-          án VT-02 hoặc Kế toán VT-05).
+          Bạn không có quyền xem chi phí thuê ngoài của dự án này.
         </div>
         {onBack && (
           <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
@@ -110,54 +110,36 @@ export default function SubcontractorExpenseListPage({
         </div>
       )}
 
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {onBack && (
+      <PageHeader
+        back={onBack ? { label: 'Quay lại', onClick: onBack, testId: 'btn-back-subcontractor-expenses' } : undefined}
+        title="Chi phí thuê ngoài"
+        meta={<span className="page-header__code">{project?.projectCode || `#${projectId}`}</span>}
+        actions={
+          <>
             <button
               type="button"
-              className="btn btn-secondary btn-sm btn-back"
-              onClick={onBack}
-              data-testid="btn-back-subcontractor-expenses"
+              className="btn btn-secondary btn-sm"
+              onClick={loadData}
+              disabled={loading}
+              data-testid="btn-reload-subcontractor-expenses"
             >
-              {ICONS.arrowLeft} Quay lại
+              {ICONS.refresh} Tải lại
             </button>
-          )}
-          <div>
-            <div className="page-header__kicker">
-              <span className="page-header__tag">{ICONS.briefcase} CHI PHÍ THUÊ NGOÀI</span>
-              <span className="page-header__dot" />
-              <span className="page-header__meta">{project?.projectCode || `Mã: ${projectId}`}</span>
-            </div>
-            <h1 className="page-title" style={{ margin: '4px 0' }}>
-              Chi phí thuê ngoài
-            </h1>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={loadData}
-            disabled={loading}
-            data-testid="btn-reload-subcontractor-expenses"
-          >
-            {ICONS.refresh} Tải lại
-          </button>
-          {canCreate && (
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              onClick={() => setIsFormOpen(true)}
-              disabled={!canOpenForm}
-              title={!isProjectOpen ? 'Dự án đã đóng hoặc tạm dừng, không thể ghi nhận thêm chi phí' : undefined}
-              data-testid="btn-add-subcontractor-expense"
-            >
-              + Ghi nhận chi phí thuê ngoài
-            </button>
-          )}
-        </div>
-      </div>
+            {canCreate && (
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => setIsFormOpen(true)}
+                disabled={!canOpenForm}
+                title={!isProjectOpen ? 'Dự án đã đóng hoặc tạm dừng, không thể ghi nhận thêm chi phí' : undefined}
+                data-testid="btn-add-subcontractor-expense"
+              >
+                + Ghi nhận chi phí thuê ngoài
+              </button>
+            )}
+          </>
+        }
+      />
 
       {project && !isProjectOpen && canCreate && (
         <div
@@ -179,7 +161,7 @@ export default function SubcontractorExpenseListPage({
 
       <div className="user-table-card" style={{ padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--ink-strong)' }}>
             Danh sách chi phí thuê ngoài
           </h3>
           <span className="field-hint" style={{ fontSize: '13px' }}>

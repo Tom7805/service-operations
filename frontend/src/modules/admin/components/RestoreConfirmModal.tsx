@@ -265,8 +265,7 @@ export default function RestoreConfirmModal({
                     <strong>Dữ liệu đã về thời điểm {formatDateTime(result.restoredToPointInTime)}.</strong>
                     <p>
                       Đã phục hồi {formatCount(result.tablesRestored)} bảng, {formatCount(result.rowsRestored)} dòng lúc{' '}
-                      {formatDateTime(result.completedAt)}. Tài khoản đăng nhập cũng về thời điểm này — hãy tải lại trang; nếu
-                      tài khoản của bạn chưa có ở thời điểm đó, bạn sẽ được yêu cầu đăng nhập lại.
+                      {formatDateTime(result.completedAt)}. Hãy tải lại trang — có thể bạn cần đăng nhập lại.
                     </p>
                   </div>
                 </div>

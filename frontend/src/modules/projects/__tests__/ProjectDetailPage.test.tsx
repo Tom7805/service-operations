@@ -63,6 +63,12 @@ const mockWbs: WorkBreakdownRes[] = [
   },
 ];
 
+/** "Đóng dự án" nằm trong menu ⋮ của đầu trang (hành động không hoàn tác được không đứng cạnh nút hay dùng). */
+function openCloseAction(): HTMLElement {
+  fireEvent.click(screen.getByRole('button', { name: 'Thao tác khác với dự án' }));
+  return screen.getByTestId('btn-close-project');
+}
+
 describe('ProjectDetailPage Component (NCL-05-CN-002)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -96,7 +102,7 @@ describe('ProjectDetailPage Component (NCL-05-CN-002)', () => {
       />
     );
 
-    expect(screen.getByText(/Đang tải thông tin dự án & WBS…/i)).toBeInTheDocument();
+    expect(screen.getByTestId('project-loading')).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByText('PRJ-2026-001')).toBeInTheDocument();
@@ -104,7 +110,7 @@ describe('ProjectDetailPage Component (NCL-05-CN-002)', () => {
 
     expect(screen.getByText('Triển khai CRM cho Khách hàng Alpha')).toBeInTheDocument();
     expect(screen.getByText('Khảo sát hiện trạng')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /\+ Thêm hạng mục gốc/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Thêm hạng mục$/i })).toBeInTheDocument();
   });
 
   it('shows warning alert and hides modification buttons when project is closed/completed', async () => {
@@ -123,11 +129,11 @@ describe('ProjectDetailPage Component (NCL-05-CN-002)', () => {
     });
 
     expect(
-      screen.getByText(/Dự án đã đóng hoặc tạm dừng/i)
+      screen.getByText(/Dự án đã đóng — chỉ xem/i)
     ).toBeInTheDocument();
 
     // + Thêm hạng mục gốc button should not be present
-    expect(screen.queryByRole('button', { name: /\+ Thêm hạng mục gốc/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Thêm hạng mục$/i })).not.toBeInTheDocument();
     // Đóng dự án button should not be present either (already closed)
     expect(screen.queryByTestId('btn-close-project')).not.toBeInTheDocument();
   });
@@ -158,7 +164,7 @@ describe('ProjectDetailPage Component (NCL-05-CN-002)', () => {
         expect(screen.getByText('PRJ-2026-001')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByTestId('btn-close-project'));
+      fireEvent.click(openCloseAction());
 
       await waitFor(() => {
         expect(projectsApi.closeProject).toHaveBeenCalledWith(1);
@@ -185,7 +191,7 @@ describe('ProjectDetailPage Component (NCL-05-CN-002)', () => {
         expect(screen.getByText('PRJ-2026-001')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByTestId('btn-close-project'));
+      fireEvent.click(openCloseAction());
 
       expect(projectsApi.closeProject).not.toHaveBeenCalled();
       confirmSpy.mockRestore();
@@ -209,13 +215,13 @@ describe('ProjectDetailPage Component (NCL-05-CN-002)', () => {
         expect(screen.getByText('PRJ-2026-001')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByTestId('btn-close-project'));
+      fireEvent.click(openCloseAction());
 
       await waitFor(() => {
         expect(screen.getByTestId('project-toast')).toHaveTextContent(/con cong viec dang cho duyet/i);
       });
       // Project stays open — the close button is still available for a retry.
-      expect(screen.getByTestId('btn-close-project')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Thao tác khác với dự án' })).toBeInTheDocument();
 
       confirmSpy.mockRestore();
     });
@@ -236,7 +242,7 @@ describe('ProjectDetailPage Component (NCL-05-CN-002)', () => {
       expect(screen.getByText('PRJ-2026-001')).toBeInTheDocument();
     });
 
-    const addRootBtn = screen.getByRole('button', { name: /\+ Thêm hạng mục gốc/i });
+    const addRootBtn = screen.getByRole('button', { name: /^Thêm hạng mục$/i });
     fireEvent.click(addRootBtn);
 
     // WorkPackageModal should be visible with title "Thêm hạng mục gốc"

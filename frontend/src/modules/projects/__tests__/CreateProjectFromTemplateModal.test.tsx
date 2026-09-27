@@ -299,7 +299,7 @@ describe('CreateProjectFromTemplateModal Component (NCL-05-CN-007)', () => {
     await waitFor(() => {
       expect(screen.getByTestId('create-success-alert')).toBeInTheDocument();
     });
-    expect(screen.getByText(/CREATE_FROM_TEMPLATE/i)).toBeInTheDocument();
+    expect(screen.getByText('Đã tạo dự án từ mẫu')).toBeInTheDocument();
 
     // Kiểm tra cây WBS được dựng sẵn từ mẫu (TC-01)
     await waitFor(() => {

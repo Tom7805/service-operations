@@ -198,7 +198,7 @@ describe('ServiceCatalogPage (NCL-15-CN-001)', () => {
 
     expect(await screen.findByTestId('svc-access-denied')).toBeInTheDocument();
     expect(api.searchServiceCatalog).toHaveBeenCalledTimes(1);
-    expect(screen.getByText(/đã được ghi vào nhật ký hệ thống/)).toBeInTheDocument();
+    expect(screen.getByText(/đã được ghi vào nhật ký/)).toBeInTheDocument();
     expect(screen.queryByTestId('svc-btn-create')).not.toBeInTheDocument();
   });
 

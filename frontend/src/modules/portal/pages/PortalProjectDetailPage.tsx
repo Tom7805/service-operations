@@ -15,6 +15,7 @@ import {
   type PortalProjectStatus,
   type PortalWorkPackageProgress,
 } from '../types/portalTypes';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface Props {
   /** Mã dự án lấy từ đường dẫn — có thể là dự án của khách hàng khác nếu khách hàng tự nhập (TC-02). */
@@ -127,8 +128,7 @@ export default function PortalProjectDetailPage({ projectId, onBack, onOpenAccep
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có quyền xem dự án này</h2>
           <p>
-            Dự án bạn đang mở không thuộc danh sách dự án của công ty bạn hoặc không tồn tại. Tài khoản cổng chỉ xem được
-            dữ liệu của chính khách hàng mình. Lần truy cập này đã được ghi vào nhật ký hệ thống.
+            Dự án không thuộc công ty bạn hoặc không tồn tại. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">
@@ -171,39 +171,37 @@ export default function PortalProjectDetailPage({ projectId, onBack, onOpenAccep
     <div className="portal-page" data-testid="portal-project-detail">
       <div className="mb-4">{backButton}</div>
 
-      <div className="page-header">
-        <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.folder} {project.projectCode}</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">
-              {PORTAL_PROJECT_STATUS_LABEL[project.status as PortalProjectStatus] ?? project.status}
+      <PageHeader
+        title={project.name}
+        meta={
+          <>
+            <span className="page-header__code">{project.projectCode}</span>
+            <span>{PORTAL_PROJECT_STATUS_LABEL[project.status as PortalProjectStatus] ?? project.status}</span>
+            <span>{project.projectManagerName ? `Quản lý dự án ${project.projectManagerName}` : 'Chưa có quản lý dự án'}</span>
+            <span>
+              {formatPortalDate(project.startDate)} – {formatPortalDate(project.expectedEndDate)}
             </span>
-          </div>
-          <h1 className="page-title">{project.name}</h1>
-          <p className="page-subtitle">
-            {project.projectManagerName ? `Quản lý dự án: ${project.projectManagerName}` : 'Chưa có quản lý dự án'}
-            {project.contractCode ? ` · Hợp đồng ${project.contractCode}` : ''} · {formatPortalDate(project.startDate)} –{' '}
-            {formatPortalDate(project.expectedEndDate)}
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {onOpenAcceptances && (
-            <button
-              type="button"
-              className={`btn ${pendingWps > 0 ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => onOpenAcceptances(project.id)}
-              data-testid="portal-detail-open-acceptances"
-            >
-              <span className="icon-xs">{ICONS.checkCircle}</span> Phiếu nghiệm thu
-              {pendingWps > 0 ? ` (${pendingWps} chờ xác nhận)` : ''}
+          </>
+        }
+        actions={
+          <>
+            {onOpenAcceptances && (
+              <button
+                type="button"
+                className={`btn ${pendingWps > 0 ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => onOpenAcceptances(project.id)}
+                data-testid="portal-detail-open-acceptances"
+              >
+                <span className="icon-xs">{ICONS.checkCircle}</span> Phiếu nghiệm thu
+                {pendingWps > 0 ? ` (${pendingWps} chờ xác nhận)` : ''}
+              </button>
+            )}
+            <button type="button" className="btn btn-secondary" onClick={() => void load()}>
+              <span className="icon-xs">{ICONS.refresh}</span> Làm mới
             </button>
-          )}
-          <button type="button" className="btn btn-secondary" onClick={() => void load()}>
-            <span className="icon-xs">{ICONS.refresh}</span> Làm mới
-          </button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <div className="user-table-card portal-overview">
         <div className="portal-overview__progress">
@@ -380,8 +378,7 @@ export default function PortalProjectDetailPage({ projectId, onBack, onOpenAccep
       </section>
 
       <p className="field-hint portal-footnote">
-        {ICONS.info} Số liệu cập nhật theo thời gian thực từ hệ thống quản lý dự án. Lượt xem của bạn được ghi nhận trong
-        nhật ký cổng khách hàng.
+        {ICONS.info} Lượt xem của bạn được ghi nhận.
       </p>
     </div>
   );

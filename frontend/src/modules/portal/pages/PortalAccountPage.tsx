@@ -16,6 +16,7 @@ import PortalAccountGrantModal from '../components/PortalAccountGrantModal';
 import PortalAccountStatusBadge from '../components/PortalAccountStatusBadge';
 import PortalAccountStatusModal from '../components/PortalAccountStatusModal';
 import { CONTACT_ROLE_LABEL, type ContactRole, type PortalAccountRes } from '../types/portalAccountTypes';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface Props {
   currentUserRoles?: string[];
@@ -190,8 +191,7 @@ export default function PortalAccountPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền cấp tài khoản cổng khách hàng</h2>
           <p>
-            Chức năng cấp và quản lý tài khoản cổng khách hàng chỉ dành cho <strong>Quản trị viên</strong> (VT-07). Hệ
-            thống đã ghi lại lần từ chối truy cập này vào nhật ký hệ thống.
+            Trang này dành cho <strong>Quản trị viên</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">
@@ -207,8 +207,6 @@ export default function PortalAccountPage({
     );
   }
 
-  const selectedCustomer = customerFilter === '' ? null : customers.find((c) => c.id === customerFilter) ?? null;
-
   return (
     <div className="user-management-page">
       {notice && (
@@ -221,59 +219,15 @@ export default function PortalAccountPage({
         </div>
       )}
 
-      <div className="page-header">
-        <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.globe} CỔNG KHÁCH HÀNG</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">{selectedCustomer ? selectedCustomer.code : 'TẤT CẢ KHÁCH HÀNG'}</span>
-          </div>
-          <h1 className="page-title">Tài khoản cổng khách hàng</h1>
-          <p className="page-subtitle">
-            Cấp tài khoản cho người liên hệ của khách hàng để họ tự theo dõi dự án — mỗi tài khoản chỉ xem được dữ liệu
-            của đúng khách hàng mình.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => setGrantOpen(true)}
-          data-testid="portal-account-open-grant"
-        >
-          <span className="icon-xs">{ICONS.plus}</span> Cấp tài khoản cổng
-        </button>
-      </div>
+      <PageHeader
+        title="Tài khoản khách hàng"
+        actions={
+          <button type="button" className="btn btn-primary" onClick={() => setGrantOpen(true)} data-testid="portal-account-open-grant">
+            <span className="icon-xs">{ICONS.plus}</span> Cấp tài khoản
+          </button>
+        }
+      />
 
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--blue">{ICONS.users}</div>
-          <div>
-            <span className="stat-card__label">Tài khoản cổng</span>
-            <div className="stat-card__value" data-testid="portal-account-total">{counts.total}</div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--green">{ICONS.userCheck}</div>
-          <div>
-            <span className="stat-card__label">Đang hoạt động</span>
-            <div className="stat-card__value text-success">{counts.active}</div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--red">{ICONS.lock}</div>
-          <div>
-            <span className="stat-card__label">Đã khóa</span>
-            <div className="stat-card__value text-danger" data-testid="portal-account-locked">{counts.locked}</div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--purple">{ICONS.building}</div>
-          <div>
-            <span className="stat-card__label">Khách hàng có tài khoản</span>
-            <div className="stat-card__value">{counts.customers}</div>
-          </div>
-        </div>
-      </div>
 
       <div className="user-table-card">
         <div className="user-table-toolbar">

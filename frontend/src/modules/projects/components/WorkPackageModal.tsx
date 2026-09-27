@@ -190,7 +190,7 @@ export default function WorkPackageModal({
                 onClick={onClose}
                 disabled={submitting}
               >
-                Hủy bỏ
+                Hủy
               </button>
               <button
                 type="submit"

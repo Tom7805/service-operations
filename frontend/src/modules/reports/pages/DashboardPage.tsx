@@ -3,6 +3,7 @@ import { ICONS } from '../../../components/common/icons';
 import { getDashboardSummary, ReportsApiError } from '../api/reportsApi';
 import type { DashboardSummaryRes } from '../types/reportTypes';
 import DashboardKpiRow from '../components/DashboardKpiRow';
+import PageHeader from '../../../components/common/PageHeader';
 
 export interface DashboardPageProps {
   currentUserRoles?: string[];
@@ -92,7 +93,7 @@ export default function DashboardPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Bảng điều khiển vận hành chỉ dành riêng cho vai trò <strong>Ban giám đốc</strong>.
+            Trang này dành cho <strong>Ban giám đốc</strong>.
           </p>
           {onBack && (
             <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
@@ -106,28 +107,10 @@ export default function DashboardPage({
 
   return (
     <div className="user-management-page" data-testid="dashboard-page">
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {onBack && (
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm btn-back"
-              onClick={onBack}
-              data-testid="btn-back-dashboard"
-            >
-              {ICONS.arrowLeft} Quay lại
-            </button>
-          )}
-          <div>
-            <h1 className="page-title" style={{ margin: '4px 0' }}>
-              Bảng điều khiển vận hành
-            </h1>
-            <p className="page-subtitle">
-              Doanh thu, biên lợi nhuận, tỷ lệ giờ tính phí và cảnh báo vận hành của kỳ chọn.
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        back={onBack ? { label: 'Báo cáo', onClick: onBack, testId: 'btn-back-dashboard' } : undefined}
+        title="Bảng điều khiển"
+      />
 
       <form onSubmit={handleSubmit} noValidate className="user-table-card" style={{ padding: '20px', marginBottom: '16px' }}>
         <div className="toolbar-filters" style={{ display: 'flex', alignItems: 'flex-end', gap: '16px', flexWrap: 'wrap' }}>

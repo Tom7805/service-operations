@@ -92,7 +92,7 @@ export default function RenewalModal({
     if (!isAllowed) return;
 
     if (!isActive) {
-      setServerError('Chỉ gia hạn được hợp đồng đang còn hiệu lực (ACTIVE); hợp đồng đã đóng vui lòng lập hợp đồng mới');
+      setServerError('Chỉ gia hạn được hợp đồng đang hiệu lực; hợp đồng đã đóng vui lòng lập hợp đồng mới');
       return;
     }
 
@@ -164,14 +164,14 @@ export default function RenewalModal({
           {/* Kiểm tra vai trò VT-04 (TC-04) */}
           {!isAllowed && (
             <div className="alert-box alert-box--danger" role="alert">
-              Yêu cầu vai trò Nhân viên kinh doanh (VT-04).
+              Yêu cầu vai trò Nhân viên kinh doanh.
             </div>
           )}
 
           {/* Kiểm tra trạng thái hợp đồng đã đóng (TC-02) */}
           {isAllowed && !isActive && (
             <div className="alert-box alert-box--warning" role="alert" data-testid="renewal-inactive-alert">
-              Chỉ gia hạn được hợp đồng đang còn hiệu lực (ACTIVE); hợp đồng đã đóng vui lòng lập hợp đồng mới.
+              Chỉ gia hạn được hợp đồng đang hiệu lực; hợp đồng đã đóng cần lập hợp đồng mới.
             </div>
           )}
 

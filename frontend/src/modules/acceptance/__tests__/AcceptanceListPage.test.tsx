@@ -118,7 +118,6 @@ describe('AcceptanceListPage — NCL-12-CN-001', () => {
     expect(screen.getByTestId('acceptance-wp-row-40')).toHaveTextContent('Đủ điều kiện nghiệm thu');
     expect(screen.getByTestId('acceptance-wp-row-50')).toHaveTextContent('Còn công việc dang dở');
     expect(screen.getByTestId('acceptance-wp-row-60')).toHaveTextContent('Đã có phiếu');
-    expect(screen.getByTestId('acceptance-ready-count')).toHaveTextContent('1');
 
     fireEvent.click(screen.getByTestId('acceptance-cert-row-5'));
     expect(onOpen).toHaveBeenCalledWith(5);

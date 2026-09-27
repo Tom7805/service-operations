@@ -371,10 +371,7 @@ export default function CustomerOverviewPanel({
     <div className="user-table-card customer-summary-panel" data-testid="customer-summary-panel">
       <div className="customer-summary-toolbar">
         <div>
-          <h3 className="customer-summary-title">Hồ sơ tổng hợp — {customerName}</h3>
-          <p className="customer-summary-subtitle">
-            Toàn cảnh cơ hội, hợp đồng, dự án, hóa đơn và công nợ của khách hàng theo dòng thời gian.
-          </p>
+          <h3 className="customer-summary-title">Lịch sử hợp tác</h3>
         </div>
         <button
           type="button"
@@ -437,10 +434,7 @@ export default function CustomerOverviewPanel({
         <div className="table-empty-state" data-testid="customer-summary-empty" style={{ marginTop: '8px' }}>
           <div className="table-empty-state__icon">{ICONS.folder}</div>
           <h3>Chưa phát sinh dữ liệu hợp tác</h3>
-          <p>
-            Khách hàng này chưa có cơ hội, hợp đồng, dự án, hóa đơn hay công nợ nào trong phạm vi bạn được xem.
-            Bảng tổng hợp sẽ tự cập nhật khi các nghiệp vụ liên quan được tạo.
-          </p>
+          <p>Khách hàng này chưa có cơ hội, hợp đồng, dự án hay hóa đơn nào.</p>
         </div>
       ) : (
         <>
@@ -635,10 +629,6 @@ export default function CustomerOverviewPanel({
         </>
       )}
 
-      <p className="customer-summary-scope-note cell-muted">
-        <span className="icon-xs">{ICONS.info}</span> Dữ liệu hiển thị nằm trong phạm vi truy cập của bạn theo vai trò và nhánh tổ chức được phân.
-        Mỗi lần mở hồ sơ tổng hợp đều được hệ thống ghi vào nhật ký (người thực hiện · nội dung · thời điểm).
-      </p>
 
       {contractLoadError && (
         <div className="alert-box alert-box--danger" role="alert" style={{ marginTop: '12px' }}>

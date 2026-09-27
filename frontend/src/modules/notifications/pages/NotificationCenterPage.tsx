@@ -11,6 +11,7 @@ import {
   openNotification,
 } from '../api/notificationsApi';
 import type { NotificationGroup, NotificationRes, NotificationSeverity } from '../types/notificationTypes';
+import PageHeader from '../../../components/common/PageHeader';
 
 const PAGE_SIZE = 20;
 
@@ -197,54 +198,43 @@ export default function NotificationCenterPage({
 
   return (
     <div className="user-management-page notif-center" data-testid="notification-center-page">
-      <div className="page-header">
-        <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.bell} THÔNG BÁO</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta" data-testid="notif-center-unread-count">
-              {unreadCount == null ? 'ĐANG ĐẾM…' : `${unreadCount} CHƯA ĐỌC`}
-            </span>
-          </div>
-          <h1 className="page-title">Trung tâm thông báo</h1>
-          <p className="page-subtitle">
-            Mọi cảnh báo và việc cần làm dành cho bạn, mới nhất trước. Bấm vào một thông báo để mở thẳng bản ghi
-            liên quan — thông báo sẽ tự chuyển sang đã đọc.
-          </p>
-        </div>
-        <div className="page-header__actions">
-          {onOpenPreferences && (
+      <PageHeader
+        title="Thông báo"
+        meta={
+          <span data-testid="notif-center-unread-count">
+            {unreadCount == null ? 'Đang đếm…' : `${unreadCount} chưa đọc`}
+          </span>
+        }
+        actions={
+          <>
+            {onOpenPreferences && (
+              <button type="button" className="btn-secondary" onClick={onOpenPreferences} data-testid="btn-open-preferences">
+                {ICONS.settings} Cài đặt
+              </button>
+            )}
             <button
               type="button"
               className="btn-secondary"
-              onClick={onOpenPreferences}
-              data-testid="btn-open-preferences"
+              onClick={handleMarkAllRead}
+              disabled={markingAll || !unreadCount}
+              data-testid="btn-mark-all-read"
             >
-              {ICONS.settings} Cài đặt nhận thông báo
+              {ICONS.checkCircle} {markingAll ? 'Đang đánh dấu…' : 'Đánh dấu tất cả đã đọc'}
             </button>
-          )}
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={handleMarkAllRead}
-            disabled={markingAll || !unreadCount}
-            data-testid="btn-mark-all-read"
-          >
-            {ICONS.checkCircle} {markingAll ? 'Đang đánh dấu…' : 'Đánh dấu tất cả đã đọc'}
-          </button>
-          <button
-            type="button"
-            className="btn-icon-refresh"
-            onClick={reloadAll}
-            title="Tải lại"
-            aria-label="Tải lại"
-            disabled={loading}
-            data-testid="btn-notif-refresh"
-          >
-            {ICONS.refresh}
-          </button>
-        </div>
-      </div>
+            <button
+              type="button"
+              className="btn-icon-refresh"
+              onClick={reloadAll}
+              title="Tải lại"
+              aria-label="Tải lại"
+              disabled={loading}
+              data-testid="btn-notif-refresh"
+            >
+              {ICONS.refresh}
+            </button>
+          </>
+        }
+      />
 
       <div className="notif-center__toolbar">
         <div className="status-tabs" role="tablist" aria-label="Trạng thái đọc">

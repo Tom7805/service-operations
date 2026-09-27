@@ -259,14 +259,14 @@ describe('PlannedVsActualPage (NCL-09-CN-006 — So sánh biên lợi nhuận d�
     expect(screen.queryByTestId('gap-reasons')).not.toBeInTheDocument();
   });
 
-  it('hiển thị mã dự án khi không lấy được thông tin dự án', async () => {
-    vi.mocked(projectsApi.getProject).mockRejectedValue(new Error('not found'));
+  it('không tự gọi lấy thông tin dự án — dự án đã chọn sẵn ở ô chọn chung của khu Lợi nhuận', async () => {
     vi.mocked(profitabilityApi.getPlannedVsActualMargin).mockResolvedValue(MARGIN_DATA);
 
     render(<PlannedVsActualPage projectId={42} currentUserRoles={['VT-02']} />);
 
     await screen.findByTestId('planned-vs-actual-page');
-    expect(screen.getByText('Mã: 42')).toBeInTheDocument();
+    expect(profitabilityApi.getPlannedVsActualMargin).toHaveBeenCalledWith(42);
+    expect(projectsApi.getProject).not.toHaveBeenCalled();
   });
 
   it('dùng initialMargin khi được truyền vào (không gọi API)', async () => {

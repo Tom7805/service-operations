@@ -235,7 +235,7 @@ export default function ContractMilestonesModal({ contract, isOpen, onClose, onS
 
         <div className="modal-body">
           {!isAllowed && (
-            <div className="alert-box alert-box--danger">Chức năng yêu cầu vai trò Kế toán (VT-05).</div>
+            <div className="alert-box alert-box--danger">Chức năng yêu cầu vai trò Kế toán.</div>
           )}
 
           {isAllowed && loadError && <div className="alert-box alert-box--danger">{loadError}</div>}

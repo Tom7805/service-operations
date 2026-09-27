@@ -8,6 +8,7 @@ import {
   type PortalAcceptanceSummary,
 } from '../types/portalTypes';
 import { formatPortalDateTime, formatPortalMoney } from '../utils/portalFormat';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface Props {
   /** Lọc sẵn theo dự án (mở từ trang tiến độ dự án). */
@@ -86,22 +87,15 @@ export default function PortalAcceptancePage({ projectId = null, onChangeProject
 
   return (
     <div className="portal-page">
-      <div className="page-header">
-        <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.checkCircle} NGHIỆM THU</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">{projectLabel ?? 'TẤT CẢ DỰ ÁN'}</span>
-          </div>
-          <h1 className="page-title">Phiếu nghiệm thu</h1>
-          <p className="page-subtitle">
-            Xem nội dung các phiếu nghiệm thu và xác nhận hoặc từ chối ngay trên cổng — không cần ký giấy gửi qua lại.
-          </p>
-        </div>
-        <button type="button" className="btn btn-secondary" onClick={() => void load()} disabled={isLoading}>
-          <span className="icon-xs">{ICONS.refresh}</span> Làm mới
-        </button>
-      </div>
+      <PageHeader
+        title="Phiếu nghiệm thu"
+        meta={projectLabel && <span>{projectLabel}</span>}
+        actions={
+          <button type="button" className="btn btn-secondary" onClick={() => void load()} disabled={isLoading}>
+            <span className="icon-xs">{ICONS.refresh}</span> Làm mới
+          </button>
+        }
+      />
 
       {isLoading ? (
         <div className="user-table-card">

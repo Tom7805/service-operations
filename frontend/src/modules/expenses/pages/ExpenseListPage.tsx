@@ -7,6 +7,7 @@ import ExpenseBillableToggle from '../components/ExpenseBillableToggle';
 import ExpenseFormModal from '../components/ExpenseFormModal';
 import type { ExpenseRes } from '../types/expenseTypes';
 import { EXPENSE_STATUS_LABELS, EXPENSE_STATUS_PILL_CLASS, EXPENSE_TYPE_LABELS } from '../types/expenseTypes';
+import PageHeader from '../../../components/common/PageHeader';
 
 export interface ExpenseListPageProps {
   projectId: number;
@@ -105,8 +106,7 @@ export default function ExpenseListPage({
     return (
       <div className="user-management-page" data-testid="expense-list-forbidden">
         <div className="alert-box alert-box--danger" role="alert">
-          Bạn không có quyền xem chi phí của dự án này (yêu cầu vai trò Quản lý dự án VT-02,
-          Nhân viên chuyên môn VT-03 hoặc Kế toán VT-05).
+          Bạn không có quyền xem chi phí của dự án này.
         </div>
         {onBack && (
           <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
@@ -134,54 +134,36 @@ export default function ExpenseListPage({
         </div>
       )}
 
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {onBack && (
+      <PageHeader
+        back={onBack ? { label: 'Quay lại', onClick: onBack, testId: 'btn-back-expenses' } : undefined}
+        title="Chi phí dự án"
+        meta={<span className="page-header__code">{project?.projectCode || `#${projectId}`}</span>}
+        actions={
+          <>
             <button
               type="button"
-              className="btn btn-secondary btn-sm btn-back"
-              onClick={onBack}
-              data-testid="btn-back-expenses"
+              className="btn btn-secondary btn-sm"
+              onClick={loadData}
+              disabled={loading}
+              data-testid="btn-reload-expenses"
             >
-              {ICONS.arrowLeft} Quay lại
+              {ICONS.refresh} Tải lại
             </button>
-          )}
-          <div>
-            <div className="page-header__kicker">
-              <span className="page-header__tag">{ICONS.receipt} CHI PHÍ DỰ ÁN</span>
-              <span className="page-header__dot" />
-              <span className="page-header__meta">{project?.projectCode || `Mã: ${projectId}`}</span>
-            </div>
-            <h1 className="page-title" style={{ margin: '4px 0' }}>
-              Chi phí dự án
-            </h1>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={loadData}
-            disabled={loading}
-            data-testid="btn-reload-expenses"
-          >
-            {ICONS.refresh} Tải lại
-          </button>
-          {canRecord && (
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              onClick={openCreateForm}
-              disabled={!canOpenCreateForm}
-              title={!isProjectOpen ? 'Dự án đã đóng hoặc tạm dừng, không thể ghi nhận thêm chi phí' : undefined}
-              data-testid="btn-add-expense"
-            >
-              + Ghi nhận chi phí
-            </button>
-          )}
-        </div>
-      </div>
+            {canRecord && (
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={openCreateForm}
+                disabled={!canOpenCreateForm}
+                title={!isProjectOpen ? 'Dự án đã đóng hoặc tạm dừng, không thể ghi nhận thêm chi phí' : undefined}
+                data-testid="btn-add-expense"
+              >
+                + Ghi nhận chi phí
+              </button>
+            )}
+          </>
+        }
+      />
 
       {project && !isProjectOpen && canRecord && (
         <div className="alert-box alert-box--warning" role="alert" data-testid="expense-project-closed-alert" style={{ marginBottom: '16px' }}>
@@ -192,8 +174,7 @@ export default function ExpenseListPage({
 
       {canMarkBillable && (
         <div className="alert-box" role="note" style={{ marginBottom: '16px' }} data-testid="expense-billable-hint">
-          Chỉ phiếu chi phí đã <strong>được duyệt</strong> mới có thể đánh dấu hoặc bỏ đánh dấu tính lại cho
-          khách hàng. Phiếu đã nằm trong hóa đơn không thể bỏ đánh dấu.
+          Chỉ phiếu đã duyệt mới đánh dấu được "Tính cho khách hàng"; phiếu đã vào hóa đơn không bỏ đánh dấu được.
         </div>
       )}
 
@@ -205,7 +186,7 @@ export default function ExpenseListPage({
 
       <div className="user-table-card" style={{ padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--ink-strong)' }}>
             Danh sách phiếu chi phí
           </h3>
           <span className="field-hint" style={{ fontSize: '13px' }}>

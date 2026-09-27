@@ -10,6 +10,7 @@ import {
 import { roleLabels } from '../../../utils/roleLabel';
 import { ICONS } from '../../../components/common/icons';
 import TableSkeleton from '../../../components/common/TableSkeleton';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface SensitiveAccessLogPageProps {
   currentUserRoles?: string[];
@@ -120,9 +121,7 @@ export default function SensitiveAccessLogPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Chức năng tra cứu nhật ký truy cập dữ liệu nhạy cảm chỉ dành riêng cho vai trò{' '}
-            <strong>Quản trị viên</strong>. Nếu bạn cần quyền này, hãy liên hệ quản trị viên hệ thống vào
-            nhật ký bảo mật phía máy chủ.
+            Trang này dành cho <strong>Quản trị viên</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">{ICONS.shield} Thời điểm: {new Date().toLocaleString('vi-VN')}</span>
@@ -134,55 +133,25 @@ export default function SensitiveAccessLogPage({
     );
   }
 
-  const deniedCount = entries.filter((e) => e.action === 'DENIED').length;
-  const exportCount = entries.filter((e) => e.action === 'EXPORT').length;
-
   return (
     <div className="user-management-page">
       {/* Page Header */}
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Nhật ký truy cập dữ liệu nhạy cảm</h1>
-          <p className="page-subtitle">
-            Tra cứu toàn bộ lượt xem, xuất và các lần bị từ chối truy cập dữ liệu lương, chi phí, giá vốn
-            và biên lợi nhuận trong hệ thống.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="btn-icon-refresh"
-          onClick={() => fetchLogs(page)}
-          title="Làm mới dữ liệu"
-          aria-label="Làm mới dữ liệu"
-        >
-          {ICONS.refresh}
-        </button>
-      </div>
+      <PageHeader
+        title="Truy cập dữ liệu nhạy cảm"
+        actions={
+          <button
+            type="button"
+            className="btn-icon-refresh"
+            onClick={() => fetchLogs(page)}
+            title="Làm mới dữ liệu"
+            aria-label="Làm mới dữ liệu"
+          >
+            {ICONS.refresh}
+          </button>
+        }
+      />
 
       {/* KPI Stats */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--blue">{ICONS.clipboardList}</div>
-          <div>
-            <span className="stat-card__label">Tổng số bản ghi thỏa bộ lọc</span>
-            <strong className="stat-card__value">{totalElements}</strong>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--purple">{ICONS.download}</div>
-          <div>
-            <span className="stat-card__label">Lượt xuất dữ liệu (trang này)</span>
-            <strong className="stat-card__value">{exportCount}</strong>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--red">{ICONS.shieldOff}</div>
-          <div>
-            <span className="stat-card__label">Lượt bị từ chối (trang này)</span>
-            <strong className="stat-card__value text-danger">{deniedCount}</strong>
-          </div>
-        </div>
-      </div>
 
       {error && (
         <div className="alert alert--error" role="alert">
@@ -292,7 +261,9 @@ export default function SensitiveAccessLogPage({
                     <td>
                       <span className="user-profile-username">{entry.ipAddress ?? '—'}</span>
                     </td>
-                    <td className="cell-email">{entry.detail ?? '—'}</td>
+                    <td>
+                      <span className="cell-email" title={entry.detail ?? undefined}>{entry.detail ?? '—'}</span>
+                    </td>
                   </tr>
                 ))
               )}

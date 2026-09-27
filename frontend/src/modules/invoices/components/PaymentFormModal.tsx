@@ -116,7 +116,7 @@ export default function PaymentFormModal({ isOpen, onClose, onSaved, invoice, cu
 
           <div className="modal-body">
             {!isAllowed && (
-              <div className="alert-box alert-box--danger">Chức năng yêu cầu vai trò Kế toán (VT-05).</div>
+              <div className="alert-box alert-box--danger">Chức năng yêu cầu vai trò Kế toán.</div>
             )}
             {isAllowed && saveError && (
               <div className="alert-box alert-box--danger" role="alert">{saveError}</div>

@@ -15,6 +15,7 @@ import type {
   OpportunityActivityFormErrors,
   OpportunityStatus,
 } from '../types/opportunityTypes';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface OpportunityDetailPageProps {
   opportunityId: number;
@@ -234,7 +235,7 @@ export default function OpportunityDetailPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Không có quyền ghi nhận hoạt động chăm sóc</h2>
           <p>
-            Theo quy định, chỉ <strong>Nhân viên kinh doanh</strong> mới được thao tác với lịch sử chăm sóc cơ hội.
+            Chỉ <strong>Nhân viên kinh doanh</strong> ghi nhận được hoạt động chăm sóc.
           </p>
           {onBack && (
             <button type="button" className="btn-secondary" onClick={onBack}>
@@ -248,57 +249,37 @@ export default function OpportunityDetailPage({
 
   return (
     <div className="opportunity-detail-page" data-testid="opportunity-detail-page">
-      {onBack && (
-        <button type="button" className="activity-back-link" onClick={onBack}>
-          {ICONS.arrowLeft} {backLabel}
-        </button>
-      )}
-      <div className="page-header">
-        <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.target} CƠ HỘI BÁN HÀNG</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">GHI NHẬN CHĂM SÓC</span>
-          </div>
-          <h1>{displayName}</h1>
-          {customerName && (
-            <div className="activity-customer-line">
-              {ICONS.building} Khách hàng: <strong>{customerName}</strong>
-            </div>
-          )}
-          {opportunity && (
-            <div className="activity-customer-line" data-testid="opportunity-summary-line">
-              {ICONS.target} Giai đoạn:{' '}
-              <strong>
-                {STAGE_CONFIGS[opportunity.stage as OpportunityStage]?.label ?? opportunity.stage}
-              </strong>
-              {' · '}Xác suất <strong>{opportunity.probability ?? 0}%</strong>
-              {' · '}Giá trị dự kiến{' '}
-              <strong>
+<PageHeader
+        back={onBack ? { label: backLabel, onClick: onBack } : undefined}
+        title={displayName}
+        meta={
+          <>
+            {customerName && <span>{customerName}</span>}
+            {opportunity && (
+              <span data-testid="opportunity-summary-line">
+                {STAGE_CONFIGS[opportunity.stage as OpportunityStage]?.label ?? opportunity.stage} · xác suất{' '}
+                {opportunity.probability ?? 0}% ·{' '}
                 {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(
                   opportunity.expectedValue ?? 0
                 )}
-              </strong>
-            </div>
-          )}
-        </div>
-        <div className="page-header__actions">
-          <span className={`activity-status-pill${isClosed ? ' activity-status-pill--closed' : ''}`}>
-            <span className="activity-status-pill__dot" />
-            {isClosed ? 'Đã đóng' : 'Đang mở'}
-          </span>
-          {opportunity && opportunity.stage === 'WON' && (
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ marginLeft: '12px' }}
-              onClick={() => setIsCreateContractOpen(true)}
-            >
-              {ICONS.document} Tạo hợp đồng
-            </button>
-          )}
-        </div>
-      </div>
+              </span>
+            )}
+          </>
+        }
+        actions={
+          <>
+            <span className={`activity-status-pill${isClosed ? ' activity-status-pill--closed' : ''}`}>
+              <span className="activity-status-pill__dot" />
+              {isClosed ? 'Đã đóng' : 'Đang mở'}
+            </span>
+            {opportunity && opportunity.stage === 'WON' && (
+              <button type="button" className="btn btn-secondary" onClick={() => setIsCreateContractOpen(true)}>
+                {ICONS.document} Tạo hợp đồng
+              </button>
+            )}
+          </>
+        }
+      />
 
       {contractCreatedMessage && (
         <div className="alert-box alert-box--success" data-testid="contract-created-banner">

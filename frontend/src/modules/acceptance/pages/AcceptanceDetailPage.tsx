@@ -10,6 +10,7 @@ import {
   MILESTONE_STATUS_META,
   type AcceptanceDetailRes,
 } from '../types/acceptanceTypes';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface Props {
   certificateId: number;
@@ -102,34 +103,21 @@ export default function AcceptanceDetailPage({
 
   return (
     <div className="user-management-page">
-      <div className="page-header">
-        <div>
-          <button
-            type="button"
-            className="btn-icon-refresh"
-            onClick={onBack}
-            aria-label="Quay lại danh sách nghiệm thu"
-            style={{ marginBottom: '8px' }}
-          >
-            {ICONS.arrowLeft}
-          </button>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.clipboardList} PHIẾU NGHIỆM THU</span>
-            {certificate && (
-              <>
-                <span className="page-header__dot" />
-                <span className="page-header__meta">{certificate.certificateCode}</span>
-              </>
-            )}
-          </div>
-          <h1 className="page-title">{certificate ? certificate.title : 'Chi tiết phiếu nghiệm thu'}</h1>
-          {certificate && (
-            <p className="page-subtitle">
-              {certificate.projectCode} — {certificate.projectName} · Hạng mục: {certificate.workPackageName}
-            </p>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        back={{ label: 'Phiếu nghiệm thu', onClick: onBack, ariaLabel: 'Quay lại danh sách nghiệm thu' }}
+        title={certificate ? certificate.title : 'Chi tiết phiếu nghiệm thu'}
+        meta={
+          certificate && (
+            <>
+              <span className="page-header__code">{certificate.certificateCode}</span>
+              <span>
+                {certificate.projectCode} — {certificate.projectName}
+              </span>
+              <span>Hạng mục {certificate.workPackageName}</span>
+            </>
+          )
+        }
+      />
 
       {isLoading ? (
         <div className="table-loading-state">

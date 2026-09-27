@@ -6,6 +6,7 @@ import { fetchBillRateHistory, fetchCurrentBillRates, RatesApiError } from '../a
 import type { BillRateHistoryRes } from '../types/rateTypes';
 import { validateRateHistoryQuery, type RateHistoryQueryFormValues } from '../validators/rateValidators';
 import RateEffectiveTimeline from '../components/RateEffectiveTimeline';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface RateHistoryPageProps {
   currentUserRoles?: string[];
@@ -97,8 +98,7 @@ export default function RateHistoryPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền xem lịch sử đơn giá</h2>
           <p>
-            Chỉ <strong>Kế toán</strong> (VT-05) hoặc <strong>Quản trị viên</strong> (VT-07) được xem lịch sử
-            thay đổi đơn giá. Hệ thống đã ghi lại lần từ chối truy cập này vào Nhật ký hệ thống.
+            Trang này dành cho <strong>Kế toán</strong> và <strong>Quản trị viên</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">
@@ -116,15 +116,7 @@ export default function RateHistoryPage({
 
   return (
     <div className="user-management-page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Lịch sử thay đổi đơn giá</h1>
-          <p className="page-subtitle">
-            Tra toàn bộ các mốc đơn giá đã từng khai báo cho một vai trò chuyên môn + cấp bậc — dùng để giải
-            trình chênh lệch doanh thu giữa hai kỳ.
-          </p>
-        </div>
-      </div>
+      <PageHeader title="Lịch sử đơn giá" />
 
       <div className="user-table-card" style={{ padding: '20px' }}>
         {serverError && (

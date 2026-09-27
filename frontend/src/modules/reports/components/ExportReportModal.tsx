@@ -150,8 +150,7 @@ export default function ExportReportModal({
               </div>
 
               <div className="alert-box alert-box--info" role="note">
-                <span className="icon-xs">{ICONS.info}</span> Tệp CSV mở được bằng Excel. Các cột giá vốn không có
-                trong tệp nếu vai trò của bạn không được xem dữ liệu chi phí. Mỗi lần xuất đều được ghi nhật ký.
+                <span className="icon-xs">{ICONS.info}</span> Tệp CSV mở được bằng Excel. Cột giá vốn chỉ có nếu bạn được xem dữ liệu chi phí.
               </div>
 
               {error && (

@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { getTimesheetReport, ReportsApiError } from '../api/reportsApi';
 import type { TimesheetByEmployeeRes } from '../types/reportTypes';
 import { ICONS } from '../../../components/common/icons';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface TimesheetReportPageProps {
   currentUserRoles?: string[];
@@ -79,19 +80,7 @@ export default function TimesheetReportPage({ currentUserRoles = [] }: Timesheet
 
   return (
     <div className="user-management-page">
-      <div className="page-header">
-        <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.chart} BÁO CÁO</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">GIỜ CÔNG</span>
-          </div>
-          <h1 className="page-title">Giờ công theo nhân sự</h1>
-          <p className="page-subtitle">
-            Giờ công đã duyệt của từng nhân sự trên từng dự án bạn quản lý, tách giờ có tính phí và không tính phí.
-          </p>
-        </div>
-      </div>
+      <PageHeader title="Giờ công theo nhân sự" />
 
       <form onSubmit={applyPeriod} noValidate
         style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'flex-end', marginBottom: '16px' }}>

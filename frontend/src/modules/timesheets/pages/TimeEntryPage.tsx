@@ -176,7 +176,7 @@ export default function TimeEntryPage({
     return (
       <div className="user-management-page" data-testid="time-entry-forbidden">
         <div className="alert-box alert-box--danger" role="alert">
-          Bạn không có quyền ghi giờ công (yêu cầu vai trò Nhân viên chuyên môn VT-03).
+          Bạn không có quyền ghi giờ công.
         </div>
         {onBack && (
           <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
@@ -212,19 +212,15 @@ export default function TimeEntryPage({
               {ICONS.arrowLeft} Quay lại
             </button>
           )}
-          <div className="page-header__kicker" style={{ margin: 0 }}>
-            <span className="page-header__tag">{ICONS.clock} GHI GIỜ CÔNG</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">
-              {project?.name || `Dự án #${projectId}`} · {project?.projectCode || `#${projectId}`}
-            </span>
+          <div className="page-header__meta-line" style={{ margin: 0 }}>
+            <span>{project?.name || `Dự án #${projectId}`}</span>
+            <span className="page-header__code">{project?.projectCode || `#${projectId}`}</span>
           </div>
         </div>
 
         <div className="task-page-header__main">
           <div>
-            <span className="task-title-eyebrow">Công việc</span>
-            <h1 className="page-title task-title" style={{ margin: '2px 0 0' }}>
+            <h1 className="page-title task-title" style={{ margin: 0 }}>
               {taskName || summary?.taskName || `Công việc #${taskId}`}
             </h1>
           </div>
@@ -345,7 +341,7 @@ export default function TimeEntryPage({
 
       <div className="user-table-card" style={{ padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>Bản ghi giờ công trong tuần</h3>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--ink-strong)' }}>Bản ghi giờ công trong tuần</h3>
           <span className="field-hint" style={{ fontSize: '13px' }}>{entries.length} bản ghi</span>
         </div>
 

@@ -91,7 +91,7 @@ describe("RevenueForecastPage Component (NCL-03-CN-004)", () => {
       expect(
         screen.getByRole("heading", {
           level: 1,
-          name: /Dự báo doanh thu theo xác suất giai đoạn/i,
+          name: 'Dự báo doanh thu',
         }),
       ).toBeInTheDocument();
       expect(screen.queryByTestId("forecast-access-denied")).toBeNull();
@@ -112,7 +112,7 @@ describe("RevenueForecastPage Component (NCL-03-CN-004)", () => {
       expect(
         screen.getByRole("heading", {
           level: 1,
-          name: /Dự báo doanh thu theo xác suất giai đoạn/i,
+          name: 'Dự báo doanh thu',
         }),
       ).toBeInTheDocument();
       expect(screen.queryByTestId("forecast-access-denied")).toBeNull();

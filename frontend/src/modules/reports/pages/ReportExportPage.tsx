@@ -2,6 +2,7 @@ import { useState } from 'react';
 import ExportReportModal from '../components/ExportReportModal';
 import { EXPORT_REPORT_OPTIONS, type ExportReportType } from '../types/reportTypes';
 import { ICONS } from '../../../components/common/icons';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface ReportExportPageProps {
   currentUserRoles?: string[];
@@ -15,19 +16,7 @@ export default function ReportExportPage({ currentUserRoles = [] }: ReportExport
 
   return (
     <div className="user-management-page">
-      <div className="page-header">
-        <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.download} BÁO CÁO</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">XUẤT TỆP</span>
-          </div>
-          <h1 className="page-title">Xuất báo cáo ra tệp</h1>
-          <p className="page-subtitle">
-            Chọn báo cáo và kỳ, hệ thống tạo tệp bảng tính để gửi khách hàng hoặc lưu trữ ngoài hệ thống.
-          </p>
-        </div>
-      </div>
+      <PageHeader title="Xuất báo cáo" />
 
       {!isAllowed ? (
         <div className="alert-box alert-box--danger" role="alert">

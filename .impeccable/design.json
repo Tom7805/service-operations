@@ -1,296 +1,369 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-01T18:57:49.183654",
-  "title": "Vận Hành Dịch Vụ",
+  "generatedAt": "2026-09-27T01:33:39.607Z",
+  "title": "Design System: Vận Hành Dịch Vụ",
   "extensions": {
     "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Xanh dương Claude — màu tương tác",
+        "canonical": "#2A78D6",
+        "tonalRamp": [
+          "#3D1A0E",
+          "#632B17",
+          "#8C3E23",
+          "#1F63B8",
+          "#2A78D6",
+          "#E59C82",
+          "#F1C8B8",
+          "#EBF3FD"
+        ]
+      },
+      "accent-hover": {
+        "role": "primary",
+        "displayName": "Xanh đậm (hover liên kết)",
+        "canonical": "#1F66C0"
+      },
+      "accent-ink": {
+        "role": "primary",
+        "displayName": "Chữ xanh (AA 5.9:1)",
+        "canonical": "#1F63B8"
+      },
+      "accent-soft": {
+        "role": "primary",
+        "displayName": "Xanh nhạt — nền mục đang chọn",
+        "canonical": "#EBF3FD"
+      },
+      "accent-ring": {
+        "role": "primary",
+        "displayName": "Vòng focus xanh",
+        "canonical": "rgba(42, 120, 214, 0.24)"
+      },
+      "primary-ink": {
+        "role": "neutral",
+        "displayName": "Gần-đen ấm — nút chính",
+        "canonical": "#1F1E1D",
+        "tonalRamp": [
+          "#1F1E1D",
+          "#3D3D3A",
+          "#5E5D59",
+          "#73726C",
+          "#9A988F",
+          "#C3C0B6",
+          "#F0F0EF",
+          "#F6F6F4"
+        ]
+      },
+      "primary-ink-hover": {
+        "role": "neutral",
+        "displayName": "Gần-đen ấm (hover)",
+        "canonical": "#3D3D3A"
+      },
       "ink-strong": {
-        "value": "#111111",
-        "role": "Tiêu đề, số liệu, nút chính"
+        "role": "neutral",
+        "displayName": "Mực đậm (text-000)",
+        "canonical": "#141413"
       },
       "ink": {
-        "value": "#2F3437",
-        "role": "Nội dung chính"
+        "role": "neutral",
+        "displayName": "Mực nội dung (text-200)",
+        "canonical": "#3D3D3A"
       },
       "ink-muted": {
-        "value": "#787774",
-        "role": "Mô tả phụ, nhãn"
+        "role": "neutral",
+        "displayName": "Mực nhãn",
+        "canonical": "#5E5D59"
       },
       "ink-faint": {
-        "value": "#9B9A97",
-        "role": "Placeholder"
+        "role": "neutral",
+        "displayName": "Mực mờ",
+        "canonical": "#6F6E69"
       },
-      "ink-soft": {
-        "value": "#5F5E5B",
-        "role": "Chữ trên nền pastel xám"
+      "frame": {
+        "role": "neutral",
+        "displayName": "Khung gần trắng",
+        "canonical": "#F6F6F4",
+        "tonalRamp": [
+          "#F0F0EF",
+          "#F6F6F4",
+          "#F8F8F7",
+          "#FCFCFB",
+          "#FFFFFF"
+        ]
       },
-      "ink-hover": {
-        "value": "#333333",
-        "role": "Hover của nút chính"
+      "frame-hover": {
+        "role": "neutral",
+        "displayName": "Khung — hover (mực 5%)",
+        "canonical": "rgba(31, 30, 29, 0.05)"
+      },
+      "frame-active": {
+        "role": "neutral",
+        "displayName": "Khung — đang chọn (mực 8%)",
+        "canonical": "rgba(31, 30, 29, 0.08)"
       },
       "canvas": {
-        "value": "#F7F6F3",
-        "role": "Nền trang và sidebar"
+        "role": "neutral",
+        "displayName": "Tấm làm việc (bg-100)",
+        "canonical": "#FCFCFB"
       },
       "surface": {
-        "value": "#FFFFFF",
-        "role": "Thẻ, bảng, modal"
+        "role": "neutral",
+        "displayName": "Bề mặt trắng (bg-000)",
+        "canonical": "#FFFFFF"
       },
       "surface-alt": {
-        "value": "#F9F9F8",
-        "role": "Nền phụ nhẹ"
+        "role": "neutral",
+        "displayName": "Bề mặt phụ",
+        "canonical": "#F8F8F7"
       },
       "surface-sunken": {
-        "value": "#F1F0EE",
-        "role": "Máng chìm, hover, mục đang chọn"
-      },
-      "surface-pressed": {
-        "value": "#EAE9E6",
-        "role": "Hover của mục đang chọn"
+        "role": "neutral",
+        "displayName": "Máng chìm (bg-300)",
+        "canonical": "#F0F0EF"
       },
       "line": {
-        "value": "#EAEAEA",
-        "role": "Viền mặc định cho mọi thành phần"
+        "role": "neutral",
+        "displayName": "Viền mực 10%",
+        "canonical": "rgba(31, 30, 29, 0.10)"
       },
-      "line-hover": {
-        "value": "#DCDCDC",
-        "role": "Viền khi rê chuột"
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Viền mực 20% (hover)",
+        "canonical": "rgba(31, 30, 29, 0.20)"
+      },
+      "line-input": {
+        "role": "neutral",
+        "displayName": "Viền ô nhập mực 15%",
+        "canonical": "rgba(31, 30, 29, 0.15)"
+      },
+      "line-focus": {
+        "role": "neutral",
+        "displayName": "Viền focus = màu nhấn",
+        "canonical": "#2A78D6"
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Đường tóc mực 6%",
+        "canonical": "rgba(31, 30, 29, 0.06)"
+      },
+      "scrim": {
+        "role": "neutral",
+        "displayName": "Lớp che nâu ấm",
+        "canonical": "rgba(20, 20, 19, 0.20)"
       },
       "pale-red-bg": {
-        "value": "#FDEBEC",
-        "role": "Nền trạng thái lỗi/khóa"
+        "role": "semantic",
+        "displayName": "Lỗi — nền",
+        "canonical": "#FDE9EB"
       },
       "pale-red-fg": {
-        "value": "#9F2F2D",
-        "role": "Chữ trạng thái lỗi/khóa"
+        "role": "semantic",
+        "displayName": "Lỗi — chữ",
+        "canonical": "#B42331"
       },
       "pale-blue-bg": {
-        "value": "#E1F3FE",
-        "role": "Nền nhãn thông tin"
+        "role": "semantic",
+        "displayName": "Thông tin — nền",
+        "canonical": "#EAF2FC"
       },
       "pale-blue-fg": {
-        "value": "#1F6C9F",
-        "role": "Chữ nhãn thông tin"
+        "role": "semantic",
+        "displayName": "Thông tin — chữ",
+        "canonical": "#1F63B8"
       },
       "pale-green-bg": {
-        "value": "#EDF3EC",
-        "role": "Nền trạng thái hoạt động"
+        "role": "semantic",
+        "displayName": "Thành công — nền",
+        "canonical": "#E6F4E6"
       },
       "pale-green-fg": {
-        "value": "#346538",
-        "role": "Chữ trạng thái hoạt động"
+        "role": "semantic",
+        "displayName": "Thành công — chữ",
+        "canonical": "#1E6E2E"
       },
       "pale-yellow-bg": {
-        "value": "#FBF3DB",
-        "role": "Nền cảnh báo"
+        "role": "semantic",
+        "displayName": "Cảnh báo — nền",
+        "canonical": "#FCF1D6"
       },
       "pale-yellow-fg": {
-        "value": "#956400",
-        "role": "Chữ cảnh báo"
+        "role": "semantic",
+        "displayName": "Cảnh báo — chữ",
+        "canonical": "#8A5A00"
       },
-      "overlay-hairline": {
-        "value": "rgba(0,0,0,0.06)",
-        "role": "Đường phân cách bên trong thẻ, viền chìm"
+      "pale-gray-bg": {
+        "role": "semantic",
+        "displayName": "Trung tính — nền",
+        "canonical": "#F0F0EF"
       },
-      "overlay-subtle": {
-        "value": "rgba(0,0,0,0.10)",
-        "role": "Đường ngăn nhóm, viền phụ"
-      },
-      "overlay-muted": {
-        "value": "rgba(0,0,0,0.14)",
-        "role": "Dải phân cách dọc, vệt bóng cuộn"
-      },
-      "overlay-strong": {
-        "value": "rgba(0,0,0,0.24)",
-        "role": "Con trượt thanh cuộn"
-      },
-      "overlay-scrim": {
-        "value": "rgba(0,0,0,0.32)",
-        "role": "Lớp che sau modal và bảng lệnh"
+      "pale-gray-fg": {
+        "role": "semantic",
+        "displayName": "Trung tính — chữ",
+        "canonical": "#5E5D59"
       }
     },
     "typographyMeta": {
       "display": {
-        "fontFamily": "-apple-system, SF Pro Display, Segoe UI Variable Display, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
-        "fontSize": "clamp(38px, 3.6vw, 58px)",
-        "fontWeight": 600,
-        "lineHeight": 1.08,
-        "letterSpacing": "-0.036em"
+        "displayName": "Display",
+        "purpose": "Bìa trang đăng nhập."
       },
       "headline": {
-        "fontFamily": "-apple-system, SF Pro Display, Segoe UI Variable Display, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
-        "fontSize": "26px",
-        "fontWeight": 600,
-        "lineHeight": 1.3,
-        "letterSpacing": "-0.026em"
+        "displayName": "Tiêu đề trang",
+        "purpose": "Điểm neo thị giác của mỗi trang và khu làm việc."
+      },
+      "metric": {
+        "displayName": "Số liệu",
+        "purpose": "Giá trị ô chỉ số, 500, tabular-nums."
       },
       "title": {
-        "fontFamily": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
-        "fontSize": "18px",
-        "fontWeight": 600,
-        "lineHeight": 1.35,
-        "letterSpacing": "-0.012em"
+        "displayName": "Tiêu đề thẻ / hộp thoại",
+        "purpose": "Tiêu đề hộp thoại, thẻ."
       },
       "body": {
-        "fontFamily": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
-        "fontSize": "14.5px",
-        "fontWeight": 400,
-        "lineHeight": 1.6,
-        "letterSpacing": "0em"
+        "displayName": "Nội dung",
+        "purpose": "Gốc thang giãn chữ."
       },
       "label": {
-        "fontFamily": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
-        "fontSize": "12.5px",
-        "fontWeight": 700,
-        "lineHeight": 1.3,
-        "letterSpacing": "0.06em"
+        "displayName": "Nhãn sentence case",
+        "purpose": "Nhãn chỉ số, tiêu đề cột bảng, nhãn nhóm — 13px/400. Không mono, không IN HOA."
       },
       "mono": {
-        "fontFamily": "SF Mono, SFMono-Regular, Segoe UI Mono, JetBrains Mono, Consolas, Liberation Mono, Menlo, monospace",
-        "fontSize": "13.5px",
-        "fontWeight": 400,
-        "lineHeight": 1.5,
-        "letterSpacing": "0.03em"
+        "displayName": "Mono",
+        "purpose": "Chỉ cho mã, số hiệu, phím tắt kbd."
       },
-      "bodySmall": {
-        "fontFamily": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
-        "fontSize": "13.5px",
-        "fontWeight": 400,
-        "lineHeight": 1.5,
-        "letterSpacing": "0.004em"
+      "control": {
+        "displayName": "Điều khiển",
+        "purpose": "Nút, nhãn biểu mẫu, mục đang chọn, badge — 14.5px/500."
       },
-      "bodyLarge": {
-        "fontFamily": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
-        "fontSize": "15px",
-        "fontWeight": 400,
-        "lineHeight": 1.6,
-        "letterSpacing": "-0.004em"
-      },
-      "lead": {
-        "fontFamily": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
-        "fontSize": "16px",
-        "fontWeight": 400,
-        "lineHeight": 1.6,
-        "letterSpacing": "-0.008em"
-      },
-      "titleLarge": {
-        "fontFamily": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
-        "fontSize": "20px",
-        "fontWeight": 600,
-        "lineHeight": 1.3,
-        "letterSpacing": "-0.016em"
-      },
-      "section": {
-        "fontFamily": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
-        "fontSize": "24px",
-        "fontWeight": 600,
-        "lineHeight": 1.25,
-        "letterSpacing": "-0.02em"
-      },
-      "heading": {
-        "fontFamily": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
-        "fontSize": "30px",
-        "fontWeight": 600,
-        "lineHeight": 1.15,
-        "letterSpacing": "-0.032em"
-      },
-      "displaySmall": {
-        "fontFamily": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
-        "fontSize": "32px",
-        "fontWeight": 600,
-        "lineHeight": 1.12,
-        "letterSpacing": "-0.032em"
-      },
-      "displayLarge": {
-        "fontFamily": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
-        "fontSize": "40px",
-        "fontWeight": 600,
-        "lineHeight": 1.05,
-        "letterSpacing": "-0.032em"
+      "weights": {
+        "displayName": "Độ đậm",
+        "purpose": "Chỉ 400 / 500 / 600. Không 700/800/bold."
       }
     },
-    "materials": [
-      {
-        "name": "Kính (lớp chức năng nổi)",
-        "recipe": "CHI tren `.app-topbar` dinh: rgba(247,246,243,.72) + backdrop-filter blur(20px) saturate(180%). Noi dung troi ben duoi. KHONG BAO GIO chong kinh len kinh, va khong bao gio dat kinh len be mat chua noi dung."
-      },
-      {
-        "name": "Tấm nội dung",
-        "recipe": "background #FFFFFF + border 1px #EAEAEA + radius 12px, DUC HOAN TOAN, khong bong do"
-      },
-      {
-        "name": "Máng chìm",
-        "recipe": "background #F1F0EE, dung cho hover / muc dieu huong dang chon / segmented control"
-      },
-      {
-        "name": "Nút đặc",
-        "recipe": "background #111111, chu trang, radius 8px, KHONG bong do"
-      },
-      {
-        "name": "Pill trạng thái",
-        "recipe": "cap pastel bg+fg, radius 999px, kem cham currentColor"
-      }
-    ],
     "shadows": [
       {
-        "name": "xs",
-        "value": "0 1px 2px rgba(0,0,0,0.03)"
+        "name": "button",
+        "value": "0 1px 2px rgba(31, 30, 29, 0.04)",
+        "purpose": "Nút phụ, ô làm mới."
       },
       {
-        "name": "sm",
-        "value": "0 1px 3px rgba(0,0,0,0.04)"
+        "name": "card-ring",
+        "value": "0 0 0 1px var(--line), 0 1px 2px rgba(31, 30, 29, 0.03)",
+        "purpose": "Thẻ bảng và ô chỉ số."
       },
       {
-        "name": "md",
-        "value": "0 2px 8px rgba(0,0,0,0.04)"
+        "name": "panel",
+        "value": "0 0 0 0.5px rgba(31, 30, 29, 0.12), 0 1px 2px rgba(31, 30, 29, 0.03), 0 8px 28px -14px rgba(31, 30, 29, 0.10)",
+        "purpose": "Tấm làm việc .app-main nổi trên khung."
       },
       {
-        "name": "lg",
-        "value": "0 4px 16px rgba(0,0,0,0.05)"
+        "name": "popover",
+        "value": "0 0 0 0.5px rgba(31, 30, 29, 0.12), 0 4px 12px -2px rgba(31, 30, 29, 0.06), 0 18px 44px -14px rgba(31, 30, 29, 0.18)",
+        "purpose": "Menu, bảng thông báo, danh sách chọn."
+      },
+      {
+        "name": "modal",
+        "value": "0 0 0 0.5px rgba(31, 30, 29, 0.10), 0 12px 32px -10px rgba(31, 30, 29, 0.16), 0 36px 90px -28px rgba(31, 30, 29, 0.26)",
+        "purpose": "Hộp thoại."
+      },
+      {
+        "name": "cmdk",
+        "value": "0 0 0 0.5px rgba(31, 30, 29, 0.10), 0 24px 64px -20px rgba(31, 30, 29, 0.28)",
+        "purpose": "Bảng lệnh."
+      },
+      {
+        "name": "toast",
+        "value": "0 0 0 0.5px rgba(31, 30, 29, 0.10), 0 12px 32px -12px rgba(31, 30, 29, 0.22)",
+        "purpose": "Toast."
+      },
+      {
+        "name": "actionbar",
+        "value": "0 0 0 0.5px rgba(31, 30, 29, 0.06), 0 8px 24px -12px rgba(31, 30, 29, 0.18)",
+        "purpose": "Thanh hành động chưa lưu."
+      },
+      {
+        "name": "raised-tile",
+        "value": "0 0 0 0.5px rgba(31, 30, 29, 0.10), 0 1px 3px rgba(31, 30, 29, 0.05)",
+        "purpose": "Ô điểm nhấn đang chọn ở trang đăng nhập."
       },
       {
         "name": "focus",
-        "value": "0 0 0 3px rgba(17,17,17,0.10)"
+        "value": "0 0 0 3px rgba(42, 120, 214, 0.24)",
+        "purpose": "Vòng focus cam."
+      }
+    ],
+    "materials": [
+      {
+        "name": "Thanh tiêu đề dính",
+        "value": "background: rgba(250,249,245,0.82); backdrop-filter: blur(20px) saturate(180%)",
+        "purpose": "Lớp chức năng nổi; mép cuộn mờ dần thay đường kẻ."
+      },
+      {
+        "name": "Lớp che hộp thoại",
+        "value": "background: rgba(40,34,26,0.18); backdrop-filter: blur(8px) saturate(120%)",
+        "purpose": "Tối nhẹ + nhoè lề ngoài. prefers-reduced-transparency: bỏ blur, nền rgba(40,34,26,0.36)."
+      },
+      {
+        "name": "Vùng nền mềm",
+        "value": "background: rgba(31,30,29,0.025–0.04); border: none; border-radius: 12–16px",
+        "purpose": "Ô trống, ghi chú, khối điểm nhấn — thay cho khung viền."
       }
     ],
     "motion": [
       {
         "name": "ease-out",
         "value": "cubic-bezier(0.23, 1, 0.32, 1)",
-        "role": "Vào / ra"
+        "purpose": "Vào / ra, hộp thoại, công tắc."
       },
       {
         "name": "ease-in-out",
         "value": "cubic-bezier(0.77, 0, 0.175, 1)",
-        "role": "Di chuyển trên màn hình"
+        "purpose": "Viên tab trượt."
       },
       {
         "name": "ease-drawer",
         "value": "cubic-bezier(0.32, 0.72, 0, 1)",
-        "role": "Ngăn kéo kiểu iOS"
+        "purpose": "Tấm trượt từ đáy."
       },
       {
         "name": "dur-fast",
-        "value": "120ms"
+        "value": "120ms",
+        "purpose": "Đổi màu nền/viền."
       },
       {
         "name": "dur-base",
-        "value": "200ms"
+        "value": "200ms",
+        "purpose": "Lớp che mờ dần, công tắc."
       },
       {
         "name": "dur-press",
         "value": "160ms",
-        "role": "Phản hồi khi bấm"
+        "purpose": "Nhấn scale(0.97)."
       },
       {
-        "name": "press",
-        "value": "scale(0.97)",
-        "role": "Phản hồi khi bấm"
+        "name": "dur-modal",
+        "value": "240ms",
+        "purpose": "Hộp thoại nhô lên từ translateY(8px) scale(0.97)."
       },
       {
-        "name": "ceiling",
-        "value": "300ms",
-        "role": "Trần cho mọi hoạt hình giao diện"
+        "name": "dur-sheet",
+        "value": "380ms",
+        "purpose": "Tấm trượt ≤640px — ngoại lệ duy nhất của trần 300ms."
+      },
+      {
+        "name": "command-palette",
+        "value": "none",
+        "purpose": "Bảng lệnh mở/đóng tức thì (cổng tần suất)."
+      },
+      {
+        "name": "tab-pill-clip",
+        "value": "clip-path 260ms var(--ease-in-out)",
+        "purpose": "Viên tab đang chọn: lớp bản sao aria-hidden cắt bằng inset(0 R 0 L round 9px); nhớ vị trí qua lần dựng lại route; không chuyển động khi co giãn."
+      },
+      {
+        "name": "check-in",
+        "value": "opacity + scale(0.7→1) 120ms var(--ease-out)",
+        "purpose": "Dấu tích / chấm nút chọn khi chọn."
       }
     ],
     "breakpoints": [
@@ -299,167 +372,208 @@
         "value": "900px"
       },
       {
-        "name": "compact-header",
+        "name": "sheet",
         "value": "640px"
       },
       {
         "name": "login-stack",
         "value": "820px"
       }
-    ],
-    "typeScale": {
-      "steps": [
-        "11px",
-        "12.5px",
-        "13.5px",
-        "14.5px",
-        "15px",
-        "16px",
-        "18px",
-        "20px",
-        "24px",
-        "30px",
-        "32px",
-        "40px"
-      ],
-      "fluid": {
-        "display": "clamp(38px, 3.6vw, 58px)",
-        "pageTitle": "clamp(30px, 3.4vw, 42px)",
-        "metric": "clamp(26px, 2.4vw, 34px)"
-      },
-      "note": "Toan bo bac duoc phep. Khong tu them bac moi. Truoc day co 23 bac roi rac, nhieu cap chi lech 0.5-1px."
-    },
-    "fontStacks": {
-      "sans": "-apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif",
-      "mono": "SF Mono, SFMono-Regular, Segoe UI Mono, JetBrains Mono, Consolas, Liberation Mono, Menlo, monospace",
-      "note": "Khai bao mot lan tai :root (--font-sans / --font-mono). Khong viet chuoi font truc tiep vao quy tac."
-    },
-    "trackingScale": {
-      "note": "Gian chu la HAM CUA CO CHU (apple-design 15). Chu noi dung 14.5px dung o 0 va la goc thang. Khong viet so truc tiep vao letter-spacing.",
-      "tokens": {
-        "--track-display": "-0.036em",
-        "--track-4xl": "-0.032em",
-        "--track-3xl": "-0.026em",
-        "--track-2xl": "-0.02em",
-        "--track-xl": "-0.016em",
-        "--track-lg": "-0.012em",
-        "--track-md": "-0.008em",
-        "--track-base": "-0.004em",
-        "--track-body": "0em",
-        "--track-sm": "0.004em",
-        "--track-xs": "0.008em",
-        "--track-2xs": "0.012em",
-        "--track-caps": "0.08em",
-        "--track-caps-lg": "0.06em",
-        "--track-mono": "0.03em"
-      },
-      "exceptions": [
-        "'.masked-cell' 0.14em",
-        "'.totp-manual-entry code' 0.12em"
-      ]
-    },
-    "radiusScale": {
-      "note": "Ba bac, cong 999px CHI cho pill trang thai va 50% cho hinh tron. Khong viet so truc tiep vao border-radius.",
-      "tokens": {
-        "--radius-sm": "4px",
-        "--radius-md": "8px",
-        "--radius-lg": "12px"
-      },
-      "rule": "Ban kinh trong = ban kinh ngoai - dem."
-    },
-    "accessibility": {
-      "prefers-reduced-motion": "It hon va diu hon, KHONG phai bang khong: giu mo dan va doi mau, bo tinh tien / phong to / do tre theo tang, cat han hieu ung lap vo han.",
-      "prefers-reduced-transparency": "Thanh tieu de thanh nen duc + vien 1px; bo backdrop-filter va bo mep cuon.",
-      "prefers-contrast": "Dam hoa ink-muted / ink-faint / line; vong focus day 3px; vien muc cho nut phu va o nhap.",
-      "warning": "Dung them lai quy tac `*{animation-duration:.01ms!important}` — vi !important tren `*`, no de len chinh khoi giam-chuyen-dong co can nhac."
-    },
-    "layout": {
-      "frame": "height:100dvh; overflow:hidden — khung co dinh, khong phai trang tai lieu dai.",
-      "scroller": "Vung cuon DUY NHAT la `.app-main`. Thanh ben va thanh tieu de dung yen.",
-      "evidence": "Do tren bang 25 dong: truoc khi sua, cuon xuong day thi topbar o -1516px va 0/10 muc dieu huong con nhin thay."
-    }
+    ]
   },
   "components": [
     {
-      "name": "Primary Button",
+      "name": "Nút chính",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Hành động chính — viên nang ĐẶC màu chàm. Chỉ một cái trên mỗi màn hình.",
-      "html": "<button class=\"ds-btn-primary\">Thêm khách hàng</button>",
-      "css": ".ds-btn-primary { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: none; border-radius: 999px; padding: 11px 22px; font-family: 'DM Sans', 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px; font-weight: 700; white-space: nowrap; cursor: pointer; color: #ffffff; background: linear-gradient(180deg, rgba(255,255,255,.30) 0%, rgba(255,255,255,.06) 46%, transparent 60%), linear-gradient(180deg, #7075f5 0%, #5b5fe3 52%, #4f46e5 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.46), inset 0 -2px 5px rgba(49,46,129,.30), 0 1px 2px rgba(79,70,229,.22), 0 14px 28px -10px rgba(79,70,229,.46), 0 5px 12px -4px rgba(79,70,229,.30); transition: transform 300ms cubic-bezier(.32,1.12,.52,1), box-shadow 180ms cubic-bezier(.16,1,.3,1), background 120ms cubic-bezier(.16,1,.3,1); } .ds-btn-primary::after { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none; background: linear-gradient(145deg, rgba(255,255,255,.70) 0%, rgba(255,255,255,.14) 42%, rgba(255,255,255,.05) 60%, rgba(255,255,255,.38) 100%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; } .ds-btn-primary:hover { transform: translateY(-2px); background: linear-gradient(180deg, rgba(255,255,255,.34) 0%, rgba(255,255,255,.08) 46%, transparent 60%), linear-gradient(180deg, #7a7ff7 0%, #6367e8 52%, #5850ea 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.50), 0 1px 2px rgba(79,70,229,.22), 0 20px 38px -10px rgba(79,70,229,.52), 0 7px 16px -4px rgba(79,70,229,.34); } .ds-btn-primary:active { transform: translateY(0) scale(.96); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(99,102,241,.40), 0 2px 6px rgba(16,24,40,.07), 0 18px 38px -14px rgba(16,24,40,.30); }"
+      "description": "Gần-đen ấm, 500, không bóng, không bao giờ màu nhấn.",
+      "html": "<button class=\"ds-btn-primary\">Lưu thay đổi</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 8px; padding: 8px 15px; border: 1px solid #141413; border-radius: 10px; background-color: #1F1E1D; background-image: linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0) 50%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 1px 2px rgba(20,20,19,0.14), 0 2px 6px -2px rgba(20,20,19,0.12); color: #FFFFFF; font-family: var(--font-sans, system-ui, sans-serif); font-size: 14.5px; font-weight: 500; cursor: pointer; transition: background 120ms cubic-bezier(0.23,1,0.32,1), transform 160ms cubic-bezier(0.23,1,0.32,1); } .ds-btn-primary:hover { background-color: #3A3936; } .ds-btn-primary:active { transform: scale(0.97); background-color: #141413; box-shadow: inset 0 1px 2px rgba(20,20,19,0.18); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(42,120,214,0.24); }"
     },
     {
-      "name": "Secondary Button (glass)",
+      "name": "Nút phụ",
       "kind": "button",
       "refersTo": "button-secondary",
-      "description": "Hình thái mặc định của mọi nút không phải hành động chính — kính trong thật sự, mép vát bắt sáng.",
+      "description": "Nền trắng, viền mực 15%, bóng tiếp xúc 4%.",
       "html": "<button class=\"ds-btn-secondary\">Huỷ</button>",
-      "css": ".ds-btn-secondary { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: none; border-radius: 999px; padding: 11px 22px; font-family: 'DM Sans', 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px; font-weight: 700; white-space: nowrap; cursor: pointer; color: #17203a; background: linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.10) 38%, transparent 62%), rgba(255,255,255,.72); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); box-shadow: 0 1px 2px rgba(16,24,40,.06), 0 6px 14px -6px rgba(16,24,40,.22), 0 2px 5px -2px rgba(16,24,40,.10); transition: transform 300ms cubic-bezier(.32,1.12,.52,1), box-shadow 180ms cubic-bezier(.16,1,.3,1), background 120ms cubic-bezier(.16,1,.3,1); } .ds-btn-secondary::after { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none; background: linear-gradient(145deg, rgba(255,255,255,.98) 0%, rgba(255,255,255,.42) 20%, rgba(255,255,255,.05) 46%, rgba(255,255,255,.34) 74%, rgba(255,255,255,.92) 100%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; } .ds-btn-secondary:hover { transform: translateY(-2px); background: linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.10) 38%, transparent 62%), rgba(255,255,255,.86); box-shadow: 0 2px 6px rgba(16,24,40,.07), 0 18px 38px -14px rgba(16,24,40,.30), 0 6px 14px -6px rgba(16,24,40,.16); } .ds-btn-secondary:active { transform: translateY(0) scale(.96); } .ds-btn-secondary:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(99,102,241,.40), 0 2px 6px rgba(16,24,40,.07), 0 18px 38px -14px rgba(16,24,40,.30); }"
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; gap: 8px; padding: 8px 15px; border: 1px solid rgba(31,30,29,0.15); border-radius: 10px; background: #FFFFFF; color: #141413; font-family: var(--font-sans, system-ui, sans-serif); font-size: 14.5px; font-weight: 500; box-shadow: 0 1px 2px rgba(31,30,29,0.04); cursor: pointer; transition: background 120ms cubic-bezier(0.23,1,0.32,1), border-color 120ms cubic-bezier(0.23,1,0.32,1), transform 160ms cubic-bezier(0.23,1,0.32,1); } .ds-btn-secondary:hover { background: #F8F8F7; border-color: rgba(31,30,29,0.20); } .ds-btn-secondary:active { transform: scale(0.97); } .ds-btn-secondary:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(42,120,214,0.24); }"
     },
     {
-      "name": "Glass Search Input",
+      "name": "Ô nhập",
       "kind": "input",
-      "refersTo": "input-glass",
-      "description": "Ô tìm kiếm/lọc trên thanh công cụ — viên nang kính h=40px. Placeholder #4b5566 để giữ 4.5:1 trên nền trong suốt.",
-      "html": "<div class=\"ds-search\"><span class=\"ds-search__icon\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/></svg></span><input class=\"ds-search__input\" type=\"text\" placeholder=\"Tìm theo tên, mã, email...\" /></div>",
-      "css": ".ds-search { position: relative; max-width: 440px; } .ds-search__icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: #7c8a9c; display: flex; } .ds-search__icon svg { width: 100%; height: 100%; } .ds-search__input { width: 100%; height: 40px; padding: 0 36px 0 38px; border: none; border-radius: 999px; font-family: 'DM Sans', 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px; color: #17203a; outline: none; background: linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.10) 38%, transparent 62%), rgba(255,255,255,.72); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); box-shadow: inset 0 1px 2px rgba(16,24,40,.07), inset 0 0 0 1px rgba(255,255,255,.75), 0 1px 2px rgba(16,24,40,.06), 0 6px 14px -6px rgba(16,24,40,.22); transition: box-shadow .2s cubic-bezier(.16,1,.3,1), background .2s cubic-bezier(.16,1,.3,1); } .ds-search__input::placeholder { color: #4b5566; } .ds-search__input:focus { background: linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.10) 38%, transparent 62%), rgba(255,255,255,.92); box-shadow: inset 0 1px 2px rgba(16,24,40,.05), inset 0 0 0 1px rgba(255,255,255,.9), 0 0 0 3px rgba(99,102,241,.32), 0 1px 2px rgba(16,24,40,.06), 0 6px 14px -6px rgba(16,24,40,.22); }"
+      "refersTo": "input",
+      "description": "Viền mực 13%; focus = viền xanh + vòng xanh 3px.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Tìm theo tên, mã hợp đồng…\" />",
+      "css": ".ds-input { width: 280px; height: 38px; padding: 0 12px; border: 1px solid rgba(31,30,29,0.15); border-radius: 10px; background: #FFFFFF; color: #141413; font-family: var(--font-sans, system-ui, sans-serif); font-size: 14.5px; outline: none; transition: border-color 120ms cubic-bezier(0.23,1,0.32,1), box-shadow 120ms cubic-bezier(0.23,1,0.32,1); } .ds-input::placeholder { color: #6F6E69; } .ds-input:hover { border-color: rgba(31,30,29,0.20); } .ds-input:focus { border-color: rgba(31,30,29,0.35); box-shadow: 0 0 0 3px rgba(42,120,214,0.24); }"
     },
     {
-      "name": "Form Input",
+      "name": "Ô tích & nút chọn tròn",
       "kind": "input",
-      "refersTo": "input-form",
-      "description": "Ô nhập trong form/modal — viên nang h=44px trên nền trắng. CỐ Ý không dùng backdrop-filter: chữ đang gõ cần rõ tuyệt đối.",
-      "html": "<label class=\"ds-form-label\">Tên khách hàng <span class=\"ds-req\">*</span></label><input class=\"ds-form-input\" type=\"text\" placeholder=\"Công ty TNHH...\" />",
-      "css": ".ds-form-label { display: block; font-family: 'DM Sans', 'Segoe UI', Roboto, Arial, sans-serif; font-size: 14px; font-weight: 700; color: #334155; margin-bottom: 6px; } .ds-req { color: #dc2626; } .ds-form-input { width: 100%; height: 44px; padding: 0 16px; border: 1px solid rgba(15,23,42,.10); border-radius: 999px; font-family: 'DM Sans', 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px; color: #0f172a; outline: none; background: linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(255,255,255,.4) 50%, transparent 55%), #ffffff; box-shadow: inset 0 1px 2px rgba(15,23,42,.04), inset 0 -1px 0 rgba(255,255,255,.8); transition: border-color 180ms cubic-bezier(.16,1,.3,1), box-shadow 180ms cubic-bezier(.16,1,.3,1); } .ds-form-input::placeholder { color: #94a3b8; } .ds-form-input:focus { border-color: #6366f1; box-shadow: inset 0 1px 2px rgba(15,23,42,.04), 0 0 0 3px rgba(99,102,241,0.14); }"
+      "refersTo": "checkbox",
+      "description": "17px, bo 5px / tròn, cam khi chọn; dấu tích mờ dần và nở từ 0.7.",
+      "html": "<label class=\"ds-check\"><input type=\"checkbox\" checked> Gửi thông báo</label> <label class=\"ds-check\"><input type=\"checkbox\"> Lưu nháp</label> <label class=\"ds-check\"><input type=\"radio\" name=\"r\" checked> Theo tháng</label>",
+      "css": ".ds-check { display: inline-flex; align-items: center; gap: 8px; margin-right: 14px; font-family: var(--font-sans, system-ui, sans-serif); font-size: 14.5px; color: #3D3D3A; } .ds-check input { appearance: none; -webkit-appearance: none; margin: 0; width: 17px; height: 17px; display: inline-grid; place-content: center; border: 1px solid rgba(31,30,29,0.28); background: #FFFFFF; cursor: pointer; transition: background 120ms cubic-bezier(0.23,1,0.32,1), border-color 120ms cubic-bezier(0.23,1,0.32,1); } .ds-check input[type=checkbox] { border-radius: 5px; } .ds-check input[type=radio] { border-radius: 50%; } .ds-check input::before { content: ''; background: #FFFFFF; opacity: 0; transform: scale(0.7); transition: opacity 120ms cubic-bezier(0.23,1,0.32,1), transform 120ms cubic-bezier(0.23,1,0.32,1); } .ds-check input[type=checkbox]::before { width: 11px; height: 11px; clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%); } .ds-check input[type=radio]::before { width: 7px; height: 7px; border-radius: 50%; } .ds-check input:hover { border-color: rgba(31,30,29,0.45); } .ds-check input:checked { background: #2A78D6; border-color: #2A78D6; } .ds-check input:checked::before { opacity: 1; transform: none; } .ds-check input:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(42,120,214,0.24); }"
     },
     {
-      "name": "Sidebar Nav Item",
+      "name": "Thanh bên trên khung",
       "kind": "nav",
       "refersTo": "nav-item",
-      "description": "Hàng điều hướng = viên nang. Mục đang chọn là viên nang ĐẶC chàm nổi trên kính — nền xám nhạt sẽ tàng hình trên kính trong.",
-      "html": "<nav class=\"ds-nav\"><button class=\"ds-nav__item\"><span class=\"ds-nav__icon\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 21h18M6 21V7l6-4 6 4v14M10 9h.01M14 9h.01M10 13h.01M14 13h.01\"/></svg></span><span>Khách hàng</span></button><button class=\"ds-nav__item ds-nav__item--active\"><span class=\"ds-nav__icon\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\"/><circle cx=\"12\" cy=\"7\" r=\"4\"/></svg></span><span>Tài khoản</span></button></nav>",
-      "css": ".ds-nav { display: flex; flex-direction: column; gap: 2px; width: 240px; padding: 10px; background: linear-gradient(180deg, rgba(255,255,255,.46) 0%, rgba(255,255,255,.28) 100%); border-radius: 20px; } .ds-nav__item { display: flex; align-items: center; gap: 11px; width: 100%; background: transparent; border: none; border-radius: 999px; padding: 10px 14px; font-family: 'DM Sans', 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px; font-weight: 600; color: #435061; cursor: pointer; text-align: left; white-space: nowrap; transition: background 120ms cubic-bezier(.16,1,.3,1), color 120ms cubic-bezier(.16,1,.3,1), transform 300ms cubic-bezier(.32,1.12,.52,1), box-shadow 180ms cubic-bezier(.16,1,.3,1); } .ds-nav__icon { display: inline-flex; flex-shrink: 0; opacity: .72; } .ds-nav__icon svg { width: 17px; height: 17px; } .ds-nav__item:hover { background: rgba(255,255,255,.62); color: #0f172a; } .ds-nav__item:active { transform: scale(.97); } .ds-nav__item--active { background: linear-gradient(180deg, #7075f5 0%, #5b5fe3 52%, #4f46e5 100%); color: #ffffff; font-weight: 700; box-shadow: inset 0 1px 0 rgba(255,255,255,.42), 0 1px 2px rgba(79,70,229,.20), 0 8px 18px -6px rgba(79,70,229,.44), 0 3px 7px -2px rgba(79,70,229,.28); } .ds-nav__item--active .ds-nav__icon { opacity: 1; color: #ffffff; }"
+      "description": "Mục trên nền khung ngà; đang chọn = mực 8% + chữ 500. Dấu thương hiệu cam với ba cột kem bo tròn.",
+      "html": "<nav class=\"ds-nav\"><div class=\"ds-nav__brand\"><span class=\"ds-nav__mark\"><i></i><i></i><i></i></span>Vận hành</div><span class=\"ds-nav__group\">Nghiệp vụ</span><button class=\"ds-nav__item ds-nav__item--active\"><svg viewBox=\"0 0 256 256\" width=\"17\" height=\"17\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"20\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"40\" y=\"40\" width=\"176\" height=\"176\" rx=\"8\"/><line x1=\"88\" y1=\"104\" x2=\"168\" y2=\"104\"/><line x1=\"88\" y1=\"152\" x2=\"168\" y2=\"152\"/></svg>Hợp đồng</button><button class=\"ds-nav__item\"><svg viewBox=\"0 0 256 256\" width=\"17\" height=\"17\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"20\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"128\" cy=\"96\" r=\"48\"/><path d=\"M40 216c16-40 48-56 88-56s72 16 88 56\"/></svg>Khách hàng</button></nav>",
+      "css": ".ds-nav { display: flex; flex-direction: column; gap: 1px; width: 244px; padding: 14px 10px 12px; background: #F6F6F4; font-family: var(--font-sans, system-ui, sans-serif); } .ds-nav__brand { display: flex; align-items: center; gap: 10px; padding: 2px 6px 12px; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; color: #141413; } .ds-nav__mark { width: 34px; height: 34px; border-radius: 10px; background: #1F1E1D; display: flex; align-items: flex-end; justify-content: center; gap: 3px; padding: 7px 6px; } .ds-nav__mark i { display: block; width: 5px; background: #FFFFFF; border-radius: 999px; } .ds-nav__mark i:nth-child(1) { height: 8px; } .ds-nav__mark i:nth-child(2) { height: 13px; } .ds-nav__mark i:nth-child(3) { height: 19px; } .ds-nav__group { font-size: 13px; font-weight: 400; color: #6F6E69; padding: 18px 10px 6px; } .ds-nav__item { display: flex; align-items: center; gap: 11px; width: 100%; padding: 8px 10px; border: none; border-radius: 10px; background: transparent; color: #3D3D3A; font: inherit; font-size: 14.5px; font-weight: 400; text-align: left; cursor: pointer; transition: background 120ms cubic-bezier(0.23,1,0.32,1), color 120ms cubic-bezier(0.23,1,0.32,1); } .ds-nav__item svg { color: #5E5D59; flex-shrink: 0; } .ds-nav__item:hover { background: rgba(31,30,29,0.05); color: #141413; } .ds-nav__item--active, .ds-nav__item--active:hover { background: rgba(31,30,29,0.08); color: #141413; font-weight: 500; } .ds-nav__item--active svg { color: #141413; } .ds-nav__item:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(42,120,214,0.24); }"
     },
     {
-      "name": "Segmented Control",
+      "name": "Tab viên (clip-path)",
+      "kind": "custom",
+      "refersTo": "tab-pill",
+      "description": "Chữ ký chuyển động: lớp bản sao kiểu 'đang chọn' bị cắt bằng clip-path inset(... round 9px); đổi tab = trượt vùng cắt 260ms ease-in-out. Rê chuột lên tab để xem.",
+      "html": "<div class=\"ds-tabs\"><button class=\"ds-tabs__tab\">Danh sách</button><button class=\"ds-tabs__tab\">Hóa đơn</button><button class=\"ds-tabs__tab\">Nghiệm thu</button><div class=\"ds-tabs__layer\" aria-hidden=\"true\"><span class=\"ds-tabs__ghost\">Danh sách</span><span class=\"ds-tabs__ghost\">Hóa đơn</span><span class=\"ds-tabs__ghost\">Nghiệm thu</span></div></div>",
+      "css": ".ds-tabs { position: relative; display: inline-flex; gap: 2px; padding: 2px 0; font-family: var(--font-sans, system-ui, sans-serif); } .ds-tabs__tab, .ds-tabs__ghost { padding: 7px 13px; border-radius: 9px; font-size: 14.5px; font-weight: 400; line-height: 1.4; color: #5E5D59; white-space: nowrap; } .ds-tabs__tab { border: none; background: transparent; font-family: inherit; cursor: pointer; transition: background 120ms cubic-bezier(0.23,1,0.32,1), color 120ms cubic-bezier(0.23,1,0.32,1); } .ds-tabs__tab:hover { background: rgba(31,30,29,0.05); color: #141413; } .ds-tabs__layer { position: absolute; top: 2px; bottom: 2px; left: 0; display: flex; gap: 2px; pointer-events: none; clip-path: inset(0 calc(100% - 94px) 0 0 round 9px); transition: clip-path 260ms cubic-bezier(0.77,0,0.175,1); } .ds-tabs__ghost { display: inline-flex; align-items: center; background: #F0F0EF; color: #141413; } .ds-tabs:has(.ds-tabs__tab:nth-child(2):hover) .ds-tabs__layer { clip-path: inset(0 calc(100% - 172px) 0 96px round 9px); } .ds-tabs:has(.ds-tabs__tab:nth-child(3):hover) .ds-tabs__layer { clip-path: inset(0 0 0 174px round 9px); }"
+    },
+    {
+      "name": "Chip đang chọn",
       "kind": "chip",
-      "refersTo": "segmented-tab-active",
-      "description": "Máng kính lõm; mục chưa chọn là chữ trần, mục đang chọn là viên nang trắng nổi lên.",
-      "html": "<div class=\"ds-segmented\"><button class=\"ds-segmented__tab ds-segmented__tab--active\">Tất cả</button><button class=\"ds-segmented__tab\">Đang hoạt động</button><button class=\"ds-segmented__tab\">Đã khoá</button></div>",
-      "css": ".ds-segmented { display: inline-flex; padding: 4px; border-radius: 999px; gap: 2px; background: linear-gradient(180deg, rgba(16,24,40,.07) 0%, rgba(16,24,40,.03) 100%); box-shadow: inset 0 1px 2px rgba(16,24,40,.10), inset 0 -1px 0 rgba(255,255,255,.60); } .ds-segmented__tab { border: none; background: transparent; padding: 7px 15px; font-family: 'DM Sans', 'Segoe UI', Roboto, Arial, sans-serif; font-size: 13.5px; font-weight: 600; color: #55617a; border-radius: 999px; cursor: pointer; transition: color 120ms cubic-bezier(.16,1,.3,1), background 120ms cubic-bezier(.16,1,.3,1), transform 300ms cubic-bezier(.32,1.12,.52,1); } .ds-segmented__tab:hover { color: #17203a; } .ds-segmented__tab:active { transform: scale(.97); } .ds-segmented__tab--active { color: #17203a; font-weight: 700; background: linear-gradient(180deg, rgba(255,255,255,.98) 0%, rgba(255,255,255,.88) 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,1), 0 1px 2px rgba(16,24,40,.10), 0 4px 10px -4px rgba(16,24,40,.24); } .ds-segmented__tab--active:focus-visible { outline: 2px solid #6366f1; outline-offset: 2px; }"
+      "refersTo": "selected-chip",
+      "description": "Ngữ pháp 'đang chọn' duy nhất: accent-soft + accent-ink + viền 1px accent.",
+      "html": "<div class=\"ds-chips\"><button class=\"ds-chip ds-chip--active\">30 ngày</button><button class=\"ds-chip\">60 ngày</button><button class=\"ds-chip\">90 ngày</button></div>",
+      "css": ".ds-chips { display: flex; gap: 6px; font-family: var(--font-sans, system-ui, sans-serif); } .ds-chip { padding: 4px 12px; border: 1px solid rgba(31,30,29,0.10); border-radius: 999px; background: #FFFFFF; color: #3D3D3A; font: inherit; font-size: 13px; cursor: pointer; transition: background 120ms cubic-bezier(0.23,1,0.32,1), border-color 120ms cubic-bezier(0.23,1,0.32,1), color 120ms cubic-bezier(0.23,1,0.32,1); } .ds-chip:hover { background: #F8F8F7; border-color: rgba(31,30,29,0.20); } .ds-chip--active, .ds-chip--active:hover { background: #EBF3FD; color: #1F63B8; border-color: #2A78D6; } .ds-chip:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(42,120,214,0.24); }"
     },
     {
-      "name": "Stat Card (opaque content layer)",
+      "name": "Ô chỉ số rời",
       "kind": "card",
-      "refersTo": "card-content",
-      "description": "Tấm ĐỤC r=20. Không bao giờ có backdrop-filter. Bán kính đồng tâm: 20 − 18 đệm = 12 cho ô icon.",
-      "html": "<div class=\"ds-stat-card\"><span class=\"ds-stat-card__icon ds-stat-card__icon--blue\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\"/><circle cx=\"12\" cy=\"7\" r=\"4\"/></svg></span><div><span class=\"ds-stat-card__label\">Tổng tài khoản</span><span class=\"ds-stat-card__value\">1.284</span></div></div>",
-      "css": ".ds-stat-card { background: #ffffff; border: none; border-radius: 20px; padding: 18px; display: flex; align-items: center; gap: 14px; font-family: 'DM Sans', 'Segoe UI', Roboto, Arial, sans-serif; box-shadow: inset 0 0 0 1px rgba(16,24,40,.06), 0 1px 2px rgba(16,24,40,.05), 0 10px 24px -14px rgba(16,24,40,.18); transition: transform 300ms cubic-bezier(.32,1.12,.52,1), box-shadow 180ms cubic-bezier(.16,1,.3,1); } .ds-stat-card:hover { transform: translateY(-2px); box-shadow: inset 0 0 0 1px rgba(16,24,40,.08), 0 2px 4px rgba(16,24,40,.06), 0 18px 36px -16px rgba(16,24,40,.26); } .ds-stat-card__icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; } .ds-stat-card__icon svg { width: 22px; height: 22px; } .ds-stat-card__icon--blue { background: #eff6ff; color: #2563eb; } .ds-stat-card__label { font-size: 14px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 2px; } .ds-stat-card__value { font-size: 22px; font-weight: 800; color: #0f172a; line-height: 1.25; font-variant-numeric: tabular-nums; }"
+      "refersTo": "stat-tile",
+      "description": "Các ô rời bo 16, gap 12, vòng viền mực 10%; nhãn 13/400, số liệu 500.",
+      "html": "<div class=\"ds-stats\"><div class=\"ds-stat\"><span class=\"ds-stat__label\">Hợp đồng đang hiệu lực</span><span class=\"ds-stat__value\">128</span></div><div class=\"ds-stat\"><span class=\"ds-stat__label\">Sắp hết hạn</span><span class=\"ds-stat__value\">7</span></div><div class=\"ds-stat\"><span class=\"ds-stat__label\">Chờ nghiệm thu</span><span class=\"ds-stat__value\">12</span></div></div>",
+      "css": ".ds-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(172px, 1fr)); gap: 12px; padding: 16px; background: #FCFCFB; font-family: var(--font-sans, system-ui, sans-serif); } .ds-stat { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px 18px; background: #FFFFFF; border-radius: 16px; box-shadow: 0 0 0 1px rgba(31,30,29,0.10), 0 1px 2px rgba(31,30,29,0.03); } .ds-stat__label { font-size: 13px; font-weight: 400; color: #5E5D59; } .ds-stat__value { font-size: clamp(24px, 2vw, 28px); font-weight: 500; line-height: 1; letter-spacing: -0.02em; color: #141413; font-variant-numeric: tabular-nums; }"
     },
     {
-      "name": "Status Pill",
-      "kind": "chip",
-      "refersTo": "status-pill",
-      "description": "Trạng thái mã hoá bằng HÌNH (chấm currentColor) + màu ngữ nghĩa, không chỉ bằng màu.",
-      "html": "<span class=\"ds-status-pill ds-status-pill--active\"><span class=\"ds-status-pill__dot\"></span>Đang hoạt động</span> <span class=\"ds-status-pill ds-status-pill--locked\"><span class=\"ds-status-pill__dot\"></span>Đã khoá</span>",
-      "css": ".ds-status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-family: 'DM Sans', 'Segoe UI', Roboto, Arial, sans-serif; font-size: 13.5px; font-weight: 700; white-space: nowrap; } .ds-status-pill__dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; } .ds-status-pill--active { background: #dcfce7; color: #15803d; } .ds-status-pill--locked { background: #fee2e2; color: #b91c1c; } .ds-status-pill--inactive { background: #f1f5f9; color: #64748b; }"
-    },
-    {
-      "name": "Glass Popover (morph-open)",
+      "name": "Bảng mềm",
       "kind": "custom",
-      "refersTo": "menu-panel",
-      "description": "Khoảnh khắc chuyển động chữ ký của hệ: kính NỞ RA từ góc nút bấm, độ đặc dâng lên trong lúc nở — không trượt vào từ ngoài.",
-      "html": "<div class=\"ds-popover-wrap\"><div class=\"ds-popover\"><button class=\"ds-popover__item\">Xem chi tiết</button><button class=\"ds-popover__item\">Phân quyền</button><button class=\"ds-popover__item ds-popover__item--danger\">Khoá tài khoản</button></div></div>",
-      "css": ".ds-popover-wrap { position: relative; height: 170px; } .ds-popover { position: absolute; right: 0; top: 0; min-width: 216px; padding: 6px; border: none; background: linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.10) 38%, transparent 62%), rgba(255,255,255,.88); backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%); border-radius: 14px; box-shadow: 0 2px 6px rgba(16,24,40,.07), 0 18px 38px -14px rgba(16,24,40,.30), 0 6px 14px -6px rgba(16,24,40,.16); display: flex; flex-direction: column; gap: 1px; transform-origin: top right; animation: ds-popover-in 300ms cubic-bezier(.32,1.12,.52,1) both; } @keyframes ds-popover-in { from { opacity: 0; transform: translateY(-8px) scale(.88); backdrop-filter: blur(0) saturate(100%); -webkit-backdrop-filter: blur(0) saturate(100%); } 60% { opacity: 1; } to { opacity: 1; transform: none; backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%); } } .ds-popover__item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 8px 10px; border: none; background: transparent; border-radius: 8px; font-family: 'DM Sans', 'Segoe UI', Roboto, Arial, sans-serif; font-size: 14.5px; font-weight: 500; color: #334155; cursor: pointer; transition: background 120ms cubic-bezier(.16,1,.3,1); } .ds-popover__item:hover { background: #f1f5f9; } .ds-popover__item:focus-visible { outline: 2px solid #6366f1; outline-offset: -2px; } .ds-popover__item--danger { color: #dc2626; } .ds-popover__item--danger:hover { background: #fef2f2; }"
+      "refersTo": "card",
+      "description": "Không dải tiêu đề, đường tóc giữa hàng, rê chuột thành viên bo 10px; đệm trong 8px.",
+      "html": "<div class=\"ds-tcard\"><table class=\"ds-table\"><thead><tr><th>Mã</th><th>Tên hợp đồng</th><th>Trạng thái</th></tr></thead><tbody><tr><td class=\"ds-mono\">HD-0142</td><td>Bảo trì hệ thống điều hoà</td><td><span class=\"ds-pill ds-pill--ok\"><span class=\"ds-pill__dot\"></span>Đang hiệu lực</span></td></tr><tr><td class=\"ds-mono\">HD-0143</td><td>Vệ sinh toà nhà quý 4</td><td><span class=\"ds-pill ds-pill--err\"><span class=\"ds-pill__dot\"></span>Đã khóa</span></td></tr></tbody></table></div>",
+      "css": ".ds-tcard { background: #FFFFFF; border-radius: 16px; padding: 0 8px 8px; box-shadow: 0 0 0 1px rgba(31,30,29,0.10), 0 1px 2px rgba(31,30,29,0.03); font-family: var(--font-sans, system-ui, sans-serif); } .ds-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14.5px; color: #3D3D3A; } .ds-table th { text-align: left; padding: 12px 10px 10px; font-size: 13px; font-weight: 400; color: #5E5D59; background: transparent; border-bottom: 1px solid rgba(31,30,29,0.10); } .ds-table td { padding: 11px 10px; border-bottom: 1px solid rgba(31,30,29,0.06); } .ds-table tbody tr:last-child td { border-bottom-color: transparent; } .ds-table tbody tr:hover td { background: #F8F8F7; } .ds-table tbody tr:hover td:first-child { border-radius: 10px 0 0 10px; } .ds-table tbody tr:hover td:last-child { border-radius: 0 10px 10px 0; } .ds-mono { font-family: var(--font-mono, ui-monospace, monospace); font-size: 13.5px; letter-spacing: 0.03em; } .ds-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 16px; font-size: 13.5px; font-weight: 500; white-space: nowrap; } .ds-pill__dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; } .ds-pill--ok { background: #E6F4E6; color: #1E6E2E; } .ds-pill--err { background: #FDE9EB; color: #B42331; }"
     },
     {
-      "name": "Glass Window Shell",
+      "name": "Hộp thoại trên lớp che mờ",
       "kind": "custom",
-      "refersTo": "window-shell",
-      "description": "Tấm kính DUY NHẤT blur môi trường. Vòng khúc xạ rìa 1px bằng mask-composite, lõi cắt rỗng nên không đè nội dung.",
-      "html": "<div class=\"ds-env\"><div class=\"ds-window\"><div class=\"ds-window__body\">Tầng nội dung đục nằm bên trong</div></div></div>",
-      "css": ".ds-env { padding: 24px; border-radius: 24px; background: radial-gradient(50% 42% at 8% 4%, rgba(255,214,150,.95) 0%, rgba(255,199,126,.50) 40%, transparent 70%), radial-gradient(40% 36% at 88% 52%, rgba(186,212,248,.66) 0%, transparent 76%), linear-gradient(158deg, #f3e7d6 0%, #ded6cd 34%, #c2c5cf 68%, #9ea5b4 100%); } .ds-window { position: relative; border-radius: 30px; border: none; padding: 22px; background: linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.10) 38%, transparent 62%), rgba(255,255,255,.60); backdrop-filter: blur(44px) saturate(185%) brightness(1.06); -webkit-backdrop-filter: blur(44px) saturate(185%) brightness(1.06); box-shadow: 0 4px 12px rgba(16,24,40,.08), 0 44px 92px -32px rgba(16,24,40,.44), 0 16px 34px -18px rgba(16,24,40,.22); } .ds-window::after { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none; background: linear-gradient(145deg, rgba(255,255,255,.98) 0%, rgba(255,255,255,.42) 20%, rgba(255,255,255,.05) 46%, rgba(255,255,255,.34) 74%, rgba(255,255,255,.92) 100%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; } .ds-window__body { background: #ffffff; border-radius: 20px; padding: 18px; font-family: 'DM Sans', 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px; color: #334155; box-shadow: inset 0 0 0 1px rgba(16,24,40,.06), 0 1px 2px rgba(16,24,40,.05), 0 10px 24px -14px rgba(16,24,40,.18); }"
+      "refersTo": "dialog",
+      "description": "Lớp che nâu ấm + blur 8px; tấm r=20 vòng 0.5px, đầu không kẻ, chân một đường tóc; nhô lên từ translateY(8px) scale(0.97) 240ms.",
+      "html": "<div class=\"ds-scrim\"><div class=\"ds-dialog\" role=\"dialog\"><h2 class=\"ds-dialog__title\">Khóa tài khoản</h2><p class=\"ds-dialog__body\">Người dùng sẽ không đăng nhập được cho tới khi được mở khóa.</p><div class=\"ds-dialog__footer\"><button class=\"ds-dialog__btn\">Huỷ</button><button class=\"ds-dialog__btn ds-dialog__btn--primary\">Khóa</button></div></div></div>",
+      "css": ".ds-scrim { display: flex; align-items: center; justify-content: center; padding: 32px; min-height: 260px; background: rgba(40,34,26,0.18); -webkit-backdrop-filter: blur(8px) saturate(120%); backdrop-filter: blur(8px) saturate(120%); animation: ds-scrim-in 200ms cubic-bezier(0.23,1,0.32,1) both; font-family: var(--font-sans, system-ui, sans-serif); } .ds-dialog { width: 420px; max-width: 100%; background: #FFFFFF; border-radius: 20px; box-shadow: 0 0 0 0.5px rgba(31,30,29,0.10), 0 12px 32px -10px rgba(31,30,29,0.16), 0 36px 90px -28px rgba(31,30,29,0.26); animation: ds-modal-in 240ms cubic-bezier(0.23,1,0.32,1) both; } .ds-dialog__title { margin: 0; padding: 22px 26px 6px; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; color: #141413; } .ds-dialog__body { margin: 0; padding: 14px 26px 22px; font-size: 14.5px; line-height: 1.6; color: #3D3D3A; } .ds-dialog__footer { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 26px 18px; border-top: 1px solid rgba(31,30,29,0.06); } .ds-dialog__btn { padding: 8px 15px; border: 1px solid rgba(31,30,29,0.15); border-radius: 10px; background: #FFFFFF; color: #141413; font: inherit; font-size: 14.5px; font-weight: 500; cursor: pointer; transition: transform 160ms cubic-bezier(0.23,1,0.32,1); } .ds-dialog__btn:active { transform: scale(0.97); } .ds-dialog__btn--primary { background: #1F1E1D; border-color: #1F1E1D; color: #FFFFFF; } .ds-dialog__btn--primary:hover { background: #3D3D3A; } @keyframes ds-scrim-in { from { opacity: 0; } to { opacity: 1; } } @keyframes ds-modal-in { from { opacity: 0; transform: translateY(8px) scale(0.97); } to { opacity: 1; transform: none; } } @media (prefers-reduced-transparency: reduce) { .ds-scrim { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(40,34,26,0.36); } } @media (prefers-reduced-motion: reduce) { @keyframes ds-modal-in { from { opacity: 0; } to { opacity: 1; } } }"
+    },
+    {
+      "name": "Công tắc",
+      "kind": "custom",
+      "refersTo": "switch",
+      "description": "Rãnh 36×20 mực 18% → cam; con trượt 16px, lún 0.92.",
+      "html": "<button class=\"ds-switch ds-switch--on\" role=\"switch\" aria-checked=\"true\"><span class=\"ds-switch__thumb\"></span></button> <button class=\"ds-switch\" role=\"switch\" aria-checked=\"false\"><span class=\"ds-switch__thumb\"></span></button>",
+      "css": ".ds-switch { position: relative; width: 36px; height: 20px; padding: 0; border: none; border-radius: 999px; background: rgba(31,30,29,0.18); cursor: pointer; transition: background 200ms ease; } .ds-switch--on { background: #2A78D6; } .ds-switch__thumb { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 1px 2px rgba(31,30,29,0.2); transition: transform 200ms cubic-bezier(0.23,1,0.32,1); } .ds-switch--on .ds-switch__thumb { transform: translateX(16px); } .ds-switch:active .ds-switch__thumb { transform: scale(0.92); } .ds-switch--on:active .ds-switch__thumb { transform: translateX(16px) scale(0.92); } .ds-switch:focus-visible { outline: 2px solid #2A78D6; outline-offset: 2px; }"
     }
   ],
-  "narrative": "Toi gian bien tap: don sac am, cau truc do duong ke 1px dam nhiem thay cho bong do, tuong phan den tu co chu va do dam thay vi khoi mau. Mau la tai nguyen khan hiem, chi dung cho ngu nghia qua 4 cap pastel da khu bao hoa. Khong gradient, khong kinh mo, khong nut vien nang, khong mau thuong hieu. Thay the hoan toan he Liquid Glass truoc do."
+  "narrative": {
+    "northStar": "Bàn làm việc mềm",
+    "overview": "**Creative North Star: \"Bàn làm việc mềm\"** — một bề mặt vận hành bình tĩnh, bám sát ngôn ngữ thị giác của chính Claude: nền ngà ấm hai tầng, nơi làm việc là một **tấm sáng bo tròn nổi lên** trên khung trầm hơn một nấc; mép thẻ, ô nhập và bảng được vẽ bằng **mực ấm trong suốt** nên đọc ra mềm chứ không \"vẽ khung\"; khi có việc chen ngang (hộp thoại), phần lề ngoài **tối nhẹ và nhoè đi**.\n\nHệ vận hành nội bộ bằng tiếng Việt, dùng lặp lại hằng ngày. Bản này **thay thế** giai đoạn \"tối giản biên tập\" (bán kính ≤12px, viền xám đặc, nhãn mono IN HOA, không màu nhấn, lớp che chỉ làm tối, khoang chỉ số chia lưới 1px). Những gì còn đúng được giữ nguyên: đơn sắc ấm, cặp pastel ngữ nghĩa, chữ hệ thống, khung cố định chỉ `.app-main` cuộn, icon Phosphor bold, sentence case tiếng Việt.",
+    "keyCharacteristics": [
+      "Khung `#F6F6F4` + tấm làm việc `#FCFCFB` bo 20px, viền 0.5px mực ấm và bóng khuếch tán.",
+      "Viền là mực ấm `#1F1E1D` trong suốt: 6% (đường tóc), 10% (thẻ), 15% (ô nhập), 20% (hover).",
+      "Một màu nhấn xanh dương Claude `#2A78D6` cho công tắc, ô tích, vòng focus, liên kết, trạng thái \"đang chọn\" và \"chưa lưu\".",
+      "Nút chính gần-đen ấm `#1F1E1D`, không phải màu nhấn.",
+      "Bán kính 8 / 10 / 16 / 20; tab và hàng bảng khi rê chuột đều là viên bo tròn.",
+      "Nhãn sentence case 13px/400; mono chỉ còn cho mã, số hiệu, phím tắt.",
+      "Chuyển động chữ ký: viên tab trượt bằng `clip-path`, lớp che mờ + hộp thoại nhô lên, tấm trượt từ đáy trên điện thoại."
+    ],
+    "rules": [
+      {
+        "name": "The Translucent Ink Line Rule",
+        "body": "Mọi viền và đường phân cách là mực ấm `#1F1E1D` ở độ trong suốt thấp (`hairline` / `line` / `line-input` / `line-strong`), không bao giờ là một màu xám đặc. Viền xám đặc là thứ biến một giao diện mềm thành \"gai góc\".",
+        "section": "colors"
+      },
+      {
+        "name": "The One Blue Rule",
+        "body": "Xanh dương Claude chỉ xuất hiện ở điểm tương tác — công tắc, ô tích/nút chọn, viền + vòng focus, liên kết, trạng thái \"đang chọn\" và \"chưa lưu\". Không bao giờ làm nền mảng lớn và không bao giờ làm nền nút — nút chính là mực đen.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Selected Grammar Rule",
+        "body": "Mọi *lựa chọn* dạng chip/thẻ/radio nói cùng một câu: nền `accent-soft` + chữ `accent-ink` + viền 1px `accent`. Ngoại lệ có chủ đích: *vị trí* (mục điều hướng, tab viên, mục bảng lệnh) dùng nền trung tính `frame-active` / `surface-sunken`.",
+        "section": "colors"
+      },
+      {
+        "name": "The Neutral Stat Rule",
+        "body": "Icon của ô chỉ số là `ink-muted` trên nền trung tính. Màu ngữ nghĩa chỉ nằm ở pill trạng thái và ở chính con số mang trạng thái.",
+        "section": "colors"
+      },
+      {
+        "name": "The Light Hand Rule",
+        "body": "Chỉ ba độ đậm: 400 (nội dung, nhãn, tab, tiêu đề cột), 500 (điều khiển, mục đang chọn, số liệu, badge), 600 (tiêu đề trang / hộp thoại / thẻ). **Không có 700/800/bold** — ở cả CSS lẫn style nội tuyến trong TSX. Tab đang chọn không đậm lên; nền viên đã nói nó đang chọn.",
+        "section": "typography"
+      },
+      {
+        "name": "The Sentence-Case Label Rule",
+        "body": "Nhãn là chữ người đọc, không phải mã máy: sans, 13px, 400, viết thường theo câu, `letter-spacing: 0`. Không mono, không IN HOA. Không hiển thị mã sự kiện nội bộ (kiểu `TASK_BUDGET_EXCEEDED`) cho người dùng.",
+        "section": "typography"
+      },
+      {
+        "name": "The Vietnamese Sentence Case Rule",
+        "body": "Tiếng Việt dùng sentence case, **không** Title Case.",
+        "section": "typography"
+      },
+      {
+        "name": "The Floating-Only Shadow Rule",
+        "body": "Bóng khuếch tán chỉ dành cho lớp nổi. Bề mặt nội dung chỉ có vòng viền mực và bóng tiếp xúc ≤3%.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Half-Pixel Ring Rule",
+        "body": "Lớp nổi được viền bằng vòng `0 0 0 0.5px` mực ấm trong `box-shadow`, không bằng `border` 1px — mép đọc ra như một cạnh bắt sáng chứ không như nét vẽ.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Dim-and-Blur Interruption Rule",
+        "body": "Khi hộp thoại mở, lề ngoài **tối nhẹ và nhoè** để dồn chú ý vào tấm chính. Nhoè chỉ ở lớp che, không bao giờ ở bề mặt chứa nội dung, và không chồng kính lên kính.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Warm Light Rule",
+        "body": "Bóng chỉ nhuộm bằng chính mực ấm của hệ; cấm bóng mang màu nhấn hay màu ngữ nghĩa.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do vẽ mọi viền bằng mực ấm trong suốt (`hairline` / `line` / `line-input` / `line-strong`).",
+      "Do tách nhóm bằng khoảng trắng và sắc nền trước, đường kẻ sau cùng.",
+      "Do tách khung và tấm làm việc bằng chênh sáng `frame` / `canvas` và vòng 0.5px.",
+      "Do dùng đúng một ngữ pháp \"đang chọn\": `accent-soft` + `accent-ink` + viền 1px `accent`.",
+      "Do giữ độ đậm trong 400 / 500 / 600; 600 chỉ cho tiêu đề.",
+      "Do viết nhãn sentence case 13px/400; giữ mono cho mã, số hiệu, phím tắt.",
+      "Do dùng `rounded.md` cho nút/ô nhập, `rounded.lg` cho thẻ và ô chỉ số, `rounded.2xl` cho tấm và hộp thoại.",
+      "Do dùng `tabular-nums` ở mọi nơi có số xếp cột.",
+      "Do cắt gọn nội dung ô bảng dài về một dòng kèm `…` và đưa đủ nội dung vào `title`.",
+      "Do cho hộp thoại thành tấm trượt từ đáy ở ≤640px, nút chân ≥44px."
+    ],
+    "donts": [
+      "Don't dùng viền xám đặc (`#EAEAEA`, `#E7E4DD`…) — viền là mực trong suốt.",
+      "Don't chia khoang bằng lưới đường kẻ 1px (`gap: 1px` trên nền đường kẻ); ô chỉ số là các ô rời.",
+      "Don't đặt dải nền cho hàng tiêu đề bảng, và don't kẻ lưới dọc trong bảng.",
+      "Don't dùng `font-weight` 700/800/`bold`, kể cả trong style nội tuyến.",
+      "Don't dùng vạch dưới cho tab đang chọn; tab là viên.",
+      "Don't đóng khung ô trống, ghi chú hay cảnh báo bằng viền (liền hay đứt) — dùng vùng nền mềm.",
+      "Don't dùng màu nhấn làm nền mảng lớn, nền nút chính hay viền ô nhập khi focus.",
+      "Don't thêm màu thứ hai ngoài xanh dương Claude, mực đen của nút và 4 cặp màu ngữ nghĩa.",
+      "Don't đặt mờ/kính lên bề mặt chứa nội dung — chỉ thanh tiêu đề dính và lớp che hộp thoại.",
+      "Don't dùng bóng khuếch tán cho bề mặt nội dung, và don't dùng bóng đen trung tính hay nhuộm màu cho lớp mới.",
+      "Don't quay lại nhãn mono IN HOA, và don't hiển thị mã sự kiện nội bộ cho người dùng.",
+      "Don't để `body` cuộn. Vùng cuộn duy nhất là `.app-main`.",
+      "Don't thêm hoạt hình mở/đóng cho bảng lệnh hay `transition: width` cho thanh bên.",
+      "Don't đổ nền màu cả một hàng bảng để báo trạng thái.",
+      "Don't dùng `border-left` màu dày > 1px trên thẻ, hàng hay cảnh báo.",
+      "Don't dùng `#000000` thuần cho chữ.",
+      "Don't viết hoa mọi chữ trong nhãn tiếng Việt (Title Case).",
+      "Don't quay lại Lucide/Feather, và don't trộn hai bộ icon.",
+      "Don't thêm eyebrow/kicker phía trên tiêu đề.",
+      "Don't tải font qua mạng.",
+      "Don't thêm gradient, vệt chói, vòng khúc xạ rìa hay nút viên nang của hệ Liquid Glass cũ."
+    ]
+  }
 }

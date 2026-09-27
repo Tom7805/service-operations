@@ -5,6 +5,7 @@ import AdjustmentModal from '../components/AdjustmentModal';
 import { getAdjustableEntries, getAdjustmentHistory, TimesheetsApiError } from '../api/timesheetsApi';
 import { getActiveUsersLookup } from '../../users/api/usersApi';
 import type { AdjustableEntryRes, AdjustmentTraceRes } from '../types/timesheetTypes';
+import PageHeader from '../../../components/common/PageHeader';
 
 export interface TimesheetAdjustmentPageProps {
   currentUserRoles?: string[];
@@ -155,8 +156,7 @@ export default function TimesheetAdjustmentPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Chức năng Điều chỉnh giờ công đã duyệt chỉ dành riêng cho vai trò <strong>Quản lý dự án</strong>.
-            Hệ thống đã ghi lại lần truy cập bị từ chối này vào nhật ký bảo mật.
+            Trang này dành cho <strong>Quản lý dự án</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">{ICONS.shield} Thời điểm: {new Date().toLocaleString('vi-VN')}</span>
@@ -180,15 +180,7 @@ export default function TimesheetAdjustmentPage({
         </div>
       )}
 
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Điều chỉnh giờ công đã duyệt</h1>
-          <p className="page-subtitle">
-            Giờ công đã duyệt là bất biến — muốn sửa phải đi qua bút toán đảo: hệ thống tự sinh một dòng đảo
-            và một dòng sửa, giữ nguyên dòng gốc để tra cứu lại được.
-          </p>
-        </div>
-      </div>
+      <PageHeader title="Điều chỉnh giờ công" />
 
       <div className="user-table-card">
         <div className="user-table-toolbar">

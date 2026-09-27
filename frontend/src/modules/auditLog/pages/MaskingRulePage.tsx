@@ -3,6 +3,7 @@ import { AuditLogApiError, getMaskingRules } from '../api/auditLogApi';
 import { ROLE_LABELS, roleLabel, roleLabels, type MaskingRule } from '../types/auditLogTypes';
 import { ICONS } from '../../../components/common/icons';
 import TableSkeleton from '../../../components/common/TableSkeleton';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface MaskingRulePageProps {
   currentUserRoles: string[];
@@ -54,8 +55,7 @@ export default function MaskingRulePage({ currentUserRoles }: MaskingRulePagePro
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Quy tắc che dữ liệu lương và giá vốn chỉ dành cho <strong>Nhân sự</strong>, <strong>Kế toán</strong> và{' '}
-            <strong>Ban giám đốc</strong>. Lần truy cập này đã được ghi vào nhật ký hệ thống.
+            Trang này dành cho <strong>Nhân sự</strong>, <strong>Kế toán</strong> và <strong>Ban giám đốc</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">Vai trò hiện tại: {roleLabels(currentUserRoles) || '—'}</span>
@@ -69,24 +69,20 @@ export default function MaskingRulePage({ currentUserRoles }: MaskingRulePagePro
 
   return (
     <div className="user-management-page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Quy tắc che dữ liệu nhạy cảm</h1>
-          <p className="page-subtitle">
-            Cột lương, chi phí giờ công và giá vốn chỉ hiển thị cho vai trò được phép — trên mọi màn hình và mọi tệp
-            xuất. Vai trò khác chỉ thấy ký hiệu che <strong>***</strong> thay cho số liệu.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="btn-icon-refresh"
-          onClick={() => void load()}
-          title="Làm mới dữ liệu"
-          aria-label="Làm mới dữ liệu"
-        >
-          {ICONS.refresh}
-        </button>
-      </div>
+      <PageHeader
+        title="Quyền xem dữ liệu"
+        actions={
+          <button
+            type="button"
+            className="btn-icon-refresh"
+            onClick={() => void load()}
+            title="Làm mới dữ liệu"
+            aria-label="Làm mới dữ liệu"
+          >
+            {ICONS.refresh}
+          </button>
+        }
+      />
 
       {error && (
         <div className="alert alert--error" role="alert">
@@ -134,8 +130,8 @@ export default function MaskingRulePage({ currentUserRoles }: MaskingRulePagePro
                           </span>
                         ))}
                       </td>
-                      <td className="cell-email">{masked.map(roleLabel).join(', ')}</td>
-                      <td className="cell-email">{APPLIED_TO[rule.level] ?? '—'}</td>
+                      <td style={{ color: 'var(--ink-muted)' }}>{masked.map(roleLabel).join(', ')}</td>
+                      <td style={{ color: 'var(--ink-muted)' }}>{APPLIED_TO[rule.level] ?? '—'}</td>
                     </tr>
                   );
                 })
@@ -145,9 +141,8 @@ export default function MaskingRulePage({ currentUserRoles }: MaskingRulePagePro
         </div>
       </div>
 
-      <p className="page-subtitle" style={{ marginTop: 16 }}>
-        {ICONS.info} Mỗi lần xem hoặc xuất dữ liệu lương, giá vốn và biên lợi nhuận đều được ghi vào nhật ký truy cập dữ
-        liệu nhạy cảm (QTN-03). Quy tắc này cố định theo quy định công ty (QTN-02), không chỉnh sửa trên giao diện.
+      <p className="customer-summary-scope-note cell-muted" style={{ marginTop: 16 }}>
+        <span className="icon-xs">{ICONS.info}</span> Mỗi lần xem hoặc xuất dữ liệu nhạy cảm đều được ghi nhật ký.
       </p>
     </div>
   );

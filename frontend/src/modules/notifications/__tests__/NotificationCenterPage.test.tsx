@@ -75,7 +75,7 @@ describe('NotificationCenterPage (NCL-14-CN-001)', () => {
     for (const n of FIVE_UNREAD) {
       expect(screen.getByTestId(`notification-unread-dot-${n.id}`)).toBeInTheDocument();
     }
-    await waitFor(() => expect(screen.getByTestId('notif-center-unread-count')).toHaveTextContent('5 CHƯA ĐỌC'));
+    await waitFor(() => expect(screen.getByTestId('notif-center-unread-count')).toHaveTextContent('5 chưa đọc'));
     expect(onUnreadCountChange).toHaveBeenCalledWith(5);
   });
 

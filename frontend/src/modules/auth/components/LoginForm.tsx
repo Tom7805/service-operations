@@ -57,7 +57,7 @@ export default function LoginForm({ onAuthenticated, onForgotPassword, onTwoFact
       {error && <p className="form-error" role="alert"><span>!</span>{error}</p>}
       <button className="submit" type="submit" disabled={loading}>{loading ? <><i className="loader" />Đang xác thực</> : <>Đăng nhập <span className="icon-sm">{ICONS.arrowRight}</span></>}</button>
     </form>
-    <div className="secure-note"><span className="icon-sm">{ICONS.check}</span><p>Phiên đăng nhập được bảo vệ và tự động kết thúc khi không thao tác trong {SESSION_IDLE_MINUTES} phút.</p></div>
+    <div className="secure-note"><span className="icon-sm">{ICONS.check}</span><p>Tự đăng xuất sau {SESSION_IDLE_MINUTES} phút không thao tác.</p></div>
     <p className="login-card__privacy">Bằng việc tiếp tục, bạn xác nhận đã đọc và đồng ý với<br /><a href="#terms">Điều khoản sử dụng</a> và <a href="#privacy">Chính sách bảo mật</a>.</p>
   </div>;
 }

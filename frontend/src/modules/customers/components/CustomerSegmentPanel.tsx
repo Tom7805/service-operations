@@ -88,7 +88,7 @@ export default function CustomerSegmentPanel({
           hàng chỉ dành riêng cho <strong>Nhân viên kinh doanh</strong>.
         </p>
         <div className="security-log-badge">
-          <span className="security-log-badge__item">{ICONS.shield} Ghi nhận Audit Log: {new Date().toLocaleString('vi-VN')}</span>
+          <span className="security-log-badge__item">{ICONS.shield} Ghi nhật ký lúc {new Date().toLocaleString('vi-VN')}</span>
           <span className="security-log-badge__item">Tài khoản thực hiện: {currentUserName}</span>
           <span className="security-log-badge__item">Vai trò tài khoản: {roleLabels(currentUserRoles)}</span>
         </div>
@@ -126,18 +126,7 @@ export default function CustomerSegmentPanel({
         )}
 
       {/* Header & nút mở biểu mẫu phân nhóm */}
-      <div className="contact-manager-header">
-        <div>
-          <div className="contact-section-eyebrow">
-            <span className="dot-pulse" />
-            <span>Phân nhóm khách hàng</span>
-          </div>
-          <h2 className="contact-section-title">Ngành nghề, quy mô & mức độ ưu tiên</h2>
-          <p className="contact-section-subtitle">
-            Gán nhãn phân nhóm để lọc và phân tích danh mục khách hàng theo ngành nghề, quy mô công
-            ty và mức độ ưu tiên chăm sóc.
-          </p>
-        </div>
+      <div className="contact-manager-header contact-manager-header--actions-only">
 
         <div className="contact-header-actions">
           {!readOnly && (

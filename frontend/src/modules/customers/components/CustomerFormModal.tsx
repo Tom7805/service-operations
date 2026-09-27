@@ -253,12 +253,10 @@ export default function CustomerFormModal({
               </span>
               <div>
                 <h3 id="modal-title" className="modal-title">
-                  {isEdit ? 'Chỉnh sửa hồ sơ khách hàng' : 'Tạo hồ sơ khách hàng mới'}
+                  {isEdit ? 'Sửa hồ sơ khách hàng' : 'Thêm khách hàng'}
                 </h3>
                 <p className="modal-subtitle">
-                  {isEdit
-                    ? `Cập nhật thông tin doanh nghiệp cho hồ sơ ${initialCustomer?.code ?? ''}. Mã khách hàng không thay đổi.`
-                    : 'Nhập thông tin doanh nghiệp/đối tác. Mã khách hàng (KH-xxxxxx) sẽ được hệ thống cấp tự động sau khi lưu.'}
+                  {isEdit ? initialCustomer?.code : 'Mã khách hàng được cấp tự động khi lưu.'}
                 </p>
               </div>
             </div>
@@ -291,9 +289,7 @@ export default function CustomerFormModal({
                 <div className="info-callout__text">
                   {isEdit ? (
                     <>
-                      <strong>Lưu ý:</strong> Ngành nghề, quy mô và mức độ ưu tiên được quản lý ở tab
-                      <em> Phân nhóm</em>. Khi đổi Tên / MST / SĐT, hệ thống vẫn chạy kiểm tra chống
-                      trùng với các hồ sơ khác.
+                      Ngành nghề, quy mô và mức độ ưu tiên sửa ở tab <em>Phân nhóm</em>.
                     </>
                   ) : (
                     <>
@@ -497,7 +493,7 @@ export default function CustomerFormModal({
                 onClick={onClose}
                 disabled={submitting}
               >
-                Hủy bỏ
+                Hủy
               </button>
               <button
                 type="submit"
@@ -507,12 +503,12 @@ export default function CustomerFormModal({
                 {submitting ? (
                   <>
                     <span className="spinner-sm" aria-hidden="true" />
-                    <span>Đang kiểm tra & lưu hồ sơ...</span>
+                    <span>Đang lưu…</span>
                   </>
                 ) : (
                   <>
                     <span className="icon-sm">{ICONS.save}</span>
-                    <span>{isEdit ? 'Lưu thay đổi' : 'Lưu hồ sơ khách hàng'}</span>
+                    <span>{isEdit ? 'Lưu thay đổi' : 'Lưu'}</span>
                   </>
                 )}
               </button>

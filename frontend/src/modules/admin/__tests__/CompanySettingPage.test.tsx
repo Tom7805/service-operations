@@ -165,7 +165,7 @@ describe('CompanySettingPage (NCL-15-CN-002)', () => {
     vi.mocked(api.getCompanySettings).mockRejectedValue(new api.AdminApiError('FORBIDDEN', 'Forbidden', 403));
     render(<CompanySettingPage currentUserRoles={['VT-05']} />);
 
-    expect(await screen.findByTestId('company-access-denied')).toHaveTextContent('đã được ghi vào nhật ký hệ thống');
+    expect(await screen.findByTestId('company-access-denied')).toHaveTextContent('đã được ghi vào nhật ký');
     expect(api.getCompanySettings).toHaveBeenCalledTimes(1);
   });
 

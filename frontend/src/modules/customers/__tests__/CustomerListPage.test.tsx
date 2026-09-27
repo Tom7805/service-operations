@@ -32,7 +32,7 @@ describe('CustomerListPage Component (NCL-02-CN-001-CV-05)', () => {
         <CustomerListPage currentUserRoles={['VT-04']} currentUserName="Nguyễn Văn Sales" />
       );
 
-      expect(screen.getByRole('heading', { level: 1, name: 'Hồ sơ khách hàng' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Khách hàng' })).toBeInTheDocument();
       expect(screen.getByTestId('btn-open-create-customer')).toBeInTheDocument();
       expect(screen.queryByTestId('access-denied-view')).toBeNull();
     });
@@ -42,7 +42,7 @@ describe('CustomerListPage Component (NCL-02-CN-001-CV-05)', () => {
         <CustomerListPage currentUserRoles={['VT-02']} currentUserName="Trần Quản Lý" />
       );
 
-      expect(screen.getByRole('heading', { level: 1, name: 'Hồ sơ khách hàng' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Khách hàng' })).toBeInTheDocument();
       expect(screen.getByTestId('btn-open-create-customer')).toBeInTheDocument();
       expect(screen.queryByTestId('access-denied-view')).toBeNull();
     });
@@ -73,7 +73,7 @@ describe('CustomerListPage Component (NCL-02-CN-001-CV-05)', () => {
       );
 
       fireEvent.click(screen.getByTestId('btn-open-create-customer'));
-      expect(screen.getByRole('heading', { name: /Tạo hồ sơ khách hàng mới/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /Thêm khách hàng/i })).toBeInTheDocument();
     });
 
     it('tạo thành công hồ sơ khách hàng, nhận mã KH-xxxxxx và hiển thị toast thông báo', async () => {
@@ -101,7 +101,7 @@ describe('CustomerListPage Component (NCL-02-CN-001-CV-05)', () => {
       fireEvent.change(nameInput, { target: { value: 'Tập đoàn Công nghệ FPT' } });
 
       // Submit form
-      const submitBtn = screen.getByRole('button', { name: /Lưu hồ sơ khách hàng/i });
+      const submitBtn = screen.getByRole('button', { name: /^Lưu$/i });
       fireEvent.click(submitBtn);
 
       await waitFor(() => {
@@ -146,7 +146,7 @@ describe('CustomerListPage Component (NCL-02-CN-001-CV-05)', () => {
       render(<CustomerListPage currentUserRoles={['VT-02']} />);
 
       await waitFor(() => {
-        expect(screen.getByText(/Chưa có hồ sơ khách hàng nào/i)).toBeInTheDocument();
+        expect(screen.getByText(/Chưa có khách hàng nào/i)).toBeInTheDocument();
       });
     });
 

@@ -12,6 +12,7 @@ import {
 } from '../types/portalTypes';
 import { formatPortalMoney } from '../utils/portalFormat';
 import { INVOICE_STATUS_TONE } from './PortalInvoicePage';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface Props {
   invoiceId: number;
@@ -85,8 +86,7 @@ export default function PortalInvoiceDetailPage({ invoiceId, onBack }: Props) {
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có quyền xem hóa đơn này</h2>
           <p>
-            Hóa đơn không thuộc công ty bạn, chưa được phát hành hoặc không tồn tại. Tài khoản cổng chỉ xem được hóa đơn
-            của chính khách hàng mình. Lần truy cập này đã được ghi vào nhật ký hệ thống.
+            Hóa đơn không thuộc công ty bạn, chưa phát hành hoặc không tồn tại. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">
@@ -130,25 +130,24 @@ export default function PortalInvoiceDetailPage({ invoiceId, onBack }: Props) {
     <div className="portal-page" data-testid="portal-invoice-detail">
       <div className="mb-4">{backButton}</div>
 
-      <div className="page-header">
-        <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.receipt} HÓA ĐƠN</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">{invoice.contractCode ? `HỢP ĐỒNG ${invoice.contractCode}` : '—'}</span>
-          </div>
-          <h1 className="page-title" style={{ fontFamily: 'var(--font-mono, monospace)' }}>{invoice.invoiceCode}</h1>
-          <p className="page-subtitle">
-            Ngày hóa đơn {formatPortalDate(invoice.invoiceDate)} · Hạn thanh toán {formatPortalDate(invoice.dueDate)}
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignSelf: 'flex-start' }}>
-          <span className={`badge ${INVOICE_STATUS_TONE[status] ?? 'badge--gray'} portal-status-lg`} data-testid="portal-invoice-status">
-            {PORTAL_INVOICE_STATUS_LABEL[status] ?? invoice.status}
-          </span>
-          {invoice.overdue && <span className="badge badge--red portal-status-lg">Quá hạn {invoice.daysOverdue} ngày</span>}
-        </div>
-      </div>
+      <PageHeader
+        title={invoice.invoiceCode}
+        meta={
+          <>
+            {invoice.contractCode && <span>Hợp đồng {invoice.contractCode}</span>}
+            <span>Ngày {formatPortalDate(invoice.invoiceDate)}</span>
+            <span>Hạn thanh toán {formatPortalDate(invoice.dueDate)}</span>
+          </>
+        }
+        actions={
+          <>
+            <span className={`badge ${INVOICE_STATUS_TONE[status] ?? 'badge--gray'} portal-status-lg`} data-testid="portal-invoice-status">
+              {PORTAL_INVOICE_STATUS_LABEL[status] ?? invoice.status}
+            </span>
+            {invoice.overdue && <span className="badge badge--red portal-status-lg">Quá hạn {invoice.daysOverdue} ngày</span>}
+          </>
+        }
+      />
 
       {invoice.overdue ? (
         <div className="alert-box alert-box--danger alert-box--inline" data-testid="portal-invoice-overdue">
@@ -264,7 +263,7 @@ export default function PortalInvoiceDetailPage({ invoiceId, onBack }: Props) {
       </div>
 
       <p className="field-hint portal-footnote">
-        {ICONS.info} Số liệu thanh toán do kế toán ghi nhận. Lượt xem của bạn được ghi nhận trong nhật ký cổng khách hàng.
+        {ICONS.info} Lượt xem của bạn được ghi nhận.
       </p>
     </div>
   );

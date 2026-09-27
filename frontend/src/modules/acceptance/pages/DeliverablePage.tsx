@@ -11,6 +11,7 @@ import DeliverableVersionList from '../components/DeliverableVersionList';
 import DeliverableVersionModal from '../components/DeliverableVersionModal';
 import { DELIVERABLE_TYPE_LABEL, type DeliverableRes, type DeliverableVersionRes } from '../types/acceptanceTypes';
 import { flattenWorkPackages } from '../utils/workPackageTree';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface Props {
   currentUserRoles?: string[];
@@ -129,9 +130,6 @@ export default function DeliverablePage({
     );
   }, [deliverables, wpFilter, search]);
 
-  const totalVersions = deliverables.reduce((sum, d) => sum + d.versionCount, 0);
-  const notDelivered = deliverables.filter((d) => d.versionCount === 0).length;
-
   const toggle = (id: number) =>
     setExpanded((prev) => {
       const next = new Set(prev);
@@ -171,9 +169,7 @@ export default function DeliverablePage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền quản lý sản phẩm bàn giao</h2>
           <p>
-            Theo quy tắc phân quyền, chức năng quản lý sản phẩm bàn giao và phiên bản chỉ dành cho{' '}
-            <strong>Quản lý dự án</strong> (VT-02) phụ trách dự án. Hệ thống đã ghi lại lần từ chối truy cập này vào
-            nhật ký hệ thống.
+            Trang này dành cho <strong>Quản lý dự án</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">
@@ -201,28 +197,20 @@ export default function DeliverablePage({
         </div>
       )}
 
-      <div className="page-header">
-        <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.document} BÀN GIAO</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">{project ? project.projectCode : 'CHƯA CHỌN DỰ ÁN'}</span>
-          </div>
-          <h1 className="page-title">Sản phẩm bàn giao và phiên bản</h1>
-          <p className="page-subtitle">
-            Khai báo sản phẩm bàn giao theo hạng mục và ghi nhận từng lần bàn giao để biết đã giao gì, cho ai, lúc nào.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => setCreateOpen(true)}
-          disabled={!project || projectClosed || isLoading || !!loadError || workPackages.length === 0}
-          data-testid="deliverable-open-create"
-        >
-          <span className="icon-xs">{ICONS.plus}</span> Khai báo sản phẩm
-        </button>
-      </div>
+      <PageHeader
+        title="Sản phẩm bàn giao"
+        actions={
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setCreateOpen(true)}
+            disabled={!project || projectClosed || isLoading || !!loadError || workPackages.length === 0}
+            data-testid="deliverable-open-create"
+          >
+            <span className="icon-xs">{ICONS.plus}</span> Khai báo sản phẩm
+          </button>
+        }
+      />
 
       <div className="user-table-card" style={{ padding: '16px 20px', marginBottom: '16px' }}>
         <div className="filter-group" style={{ flexWrap: 'wrap' }}>
@@ -300,36 +288,6 @@ export default function DeliverablePage({
         </div>
       ) : (
         <>
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-card__icon stat-card__icon--purple">{ICONS.document}</div>
-              <div>
-                <span className="stat-card__label">Sản phẩm bàn giao</span>
-                <div className="stat-card__value">{deliverables.length}</div>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-card__icon stat-card__icon--blue">{ICONS.history}</div>
-              <div>
-                <span className="stat-card__label">Phiên bản đã bàn giao</span>
-                <div className="stat-card__value" data-testid="deliverable-total-versions">{totalVersions}</div>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-card__icon stat-card__icon--amber">{ICONS.clock}</div>
-              <div>
-                <span className="stat-card__label">Chưa bàn giao lần nào</span>
-                <div className="stat-card__value">{notDelivered}</div>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-card__icon stat-card__icon--green">{ICONS.tree}</div>
-              <div>
-                <span className="stat-card__label">Hạng mục</span>
-                <div className="stat-card__value">{workPackages.length}</div>
-              </div>
-            </div>
-          </div>
 
           <div className="user-table-card">
             <div className="user-table-toolbar">

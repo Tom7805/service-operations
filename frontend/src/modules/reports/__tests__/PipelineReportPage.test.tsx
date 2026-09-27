@@ -43,7 +43,7 @@ describe('PipelineReportPage Component (NCL-03-CN-007)', () => {
       render(<PipelineReportPage currentUserRoles={['VT-01']} />);
 
       await waitFor(() => {
-        expect(screen.getByText('Báo cáo đường ống bán hàng theo giai đoạn')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { level: 1, name: 'Đường ống bán hàng' })).toBeInTheDocument();
       });
       expect(reportsApi.getPipelineReport).toHaveBeenCalledTimes(1);
     });
@@ -52,7 +52,7 @@ describe('PipelineReportPage Component (NCL-03-CN-007)', () => {
       render(<PipelineReportPage currentUserRoles={['VT-04']} />);
 
       await waitFor(() => {
-        expect(screen.getByText('Báo cáo đường ống bán hàng theo giai đoạn')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { level: 1, name: 'Đường ống bán hàng' })).toBeInTheDocument();
       });
     });
 
@@ -62,7 +62,7 @@ describe('PipelineReportPage Component (NCL-03-CN-007)', () => {
       expect(screen.getByTestId('pipeline-report-access-denied')).toBeInTheDocument();
       // TC-03: request thật để máy chủ từ chối (403) và ghi nhật ký; màn hình không hiện dữ liệu.
       await waitFor(() => expect(reportsApi.getPipelineReport).toHaveBeenCalledTimes(1));
-      expect(screen.queryByText('Báo cáo đường ống bán hàng theo giai đoạn')).toBeNull();
+      expect(screen.queryByRole('heading', { level: 1, name: 'Đường ống bán hàng' })).toBeNull();
     });
   });
 

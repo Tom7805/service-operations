@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
-import type { ProjectRes } from '../../projects/types/projectTypes';
-import { getProject, ProjectsApiError } from '../../projects/api/projectsApi';
+import { ProjectsApiError } from '../../projects/api/projectsApi';
 import type { ContractType, RecognitionMethod, RecognizedRevenueRes } from '../types/profitabilityTypes';
 import { getProjectRecognizedRevenue, ProfitabilityApiError } from '../api/profitabilityApi';
+import PageHeader from '../../../components/common/PageHeader';
 
 export interface ProjectRecognizedRevenuePageProps {
   projectId: number;
@@ -33,6 +33,8 @@ function formatHours(hours: number): string {
 }
 
 function formatPercent(ratio: number): string {
+  // Doanh thu bằng 0 thì tỷ suất không xác định (0/0) — hiện gạch ngang thay vì "NaN%".
+  if (!Number.isFinite(ratio)) return '—';
   return new Intl.NumberFormat('vi-VN', { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
     ratio
   );
@@ -66,7 +68,6 @@ export default function ProjectRecognizedRevenuePage({
   const [loading, setLoading] = useState(!initialRevenue);
   const [error, setError] = useState<string | null>(null);
   const [unsupported, setUnsupported] = useState(false);
-  const [project, setProject] = useState<ProjectRes | null>(null);
   const [recalculating, setRecalculating] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -96,17 +97,6 @@ export default function ProjectRecognizedRevenuePage({
     }
   }, [loadData, initialRevenue]);
 
-  useEffect(() => {
-    if (initialRevenue) return;
-    void (async () => {
-      try {
-        const proj = await getProject(projectId);
-        setProject(proj);
-      } catch {
-        // Không báo lỗi nếu không lấy được thông tin dự án — vẫn hiển thị doanh thu.
-      }
-    })();
-  }, [projectId, initialRevenue]);
 
   // Backend tính động doanh thu mỗi lần gọi GET, nên "tính lại" tương đương gọi lại
   // API để lấy kết quả mới nhất (không có endpoint recalculate riêng).
@@ -123,8 +113,7 @@ export default function ProjectRecognizedRevenuePage({
     return (
       <div className="user-management-page" data-testid="revenue-forbidden">
         <div className="alert-box alert-box--danger" role="alert">
-          Bạn không có quyền xem doanh thu ghi nhận dự án này (yêu cầu vai trò Ban giám đốc
-          VT-01 hoặc Kế toán VT-05).
+          Bạn không có quyền xem doanh thu ghi nhận dự án này.
         </div>
         {onBack && (
           <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
@@ -140,47 +129,32 @@ export default function ProjectRecognizedRevenuePage({
 
   return (
     <div className="user-management-page" data-testid="revenue-page">
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {onBack && (
+      <PageHeader
+        back={onBack ? { label: 'Chọn dự án khác', onClick: onBack, testId: 'btn-back-revenue' } : undefined}
+        title="Doanh thu ghi nhận"
+        actions={
+          <>
             <button
               type="button"
-              className="btn btn-secondary btn-sm btn-back"
-              onClick={onBack}
-              data-testid="btn-back-revenue"
+              className="btn btn-secondary btn-sm"
+              onClick={loadData}
+              disabled={loading}
+              data-testid="btn-reload-revenue"
             >
-              {ICONS.arrowLeft} Quay lại
+              {ICONS.refresh} Tải lại
             </button>
-          )}
-          <div>
-            <h1 className="page-title" style={{ margin: '4px 0' }}>
-              Doanh thu ghi nhận dự án
-            </h1>
-            <p className="page-subtitle" data-testid="project-code">{project?.projectCode || `Mã: ${projectId}`}</p>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={loadData}
-            disabled={loading}
-            data-testid="btn-reload-revenue"
-          >
-            {ICONS.refresh} Tải lại
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary btn-sm"
-            onClick={handleRecalculate}
-            disabled={recalculating || loading}
-            data-testid="btn-recalculate-revenue"
-          >
-            {ICONS.wrench} {recalculating ? 'Đang tính...' : 'Tính lại'}
-          </button>
-        </div>
-      </div>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={handleRecalculate}
+              disabled={recalculating || loading}
+              data-testid="btn-recalculate-revenue"
+            >
+              {ICONS.wrench} {recalculating ? 'Đang tính…' : 'Tính lại'}
+            </button>
+          </>
+        }
+      />
 
       {error && (
         <div
@@ -279,7 +253,7 @@ export default function ProjectRecognizedRevenuePage({
           {isHourly && (
             <div className="user-table-card" style={{ padding: '20px' }} data-testid="revenue-detail-table">
               <div style={{ marginBottom: '16px' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--ink-strong)' }}>
                   Chi tiết từng dòng giờ công
                 </h3>
               </div>

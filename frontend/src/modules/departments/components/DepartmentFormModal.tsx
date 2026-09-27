@@ -201,7 +201,6 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
                   autoFocus
                 />
                 {fieldErrors.name && <span className="field-error">{fieldErrors.name}</span>}
-                <span className="field-hint">Nhập tên chính thức của bộ phận trong sơ đồ cây tổ chức (Tối đa 255 ký tự).</span>
               </div>
 
               {/* Unit Type */}
@@ -228,7 +227,7 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
                     </option>
                   ))}
                 </select>
-                <span className="field-hint">Quyết định cấp bậc trong cây tổ chức: Trung tâm/Ban là cấp cao nhất, rồi đến Phòng, rồi Tổ/Nhóm.</span>
+                <span className="field-hint">Trung tâm/Ban → Phòng → Tổ/Nhóm.</span>
               </div>
 
               {/* Parent Department */}
@@ -252,7 +251,7 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
                     );
                   })}
                 </select>
-                <span className="field-hint">Chọn bộ phận cha để sắp xếp thứ bậc cây tổ chức. Để trống nếu là cấp cao nhất.</span>
+                <span className="field-hint">Để trống nếu là cấp cao nhất.</span>
               </div>
 
               {/* Manager Selection */}
@@ -277,14 +276,13 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
                   ))}
                 </select>
                 {fieldErrors.managerId && <span className="field-error">{fieldErrors.managerId}</span>}
-                <span className="field-hint">Mỗi bộ phận yêu cầu phải được gán 1 người quản lý chịu trách nhiệm chính.</span>
               </div>
             </div>
           </div>
 
           <div className="modal-footer">
             <button type="button" className="btn-secondary" onClick={onClose} disabled={submitting}>
-              Hủy bỏ
+              Hủy
             </button>
             <button type="submit" className="btn-primary" disabled={submitting}>
               {submitting ? (
@@ -292,9 +290,9 @@ export const DepartmentFormModal: React.FC<DepartmentFormModalProps> = ({
                   <span className="loader mr-2" /> Đang lưu...
                 </>
               ) : editingDepartment ? (
-                'Cập nhật bộ phận'
+                'Lưu thay đổi'
               ) : (
-                'Tạo bộ phận mới'
+                'Thêm bộ phận'
               )}
             </button>
           </div>

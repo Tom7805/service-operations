@@ -20,6 +20,7 @@ import type {
   CustomerUpdateWithOverridePayload,
   DuplicateCandidate,
 } from '../types/customerTypes';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface CustomerListPageProps {
   currentUserRoles?: string[];
@@ -267,8 +268,6 @@ export default function CustomerListPage({
     return Array.from(new Set(list));
   }, [customers]);
 
-  const hasActiveSegmentFilter = Boolean(industryFilter || companySizeFilter || priorityFilter);
-
   const clearAllFilters = () => {
     setSearchTerm('');
     setIndustryFilter('');
@@ -284,9 +283,7 @@ export default function CustomerListPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền tạo & quản lý hồ sơ khách hàng</h2>
           <p>
-            Theo quy định phân quyền bảo mật, chức năng Tạo hồ sơ khách hàng chỉ dành riêng cho{' '}
-            <strong>Nhân viên kinh doanh</strong> hoặc <strong>Quản lý dự án</strong>.
-            Hệ thống đã ghi lại lần từ chối truy cập này vào nhật ký bảo mật (Audit Log).
+            Trang này dành cho <strong>Nhân viên kinh doanh</strong> và <strong>Quản lý dự án</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">{ICONS.shield} Thời điểm ghi nhận: {new Date().toLocaleString('vi-VN')}</span>
@@ -369,12 +366,9 @@ export default function CustomerListPage({
       )}
 
       {/* Header trang */}
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Hồ sơ khách hàng</h1>
-          <p className="page-subtitle">Tạo mới và quản lý danh mục khách hàng doanh nghiệp.</p>
-        </div>
-        <div>
+      <PageHeader
+        title="Khách hàng"
+        actions={
           <button
             type="button"
             className="btn btn-primary btn-create-customer"
@@ -382,39 +376,12 @@ export default function CustomerListPage({
             data-testid="btn-open-create-customer"
           >
             <span>+</span>
-            <span>Tạo hồ sơ khách hàng</span>
+            <span>Thêm khách hàng</span>
           </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Thẻ thống kê KPI */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--blue">{ICONS.building}</div>
-          <div>
-            <span className="stat-card__label">Tổng hồ sơ khách hàng</span>
-            <div className="stat-card__value">{customers.length}</div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--green">{ICONS.spark}</div>
-          <div>
-            <span className="stat-card__label">Hồ sơ tạo trong phiên</span>
-            <div className="stat-card__value text-success">
-              {customers.filter((c) => c.createdAt && new Date(c.createdAt).toDateString() === new Date().toDateString()).length}
-            </div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--purple">{ICONS.shield}</div>
-          <div>
-            <span className="stat-card__label">Vai trò thực hiện</span>
-            <div className="stat-card__value" style={{ fontSize: '16px' }}>
-              {currentUserRoles.includes('VT-04') ? 'Nhân viên kinh doanh' : 'Quản lý dự án'}
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Bảng danh sách & Toolbar */}
       <div className="user-table-card customer-table-card">
@@ -541,11 +508,7 @@ export default function CustomerListPage({
           <div className="table-empty-state" data-testid="segment-filter-empty-state">
             <div className="table-empty-state__icon">{ICONS.search}</div>
             <h3>Không có kết quả phù hợp</h3>
-            <p>
-              Không tìm thấy khách hàng nào khớp với từ khóa hoặc nhóm đã chọn
-              {hasActiveSegmentFilter ? ' (ngành nghề / quy mô / mức độ ưu tiên).' : '.'} Vui lòng thử
-              từ khóa khác hoặc bỏ bớt bộ lọc.
-            </p>
+            <p>Thử từ khóa khác hoặc bỏ bớt bộ lọc.</p>
             <button
               type="button"
               className="btn btn-secondary"

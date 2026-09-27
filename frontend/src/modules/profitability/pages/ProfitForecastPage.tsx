@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
-import type { ProjectRes } from '../../projects/types/projectTypes';
-import { getProject } from '../../projects/api/projectsApi';
 import type { ProfitForecastRes } from '../types/profitabilityTypes';
 import { getProfitForecast, ProfitabilityApiError } from '../api/profitabilityApi';
+import PageHeader from '../../../components/common/PageHeader';
 
 export interface ProfitForecastPageProps {
   projectId: number;
@@ -99,7 +98,7 @@ function ProfitForecastContent({ data }: { data: ProfitForecastRes }) {
 
       {/* Giờ công: ngân sách / đã dùng / còn lại */}
       <div className="user-table-card" style={{ padding: '20px', marginBottom: '24px' }} data-testid="hours-forecast">
-        <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700, color: 'var(--ink-strong)' }}>Giờ công đến khi kết thúc</h3>
+        <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 600, color: 'var(--ink-strong)' }}>Giờ công đến khi kết thúc</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '16px' }}>
           <div data-testid="budget-hours">
             <div style={{ fontSize: '12.5px', color: 'var(--ink-faint)' }}>Ngân sách giờ</div>
@@ -193,7 +192,6 @@ export default function ProfitForecastPage({
   const [data, setData] = useState<ProfitForecastRes | null>(initialForecast ?? null);
   const [loading, setLoading] = useState(!initialForecast);
   const [error, setError] = useState<string | null>(null);
-  const [project, setProject] = useState<ProjectRes | null>(null);
 
   const loadData = useCallback(async () => {
     if (!canViewScreen) return;
@@ -220,22 +218,12 @@ export default function ProfitForecastPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadData, initialForecast]);
 
-  useEffect(() => {
-    if (initialForecast || !canViewScreen) return;
-    void (async () => {
-      try {
-        setProject(await getProject(projectId));
-      } catch {
-        // Không báo lỗi nếu không lấy được thông tin dự án — vẫn hiển thị số liệu dự báo.
-      }
-    })();
-  }, [projectId, initialForecast, canViewScreen]);
 
   if (!canViewScreen) {
     return (
       <div className="user-management-page" data-testid="profit-forecast-forbidden">
         <div className="alert-box alert-box--danger" role="alert">
-          Bạn không có quyền xem dự báo lợi nhuận tới khi kết thúc dự án (yêu cầu vai trò Quản lý dự án VT-02).
+          Bạn không có quyền xem dự báo lợi nhuận tới khi kết thúc dự án.
         </div>
         {onBack && (
           <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
@@ -248,36 +236,23 @@ export default function ProfitForecastPage({
 
   return (
     <div className="user-management-page" data-testid="profit-forecast-page">
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {onBack && (
-            <button type="button" className="btn btn-secondary btn-sm btn-back" onClick={onBack} data-testid="btn-back-profit-forecast">
-              {ICONS.arrowLeft} Quay lại
+      <PageHeader
+        back={onBack ? { label: 'Chọn dự án khác', onClick: onBack, testId: 'btn-back-profit-forecast' } : undefined}
+        title="Dự báo lợi nhuận"
+        actions={
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => void loadData()}
+              disabled={loading}
+              data-testid="btn-reload-profit-forecast"
+            >
+              {ICONS.refresh} Tải lại
             </button>
-          )}
-          <div>
-            <h1 className="page-title" style={{ margin: '4px 0' }}>Dự báo lợi nhuận tới khi kết thúc dự án</h1>
-            <p className="page-subtitle" data-testid="project-code">{project?.projectCode || `Mã: ${projectId}`}</p>
-            {project?.name && (
-              <p className="page-subtitle" style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
-                {project.name}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={() => void loadData()}
-            disabled={loading}
-            data-testid="btn-reload-profit-forecast"
-          >
-            {ICONS.refresh} Tải lại
-          </button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {error && (
         <div className="alert-box alert-box--danger" role="alert" style={{ marginBottom: '16px' }} data-testid="profit-forecast-error">

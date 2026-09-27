@@ -80,8 +80,7 @@ export default function WorkTypeRateManager() {
         <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Đơn giá theo loại hình công việc</h2>
       </div>
       <p className="field-hint" style={{ marginBottom: '14px' }}>
-        Hệ số nhân lên đơn giá theo vai trò/cấp bậc khi tính đơn giá cuối cùng cho một dòng giờ công (ví dụ
-        giờ ngoài giờ hành chính × 1.5). Lưu sẽ ghi đè trực tiếp giá trị đang dùng, không giữ lịch sử.
+        Hệ số nhân với đơn giá, ví dụ ngoài giờ × 1.5. Lưu sẽ ghi đè giá trị hiện tại.
       </p>
 
       {isLoading ? (

@@ -135,7 +135,7 @@ export default function SubcontractorExpenseApprovalActionBar({
 
               <div className="modal-footer">
                 <button type="button" className="btn-secondary" onClick={closeModal} disabled={submitting}>
-                  Hủy bỏ
+                  Hủy
                 </button>
                 <button
                   type="button"
@@ -199,7 +199,7 @@ export default function SubcontractorExpenseApprovalActionBar({
 
               <div className="modal-footer">
                 <button type="button" className="btn-secondary" onClick={closeModal} disabled={submitting}>
-                  Hủy bỏ
+                  Hủy
                 </button>
                 <button
                   type="button"

@@ -85,7 +85,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
       <div className="tree-empty-state">
         <div className="empty-icon">{ICONS.building}</div>
         <h3>Chưa có bộ phận nào trong cây tổ chức</h3>
-        <p>Hệ thống chưa ghi nhận khai báo bộ phận. Hãy bắt đầu bằng cách thêm bộ phận cấp gốc đầu tiên.</p>
+        <p>Thêm bộ phận gốc đầu tiên để bắt đầu.</p>
       </div>
     );
   }
@@ -199,27 +199,30 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
     );
   };
 
-  // TABLE VIEW RENDER
+  // TABLE VIEW RENDER — danh sách gọn cùng mẫu với Nhân sự/Khách hàng: mỗi hàng một dòng, chữ
+  // thường thay cho viên màu, không hiện mã nội bộ; menu ⋮ chỉ hiện khi rê chuột vào hàng.
   if (viewMode === 'TABLE') {
     return (
       <div className="user-table-card">
         <div className="table-responsive">
-          <table className="user-data-table">
+          <table className="user-data-table list-table dept-table">
             <thead>
               <tr>
-                <th>Mã / tên bộ phận</th>
-                <th>Cấp độ cây</th>
-                <th>Bộ phận cha</th>
-                <th>Trưởng bộ phận</th>
-                <th>Số đơn vị con</th>
-                <th style={{ textAlign: 'right' }}>Thao tác</th>
+                <th style={{ width: '32%' }}>Bộ phận</th>
+                <th className="list-table__hide-sm" style={{ width: '9%' }}>Cấp</th>
+                <th className="list-table__hide-sm" style={{ width: '23%' }}>Trực thuộc</th>
+                <th style={{ width: '21%' }}>Trưởng bộ phận</th>
+                <th className="list-table__hide-sm list-table__num" style={{ width: '10%' }}>Bộ phận con</th>
+                <th className="list-table__actions">
+                  <span className="visually-hidden">Thao tác</span>
+                </th>
               </tr>
             </thead>
             <tbody>
               {filteredFlatData.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#5B5A57' }}>
-                    Không tìm thấy bộ phận nào phù hợp với từ khóa "{searchKeyword}".
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--ink-muted)' }}>
+                    Không tìm thấy bộ phận nào khớp "{searchKeyword}".
                   </td>
                 </tr>
               ) : (
@@ -228,45 +231,38 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
                   const childCount = flatData.filter((d) => d.parentId === dept.id).length;
                   const isRoot = !dept.parentId;
                   const depth = getDepth(dept.id);
+                  const typeLabel = getUnitTypeLabel(dept.unitType);
 
                   return (
                     <tr key={dept.id}>
                       <td>
                         <div className="user-profile-cell">
-                          <span className="avatar-circle avatar-circle--lg" style={{ background: isRoot ? '#111111' : '#1F6C9F' }}>
-                            {getUnitTypeMonogram(dept.unitType)}
-                          </span>
+                          <span className="avatar-circle" aria-hidden="true">{getUnitTypeMonogram(dept.unitType)}</span>
                           <div className="user-profile-meta">
-                            <span className="user-profile-fullname">{dept.name}</span>
-                            <span className="user-profile-username">ID: DEPT-{dept.id} • {getUnitTypeLabel(dept.unitType)}</span>
+                            <span className="list-table__name" title={dept.name}>{dept.name}</span>
+                            <span className="list-table__sub list-table__sub--text">
+                              {isRoot ? `${typeLabel} · cấp gốc` : typeLabel}
+                            </span>
                           </div>
                         </div>
                       </td>
-                      <td>
-                        {isRoot ? (
-                          <span className="badge-level badge-level--root">Cấp 1 (Gốc)</span>
-                        ) : (
-                          <span className="badge-level badge-level--branch">Cấp {depth + 1}</span>
-                        )}
-                      </td>
-                      <td>
+                      <td className="list-table__muted list-table__hide-sm">Cấp {depth + 1}</td>
+                      <td className="list-table__hide-sm">
                         {parentDept ? (
-                          <span className="cell-dept">{parentDept.name}</span>
+                          <span className="list-table__clip" title={parentDept.name}>{parentDept.name}</span>
                         ) : (
-                          <span style={{ color: '#6B6A67', fontStyle: 'italic' }}>-- Cấp cao nhất --</span>
+                          <span className="list-table__muted">—</span>
                         )}
                       </td>
                       <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <strong style={{ color: '#111111' }}>{dept.managerName || 'Chưa gán'}</strong>
-                        </div>
+                        {dept.managerName ? (
+                          <span className="list-table__clip" title={dept.managerName}>{dept.managerName}</span>
+                        ) : (
+                          <span className="list-table__muted">Chưa phân công</span>
+                        )}
                       </td>
-                      <td>
-                        <span className="badge-children">{childCount} bộ phận con</span>
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        {renderActionButtons(dept)}
-                      </td>
+                      <td className="list-table__muted list-table__hide-sm list-table__num">{childCount > 0 ? childCount : '—'}</td>
+                      <td className="list-table__actions">{renderActionButtons(dept)}</td>
                     </tr>
                   );
                 })
@@ -289,7 +285,7 @@ export const DepartmentTree: React.FC<DepartmentTreeProps> = ({
         <div className="tree-empty-state">
           <div className="empty-icon">{ICONS.search}</div>
           <h3>Không tìm thấy bộ phận nào phù hợp</h3>
-          <p>Không có bộ phận nào khớp với từ khóa "{searchKeyword}". Hãy thử một từ khóa khác.</p>
+          <p>Không có bộ phận nào khớp với "{searchKeyword}".</p>
         </div>
       );
     }

@@ -14,6 +14,7 @@ import {
 } from '../types/portalTypes';
 import { formatPortalDateTime, formatPortalMoney } from '../utils/portalFormat';
 import { ACCEPTANCE_STATUS_TONE } from './PortalAcceptancePage';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface Props {
   certificateId: number;
@@ -83,8 +84,7 @@ export default function PortalAcceptanceDetailPage({ certificateId, signerName, 
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có quyền xem phiếu nghiệm thu này</h2>
           <p>
-            Phiếu không thuộc dự án của công ty bạn hoặc không tồn tại. Tài khoản cổng chỉ xem và duyệt được phiếu của
-            chính khách hàng mình. Lần truy cập này đã được ghi vào nhật ký hệ thống.
+            Phiếu không thuộc công ty bạn hoặc không tồn tại. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">
@@ -150,25 +150,26 @@ export default function PortalAcceptanceDetailPage({ certificateId, signerName, 
         </div>
       )}
 
-      <div className="page-header">
-        <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.clipboardList} {data.certificateCode}</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">Lần gửi {data.revisionNo}</span>
-          </div>
-          <h1 className="page-title">{data.title}</h1>
-          <p className="page-subtitle">
-            <button type="button" className="btn-link" onClick={() => onOpenProject(data.projectId)} style={{ padding: 0 }}>
-              {data.projectCode} — {data.projectName}
-            </button>
-            {data.workPackageName ? ` · Hạng mục ${data.workPackageName}` : ''}
-          </p>
-        </div>
-        <span className={`badge ${ACCEPTANCE_STATUS_TONE[status] ?? 'badge--gray'} portal-status-lg`} data-testid="portal-acceptance-status">
-          {PORTAL_ACCEPTANCE_LIST_STATUS_LABEL[status] ?? data.status}
-        </span>
-      </div>
+      <PageHeader
+        title={data.title}
+        meta={
+          <>
+            <span className="page-header__code">{data.certificateCode}</span>
+            <span>Lần gửi {data.revisionNo}</span>
+            <span>
+              <button type="button" className="btn-link" onClick={() => onOpenProject(data.projectId)} style={{ padding: 0 }}>
+                {data.projectCode} — {data.projectName}
+              </button>
+            </span>
+            {data.workPackageName && <span>Hạng mục {data.workPackageName}</span>}
+          </>
+        }
+        actions={
+          <span className={`badge ${ACCEPTANCE_STATUS_TONE[status] ?? 'badge--gray'} portal-status-lg`} data-testid="portal-acceptance-status">
+            {PORTAL_ACCEPTANCE_LIST_STATUS_LABEL[status] ?? data.status}
+          </span>
+        }
+      />
 
       {/* Khối quyết định */}
       {pending ? (

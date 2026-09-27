@@ -178,3 +178,71 @@ export interface RestoreResultRes {
   restoredToPointInTime: string;
   completedAt: string;
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// NCL-15-CN-004 — nhập dữ liệu khách hàng và nhân sự từ tệp CSV (xem trước → xác nhận nhập).
+
+export type ImportTargetType = 'CUSTOMER' | 'EMPLOYEE';
+export type ImportStatus = 'PREVIEWED' | 'COMMITTED' | 'COMMITTED_WITH_ERRORS';
+export type ImportRowStatus = 'VALID' | 'INVALID' | 'DUPLICATE';
+export type DuplicateAction = 'SKIP' | 'UPDATE';
+export type ImportErrorStage = 'VALIDATION' | 'COMMIT';
+
+export interface ImportPreviewRow {
+  /** Số dòng theo tệp — dòng tiêu đề là dòng 1. */
+  rowNumber: number;
+  status: ImportRowStatus;
+  /** Chỉ chứa ô có giá trị, khoá là tên trường chuẩn (name, taxCode… / username, hireDate…). */
+  data: Record<string, string>;
+  errors: string[];
+  duplicateOfId?: number | null;
+  duplicateOfLabel?: string | null;
+}
+
+export interface ImportPreviewRes {
+  jobId: number;
+  targetType: ImportTargetType;
+  fileName: string;
+  status: ImportStatus;
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  duplicateRows: number;
+  notice?: string | null;
+  rows: ImportPreviewRow[];
+}
+
+export interface ImportRowError {
+  rowNumber: number;
+  stage: ImportErrorStage;
+  message: string;
+  rawData?: string | null;
+}
+
+export interface ImportResultRes {
+  jobId: number;
+  targetType: ImportTargetType;
+  fileName: string;
+  status: ImportStatus;
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  duplicateRows: number;
+  createdCount: number;
+  updatedCount: number;
+  skippedCount: number;
+  failedCount: number;
+  duplicateAction?: DuplicateAction | null;
+  createdBy?: string | null;
+  createdAt: string;
+  committedBy?: string | null;
+  committedAt?: string | null;
+  notice?: string | null;
+  /** Vắng mặt ở API danh sách. */
+  errors?: ImportRowError[] | null;
+}
+
+export interface ImportCommitReq {
+  duplicateAction?: DuplicateAction | null;
+  rowActions?: { rowNumber: number; action: DuplicateAction }[];
+}

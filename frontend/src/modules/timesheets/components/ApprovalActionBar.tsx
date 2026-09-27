@@ -146,7 +146,7 @@ export default function ApprovalActionBar({ timesheet, onApproved, onRejected, o
 
               <div className="modal-footer">
                 <button type="button" className="btn-secondary" onClick={closeModal} disabled={submitting}>
-                  Hủy bỏ
+                  Hủy
                 </button>
                 <button
                   type="button"
@@ -189,7 +189,7 @@ export default function ApprovalActionBar({ timesheet, onApproved, onRejected, o
                   <strong>
                     {timesheet.weekStartDate} → {timesheet.weekEndDate}
                   </strong>
-                  . Các dòng này sẽ quay về nhập (DRAFT) để nhân viên sửa và nộp lại.
+                  . Các dòng này sẽ trả về bản nháp để nhân viên sửa và nộp lại.
                 </p>
                 <label className="form-label" htmlFor="reject-reason">
                   Lý do từ chối <span className="text-danger">*</span>
@@ -213,7 +213,7 @@ export default function ApprovalActionBar({ timesheet, onApproved, onRejected, o
 
               <div className="modal-footer">
                 <button type="button" className="btn-secondary" onClick={closeModal} disabled={submitting}>
-                  Hủy bỏ
+                  Hủy
                 </button>
                 <button
                   type="button"

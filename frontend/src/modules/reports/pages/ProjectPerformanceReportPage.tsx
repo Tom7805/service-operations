@@ -8,6 +8,7 @@ import type {
   ProjectPerformanceRes,
   ProjectPerformanceStatus,
 } from '../types/projectPerformanceReportTypes';
+import PageHeader from '../../../components/common/PageHeader';
 
 export interface ProjectPerformanceReportPageProps {
   currentUserRoles?: string[];
@@ -131,7 +132,7 @@ export default function ProjectPerformanceReportPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Báo cáo hiệu quả theo dự án chỉ dành riêng cho vai trò <strong>Quản lý dự án</strong>.
+            Trang này dành cho <strong>Quản lý dự án</strong>.
           </p>
           {onBack && (
             <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
@@ -145,29 +146,10 @@ export default function ProjectPerformanceReportPage({
 
   return (
     <div className="user-management-page" data-testid="project-performance-page">
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {onBack && (
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm btn-back"
-              onClick={onBack}
-              data-testid="btn-back-project-performance"
-            >
-              {ICONS.arrowLeft} Quay lại
-            </button>
-          )}
-          <div>
-            <h1 className="page-title" style={{ margin: '4px 0' }}>
-              Báo cáo hiệu quả theo dự án
-            </h1>
-            <p className="page-subtitle">
-              So kế hoạch trong báo giá với thực tế tính đến hiện tại của các dự án bạn quản lý — giờ
-              công, doanh thu và biên lợi nhuận.
-            </p>
-          </div>
-        </div>
-        <div className="page-header__actions">
+      <PageHeader
+        back={onBack ? { label: 'Báo cáo', onClick: onBack, testId: 'btn-back-project-performance' } : undefined}
+        title="Hiệu quả dự án"
+        actions={
           <button
             type="button"
             className="btn-primary"
@@ -176,10 +158,10 @@ export default function ProjectPerformanceReportPage({
             data-testid="btn-refresh-project-performance"
           >
             {refreshing ? <span className="spinner-sm" aria-hidden="true" /> : ICONS.refresh}{' '}
-            {refreshing ? 'Đang tải lại...' : 'Làm mới'}
+            {refreshing ? 'Đang tải lại…' : 'Làm mới'}
           </button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="user-table-card" style={{ padding: '20px', marginBottom: '16px' }}>
         <div className="toolbar-filters" style={{ display: 'flex', alignItems: 'flex-end', gap: '16px', flexWrap: 'wrap' }}>

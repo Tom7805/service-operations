@@ -3,6 +3,7 @@ import { AuditLogApiError, searchAuditLogs } from '../api/auditLogApi';
 import { TARGET_TYPE_LABELS, roleLabel, type AuditLogEntry, type AuditTargetType } from '../types/auditLogTypes';
 import { ICONS } from '../../../components/common/icons';
 import TableSkeleton from '../../../components/common/TableSkeleton';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface AuditLogPageProps {
   currentUserRoles?: string[];
@@ -126,7 +127,7 @@ export default function AuditLogPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Nhật ký thao tác tổng hợp chỉ dành riêng cho vai trò <strong>Quản trị viên</strong>.
+            Trang này dành cho <strong>Quản trị viên</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">Tài khoản: {currentUserName}</span>
@@ -138,33 +139,21 @@ export default function AuditLogPage({
 
   return (
     <div className="user-management-page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Nhật ký thao tác hệ thống</h1>
-          <p className="page-subtitle">
-            Toàn bộ thao tác nghiệp vụ và lần từ chối truy cập trái phép trên mọi module — lưu trên máy chủ.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="btn-icon-refresh"
-          onClick={() => fetchLogs(page)}
-          title="Làm mới dữ liệu"
-          aria-label="Làm mới dữ liệu"
-        >
-          {ICONS.refresh}
-        </button>
-      </div>
+      <PageHeader
+        title="Nhật ký thao tác"
+        actions={
+          <button
+            type="button"
+            className="btn-icon-refresh"
+            onClick={() => fetchLogs(page)}
+            title="Làm mới dữ liệu"
+            aria-label="Làm mới dữ liệu"
+          >
+            {ICONS.refresh}
+          </button>
+        }
+      />
 
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--blue">{ICONS.clipboardList}</div>
-          <div>
-            <span className="stat-card__label">Tổng số bản ghi thỏa bộ lọc</span>
-            <strong className="stat-card__value">{totalElements}</strong>
-          </div>
-        </div>
-      </div>
 
       {error && (
         <div className="alert alert--error" role="alert">

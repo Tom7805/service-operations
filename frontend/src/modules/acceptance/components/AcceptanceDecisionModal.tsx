@@ -230,7 +230,7 @@ export default function AcceptanceDecisionModal({ isOpen, mode, certificate, onC
                       <span className="field-error">{errors.reason}</span>
                     ) : (
                       <span className="field-hint">
-                        Lý do được lưu vào phiếu để nhóm dự án chỉnh sửa trước khi nộp lại · {reason.length}/{REASON_MAX_LENGTH}
+                        {reason.length}/{REASON_MAX_LENGTH}
                       </span>
                     )}
                   </div>
@@ -315,9 +315,7 @@ export default function AcceptanceDecisionModal({ isOpen, mode, certificate, onC
                     </div>
                     {errors.minutesUrl ? (
                       <span className="field-error">{errors.minutesUrl}</span>
-                    ) : (
-                      <span className="field-hint">Tệp biên bản được lưu dạng đường dẫn mô phỏng.</span>
-                    )}
+                    ) : null}
                   </div>
                 </div>
 

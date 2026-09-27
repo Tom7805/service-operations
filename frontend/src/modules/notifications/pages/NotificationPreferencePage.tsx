@@ -8,6 +8,7 @@ import {
   updateNotificationPreferences,
 } from '../api/notificationsApi';
 import type { NotificationPreference } from '../types/notificationTypes';
+import PageHeader from '../../../components/common/PageHeader';
 
 export interface NotificationPreferencePageProps {
   /** Quay lại trung tâm thông báo. */
@@ -123,25 +124,10 @@ export default function NotificationPreferencePage({ onBack }: NotificationPrefe
 
   return (
     <div className="user-management-page pref-page" data-testid="notification-preference-page">
-      <div className="page-header">
-        <div>
-          {onBack && (
-            <button type="button" className="btn-link pref-page__back" onClick={handleBack} data-testid="btn-pref-back">
-              {ICONS.arrowLeft} Trung tâm thông báo
-            </button>
-          )}
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.settings} THÔNG BÁO</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">CẤU HÌNH NHẬN</span>
-          </div>
-          <h1 className="page-title">Cài đặt nhận thông báo</h1>
-          <p className="page-subtitle">
-            Chọn nhóm thông báo muốn nhận và nhận ngay hay gộp thành bản tổng hợp cuối ngày. Thay đổi áp dụng cho
-            thông báo phát sinh từ lúc lưu, không ảnh hưởng thông báo đã nhận.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        back={onBack ? { label: 'Thông báo', onClick: handleBack, testId: 'btn-pref-back' } : undefined}
+        title="Cài đặt nhận thông báo"
+      />
 
       {loadError ? (
         <div className="alert alert--error mb-4" role="alert">
@@ -188,8 +174,7 @@ export default function NotificationPreferencePage({ onBack }: NotificationPrefe
           <div className="info-callout pref-page__callout">
             <span className="info-callout__icon">{ICONS.info}</span>
             <span>
-              Cảnh báo bảo mật tài khoản và bản tổng hợp cuối ngày luôn được gửi, không tắt được. Mỗi lần lưu, hệ thống
-              ghi lại người thay đổi, nội dung và thời điểm vào nhật ký hệ thống.
+              Cảnh báo bảo mật và bản tổng hợp cuối ngày luôn được gửi.
             </span>
           </div>
 

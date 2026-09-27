@@ -41,7 +41,7 @@ export default class ErrorBoundary extends Component<Props, State> {
             gap: '16px',
             padding: '24px',
             textAlign: 'center',
-            fontFamily: 'system-ui, sans-serif',
+            fontFamily: 'var(--font-sans)',
           }}
         >
           <h2 style={{ margin: 0 }}>Đã có lỗi xảy ra</h2>

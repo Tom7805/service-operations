@@ -13,6 +13,7 @@ import ServicePriceFormModal from '../components/ServicePriceFormModal';
 import ServiceCatalogDetailPanel from '../components/ServiceCatalogDetailPanel';
 import type { ServiceCatalogRes } from '../types/adminTypes';
 import { formatDate, formatVnd, todayIso } from '../utils/serviceCatalogUtils';
+import PageHeader from '../../../components/common/PageHeader';
 
 type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
 
@@ -193,8 +194,7 @@ export default function ServiceCatalogPage({ currentUserRoles = [], onViewAuditL
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Quản lý danh mục dịch vụ và giá chỉ dành cho <strong>Quản trị viên</strong>. Lần truy cập này đã được ghi vào
-            nhật ký hệ thống.
+            Trang này dành cho <strong>Quản trị viên</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">Vai trò hiện tại: {roleLabels(currentUserRoles) || '—'}</span>
@@ -211,30 +211,21 @@ export default function ServiceCatalogPage({ currentUserRoles = [], onViewAuditL
 
   return (
     <div className="user-management-page svc-page" data-testid="service-catalog-page">
-      <div className="page-header">
-        <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.tag} DANH MỤC</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">QTN-28 · GIÁ THEO NGÀY HIỆU LỰC</span>
-          </div>
-          <h1 className="page-title">Danh mục dịch vụ và giá</h1>
-          <p className="page-subtitle">
-            Một bộ dịch vụ chuẩn dùng chung cho báo giá và hóa đơn. Đổi giá là thêm mốc giá mới theo ngày hiệu lực — mọi
-            mốc cũ được giữ lại để chứng từ đã lập vẫn giải thích được.
-          </p>
-        </div>
-        <div className="page-header__actions">
-          {onViewAuditLog && (
-            <button type="button" className="btn-secondary" onClick={onViewAuditLog} data-testid="svc-btn-audit">
-              {ICONS.clipboardList} Nhật ký hệ thống
+      <PageHeader
+        title="Danh mục dịch vụ"
+        actions={
+          <>
+            {onViewAuditLog && (
+              <button type="button" className="btn-secondary" onClick={onViewAuditLog} data-testid="svc-btn-audit">
+                {ICONS.clipboardList} Nhật ký
+              </button>
+            )}
+            <button type="button" className="btn-primary" onClick={() => setFormMode('create')} data-testid="svc-btn-create">
+              {ICONS.plus} Thêm dịch vụ
             </button>
-          )}
-          <button type="button" className="btn-primary" onClick={() => setFormMode('create')} data-testid="svc-btn-create">
-            {ICONS.plus} Thêm dịch vụ
-          </button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <div className={`svc-layout ${selectedId != null ? 'svc-layout--split' : ''}`}>
       <div className="user-table-card svc-table-card">

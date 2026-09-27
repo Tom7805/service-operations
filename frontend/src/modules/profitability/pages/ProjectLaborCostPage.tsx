@@ -2,10 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import MaskedCell from '../../../components/common/MaskedCell';
 import { canViewSensitiveData } from '../../../hooks/usePermission';
-import type { ProjectRes } from '../../projects/types/projectTypes';
-import { getProject, ProjectsApiError } from '../../projects/api/projectsApi';
+import { ProjectsApiError } from '../../projects/api/projectsApi';
 import type { ProjectLaborCostRes } from '../types/profitabilityTypes';
 import { getProjectLaborCost, ProfitabilityApiError } from '../api/profitabilityApi';
+import PageHeader from '../../../components/common/PageHeader';
 
 export interface ProjectLaborCostPageProps {
   projectId: number;
@@ -54,7 +54,6 @@ export default function ProjectLaborCostPage({
   const [laborCost, setLaborCost] = useState<ProjectLaborCostRes | null>(initialLaborCost ?? null);
   const [loading, setLoading] = useState(!initialLaborCost);
   const [error, setError] = useState<string | null>(null);
-  const [project, setProject] = useState<ProjectRes | null>(null);
   const [recalculating, setRecalculating] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -81,17 +80,6 @@ export default function ProjectLaborCostPage({
     }
   }, [loadData, initialLaborCost]);
 
-  useEffect(() => {
-    if (initialLaborCost) return;
-    void (async () => {
-      try {
-        const proj = await getProject(projectId);
-        setProject(proj);
-      } catch {
-        // Không báo lỗi nếu không lấy được thông tin dự án — vẫn hiển thị giá vốn.
-      }
-    })();
-  }, [projectId, initialLaborCost]);
 
   // Backend tính động giá vốn từ các dòng giờ công APPROVED mỗi lần gọi GET, nên "tính lại"
   // tương đương gọi lại API để lấy kết quả mới nhất (không có endpoint recalculate riêng).
@@ -108,8 +96,7 @@ export default function ProjectLaborCostPage({
     return (
       <div className="user-management-page" data-testid="labor-cost-forbidden">
         <div className="alert-box alert-box--danger" role="alert">
-          Bạn không có quyền xem giá vốn giờ công dự án này (yêu cầu vai trò Ban giám đốc
-          VT-01, Quản lý dự án VT-02 hoặc Kế toán VT-05).
+          Bạn không có quyền xem giá vốn giờ công dự án này.
         </div>
         {onBack && (
           <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
@@ -122,47 +109,32 @@ export default function ProjectLaborCostPage({
 
   return (
     <div className="user-management-page" data-testid="labor-cost-page">
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {onBack && (
+      <PageHeader
+        back={onBack ? { label: 'Chọn dự án khác', onClick: onBack, testId: 'btn-back-labor-cost' } : undefined}
+        title="Giá vốn giờ công"
+        actions={
+          <>
             <button
               type="button"
-              className="btn btn-secondary btn-sm btn-back"
-              onClick={onBack}
-              data-testid="btn-back-labor-cost"
+              className="btn btn-secondary btn-sm"
+              onClick={loadData}
+              disabled={loading}
+              data-testid="btn-reload-labor-cost"
             >
-              {ICONS.arrowLeft} Quay lại
+              {ICONS.refresh} Tải lại
             </button>
-          )}
-          <div>
-            <h1 className="page-title" style={{ margin: '4px 0' }}>
-              Giá vốn giờ công dự án
-            </h1>
-            <p className="page-subtitle" data-testid="project-code">{project?.projectCode || `Mã: ${projectId}`}</p>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={loadData}
-            disabled={loading}
-            data-testid="btn-reload-labor-cost"
-          >
-            {ICONS.refresh} Tải lại
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary btn-sm"
-            onClick={handleRecalculate}
-            disabled={recalculating || loading}
-            data-testid="btn-recalculate-labor-cost"
-          >
-            {ICONS.wrench} {recalculating ? 'Đang tính...' : 'Tính lại'}
-          </button>
-        </div>
-      </div>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={handleRecalculate}
+              disabled={recalculating || loading}
+              data-testid="btn-recalculate-labor-cost"
+            >
+              {ICONS.wrench} {recalculating ? 'Đang tính…' : 'Tính lại'}
+            </button>
+          </>
+        }
+      />
 
       {error && (
         <div
@@ -230,16 +202,14 @@ export default function ProjectLaborCostPage({
           {/* RBAC: Ẩn bảng chi tiết cho Project Manager (VT-02) không có VT-01 */}
           {!canViewTableDetail && (
             <div className="alert-box alert-box--info" role="alert" style={{ marginBottom: '16px' }} data-testid="table-hidden-notice">
-              <strong>Thông báo:</strong> Vai trò Quản lý dự án (VT-02) chỉ được xem tổng số giờ và số dòng giờ
-              công. Số tiền giá vốn (đơn giá/giờ, tổng giá vốn) và bảng chi tiết từng nhân sự bị ẩn theo phân
-              quyền — chỉ Ban giám đốc (VT-01), Kế toán (VT-05) và Nhân sự (VT-06) được xem số tiền này.
+              Số tiền giá vốn và chi tiết theo nhân sự chỉ hiển thị với Ban giám đốc, Kế toán và Nhân sự.
             </div>
           )}
 
           {canViewTableDetail && (
             <div className="user-table-card" style={{ padding: '20px' }} data-testid="labor-cost-detail-table">
               <div style={{ marginBottom: '16px' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--ink-strong)' }}>
                   Chi tiết từng dòng giờ công
                 </h3>
               </div>

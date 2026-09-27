@@ -4,6 +4,7 @@ import { roleLabels } from '../../../utils/roleLabel';
 import { getUnsubmittedTimesheets, remindUnsubmittedTimesheetsNow, TimesheetsApiError } from '../api/timesheetsApi';
 import type { UnsubmittedTimesheetRes } from '../types/timesheetTypes';
 import { addDays, formatIsoDate, getMondayOf } from '../utils/weekRange';
+import PageHeader from '../../../components/common/PageHeader';
 
 export interface UnsubmittedTimesheetsPageProps {
   currentUserRoles?: string[];
@@ -79,9 +80,7 @@ export default function UnsubmittedTimesheetsPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Chức năng tra cứu nhân sự chưa nộp bảng chấm công chỉ dành cho vai trò{' '}
-            <strong>Quản lý dự án</strong> hoặc <strong>Nhân viên chuyên môn</strong>. Hệ thống đã ghi lại lần
-            truy cập bị từ chối này vào nhật ký bảo mật.
+            Trang này dành cho <strong>Quản lý dự án</strong> và <strong>Nhân viên chuyên môn</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">{ICONS.shield} Thời điểm: {new Date().toLocaleString('vi-VN')}</span>
@@ -97,23 +96,20 @@ export default function UnsubmittedTimesheetsPage({
 
   return (
     <div className="user-management-page" data-testid="unsubmitted-timesheets-page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Nhân sự chưa nộp bảng chấm công</h1>
-          <p className="page-subtitle">
-            Tra cứu theo tuần. Việc nhắc nộp chạy tự động vào Chủ Nhật hằng tuần — bấm "Gửi nhắc ngay" nếu
-            muốn gửi thông báo cho danh sách này ngay bây giờ.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="btn-primary"
-          onClick={handleRemindNow}
-          disabled={reminding || loading || !result || result.length === 0}
-        >
-          {reminding ? 'Đang gửi…' : 'Gửi nhắc ngay'}
-        </button>
-      </div>
+      <PageHeader
+        title="Chưa nộp bảng chấm công"
+        actions={
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={handleRemindNow}
+            disabled={reminding || loading || !result || result.length === 0}
+            title="Hệ thống vẫn tự nhắc vào Chủ nhật hằng tuần"
+          >
+            {reminding ? 'Đang gửi…' : 'Gửi nhắc ngay'}
+          </button>
+        }
+      />
 
       {remindMessage && (
         <div className="alert alert--success mb-4" role="status">

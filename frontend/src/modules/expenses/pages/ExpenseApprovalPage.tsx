@@ -6,6 +6,7 @@ import SubcontractorExpenseApprovalActionBar from '../components/SubcontractorEx
 import { getPendingExpenses, getPendingSubcontractorExpenses, ExpensesApiError } from '../api/expensesApi';
 import type { ExpenseRes, SubcontractorExpenseRes } from '../types/expenseTypes';
 import { EXPENSE_TYPE_LABELS } from '../types/expenseTypes';
+import PageHeader from '../../../components/common/PageHeader';
 
 export interface ExpenseApprovalPageProps {
   currentUserRoles?: string[];
@@ -81,8 +82,7 @@ export default function ExpenseApprovalPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Chức năng Duyệt chi phí dự án chỉ dành riêng cho vai trò <strong>Kế toán</strong>. Hệ thống đã ghi
-            lại lần truy cập bị từ chối này vào nhật ký bảo mật.
+            Trang này dành cho <strong>Kế toán</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">{ICONS.shield} Thời điểm: {new Date().toLocaleString('vi-VN')}</span>
@@ -109,51 +109,15 @@ export default function ExpenseApprovalPage({
         </div>
       )}
 
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Duyệt chi phí dự án</h1>
-          <p className="page-subtitle">
-            Các phiếu chi phí đang chờ bạn duyệt hoặc từ chối, gồm cả chi phí phát sinh nội bộ và chi phí
-            thuê ngoài. Phiếu được duyệt sẽ được tính vào giá vốn dự án.
-          </p>
-        </div>
-        <div className="page-header__actions">
+      <PageHeader
+        title="Duyệt chi phí"
+        actions={
           <button type="button" className="btn-icon-refresh" onClick={fetchPending} title="Tải lại" aria-label="Tải lại" disabled={loading}>
             {ICONS.refresh}
           </button>
-        </div>
-      </div>
+        }
+      />
 
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--blue">{ICONS.clipboardList}</div>
-          <div>
-            <span className="stat-card__label">Phiếu chi phí nội bộ đang chờ duyệt</span>
-            <strong className="stat-card__value">{pending.length}</strong>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--amber">{ICONS.money}</div>
-          <div>
-            <span className="stat-card__label">Tổng tiền chi phí nội bộ chờ duyệt</span>
-            <strong className="stat-card__value">{formatAmount(totalPendingAmount)}</strong>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--blue">{ICONS.briefcase}</div>
-          <div>
-            <span className="stat-card__label">Phiếu chi phí thuê ngoài đang chờ duyệt</span>
-            <strong className="stat-card__value">{pendingSubcontractor.length}</strong>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--amber">{ICONS.money}</div>
-          <div>
-            <span className="stat-card__label">Tổng tiền chi phí thuê ngoài chờ duyệt</span>
-            <strong className="stat-card__value">{formatAmount(totalPendingSubcontractorAmount)}</strong>
-          </div>
-        </div>
-      </div>
 
       {error && (
         <div className="alert alert--error mb-4" role="alert">
@@ -165,7 +129,14 @@ export default function ExpenseApprovalPage({
         </div>
       )}
 
-      <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 700 }}>Chi phí phát sinh nội bộ</h3>
+      <h3 className="section-heading">
+        Chi phí phát sinh nội bộ
+        {pending.length > 0 && (
+          <span className="section-heading__meta">
+            {pending.length} phiếu · {formatAmount(totalPendingAmount)}
+          </span>
+        )}
+      </h3>
       <div className="user-table-card" style={{ marginBottom: '24px' }}>
         <div className="table-responsive">
           <table className="user-data-table">
@@ -244,7 +215,14 @@ export default function ExpenseApprovalPage({
         </div>
       </div>
 
-      <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 700 }}>Chi phí thuê ngoài</h3>
+      <h3 className="section-heading">
+        Chi phí thuê ngoài
+        {pendingSubcontractor.length > 0 && (
+          <span className="section-heading__meta">
+            {pendingSubcontractor.length} phiếu · {formatAmount(totalPendingSubcontractorAmount)}
+          </span>
+        )}
+      </h3>
       <div className="user-table-card">
         <div className="table-responsive">
           <table className="user-data-table">

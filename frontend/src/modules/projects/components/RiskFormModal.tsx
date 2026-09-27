@@ -293,9 +293,6 @@ export default function RiskFormModal({
                   </button>
                 )}
               </div>
-              <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px' }}>
-                Chỉ hiển thị các tài khoản đang hoạt động (backend sẽ từ chối tài khoản đã khóa).
-              </p>
               {errors.watcherId && (
                 <p
                   className="field-error"
@@ -312,7 +309,7 @@ export default function RiskFormModal({
               style={{ padding: '16px 0 0', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}
             >
               <button type="button" className="btn btn-secondary" onClick={onClose} disabled={submitting}>
-                Hủy bỏ
+                Hủy
               </button>
               <button type="submit" className="btn btn-primary" disabled={submitting} data-testid="submit-risk-btn">
                 {submitting ? 'Đang lưu…' : isEdit ? 'Lưu thay đổi' : 'Ghi nhận rủi ro'}

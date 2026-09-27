@@ -116,7 +116,7 @@ describe('ContractLimitAlert (NCL-04-CN-005)', () => {
     );
 
     expect(
-      screen.getByText(/Chức năng yêu cầu vai trò Quản lý dự án \(VT-02\) hoặc Kế toán \(VT-05\)/i)
+      screen.getByText(/Chức năng yêu cầu vai trò Quản lý dự án hoặc Kế toán/i)
     ).toBeInTheDocument();
     expect(contractsApi.getContractUsage).not.toHaveBeenCalled();
   });

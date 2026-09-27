@@ -7,6 +7,7 @@ import RestoreConfirmModal from '../components/RestoreConfirmModal';
 import type { BackupRecordRes } from '../types/adminTypes';
 import { formatBytes, formatCount, MAX_BACKUP_NOTE, notRestorableReason, STATUS_META } from '../utils/backupUtils';
 import { formatDateTime } from '../utils/serviceCatalogUtils';
+import PageHeader from '../../../components/common/PageHeader';
 
 /** Khi còn bản sao đang tạo (VD sao lưu theo lịch), tự làm mới danh sách sau mỗi khoảng này. */
 export const IN_PROGRESS_POLL_MS = 5000;
@@ -135,8 +136,7 @@ export default function BackupRestorePage({ currentUserRoles = [], onViewAuditLo
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Sao lưu và phục hồi dữ liệu chỉ dành cho <strong>Quản trị viên</strong> (QTN-30). Lần truy cập này đã được ghi vào
-            nhật ký hệ thống.
+            Trang này dành cho <strong>Quản trị viên</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">Vai trò hiện tại: {roleLabels(currentUserRoles) || '—'}</span>
@@ -151,38 +151,29 @@ export default function BackupRestorePage({ currentUserRoles = [], onViewAuditLo
 
   return (
     <div className="user-management-page backup-page" data-testid="backup-restore-page">
-      <div className="page-header">
-        <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.save} DỮ LIỆU</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">QTN-30 · CHỈ QUẢN TRỊ VIÊN PHỤC HỒI</span>
-          </div>
-          <h1 className="page-title">Sao lưu và phục hồi dữ liệu</h1>
-          <p className="page-subtitle">
-            Tạo bản sao toàn bộ dữ liệu vận hành theo yêu cầu, hoặc để hệ thống sao lưu theo lịch. Khi có sự cố, chọn một bản
-            sao đã hoàn tất và phục hồi sau khi xác nhận hai bước.
-          </p>
-        </div>
-        <div className="page-header__actions">
-          {onViewAuditLog && (
-            <button type="button" className="btn-secondary" onClick={onViewAuditLog} data-testid="backup-btn-audit">
-              {ICONS.clipboardList} Nhật ký hệ thống
+      <PageHeader
+        title="Sao lưu và phục hồi"
+        actions={
+          <>
+            {onViewAuditLog && (
+              <button type="button" className="btn-secondary" onClick={onViewAuditLog} data-testid="backup-btn-audit">
+                {ICONS.clipboardList} Nhật ký
+              </button>
+            )}
+            <button
+              type="button"
+              className="btn-icon-refresh"
+              onClick={() => void load()}
+              title="Tải lại"
+              aria-label="Tải lại"
+              disabled={loading}
+              data-testid="backup-refresh"
+            >
+              {ICONS.refresh}
             </button>
-          )}
-          <button
-            type="button"
-            className="btn-icon-refresh"
-            onClick={() => void load()}
-            title="Tải lại"
-            aria-label="Tải lại"
-            disabled={loading}
-            data-testid="backup-refresh"
-          >
-            {ICONS.refresh}
-          </button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <div className="backup-top">
         <form className="company-card backup-create" onSubmit={handleCreate} noValidate data-testid="backup-create-form">
@@ -204,7 +195,7 @@ export default function BackupRestorePage({ currentUserRoles = [], onViewAuditLo
           </div>
           <div className="backup-create__foot">
             <span className="field-hint">
-              Sao lưu mọi bảng nghiệp vụ; nhật ký hệ thống và phiên đăng nhập không nằm trong bản sao.
+              Không gồm nhật ký hệ thống và phiên đăng nhập.
             </span>
             <button type="submit" className="btn-primary" disabled={creating} data-testid="backup-create">
               {ICONS.save} {creating ? 'Đang sao lưu…' : 'Tạo bản sao lưu'}

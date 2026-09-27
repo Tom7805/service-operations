@@ -3,6 +3,7 @@ import { ICONS } from '../../../components/common/icons';
 import { fetchPortalProjects } from '../api/portalApi';
 import PortalProjectCard from '../components/PortalProjectCard';
 import type { PortalProjectRes } from '../types/portalTypes';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface Props {
   customerName: string;
@@ -69,22 +70,15 @@ export default function PortalDashboardPage({
 
   return (
     <div className="portal-page">
-      <div className="page-header">
-        <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.folder} DỰ ÁN CỦA BẠN</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">{customerName}</span>
-          </div>
-          <h1 className="page-title">Tiến độ dự án</h1>
-          <p className="page-subtitle">
-            Theo dõi tỷ lệ hoàn thành, các mốc tiến độ và sản phẩm đã bàn giao của những dự án bạn đã thuê.
-          </p>
-        </div>
-        <button type="button" className="btn btn-secondary" onClick={() => void load()} disabled={isLoading}>
-          <span className="icon-xs">{ICONS.refresh}</span> Làm mới
-        </button>
-      </div>
+      <PageHeader
+        title="Dự án của bạn"
+        meta={customerName && <span>{customerName}</span>}
+        actions={
+          <button type="button" className="btn btn-secondary" onClick={() => void load()} disabled={isLoading}>
+            <span className="icon-xs">{ICONS.refresh}</span> Làm mới
+          </button>
+        }
+      />
 
       {pendingAcceptances > 0 && onOpenAcceptances && (
         <div className="alert-box alert-box--warning alert-box--inline" data-testid="portal-dashboard-pending">
@@ -122,7 +116,7 @@ export default function PortalDashboardPage({
         <div className="table-empty-state" data-testid="portal-projects-empty">
           <div className="table-empty-state__icon">{ICONS.folder}</div>
           <h3>Chưa có dự án nào</h3>
-          <p>Khi dự án của bạn được khởi tạo, tiến độ sẽ hiển thị tại đây. Cần hỗ trợ, vui lòng liên hệ quản lý dự án.</p>
+          <p>Tiến độ dự án sẽ hiển thị tại đây khi dự án được khởi tạo.</p>
         </div>
       ) : (
         <>

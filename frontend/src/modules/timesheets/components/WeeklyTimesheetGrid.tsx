@@ -4,7 +4,6 @@ import { listWeekDates, weekdayLabel } from '../utils/weekRange';
 
 export interface WeeklyTimesheetGridProps {
   weekFrom: string;
-  weekTo: string;
   summaries: TimesheetSummaryRes[];
 }
 
@@ -14,7 +13,7 @@ export interface WeeklyTimesheetGridProps {
  * sửa/xoá (những thao tác đó cần biết `projectId` của công việc, thứ mà endpoint tổng hợp
  * tuần không trả về; xem chi tiết/sửa/xoá ở đúng công việc trong dự án tương ứng).
  */
-export default function WeeklyTimesheetGrid({ weekFrom, weekTo, summaries }: WeeklyTimesheetGridProps) {
+export default function WeeklyTimesheetGrid({ weekFrom, summaries }: WeeklyTimesheetGridProps) {
   const days = listWeekDates(weekFrom);
 
   if (summaries.length === 0) {
@@ -25,7 +24,7 @@ export default function WeeklyTimesheetGrid({ weekFrom, weekTo, summaries }: Wee
         </div>
         <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: 'var(--ink-strong)' }}>Chưa ghi giờ công nào trong tuần này</h4>
         <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
-          Từ {weekFrom} đến {weekTo} — mở một công việc được giao trong dự án để bắt đầu ghi giờ công.
+          Bấm “Ghi giờ công” ở công việc được giao để bắt đầu.
         </p>
       </div>
     );

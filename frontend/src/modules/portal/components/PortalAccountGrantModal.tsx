@@ -64,7 +64,7 @@ function describeCreateError(err: unknown): { field?: keyof PortalAccountFormErr
     };
   }
   if (err.code === 'RESOURCE_NOT_FOUND') {
-    return { message: 'Không tìm thấy người liên hệ hoặc vai trò Khách hàng (VT-09) chưa được khai báo.', reload: true };
+    return { message: 'Không tìm thấy người liên hệ hoặc vai trò Khách hàng chưa được khai báo.', reload: true };
   }
   if (err.code === 'VALIDATION_ERROR' && err.fieldErrors?.length) {
     const first = err.fieldErrors[0];
@@ -274,7 +274,7 @@ export default function PortalAccountGrantModal({
               <p className="field-hint">
                 {created
                   ? 'Gửi thông tin đăng nhập cho khách hàng qua kênh riêng — mật khẩu chỉ hiển thị một lần.'
-                  : 'Tài khoản mang vai trò Khách hàng (VT-09) và chỉ xem được dữ liệu của đúng khách hàng được chọn.'}
+                  : 'Tài khoản mang vai trò Khách hàng và chỉ xem được dữ liệu của đúng khách hàng được chọn.'}
               </p>
             </div>
             <button type="button" className="modal-close" onClick={handleClose} disabled={submitting} aria-label="Đóng">
@@ -334,8 +334,7 @@ export default function PortalAccountGrantModal({
               <div className="confirm-note-box">
                 <span className="confirm-note-box__icon">{ICONS.info}</span>
                 <span>
-                  Khách hàng đăng nhập bằng màn hình đăng nhập chung và nên đổi mật khẩu ngay lần đầu. Thao tác cấp tài
-                  khoản đã được ghi vào Nhật ký hệ thống (người thực hiện, nội dung, thời điểm).
+                  Khách hàng đăng nhập ở màn hình đăng nhập chung và nên đổi mật khẩu ngay lần đầu.
                 </span>
               </div>
 
@@ -501,7 +500,7 @@ export default function PortalAccountGrantModal({
                   )}
                   {customer && candidates.length > 0 && available.length === 0 && !candidatesLoading && (
                     <p className="field-hint" data-testid="portal-grant-all-taken">
-                      Tất cả người liên hệ của khách hàng này đã có tài khoản cổng — mỗi người liên hệ tối đa một tài khoản.
+                      Mọi người liên hệ của khách hàng này đều đã có tài khoản.
                     </p>
                   )}
                   {errors.contactId && <span className="field-error">{errors.contactId}</span>}

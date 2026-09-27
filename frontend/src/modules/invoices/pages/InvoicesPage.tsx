@@ -11,8 +11,8 @@ interface Props {
 type Section = 'LIST' | 'AGING';
 
 const SECTIONS: Array<{ key: Section; label: string }> = [
-  { key: 'LIST', label: 'Danh sách hóa đơn' },
-  { key: 'AGING', label: 'Báo cáo tuổi nợ' },
+  { key: 'LIST', label: 'Tất cả hóa đơn' },
+  { key: 'AGING', label: 'Công nợ quá hạn' },
 ];
 
 /**
@@ -26,22 +26,19 @@ export default function InvoicesPage({ currentUserRoles = [], currentUserName = 
   const [section, setSection] = useState<Section>('LIST');
 
   return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Hóa đơn</h1>
-        </div>
+    <div className="user-management-page hub-frame">
+      <div className="hub-frame__head">
+        <h1 className="page-title">Hóa đơn</h1>
       </div>
-
-      <div className="user-table-toolbar" style={{ padding: '0 16px 16px' }}>
-        <div className="status-tabs" role="tablist" aria-label="Chức năng Hóa đơn">
+      <div className="hub-tabs-row">
+        <div className="hub-tabs" role="tablist" aria-label="Hóa đơn">
           {SECTIONS.map((s) => (
             <button
               key={s.key}
               type="button"
               role="tab"
               aria-selected={section === s.key}
-              className={`status-tab ${section === s.key ? 'status-tab--active' : ''}`}
+              className={`hub-tabs__tab ${section === s.key ? 'hub-tabs__tab--active' : ''}`}
               onClick={() => setSection(s.key)}
             >
               {s.label}
@@ -50,12 +47,14 @@ export default function InvoicesPage({ currentUserRoles = [], currentUserName = 
         </div>
       </div>
 
+      <div className="hub-frame__body">
       {section === 'LIST' && (
         <InvoiceListPage currentUserRoles={currentUserRoles} currentUserName={currentUserName} onOpenInvoice={onOpenInvoice} />
       )}
       {section === 'AGING' && (
         <ReceivableAgingPage currentUserRoles={currentUserRoles} currentUserName={currentUserName} onOpenInvoice={onOpenInvoice} />
       )}
+      </div>
     </div>
   );
 }

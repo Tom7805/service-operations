@@ -236,7 +236,7 @@ describe('BackupRestorePage (NCL-15-CN-003)', () => {
     vi.mocked(api.listBackups).mockRejectedValue(new api.AdminApiError('FORBIDDEN', 'Forbidden', 403));
     render(<BackupRestorePage currentUserRoles={['VT-01']} />);
 
-    expect(await screen.findByTestId('backup-access-denied')).toHaveTextContent('đã được ghi vào nhật ký hệ thống');
+    expect(await screen.findByTestId('backup-access-denied')).toHaveTextContent('đã được ghi vào nhật ký');
     expect(api.listBackups).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId('backup-create')).not.toBeInTheDocument();
   });

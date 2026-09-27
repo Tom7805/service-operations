@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState, type FormEvent } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import { getUtilizationReport, ReportsApiError } from '../api/reportsApi';
 import type { UtilizationReportRes } from '../types/utilizationReportTypes';
+import PageHeader from '../../../components/common/PageHeader';
 
 export interface UtilizationReportPageProps {
   currentUserRoles?: string[];
@@ -103,7 +104,7 @@ export default function UtilizationReportPage({ currentUserRoles = ['VT-01'], on
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Báo cáo tỷ lệ giờ tính phí chỉ dành riêng cho vai trò <strong>Ban giám đốc</strong>.
+            Trang này dành cho <strong>Ban giám đốc</strong>.
           </p>
           {onBack && (
             <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
@@ -117,29 +118,10 @@ export default function UtilizationReportPage({ currentUserRoles = ['VT-01'], on
 
   return (
     <div className="user-management-page" data-testid="utilization-report-page">
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {onBack && (
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm btn-back"
-              onClick={onBack}
-              data-testid="btn-back-utilization-report"
-            >
-              {ICONS.arrowLeft} Quay lại
-            </button>
-          )}
-          <div>
-            <h1 className="page-title" style={{ margin: '4px 0' }}>
-              Báo cáo tỷ lệ giờ tính phí
-            </h1>
-            <p className="page-subtitle">
-              Giờ tính phí đã duyệt so với giờ làm việc chuẩn của kỳ, theo toàn công ty, từng bộ phận và
-              từng người.
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        back={onBack ? { label: 'Báo cáo', onClick: onBack, testId: 'btn-back-utilization-report' } : undefined}
+        title="Tỷ lệ giờ tính phí"
+      />
 
       <form onSubmit={handleSubmit} noValidate className="user-table-card" style={{ padding: '20px', marginBottom: '16px' }}>
         <div className="toolbar-filters" style={{ display: 'flex', alignItems: 'flex-end', gap: '16px', flexWrap: 'wrap' }}>
@@ -241,7 +223,7 @@ export default function UtilizationReportPage({ currentUserRoles = ['VT-01'], on
 
             <div className="user-table-card" style={{ padding: '20px', marginBottom: '16px' }} data-testid="utilization-department-table">
               <div style={{ marginBottom: '16px' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>Theo bộ phận</h3>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--ink-strong)' }}>Theo bộ phận</h3>
               </div>
 
               {report.departments.length === 0 ? (
@@ -280,7 +262,7 @@ export default function UtilizationReportPage({ currentUserRoles = ['VT-01'], on
 
             <div className="user-table-card" style={{ padding: '20px' }} data-testid="utilization-employee-table">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>Theo từng người</h3>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--ink-strong)' }}>Theo từng người</h3>
                 <input
                   type="text"
                   className="form-input"

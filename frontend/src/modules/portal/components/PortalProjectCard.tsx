@@ -71,7 +71,7 @@ export default function PortalProjectCard({ project, onOpen }: Props) {
         onClick={() => onOpen(project.id)}
         data-testid={`portal-project-open-${project.id}`}
       >
-        Xem tiến độ chi tiết <span className="icon-xs">{ICONS.arrowRight}</span>
+        Xem tiến độ <span className="icon-xs">{ICONS.arrowRight}</span>
       </button>
     </article>
   );

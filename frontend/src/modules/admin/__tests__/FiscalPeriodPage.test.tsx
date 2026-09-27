@@ -36,7 +36,7 @@ describe('FiscalPeriodPage (NCL-15-CN-002 TC-01)', () => {
     render(<FiscalPeriodPage currentUserRoles={['VT-01']} />);
 
     expect(await screen.findByTestId('fiscal-range')).toHaveTextContent('01/04/2026 → 31/03/2027');
-    expect(screen.getByTestId('fiscal-start-month')).toHaveTextContent('THÁNG 4');
+    expect(screen.getByTestId('fiscal-start-month')).toHaveTextContent('tháng 4');
     expect(screen.getByTestId('fiscal-q1')).toHaveTextContent('T4/2026 – T6/2026');
     expect(screen.getByTestId('fiscal-q4')).toHaveTextContent('T1/2027 – T3/2027');
     expect(screen.getByTestId('fiscal-m12')).toHaveTextContent('T3/2027');

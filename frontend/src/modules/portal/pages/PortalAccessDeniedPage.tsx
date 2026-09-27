@@ -15,15 +15,15 @@ interface Props {
 const FEATURE_TEXT = {
   projects: {
     title: 'Cổng theo dõi dự án chỉ dành cho khách hàng',
-    hint: 'Tài khoản nội bộ theo dõi tiến độ dự án ở các màn hình quản lý dự án.',
+    hint: 'Tài khoản nội bộ xem tiến độ ở mục Dự án.',
   },
   acceptances: {
     title: 'Duyệt phiếu nghiệm thu trên cổng chỉ dành cho khách hàng',
-    hint: 'Quản lý dự án ghi nhận quyết định của khách hàng ở màn hình Nghiệm thu nội bộ.',
+    hint: 'Tài khoản nội bộ xử lý phiếu ở mục Nghiệm thu.',
   },
   invoices: {
     title: 'Xem hóa đơn và công nợ trên cổng chỉ dành cho khách hàng',
-    hint: 'Kế toán theo dõi hóa đơn và công nợ ở màn hình Hóa đơn nội bộ.',
+    hint: 'Tài khoản nội bộ xem hóa đơn ở mục Hóa đơn.',
   },
 } as const;
 
@@ -46,8 +46,7 @@ export default function PortalAccessDeniedPage({ currentUserRoles, currentUserNa
         <div className="access-denied-icon">{ICONS.shieldOff}</div>
         <h2>{text.title}</h2>
         <p>
-          Chức năng này chỉ dành cho người liên hệ của khách hàng được cấp tài khoản cổng (<strong>Khách hàng</strong>,
-          VT-09). {text.hint} Hệ thống đã ghi lại lần từ chối truy cập này vào nhật ký hệ thống.
+          {text.hint} Lần truy cập đã được ghi vào nhật ký.
         </p>
         <div className="security-log-badge">
           <span className="security-log-badge__item">

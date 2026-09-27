@@ -125,7 +125,7 @@ describe('DeliverablePage — NCL-12-CN-004', () => {
     const history = await screen.findByTestId('deliverable-version-list');
     await waitFor(() => expect(within(history).getByTestId('deliverable-version-15')).toHaveTextContent('Mới nhất'));
     expect(within(history).getByTestId('deliverable-version-14')).toHaveTextContent('1.0');
-    expect(screen.getByTestId('deliverable-total-versions')).toHaveTextContent('2');
+    expect(within(history).getAllByTestId(/^deliverable-version-/)).toHaveLength(2);
   });
 
   it('TC-02: trùng số phiên bản (khác hoa thường/khoảng trắng) → báo trùng, yêu cầu đặt số khác, không gọi máy chủ', async () => {

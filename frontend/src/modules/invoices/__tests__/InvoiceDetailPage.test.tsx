@@ -129,7 +129,8 @@ describe('InvoiceDetailPage (NCL-10-CN-006 — Nhắc thu nợ tự động)', (
     render(<InvoiceDetailPage invoiceId={9} onBack={vi.fn()} currentUserRoles={['VT-05']} />);
 
     expect(await screen.findByText('INV-20260713-A1B2C3')).toBeInTheDocument();
-    expect(screen.getByText((_, element) => element?.textContent === 'HD-LK3F9A · Cong ty A')).toBeInTheDocument();
+    expect(screen.getByText('HD-LK3F9A')).toBeInTheDocument();
+    expect(screen.getByText('Cong ty A')).toBeInTheDocument();
     expect(screen.getByText('Lịch sử thanh toán')).toBeInTheDocument();
     expect(screen.getByText('Tiền mặt')).toBeInTheDocument();
   });

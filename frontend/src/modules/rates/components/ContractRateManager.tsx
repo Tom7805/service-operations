@@ -71,14 +71,20 @@ export default function ContractRateManager({ currentUserRoles = [], roleOptions
     }
   }, []);
 
-  const handleOpenContract = (e: FormEvent) => {
-    e.preventDefault();
-    const id = Number(contractIdInput);
+  const openContract = (raw: string) => {
+    const id = Number(raw);
     if (!Number.isFinite(id) || id <= 0) return;
     setActiveContractId(id);
     setToast(null);
     void loadContractRates(id);
   };
+
+  const handleOpenContract = (e: FormEvent) => {
+    e.preventDefault();
+    openContract(contractIdInput);
+  };
+
+  const useContractSelect = canListContracts && !contractsLoadError;
 
   const handleCreated = (created: ContractBillRateRes) => {
     setRates((prev) => [created, ...prev]);
@@ -114,8 +120,7 @@ export default function ContractRateManager({ currentUserRoles = [], roleOptions
         <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Đơn giá riêng theo hợp đồng</h2>
       </div>
       <p className="field-hint" style={{ marginBottom: '14px' }}>
-        Mức giá đàm phán riêng cho một hợp đồng cụ thể — khi tính doanh thu, hệ thống ưu tiên dùng đơn giá
-        riêng này thay vì bảng đơn giá chung công ty.
+        Được ưu tiên hơn bảng đơn giá chung khi tính doanh thu.
       </p>
 
       {contractsLoadError && (
@@ -125,7 +130,7 @@ export default function ContractRateManager({ currentUserRoles = [], roleOptions
       )}
 
       <form onSubmit={handleOpenContract} style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-        {canListContracts && !contractsLoadError ? (
+        {useContractSelect ? (
           <div style={{ minWidth: '280px' }}>
             <label className="form-label" htmlFor="contract-rate-select">
               Hợp đồng
@@ -134,9 +139,13 @@ export default function ContractRateManager({ currentUserRoles = [], roleOptions
               id="contract-rate-select"
               className="form-input"
               value={contractIdInput}
-              onChange={(e) => setContractIdInput(e.target.value)}
+              onChange={(e) => {
+                // Chọn là mở luôn — không bắt bấm thêm một nút "Mở" cho cùng một ý định.
+                setContractIdInput(e.target.value);
+                openContract(e.target.value);
+              }}
             >
-              <option value="">-- Chọn hợp đồng --</option>
+              <option value="">Chọn hợp đồng…</option>
               {contracts.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.contractCode} — {c.name}
@@ -162,9 +171,11 @@ export default function ContractRateManager({ currentUserRoles = [], roleOptions
             <small className="field-hint">Xem ID ở trang Hợp đồng, dưới mỗi mã hợp đồng.</small>
           </div>
         )}
-        <button type="submit" className="btn btn-secondary" disabled={!contractIdInput.trim()}>
-          Mở đơn giá hợp đồng
-        </button>
+        {!useContractSelect && (
+          <button type="submit" className="btn btn-secondary" disabled={!contractIdInput.trim()}>
+            Mở đơn giá hợp đồng
+          </button>
+        )}
       </form>
 
       {activeContractId != null && (

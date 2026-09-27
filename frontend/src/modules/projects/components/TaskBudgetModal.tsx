@@ -162,7 +162,7 @@ export default function TaskBudgetModal({
                 onClick={onClose}
                 disabled={submitting}
               >
-                Hủy bỏ
+                Hủy
               </button>
               <button
                 type="submit"

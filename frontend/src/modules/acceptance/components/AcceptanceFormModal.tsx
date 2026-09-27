@@ -190,7 +190,7 @@ export default function AcceptanceFormModal({
           <div className="modal-body">
             {!isAllowed ? (
               <div className="alert-box alert-box--danger" role="alert">
-                Chức năng lập phiếu nghiệm thu chỉ dành cho Quản lý dự án (VT-02).
+                Chức năng lập phiếu nghiệm thu chỉ dành cho Quản lý dự án.
               </div>
             ) : step === 'confirm' && readiness && selectedWp ? (
               <div data-testid="acceptance-confirm-step">
@@ -198,7 +198,7 @@ export default function AcceptanceFormModal({
                   <span className="alert-box__icon">{ICONS.info}</span>
                   <div className="alert-box__content">
                     Sau khi lập, phiếu chuyển sang trạng thái <strong style={{ display: 'inline' }}>Chờ khách hàng xác nhận</strong>.
-                    Nội dung công việc và sản phẩm bàn giao được chụp lại tại thời điểm này; thao tác được ghi vào nhật ký nghiệm thu.
+                    Danh sách công việc và sản phẩm bàn giao được chốt tại thời điểm này.
                   </div>
                 </div>
                 <div className="detail-grid" style={{ marginBottom: '16px' }}>
@@ -342,7 +342,7 @@ export default function AcceptanceFormModal({
                               <strong>
                                 Chưa thể lập phiếu — còn {readiness.unfinishedTasks.length} công việc chưa hoàn thành
                               </strong>
-                              Chỉ nghiệm thu khi toàn bộ công việc của hạng mục (kể cả hạng mục con) đã hoàn thành (QTN-24):
+                              Chỉ nghiệm thu khi toàn bộ công việc của hạng mục (kể cả hạng mục con) đã hoàn thành:
                               <ul className="acceptance-task-list">
                                 {readiness.unfinishedTasks.map((t) => {
                                   const meta = TASK_STATUS_META[t.status] ?? { label: t.status, badge: 'badge--gray' };

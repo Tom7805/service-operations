@@ -631,7 +631,7 @@ export default function QuoteBuilder({
                 <div
                   style={{
                     fontSize: '24px',
-                    fontWeight: 700,
+                    fontWeight: 600,
                     fontFamily: 'var(--font-mono, monospace)',
                     fontVariantNumeric: 'tabular-nums',
                     color: 'var(--ink-strong)',
@@ -862,7 +862,7 @@ export default function QuoteBuilder({
         {/* Footer modal */}
         <div className="modal-footer">
           <button type="button" className="btn btn-secondary" onClick={onClose} disabled={submitting}>
-            {latestQuote && !isEditingNewVersion ? 'Đóng' : 'Hủy bỏ'}
+            {latestQuote && !isEditingNewVersion ? 'Đóng' : 'Hủy'}
           </button>
 
           {(!latestQuote || isEditingNewVersion) && (
@@ -1002,7 +1002,7 @@ export default function QuoteBuilder({
                         <span
                           style={{
                             fontFamily: 'var(--font-mono, monospace)',
-                            fontWeight: 700,
+                            fontWeight: 600,
                             fontSize: '15px',
                             color: 'var(--ink-strong)',
                           }}

@@ -117,7 +117,8 @@ describe('NCL-13-CN-001 — Cấp tài khoản cổng cho khách hàng', () => {
     expect(within(row).getByText('@nhi.abc')).toBeInTheDocument();
     expect(within(row).getByText('KH-100001')).toBeInTheDocument();
     expect(within(row).getByText('Đang hoạt động')).toBeInTheDocument();
-    expect(screen.getByTestId('portal-account-total')).toHaveTextContent('1');
+    // Số đếm nằm ở nút lọc trạng thái (không còn ô đếm đầu trang).
+    expect(screen.getByTestId('portal-account-tab-ALL')).toHaveTextContent('(1)');
   });
 
   it('TC-01: chọn khách hàng → đầu mối chính được chọn sẵn, người đã có tài khoản bị khoá chọn, cấp thành công', async () => {
@@ -244,7 +245,7 @@ describe('NCL-13-CN-001 — Cấp tài khoản cổng cho khách hàng', () => {
     expect(within(row).getByText('Đã khóa')).toBeInTheDocument();
     expect(within(row).getByText('Người liên hệ đã nghỉ việc ở phía khách hàng')).toBeInTheDocument();
     expect(screen.getByTestId('portal-account-notice')).toHaveTextContent('dữ liệu được giữ nguyên');
-    expect(screen.getByTestId('portal-account-locked')).toHaveTextContent('1');
+    expect(screen.getByTestId('portal-account-tab-LOCKED')).toHaveTextContent('(1)');
   });
 
   it('TC-02: mở khoá lại tài khoản đang khoá', async () => {

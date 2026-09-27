@@ -17,6 +17,7 @@ import {
   flattenWorkPackages,
   type WorkPackageAcceptanceState,
 } from '../utils/workPackageTree';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface Props {
   currentUserRoles?: string[];
@@ -138,9 +139,6 @@ export default function AcceptanceListPage({
     () => workPackages.map((wp) => ({ wp, ...acceptanceStateOf(wp, certificates) })),
     [workPackages, certificates]
   );
-  const readyCount = rows.filter((r) => r.state === 'READY').length;
-  const unfinishedCount = rows.filter((r) => r.state === 'UNFINISHED').length;
-
   const openModal = (workPackageId: number | null) => {
     setModalWorkPackageId(workPackageId);
     setModalOpen(true);
@@ -159,9 +157,7 @@ export default function AcceptanceListPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền lập hoặc xác nhận phiếu nghiệm thu</h2>
           <p>
-            Theo quy tắc phân quyền, chức năng lập phiếu nghiệm thu hạng mục và ghi nhận khách hàng xác nhận/từ
-            chối phiếu chỉ dành cho <strong>Quản lý dự án</strong> (VT-02) phụ trách dự án. Hệ thống đã ghi lại
-            lần từ chối truy cập này vào nhật ký hệ thống.
+            Trang này dành cho <strong>Quản lý dự án</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">
@@ -197,28 +193,20 @@ export default function AcceptanceListPage({
         </div>
       )}
 
-      <div className="page-header">
-        <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.clipboardList} NGHIỆM THU</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">{project ? project.projectCode : 'CHƯA CHỌN DỰ ÁN'}</span>
-          </div>
-          <h1 className="page-title">Lập phiếu nghiệm thu hạng mục</h1>
-          <p className="page-subtitle">
-            Chọn hạng mục đã hoàn thành toàn bộ công việc để lập phiếu, làm căn cứ đề nghị khách hàng xác nhận.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => openModal(null)}
-          disabled={!project || projectClosed || isLoading || !!loadError}
-          data-testid="acceptance-open-create"
-        >
-          <span className="icon-xs">{ICONS.plus}</span> Lập phiếu nghiệm thu
-        </button>
-      </div>
+      <PageHeader
+        title="Phiếu nghiệm thu"
+        actions={
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => openModal(null)}
+            disabled={!project || projectClosed || isLoading || !!loadError}
+            data-testid="acceptance-open-create"
+          >
+            <span className="icon-xs">{ICONS.plus}</span> Lập phiếu nghiệm thu
+          </button>
+        }
+      />
 
       <div className="user-table-card" style={{ padding: '16px 20px', marginBottom: '16px' }}>
         <div className="filter-group" style={{ flexWrap: 'wrap' }}>
@@ -294,36 +282,6 @@ export default function AcceptanceListPage({
         </div>
       ) : (
         <>
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-card__icon stat-card__icon--purple">{ICONS.tree}</div>
-              <div>
-                <span className="stat-card__label">Hạng mục</span>
-                <div className="stat-card__value">{workPackages.length}</div>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-card__icon stat-card__icon--green">{ICONS.checkCircle}</div>
-              <div>
-                <span className="stat-card__label">Đủ điều kiện nghiệm thu</span>
-                <div className="stat-card__value" data-testid="acceptance-ready-count">{readyCount}</div>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-card__icon stat-card__icon--amber">{ICONS.clock}</div>
-              <div>
-                <span className="stat-card__label">Còn công việc dang dở</span>
-                <div className="stat-card__value">{unfinishedCount}</div>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-card__icon stat-card__icon--blue">{ICONS.clipboardList}</div>
-              <div>
-                <span className="stat-card__label">Phiếu đã lập</span>
-                <div className="stat-card__value">{certificates.length}</div>
-              </div>
-            </div>
-          </div>
 
           <div className="user-table-card" style={{ marginBottom: '16px' }}>
             <div className="page-header" style={{ padding: '16px 16px 0' }}>
@@ -410,11 +368,6 @@ export default function AcceptanceListPage({
           <div className="user-table-card">
             <div className="page-header" style={{ padding: '16px 16px 0' }}>
               <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Phiếu nghiệm thu đã lập</h3>
-              {certificates.length > 0 && (
-                <span className="field-hint">
-                  Bấm vào phiếu để ghi nhận khách hàng xác nhận, từ chối hoặc nộp lại phiếu.
-                </span>
-              )}
             </div>
             {certificates.length === 0 ? (
               <div className="table-empty-state" data-testid="acceptance-cert-empty">

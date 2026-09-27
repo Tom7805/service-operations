@@ -13,6 +13,17 @@ export interface FiscalYearOverviewProps {
 
 const within = (d: string | undefined, start: string, end: string) => !!d && d >= start && d <= end;
 
+/**
+ * "01/01 → 31/03/2026": năm chỉ ghi một lần ở cuối để dòng ngày luôn vừa một dòng trong thẻ quý.
+ * Quý vắt qua năm mới (năm tài chính bắt đầu tháng 11–12) thì ghi đủ năm ở cả hai đầu.
+ */
+function quarterDates(start: string, end: string): string {
+  const full = (iso: string) => formatDate(iso);
+  if (start.slice(0, 4) !== end.slice(0, 4)) return `${full(start)} → ${full(end)}`;
+  const [, m, d] = start.slice(0, 10).split('-');
+  return `${d}/${m} → ${full(end)}`;
+}
+
 /** Cách chia một năm tài chính thành 4 quý và 12 kỳ tháng (NCL-15-CN-002 TC-01). */
 export default function FiscalYearOverview({ period, highlightDate, compact = false, testIdPrefix = 'fy' }: FiscalYearOverviewProps) {
   return (
@@ -37,8 +48,8 @@ export default function FiscalYearOverview({ period, highlightDate, compact = fa
               <span className="fy-quarter__range">
                 {monthLabel(q.startDate.slice(0, 7))} – {monthLabel(q.endDate.slice(0, 7))}
               </span>
-              <span className="fy-quarter__dates">
-                {formatDate(q.startDate)} → {formatDate(q.endDate)}
+              <span className="fy-quarter__dates" title={`${formatDate(q.startDate)} → ${formatDate(q.endDate)}`}>
+                {quarterDates(q.startDate, q.endDate)}
               </span>
             </li>
           );

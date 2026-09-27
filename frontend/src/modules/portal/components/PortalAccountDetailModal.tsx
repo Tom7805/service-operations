@@ -121,7 +121,7 @@ export default function PortalAccountDetailModal({ account, onClose, onToggleSta
               </div>
               <div>
                 <dt>Vai trò / phạm vi</dt>
-                <dd>Khách hàng (VT-09) · chỉ dữ liệu của khách hàng này</dd>
+                <dd>Khách hàng · chỉ dữ liệu của khách hàng này</dd>
               </div>
               <div>
                 <dt>Cấp bởi</dt>

@@ -4,6 +4,7 @@ import type { PipelineReportRes, PipelineStageRes } from '../types/pipelineRepor
 import { STAGE_CONFIGS, type OpportunityStage } from '../../opportunities/types/opportunityTypes';
 import { fetchOpportunities } from '../../opportunities/api/opportunitiesApi';
 import { ICONS } from '../../../components/common/icons';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface PipelineReportPageProps {
   currentUserRoles?: string[];
@@ -150,8 +151,7 @@ export default function PipelineReportPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Báo cáo đường ống bán hàng theo giai đoạn chỉ dành riêng cho vai trò{' '}
-            <strong>Ban giám đốc</strong> hoặc <strong>Nhân viên kinh doanh</strong>.
+            Trang này dành cho <strong>Ban giám đốc</strong> và <strong>Nhân viên kinh doanh</strong>.
           </p>
         </div>
       </div>
@@ -164,17 +164,10 @@ export default function PipelineReportPage({
 
   return (
     <div className="user-management-page" data-testid="pipeline-report-page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Báo cáo đường ống bán hàng theo giai đoạn</h1>
-          <p className="page-subtitle">Số cơ hội và giá trị dự kiến theo từng giai đoạn, kèm cảnh báo quá hạn xử lý.</p>
-        </div>
-        <div className="page-header__actions">
-          {data && (
-            <span className="pipeline-generated-at">
-              Cập nhật lúc {new Date(data.generatedAt).toLocaleString('vi-VN')}
-            </span>
-          )}
+      <PageHeader
+        title="Đường ống bán hàng"
+        meta={data && <span>Cập nhật lúc {new Date(data.generatedAt).toLocaleString('vi-VN')}</span>}
+        actions={
           <button
             type="button"
             className="btn-primary"
@@ -183,10 +176,10 @@ export default function PipelineReportPage({
             data-testid="btn-refresh-pipeline"
           >
             {refreshing ? <span className="spinner-sm" aria-hidden="true" /> : ICONS.refresh}{' '}
-            {refreshing ? 'Đang tải lại...' : 'Làm mới báo cáo'}
+            {refreshing ? 'Đang tải lại…' : 'Làm mới'}
           </button>
-        </div>
-      </div>
+        }
+      />
 
       {error && (
         <div className="alert-box alert-box--danger" style={{ justifyContent: 'space-between' }}>
@@ -244,7 +237,7 @@ export default function PipelineReportPage({
                 <div className="pipeline-stalled-card__heading">
                   <h2 className="pipeline-stalled-card__title">Cơ hội quá hạn xử lý</h2>
                   <p className="pipeline-stalled-card__subtitle">
-                    Đứng quá {data.stalledThresholdDays} ngày ở cùng một giai đoạn — nên ưu tiên xử lý trước.
+                    Đứng quá {data.stalledThresholdDays} ngày ở cùng một giai đoạn
                   </p>
                 </div>
                 <span className="pipeline-stalled-card__count">{totalStalledCount}</span>
@@ -296,9 +289,6 @@ export default function PipelineReportPage({
             <div className="pipeline-flow-card">
               <div className="pipeline-flow-card__head">
                 <h2 className="pipeline-flow-card__title">Số cơ hội theo giai đoạn</h2>
-                <p className="pipeline-flow-card__subtitle">
-                  Đậm dần từ trái sang phải theo mức độ cơ hội đã tiến sâu vào đường ống
-                </p>
               </div>
 
               <div className="pipeline-flow">

@@ -3,6 +3,7 @@ import { ICONS } from '../../../components/common/icons';
 import { roleLabels } from '../../../utils/roleLabel';
 import { getTimesheetPeriods, lockTimesheetPeriod, TimesheetsApiError, unlockTimesheetPeriod } from '../api/timesheetsApi';
 import type { TimesheetPeriodRes } from '../types/timesheetTypes';
+import PageHeader from '../../../components/common/PageHeader';
 
 export interface TimesheetPeriodPageProps {
   currentUserRoles?: string[];
@@ -153,8 +154,7 @@ export default function TimesheetPeriodPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Chức năng Khóa kỳ chấm công chỉ dành riêng cho vai trò <strong>Kế toán</strong>. Hệ thống đã ghi
-            lại lần truy cập bị từ chối này vào nhật ký bảo mật.
+            Trang này dành cho <strong>Kế toán</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">{ICONS.shield} Thời điểm: {new Date().toLocaleString('vi-VN')}</span>
@@ -165,8 +165,6 @@ export default function TimesheetPeriodPage({
       </div>
     );
   }
-
-  const lockedCount = periods.filter((p) => p.status === 'LOCKED').length;
 
   return (
     <div className="user-management-page" data-testid="timesheet-period-page">
@@ -180,40 +178,18 @@ export default function TimesheetPeriodPage({
         </div>
       )}
 
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Khóa kỳ chấm công</h1>
-          <p className="page-subtitle">
-            Kỳ tính theo tháng — khóa/mở đồng loạt cả tháng. Khi đã khóa, mọi thao tác ghi/sửa/điều chỉnh
-            giờ công có ngày làm việc rơi vào kỳ đó đều bị chặn.
-          </p>
-        </div>
-        <div className="page-header__actions">
+      <PageHeader
+        title="Kỳ chấm công"
+        actions={
           <button type="button" className="btn-icon-refresh" onClick={fetchPeriods} title="Tải lại" aria-label="Tải lại" disabled={loading}>
             {ICONS.refresh}
           </button>
-        </div>
-      </div>
+        }
+      />
 
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--purple">{ICONS.calendar}</div>
-          <div>
-            <span className="stat-card__label">Tổng số kỳ</span>
-            <strong className="stat-card__value">{periods.length}</strong>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--red">{ICONS.lock}</div>
-          <div>
-            <span className="stat-card__label">Kỳ đang khóa</span>
-            <strong className="stat-card__value">{lockedCount}</strong>
-          </div>
-        </div>
-      </div>
 
       <div className="user-table-card" style={{ padding: '20px', marginBottom: '16px' }}>
-        <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 700 }}>Khóa kỳ theo tháng</h3>
+        <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 600 }}>Khóa kỳ theo tháng</h3>
         <div className="form-grid">
           <div>
             <label className="form-label" htmlFor="lock-year">

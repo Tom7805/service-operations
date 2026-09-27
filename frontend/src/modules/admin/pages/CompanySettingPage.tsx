@@ -19,6 +19,7 @@ import {
   type CompanyForm,
 } from '../utils/companySettingUtils';
 import { formatDateTime, mapFieldErrors, todayIso, type FieldErrors } from '../utils/serviceCatalogUtils';
+import PageHeader from '../../../components/common/PageHeader';
 
 export interface CompanySettingPageProps {
   currentUserRoles?: string[];
@@ -98,8 +99,7 @@ export default function CompanySettingPage({ currentUserRoles = [], onViewAuditL
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Cấu hình thông tin công ty và kỳ tài chính chỉ dành cho <strong>Quản trị viên</strong>. Lần truy cập này đã được
-            ghi vào nhật ký hệ thống.
+            Trang này dành cho <strong>Quản trị viên</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">Vai trò hiện tại: {roleLabels(currentUserRoles) || '—'}</span>
@@ -169,32 +169,23 @@ export default function CompanySettingPage({ currentUserRoles = [], onViewAuditL
 
   return (
     <div className="user-management-page company-page" data-testid="company-setting-page">
-      <div className="page-header">
-        <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.building} CẤU HÌNH</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">DÙNG CHUNG TOÀN HỆ THỐNG</span>
-          </div>
-          <h1 className="page-title">Thông tin công ty và kỳ tài chính</h1>
-          <p className="page-subtitle">
-            Tên công ty, mã số thuế và tiền tệ in trên báo giá, hóa đơn; tháng bắt đầu năm tài chính quyết định cách các báo
-            cáo theo năm và theo quý chia kỳ.
-          </p>
-        </div>
-        <div className="page-header__actions">
-          {onViewFiscalPeriods && (
-            <button type="button" className="btn-secondary" onClick={onViewFiscalPeriods} data-testid="company-btn-fiscal">
-              {ICONS.calendar} Xem kỳ tài chính
-            </button>
-          )}
-          {onViewAuditLog && (
-            <button type="button" className="btn-secondary" onClick={onViewAuditLog} data-testid="company-btn-audit">
-              {ICONS.clipboardList} Nhật ký hệ thống
-            </button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="Thông tin công ty"
+        actions={
+          <>
+            {onViewFiscalPeriods && (
+              <button type="button" className="btn-secondary" onClick={onViewFiscalPeriods} data-testid="company-btn-fiscal">
+                {ICONS.calendar} Xem kỳ tài chính
+              </button>
+            )}
+            {onViewAuditLog && (
+              <button type="button" className="btn-secondary" onClick={onViewAuditLog} data-testid="company-btn-audit">
+                {ICONS.clipboardList} Nhật ký
+              </button>
+            )}
+          </>
+        }
+      />
 
       {loadError ? (
         <div className="alert alert--error" role="alert">
@@ -217,8 +208,7 @@ export default function CompanySettingPage({ currentUserRoles = [], onViewAuditL
               <div className="company-banner" role="status" data-testid="company-not-configured">
                 {ICONS.info}
                 <span>
-                  <strong>Chưa khai báo thông tin công ty.</strong> Hệ thống đang dùng giá trị mặc định (VND, năm tài chính
-                  bắt đầu tháng 1, 22 ngày công/tháng). Hãy nhập tên công ty rồi bấm “Lưu cấu hình”.
+                  <strong>Chưa khai báo thông tin công ty.</strong> Đang dùng giá trị mặc định cho tới khi bạn lưu.
                 </span>
               </div>
             )}
@@ -343,7 +333,7 @@ export default function CompanySettingPage({ currentUserRoles = [], onViewAuditL
                 </div>
                 <div className="form-group">
                   <label className="form-label" htmlFor="company-fiscal-start">
-                    Tháng bắt đầu năm tài chính <span className="field-required">*</span>
+                    Năm tài chính bắt đầu <span className="field-required">*</span>
                   </label>
                   <select
                     id="company-fiscal-start"

@@ -113,7 +113,7 @@ describe('RejectActionButton (NCL-06-CN-004)', () => {
 
     fireEvent.click(screen.getByTestId('btn-reject-50'));
     fireEvent.change(screen.getByTestId('reject-reason-input'), { target: { value: 'Nhap do roi huy' } });
-    fireEvent.click(screen.getByText('Hủy bỏ'));
+    fireEvent.click(screen.getByText('Hủy'));
 
     expect(screen.queryByTestId('reject-reason-input')).not.toBeInTheDocument();
     expect(timesheetsApi.rejectTimesheet).not.toHaveBeenCalled();

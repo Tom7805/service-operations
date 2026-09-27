@@ -10,6 +10,7 @@ import {
   type PortalInvoiceStatus,
 } from '../types/portalTypes';
 import { formatPortalMoney } from '../utils/portalFormat';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface Props {
   onOpen: (invoiceId: number) => void;
@@ -96,22 +97,14 @@ export default function PortalInvoicePage({ onOpen }: Props) {
 
   return (
     <div className="portal-page">
-      <div className="page-header">
-        <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.receipt} HÓA ĐƠN</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">{summary?.customerName ?? 'CÔNG NỢ CỦA BẠN'}</span>
-          </div>
-          <h1 className="page-title">Hóa đơn và công nợ</h1>
-          <p className="page-subtitle">
-            Theo dõi các hóa đơn đã phát hành, số đã thanh toán, số còn phải trả và hạn thanh toán để chủ động thu xếp.
-          </p>
-        </div>
-        <button type="button" className="btn btn-secondary" onClick={() => void load()} disabled={isLoading}>
-          <span className="icon-xs">{ICONS.refresh}</span> Làm mới
-        </button>
-      </div>
+      <PageHeader
+        title="Hóa đơn và công nợ"
+        actions={
+          <button type="button" className="btn btn-secondary" onClick={() => void load()} disabled={isLoading}>
+            <span className="icon-xs">{ICONS.refresh}</span> Làm mới
+          </button>
+        }
+      />
 
       {isLoading ? (
         <div className="user-table-card">

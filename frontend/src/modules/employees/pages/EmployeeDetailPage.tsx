@@ -393,8 +393,7 @@ export default function EmployeeDetailPage({ employeeId, onBack, currentUserRole
             <div className="detail-section" data-testid="hourly-rate-section">
               <h3 className="section-title">Chi phí giờ công nội bộ</h3>
               <p style={{ color: '#5B5A57', fontSize: 13.5, marginTop: '-4px' }}>
-                Dữ liệu nhạy cảm (lương/giá vốn) — dùng để tính giá vốn dự án. Mỗi lần xem hoặc khai báo đều
-                được hệ thống tự ghi vào nhật ký truy cập dữ liệu nhạy cảm.
+                Dữ liệu nhạy cảm — mỗi lần xem hoặc khai báo đều được ghi nhật ký.
               </p>
 
               {hourlyRatesLoading ? (

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import OpportunityListPage from '../pages/OpportunityListPage';
 import OpportunityCloseModal from '../components/OpportunityCloseModal';
@@ -55,6 +55,21 @@ const mockOpportunities: Opportunity[] = [
     createdBy: 'sale01',
   },
 ];
+
+/** Thao tác của một hàng cơ hội nằm trong menu ⋮ — mở menu của đúng hàng đó rồi lấy mục theo testId. */
+function openRowAction(oppId: number, testId: string): HTMLElement {
+  fireEvent.click(within(screen.getByTestId(`opp-row-${oppId}`)).getByRole('button', { name: /^Thao tác với/ }));
+  return screen.getByTestId(testId);
+}
+
+/** Mở menu ⋮ của một hàng, trả về testId các mục đang có, rồi đóng menu. */
+function rowActionIds(oppId: number): string[] {
+  const trigger = within(screen.getByTestId(`opp-row-${oppId}`)).getByRole('button', { name: /^Thao tác với/ });
+  fireEvent.click(trigger);
+  const ids = screen.queryAllByRole('menuitem').map((el) => el.getAttribute('data-testid') ?? '');
+  fireEvent.click(trigger);
+  return ids;
+}
 
 describe('Ghi nhận kết quả thắng thua của cơ hội (NCL-03-CN-005)', () => {
   beforeEach(() => {
@@ -131,7 +146,7 @@ describe('Ghi nhận kết quả thắng thua của cơ hội (NCL-03-CN-005)', 
         />,
       );
 
-      fireEvent.click(screen.getByTestId('btn-close-opportunity-1'));
+      fireEvent.click(openRowAction(1, 'btn-close-opportunity-1'));
       expect(screen.getByTestId('opportunity-close-modal')).toBeInTheDocument();
 
       fireEvent.change(screen.getByTestId('select-loss-reason'), {
@@ -158,10 +173,9 @@ describe('Ghi nhận kết quả thắng thua của cơ hội (NCL-03-CN-005)', 
         expect(screen.queryByTestId('opportunity-close-modal')).toBeNull();
       });
 
-      expect(screen.getByTestId('badge-closed-1')).toHaveTextContent(
-        'Đã hoàn tất',
-      );
-      expect(screen.queryByTestId('btn-close-opportunity-1')).toBeNull();
+      // Cột giai đoạn nói rõ kết quả (trước là nhãn chung "Đã hoàn tất" ở cột thao tác).
+      expect(screen.getByTestId('badge-closed-1')).toHaveTextContent('Thất bại');
+      expect(rowActionIds(1)).not.toContain('btn-close-opportunity-1');
 
       // Lý do thua không còn lặp lại trên từng hàng của bảng nữa — sau khi chốt
       // xong, cơ hội tự được chọn và lý do hiện ra ở panel "Tiến trình bán hàng &
@@ -240,8 +254,8 @@ describe('Ghi nhận kết quả thắng thua của cơ hội (NCL-03-CN-005)', 
         />,
       );
 
-      expect(screen.getByText(/Chế độ chỉ xem/i)).toBeInTheDocument();
-      expect(screen.queryByTestId('btn-close-opportunity-1')).toBeNull();
+      expect(screen.getByTestId('opportunity-view-only')).toHaveTextContent('Chỉ xem');
+      expect(rowActionIds(1)).not.toContain('btn-close-opportunity-1');
       expect(screen.queryByTestId('btn-disabled-close-2')).toBeNull();
     });
   });
@@ -255,7 +269,7 @@ describe('Ghi nhận kết quả thắng thua của cơ hội (NCL-03-CN-005)', 
         />,
       );
 
-      fireEvent.click(screen.getByTestId('btn-close-opportunity-2'));
+      fireEvent.click(openRowAction(2, 'btn-close-opportunity-2'));
 
       // Mặc định chọn Thua, nút xác nhận dùng được (chỉ còn chờ chọn lý do — TC-02).
       expect(screen.getByTestId('lost-reason-section')).toBeInTheDocument();
@@ -306,15 +320,15 @@ describe('Ghi nhận kết quả thắng thua của cơ hội (NCL-03-CN-005)', 
       );
 
       const badge = screen.getByTestId('badge-closed-3');
-      expect(badge).toHaveTextContent('Đã hoàn tất');
+      expect(badge).toHaveTextContent('Thất bại');
       // Trên hàng chỉ còn nhãn gọn "Đã hoàn tất" + tooltip — chi tiết lý do thua
       // không lặp lại ở mọi hàng nữa, tránh rối bảng.
       expect(badge.getAttribute('title')).toContain('Phần mềm XYZ');
-      expect(screen.queryByTestId('btn-close-opportunity-3')).toBeNull();
+      expect(rowActionIds(3)).not.toContain('btn-close-opportunity-3');
 
       // Bấm chọn đúng cơ hội đó thì lý do thua đầy đủ hiện ra ở panel "Tiến
       // trình bán hàng & Xác suất thành công" phía trên.
-      fireEvent.click(screen.getByRole('button', { name: new RegExp(mockOpportunities[2].name) }));
+      fireEvent.click(screen.getByRole('button', { name: mockOpportunities[2].name }));
       expect(screen.getByText(/Lý do thua/i)).toHaveTextContent('Phần mềm XYZ');
     });
   });

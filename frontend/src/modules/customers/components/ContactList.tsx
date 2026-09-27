@@ -184,7 +184,7 @@ export default function ContactList({
           <strong>Nhân viên kinh doanh</strong>.
         </p>
         <div className="security-log-badge">
-          <span className="security-log-badge__item">{ICONS.shield} Ghi nhận Audit Log: {new Date().toLocaleString('vi-VN')}</span>
+          <span className="security-log-badge__item">{ICONS.shield} Ghi nhật ký lúc {new Date().toLocaleString('vi-VN')}</span>
           <span className="security-log-badge__item">Tài khoản thực hiện: {currentUserName}</span>
           <span className="security-log-badge__item">Vai trò tài khoản: {roleLabels(currentUserRoles)}</span>
         </div>
@@ -222,17 +222,7 @@ export default function ContactList({
         )}
 
       {/* Header & Bộ công cụ Quản lý liên hệ */}
-      <div className="contact-manager-header">
-        <div>
-          <div className="contact-section-eyebrow">
-            <span className="dot-pulse" />
-            <span>Danh bạ đầu mối</span>
-          </div>
-          <h2 className="contact-section-title">Danh sách người liên hệ</h2>
-          <p className="contact-section-subtitle">
-            Quản lý các đầu mối giao tiếp, phân định đầu mối chính phụ phục vụ ký kết hợp đồng và triển khai dịch vụ.
-          </p>
-        </div>
+      <div className="contact-manager-header contact-manager-header--actions-only">
 
         <div className="contact-header-actions">
           {!readOnly && (
@@ -272,15 +262,6 @@ export default function ContactList({
           </div>
         </div>
 
-        <div className="contact-stat-card">
-          <div className="contact-stat-icon contact-stat-icon--role">{ICONS.briefcase}</div>
-          <div>
-            <span className="contact-stat-label">Quyền hạn thao tác</span>
-            <div className="contact-stat-value text-success" style={{ fontSize: '15px' }}>
-              Nhân viên kinh doanh
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Thanh tìm kiếm & lọc liên hệ */}
@@ -325,9 +306,6 @@ export default function ContactList({
         <div className="table-empty-state contact-empty-state" data-testid="contact-empty-state">
           <div className="table-empty-state__icon">{ICONS.users}</div>
           <h3>Chưa có người liên hệ nào</h3>
-          <p>
-            Hồ sơ khách hàng này chưa có người liên hệ được ghi nhận. Hãy thêm người liên hệ đầu tiên để thiết lập kênh kết nối.
-          </p>
           {!readOnly && (
           <button
             type="button"
@@ -344,7 +322,7 @@ export default function ContactList({
         <div className="table-empty-state contact-empty-state">
           <div className="table-empty-state__icon">{ICONS.search}</div>
           <h3>Không tìm thấy người liên hệ phù hợp</h3>
-          <p>Không có kết quả nào khớp với từ khóa "{searchTerm}". Vui lòng thử từ khóa khác.</p>
+          <p>Không có ai khớp với "{searchTerm}".</p>
           <button
             type="button"
             className="btn btn-secondary"
@@ -362,7 +340,7 @@ export default function ContactList({
                 <th style={{ width: '60px', textAlign: 'center' }}>Vai trò</th>
                 <th style={{ minWidth: '220px' }}>Họ và tên</th>
                 <th style={{ minWidth: '180px' }}>Chức danh / Vị trí</th>
-                <th style={{ minWidth: '220px' }}>Thư điện tử (Email)</th>
+                <th style={{ minWidth: '220px' }}>Email</th>
                 <th style={{ width: '160px' }}>Số điện thoại</th>
                 <th style={{ width: '190px', textAlign: 'center' }}>Thao tác đầu mối</th>
               </tr>

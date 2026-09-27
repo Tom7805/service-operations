@@ -268,7 +268,7 @@ export default function ProjectWbsModal({
         <div className="modal-body" style={{ overflowY: 'auto', maxHeight: '75vh' }}>
           {!isAllowedToView && (
             <div className="alert-box alert-box--danger" role="alert" data-testid="wbs-forbidden-alert">
-              Yêu cầu vai trò Quản lý dự án (VT-02), Nhân viên chuyên môn (VT-03) hoặc Ban giám đốc (VT-01).
+              Yêu cầu vai trò Quản lý dự án, Nhân viên chuyên môn hoặc Ban giám đốc.
             </div>
           )}
 

@@ -112,7 +112,6 @@ describe('ProfitForecastPage (NCL-09-CN-007 — Dự báo lợi nhuận tới kh
 
     expect(await screen.findByTestId('hours-forecast')).toBeInTheDocument();
     expect(profitabilityApi.getProfitForecast).toHaveBeenCalledWith(42);
-    expect(await screen.findByText('PRJ-2026-042')).toBeInTheDocument();
 
     expect(screen.getByTestId('budget-hours')).toHaveTextContent('1.000,00 giờ');
     expect(screen.getByTestId('actual-hours')).toHaveTextContent('600,00 giờ');

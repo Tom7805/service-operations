@@ -6,6 +6,7 @@ import RoleScopeModal from '../components/RoleScopeModal';
 import RoleMatrixTable from '../components/RoleMatrixTable';
 import { ICONS } from '../components/icons';
 import TableSkeleton from '../../../components/common/TableSkeleton';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface RolePermissionPageProps {
   currentUserRoles?: string[];
@@ -101,8 +102,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Chức năng Phân quyền theo vai trò và phạm vi dữ liệu chỉ dành riêng cho vai trò <strong>Quản trị viên</strong>.
-            Nếu bạn cần quyền này, hãy liên hệ quản trị viên hệ thống.
+            Trang này dành cho <strong>Quản trị viên</strong>.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">{ICONS.shield} Thời điểm: {new Date().toLocaleString('vi-VN')}</span>
@@ -132,12 +132,6 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
     return matchesKeyword && matchesRole && matchesScope;
   });
 
-  // KPI Calculations
-  const totalUsers = users.length;
-  const companyScopeUsers = users.filter((u) => !u.scopeType || u.scopeType === 'COMPANY').length;
-  const deptScopeUsers = users.filter((u) => u.scopeType === 'DEPARTMENT').length;
-  const selfScopeUsers = users.filter((u) => u.scopeType === 'SELF' || u.scopeType === 'PERSONAL').length;
-
   return (
     <div className="user-management-page">
       {/* Toast Notification */}
@@ -152,55 +146,9 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
       )}
 
       {/* Page Header */}
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Phân quyền vai trò & phạm vi dữ liệu</h1>
-          <p className="page-subtitle">Gán vai trò và phạm vi truy cập dữ liệu cho từng tài khoản.</p>
-        </div>
-      </div>
+      <PageHeader title="Phân quyền" />
 
       {/* KPI Stats Cards */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--purple">{ICONS.shield}</div>
-          <div>
-            <span className="stat-card__label">Vai trò hệ thống</span>
-            <strong className="stat-card__value">9 vai trò</strong>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--blue">{ICONS.users}</div>
-          <div>
-            <span className="stat-card__label">Tổng tài khoản</span>
-            <strong className="stat-card__value">{totalUsers}</strong>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--green">{ICONS.globe}</div>
-          <div>
-            <span className="stat-card__label">Toàn công ty</span>
-            <strong className="stat-card__value text-success">{companyScopeUsers}</strong>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--blue">{ICONS.building}</div>
-          <div>
-            <span className="stat-card__label">Nhánh bộ phận</span>
-            <strong className="stat-card__value">{deptScopeUsers}</strong>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--amber">{ICONS.user}</div>
-          <div>
-            <span className="stat-card__label">Chỉ cá nhân</span>
-            <strong className="stat-card__value text-warning">{selfScopeUsers}</strong>
-          </div>
-        </div>
-      </div>
 
       {/* Global Error Banner */}
       {error && (
@@ -280,9 +228,9 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
                   onChange={(e) => setFilterScope(e.target.value)}
                 >
                   <option value="ALL">-- Tất cả phạm vi --</option>
-                  <option value="COMPANY">Toàn công ty (COMPANY)</option>
-                  <option value="DEPARTMENT">Nhánh bộ phận (DEPARTMENT)</option>
-                  <option value="SELF">Chỉ cá nhân (SELF)</option>
+                  <option value="COMPANY">Toàn công ty</option>
+                  <option value="DEPARTMENT">Nhánh bộ phận</option>
+                  <option value="SELF">Chỉ cá nhân</option>
                 </select>
               </div>
 
@@ -422,8 +370,7 @@ export const RolePermissionPage: React.FC<RolePermissionPageProps> = ({
         <button type="button" className="audit-log-link" data-reveal-target onClick={onViewAuditLog}>
           <span className="audit-log-link__icon">{ICONS.clipboardList}</span>
           <span className="audit-log-link__text">
-            <strong>Xem nhật ký phân quyền đầy đủ</strong>
-            <span>Toàn bộ lịch sử gán vai trò và phạm vi dữ liệu — lưu trên máy chủ</span>
+            <strong>Xem nhật ký phân quyền</strong>
           </span>
           <span className="audit-log-link__arrow icon-sm">{ICONS.arrowRight}</span>
         </button>

@@ -250,7 +250,7 @@ export default function TimerWidget({ projectId, taskId, canStart, onStopped, on
               }}
               disabled={submitting}
             >
-              Hủy bỏ
+              Hủy
             </button>
             <button type="button" className="btn-primary" onClick={handleStart} disabled={submitting} data-testid="btn-confirm-start-timer">
               {ICONS.clock} {submitting ? 'Đang bắt đầu…' : 'Bắt đầu'}

@@ -60,7 +60,7 @@ describe('NotificationDedupConfigPage (NCL-14-CN-003)', () => {
 
     expect(await screen.findByTestId('dedup-access-denied')).toBeInTheDocument();
     expect(notificationsApi.getDedupConfigs).toHaveBeenCalledTimes(1);
-    expect(screen.getByText(/đã được ghi vào nhật ký hệ thống/)).toBeInTheDocument();
+    expect(screen.getByText(/đã được ghi vào nhật ký/)).toBeInTheDocument();
     expect(screen.queryByTestId(`dedup-card-${T}`)).not.toBeInTheDocument();
   });
 

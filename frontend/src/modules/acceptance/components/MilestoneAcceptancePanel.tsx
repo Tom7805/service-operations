@@ -103,8 +103,9 @@ export default function MilestoneAcceptancePanel({ contractId, currentUserRoles 
         <div>
           <h3 style={{ margin: 0, fontSize: '15px' }}>Nghiệm thu theo mốc thanh toán</h3>
           <p className="cell-muted" style={{ margin: '2px 0 0', fontSize: '12.5px' }}>
-            Mốc chỉ lập được hóa đơn khi phiếu nghiệm thu gắn kèm đã được khách hàng xác nhận (QTN-25).
-            {rows.length > 0 && ` ${readyCount}/${rows.length} mốc đủ điều kiện.`}
+            {rows.length > 0
+              ? `${readyCount}/${rows.length} mốc đủ điều kiện lập hóa đơn`
+              : 'Mốc chỉ lập được hóa đơn khi phiếu gắn kèm đã được khách hàng xác nhận.'}
           </p>
         </div>
         <button

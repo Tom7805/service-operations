@@ -92,13 +92,13 @@ export const DepartmentDeleteModal: React.FC<DepartmentDeleteModalProps> = ({
 
           <div className="confirm-note-box">
             <span className="confirm-note-box__icon">{ICONS.info}</span>
-            <span>Thao tác xóa sẽ được lưu vào nhật ký hệ thống. Không thể hoàn tác sau khi đã thực hiện.</span>
+            <span>Không thể hoàn tác sau khi xóa.</span>
           </div>
         </div>
 
         <div className="modal-footer">
           <button type="button" className="btn-secondary" onClick={onClose} disabled={deleting}>
-            Hủy bỏ
+            Hủy
           </button>
           <button type="button" className="btn-primary btn-danger" onClick={handleDelete} disabled={deleting}>
             {deleting ? 'Đang xóa...' : 'Xác nhận xóa bộ phận'}

@@ -65,14 +65,15 @@ export const UserTable: React.FC<UserTableProps> = ({
 
   const getStatusBadge = (status: UserStatus) => {
     switch (status) {
+      // Trạng thái bình thường chỉ là chấm + chữ nhạt; ngoại lệ (khóa, ngưng) mới được nhấn.
       case 'ACTIVE':
-        return <span className="status-pill status-pill--active"><i className="status-pill__dot" /> Hoạt động</span>;
+        return <span className="list-status list-status--on">Hoạt động</span>;
       case 'LOCKED':
-        return <span className="status-pill status-pill--locked"><i className="status-pill__dot" /> Đã khóa</span>;
+        return <span className="list-status list-status--danger">Đã khóa</span>;
       case 'INACTIVE':
-        return <span className="status-pill status-pill--inactive"><i className="status-pill__dot" /> Ngưng hoạt động</span>;
+        return <span className="list-status list-status--off">Ngưng hoạt động</span>;
       default:
-        return <span className="status-pill status-pill--inactive">{status}</span>;
+        return <span className="list-status list-status--off">{status}</span>;
     }
   };
 
@@ -158,24 +159,27 @@ export const UserTable: React.FC<UserTableProps> = ({
 
       {/* Main Data Table */}
       <div className="table-responsive">
-        <table className="user-data-table">
+        {/* Danh sách gọn: mỗi hàng một dòng. Cột STT bỏ vì không mang thông tin; vai trò thứ hai
+            trở đi gộp thành "+N" (rê chuột xem đủ). Bấm vào hàng để mở chi tiết. */}
+        <table className="user-data-table list-table">
           <thead>
             <tr>
-              <th scope="col" style={{ width: '46px' }}>STT</th>
-              <th scope="col">Tài khoản & Họ tên</th>
-              <th scope="col">Email</th>
-              <th scope="col">Bộ phận</th>
-              <th scope="col">Vai trò hệ thống</th>
-              <th scope="col" style={{ width: '132px' }}>Trạng thái</th>
-              <th scope="col" style={{ width: '84px', textAlign: 'right' }}>Thao tác</th>
+              <th scope="col" style={{ width: '26%' }}>Tài khoản</th>
+              <th scope="col" className="list-table__hide-sm" style={{ width: '22%' }}>Email</th>
+              <th scope="col" className="list-table__hide-sm" style={{ width: '18%' }}>Bộ phận</th>
+              <th scope="col" className="list-table__hide-sm" style={{ width: '16%' }}>Vai trò</th>
+              <th scope="col" style={{ width: '14%' }}>Trạng thái</th>
+              <th scope="col" className="list-table__actions">
+              <span className="visually-hidden">Thao tác</span>
+            </th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <TableSkeleton columns={7} />
+              <TableSkeleton columns={6} />
             ) : filteredUsers.length === 0 ? (
               <tr>
-                <td colSpan={7}>
+                <td colSpan={6}>
                   <div className="table-empty-state">
                     <div className="empty-icon">{ICONS.user}</div>
                     <h3>Không tìm thấy tài khoản người dùng nào</h3>
@@ -197,40 +201,61 @@ export const UserTable: React.FC<UserTableProps> = ({
                 </td>
               </tr>
             ) : (
-              filteredUsers.map((user, index) => (
-                <tr key={user.id} className={user.status === 'LOCKED' ? 'row--locked' : ''}>
-                  <td className="col-index">{index + 1}</td>
+              filteredUsers.map((user) => (
+                <tr
+                  key={user.id}
+                  className={`list-table__row ${user.status === 'LOCKED' ? 'row--locked' : ''}`}
+                  onClick={() => onViewDetail(user)}
+                >
                   <td>
-                    <div
-                      className="user-profile-cell"
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => onViewDetail(user)}
-                      title="Nhấp để xem chi tiết"
-                    >
+                    <div className="user-profile-cell">
                       <div className="avatar-circle">
                         {user.fullName.charAt(0).toUpperCase()}
                       </div>
                       <div className="user-profile-meta">
-                        <span className="user-profile-fullname" title={user.fullName}>{user.fullName}</span>
-                        <span className="user-profile-username" title={`@${user.username}`}>@{user.username}</span>
+                        <button
+                          type="button"
+                          className="list-table__title"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onViewDetail(user);
+                          }}
+                          title={user.fullName}
+                        >
+                          {user.fullName}
+                        </button>
+                        <span className="list-table__sub" title={`@${user.username}`}>@{user.username}</span>
                       </div>
                     </div>
                   </td>
-                  <td>
-                    <span className="cell-email" title={user.email || undefined}>{user.email || '—'}</span>
+                  <td className="list-table__hide-sm">
+                    <span className="list-table__clip list-table__muted" title={user.email || undefined}>{user.email || '—'}</span>
                   </td>
-                  <td>
-                    <span className="cell-dept" title={getDepartmentName(user.departmentId)}>{getDepartmentName(user.departmentId)}</span>
+                  <td className="list-table__hide-sm">
+                    <span className="list-table__clip" title={getDepartmentName(user.departmentId)}>{getDepartmentName(user.departmentId)}</span>
                   </td>
-                  <td>
-                    <div className="user-tags-wrap">
-                      {user.roleCodes && user.roleCodes.length > 0
-                        ? user.roleCodes.map((code) => getRoleBadge(code))
-                        : <span className="cell-muted">Chưa gán</span>}
-                    </div>
+                  <td className="list-table__hide-sm">
+                    {user.roleCodes && user.roleCodes.length > 0 ? (
+                      <span className="list-table__inline">
+                        {getRoleBadge(user.roleCodes[0])}
+                        {user.roleCodes.length > 1 && (
+                          <span
+                            className="list-chip"
+                            title={user.roleCodes
+                              .slice(1)
+                              .map((code) => SYSTEM_ROLES.find((r) => r.code === code)?.name ?? code)
+                              .join(', ')}
+                          >
+                            +{user.roleCodes.length - 1}
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="list-table__muted">Chưa gán</span>
+                    )}
                   </td>
                   <td>{getStatusBadge(user.status)}</td>
-                  <td style={{ textAlign: 'right' }}>
+                  <td className="list-table__actions" onClick={(e) => e.stopPropagation()}>
                     <RowActionsMenu
                       actions={[
                         { key: 'edit', label: 'Chỉnh sửa thông tin', icon: ICONS.edit, onClick: () => onEdit(user) },

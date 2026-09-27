@@ -97,7 +97,7 @@ describe('Customer Contact Management Frontend (NCL-02-CN-003)', () => {
       // 2. Nhập họ tên, chức danh, email, phone
       const nameInput = screen.getByLabelText(/Họ và tên người liên hệ/i);
       const titleInput = screen.getByLabelText(/Chức danh \/ Vị trí/i);
-      const emailInput = screen.getByLabelText(/Thư điện tử \(Email\)/i);
+      const emailInput = screen.getByLabelText(/^Email/i);
       const phoneInput = screen.getByLabelText(/Số điện thoại liên lạc/i);
       const primaryCheckbox = screen.getByLabelText(/Đặt làm Người liên hệ đầu mối chính/i);
 
@@ -148,7 +148,7 @@ describe('Customer Contact Management Frontend (NCL-02-CN-003)', () => {
       expect(customersApi.addCustomerContact).not.toHaveBeenCalled();
 
       // Nhập email sai định dạng
-      const emailInput = screen.getByLabelText(/Thư điện tử \(Email\)/i);
+      const emailInput = screen.getByLabelText(/^Email/i);
       fireEvent.change(emailInput, { target: { value: 'invalid-email' } });
       fireEvent.click(submitBtn);
 
@@ -354,7 +354,7 @@ describe('Customer Contact Management Frontend (NCL-02-CN-003)', () => {
 
       // Chuyển sang Tab Hồ sơ chi tiết
       fireEvent.click(screen.getByTestId('tab-btn-overview'));
-      expect(screen.getByText('Thông tin hành chính doanh nghiệp')).toBeInTheDocument();
+      expect(screen.getByText('Tên pháp nhân')).toBeInTheDocument();
 
       // Không còn tab "Nhật ký kiểm toán" nhúng trong trang (chuyển sang trang /audit-logs riêng).
       expect(screen.queryByTestId('tab-btn-audit')).not.toBeInTheDocument();

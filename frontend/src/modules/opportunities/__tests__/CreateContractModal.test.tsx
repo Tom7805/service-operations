@@ -108,7 +108,7 @@ describe('CreateContractModal', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/chưa có báo giá nào/i)).toBeInTheDocument();
+      expect(screen.getByText(/chưa có báo giá/i)).toBeInTheDocument();
     });
     expect(screen.getByRole('button', { name: /Tạo hợp đồng/i })).toBeDisabled();
   });

@@ -25,10 +25,7 @@ export default function ChangePasswordPage({ onBack, onPasswordChanged }: Change
       </div>
 
       <div className="detail-card" style={{ maxWidth: 520, margin: '0 auto' }}>
-        <h1 className="page-title">Đổi mật khẩu</h1>
-        <p className="page-subtitle" style={{ marginBottom: 24 }}>
-          Nhập mật khẩu hiện tại và mật khẩu mới.
-        </p>
+        <h1 className="page-title" style={{ marginBottom: 24 }}>Đổi mật khẩu</h1>
 
         {done ? (
           <div

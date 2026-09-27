@@ -260,7 +260,7 @@ export default function OpportunityCloseModal({
                       marginBottom: "4px",
                     }}
                   >
-                    Thành công (WON)
+                    Thành công
                   </strong>
                   <span style={{ fontSize: "12px", color: "var(--ink-muted)" }}>
                     Chốt hợp đồng thành công. Xác suất nâng lên 100%.
@@ -290,7 +290,7 @@ export default function OpportunityCloseModal({
                       marginBottom: "4px",
                     }}
                   >
-                    Thất bại (LOST)
+                    Thất bại
                   </strong>
                   <span style={{ fontSize: "12px", color: "var(--ink-muted)" }}>
                     Không chốt được hợp đồng. Bắt buộc ghi nhận lý do.
@@ -455,9 +455,9 @@ export default function OpportunityCloseModal({
                   <span>Đang lưu kết quả...</span>
                 </>
               ) : result === "LOST" ? (
-                "Xác nhận cơ hội Thua"
+                "Xác nhận thua"
               ) : (
-                "Xác nhận cơ hội Thắng"
+                "Xác nhận thắng"
               )}
             </button>
           </div>

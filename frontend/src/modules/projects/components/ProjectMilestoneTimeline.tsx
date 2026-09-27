@@ -118,13 +118,13 @@ export default function ProjectMilestoneTimeline({
           gap: '8px',
         }}
       >
-        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
+        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--ink-strong)' }}>
           Mốc tiến độ dự án
         </h3>
         {canCreate && (
           <button
             type="button"
-            className="btn btn-primary btn-sm"
+            className="btn btn-secondary btn-sm"
             onClick={openCreateForm}
             disabled={!hasWorkBreakdown}
             title={
@@ -134,7 +134,7 @@ export default function ProjectMilestoneTimeline({
             }
             data-testid="btn-add-milestone"
           >
-            + Thêm mốc tiến độ
+            {ICONS.plus} Thêm mốc tiến độ
           </button>
         )}
       </div>
@@ -176,7 +176,7 @@ export default function ProjectMilestoneTimeline({
           </h4>
           <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
             {canCreate
-              ? 'Hãy bấm nút "+ Thêm mốc tiến độ" ở trên để bắt đầu theo dõi tiến độ dự án.'
+              ? 'Bấm "Thêm mốc tiến độ" để bắt đầu theo dõi tiến độ dự án.'
               : 'Dự án này chưa khai báo mốc tiến độ nào.'}
           </p>
         </div>

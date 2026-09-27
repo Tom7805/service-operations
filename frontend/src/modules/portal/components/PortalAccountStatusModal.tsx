@@ -171,14 +171,14 @@ export default function PortalAccountStatusModal({ account, onClose, onChanged, 
                 <span className="field-error">{reasonError}</span>
               ) : (
                 <span className="field-hint">
-                  Không bắt buộc, tối đa {PORTAL_REASON_MAX} ký tự — lưu cùng tài khoản và ghi vào Nhật ký hệ thống.
+                  Không bắt buộc, tối đa {PORTAL_REASON_MAX} ký tự.
                 </span>
               )}
             </div>
 
             <div className="modal-footer" style={{ padding: '16px 0 0' }}>
               <button type="button" className="btn-secondary" onClick={handleClose} disabled={submitting}>
-                Hủy bỏ
+                Hủy
               </button>
               <button
                 type="submit"

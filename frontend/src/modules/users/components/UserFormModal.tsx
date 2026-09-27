@@ -159,7 +159,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
               {/* Username */}
               <div className="form-field">
                 <label htmlFor="username-input" className="form-label">
-                  Tên tài khoản (Username) <span className="req">*</span>
+                  Tên đăng nhập <span className="req">*</span>
                 </label>
                 <input
                   id="username-input"
@@ -300,7 +300,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
           <div className="modal-footer">
             <button type="button" className="btn-secondary" onClick={onClose} disabled={submitting}>
-              Hủy bỏ
+              Hủy
             </button>
             <button type="submit" className="btn-primary" disabled={submitting}>
               {submitting ? 'Đang lưu...' : isEdit ? 'Cập nhật thay đổi' : 'Tạo tài khoản'}

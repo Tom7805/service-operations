@@ -4,6 +4,7 @@ import type { TwoFactorRoleConfig } from '../types/authTypes';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
 import { useBackdropClick } from '../../../hooks/useBackdropClick';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface TwoFactorSetupPageProps {
   currentUserRoles?: string[];
@@ -93,8 +94,7 @@ export default function TwoFactorSetupPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Chức năng cấu hình xác thực hai bước chỉ dành riêng cho vai trò <strong>Quản trị viên</strong>.
-            Nếu bạn cần quyền này, hãy liên hệ quản trị viên hệ thống.
+            Trang này dành cho <strong>Quản trị viên</strong>.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">{ICONS.shield} Thời điểm: {new Date().toLocaleString('vi-VN')}</span>
@@ -107,14 +107,7 @@ export default function TwoFactorSetupPage({
 
   return (
     <div className="user-management-page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Xác thực hai bước theo vai trò</h1>
-          <p className="page-subtitle">
-            Vai trò được bật sẽ phải nhập mã OTP mỗi lần đăng nhập, sau mật khẩu.
-          </p>
-        </div>
-      </div>
+      <PageHeader title="Xác thực hai bước" />
 
       {error && (
         <div className="alert alert--error" role="alert">

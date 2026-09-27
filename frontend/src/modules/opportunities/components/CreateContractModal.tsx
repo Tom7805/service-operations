@@ -157,7 +157,6 @@ export default function CreateContractModal({
               <span className="modal-title__icon">{ICONS.document}</span>
               Tạo hợp đồng từ cơ hội
             </h3>
-            <p className="field-hint">Hệ thống sẽ dùng thông tin khách hàng và báo giá mặc định từ cơ hội.</p>
           </div>
           <button type="button" className="modal-close" onClick={onClose} disabled={submitting} aria-label="Đóng">
             {ICONS.close}
@@ -245,8 +244,8 @@ export default function CreateContractModal({
             />
             <small className="field-hint">
               {latestQuote
-                ? `Tự động lấy từ báo giá mới nhất (v${latestQuote.version}) — không thể chỉnh sửa tay để tránh sai lệch.`
-                : 'Cơ hội chưa có báo giá nào, cần lập báo giá trước khi tạo hợp đồng.'}
+                ? `Lấy từ báo giá mới nhất (v${latestQuote.version}).`
+                : 'Cơ hội chưa có báo giá — lập báo giá trước khi tạo hợp đồng.'}
             </small>
 
             <label className="form-label" style={{ marginTop: '12px' }}>

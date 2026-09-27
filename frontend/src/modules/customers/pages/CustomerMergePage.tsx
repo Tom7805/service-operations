@@ -14,6 +14,7 @@ import type {
   CustomerMergePreview,
   CustomerMergeFormErrors,
 } from '../types/customerTypes';
+import PageHeader from '../../../components/common/PageHeader';
 
 /** Nhãn hiển thị cho khóa loại bản ghi trong `relatedRecordBreakdown` (backend dùng chuỗi không dấu). */
 const MERGE_RECORD_LABELS: Record<string, string> = {
@@ -306,9 +307,7 @@ export default function CustomerMergePage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền gộp hồ sơ khách hàng</h2>
           <p>
-            Theo quy định phân quyền bảo mật, chức năng Gộp hồ sơ khách
-            hàng trùng chỉ dành riêng cho <strong>Quản trị viên</strong>. Hệ thống đã ghi lại lần từ chối
-            truy cập này vào nhật ký bảo mật (Audit Log).
+            Trang này dành cho <strong>Quản trị viên</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">{ICONS.shield} Thời điểm ghi nhận: {new Date().toLocaleString('vi-VN')}</span>
@@ -345,12 +344,7 @@ export default function CustomerMergePage({
         </div>
       )}
 
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Gộp hai hồ sơ khách hàng trùng</h1>
-          <p className="page-subtitle">Chuyển dữ liệu từ hồ sơ bị gộp về hồ sơ giữ lại.</p>
-        </div>
-      </div>
+      <PageHeader title="Gộp khách hàng trùng" />
 
       <div className="user-table-card customer-table-card" style={{ padding: '24px' }}>
         <form onSubmit={handlePreview} noValidate>
@@ -523,7 +517,7 @@ export default function CustomerMergePage({
                 )}
               </button>
               <button type="button" className="btn btn-secondary" onClick={resetForm} disabled={isMerging}>
-                Hủy bỏ
+                Hủy
               </button>
             </div>
           </div>

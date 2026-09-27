@@ -72,7 +72,7 @@ export function validateQuoteCreate(items: QuoteItemReq[]): QuoteValidationResul
   if (!items || !Array.isArray(items) || items.length === 0) {
     return {
       valid: false,
-      generalError: 'Báo giá phải có ít nhất một dòng chuyên môn (TC-02)',
+      generalError: 'Báo giá phải có ít nhất một dòng chuyên môn',
       fieldErrors: {},
     };
   }
@@ -168,7 +168,7 @@ export function canTransitionStage(
     const nextAllowed = ACTIVE_STAGES_ORDER[currentIndex + 1];
     return {
       allowed: false,
-      reason: `Quy tắc QTN-06: Không thể nhảy cóc. Giai đoạn kế tiếp hợp lệ là ${STAGE_CONFIGS[nextAllowed]?.shortLabel ?? nextAllowed}.`,
+      reason: `Không thể nhảy cóc. Giai đoạn kế tiếp hợp lệ là ${STAGE_CONFIGS[nextAllowed]?.shortLabel ?? nextAllowed}.`,
     };
   }
 
@@ -301,7 +301,7 @@ export function validateOpportunityClose(
   }
 
   if (payload.result === 'LOST' && !payload.lossReason) {
-    errors.lossReason = 'Vui lòng chọn lý do khi ghi nhận cơ hội thất bại (TC-02).';
+    errors.lossReason = 'Vui lòng chọn lý do khi ghi nhận cơ hội thất bại.';
   }
 
   if (payload.reasonDetail && payload.reasonDetail.trim().length > 500) {

@@ -11,6 +11,7 @@ import {
 import { ICONS } from '../../../components/common/icons';
 import { getCurrentFiscalPeriod, getFiscalPeriod } from '../../admin/api/companySettingApi';
 import type { FiscalPeriodRes } from '../../admin/types/adminTypes';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface RevenueReportPageProps {
   currentUserRoles?: string[];
@@ -193,19 +194,7 @@ export default function RevenueReportPage({ currentUserRoles = [] }: RevenueRepo
 
   return (
     <div className="user-management-page">
-      <div className="page-header">
-        <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.chart} BÁO CÁO</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">DOANH THU</span>
-          </div>
-          <h1 className="page-title">Doanh thu theo tháng</h1>
-          <p className="page-subtitle">
-            Doanh thu ghi nhận từ giờ công tính phí đã duyệt, tách theo loại hợp đồng và so với cùng kỳ năm trước.
-          </p>
-        </div>
-      </div>
+      <PageHeader title="Doanh thu theo tháng" />
 
       <form onSubmit={applyPeriod} noValidate
         style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'flex-end', marginBottom: '16px' }}>
@@ -275,7 +264,7 @@ export default function RevenueReportPage({ currentUserRoles = [] }: RevenueRepo
             disabled={loading || fiscalLoading}
             data-testid="revenue-fy-prev"
           >
-            ← Năm TC {fiscal.fiscalYear - 1}
+            ← Năm {fiscal.fiscalYear - 1}
           </button>
           {currentFiscalYear != null && fiscal.fiscalYear !== currentFiscalYear && (
             <button
@@ -285,7 +274,7 @@ export default function RevenueReportPage({ currentUserRoles = [] }: RevenueRepo
               disabled={loading || fiscalLoading}
               data-testid="revenue-fy-current"
             >
-              Năm TC hiện tại
+              Năm nay
             </button>
           )}
         </div>

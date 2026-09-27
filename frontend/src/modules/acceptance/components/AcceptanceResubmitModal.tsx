@@ -121,8 +121,7 @@ export default function AcceptanceResubmitModal({ isOpen, certificate, onClose, 
               </div>
             )}
             <p className="field-hint" style={{ marginTop: 0 }}>
-              Khi nộp lại, hệ thống kiểm tra lại toàn bộ công việc của hạng mục và chụp lại danh sách công việc cùng
-              phiên bản sản phẩm bàn giao mới nhất.
+              Phiếu nộp lại sẽ lấy danh sách công việc và phiên bản bàn giao mới nhất của hạng mục.
             </p>
 
             <form onSubmit={(e) => void handleSubmit(e)} noValidate>

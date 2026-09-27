@@ -145,21 +145,11 @@ export default function StageTransitionControl({
         }}
       >
         <div>
-          <div
-            style={{
-              fontFamily: 'var(--font-mono, monospace)',
-              fontSize: '11px',
-              fontWeight: 500,
-              textTransform: 'uppercase',
-              letterSpacing: 'var(--track-caps)',
-              color: 'var(--ink-muted)',
-              marginBottom: '4px',
-            }}
-          >
-            Tiến trình bán hàng & Xác suất thành công
+          <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ink-strong)', marginBottom: '4px' }}>
+            {opportunity.name}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ink-strong)' }}>
+            <span style={{ fontSize: '13.5px', color: 'var(--ink-muted)' }}>
               Giai đoạn: {STAGE_CONFIGS[opportunity.stage as OpportunityStage]?.label ?? opportunity.stage}
             </span>
             <span
@@ -424,10 +414,10 @@ export default function StageTransitionControl({
             }}
           >
             {opportunity.stage === 'WON'
-              ? 'WON (100%)'
+              ? 'Thành công'
               : opportunity.stage === 'LOST'
-              ? 'LOST (0%)'
-              : 'Won / Lost'}
+              ? 'Thất bại'
+              : 'Thắng / Thua'}
           </div>
           <div
             style={{
@@ -457,7 +447,7 @@ export default function StageTransitionControl({
           {isClosed ? (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--ink-muted)' }}>
               <span>{ICONS.lock}</span>
-              <span>Cơ hội đã đóng. Quy tắc hệ thống không cho phép chuyển tiếp.</span>
+              <span>Cơ hội đã đóng — không chuyển giai đoạn được nữa.</span>
             </span>
           ) : !isAllowedRole ? (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--ink-muted)' }}>
@@ -466,7 +456,7 @@ export default function StageTransitionControl({
             </span>
           ) : (
             <span>
-              Quy tắc QTN-06: chỉ chuyển tuần tự sang bước kế tiếp liền kề, không nhảy cóc hay chuyển lùi. Có thể đóng Thất bại ở bất kỳ bước nào; chốt Thành công chỉ từ Đàm phán.
+              Chuyển lần lượt từng bước. Đóng Thất bại được ở mọi bước; chốt Thành công chỉ từ Đàm phán.
             </span>
           )}
         </div>

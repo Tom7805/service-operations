@@ -160,8 +160,7 @@ export default function PortalAcceptanceDecisionModal({ mode, certificate, signe
                 <div className="confirm-note-box">
                   <span className="confirm-note-box__icon">{ICONS.info}</span>
                   <span>
-                    Xác nhận không hoàn tác được: phiếu chuyển sang <strong>Đã nghiệm thu</strong>, nội dung bị khoá và mốc
-                    thanh toán gắn với phiếu (nếu có) được mở để xuất hóa đơn.
+                    Không hoàn tác được: phiếu chuyển sang <strong>Đã nghiệm thu</strong> và nội dung bị khóa.
                   </span>
                 </div>
               </>
@@ -188,8 +187,7 @@ export default function PortalAcceptanceDecisionModal({ mode, certificate, signe
                   <span className="field-error" data-testid="portal-reject-reason-error">{fieldError}</span>
                 ) : (
                   <span className="field-hint">
-                    Bắt buộc, tối đa {PORTAL_REJECT_REASON_MAX} ký tự ({reason.trim().length}/{PORTAL_REJECT_REASON_MAX}). Phiếu
-                    chuyển sang <strong>Đang chỉnh sửa</strong> và quản lý dự án được thông báo để sửa rồi gửi lại.
+                    Bắt buộc · {reason.trim().length}/{PORTAL_REJECT_REASON_MAX}. Quản lý dự án sẽ được báo để chỉnh sửa rồi gửi lại.
                   </span>
                 )}
               </div>

@@ -7,7 +7,7 @@ export const EVENT_META: Partial<Record<NotificationType, { label: string; descr
   TASK_BUDGET_EXCEEDED: {
     label: 'Công việc vượt ngân sách giờ công',
     description:
-      'Gửi cho quản lý dự án khi giờ công đã duyệt đạt từ 80% ngân sách của một công việc (QTN-20). Tác vụ nền rà soát mỗi giờ và ngay sau khi duyệt bảng chấm công.',
+      'Gửi cho quản lý dự án khi giờ công đã duyệt đạt 80% ngân sách của công việc.',
   },
 };
 
@@ -112,7 +112,6 @@ export default function DedupConfigCard({ config, onSave }: DedupConfigCardProps
           <h2 className="dedup-card__title" id={`dedup-title-${testId}`}>
             {meta.label}
           </h2>
-          <code className="dedup-card__code">{config.eventType}</code>
           {dirty && <span className="pref-row__dirty">Chưa lưu</span>}
         </div>
         <button
@@ -190,7 +189,7 @@ export default function DedupConfigCard({ config, onSave }: DedupConfigCardProps
       {!dedupEnabled && (
         <div className="dedup-card__warn" role="note" data-testid={`dedup-off-warning-${testId}`}>
           <span />
-          Khi tắt, mỗi lần tác vụ nền rà soát (mỗi giờ) đều gửi lại cảnh báo cho cùng công việc và cùng người nhận.
+          Khi tắt, cảnh báo sẽ được gửi lại mỗi giờ cho cùng công việc và người nhận.
         </div>
       )}
 

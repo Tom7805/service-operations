@@ -5,6 +5,7 @@ import { roleLabels } from '../../../utils/roleLabel';
 import DedupConfigCard, { EVENT_META } from '../components/DedupConfigCard';
 import { getDedupConfigs, NotificationsApiError, updateDedupConfig } from '../api/notificationsApi';
 import type { NotificationDedupConfig, NotificationDedupConfigReq, NotificationType } from '../types/notificationTypes';
+import PageHeader from '../../../components/common/PageHeader';
 
 export interface NotificationDedupConfigPageProps {
   currentUserRoles?: string[];
@@ -23,6 +24,7 @@ export interface NotificationDedupConfigPageProps {
 export default function NotificationDedupConfigPage({ currentUserRoles = [], onViewAuditLog }: NotificationDedupConfigPageProps) {
   const [configs, setConfigs] = useState<NotificationDedupConfig[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showHowto, setShowHowto] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -86,8 +88,7 @@ export default function NotificationDedupConfigPage({ currentUserRoles = [], onV
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Cấu hình chống gửi trùng thông báo chỉ dành cho <strong>Quản trị viên</strong>. Lần truy cập này đã được ghi
-            vào nhật ký hệ thống.
+            Trang này dành cho <strong>Quản trị viên</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">Vai trò hiện tại: {roleLabels(currentUserRoles) || '—'}</span>
@@ -99,39 +100,41 @@ export default function NotificationDedupConfigPage({ currentUserRoles = [], onV
 
   return (
     <div className="user-management-page dedup-page" data-testid="notification-dedup-page">
-      <div className="page-header">
-        <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.bell} THÔNG BÁO</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">QTN-27 · KHÔNG GỬI TRÙNG</span>
-          </div>
-          <h1 className="page-title">Chống gửi trùng thông báo</h1>
-          <p className="page-subtitle">
-            Mỗi cảnh báo được gắn khóa gồm loại sự kiện, bản ghi liên quan và người nhận — các lần rà soát sau bỏ qua nếu
-            khóa đã tồn tại, để người dùng không bị làm phiền bởi cùng một cảnh báo.
-          </p>
-        </div>
-        <div className="page-header__actions">
-          {onViewAuditLog && (
-            <button type="button" className="btn-secondary" onClick={onViewAuditLog} data-testid="btn-dedup-audit-log">
-              {ICONS.clipboardList} Nhật ký hệ thống
+      <PageHeader
+        title="Chống gửi trùng thông báo"
+        actions={
+          <>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setShowHowto((v) => !v)}
+              aria-expanded={showHowto}
+              aria-controls="dedup-howto"
+              data-testid="btn-dedup-howto"
+            >
+              {ICONS.info} Cách hoạt động
             </button>
-          )}
-          <button
-            type="button"
-            className="btn-icon-refresh"
-            onClick={() => void load()}
-            title="Tải lại"
-            aria-label="Tải lại"
-            disabled={loading}
-          >
-            {ICONS.refresh}
-          </button>
-        </div>
-      </div>
+            {onViewAuditLog && (
+              <button type="button" className="btn-secondary" onClick={onViewAuditLog} data-testid="btn-dedup-audit-log">
+                {ICONS.clipboardList} Nhật ký
+              </button>
+            )}
+            <button
+              type="button"
+              className="btn-icon-refresh"
+              onClick={() => void load()}
+              title="Tải lại"
+              aria-label="Tải lại"
+              disabled={loading}
+            >
+              {ICONS.refresh}
+            </button>
+          </>
+        }
+      />
 
-      <ol className="dedup-howto" aria-label="Cách hệ thống chống gửi trùng">
+      {showHowto && (
+      <ol className="dedup-howto" id="dedup-howto" aria-label="Cách hệ thống chống gửi trùng">
         <li>
           <span className="dedup-howto__step">1</span>
           <div>
@@ -154,6 +157,7 @@ export default function NotificationDedupConfigPage({ currentUserRoles = [], onV
           </div>
         </li>
       </ol>
+      )}
 
       {error && (
         <div className="alert alert--error mb-4" role="alert">
@@ -190,8 +194,7 @@ export default function NotificationDedupConfigPage({ currentUserRoles = [], onV
       <div className="info-callout dedup-page__callout">
         <span className="info-callout__icon">{ICONS.info}</span>
         <span>
-          Cảnh báo âm biên lợi nhuận, nhắc nộp bảng chấm công và nhắc thu công nợ có cơ chế chống trùng riêng nên không
-          hiện ở đây. Mỗi lần lưu được ghi vào nhật ký hệ thống kèm người thực hiện, nội dung và thời điểm.
+          Cảnh báo âm biên, nhắc nộp bảng chấm công và nhắc thu công nợ có cơ chế chống trùng riêng nên không hiện ở đây.
         </span>
       </div>
 

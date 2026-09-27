@@ -21,6 +21,7 @@ function formatVND(value: number): string {
 
 /** `averageMarginRate`/`billableHoursRatio` là phân số (0.1000 = 10%) — nhân 100 để hiển thị %. */
 function formatPercent(fraction: number): string {
+  if (!Number.isFinite(fraction)) return '—';
   return `${new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
     fraction * 100
   )}%`;

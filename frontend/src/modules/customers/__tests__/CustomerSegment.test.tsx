@@ -309,7 +309,7 @@ describe('Phân nhóm khách hàng theo ngành và quy mô (NCL-02-CN-005)', () 
       fireEvent.click(screen.getByTestId('btn-open-segment-modal'));
       expect(screen.getByTestId('customer-segment-modal')).toBeInTheDocument();
 
-      fireEvent.click(screen.getByText('Hủy bỏ'));
+      fireEvent.click(screen.getByText('Hủy'));
       expect(screen.queryByTestId('customer-segment-modal')).not.toBeInTheDocument();
     });
   });
