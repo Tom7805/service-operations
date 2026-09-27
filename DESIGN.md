@@ -37,6 +37,10 @@ colors:
   pale-yellow-fg: "#8A5A00"
   pale-gray-bg: "#F0F0EF"
   pale-gray-fg: "#5E5D59"
+  on-primary: "#FFFFFF"
+  danger-solid: "#B42331"
+  success-solid: "#1E6E2E"
+  warning-solid: "#8A5A00"
 typography:
   display:
     fontFamily: "Manrope Variable, -apple-system, SF Pro Text, Segoe UI Variable Text, Segoe UI, system-ui, Helvetica Neue, Arial, sans-serif"
@@ -123,7 +127,7 @@ rounded:
 components:
   button-primary:
     backgroundColor: "{colors.primary-ink}"
-    textColor: "{colors.surface}"
+    textColor: "{colors.on-primary}"
     typography: "{typography.control}"
     rounded: "{rounded.md}"
     padding: "8px 15px"
@@ -178,8 +182,8 @@ components:
   menu-item:
     rounded: "{rounded.sm}"
   avatar:
-    backgroundColor: "{colors.accent-soft}"
-    textColor: "{colors.accent-ink}"
+    backgroundColor: "{colors.surface-sunken}"
+    textColor: "{colors.ink-strong}"
 ---
 
 # Design
@@ -216,6 +220,8 @@ nền tiêu đề bảng, nhãn mono IN HOA, chữ đậm 700, và mọi dấu v
 - Bán kính 8 / 10 / 16 / 20; tab và hàng bảng khi rê chuột đều là viên bo tròn.
 - Nhãn sentence case 13px/400; mono chỉ còn cho mã, số hiệu, phím tắt.
 - Chuyển động chữ ký: viên tab trượt bằng `clip-path`, lớp che mờ + hộp thoại nhô lên, tấm trượt từ đáy trên điện thoại.
+- **Hai giao diện Sáng / Tối (+ Theo hệ thống)** cùng một bộ token: mọi thành phần đọc màu qua biến, giao diện tối
+  chỉ đổi giá trị biến (§ Giao diện tối). Người dùng chọn ở Cài đặt › Giao diện (không đặt nút Sáng/Tối trên thanh bên).
 
 ## Colors
 
@@ -270,7 +276,35 @@ Dùng theo cặp `bg` + `fg`, không bao giờ dùng lẻ.
 | Cảnh báo | `pale-yellow-*` | pill cảnh báo, hạn mức |
 | Thông tin | `pale-blue-*` | nhãn phân loại |
 
+### Giao diện tối
+Bật bằng `data-theme="dark"` trên `<html>` (khối `:root[data-theme="dark"]`, mục 30 của `index.css`). Theo tông tối
+của Claude: than ấm nhiều tầng, sáng dần từ khung ra thẻ; chữ ngà; viền là mực **sáng** trong suốt.
+
+| Token | Sáng | Tối |
+|---|---|---|
+| `frame` | `#F6F6F4` | `#1C1B1A` |
+| `canvas` | `#FCFCFB` | `#242322` |
+| `surface` / `surface-alt` / `surface-sunken` | `#FFFFFF` / `#F8F8F7` / `#F0F0EF` | `#2B2A28` / `#32312E` / `#3A3936` |
+| `ink-strong` / `ink` / `ink-muted` / `ink-faint` | `#141413` / `#3D3D3A` / `#5E5D59` / `#6F6E69` | `#F2F1EC` / `#D6D4CC` / `#AAA89F` / `#8F8D85` |
+| `line` / `line-strong` / `line-input` | mực tối 9% / 18% / 13% | mực sáng `rgba(242,241,236,…)` 12% / 22% / 16% |
+| `accent` / `accent-ink` | `#2A78D6` / `#1F63B8` | `#5A9BEA` / `#8DB9F2` (sáng hơn để đủ tương phản) |
+| `primary` / `on-primary` | `#1F1E1D` / `#FFFFFF` | `#ECEAE3` / `#1C1B1A` — **nút chính đảo thành khối sáng chữ tối** |
+| `danger-solid` / `success-solid` / `warning-solid` | `#B42331` / `#1E6E2E` / `#8A5A00` | `#C23A45` / `#2E8A40` / `#A8750F` |
+| `pale-*-bg` / `pale-*-fg` | nền nhạt + chữ đậm | nền màu 16% trong suốt + chữ sáng |
+
+**Kênh màu cho độ trong suốt.** Viền/nền mực viết `rgb(var(--ink-rgb) / 0.1)` để tự đảo sáng khi tối; bóng
+đổ viết `rgb(var(--shadow-rgb) / …)` — luôn tối. Nền kính của thanh tiêu đề dùng `--canvas-rgb`/`--surface-rgb`.
+
+**Nền đặc ≠ cặp pastel.** Nút xóa/thành công, huy hiệu đếm có chữ trắng dùng `*-solid`; `pale-*-fg` chỉ là màu chữ.
+
+Mô phỏng chủ đề trong ô chọn "Sáng / Tối / Theo hệ thống" (`.theme-preview`) cố ý viết cứng màu — nó phải
+trông như giao diện kia dù đang ở giao diện nào.
+
 ### Named Rules
+**The Token-Only Color Rule.** Màu mới trong CSS và style nội tuyến TSX **luôn** là biến (`var(--surface)`,
+`var(--ink-muted)`, `rgb(var(--ink-rgb) / .08)`…), không bao giờ `#hex` thẳng — nếu không, giao diện tối sẽ
+để lại một mảng trắng. Ngoại lệ: màu chuỗi dữ liệu biểu đồ và `.theme-preview`.
+
 **The Translucent Ink Line Rule.** Mọi viền và đường phân cách là mực ấm `#1F1E1D` ở độ trong suốt
 thấp (`hairline` / `line` / `line-input` / `line-strong`), không bao giờ là một màu xám đặc. Viền xám
 đặc là thứ biến một giao diện mềm thành "gai góc".
@@ -441,11 +475,22 @@ trong 200ms `--ease-out`, lún `scale(0.92)` khi nhấn.
 ### Navigation
 - **Thanh bên** trên khung: mục 14.5px/400 `ink`, icon 17px `ink-muted`, `rounded.md`. Hover
   `frame-hover`; đang chọn `frame-active` + chữ 500 `ink-strong` — không khối màu đổ đầy.
-- Nhãn nhóm: 13px/400 sentence case, `ink-faint`.
+- **Nhóm mục tách bằng đường kẻ, không có nhãn nhóm** (theo ảnh mẫu người dùng đưa, kiểu YouTube/Linky):
+  `.side-nav__divider` 1px `line`, cách 8px; mỗi nhóm là `role="group"` có `aria-label` = tên nhóm để trình đọc
+  màn hình vẫn đọc được.
+- **Chân thanh bên** (`.side-nav__footer`, một đường `line` phía trên), từ trên xuống: *Cài đặt* (mở Cài đặt cá
+  nhân), *Trợ giúp* (mở mục Trợ giúp & phím tắt), đường kẻ, rồi **khối tài khoản**: avatar 32px + họ tên 14px/500 + vai trò 12.5px `ink-muted` + ⋯.
+  Bấm khối tài khoản mở menu **bật lên phía trên** (Cài đặt · Đổi mật khẩu · Quyền xem dữ liệu nếu có · Đăng xuất
+  màu `pale-red-fg`). Thanh tiêu đề **không còn** chip tài khoản.
+- Cấu hình hệ thống của quản trị (trước là "Cài đặt") đổi thành **"Cấu hình hệ thống"**, icon cờ lê, để không
+  trùng với Cài đặt cá nhân.
+- ≤900px: thanh ngang cuộn ngang; nhóm nối nhau bằng vạch dọc 1px; chân chỉ còn icon (Cài đặt, Trợ giúp,
+  avatar); menu tài khoản mở xuống ở góc phải trên.
 - **Dấu thương hiệu:** khối **mực ấm `#1F1E1D`** (cùng màu nút chính) bo 10px, ba cột **trắng `#FFFFFF`,
   bo tròn hoàn toàn** cao dần 8/13/19px. Dùng chung cho thanh bên và trang đăng nhập. **Không dùng màu
   cho logo** (yêu cầu của người dùng) — màu nhấn chỉ dành cho điểm tương tác.
-- **Thu/mở không có chuyển động chiều rộng** (xem Known accepted deviations).
+- **Thu/mở không có chuyển động chiều rộng** (xem Known accepted deviations). Phím tắt `Ctrl/⌘+B`; trạng thái
+  thu/mở là một tuỳ chọn cá nhân lưu lên máy chủ cùng các tuỳ chọn khác.
 
 ### Danh sách gọn (`.list-table`)
 Danh sách là nơi **tìm và chọn**, không phải nơi đọc hồ sơ — thông tin chi tiết ở trang chi tiết.
@@ -503,6 +548,27 @@ vị trí mới, không chuyển động. Đổi tab chỉ phần thân xổ và
 Không viền, bo 14px, vòng 0.5px + bóng popover, đệm 6px, mục bên trong `rounded.sm` 400, hover
 `surface-sunken`, phân cách bằng đường tóc. Toast dải nền `primary-ink`, vào từ `translateY(12px) scale(0.98)`.
 
+### Trang Cài đặt cá nhân
+Mở từ chân thanh bên, menu tài khoản, bảng lệnh (`Cài đặt: …`) hoặc phím `?` (mục Trợ giúp). Cột mục bên trái
+(viên như tab, sticky) + một thẻ `surface` bên phải; ≤900px cột mục thành dải viên cuộn ngang.
+
+| Mục | Nội dung |
+|---|---|
+| Tài khoản | Họ tên, @tài khoản, vai trò; chính sách tự đăng xuất khi không thao tác; nút Đăng xuất |
+| Giao diện | Chủ đề (3 thẻ mô phỏng Sáng / Tối / Theo hệ thống), mật độ (Thoải mái / Gọn), màn hình mở đầu, thu gọn thanh bên, giảm hiệu ứng |
+| Thông báo | Nhúng trang tuỳ chọn thông báo sẵn có |
+| Bảo mật | Nhúng trang đổi mật khẩu |
+| Quyền xem dữ liệu | Chỉ với vai trò được xem lương/giá vốn — nhúng trang che dữ liệu nhạy cảm |
+| Trợ giúp & phím tắt | Bảng phím tắt (`kbd`), 8 bước luồng nghiệp vụ chính, nơi liên hệ |
+
+- **Mỗi thay đổi áp dụng ngay và tự lưu** (gom 450ms) lên `GET/PUT /api/v1/me/preferences`; trạng thái lưu
+  (`Đang lưu… / ✓ Đã lưu / Đã lưu trên máy này` — cái cuối là chữ nhạt khi máy chủ không nhận: tùy chọn vẫn áp dụng, không báo lỗi đỏ) nằm cạnh tiêu đề mục, `role="status"`. Không có nút "Lưu".
+- Tuỳ chọn được **đệm ở `localStorage['ui-preferences']` và áp trước khi vẽ** (`main.tsx`) để không nháy trắng khi
+  tải lại hay ở trang đăng nhập; máy chủ là nguồn đúng sau khi đăng nhập.
+- Thẻ chủ đề đang chọn: vòng 2px `ink-strong` + nhãn 500 (xem trước chủ đề, nên không dùng màu nhấn); mật độ là điều khiển
+  phân đoạn; hai tuỳ chọn bật/tắt là công tắc.
+- Các trang được nhúng dùng `HubContext` (`embedded: true`) nên không lặp tiêu đề trang.
+
 ### Trạng thái "chưa lưu"
 Là trạng thái **tương tác** nên mang màu nhấn: hàng có nền xanh rất nhạt `#F5F9FE`, nhãn `accent-soft`/`accent-ink`,
 thanh hành động nổi có viền `accent` và chữ trạng thái `accent-ink`. Không dùng vạch trái dày.
@@ -541,9 +607,13 @@ và đóng tức thì.
 |---|---|
 | `prefers-reduced-motion` | **Ít hơn và dịu hơn, không phải bằng không.** Hộp thoại, tấm trượt, toast chỉ còn mờ dần; viên tab đặt thẳng; công tắc bỏ lún; dấu tích hiện không chuyển động; cắt mọi hiệu ứng lặp vô hạn — **trừ** spinner báo "đang chạy". |
 | `prefers-reduced-transparency` | Lớp che bỏ `backdrop-filter`, thay bằng nền nâu ấm đục hơn (36%); thanh tiêu đề thành nền đục + viền 1px. |
+| Cài đặt › **Giảm hiệu ứng** (`data-motion="reduce"`) | Lựa chọn **chủ động** của người dùng nên tắt hẳn: mọi `transition`/`animation` 0.01ms — **trừ** spinner. Khác với khối `prefers-reduced-motion` ở trên (dịu đi, không tắt). |
+| Cài đặt › **Mật độ Gọn** (`data-density="compact"`) | Hàng bảng/danh sách, mục thanh bên và đầu trang bớt đệm dọc; cỡ chữ và vùng bấm tối thiểu giữ nguyên. |
+| Chủ đề **Theo hệ thống** | Theo `prefers-color-scheme`, đổi ngay khi hệ điều hành đổi (bộ nghe `matchMedia`). |
 | `prefers-contrast: more` | Tấm làm việc, thẻ bảng, ô chỉ số có vòng viền `ink-muted`; ô nhập và ô tích viền `ink-muted`. |
 
-**Đừng thêm lại** `*{ animation-duration: .01ms !important }` — nó đè lên khối giảm-chuyển-động có cân nhắc.
+**Đừng thêm lại** `*{ animation-duration: .01ms !important }` **không có phạm vi** — nó đè lên khối giảm-chuyển-động
+có cân nhắc. Quy tắc tương tự chỉ được phép dưới `[data-motion="reduce"]` (người dùng tự bật).
 
 ## Do's and Don'ts
 
@@ -558,9 +628,12 @@ và đóng tức thì.
 - **Do** dùng `tabular-nums` ở mọi nơi có số xếp cột.
 - **Do** cắt gọn nội dung ô bảng dài về một dòng kèm `…` và đưa đủ nội dung vào `title`.
 - **Do** cho hộp thoại thành tấm trượt từ đáy ở ≤640px, nút chân ≥44px.
+- **Do** kiểm cả hai giao diện Sáng và Tối khi thêm màn hình mới.
 
 ### Don't:
 - **Don't** dùng viền xám đặc (`#EAEAEA`, `#E7E4DD`…) — viền là mực trong suốt.
+- **Don't** viết `#hex` thẳng trong CSS/TSX mới (trừ màu chuỗi biểu đồ) — giao diện tối sẽ sót mảng sáng.
+- **Don't** đặt lại nhãn nhóm hay chip tài khoản trên thanh tiêu đề — tài khoản ở chân thanh bên.
 - **Don't** chia khoang bằng lưới đường kẻ 1px (`gap: 1px` trên nền đường kẻ); ô chỉ số là các ô rời.
 - **Don't** đặt dải nền cho hàng tiêu đề bảng, và **don't** kẻ lưới dọc trong bảng.
 - **Don't** dùng `font-weight` 700/800/`bold`, kể cả trong style nội tuyến.
@@ -599,8 +672,9 @@ và đóng tức thì.
 - **Tấm trượt từ đáy không có tay nắm / kéo-để-đóng.** Một tay nắm mà không kéo được là gợi ý sai.
 - **Mono chỉ còn cho mã, số hiệu, `kbd`** — không còn cho nhãn.
 - **Drift đã biết (chưa sửa):**
-  - Nhiều quy tắc cũ sâu trong `index.css` vẫn viết cứng `#111111` / `#EAEAEA` và thang `--overlay-*`;
-    lớp "Claude" ở cuối tệp đè lên các thành phần dùng chung, phần lẻ chưa được chuyển đổi.
+  - Đợt giao diện tối đã đổi ~940 khai báo màu viết cứng trong `index.css` và style nội tuyến của 16 tệp TSX sang
+    biến. Còn lại có chủ đích: định nghĩa token, `.theme-preview`, con trượt công tắc, màu chuỗi biểu đồ doanh thu.
+    Thang `--overlay-*` cũ vẫn còn ở vài quy tắc (đã có giá trị tối riêng).
   - Lớp Claude vẫn viết thẳng công thức bóng mực ấm cho từng lớp nổi thay vì tham chiếu token
     `--shadow-*` (các token này đã được đổi sang mực ấm `rgba(31,30,29,…)`, nhưng giá trị chưa trùng khớp
     từng lớp). Khi chạm vào, gom về token — đừng thêm công thức mới.
@@ -617,6 +691,13 @@ và đóng tức thì.
   thử màu xanh, người dùng từ chối ("đổi về đen") → nút chính giữ mực đen trên toàn hệ thống; xanh chỉ ở
   công tắc, ô chọn, focus, liên kết và trạng thái đang chọn. Sau đó người dùng chê chữ xanh ở ô định danh →
   ô định danh chuyển về chữ đen trên nền xám nhạt.
+- **Thanh bên + Cài đặt + giao diện tối (2026-09-27).** Người dùng đưa ảnh thanh bên kiểu Linky/YouTube và yêu cầu
+  "thêm phần cài đặt, bổ sung hết những thứ cần thiết và các logic liên quan". Chọn qua câu hỏi có cấu trúc: chế độ
+  tối = làm đầy đủ; tài khoản = chân thanh bên; nhóm mục = chỉ đường kẻ như ảnh mẫu. Thay cho quyết định trước đó
+  "chế độ tối = không làm đợt này". Kiểm bằng chụp 76 màn × 7 vai trò ở giao diện tối (0 lỗi console/API, không
+  còn mảng trắng: tỷ lệ điểm ảnh sáng ≤2.3%) và giao diện điện thoại 390px cả hai chủ đề; **chưa chạy duyệt hoàn thiện**.
+  Nút Sáng/Tối ở chân thanh bên đã làm rồi **bỏ theo yêu cầu người dùng** ("trong Cài đặt có lựa chọn sáng tối rồi,
+  thanh bên không nhất thiết phải để") — đừng đặt lại.
 - **Bỏ qua bước gieo concept (concept-seed roll).** Theo new-work.md §3 ("a user- or brief-pinned direction
   beats the roll, always"), không chạy roll nào — hướng đã được ghim.
 - **Đợt 1 — dẫn bằng code** (không có công cụ sinh ảnh), không có comp. Người duyệt hoàn thiện chấm hai
