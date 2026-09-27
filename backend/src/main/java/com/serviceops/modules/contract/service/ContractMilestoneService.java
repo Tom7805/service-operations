@@ -27,7 +27,19 @@ public interface ContractMilestoneService {
      * @throws com.serviceops.common.exception.BusinessRuleException
      *         RESOURCE_NOT_FOUND neu khong ton tai hop dong/moc thanh toan,
      *         hoac moc thanh toan khong thuoc hop dong nay; INVALID_STATE neu
-     *         chuyen trang thai khong hop le (nhay coc, lui lai, hoac giu nguyen)
+     *         chuyen trang thai khong hop le (nhay coc, lui lai, hoac giu nguyen); INVALID_STATE
+     *         neu mo moc (READY_TO_INVOICE) trong khi phieu nghiem thu gan voi moc chua duoc khach
+     *         hang xac nhan (NCL-12-CN-003, QTN-25)
      */
     ContractMilestoneRes updateStatus(Long contractId, Long milestoneId, ContractMilestoneStatus newStatus);
+
+    /**
+     * Dua moc READY_TO_INVOICE ve lai PENDING vi phieu nghiem thu gan voi moc chua duoc xac nhan hoac
+     * vua bi go khoi moc (NCL-12-CN-003, QTN-25: "giu moc o trang thai cho nghiem thu"). Moc dang
+     * PENDING thi khong lam gi; moc INVOICED thi bao loi vi hoa don da phat hanh.
+     *
+     * @throws com.serviceops.common.exception.BusinessRuleException RESOURCE_NOT_FOUND neu khong co
+     *         moc thuoc hop dong; INVALID_STATE neu moc da INVOICED
+     */
+    ContractMilestoneRes holdForAcceptance(Long contractId, Long milestoneId, String reason);
 }

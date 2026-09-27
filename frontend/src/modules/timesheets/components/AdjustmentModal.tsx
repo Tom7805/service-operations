@@ -153,7 +153,7 @@ export default function AdjustmentModal({
               {!presetEntry && (
                 <div>
                   <label className="form-label" htmlFor="entry-id">
-                    Mã dòng giờ công (Entry ID) <span className="text-danger">*</span>
+                    Mã dòng giờ công <span className="text-danger">*</span>
                   </label>
                   <input
                     id="entry-id"
@@ -211,7 +211,7 @@ export default function AdjustmentModal({
 
           <div className="modal-footer">
             <button type="button" className="btn-secondary" onClick={closeModal} disabled={submitting}>
-              Hủy bỏ
+              Hủy
             </button>
             <button type="button" className="btn-primary" onClick={handleSubmit} disabled={submitting}>
               {submitting ? 'Đang điều chỉnh…' : 'Xác nhận điều chỉnh'}

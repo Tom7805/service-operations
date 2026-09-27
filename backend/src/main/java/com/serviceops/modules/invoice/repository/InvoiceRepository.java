@@ -16,6 +16,10 @@ import java.util.Optional;
 
 public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
 
+	/** NCL-13-CN-004: hoa don cua cac khach hang trong pham vi cong khach hang, moi nhat truoc. */
+	List<Invoice> findByCustomerIdInAndStatusInOrderByInvoiceDateDescIdDesc(Collection<Long> customerIds,
+			Collection<InvoiceStatus> statuses);
+
 	/**
 	 * Tim hoa don theo hop dong (tuy chon) va tap trang thai, moi nhat truoc (NCL-10-CN-003).
 	 * {@code statuses} khong duoc rong — noi goi truyen day du cac trang thai khi khong loc.

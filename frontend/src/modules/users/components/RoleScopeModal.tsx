@@ -137,7 +137,7 @@ export const RoleScopeModal: React.FC<RoleScopeModalProps> = ({
             <div className="user-assign-summary">
               <div className="avatar-circle avatar-circle--lg">{user.fullName.charAt(0).toUpperCase()}</div>
               <div className="user-profile-meta">
-                <strong style={{ fontSize: '15px', color: '#111111' }}>{user.fullName}</strong>
+                <strong style={{ fontSize: '15px', color: 'var(--ink-strong)' }}>{user.fullName}</strong>
                 <span className="user-profile-username">@{user.username} • {user.email || 'Chưa có email'}</span>
               </div>
             </div>
@@ -145,7 +145,7 @@ export const RoleScopeModal: React.FC<RoleScopeModalProps> = ({
             {/* Section 1: Data Scope Selection */}
             <div className="form-field mt-4">
               <label className="form-label">
-                1. Phạm vi truy cập dữ liệu (Data Scope) <span className="req">*</span>
+                1. Phạm vi dữ liệu <span className="req">*</span>
               </label>
               <div className="scope-options">
                 <div
@@ -165,7 +165,7 @@ export const RoleScopeModal: React.FC<RoleScopeModalProps> = ({
                   />
                   <div>
                     <label htmlFor="scope-type-company" style={{ cursor: 'pointer' }}>
-                      <strong><span className="icon-sm">{ICONS.globe}</span> Toàn công ty (Company-wide)</strong>
+                      <strong><span className="icon-sm">{ICONS.globe}</span> Toàn công ty</strong>
                     </label>
                     <p>Truy cập và xem dữ liệu trên toàn hệ thống công ty, không giới hạn phòng ban.</p>
                   </div>
@@ -189,7 +189,7 @@ export const RoleScopeModal: React.FC<RoleScopeModalProps> = ({
                   />
                   <div style={{ flex: 1 }}>
                     <label htmlFor="scope-type-department" style={{ cursor: 'pointer' }}>
-                      <strong><span className="icon-sm">{ICONS.building}</span> Một nhánh tổ chức (Department-level & Children)</strong>
+                      <strong><span className="icon-sm">{ICONS.building}</span> Một nhánh tổ chức</strong>
                     </label>
                     <p>Giới hạn trong phạm vi bộ phận được chọn và toàn bộ các bộ phận con cháu trực thuộc.</p>
 
@@ -238,7 +238,7 @@ export const RoleScopeModal: React.FC<RoleScopeModalProps> = ({
                   />
                   <div>
                     <label htmlFor="scope-type-self" style={{ cursor: 'pointer' }}>
-                      <strong><span className="icon-sm">{ICONS.user}</span> Chỉ cá nhân (Self-only)</strong>
+                      <strong><span className="icon-sm">{ICONS.user}</span> Chỉ cá nhân</strong>
                     </label>
                     <p>Chỉ xem và thao tác dữ liệu do chính tài khoản tạo ra hoặc được trực tiếp phân công.</p>
                   </div>
@@ -249,7 +249,7 @@ export const RoleScopeModal: React.FC<RoleScopeModalProps> = ({
             {/* Section 2: Roles Selection */}
             <div className="form-field mt-4">
               <label className="form-label">
-                2. Gán các vai trò chức năng hệ thống <span className="req">*</span>
+                2. Vai trò <span className="req">*</span>
               </label>
               {fieldErrors.roles && <span className="field-error mb-2">{fieldErrors.roles}</span>}
 
@@ -291,13 +291,13 @@ export const RoleScopeModal: React.FC<RoleScopeModalProps> = ({
 
             <div className="confirm-note-box mt-3">
               <span className="confirm-note-box__icon">{ICONS.info}</span>
-              <span>Lưu ý: Quyền hạn mới sẽ có hiệu lực ngay lập tức sau khi lưu. Mọi thao tác đều được ghi vào Audit Log hệ thống.</span>
+              <span>Quyền mới có hiệu lực ngay sau khi lưu.</span>
             </div>
           </div>
 
           <div className="modal-footer">
             <button type="button" className="btn-secondary" onClick={onClose} disabled={submitting}>
-              Hủy bỏ
+              Hủy
             </button>
             <button type="submit" className="btn-primary" disabled={submitting}>
               {submitting ? 'Đang lưu cấu hình...' : 'Lưu phân quyền & phạm vi'}

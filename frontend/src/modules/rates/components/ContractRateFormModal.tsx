@@ -100,10 +100,6 @@ export default function ContractRateFormModal({ contractId, isOpen, onClose, onS
                 <span className="modal-title__icon">{ICONS.receipt}</span>
                 Khai báo đơn giá riêng cho hợp đồng #{contractId}
               </h3>
-              <p className="field-hint">
-                Mức giá đàm phán riêng cho hợp đồng này — được ưu tiên hơn đơn giá chung công ty khi tính
-                doanh thu.
-              </p>
             </div>
             <button
               type="button"
@@ -186,8 +182,7 @@ export default function ContractRateFormModal({ contractId, isOpen, onClose, onS
               />
               {errors.effectiveFrom && <small className="field-error">{errors.effectiveFrom}</small>}
               <p className="field-hint" style={{ marginTop: '6px' }}>
-                Cùng vai trò + cấp bậc không được khai báo hai lần cho cùng một ngày hiệu lực trong hợp đồng
-                này.
+                Mỗi vai trò và cấp bậc chỉ có một đơn giá cho mỗi ngày hiệu lực.
               </p>
 
               <div style={{ marginTop: '16px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>

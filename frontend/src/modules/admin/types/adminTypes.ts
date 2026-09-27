@@ -1,0 +1,248 @@
+/**
+ * Kiểu dữ liệu Epic NCL-15 — Quản trị hệ thống và danh mục.
+ * Backend lược trường `null` khỏi JSON (Jackson `non_null`) nên các trường tùy chọn có thể vắng mặt.
+ */
+
+/** Một mốc giá của dịch vụ (QTN-28) — mốc cũ luôn được giữ, đổi giá là thêm mốc mới. */
+export interface ServicePriceRes {
+  id: number;
+  price: number;
+  /** yyyy-MM-dd */
+  effectiveFrom: string;
+  /** Ngày cuối mốc này còn hiệu lực (trước mốc kế tiếp); vắng mặt = chưa có mốc sau. */
+  effectiveTo?: string | null;
+  /** Mốc đang áp dụng tại ngày tra cứu `asOf`. */
+  current: boolean;
+  note?: string | null;
+  createdBy?: string | null;
+  createdAt?: string | null;
+}
+
+/** Dịch vụ trong danh mục kèm giá đang hiệu lực tại `asOf` (NCL-15-CN-001). */
+export interface ServiceCatalogRes {
+  id: number;
+  /** Mã sinh tự động `DV` + 5 chữ số — không nhập tay. */
+  code: string;
+  name: string;
+  unit: string;
+  description?: string | null;
+  active: boolean;
+  asOf: string;
+  /** `false` khi chưa có mốc giá nào hiệu lực tại `asOf` → không chọn được khi lập báo giá / hóa đơn. */
+  hasEffectivePrice: boolean;
+  currentPrice?: number | null;
+  currentPriceEffectiveFrom?: string | null;
+  createdBy?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  /** Chỉ có ở API chi tiết và response của các API ghi; danh sách không có trường này. */
+  prices?: ServicePriceRes[];
+}
+
+/** POST /service-catalog — tạo dịch vụ kèm mốc giá đầu tiên (TC-01). */
+export interface ServiceCatalogCreateReq {
+  name: string;
+  unit: string;
+  description?: string | null;
+  price: number;
+  effectiveFrom: string;
+}
+
+/** PUT /service-catalog/{id} — chỉ sửa mô tả, không sửa giá. */
+export interface ServiceCatalogUpdateReq {
+  name: string;
+  unit: string;
+  description?: string | null;
+}
+
+/** POST /service-catalog/{id}/prices — thêm mốc giá mới. */
+export interface ServicePriceReq {
+  price: number;
+  effectiveFrom: string;
+  note?: string | null;
+}
+
+export interface ServiceCatalogSearchParams {
+  keyword?: string;
+  /** `undefined` = tất cả trạng thái. */
+  active?: boolean;
+  /** Ngày tính giá hiện hành (yyyy-MM-dd), mặc định hôm nay ở backend. */
+  asOf?: string;
+}
+
+/* ---------- NCL-15-CN-002 — Cấu hình công ty và kỳ tài chính ---------- */
+
+export type CompanyCurrency = 'VND' | 'USD' | 'EUR';
+
+/** Một bộ cấu hình duy nhất cho toàn hệ thống — GET/PUT /company-settings. */
+export interface CompanySettingRes {
+  /** `false` khi chưa cấu hình lần nào — các trường tùy chọn vắng mặt, còn lại là mặc định. */
+  configured: boolean;
+  companyName?: string | null;
+  taxCode?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  currency: CompanyCurrency;
+  /** 1–12 — tháng bắt đầu năm tài chính, quyết định cách chia kỳ báo cáo theo năm/quý (TC-01). */
+  fiscalYearStartMonth: number;
+  standardWorkingDaysPerMonth: number;
+  updatedBy?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface CompanySettingReq {
+  companyName: string;
+  taxCode: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  currency: CompanyCurrency;
+  fiscalYearStartMonth: number;
+  standardWorkingDaysPerMonth: number;
+}
+
+export interface FiscalQuarter {
+  quarter: number;
+  startDate: string;
+  endDate: string;
+}
+
+export interface FiscalMonth {
+  /** Kỳ thứ 1–12 trong năm tài chính. */
+  period: number;
+  /** yyyy-MM */
+  yearMonth: string;
+  startDate: string;
+  endDate: string;
+}
+
+/**
+ * Năm tài chính mang số của năm dương lịch chứa ngày bắt đầu — VD bắt đầu tháng 4 thì năm tài chính
+ * 2026 = 2026-04-01 … 2027-03-31. GET /fiscal-periods/{fiscalYear} · /fiscal-periods/current?date=
+ */
+export interface FiscalPeriodRes {
+  fiscalYear: number;
+  startMonth: number;
+  startDate: string;
+  endDate: string;
+  quarters: FiscalQuarter[];
+  months: FiscalMonth[];
+}
+
+/* ---------- NCL-15-CN-003 — Sao lưu và phục hồi dữ liệu ---------- */
+
+/** `IN_PROGRESS` còn đang tạo hoặc dở dang, `FAILED` lỗi khi tạo — cả hai KHÔNG phục hồi được (TC-02). */
+export type BackupStatus = 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
+export type BackupTrigger = 'MANUAL' | 'SCHEDULED';
+export type RestoreStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'EXPIRED';
+
+export interface BackupRecordRes {
+  id: number;
+  code: string;
+  status: BackupStatus;
+  triggerType: BackupTrigger;
+  fileName?: string | null;
+  sizeBytes?: number | null;
+  checksumSha256?: string | null;
+  tableCount?: number | null;
+  rowCount?: number | null;
+  note?: string | null;
+  errorMessage?: string | null;
+  /** Vắng mặt với bản sao theo lịch. */
+  createdBy?: string | null;
+  startedAt: string;
+  completedAt?: string | null;
+  /** `status == COMPLETED` — bật/tắt nút "Phục hồi". Tính toàn vẹn tệp chỉ kiểm khi tạo yêu cầu phục hồi. */
+  restorable: boolean;
+}
+
+/** Bước 1 — mã xác nhận chỉ trả về MỘT lần, giữ trong bộ nhớ hộp thoại, không lưu localStorage. */
+export interface RestoreChallengeRes {
+  requestId: number;
+  backupId: number;
+  backupCode: string;
+  backupCreatedAt: string;
+  confirmationToken: string;
+  expiresAt: string;
+  warning: string;
+}
+
+export interface RestoreResultRes {
+  requestId: number;
+  backupId: number;
+  backupCode: string;
+  status: RestoreStatus;
+  tablesRestored: number;
+  rowsRestored: number;
+  restoredToPointInTime: string;
+  completedAt: string;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// NCL-15-CN-004 — nhập dữ liệu khách hàng và nhân sự từ tệp CSV (xem trước → xác nhận nhập).
+
+export type ImportTargetType = 'CUSTOMER' | 'EMPLOYEE';
+export type ImportStatus = 'PREVIEWED' | 'COMMITTED' | 'COMMITTED_WITH_ERRORS';
+export type ImportRowStatus = 'VALID' | 'INVALID' | 'DUPLICATE';
+export type DuplicateAction = 'SKIP' | 'UPDATE';
+export type ImportErrorStage = 'VALIDATION' | 'COMMIT';
+
+export interface ImportPreviewRow {
+  /** Số dòng theo tệp — dòng tiêu đề là dòng 1. */
+  rowNumber: number;
+  status: ImportRowStatus;
+  /** Chỉ chứa ô có giá trị, khoá là tên trường chuẩn (name, taxCode… / username, hireDate…). */
+  data: Record<string, string>;
+  errors: string[];
+  duplicateOfId?: number | null;
+  duplicateOfLabel?: string | null;
+}
+
+export interface ImportPreviewRes {
+  jobId: number;
+  targetType: ImportTargetType;
+  fileName: string;
+  status: ImportStatus;
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  duplicateRows: number;
+  notice?: string | null;
+  rows: ImportPreviewRow[];
+}
+
+export interface ImportRowError {
+  rowNumber: number;
+  stage: ImportErrorStage;
+  message: string;
+  rawData?: string | null;
+}
+
+export interface ImportResultRes {
+  jobId: number;
+  targetType: ImportTargetType;
+  fileName: string;
+  status: ImportStatus;
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  duplicateRows: number;
+  createdCount: number;
+  updatedCount: number;
+  skippedCount: number;
+  failedCount: number;
+  duplicateAction?: DuplicateAction | null;
+  createdBy?: string | null;
+  createdAt: string;
+  committedBy?: string | null;
+  committedAt?: string | null;
+  notice?: string | null;
+  /** Vắng mặt ở API danh sách. */
+  errors?: ImportRowError[] | null;
+}
+
+export interface ImportCommitReq {
+  duplicateAction?: DuplicateAction | null;
+  rowActions?: { rowNumber: number; action: DuplicateAction }[];
+}

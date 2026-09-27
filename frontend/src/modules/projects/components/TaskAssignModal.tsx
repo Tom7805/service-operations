@@ -213,8 +213,7 @@ export default function TaskAssignModal({
                   </p>
                 )}
                 <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px', color: 'var(--ink-muted)' }}>
-                  Danh sách người được chọn sẽ thay thế toàn bộ danh sách phân công hiện tại, không cộng dồn.
-                  Có thể phân công cho bất kỳ vai trò nào đang hoạt động; người được giao sẽ tự cập nhật tiến độ công việc này sau khi đăng nhập.
+                  Danh sách này sẽ thay thế toàn bộ phân công hiện tại.
                 </p>
               </div>
 
@@ -273,7 +272,7 @@ export default function TaskAssignModal({
                   onClick={onClose}
                   disabled={submitting}
                 >
-                  Hủy bỏ
+                  Hủy
                 </button>
                 <button
                   type="submit"

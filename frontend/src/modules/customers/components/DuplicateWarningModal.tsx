@@ -17,6 +17,23 @@ interface DuplicateWarningModalProps {
   isLoading?: boolean;
   /** true khi cảnh báo này phát sinh từ luồng chỉnh sửa (update-with-override) thay vì tạo mới. */
   isEdit?: boolean;
+  /**
+   * NCL-02-CN-002: người dùng chọn dùng hồ sơ đã có thay vì tạo mới (kết quả sau hoàn thành của story).
+   * Không truyền thì ẩn nút "Dùng hồ sơ này".
+   */
+  onSelectExisting?: (candidate: DuplicateCandidate) => void;
+}
+
+/** Mức độ giống nhau dạng phần trăm (0.95 -> "95%"). */
+function formatSimilarity(similarity: number): string {
+  return `${Math.round(Math.min(1, Math.max(0, similarity)) * 100)}%`;
+}
+
+/** >= 90% bị chặn lưu mặc định (TC-01), 70–89% khá giống, còn lại chỉ để tham khảo. */
+function similarityTone(similarity: number): 'high' | 'medium' | 'low' {
+  if (similarity >= 0.9) return 'high';
+  if (similarity >= 0.7) return 'medium';
+  return 'low';
 }
 
 export default function DuplicateWarningModal({
@@ -27,6 +44,7 @@ export default function DuplicateWarningModal({
   onConfirmOverride,
   isLoading = false,
   isEdit = false,
+  onSelectExisting,
 }: DuplicateWarningModalProps) {
   const [showOverrideForm, setShowOverrideForm] = useState(false);
   const [reason, setReason] = useState('');
@@ -123,9 +141,7 @@ export default function DuplicateWarningModal({
               <h3 id="duplicate-modal-title" className="modal-title duplicate-title">
                 Phát hiện {candidates.length} hồ sơ tương tự
               </h3>
-              <p className="modal-subtitle">
-                Thông tin bạn vừa nhập trùng khớp với dữ liệu đã có. Đối chiếu bên dưới trước khi quyết định.
-              </p>
+              <p className="modal-subtitle">Đối chiếu với hồ sơ đã có trước khi lưu.</p>
             </div>
           </div>
           <button
@@ -192,6 +208,13 @@ export default function DuplicateWarningModal({
                         <h5 className="candidate-name">{cand.name}</h5>
                         <span className="candidate-code-pill">{cand.code}</span>
                       </div>
+                      <span
+                        className={`candidate-similarity candidate-similarity--${similarityTone(cand.similarity)}`}
+                        data-testid={`candidate-similarity-${cand.id}`}
+                        title="Mức độ giống nhau so với hồ sơ đang nhập"
+                      >
+                        Giống {formatSimilarity(cand.similarity)}
+                      </span>
                     </div>
 
                     <div className="candidate-comparison-table">
@@ -211,6 +234,20 @@ export default function DuplicateWarningModal({
                         {matchesPhone && <span className="comp-match-tag">Trùng</span>}
                       </div>
                     </div>
+                    {onSelectExisting && cand.id > 0 && (
+                      <div className="candidate-card__actions">
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => onSelectExisting(cand)}
+                          disabled={isLoading}
+                          data-testid={`btn-use-existing-${cand.id}`}
+                        >
+                          <span className="icon-sm">{ICONS.check}</span>
+                          <span>Dùng hồ sơ này</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -219,7 +256,7 @@ export default function DuplicateWarningModal({
 
           {hasHighSimilarity && !showOverrideForm && (
             <p className="duplicate-high-note">
-              Có hồ sơ trùng nhiều thông tin nên hệ thống chặn lưu mặc định — nếu đây thực sự là hai khách hàng khác nhau, bạn sẽ cần nhập lý do giải trình ở bước tiếp theo.
+              Hồ sơ trùng nhiều thông tin nên chưa lưu được. Nếu đây là hai khách hàng khác nhau, hãy nêu lý do ở bước tiếp theo.
             </p>
           )}
 
@@ -236,12 +273,11 @@ export default function DuplicateWarningModal({
                 <div>
                   <h5 className="override-title">
                     {isEdit
-                      ? 'Xác nhận bỏ qua cảnh báo & Lưu thay đổi'
-                      : 'Xác nhận bỏ qua cảnh báo & Tạo hồ sơ mới'}
+                      ? 'Vẫn lưu thay đổi'
+                      : 'Vẫn tạo hồ sơ mới'}
                   </h5>
                   <p className="override-desc">
-                    Vui lòng cung cấp lý do cụ thể vì sao đây là hai khách hàng khác nhau. Dữ liệu này
-                    sẽ được lưu vào <strong>Nhật ký kiểm toán (Audit Log)</strong> để phục vụ hậu kiểm.
+                    Vì sao đây là hai khách hàng khác nhau? Lý do được lưu vào nhật ký hệ thống.
                   </p>
                 </div>
               </div>
@@ -348,7 +384,7 @@ export default function DuplicateWarningModal({
                 disabled={isLoading}
               >
                 <span className="icon-sm">{ICONS.alertTriangle}</span>
-                <span>{isEdit ? 'Vẫn lưu thay đổi (Bỏ qua cảnh báo)' : 'Vẫn tạo mới (Bỏ qua cảnh báo)'}</span>
+                <span>{isEdit ? 'Vẫn lưu' : 'Vẫn tạo mới'}</span>
               </button>
             ) : (
               <button
@@ -360,12 +396,12 @@ export default function DuplicateWarningModal({
                 {isLoading ? (
                   <>
                     <span className="spinner-sm" aria-hidden="true" />
-                    <span>{isEdit ? 'Đang lưu thay đổi và ghi log...' : 'Đang lưu hồ sơ và ghi log...'}</span>
+                    <span>Đang lưu…</span>
                   </>
                 ) : (
                   <>
                     <span className="icon-sm">{ICONS.shield}</span>
-                    <span>{isEdit ? 'Xác nhận lưu (Ghi nhật ký)' : 'Xác nhận tạo mới (Ghi nhật ký)'}</span>
+                    <span>{isEdit ? 'Xác nhận lưu' : 'Xác nhận tạo mới'}</span>
                   </>
                 )}
               </button>

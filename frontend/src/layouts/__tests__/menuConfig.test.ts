@@ -1,241 +1,211 @@
 import { describe, it, expect } from 'vitest';
 import {
   ALL_NAV_ITEMS,
+  ALL_NAV_LEAVES,
   NAV_GROUPS,
+  accountLeavesFor,
   canAccess,
-  isItemVisible,
-  visibleNavItems,
-  navGroupsFor,
   defaultTabFor,
+  entryTabOf,
+  findNavItem,
+  isItemVisible,
   isTabVisible,
+  navGroupsFor,
+  visibleNavLeaves,
 } from '../menuConfig';
 
-/** Rút gọn: danh sách `tab` hiển thị với một bộ vai trò. */
-const tabsFor = (roles: readonly string[]) => visibleNavItems(roles).map((i) => i.tab);
+/** Rút gọn: các màn hình người dùng thấy được, theo thứ tự sidebar. */
+const tabsFor = (roles: readonly string[]) => visibleNavLeaves(roles).map((leaf) => leaf.tab);
+/** Rút gọn: các mục sidebar (id) người dùng thấy được. */
+const itemsFor = (roles: readonly string[]) => navGroupsFor(roles).flatMap((g) => g.items.map((i) => i.id));
+const leaf = (tab: string) => ALL_NAV_LEAVES.find((l) => l.tab === tab)!;
 
 describe('canAccess — quy tắc phân quyền hiển thị', () => {
-  it('mục không yêu cầu vai trò nào luôn truy cập được (ví dụ: Công việc và giờ công)', () => {
-    const myWork = ALL_NAV_ITEMS.find((i) => i.tab === 'MY_WORK')!;
-    expect(canAccess(myWork, [])).toBe(true);
-    expect(canAccess(myWork, ['VT-03'])).toBe(true);
-    expect(canAccess(myWork, ['VT-09'])).toBe(true);
+  it('màn hình không yêu cầu vai trò luôn truy cập được (Việc của tôi)', () => {
+    expect(canAccess(leaf('MY_WORK'), [])).toBe(true);
+    expect(canAccess(leaf('MY_WORK'), ['VT-03'])).toBe(true);
   });
 
-  it('mục yêu cầu vai trò thì chỉ người có vai trò đó được phép', () => {
-    const permissions = ALL_NAV_ITEMS.find((i) => i.tab === 'PERMISSIONS')!;
-    expect(canAccess(permissions, ['VT-07'])).toBe(true);
-    expect(canAccess(permissions, ['VT-02'])).toBe(false);
-    expect(canAccess(permissions, [])).toBe(false);
-  });
-
-  it('cho phép khi tài khoản có ít nhất một trong các vai trò yêu cầu', () => {
-    const unsubmitted = ALL_NAV_ITEMS.find((i) => i.tab === 'UNSUBMITTED_TIMESHEETS')!;
-    expect(canAccess(unsubmitted, ['VT-02'])).toBe(true);
-    expect(canAccess(unsubmitted, ['VT-02', 'VT-05'])).toBe(true);
-    expect(canAccess(unsubmitted, ['VT-03'])).toBe(false); // nhân viên chuyên môn chỉ nhận nhắc, không theo dõi
-    expect(canAccess(unsubmitted, ['VT-05'])).toBe(false);
+  it('màn hình yêu cầu vai trò thì chỉ người có vai trò đó được phép', () => {
+    expect(canAccess(leaf('PERMISSIONS'), ['VT-07'])).toBe(true);
+    expect(canAccess(leaf('PERMISSIONS'), ['VT-02'])).toBe(false);
+    expect(canAccess(leaf('UNSUBMITTED_TIMESHEETS'), ['VT-02', 'VT-05'])).toBe(true);
+    expect(canAccess(leaf('UNSUBMITTED_TIMESHEETS'), ['VT-03'])).toBe(false);
   });
 });
 
-describe('isItemVisible — sidebar chỉ hiện thị chức năng người dùng thấy được', () => {
-  it('ẩn mục chặn hẳn (không quyền, không viewOnly) thay vì hiển thị mờ + icon khóa', () => {
-    const departments = ALL_NAV_ITEMS.find((i) => i.tab === 'DEPARTMENTS')!;
-    expect(isItemVisible(departments, ['VT-02'])).toBe(false); // quản lý dự án thấy không Tổ chức
-    expect(isItemVisible(departments, ['VT-07'])).toBe(true); // quản trị viên thấy
+describe('khu làm việc — một mục sidebar, nhiều tab', () => {
+  it('mục hiện nếu người dùng thấy ít nhất một tab, mở vào tab đầu tiên họ thấy', () => {
+    const profit = ALL_NAV_ITEMS.find((i) => i.id === 'profitability')!;
+    expect(isItemVisible(profit, ['VT-03'])).toBe(false);
+    expect(entryTabOf(profit, ['VT-02'])).toBe('PROJECT_MARGIN');
+    const settings = ALL_NAV_ITEMS.find((i) => i.id === 'settings')!;
+    // "Cài đặt" chỉ còn những thứ chỉnh được — Kế toán không có gì để chỉnh nên không thấy mục này.
+    expect(isItemVisible(settings, ['VT-05'])).toBe(false);
+    expect(entryTabOf(settings, ['VT-07'])).toBe('COMPANY_SETTINGS');
   });
 
-  it('Cơ hội bán hàng chỉ hiện với vai trò backend cho phép (VT-01/VT-02/VT-04), không hiện "chỉ xem" rồi báo 403', () => {
-    const opportunities = ALL_NAV_ITEMS.find((i) => i.tab === 'OPPORTUNITIES')!;
-    expect(isItemVisible(opportunities, ['VT-01'])).toBe(true);
-    expect(isItemVisible(opportunities, ['VT-02'])).toBe(true);
-    expect(isItemVisible(opportunities, ['VT-04'])).toBe(true);
-    for (const role of ['VT-03', 'VT-05', 'VT-06', 'VT-07', 'VT-08', 'VT-09']) {
-      expect(isItemVisible(opportunities, [role])).toBe(false);
-    }
-    expect(isItemVisible(opportunities, [])).toBe(false);
+  it('tab chỉ dành cho một vai trò không lộ ra với vai trò khác trong cùng khu làm việc', () => {
+    const profitTabs = (roles: string[]) =>
+      navGroupsFor(roles).flatMap((g) => g.items).find((i) => i.id === 'profitability')?.tabs?.map((t) => t.tab);
+    expect(profitTabs(['VT-02'])).toEqual([
+      'PROJECT_MARGIN', 'PROJECT_LABOR_COST', 'PLANNED_VS_ACTUAL', 'PROFIT_FORECAST', 'MARGIN_ALERT_THRESHOLD',
+    ]);
+    expect(profitTabs(['VT-05'])).toEqual([
+      'PROJECT_MARGIN', 'PROJECT_LABOR_COST', 'PROJECT_RECOGNIZED_REVENUE', 'MARGIN_ALERT_THRESHOLD',
+    ]);
+  });
+
+  it('findNavItem tìm đúng mục cho tab khu làm việc và màn hình chi tiết', () => {
+    expect(findNavItem('OVERHEAD_ALLOCATION')?.id).toBe('expenses');
+    expect(findNavItem('ACCEPTANCE_DETAIL')?.id).toBe('acceptance');
+    expect(findNavItem('CONTRACT_DETAIL')?.id).toBe('contracts');
+    expect(findNavItem('PIPELINE_REPORT')?.id).toBe('reports');
   });
 });
 
-describe('visibleNavItems — thanh sidebar theo vai trò', () => {
-  it('Quản lý dự án (VT-02) thấy đúng chức năng mình thao tác', () => {
+describe('sidebar theo vai trò — gọn hơn nhưng không mất màn hình nào', () => {
+  it('Quản lý dự án (VT-02): 8 mục, "Dự án" ngay dưới "Việc của tôi"', () => {
+    expect(itemsFor(['VT-02'])).toEqual([
+      'my-work', 'projects', 'timesheet-review', 'customers', 'opportunities', 'acceptance', 'profitability', 'reports',
+    ]);
     expect(tabsFor(['VT-02'])).toEqual([
       'MY_WORK',
-      'UNSUBMITTED_TIMESHEETS',
-      'TIMESHEET_APPROVAL',
-      'TIMESHEET_REJECT',
-      'TIMESHEET_ADJUSTMENT',
-      'CUSTOMERS',
-      'OPPORTUNITIES',
-      'PROJECT_LABOR_COST',
-      'PROJECT_MARGIN',
-      'PLANNED_VS_ACTUAL',
-      'PROFIT_FORECAST',
-      'MARGIN_ALERT_THRESHOLD',
-    ]);
-  });
-
-  it('Quản lý dự án (VT-02) KHÔNG thấy các mục quản trị / bảo mật', () => {
-    const visible = tabsFor(['VT-02']);
-    expect(visible).not.toContain('DEPARTMENTS');
-    expect(visible).not.toContain('USERS');
-    expect(visible).not.toContain('USERS');
-    expect(visible).not.toContain('PERMISSIONS');
-    expect(visible).not.toContain('TWO_FACTOR_SETTINGS');
-    expect(visible).not.toContain('AUDIT_LOG');
-    expect(visible).not.toContain('SYSTEM_AUDIT_LOG');
-    expect(visible).not.toContain('CONTRACTS');
-    expect(visible).not.toContain('BILL_RATES');
-  });
-
-  it('Kế toán (VT-05) thấy chấm công + hợp đồng + đơn giá (và Cơ hội chỉ xem)', () => {
-    expect(tabsFor(['VT-05'])).toEqual([
-      'MY_WORK',
-      'TIMESHEET_PERIOD',
-      'CONTRACTS',
-      'BILL_RATES',
-      'RATE_HISTORY',
-      'INVOICES',
-      'EXPENSE_APPROVAL',
-      'OVERHEAD_ALLOCATION',
-      'PROJECT_LABOR_COST',
-      'PROJECT_RECOGNIZED_REVENUE',
-      'PROJECT_MARGIN',
-      'MARGIN_ALERT_THRESHOLD',
-    ]);
-  });
-
-  it('Nhân sự (VT-06) thấy chấm công + nhân sự', () => {
-    expect(tabsFor(['VT-06'])).toEqual(['MY_WORK', 'EMPLOYEES']);
-  });
-
-  it('Nhân viên kinh doanh (VT-04) thấy trang trai của Kinh doanh', () => {
-    expect(tabsFor(['VT-04'])).toEqual([
-      'MY_WORK',
-      'CUSTOMERS',
-      'OPPORTUNITIES',
-      'OPPORTUNITY_DETAIL',
-      'REVENUE_FORECAST',
+      'PROJECTS',
+      'TIMESHEET_APPROVAL', 'UNSUBMITTED_TIMESHEETS', 'TIMESHEET_ADJUSTMENT',
+      'CUSTOMERS', 'OPPORTUNITIES',
+      'ACCEPTANCES', 'DELIVERABLES',
+      'PROJECT_MARGIN', 'PROJECT_LABOR_COST', 'PLANNED_VS_ACTUAL', 'PROFIT_FORECAST', 'MARGIN_ALERT_THRESHOLD',
       'REPORTS',
     ]);
   });
 
-  it('Quản trị viên (VT-07) chỉ thấy mục quản trị + mục dùng chung, không tham gia nghiệp vụ bán hàng/dự án/kế toán', () => {
-    // Đúng theo vai trò VT-07 trong tài liệu backlog: "Không tham gia nghiệp vụ
-    // bán hàng, dự án hay kế toán" — nên KHÔNG thấy Khách hàng, Hợp đồng, Duyệt
-    // bảng chấm công... dù có toàn quyền quản trị hệ thống.
-    expect(tabsFor(['VT-07'])).toEqual([
-      'MY_WORK',
-      'CUSTOMER_MERGE',
-      'BILL_RATES',
-      'RATE_HISTORY',
-      'DEPARTMENTS',
-      'USERS',
-      'EMPLOYEES',
-      'PERMISSIONS',
-      'TWO_FACTOR_SETTINGS',
-      'SYSTEM_AUDIT_LOG',
-      'AUDIT_LOG',
+  it('Kế toán (VT-05): hợp đồng và hóa đơn vẫn là hai mục riêng', () => {
+    expect(itemsFor(['VT-05'])).toEqual([
+      'my-work', 'projects', 'contracts', 'invoices', 'expenses', 'timesheet-period', 'profitability', 'rates', 'reports',
     ]);
   });
 
-  it('Nhân viên công ty (VT-08) chỉ thấy Công việc', () => {
+  it('Nhân viên kinh doanh (VT-04): 4 mục', () => {
+    expect(itemsFor(['VT-04'])).toEqual(['my-work', 'customers', 'opportunities', 'reports']);
+  });
+
+  it('Nhân sự (VT-06) thấy Nhân sự; không còn mục Cài đặt chỉ để đọc', () => {
+    expect(itemsFor(['VT-06'])).toEqual(['my-work', 'employees']);
+    expect(tabsFor(['VT-06'])).toEqual(['MY_WORK', 'EMPLOYEES']);
+  });
+
+  it('"Quyền xem dữ liệu" mở từ menu tài khoản, chỉ cho Ban giám đốc / Kế toán / Nhân sự (QTN-02)', () => {
+    for (const role of ['VT-01', 'VT-05', 'VT-06']) {
+      expect(accountLeavesFor([role]).map((l) => l.tab)).toEqual(['MASKING_RULES']);
+      expect(isTabVisible('MASKING_RULES', [role])).toBe(true);
+    }
+    for (const role of ['VT-02', 'VT-03', 'VT-04', 'VT-07']) {
+      expect(accountLeavesFor([role])).toEqual([]);
+      expect(isTabVisible('MASKING_RULES', [role])).toBe(false);
+    }
+    // Không còn nằm trên sidebar ở bất kỳ vai trò nào.
+    expect(findNavItem('MASKING_RULES')).toBeUndefined();
+  });
+
+  it('"Dự án": Ban giám đốc, Quản lý dự án, Kế toán thấy; trang chi tiết/rủi ro thuộc cùng mục', () => {
+    const projects = ALL_NAV_ITEMS.find((i) => i.id === 'projects')!;
+    for (const role of ['VT-01', 'VT-02', 'VT-05']) expect(isItemVisible(projects, [role])).toBe(true);
+    for (const role of ['VT-03', 'VT-04', 'VT-06', 'VT-07']) expect(isItemVisible(projects, [role])).toBe(false);
+    expect(findNavItem('PROJECT_DETAIL')?.id).toBe('projects');
+    expect(findNavItem('PROJECT_RISKS')?.id).toBe('projects');
+  });
+
+  it('Quản trị viên (VT-07) không tham gia nghiệp vụ bán hàng / dự án / kế toán', () => {
+    expect(itemsFor(['VT-07'])).toEqual([
+      'my-work', 'rates', 'departments', 'accounts', 'employees', 'service-catalog', 'data', 'logs', 'settings',
+    ]);
+    const visible = tabsFor(['VT-07']);
+    for (const tab of ['CUSTOMERS', 'CONTRACTS', 'INVOICES', 'TIMESHEET_APPROVAL', 'PROJECT_MARGIN', 'REPORTS']) {
+      expect(visible).not.toContain(tab);
+    }
+    expect(visible).toContain('DATA_IMPORT');
+  });
+
+  it('Quản lý dự án KHÔNG thấy màn hình quản trị / bảo mật / kế toán', () => {
+    const visible = tabsFor(['VT-02']);
+    for (const tab of ['DEPARTMENTS', 'USERS', 'PERMISSIONS', 'TWO_FACTOR_SETTINGS', 'AUDIT_LOG',
+      'SYSTEM_AUDIT_LOG', 'CONTRACTS', 'BILL_RATES', 'DATA_IMPORT', 'BACKUP_RESTORE']) {
+      expect(visible).not.toContain(tab);
+    }
+  });
+
+  it('Cơ hội chỉ hiện với vai trò backend cho phép (VT-01/VT-02/VT-04)', () => {
+    const opp = ALL_NAV_ITEMS.find((i) => i.id === 'opportunities')!;
+    for (const role of ['VT-01', 'VT-02', 'VT-04']) expect(isItemVisible(opp, [role])).toBe(true);
+    for (const role of ['VT-03', 'VT-05', 'VT-06', 'VT-07', 'VT-09']) expect(isItemVisible(opp, [role])).toBe(false);
+  });
+
+  it('nhân viên / tài khoản không vai trò chỉ thấy Việc của tôi', () => {
+    expect(tabsFor(['VT-03'])).toEqual(['MY_WORK']);
     expect(tabsFor(['VT-08'])).toEqual(['MY_WORK']);
-  });
-
-  it('Khách hàng (VT-09) chỉ thấy Công việc', () => {
-    expect(tabsFor(['VT-09'])).toEqual(['MY_WORK']);
-  });
-
-  it('Tài khoản không vai trò nào vẫn thấy Công việc', () => {
     expect(tabsFor([])).toEqual(['MY_WORK']);
   });
 });
 
-describe('navGroupsFor — bỏ qua nhóm không có mục hiển thị', () => {
-  it('VT-08 chỉ còn nhóm Chấm công, mọi nhóm khác biến mất', () => {
-    const groups = navGroupsFor(['VT-08']);
-    expect(groups.map((g) => g.paletteLabel)).toEqual(['Chấm công']);
-    expect(groups[0].items.map((i) => i.tab)).toEqual(['MY_WORK']);
+describe('cấu trúc nhóm', () => {
+  it('thứ tự nhóm cố định', () => {
+    expect(NAV_GROUPS.map((g) => g.id)).toEqual(['work', 'business', 'finance', 'reports', 'admin']);
   });
 
-  it('VT-05 (Kế toán) thấy các nhóm nghiệp vụ tài chính nhưng bỏ Quản trị/Bảo mật', () => {
-    const groups = navGroupsFor(['VT-05']);
-    expect(groups.map((g) => g.paletteLabel)).toEqual([
-      'Chấm công',
-      'Hợp đồng & Đơn giá',
-      'Hóa đơn & Chi phí',
-      'Giá vốn & Lợi nhuận',
-    ]);
-    expect(groups[1].items.map((i) => i.tab)).toEqual(['CONTRACTS', 'BILL_RATES', 'RATE_HISTORY']);
-    expect(groups[2].items.map((i) => i.tab)).toEqual(['INVOICES', 'EXPENSE_APPROVAL', 'OVERHEAD_ALLOCATION']);
+  it('bỏ qua nhóm không có mục hiển thị', () => {
+    expect(navGroupsFor(['VT-03']).map((g) => g.id)).toEqual(['work']);
   });
 
-  it('VT-07 (quản trị) thấy nhóm Quản trị + Bảo mật, không thấy Hóa đơn/Giá vốn/Báo cáo', () => {
-    expect(navGroupsFor(['VT-07']).map((g) => g.paletteLabel)).toEqual([
-      'Chấm công',
-      'Bán hàng & Khách hàng',
-      'Hợp đồng & Đơn giá',
-      'Quản trị & Tổ chức',
-      'Bảo mật & Hệ thống',
-    ]);
-  });
-
-  it('luôn duy trì đúng thứ tự nhóm (Chấm công trước)', () => {
-    expect(NAV_GROUPS.map((g) => g.paletteLabel)).toEqual([
-      'Chấm công',
-      'Bán hàng & Khách hàng',
-      'Hợp đồng & Đơn giá',
-      'Hóa đơn & Chi phí',
-      'Giá vốn & Lợi nhuận',
-      'Báo cáo',
-      'Quản trị & Tổ chức',
-      'Bảo mật & Hệ thống',
-    ]);
-  });
-
-  it('mỗi mục điều hướng dùng một icon riêng, không trùng nhau', () => {
+  it('mỗi mục sidebar dùng một icon riêng', () => {
     const icons = ALL_NAV_ITEMS.map((i) => i.icon);
     expect(new Set(icons).size).toBe(icons.length);
   });
+
+  it('không màn hình nào nằm ở hai mục sidebar cùng lúc', () => {
+    const tabs = ALL_NAV_LEAVES.map((l) => l.tab);
+    expect(new Set(tabs).size).toBe(tabs.length);
+  });
 });
 
-describe('defaultTabFor — đưa người dùng tới mục họ thấy được', () => {
-  it('quản trị viên (VT-07) vẫn đặt mặc định ở Tổ chức (giữ hành vi cũ)', () => {
+describe('defaultTabFor', () => {
+  it('Quản trị viên vào Tổ chức; vai trò khác vào Việc của tôi', () => {
     expect(defaultTabFor(['VT-07'])).toBe('DEPARTMENTS');
-  });
-
-  it('các vai trò khác không thấy Tổ chức nên quay về Công việc và giờ công', () => {
-    expect(defaultTabFor(['VT-01'])).toBe('MY_WORK');
-    expect(defaultTabFor(['VT-02'])).toBe('MY_WORK');
-    expect(defaultTabFor(['VT-05'])).toBe('MY_WORK');
-    expect(defaultTabFor(['VT-06'])).toBe('MY_WORK');
-    expect(defaultTabFor(['VT-08'])).toBe('MY_WORK');
-    expect(defaultTabFor([])).toBe('MY_WORK');
+    for (const roles of [['VT-01'], ['VT-02'], ['VT-05'], ['VT-06'], []]) {
+      expect(defaultTabFor(roles)).toBe('MY_WORK');
+    }
   });
 });
 
-describe('isTabVisible — tuần tự hóa lại khi vai trỏ đổi', () => {
-  it('mục tính (Đổi mật khẩu, Thông báo) luôn hiển thị qua menu tài khoản', () => {
-    expect(isTabVisible('CHANGE_PASSWORD', [])).toBe(true);
-    expect(isTabVisible('NOTIFICATIONS', [])).toBe(true);
-    expect(isTabVisible('CHANGE_PASSWORD', ['VT-03'])).toBe(true);
+describe('isTabVisible — khi vai trò đổi', () => {
+  it('màn hình tài khoản của tôi luôn mở được', () => {
+    for (const tab of ['CHANGE_PASSWORD', 'NOTIFICATIONS', 'NOTIFICATION_PREFERENCES'] as const) {
+      expect(isTabVisible(tab, [])).toBe(true);
+    }
   });
 
-  it('tab con hiển thị khi mục cha hiển thị', () => {
-    expect(isTabVisible('PIPELINE_REPORT', ['VT-01'])).toBe(true); // cha: Báo cáo
-    expect(isTabVisible('DETAIL', ['VT-07'])).toBe(true); // cha: Tài khoản
-    expect(isTabVisible('EMPLOYEE_DETAIL', ['VT-06'])).toBe(true); // cha: Nhân sự
+  it('màn hình quản trị chỉ hiện với Quản trị viên', () => {
+    expect(isTabVisible('NOTIFICATION_DEDUP', ['VT-07'])).toBe(true);
+    expect(isTabVisible('NOTIFICATION_DEDUP', ['VT-02'])).toBe(false);
+    expect(isTabVisible('SERVICE_CATALOG', ['VT-04'])).toBe(false);
+    expect(isTabVisible('COMPANY_SETTINGS', ['VT-05'])).toBe(false);
+    expect(isTabVisible('BACKUP_RESTORE', ['VT-01'])).toBe(false);
+    expect(isTabVisible('DATA_IMPORT', ['VT-07'])).toBe(true);
+    expect(isTabVisible('DATA_IMPORT', ['VT-05'])).toBe(false);
   });
 
-  it('tab con ẩn khi mục cha bị khóa', () => {
-    expect(isTabVisible('PIPELINE_REPORT', ['VT-07'])).toBe(false); // cha: Báo cáo bị khóa
-    expect(isTabVisible('DETAIL', ['VT-02'])).toBe(false); // cha: Tài khoản (VT-07)
-    expect(isTabVisible('DEPARTMENTS', ['VT-02'])).toBe(false);
+  it('Kỳ tài chính: người xem báo cáo, và Quản trị viên (mở từ Cài đặt › Công ty)', () => {
+    expect(isTabVisible('FISCAL_PERIODS', ['VT-05'])).toBe(true);
+    expect(isTabVisible('FISCAL_PERIODS', ['VT-07'])).toBe(true);
+    expect(isTabVisible('FISCAL_PERIODS', ['VT-03'])).toBe(false);
   });
 
-  it('chặn hẳn mục vào trang này', () => {
-    expect(isTabVisible('DEPARTMENTS', ['VT-07'])).toBe(true);
-    expect(isTabVisible('PERMISSIONS', ['VT-05'])).toBe(false);
-    expect(isTabVisible('OPPORTUNITIES', ['VT-02'])).toBe(true); // VT-02 có full quyền
+  it('màn hình con theo mục cha', () => {
+    expect(isTabVisible('PIPELINE_REPORT', ['VT-01'])).toBe(true);
+    expect(isTabVisible('PIPELINE_REPORT', ['VT-07'])).toBe(false);
+    expect(isTabVisible('DETAIL', ['VT-07'])).toBe(true);
+    expect(isTabVisible('DETAIL', ['VT-02'])).toBe(false);
+    expect(isTabVisible('EMPLOYEE_DETAIL', ['VT-06'])).toBe(true);
+    expect(isTabVisible('ACCEPTANCE_DETAIL', ['VT-02'])).toBe(true);
   });
 });

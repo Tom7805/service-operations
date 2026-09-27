@@ -67,7 +67,9 @@ export default function ReceivableAgingPage({ currentUserRoles = [], currentUser
         <div className="access-denied-card">
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền xem báo cáo tuổi nợ</h2>
-          <p>Chức năng này chỉ dành riêng cho <strong>Kế toán</strong> (VT-05).</p>
+          <p>
+            Trang này dành cho <strong>Kế toán</strong>.
+          </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">Tài khoản: {currentUserName}</span>
             <span className="security-log-badge__item">
@@ -81,8 +83,7 @@ export default function ReceivableAgingPage({ currentUserRoles = [], currentUser
 
   return (
     <div className="user-management-page">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '16px' }}>
-        <p className="page-subtitle" style={{ margin: 0 }}>Hóa đơn quá hạn thanh toán, gộp theo số ngày quá hạn.</p>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
         <button type="button" className="btn-icon-refresh" onClick={() => void load()} title="Tải lại" aria-label="Tải lại báo cáo tuổi nợ">
           {ICONS.refresh}
         </button>

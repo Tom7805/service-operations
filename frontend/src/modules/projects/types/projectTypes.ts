@@ -58,6 +58,9 @@ export interface ProjectRes {
   status: ProjectStatus | string;
   createdBy?: string | null;
   createdAt: string;
+  /** Chỉ danh sách dự án (GET /projects) trả về — backend cũ chưa có thì để trống. */
+  customerName?: string | null;
+  projectManagerName?: string | null;
 }
 
 /** Tài khoản đang hoạt động (ACTIVE) — dùng cho ô chọn "Người quản lý dự án" thay vì gõ tay ID. */

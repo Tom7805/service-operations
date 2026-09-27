@@ -109,7 +109,7 @@ describe('Organization Tree Module — Acceptance Criteria Tests (NCL-01-CN-003)
     const nameInput = screen.getByLabelText(/Tên bộ phận/i);
     fireEvent.change(nameInput, { target: { value: '' } });
 
-    const submitBtn = screen.getByRole('button', { name: /Tạo bộ phận mới/i });
+    const submitBtn = screen.getByRole('button', { name: /^Thêm bộ phận$/i });
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
@@ -157,14 +157,15 @@ describe('Organization Tree Module — Acceptance Criteria Tests (NCL-01-CN-003)
 
     expect(screen.getByRole('heading', { name: /Bạn không có thẩm quyền/i })).toBeInTheDocument();
     expect(screen.getByText(/Bạn không có thẩm quyền truy cập màn hình này/i)).toBeInTheDocument();
-    expect(screen.getByText(/Chức năng Khai báo cây tổ chức chỉ dành riêng cho vai trò/i)).toBeInTheDocument();
+    expect(screen.getByText(/Trang này dành cho/i)).toBeInTheDocument();
   });
 
-  it('TC-05: Admin users (VT-07) view stats, audit log stream, and tree controls', () => {
+  it('TC-05: Admin users (VT-07) view the tree controls and audit log stream', () => {
     render(<DepartmentTreePage currentUserRoles={['VT-07']} currentUserName="Quản trị viên" />);
 
-    expect(screen.getByText('Khai báo cây tổ chức')).toBeInTheDocument();
-    expect(screen.getByText('Tổng bộ phận')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Tổ chức' })).toBeInTheDocument();
+    // Không còn hàng ô đếm số đầu trang — số liệu nằm ngay trong cây/bảng.
+    expect(screen.getByRole('group', { name: 'Chế độ xem' })).toBeInTheDocument();
     expect(screen.getByText(/Nhật ký khai báo cây tổ chức/i)).toBeInTheDocument();
   });
 });

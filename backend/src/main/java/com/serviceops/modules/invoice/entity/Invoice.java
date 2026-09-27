@@ -35,6 +35,13 @@ public class Invoice extends BaseEntity {
 	@Column(name = "customer_id", nullable = false)
 	private Long customerId;
 
+	/**
+	 * NCL-02-CN-006 TC-02: khach hang goc truoc khi ho so bi gop vao ho so khac — null neu ban ghi chua tung
+	 * bi chuyen. Chi ghi mot lan (lan gop dau tien), cac lan gop sau giu nguyen de truy duoc nguon goc.
+	 */
+	@Column(name = "original_customer_id")
+	private Long originalCustomerId;
+
 	/** columnDefinition khai tuong minh de Hibernate khong suy ra kieu ENUM cua MySQL (cung quy uoc Contract.status). */
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, columnDefinition = "VARCHAR(30)")

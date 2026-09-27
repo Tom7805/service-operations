@@ -147,7 +147,7 @@ export default function MilestoneCompleteModal({
               style={{ padding: '16px 0 0', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}
             >
               <button type="button" className="btn btn-secondary" onClick={onClose} disabled={submitting}>
-                Hủy bỏ
+                Hủy
               </button>
               <button
                 type="submit"

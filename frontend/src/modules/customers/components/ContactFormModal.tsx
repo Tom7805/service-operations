@@ -219,8 +219,7 @@ export default function ContactFormModal({
 
               {/* Thư điện tử (Email) */}
               <div className="form-field form-field--full">
-                <label htmlFor="contact-email" className="form-label">
-                  Thư điện tử (Email)
+                <label htmlFor="contact-email" className="form-label"> Email
                 </label>
                 <input
                   id="contact-email"
@@ -236,9 +235,6 @@ export default function ContactFormModal({
                     {errors.email}
                   </span>
                 )}
-                <span className="field-hint">
-                  Dùng để gửi thông báo tự động, trao đổi hợp đồng và biên bản dịch vụ.
-                </span>
               </div>
 
               {/* Checkbox Đặt làm đầu mối chính (TC-01, TC-02) */}
@@ -257,7 +253,7 @@ export default function ContactFormModal({
                       <strong>Đặt làm Người liên hệ đầu mối chính</strong>
                     </div>
                     <p>
-                      Đầu mối chính sẽ luôn hiển thị ở vị trí đầu tiên trong danh bạ. Nếu khách hàng đã có đầu mối chính khác, hệ thống sẽ tự động chuyển người cũ thành đầu mối phụ.
+                      Đầu mối chính hiện đầu danh bạ. Người đang là đầu mối chính sẽ chuyển thành đầu mối phụ.
                     </p>
                   </div>
                 </label>
@@ -272,7 +268,7 @@ export default function ContactFormModal({
               onClick={onClose}
               disabled={isSubmitting}
             >
-              Hủy bỏ
+              Hủy
             </button>
             <button
               type="submit"

@@ -20,6 +20,19 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
 	Page<Notification> findByRecipientIdAndIsReadFalse(Long recipientId, Pageable pageable);
 
+	/** NCL-14-CN-001: loc theo nhom thong bao (group -> tap type). */
+	Page<Notification> findByRecipientIdAndTypeIn(Long recipientId,
+			java.util.Collection<com.serviceops.modules.notification.enums.NotificationType> types, Pageable pageable);
+
+	Page<Notification> findByRecipientIdAndIsReadFalseAndTypeIn(Long recipientId,
+			java.util.Collection<com.serviceops.modules.notification.enums.NotificationType> types, Pageable pageable);
+
+	/** NCL-14-CN-001: danh dau tat ca thong bao chua doc cua chinh minh la da doc; tra ve so dong da doi. */
+	@org.springframework.data.jpa.repository.Modifying(clearAutomatically = true)
+	@Query("UPDATE Notification n SET n.isRead = true, n.readAt = :readAt"
+			+ " WHERE n.recipientId = :recipientId AND n.isRead = false")
+	int markAllReadByRecipientId(@Param("recipientId") Long recipientId, @Param("readAt") LocalDateTime readAt);
+
 	@Query("SELECT COUNT(n) FROM Notification n WHERE n.recipientId = :recipientId AND n.isRead = false")
 	long countUnreadByRecipientId(@Param("recipientId") Long recipientId);
 

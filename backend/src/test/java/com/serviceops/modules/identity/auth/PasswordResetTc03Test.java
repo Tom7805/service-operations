@@ -67,7 +67,8 @@ class PasswordResetTc03Test {
     void setUp() {
         passwordService = new PasswordServiceImpl(userRepository, tokenRepository,
                 passwordEncoder, new PasswordPolicyValidator(), notifier,
-                new PasswordResetAttemptRecorder(tokenRepository));
+                new PasswordResetAttemptRecorder(tokenRepository),
+                org.mockito.Mockito.mock(com.serviceops.common.audit.service.AuditLogService.class));
         ReflectionTestUtils.setField(passwordService, "resetTokenTtlMinutes", 10L);
 
         user = new User();

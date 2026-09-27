@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import type { MarginAlertThresholdRes } from '../types/profitabilityTypes';
 import { getMarginAlertThreshold, ProfitabilityApiError, setMarginAlertThreshold } from '../api/profitabilityApi';
+import PageHeader from '../../../components/common/PageHeader';
 
 export interface MarginAlertThresholdPageProps {
   currentUserRoles?: string[];
@@ -9,6 +10,8 @@ export interface MarginAlertThresholdPageProps {
 }
 
 function formatPercent(ratio: number): string {
+  // Doanh thu bằng 0 thì tỷ suất không xác định (0/0) — hiện gạch ngang thay vì "NaN%".
+  if (!Number.isFinite(ratio)) return '—';
   return new Intl.NumberFormat('vi-VN', { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
     ratio
   );
@@ -123,8 +126,7 @@ export default function MarginAlertThresholdPage({
     return (
       <div className="user-management-page" data-testid="margin-threshold-forbidden">
         <div className="alert-box alert-box--danger" role="alert">
-          Bạn không có quyền xem ngưỡng cảnh báo âm biên (yêu cầu vai trò Ban giám đốc VT-01,
-          Quản lý dự án VT-02 hoặc Kế toán VT-05).
+          Bạn không có quyền xem ngưỡng cảnh báo âm biên.
         </div>
         {onBack && (
           <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
@@ -137,39 +139,21 @@ export default function MarginAlertThresholdPage({
 
   return (
     <div className="user-management-page" data-testid="margin-threshold-page">
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {onBack && (
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm btn-back"
-              onClick={onBack}
-              data-testid="btn-back-margin-threshold"
-            >
-              {ICONS.arrowLeft} Quay lại
-            </button>
-          )}
-          <div>
-            <h1 className="page-title" style={{ margin: '4px 0' }}>
-              Ngưỡng cảnh báo dự án âm biên
-            </h1>
-            <p className="page-subtitle">
-              Áp dụng cho toàn bộ dự án trong công ty. Khi biên lợi nhuận của một dự án thấp hơn
-              ngưỡng này, hệ thống tự động thông báo cho quản lý dự án và Ban giám đốc.
-            </p>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          className="btn btn-secondary btn-sm"
-          onClick={loadData}
-          disabled={loading}
-          data-testid="btn-reload-margin-threshold"
-        >
-          {ICONS.refresh} Tải lại
-        </button>
-      </div>
+      <PageHeader
+        back={onBack ? { label: 'Quay lại', onClick: onBack, testId: 'btn-back-margin-threshold' } : undefined}
+        title="Ngưỡng cảnh báo"
+        actions={
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={loadData}
+            disabled={loading}
+            data-testid="btn-reload-margin-threshold"
+          >
+            {ICONS.refresh} Tải lại
+          </button>
+        }
+      />
 
       {error && (
         <div
@@ -192,7 +176,7 @@ export default function MarginAlertThresholdPage({
           {threshold && threshold.minMarginRate !== null ? (
             <div style={{ marginBottom: '20px' }} data-testid="margin-threshold-current">
               <div style={{ fontSize: '13.5px', color: 'var(--ink-muted)', marginBottom: '8px' }}>Ngưỡng hiện hành</div>
-              <div style={{ fontSize: '28px', fontWeight: 700, color: 'var(--ink-strong)' }}>
+              <div style={{ fontSize: '28px', fontWeight: 600, color: 'var(--ink-strong)' }}>
                 {formatPercent(threshold.minMarginRate)}
               </div>
               {threshold.updatedBy && threshold.updatedAt && (
@@ -271,7 +255,7 @@ export default function MarginAlertThresholdPage({
               role="status"
               data-testid="margin-threshold-readonly-notice"
             >
-              <strong>Thông báo:</strong> Chỉ Ban giám đốc (VT-01) được đặt/đổi ngưỡng này. Vai trò
+              <strong>Thông báo:</strong> Chỉ Ban giám đốc được đặt/đổi ngưỡng này. Vai trò
               của bạn chỉ có quyền xem.
             </div>
           )}

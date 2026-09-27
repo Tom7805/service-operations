@@ -134,7 +134,7 @@ export const DepartmentMoveModal: React.FC<DepartmentMoveModalProps> = ({
                   value={newParentId ?? ''}
                   onChange={(e) => setNewParentId(e.target.value ? Number(e.target.value) : null)}
                 >
-                  <option value="">-- Chuyển thành bộ phận cấp gốc (Root Level) --</option>
+                  <option value="">— Đưa lên cấp gốc —</option>
                   {departmentsList.map((dept) => {
                     const isDisabled = disabledParents.has(dept.id) || isHierarchyInvalidParent(dept);
                     return (
@@ -149,13 +149,13 @@ export const DepartmentMoveModal: React.FC<DepartmentMoveModalProps> = ({
 
             <div className="confirm-note-box">
               <span className="confirm-note-box__icon">{ICONS.info}</span>
-              <span>Việc di chuyển bộ phận sẽ kéo theo toàn bộ các bộ phận con trực thuộc sang nhánh quản lý mới.</span>
+              <span>Các bộ phận con sẽ được chuyển theo.</span>
             </div>
           </div>
 
           <div className="modal-footer">
             <button type="button" className="btn-secondary" onClick={onClose} disabled={submitting}>
-              Hủy bỏ
+              Hủy
             </button>
             <button type="submit" className="btn-primary" disabled={submitting}>
               {submitting ? 'Đang di chuyển...' : 'Xác nhận di chuyển'}

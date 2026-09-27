@@ -13,6 +13,7 @@ import TimeEntryPage from '../../timesheets/pages/TimeEntryPage';
 import ExpenseListPage from '../../expenses/pages/ExpenseListPage';
 import { addDays, formatIsoDate, getMondayOf } from '../../timesheets/utils/weekRange';
 import { canSubmitWeek, countDraftEntries } from '../../timesheets/validators/timesheetValidators';
+import PageHeader from '../../../components/common/PageHeader';
 
 export interface MyWorkPageProps {
   currentUserRoles?: string[];
@@ -59,7 +60,7 @@ function formatDate(dateStr: string | null): string {
  * chỉ dành cho Nhân viên chuyên môn VT-03 vì backend TimeEntryController chỉ mở
  * cho vai trò này). Một điểm vào duy nhất thay vì hai màn rời rạc và trùng lặp.
  */
-export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'Người dùng', currentUserId }: MyWorkPageProps) {
+export default function MyWorkPage({ currentUserRoles = [], currentUserId }: MyWorkPageProps) {
   const canLogTime = currentUserRoles.includes('VT-03');
   // NCL-08-CN-001: Nhân viên chuyên môn ghi nhận chi phí dự án — nhưng modal "Quản lý dự
   // án" (nơi có tab Chi phí) chỉ mở được từ menu "Khách hàng", vốn không dành cho VT-03.
@@ -225,30 +226,22 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
 
   return (
     <div className="user-management-page" data-testid="my-work-page">
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div>
-          {/* Menu bên trái và thanh trên cùng của layout đã hiện đúng chữ "Công việc và giờ
-              công" rồi — lặp lại y hệt làm tiêu đề trang thứ hai chỉ gây rối mắt. Tiêu đề ở
-              đây nói rõ hơn NỘI DUNG cụ thể của trang (giống "Hồ sơ khách hàng" dưới menu
-              "Khách hàng"), không nhắc lại tên menu. */}
-          <h1 className="page-title">Việc được giao &amp; giờ công tuần</h1>
-          <p className="page-subtitle">
-            {currentUserName} — đổi trạng thái công việc ngay tại đây
-            {canLogTime ? '; bảng giờ công tuần để ghi và nộp ở bên dưới.' : '.'}
-          </p>
-        </div>
-        <button
-          type="button"
-          className="btn btn-secondary btn-sm"
-          onClick={() => {
-            void loadTasks();
-            void loadWeek();
-          }}
-          disabled={tasksLoading || weekLoading}
-        >
-          {ICONS.refresh} Làm mới
-        </button>
-      </div>
+      <PageHeader
+        title="Việc của tôi"
+        actions={
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => {
+              void loadTasks();
+              void loadWeek();
+            }}
+            disabled={tasksLoading || weekLoading}
+          >
+            {ICONS.refresh} Làm mới
+          </button>
+        }
+      />
 
       {toast && (
         <div className={`alert-box alert-box--${toast.type === 'success' ? 'success' : 'danger'}`} role="alert" style={{ marginBottom: '14px' }}>
@@ -263,7 +256,7 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
       )}
 
       <div className="user-table-card" style={{ padding: '20px', marginBottom: '16px' }}>
-        <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
+        <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 600, color: 'var(--ink-strong)' }}>
           Công việc đang được giao
         </h3>
 
@@ -442,7 +435,7 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserName = 'N
             ) : (
               // Mở lại một dòng giờ công cụ thể để sửa: dùng đúng nút "Ghi giờ công" ở bảng
               // công việc phía trên, không lặp lại một lối vào thứ hai cho cùng một việc.
-              <WeeklyTimesheetGrid weekFrom={weekFrom} weekTo={weekTo} summaries={summaries} />
+              <WeeklyTimesheetGrid weekFrom={weekFrom} summaries={summaries} />
             )}
           </div>
         </>

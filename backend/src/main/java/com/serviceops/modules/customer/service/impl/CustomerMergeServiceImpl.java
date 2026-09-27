@@ -19,6 +19,7 @@ import com.serviceops.modules.customer.repository.CustomerDuplicateOverrideLogRe
 import com.serviceops.modules.customer.repository.CustomerMergeLogRepository;
 import com.serviceops.modules.customer.repository.CustomerRepository;
 import com.serviceops.modules.customer.service.CustomerMergeService;
+import com.serviceops.modules.customer.service.impl.CustomerBusinessRecordMover.MovedRecords;
 import com.serviceops.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,13 +28,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * NCL-02-CN-006: Gop hai ho so khach hang trung thanh mot (QTN-05).
  *
  * <p>Ho so "giu lai" ({@code targetCustomerId}) nhan toan bo du lieu lien quan hien
- * co cua ho so "bi gop" ({@code sourceCustomerId}): nhat ky khach hang va ly do bo
+ * co cua ho so "bi gop" ({@code sourceCustomerId}): co hoi, hop dong, du an, hoa don,
+ * de nghi xuat hoa don ({@link CustomerBusinessRecordMover}), nhat ky khach hang va ly do bo
  * qua canh bao trung. Moi ban ghi duoc chuyen deu duoc danh dau
  * {@code originalCustomerId} de giu dau vet nguon goc (TC-02), ke ca khi ho so bi
  * gop dang con du lieu lien quan chua xu ly xong - thao tac gop van duoc thuc hien,
@@ -51,6 +55,7 @@ public class CustomerMergeServiceImpl implements CustomerMergeService {
 	private final CustomerDuplicateOverrideLogRepository overrideLogRepository;
 	private final CustomerMergeLogRepository mergeLogRepository;
 	private final AuditLogService systemAuditLogService;
+	private final CustomerBusinessRecordMover businessRecordMover;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -59,11 +64,15 @@ public class CustomerMergeServiceImpl implements CustomerMergeService {
 		Customer source = requireMergeableCustomer(request.sourceCustomerId(), "bi gop");
 		requireDifferentCustomers(target, source);
 
-		long relatedRecordCount = auditLogRepository.findByCustomerIdOrderByCreatedAtDesc(source.getId()).size()
-				+ overrideLogRepository.findByCustomerId(source.getId()).size();
+		Map<String, Long> breakdown = new LinkedHashMap<>(businessRecordMover.countRecordsByLabel(source.getId()));
+		breakdown.put("nhat ky khach hang",
+				(long) auditLogRepository.findByCustomerIdOrderByCreatedAtDesc(source.getId()).size());
+		breakdown.put("nhat ky bo qua canh bao trung",
+				(long) overrideLogRepository.findByCustomerId(source.getId()).size());
+		long relatedRecordCount = breakdown.values().stream().mapToLong(Long::longValue).sum();
 
 		return new MergePreviewRes(customerMapper.toResponse(target), customerMapper.toResponse(source),
-				relatedRecordCount);
+				relatedRecordCount, breakdown);
 	}
 
 	@Override
@@ -77,14 +86,15 @@ public class CustomerMergeServiceImpl implements CustomerMergeService {
 		// cong no chua thanh toan) - luon thuc hien gop va giu lai dau vet nguon goc.
 		int movedAuditLogs = reassignAuditLogs(source.getId(), target.getId());
 		int movedOverrideLogs = reassignOverrideLogs(source.getId(), target.getId());
+		MovedRecords movedRecords = businessRecordMover.moveRecords(source.getId(), target.getId());
 
 		source.setStatus(CustomerStatus.MERGED);
 		source.setMergedIntoId(target.getId());
 		source.setMergedAt(LocalDateTime.now());
 		customerRepository.save(source);
 
-		recordMergeLog(source, target, movedAuditLogs, movedOverrideLogs);
-		recordAuditOnTarget(target, source);
+		recordMergeLog(source, target, movedAuditLogs, movedOverrideLogs, movedRecords);
+		recordAuditOnTarget(target, source, movedRecords);
 
 		log.info("CUSTOMER_MERGED sourceId={} sourceCode={} targetId={} targetCode={} by={}",
 				source.getId(), source.getCode(), target.getId(), target.getCode(), currentUsername());
@@ -135,7 +145,8 @@ public class CustomerMergeServiceImpl implements CustomerMergeService {
 	}
 
 	/** NCL-02-CN-006 TC-04: nhat ky chi tiet lan gop, luu snapshot vi ho so bi gop se chuyen trang thai ngay sau do. */
-	private void recordMergeLog(Customer source, Customer target, int movedAuditLogs, int movedOverrideLogs) {
+	private void recordMergeLog(Customer source, Customer target, int movedAuditLogs, int movedOverrideLogs,
+			MovedRecords movedRecords) {
 		CustomerMergeLog mergeLog = new CustomerMergeLog();
 		mergeLog.setSourceCustomerId(source.getId());
 		mergeLog.setSourceCustomerCode(source.getCode());
@@ -143,19 +154,20 @@ public class CustomerMergeServiceImpl implements CustomerMergeService {
 		mergeLog.setTargetCustomerId(target.getId());
 		mergeLog.setTargetCustomerCode(target.getCode());
 		mergeLog.setTargetCustomerName(target.getName());
-		mergeLog.setMovedRecordSummary("Da chuyen " + movedAuditLogs + " nhat ky khach hang va "
-				+ movedOverrideLogs + " nhat ky bo qua canh bao trung ve ho so giu lai");
+		mergeLog.setMovedRecordSummary("Da chuyen " + movedRecords.summary() + ", " + movedAuditLogs
+				+ " nhat ky khach hang va " + movedOverrideLogs + " nhat ky bo qua canh bao trung ve ho so giu lai");
 		mergeLog.setPerformedByUserId(currentUserId());
 		mergeLog.setPerformedByUsername(currentUsername());
 		mergeLogRepository.save(mergeLog);
 	}
 
 	/** NCL-02-CN-006 TC-04: ghi them vao "Nhat ky khach hang" chung cua ho so giu lai (cung co che voi TC-05 cua NCL-02-CN-002). */
-	private void recordAuditOnTarget(Customer target, Customer source) {
+	private void recordAuditOnTarget(Customer target, Customer source, MovedRecords movedRecords) {
 		CustomerAuditLog auditLog = new CustomerAuditLog();
 		auditLog.setCustomerId(target.getId());
 		auditLog.setActionType(CustomerAuditAction.MERGE);
-		String detail = "Da gop ho so " + source.getCode() + " (" + source.getName() + ") vao ho so nay";
+		String detail = "Da gop ho so " + source.getCode() + " (" + source.getName() + ") vao ho so nay, chuyen "
+				+ movedRecords.summary();
 		auditLog.setDetail(detail);
 		auditLog.setActorUserId(currentUserId());
 		auditLog.setActorUsername(currentUsername());

@@ -313,8 +313,7 @@ export default function EmployeeFormModal({
                 />
                 {errors.standardHoursPerWeek && <span className="field-error">{errors.standardHoursPerWeek}</span>}
                 <span className="field-hint">
-                  Là mẫu số của tỷ lệ giờ tính phí. Để trống sẽ mặc định {DEFAULT_STANDARD_HOURS_PER_WEEK}; nếu
-                  nhập giá trị khác (ví dụ 20 cho bán thời gian) hệ thống lưu đúng giá trị đó, không tự làm tròn.
+                  Để trống sẽ dùng {DEFAULT_STANDARD_HOURS_PER_WEEK} giờ. Dùng để tính tỷ lệ giờ tính phí.
                 </span>
               </div>
             </div>
@@ -322,7 +321,7 @@ export default function EmployeeFormModal({
 
           <div className="modal-footer">
             <button type="button" className="btn-secondary" onClick={onClose} disabled={submitting}>
-              Hủy bỏ
+              Hủy
             </button>
             <button type="submit" className="btn-primary" disabled={submitting}>
               {submitting ? 'Đang lưu...' : isEdit ? 'Cập nhật thay đổi' : 'Tạo hồ sơ nhân sự'}

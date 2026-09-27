@@ -22,6 +22,8 @@ public class CorsConfig {
         configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
+        // NCL-11-CN-004: trình duyệt chỉ đọc được tên tệp báo cáo xuất ra khi header này được lộ ra.
+        configuration.setExposedHeaders(List.of("Content-Disposition", "X-Report-Row-Count"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

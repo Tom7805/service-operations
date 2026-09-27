@@ -11,6 +11,7 @@ import com.serviceops.modules.identity.user.entity.User;
 import com.serviceops.modules.profitability.dto.response.PlannedVsActualMarginRes;
 import com.serviceops.modules.profitability.service.impl.EntryMarginCalculator;
 import com.serviceops.modules.profitability.service.impl.MarginComparisonServiceImpl;
+import com.serviceops.modules.profitability.service.impl.QuotePlanEstimator;
 import com.serviceops.modules.project.entity.Project;
 import com.serviceops.modules.project.entity.Task;
 import com.serviceops.modules.project.repository.ProjectRepository;
@@ -56,7 +57,8 @@ class MarginComparisonServiceTest {
 	@BeforeEach
 	void setUp() {
 		service = new MarginComparisonServiceImpl(projectRepository, contractRepository, quoteRepository,
-				taskRepository, timeEntryRepository, employeeRepository, employeeHourlyRateService,
+				taskRepository, timeEntryRepository, employeeRepository,
+				new QuotePlanEstimator(employeeRepository, employeeHourlyRateService),
 				entryMarginCalculator, sensitiveAccessLogger);
 	}
 

@@ -22,9 +22,10 @@ class StageTransitionValidatorTest {
 	}
 
 	@Test
-	@DisplayName("QTN-06: cho phep chuyen tiep MOT BUOC lien ke dung thu tu")
+	@DisplayName("QTN-06: cho phep chuyen tiep MOT BUOC lien ke dung thu tu tiep can -> khao sat -> bao gia -> dam phan")
 	void allowsForwardTransition() {
-		assertThat(validator.canTransition(OpportunityStage.APPROACH, OpportunityStage.PROPOSAL)).isTrue();
+		assertThat(validator.canTransition(OpportunityStage.APPROACH, OpportunityStage.SURVEY)).isTrue();
+		assertThat(validator.canTransition(OpportunityStage.SURVEY, OpportunityStage.PROPOSAL)).isTrue();
 		assertThat(validator.canTransition(OpportunityStage.PROPOSAL, OpportunityStage.NEGOTIATION)).isTrue();
 	}
 
@@ -36,13 +37,41 @@ class StageTransitionValidatorTest {
 	}
 
 	@Test
-	@DisplayName("TC-02: khong cho phep nhay coc (bo qua giai doan trung gian)")
+	@DisplayName("QTN-06: giai doan dich la THUA thi cho chuyen tu moi giai doan dang mo")
+	void allowsLostFromAnyActiveStage() {
+		assertThat(validator.canTransition(OpportunityStage.APPROACH, OpportunityStage.LOST)).isTrue();
+		assertThat(validator.canTransition(OpportunityStage.SURVEY, OpportunityStage.LOST)).isTrue();
+		assertThat(validator.canTransition(OpportunityStage.PROPOSAL, OpportunityStage.LOST)).isTrue();
+	}
+
+	@Test
+	@DisplayName("TC-02: khong cho phep nhay coc (bo qua giai doan trung gian) va khong chot THANG som")
 	void rejectsSkippedTransition() {
 		assertThat(validator.canTransition(OpportunityStage.APPROACH, OpportunityStage.NEGOTIATION)).isFalse();
+		assertThat(validator.canTransition(OpportunityStage.APPROACH, OpportunityStage.PROPOSAL)).isFalse();
+		assertThat(validator.canTransition(OpportunityStage.SURVEY, OpportunityStage.NEGOTIATION)).isFalse();
 		assertThat(validator.canTransition(OpportunityStage.APPROACH, OpportunityStage.WON)).isFalse();
-		assertThat(validator.canTransition(OpportunityStage.APPROACH, OpportunityStage.LOST)).isFalse();
 		assertThat(validator.canTransition(OpportunityStage.PROPOSAL, OpportunityStage.WON)).isFalse();
-		assertThat(validator.canTransition(OpportunityStage.PROPOSAL, OpportunityStage.LOST)).isFalse();
+	}
+
+	@Test
+	@DisplayName("TC-01: xac suat tuong ung tung giai doan")
+	void probabilityPerStage() {
+		assertThat(validator.probabilityFor(OpportunityStage.APPROACH)).isEqualByComparingTo("10");
+		assertThat(validator.probabilityFor(OpportunityStage.SURVEY)).isEqualByComparingTo("25");
+		assertThat(validator.probabilityFor(OpportunityStage.PROPOSAL)).isEqualByComparingTo("40");
+		assertThat(validator.probabilityFor(OpportunityStage.NEGOTIATION)).isEqualByComparingTo("70");
+		assertThat(validator.probabilityFor(OpportunityStage.WON)).isEqualByComparingTo("100");
+		assertThat(validator.probabilityFor(OpportunityStage.LOST)).isEqualByComparingTo("0");
+		assertThat(validator.initialProbability()).isEqualByComparingTo("10");
+	}
+
+	@Test
+	@DisplayName("TC-02: giai doan hop le ke tiep dung de bao loi")
+	void nextActiveStage() {
+		assertThat(validator.nextActiveStage(OpportunityStage.APPROACH)).isEqualTo(OpportunityStage.SURVEY);
+		assertThat(validator.nextActiveStage(OpportunityStage.NEGOTIATION)).isNull();
+		assertThat(validator.nextActiveStage(OpportunityStage.WON)).isNull();
 	}
 
 	@Test

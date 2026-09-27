@@ -4,6 +4,7 @@ import OpportunityDetailPage from '../pages/OpportunityDetailPage';
 import * as opportunitiesApi from '../api/opportunitiesApi';
 
 vi.mock('../api/opportunitiesApi', () => ({
+  fetchOpportunity: vi.fn(),
   fetchOpportunityActivities: vi.fn(),
   createOpportunityActivity: vi.fn(),
   OpportunityApiError: class extends Error {
@@ -17,6 +18,16 @@ vi.mock('../api/opportunitiesApi', () => ({
 describe('Opportunity care activity frontend', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(opportunitiesApi.fetchOpportunity).mockResolvedValue({
+      id: 15,
+      name: 'Cơ hội triển khai ERP',
+      customerId: 10,
+      customerName: 'Công ty ABC',
+      expectedValue: 500000000,
+      stage: 'SURVEY',
+      status: 'OPEN',
+      probability: 25,
+    });
   });
 
   it('loads activity timeline and allows sales user to add a new activity', async () => {
@@ -55,6 +66,10 @@ describe('Opportunity care activity frontend', () => {
     );
 
     expect(await screen.findByText(/Khách hàng xác nhận cần demo tiếp theo/i)).toBeInTheDocument();
+    // Trạng thái, giai đoạn và khách hàng lấy trực tiếp từ GET /opportunities/{id}.
+    expect(opportunitiesApi.fetchOpportunity).toHaveBeenCalledWith(15);
+    expect(screen.getByTestId('opportunity-summary-line')).toHaveTextContent(/Khảo sát nhu cầu/);
+    expect(screen.getByText('Công ty ABC')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText(/Loại hoạt động/i), { target: { value: 'MEETING' } });
     fireEvent.change(screen.getByLabelText(/Thời điểm/i), { target: { value: '2026-01-15T15:00' } });
@@ -75,6 +90,16 @@ describe('Opportunity care activity frontend', () => {
   });
 
   it('keeps historical activity visible and blocks add action when opportunity is closed', async () => {
+    // Máy chủ báo cơ hội đã đóng dù màn hình được mở với trạng thái mặc định khác.
+    vi.mocked(opportunitiesApi.fetchOpportunity).mockResolvedValue({
+      id: 21,
+      name: 'Cơ hội đã đóng',
+      customerId: 10,
+      expectedValue: 100000000,
+      stage: 'LOST',
+      status: 'CLOSED',
+      probability: 0,
+    });
     vi.mocked(opportunitiesApi.fetchOpportunityActivities).mockResolvedValue([
       {
         id: 3,
@@ -92,7 +117,7 @@ describe('Opportunity care activity frontend', () => {
       <OpportunityDetailPage
         opportunityId={21}
         opportunityName="Cơ hội đã đóng"
-        opportunityStatus="CLOSED"
+        opportunityStatus="OPEN"
         currentUserRoles={['VT-04']}
       />
     );
@@ -117,5 +142,8 @@ describe('Opportunity care activity frontend', () => {
 
     expect(await screen.findByTestId('activity-access-denied')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Lưu hoạt động/i })).not.toBeInTheDocument();
+    // TC-03: vẫn gửi request thật để máy chủ từ chối và ghi nhật ký lần từ chối.
+    expect(opportunitiesApi.fetchOpportunityActivities).toHaveBeenCalledWith(30);
+    expect(opportunitiesApi.createOpportunityActivity).not.toHaveBeenCalled();
   });
 });

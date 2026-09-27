@@ -3,6 +3,7 @@ import { ICONS } from '../../../components/common/icons';
 import type { ProjectRes, ProjectRiskRes, RiskLevel, RiskStatus } from '../types/projectTypes';
 import { changeRiskStatus, deleteRisk, getProject, getRisks, ProjectsApiError } from '../api/projectsApi';
 import RiskFormModal from '../components/RiskFormModal';
+import PageHeader from '../../../components/common/PageHeader';
 
 export interface ProjectRiskPageProps {
   projectId: number;
@@ -149,7 +150,7 @@ export default function ProjectRiskPage({
     return (
       <div className="user-management-page" data-testid="project-risk-forbidden">
         <div className="alert-box alert-box--danger" role="alert">
-          Bạn không có quyền xem rủi ro của dự án này (yêu cầu vai trò Quản lý dự án VT-02).
+          Bạn không có quyền xem rủi ro của dự án này.
         </div>
         {onBack && (
           <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
@@ -173,52 +174,34 @@ export default function ProjectRiskPage({
         </div>
       )}
 
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {onBack && (
+      <PageHeader
+        back={onBack ? { label: 'Quay lại', onClick: onBack, testId: 'btn-back-risk' } : undefined}
+        title="Rủi ro dự án"
+        meta={
+          <>
+            <span className="page-header__code">{project?.projectCode || `#${projectId}`}</span>
+            {project?.name && <span>{project.name}</span>}
+          </>
+        }
+        actions={
+          <>
             <button
               type="button"
-              className="btn btn-secondary btn-sm btn-back"
-              onClick={onBack}
-              data-testid="btn-back-risk"
+              className="btn btn-secondary btn-sm"
+              onClick={loadData}
+              disabled={loading}
+              data-testid="btn-reload-risks"
             >
-              {ICONS.arrowLeft} Quay lại
+              {ICONS.refresh} Tải lại
             </button>
-          )}
-          <div>
-            <div className="page-header__kicker">
-              <span className="page-header__tag">{ICONS.alertTriangle} RỦI RO DỰ ÁN</span>
-              <span className="page-header__dot" />
-              <span className="page-header__meta">{project?.projectCode || `Mã: ${projectId}`}</span>
-            </div>
-            <h1 className="page-title" style={{ margin: '4px 0' }}>
-              {project?.name || 'Rủi ro dự án'}
-            </h1>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={loadData}
-            disabled={loading}
-            data-testid="btn-reload-risks"
-          >
-            {ICONS.refresh} Tải lại
-          </button>
-          {canEdit && (
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              onClick={openCreateForm}
-              data-testid="btn-add-risk"
-            >
-              + Ghi nhận rủi ro
-            </button>
-          )}
-        </div>
-      </div>
+            {canEdit && (
+              <button type="button" className="btn btn-primary btn-sm" onClick={openCreateForm} data-testid="btn-add-risk">
+                + Ghi nhận rủi ro
+              </button>
+            )}
+          </>
+        }
+      />
 
       {loading && (
         <div className="alert-box" role="status" style={{ marginBottom: '16px' }} data-testid="risk-loading">
@@ -246,7 +229,7 @@ export default function ProjectRiskPage({
 
       <div className="user-table-card" style={{ padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--ink-strong)' }}>
             Bảng theo dõi rủi ro
           </h3>
           <span className="field-hint" style={{ fontSize: '13px' }}>

@@ -12,6 +12,7 @@ import {
   OpportunityApiError,
 } from "../api/opportunitiesApi";
 import type { RevenueForecastData } from "../types/opportunityTypes";
+import PageHeader from '../../../components/common/PageHeader';
 
 interface RevenueForecastPageProps {
   currentUserRoles?: string[];
@@ -122,8 +123,13 @@ export default function RevenueForecastPage({
 
   useEffect(() => {
     if (initialData) return;
+    // TC-03: vai trò không được xem vẫn gửi request thật để máy chủ từ chối (403) và ghi nhật ký.
+    if (!isAllowed) {
+      Promise.resolve().then(() => fetchRevenueForecast({})).catch(() => undefined);
+      return;
+    }
     loadForecast(appliedFilters);
-  }, [appliedFilters, loadForecast, initialData]);
+  }, [appliedFilters, loadForecast, initialData, isAllowed]);
 
   // Xử lý áp dụng bộ lọc (TC-01, TC-02)
   const handleFilterSubmit = (e: FormEvent) => {
@@ -191,9 +197,7 @@ export default function RevenueForecastPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Chức năng dự báo doanh thu theo xác suất giai đoạn chỉ dành riêng
-            cho vai trò <strong>Ban giám đốc</strong> hoặc{" "}
-            <strong>Nhân viên kinh doanh</strong>.
+            Trang này dành cho <strong>Ban giám đốc</strong> và <strong>Nhân viên kinh doanh</strong>.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">
@@ -214,53 +218,31 @@ export default function RevenueForecastPage({
   return (
     <div className="user-management-page" data-testid="revenue-forecast-page">
       {/* Tiêu đề trang & Thao tác chính */}
-      <div className="page-header">
-        <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">
-              {ICONS.chart} CƠ HỘI BÁN HÀNG
-            </span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">
-              QUY TẮC DỰ BÁO DOANH THU
-            </span>
-          </div>
-          <h1 className="page-title">
-            Dự báo doanh thu theo xác suất giai đoạn
-          </h1>
-          <p className="page-subtitle">
-            Hệ thống nhân giá trị mỗi cơ hội còn mở với xác suất của giai đoạn
-            hiện tại rồi cộng dồn theo tháng dự kiến ký hợp đồng.
-          </p>
-        </div>
-
-        <div className="page-header__actions">
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => setShowRuleInfo((prev) => !prev)}
-            title="Xem quy tắc nghiệp vụ tính dự báo"
-            data-testid="btn-toggle-rules"
-          >
-            {ICONS.info} Quy tắc tính dự báo
-          </button>
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => loadForecast(appliedFilters, true)}
-            disabled={loading || refreshing}
-            title="Tính lại dự báo doanh thu theo trạng thái cơ hội mới nhất"
-            data-testid="btn-refresh-forecast"
-          >
-            {refreshing ? (
-              <span className="spinner-sm" aria-hidden="true" />
-            ) : (
-              ICONS.refresh
-            )}{" "}
-            {refreshing ? "Đang đồng bộ..." : "Làm mới số liệu"}
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Dự báo doanh thu"
+        actions={
+          <>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setShowRuleInfo((prev) => !prev)}
+              data-testid="btn-toggle-rules"
+            >
+              {ICONS.info} Cách tính
+            </button>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => loadForecast(appliedFilters, true)}
+              disabled={loading || refreshing}
+              data-testid="btn-refresh-forecast"
+            >
+              {refreshing ? <span className="spinner-sm" aria-hidden="true" /> : ICONS.refresh}{' '}
+              {refreshing ? 'Đang tính lại…' : 'Làm mới'}
+            </button>
+          </>
+        }
+      />
 
       {/* Thông tin quy tắc nghiệp vụ QTN-07 (TC-04) */}
       {showRuleInfo && (
@@ -402,9 +384,8 @@ export default function RevenueForecastPage({
         <div className="alert-box alert-box--warning" data-testid="forecast-missing-probability-warning">
           <span>{ICONS.alertTriangle}</span>
           <div>
-            <strong>Cảnh báo dữ liệu:</strong> {opportunitiesMissingProbability.length} cơ hội
-            đang mở nhưng chưa có xác suất giai đoạn, hệ thống tạm tính đóng góp của các cơ hội
-            này là 0 đ vào dự báo — có thể khiến tổng doanh thu kỳ vọng thấp hơn thực tế:
+            <strong>{opportunitiesMissingProbability.length} cơ hội chưa có xác suất giai đoạn</strong> — đang được tính là 0 đ nên
+            dự báo có thể thấp hơn thực tế:
             <ul className="forecast-data-warning-list">
               {opportunitiesMissingProbability.map((o) => (
                 <li key={o.id}>
@@ -474,9 +455,6 @@ export default function RevenueForecastPage({
                 <h2 className="forecast-chart__title">
                   Phân bổ doanh thu kỳ vọng theo tháng
                 </h2>
-                <p className="forecast-chart__subtitle">
-                  Tương quan giá trị kỳ vọng (VNĐ) và khối lượng cơ hội mở sắp về
-                </p>
               </div>
               <span className="forecast-chart__peak">
                 Tháng cao nhất: {formatVND(maxMonthRevenue)}
@@ -609,11 +587,7 @@ export default function RevenueForecastPage({
           <div className="table-empty-state" data-testid="forecast-empty-state">
             <div className="table-empty-state__icon">{ICONS.chart}</div>
             <h3>Chưa có dữ liệu dự báo doanh thu</h3>
-            <p>
-              Không tìm thấy cơ hội mở nào có ngày dự kiến ký nằm trong khoảng
-              thời gian đã chọn. Các cơ hội đã đóng (thắng hoặc thất bại) tự
-              động không được tính vào dự báo.
-            </p>
+            <p>Không có cơ hội mở nào dự kiến ký trong khoảng thời gian này.</p>
           </div>
         ) : (
           <div className="table-responsive">

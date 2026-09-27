@@ -200,14 +200,13 @@ describe('ProjectLaborCostPage (NCL-09-CN-001 — Tính giá vốn giờ công d
     expect(await screen.findByTestId('labor-cost-empty')).toBeInTheDocument();
   });
 
-  it('hiển thị mã dự án khi không lấy được thông tin dự án', async () => {
-    vi.mocked(projectsApi.getProject).mockRejectedValue(new Error('not found'));
+  it('không tự gọi lấy thông tin dự án — dự án đã chọn sẵn ở ô chọn chung của khu Lợi nhuận', async () => {
     vi.mocked(profitabilityApi.getProjectLaborCost).mockResolvedValue(LABOR_COST_DATA);
 
     render(<ProjectLaborCostPage projectId={1} currentUserRoles={['VT-01']} />);
 
     await screen.findByTestId('labor-cost-line-100');
-    expect(screen.getByText('Mã: 1')).toBeInTheDocument();
+    expect(projectsApi.getProject).not.toHaveBeenCalled();
   });
 
   it('nút tải lại gọi lại API', async () => {

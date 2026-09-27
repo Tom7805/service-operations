@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
+import { notifyNotificationsChanged } from '../../notifications/utils/notificationEvents';
 import ModalPortal from '../../../components/common/ModalPortal';
 import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import { roleLabels } from '../../../utils/roleLabel';
@@ -7,6 +8,7 @@ import ApprovalActionBar from '../components/ApprovalActionBar';
 import { getMyApprovalHistory, getPendingTimesheets, TimesheetsApiError } from '../api/timesheetsApi';
 import type { PendingTimesheetRes, TimesheetApprovalHistoryRes } from '../types/timesheetTypes';
 import { formatIsoDate } from '../utils/weekRange';
+import PageHeader from '../../../components/common/PageHeader';
 
 export interface TimesheetApprovalPageProps {
   currentUserRoles?: string[];
@@ -98,8 +100,7 @@ export default function TimesheetApprovalPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Chức năng Duyệt bảng chấm công chỉ dành riêng cho vai trò <strong>Quản lý dự án</strong>.
-            Hệ thống đã ghi lại lần truy cập bị từ chối này vào nhật ký bảo mật.
+            Trang này dành cho <strong>Quản lý dự án</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">{ICONS.shield} Thời điểm: {new Date().toLocaleString('vi-VN')}</span>
@@ -110,9 +111,6 @@ export default function TimesheetApprovalPage({
       </div>
     );
   }
-
-  const totalPendingHours = pending.reduce((sum, t) => sum + t.pendingHours, 0);
-  const totalPendingEntries = pending.reduce((sum, t) => sum + t.pendingEntries, 0);
 
   return (
     <div className="user-management-page" data-testid="timesheet-approval-page">
@@ -126,56 +124,30 @@ export default function TimesheetApprovalPage({
         </div>
       )}
 
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Duyệt bảng chấm công</h1>
-          <p className="page-subtitle">
-            Các bảng chấm công tuần đang chờ bạn duyệt hoặc từ chối, thuộc những dự án bạn quản lý.
-          </p>
-        </div>
-        <div className="page-header__actions">
-          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setHistoryOpen(true)}>
-            <span className="icon-xs">{ICONS.history}</span> Giờ công đã duyệt
-          </button>
-          <button
-            type="button"
-            className="btn-icon-refresh"
-            onClick={() => {
-              void fetchPending();
-              void fetchHistory();
-            }}
-            title="Tải lại"
-            aria-label="Tải lại"
-            disabled={loading}
-          >
-            {ICONS.refresh}
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Duyệt giờ công"
+        actions={
+          <>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setHistoryOpen(true)}>
+              <span className="icon-xs">{ICONS.history}</span> Lịch sử duyệt
+            </button>
+            <button
+              type="button"
+              className="btn-icon-refresh"
+              onClick={() => {
+                void fetchPending();
+                void fetchHistory();
+              }}
+              title="Tải lại"
+              aria-label="Tải lại"
+              disabled={loading}
+            >
+              {ICONS.refresh}
+            </button>
+          </>
+        }
+      />
 
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--blue">{ICONS.clipboardList}</div>
-          <div>
-            <span className="stat-card__label">Bảng đang chờ duyệt</span>
-            <strong className="stat-card__value">{pending.length}</strong>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--purple">{ICONS.clock}</div>
-          <div>
-            <span className="stat-card__label">Tổng dòng chờ duyệt</span>
-            <strong className="stat-card__value">{totalPendingEntries}</strong>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--amber">{ICONS.chart}</div>
-          <div>
-            <span className="stat-card__label">Tổng giờ chờ duyệt</span>
-            <strong className="stat-card__value">{totalPendingHours}</strong>
-          </div>
-        </div>
-      </div>
 
       {error && (
         <div className="alert alert--error mb-4" role="alert">
@@ -237,6 +209,8 @@ export default function TimesheetApprovalPage({
                         onApproved={(result) => {
                           const label = t.userName ?? `Nhân sự #${t.userId}`;
                           const warnings = result.overBudgetWarnings;
+                          // NCL-14-CN-003: cảnh báo vượt ngân sách được gửi ngay sau khi duyệt — cập nhật chuông luôn.
+                          notifyNotificationsChanged();
                           const base = `Đã duyệt bảng chấm công của ${label} thành công.`;
                           showToast(
                             warnings.length > 0 ? `${base} Cảnh báo: ${warnings.join('; ')}` : base,
@@ -283,12 +257,11 @@ export default function TimesheetApprovalPage({
                     Giờ công đã duyệt
                   </h3>
                   <p className="field-hint">
-                    Các bảng bạn vừa duyệt hoặc từ chối — mất khỏi hàng chờ ở trên vì đã có quyết định, không
-                    phải bị xóa; tra lại được ở đây kể cả sau khi tải lại trang.
+                    Các bảng bạn đã duyệt hoặc từ chối.
                     {onNavigateToAdjustment && (
                       <>
                         {' '}
-                        Muốn xem đầy đủ từng dòng giờ công đã duyệt để đối chiếu hoặc sửa lại, dùng{' '}
+                        Cần sửa từng dòng? Dùng{' '}
                         <button
                           type="button"
                           className="btn-link"
@@ -343,7 +316,7 @@ export default function TimesheetApprovalPage({
                             <div className="table-empty-state">
                               <span className="empty-icon">{ICONS.history}</span>
                               <h3>Chưa có bảng chấm công nào bạn đã xử lý</h3>
-                              <p>Sau khi bạn duyệt hoặc từ chối một bảng ở trên, kết quả sẽ hiện tại đây để đối chiếu lại.</p>
+                              <p>Bảng bạn duyệt hoặc từ chối sẽ hiện ở đây.</p>
                             </div>
                           </td>
                         </tr>

@@ -25,15 +25,12 @@ export default function ChangePasswordPage({ onBack, onPasswordChanged }: Change
       </div>
 
       <div className="detail-card" style={{ maxWidth: 520, margin: '0 auto' }}>
-        <h1 className="page-title">Đổi mật khẩu</h1>
-        <p className="page-subtitle" style={{ marginBottom: 24 }}>
-          Nhập mật khẩu hiện tại và mật khẩu mới.
-        </p>
+        <h1 className="page-title" style={{ marginBottom: 24 }}>Đổi mật khẩu</h1>
 
         {done ? (
           <div
             className="alert"
-            style={{ background: '#EDF3EC', border: '1px solid rgba(52,101,56,.20)', color: '#346538' }}
+            style={{ background: 'var(--pale-green-bg)', border: '1px solid var(--line)', color: 'var(--pale-green-fg)' }}
             role="status"
           >
             <span className="alert__icon">{ICONS.checkCircle}</span>

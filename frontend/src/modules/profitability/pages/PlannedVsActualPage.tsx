@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
-import type { ProjectRes } from '../../projects/types/projectTypes';
-import { getProject, ProjectsApiError } from '../../projects/api/projectsApi';
+import { ProjectsApiError } from '../../projects/api/projectsApi';
 import type { PlannedVsActualMarginRes } from '../types/profitabilityTypes';
 import { getPlannedVsActualMargin, ProfitabilityApiError } from '../api/profitabilityApi';
+import PageHeader from '../../../components/common/PageHeader';
 
 export interface PlannedVsActualPageProps {
   projectId: number;
@@ -178,7 +178,7 @@ function PlannedVsActualContent({ data }: { data: PlannedVsActualMarginRes }) {
         style={{ padding: '20px', marginBottom: '24px' }}
         data-testid="hours-comparison"
       >
-        <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700, color: 'var(--ink-strong)' }}>
+        <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 600, color: 'var(--ink-strong)' }}>
           So sánh số giờ công và chi phí giờ
         </h3>
         <div
@@ -222,7 +222,7 @@ function PlannedVsActualContent({ data }: { data: PlannedVsActualMarginRes }) {
           style={{ padding: '20px', marginBottom: '16px' }}
           data-testid="gap-reasons"
         >
-          <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700, color: 'var(--ink-strong)' }}>
+          <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 600, color: 'var(--ink-strong)' }}>
             Nguyên nhân chênh lệch
           </h3>
           <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--ink-strong)', fontSize: '13.5px' }}>
@@ -263,7 +263,6 @@ export default function PlannedVsActualPage({
   const [error, setError] = useState<string | null>(null);
   // TC-02: dự án (qua hợp đồng) chưa gắn báo giá nào → 404 RESOURCE_NOT_FOUND.
   const [notFound, setNotFound] = useState(false);
-  const [project, setProject] = useState<ProjectRes | null>(null);
 
   const loadData = useCallback(async () => {
     if (!canViewScreen) return;
@@ -300,24 +299,12 @@ export default function PlannedVsActualPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadData, initialMargin]);
 
-  useEffect(() => {
-    if (initialMargin) return;
-    void (async () => {
-      try {
-        const proj = await getProject(projectId);
-        setProject(proj);
-      } catch {
-        // Không báo lỗi nếu không lấy được thông tin dự án — vẫn hiển thị số liệu so sánh.
-      }
-    })();
-  }, [projectId, initialMargin]);
 
   if (!canViewScreen) {
     return (
       <div className="user-management-page" data-testid="planned-vs-actual-forbidden">
         <div className="alert-box alert-box--danger" role="alert">
-          Bạn không có quyền xem so sánh biên lợi nhuận dự kiến với thực tế của dự án này
-          (yêu cầu vai trò Quản lý dự án VT-02).
+          Bạn không có quyền xem so sánh biên lợi nhuận dự kiến với thực tế của dự án này.
         </div>
         {onBack && (
           <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
@@ -330,41 +317,23 @@ export default function PlannedVsActualPage({
 
   return (
     <div className="user-management-page" data-testid="planned-vs-actual-page">
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {onBack && (
+      <PageHeader
+        back={onBack ? { label: 'Chọn dự án khác', onClick: onBack, testId: 'btn-back-planned-vs-actual' } : undefined}
+        title="Kế hoạch và thực tế"
+        actions={
+          <>
             <button
               type="button"
-              className="btn btn-secondary btn-sm btn-back"
-              onClick={onBack}
-              data-testid="btn-back-planned-vs-actual"
+              className="btn btn-secondary btn-sm"
+              onClick={() => void loadData()}
+              disabled={loading}
+              data-testid="btn-reload-planned-vs-actual"
             >
-              {ICONS.arrowLeft} Quay lại
+              {ICONS.refresh} Tải lại
             </button>
-          )}
-          <div>
-            <h1 className="page-title" style={{ margin: '4px 0' }}>Biên lợi nhuận dự kiến vs thực tế</h1>
-            <p className="page-subtitle" data-testid="project-code">{project?.projectCode || `Mã: ${projectId}`}</p>
-            {project?.name && (
-              <p className="page-subtitle" style={{ margin: 0, color: 'var(--ink-muted)', fontSize: '13.5px' }}>
-                {project.name}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={() => void loadData()}
-            disabled={loading}
-            data-testid="btn-reload-planned-vs-actual"
-          >
-            {ICONS.refresh} Tải lại
-          </button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {error && (
         <div

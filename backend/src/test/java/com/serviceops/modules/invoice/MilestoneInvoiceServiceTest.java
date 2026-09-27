@@ -11,6 +11,7 @@ import com.serviceops.modules.contract.enums.ContractType;
 import com.serviceops.modules.contract.repository.ContractMilestoneRepository;
 import com.serviceops.modules.contract.repository.ContractRepository;
 import com.serviceops.modules.contract.service.ContractMilestoneService;
+import com.serviceops.modules.acceptance.repository.AcceptanceCertificateRepository;
 import com.serviceops.modules.invoice.dto.request.InvoiceFromMilestoneReq;
 import com.serviceops.modules.invoice.dto.response.InvoiceRes;
 import com.serviceops.modules.invoice.entity.Invoice;
@@ -21,6 +22,7 @@ import com.serviceops.modules.invoice.repository.InvoiceRepository;
 import com.serviceops.modules.invoice.service.impl.MilestoneInvoiceServiceImpl;
 import com.serviceops.modules.invoice.validator.ContractValueLimitValidator;
 import com.serviceops.modules.invoice.validator.MilestoneAcceptanceValidator;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -69,6 +71,8 @@ class MilestoneInvoiceServiceTest {
 	private InvoiceLineRepository invoiceLineRepository;
 	@Mock
 	private AuditLogService auditLogService;
+	@Mock
+	private AcceptanceCertificateRepository acceptanceCertificateRepository;
 
 	private MilestoneInvoiceServiceImpl service;
 
@@ -77,9 +81,15 @@ class MilestoneInvoiceServiceTest {
 		Clock clock = Clock.fixed(Instant.parse("2026-09-21T03:00:00Z"), ZONE);
 		service = new MilestoneInvoiceServiceImpl(contractRepository, milestoneRepository,
 				contractMilestoneService, invoiceRepository, invoiceLineRepository,
-				new MilestoneAcceptanceValidator(), new ContractValueLimitValidator(), auditLogService, clock);
+				new MilestoneAcceptanceValidator(acceptanceCertificateRepository), new ContractValueLimitValidator(), auditLogService, clock);
 		SecurityContextHolder.getContext().setAuthentication(
 				new UsernamePasswordAuthenticationToken("ketoan01", "x"));
+	}
+
+	/** SecurityContextHolder la ThreadLocal: khong don thi nguoi dung o day ro sang test khac cung JVM. */
+	@AfterEach
+	void clearSecurityContext() {
+		SecurityContextHolder.clearContext();
 	}
 
 	@Test

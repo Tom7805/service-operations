@@ -128,7 +128,7 @@ describe('RenewalModal (NCL-04-CN-007 — Gia hạn hợp đồng)', () => {
       expect(screen.getByTestId('renewal-inactive-alert')).toBeInTheDocument();
     });
     expect(
-      screen.getByText(/Chỉ gia hạn được hợp đồng đang còn hiệu lực \(ACTIVE\); hợp đồng đã đóng vui lòng lập hợp đồng mới/i)
+      screen.getByText(/Chỉ gia hạn được hợp đồng đang hiệu lực; hợp đồng đã đóng cần lập hợp đồng mới/i)
     ).toBeInTheDocument();
     // Ẩn form nhập gia hạn
     expect(screen.queryByTestId('renewal-form')).toBeNull();
@@ -249,7 +249,7 @@ describe('RenewalModal (NCL-04-CN-007 — Gia hạn hợp đồng)', () => {
       />
     );
 
-    expect(screen.getByText(/Yêu cầu vai trò Nhân viên kinh doanh \(VT-04\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Yêu cầu vai trò Nhân viên kinh doanh/i)).toBeInTheDocument();
     expect(screen.queryByTestId('renewal-form')).toBeNull();
     expect(contractsApi.fetchRenewals).not.toHaveBeenCalled();
     expect(contractsApi.createRenewal).not.toHaveBeenCalled();

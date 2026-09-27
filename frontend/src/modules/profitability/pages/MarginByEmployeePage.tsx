@@ -2,6 +2,7 @@ import { useCallback, useState, type FormEvent } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import type { MarginByEmployeeRes } from '../types/profitabilityTypes';
 import { getMarginByEmployee, ProfitabilityApiError } from '../api/profitabilityApi';
+import PageHeader from '../../../components/common/PageHeader';
 
 export interface MarginByEmployeePageProps {
   currentUserRoles?: string[];
@@ -96,8 +97,7 @@ export default function MarginByEmployeePage({
     return (
       <div className="user-management-page" data-testid="margin-by-employee-forbidden">
         <div className="alert-box alert-box--danger" role="alert">
-          Bạn không có quyền xem báo cáo biên lợi nhuận theo nhân sự (chỉ dành cho Ban giám đốc
-          VT-01).
+          Bạn không có quyền xem báo cáo biên lợi nhuận theo nhân sự.
         </div>
         {onBack && (
           <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
@@ -110,29 +110,10 @@ export default function MarginByEmployeePage({
 
   return (
     <div className="user-management-page" data-testid="margin-by-employee-page">
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {onBack && (
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm btn-back"
-              onClick={onBack}
-              data-testid="btn-back-margin-by-employee"
-            >
-              {ICONS.arrowLeft} Quay lại
-            </button>
-          )}
-          <div>
-            <h1 className="page-title" style={{ margin: '4px 0' }}>
-              Báo cáo biên lợi nhuận theo nhân sự
-            </h1>
-            <p className="page-subtitle">
-              Gộp doanh thu ghi nhận và giá vốn giờ công đã duyệt của mọi dự án theo từng nhân sự
-              thực hiện trong kỳ.
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        back={onBack ? { label: 'Báo cáo', onClick: onBack, testId: 'btn-back-margin-by-employee' } : undefined}
+        title="Lợi nhuận theo nhân sự"
+      />
 
       <form onSubmit={handleSubmit} noValidate className="user-table-card" style={{ padding: '20px', marginBottom: '16px' }}>
         <div className="toolbar-filters" style={{ display: 'flex', alignItems: 'flex-end', gap: '16px', flexWrap: 'wrap' }}>
@@ -230,7 +211,7 @@ export default function MarginByEmployeePage({
 
             <div className="user-table-card" style={{ padding: '20px' }} data-testid="margin-by-employee-table">
               <div style={{ marginBottom: '16px' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>Chi tiết theo nhân sự</h3>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--ink-strong)' }}>Chi tiết theo nhân sự</h3>
               </div>
 
               {report.lines.length === 0 ? (

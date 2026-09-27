@@ -39,6 +39,7 @@ public class OpportunityActivityServiceImpl implements OpportunityActivityServic
 	private final OpportunityActivityRepository opportunityActivityRepository;
 	private final OpportunityActivityMapper opportunityActivityMapper;
 	private final OpportunityAuditLogger auditLogger;
+	private final OpportunityScopeGuard scopeGuard;
 
 	@Override
 	public List<ActivityRes> listByOpportunity(Long opportunityId) {
@@ -52,6 +53,8 @@ public class OpportunityActivityServiceImpl implements OpportunityActivityServic
 	public ActivityRes addActivity(Long opportunityId, ActivityCreateReq request) {
 		Opportunity opportunity = opportunityRepository.findById(opportunityId)
 				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Khong tim thay co hoi"));
+		// QTN-01: chi cham soc co hoi thuoc pham vi du lieu cua minh.
+		scopeGuard.requireInScope(opportunity);
 
 		// TC-02: co hoi da dong (khac OPEN) thi chi con xem lai lich su, khong duoc them hoat dong moi.
 		if (opportunity.getStatus() != OpportunityStatus.OPEN) {
@@ -84,9 +87,9 @@ public class OpportunityActivityServiceImpl implements OpportunityActivityServic
 	}
 
 	private void requireOpportunityExists(Long opportunityId) {
-		if (!opportunityRepository.existsById(opportunityId)) {
-			throw new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Khong tim thay co hoi");
-		}
+		Opportunity opportunity = opportunityRepository.findById(opportunityId)
+				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Khong tim thay co hoi"));
+		scopeGuard.requireInScope(opportunity);
 	}
 
 	private String blankToNull(String value) {

@@ -117,10 +117,8 @@ export default function TwoFactorVerifyForm({
         <>
           <h2>Liên kết ứng dụng Authenticator</h2>
           <p className="login-card__intro">
-            Tài khoản <strong>{username}</strong> thuộc vai trò yêu cầu xác thực hai bước để bảo vệ dữ liệu tài
-            chính. Đây là lần đầu thiết lập — làm theo 3 bước dưới đây bằng{' '}
-            <strong>Google Authenticator</strong>, <strong>Microsoft Authenticator</strong> hoặc{' '}
-            <strong>Authy</strong>.
+            Tài khoản <strong>{username}</strong> cần bật xác thực hai bước. Làm theo 3 bước dưới đây bằng
+            Google Authenticator, Microsoft Authenticator hoặc Authy.
           </p>
 
           <ol className="totp-setup-steps">
@@ -176,9 +174,7 @@ export default function TwoFactorVerifyForm({
         <>
           <h2>Nhập mã xác thực</h2>
           <p className="login-card__intro">
-            Tài khoản <strong>{username}</strong> thuộc vai trò yêu cầu xác thực hai bước để bảo vệ dữ liệu tài
-            chính. Mở ứng dụng Authenticator đã liên kết và nhập mã 6 số đang hiển thị — mã tự đổi mới mỗi 30
-            giây, không cần chờ gửi qua email hay tin nhắn.
+            Nhập mã 6 số đang hiển thị trong ứng dụng Authenticator của <strong>{username}</strong>.
           </p>
         </>
       )}
@@ -200,7 +196,7 @@ export default function TwoFactorVerifyForm({
             }}
             placeholder="Nhập mã gồm 6 chữ số"
             disabled={submitting}
-            style={{ letterSpacing: '0.4em', textAlign: 'center', fontWeight: 700 }}
+            style={{ letterSpacing: '0.4em', textAlign: 'center', fontWeight: 600 }}
           />
         </div>
         {errors.otp && (

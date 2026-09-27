@@ -99,7 +99,7 @@ class CustomerMergeControllerIT {
 		CustomerMergeReq req = new CustomerMergeReq(1L, 2L);
 		CustomerRes target = new CustomerRes(1L, "KH-000001", "Cong ty TNHH ABC", null, null, null, null, null);
 		CustomerRes source = new CustomerRes(2L, "KH-000002", "Cong ty TNHH ABC (chi nhanh)", null, null, null, null, null);
-		when(customerMergeService.preview(any())).thenReturn(new MergePreviewRes(target, source, 3L));
+		when(customerMergeService.preview(any())).thenReturn(new MergePreviewRes(target, source, 3L, java.util.Map.of("hop dong", 3L)));
 
 		mockMvc.perform(post("/customers/merge/preview")
 						.contentType("application/json")

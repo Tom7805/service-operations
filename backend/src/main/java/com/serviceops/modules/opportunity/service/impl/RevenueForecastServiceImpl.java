@@ -6,6 +6,7 @@ import com.serviceops.modules.opportunity.dto.request.ForecastQueryReq;
 import com.serviceops.modules.opportunity.dto.response.RevenueForecastRes;
 import com.serviceops.modules.opportunity.entity.Opportunity;
 import com.serviceops.modules.opportunity.enums.OpportunityStatus;
+import com.serviceops.modules.opportunity.logging.OpportunityAuditLogger;
 import com.serviceops.modules.opportunity.repository.OpportunityRepository;
 import com.serviceops.modules.opportunity.service.RevenueForecastService;
 import org.springframework.stereotype.Service;
@@ -22,23 +23,36 @@ import java.util.Objects;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
+/**
+ * NCL-03-CN-004: Du bao doanh thu theo xac suat giai doan (QTN-07).
+ *
+ * <p>Doanh thu du bao cua mot co hoi = gia tri du kien x xac suat giai doan hien tai; cong
+ * don theo thang du kien ky (TC-01). Chi tinh co hoi con mo — co hoi da thang/thua bi loai
+ * khoi du bao (TC-02). Chi lay co hoi trong pham vi du lieu cua nguoi xem (QTN-01). Moi lan
+ * xem ghi mot dong nhat ky co hoi {@code FORECAST_VIEW} (TC-04) nen transaction la doc-ghi.</p>
+ */
 @Service
-@Transactional(readOnly = true)
+@Transactional
 public class RevenueForecastServiceImpl implements RevenueForecastService {
 
 	private final OpportunityRepository opportunityRepository;
 	private final CustomerRepository customerRepository;
+	private final OpportunityScopeGuard scopeGuard;
+	private final OpportunityAuditLogger auditLogger;
 
 	public RevenueForecastServiceImpl(OpportunityRepository opportunityRepository,
-			CustomerRepository customerRepository) {
+			CustomerRepository customerRepository, OpportunityScopeGuard scopeGuard,
+			OpportunityAuditLogger auditLogger) {
 		this.opportunityRepository = opportunityRepository;
 		this.customerRepository = customerRepository;
+		this.scopeGuard = scopeGuard;
+		this.auditLogger = auditLogger;
 	}
 
 	@Override
 	public RevenueForecastRes forecast(ForecastQueryReq query) {
 		final Map<YearMonth, MonthlyAccumulator> byMonth = new TreeMap<>();
-		for (Opportunity opportunity : opportunityRepository.findAll()) {
+		for (Opportunity opportunity : scopeGuard.filter(opportunityRepository.findAll())) {
 			if (opportunity.getStatus() != OpportunityStatus.OPEN
 					|| opportunity.getExpectedCloseDate() == null) {
 				continue;
@@ -76,6 +90,14 @@ public class RevenueForecastServiceImpl implements RevenueForecastService {
 		BigDecimal total = byMonth.values().stream()
 				.map(accumulator -> accumulator.revenue)
 				.reduce(BigDecimal.ZERO, BigDecimal::add);
+
+		// TC-04: ghi nhat ky nguoi xem, noi dung (khoang loc, so thang, tong du bao) va thoi diem.
+		int opportunityCount = byMonth.values().stream().mapToInt(acc -> acc.opportunityCount).sum();
+		auditLogger.recordForecastView("Xem du bao doanh thu"
+				+ " tu " + (query.from() == null ? "(khong gioi han)" : query.from())
+				+ " den " + (query.to() == null ? "(khong gioi han)" : query.to())
+				+ ": " + byMonth.size() + " thang, " + opportunityCount + " co hoi mo, tong "
+				+ total.toPlainString());
 
 		return new RevenueForecastRes(total, byMonth.entrySet().stream()
 				.map(entry -> {

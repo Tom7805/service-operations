@@ -41,11 +41,11 @@ export default class ErrorBoundary extends Component<Props, State> {
             gap: '16px',
             padding: '24px',
             textAlign: 'center',
-            fontFamily: 'system-ui, sans-serif',
+            fontFamily: 'var(--font-sans)',
           }}
         >
           <h2 style={{ margin: 0 }}>Đã có lỗi xảy ra</h2>
-          <p style={{ margin: 0, color: '#6b7280', maxWidth: '480px' }}>
+          <p style={{ margin: 0, color: 'var(--ink-muted)', maxWidth: '480px' }}>
             Trang gặp sự cố hiển thị. Bấm nút bên dưới để tải lại — nếu vẫn còn lỗi, hãy báo lại cho quản
             trị viên kèm theo bước bạn vừa làm.
           </p>
@@ -56,8 +56,8 @@ export default class ErrorBoundary extends Component<Props, State> {
               padding: '10px 20px',
               borderRadius: '8px',
               border: 'none',
-              background: '#111827',
-              color: '#fff',
+              background: 'var(--primary)',
+              color: 'var(--on-primary)',
               fontWeight: 600,
               cursor: 'pointer',
             }}

@@ -22,6 +22,15 @@ public enum OpportunityAuditAction {
 	/** Sinh bao cao duong ong ban hang theo giai doan (NCL-03-CN-007, TC-04). */
 	REPORT_VIEW,
 
+	/** Chuyen giai doan co hoi (NCL-03-CN-002, TC-05). */
+	STAGE_CHANGE,
+
+	/** Lap mot phien ban bao gia cho co hoi (NCL-03-CN-003, TC-05). */
+	QUOTE_CREATE,
+
+	/** Xem bao cao du bao doanh thu theo xac suat giai doan (NCL-03-CN-004, TC-04). */
+	FORECAST_VIEW,
+
 	/** Tao hop dong tu co hoi da thang (NCL-04-CN-001, TC-04). */
 	CONTRACT_CREATE
 }

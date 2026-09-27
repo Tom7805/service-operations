@@ -101,9 +101,6 @@ export default function RateFormModal({ isOpen, onClose, onSaved, currentUserRol
                 <span className="modal-title__icon">{ICONS.money}</span>
                 Khai báo đơn giá theo vai trò
               </h3>
-              <p className="field-hint">
-                Mỗi dòng gồm vai trò chuyên môn, cấp bậc và đơn giá theo ngày công.
-              </p>
             </div>
             <button
               type="button"
@@ -192,8 +189,7 @@ export default function RateFormModal({ isOpen, onClose, onSaved, currentUserRol
               />
               {errors.effectiveFrom && <small className="field-error">{errors.effectiveFrom}</small>}
               <p className="field-hint" style={{ marginTop: '6px' }}>
-                Cùng vai trò + cấp bậc không được khai báo hai lần cho cùng một ngày hiệu lực. Đơn giá
-                hiệu lực trong tương lai chưa xuất hiện ở màn hình lập báo giá cho tới đúng ngày này.
+                Mỗi vai trò và cấp bậc chỉ có một đơn giá cho mỗi ngày hiệu lực. Đơn giá tương lai chỉ dùng được khi tới ngày.
               </p>
 
               <div style={{ marginTop: '16px', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>

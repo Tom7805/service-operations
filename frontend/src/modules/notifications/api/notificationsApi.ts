@@ -1,4 +1,11 @@
-import type { NotificationRes } from '../types/notificationTypes';
+import type {
+  NotificationDedupConfig,
+  NotificationDedupConfigReq,
+  NotificationGroup,
+  NotificationPreference,
+  NotificationRes,
+  NotificationType,
+} from '../types/notificationTypes';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
 
@@ -47,18 +54,21 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
 
 /**
  * Danh sách thông báo in-app của chính mình, phân trang, mới nhất trước.
- * GET /notifications?unreadOnly=...&page=...&size=...
+ * GET /notifications?unreadOnly=...&group=...&page=...&size=...
+ * `group` bỏ trống = không lọc theo nhóm (NCL-14-CN-001).
  */
 export async function getNotifications(
   unreadOnly = false,
   page = 0,
-  size = 20
+  size = 20,
+  group?: NotificationGroup | null
 ): Promise<NotificationRes[]> {
   const params = new URLSearchParams({
     unreadOnly: String(unreadOnly),
     page: String(page),
     size: String(size),
   });
+  if (group) params.set('group', group);
   return requestBackend<NotificationRes[]>(`${API_BASE_URL}/notifications?${params.toString()}`, {
     method: 'GET',
   });
@@ -82,5 +92,74 @@ export async function markNotificationsRead(notificationIds: number[]): Promise<
   await requestBackend<null>(`${API_BASE_URL}/notifications/read`, {
     method: 'POST',
     body: JSON.stringify({ notificationIds }),
+  });
+}
+
+/**
+ * Đánh dấu tất cả thông báo chưa đọc của chính mình là đã đọc (NCL-14-CN-001).
+ * POST /notifications/read-all — trả về số thông báo thực sự đổi trạng thái.
+ */
+export async function markAllNotificationsRead(): Promise<number> {
+  const changed = await requestBackend<number | null>(`${API_BASE_URL}/notifications/read-all`, {
+    method: 'POST',
+  });
+  return changed ?? 0;
+}
+
+/**
+ * Mở một thông báo (NCL-14-CN-001 TC-02): đánh dấu đã đọc và trả về `targetType`/`referenceId`
+ * để điều hướng thẳng tới bản ghi liên quan. Backend ghi nhật ký "Mo thong bao" (TC-03).
+ * POST /notifications/{id}/open — `404` nếu thông báo không tồn tại hoặc không thuộc về mình.
+ */
+export async function openNotification(id: number): Promise<NotificationRes> {
+  return requestBackend<NotificationRes>(`${API_BASE_URL}/notifications/${id}/open`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * Cấu hình nhận thông báo của chính mình (NCL-14-CN-002) — luôn đủ 6 nhóm, nhóm chưa từng cấu
+ * hình được điền mặc định bật + nhận ngay.
+ * GET /notifications/preferences
+ */
+export async function getNotificationPreferences(): Promise<NotificationPreference[]> {
+  return requestBackend<NotificationPreference[]>(`${API_BASE_URL}/notifications/preferences`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * Lưu cấu hình nhận thông báo — chỉ cần gửi các nhóm thay đổi, nhóm không gửi giữ nguyên.
+ * Backend ghi nhật ký "Cap nhat cau hinh nhan thong bao" (TC-03). `400` nếu danh sách rỗng
+ * hoặc giá trị ngoài enum.
+ * PUT /notifications/preferences
+ */
+export async function updateNotificationPreferences(preferences: NotificationPreference[]): Promise<void> {
+  await requestBackend<null>(`${API_BASE_URL}/notifications/preferences`, {
+    method: 'PUT',
+    body: JSON.stringify({ preferences }),
+  });
+}
+
+/**
+ * Cấu hình chống gửi trùng theo loại sự kiện (NCL-14-CN-003). Chỉ VT-07 — vai trò khác nhận `403`
+ * và backend tự ghi nhật ký lần từ chối (TC-03), nên màn hình luôn gọi API thật thay vì tự chặn.
+ * GET /notifications/dedup-configs
+ */
+export async function getDedupConfigs(): Promise<NotificationDedupConfig[]> {
+  return requestBackend<NotificationDedupConfig[]>(`${API_BASE_URL}/notifications/dedup-configs`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * Đặt/đổi cấu hình chống gửi trùng của một loại sự kiện — backend ghi nhật ký người thực hiện,
+ * nội dung, thời điểm (TC-04). `400` nếu `cooldownHours` < 1 hoặc loại sự kiện không dùng cơ chế này.
+ * PUT /notifications/dedup-configs/{eventType}
+ */
+export async function updateDedupConfig(eventType: NotificationType, payload: NotificationDedupConfigReq): Promise<void> {
+  await requestBackend<null>(`${API_BASE_URL}/notifications/dedup-configs/${eventType}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
   });
 }

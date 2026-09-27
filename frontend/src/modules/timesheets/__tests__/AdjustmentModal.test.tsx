@@ -87,7 +87,7 @@ describe('AdjustmentModal (NCL-06-CN-005)', () => {
     const onClose = vi.fn();
     render(<AdjustmentModal projectId={1} taskId={20} onClose={onClose} onAdjusted={vi.fn()} />);
 
-    fireEvent.click(screen.getByText('Hủy bỏ'));
+    fireEvent.click(screen.getByText('Hủy'));
 
     expect(onClose).toHaveBeenCalled();
     expect(timesheetsApi.adjustTimeEntry).not.toHaveBeenCalled();

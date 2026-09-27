@@ -9,6 +9,7 @@ import RateResolveLookup from '../components/RateResolveLookup';
 import ContractRateManager from '../components/ContractRateManager';
 import TimeEntryRateResolveLookup from '../components/TimeEntryRateResolveLookup';
 import WorkTypeRateManager from '../components/WorkTypeRateManager';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface BillRatePageProps {
   currentUserRoles?: string[];
@@ -168,8 +169,7 @@ export default function BillRatePage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền quản lý bảng đơn giá</h2>
           <p>
-            Chỉ <strong>Kế toán</strong> (VT-05) hoặc <strong>Quản trị viên</strong> (VT-07) được khai báo bảng
-            đơn giá theo vai trò. Hệ thống đã ghi lại lần từ chối truy cập này vào Nhật ký hệ thống.
+            Trang này dành cho <strong>Kế toán</strong> và <strong>Quản trị viên</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">
@@ -216,25 +216,14 @@ export default function BillRatePage({
         </div>
       )}
 
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Bảng đơn giá theo vai trò</h1>
-          <p className="page-subtitle">
-            Khai báo đơn giá theo NGÀY công cho từng vai trò chuyên môn và cấp bậc — dùng để lập báo giá
-            (Cơ hội bán hàng) tự động tra cứu theo tên vai trò.
-          </p>
-        </div>
-        <div>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => setIsFormOpen(true)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
-          >
+      <PageHeader
+        title="Bảng đơn giá"
+        actions={
+          <button type="button" className="btn btn-primary" onClick={() => setIsFormOpen(true)}>
             <span className="icon-xs">{ICONS.plus}</span> Khai báo đơn giá
           </button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="user-table-card">
         <div className="user-table-toolbar">
@@ -346,11 +335,6 @@ export default function BillRatePage({
         )}
       </div>
 
-      <p className="customer-summary-scope-note cell-muted" style={{ marginTop: '12px' }}>
-        <span className="icon-xs">{ICONS.info}</span> Không được khai báo trùng cùng một vai trò + cấp bậc cho
-        cùng ngày hiệu lực. Mỗi lần khai báo thành công đều được ghi vào Nhật ký hệ thống (người thực hiện ·
-        nội dung · thời điểm).
-      </p>
 
       <RateResolveLookup roleOptions={roleOptions} levelsByRole={levelsByRole} />
 

@@ -92,9 +92,9 @@ describe('Role & Data Scope Module — Acceptance Criteria Tests (NCL-01-CN-004)
       expect(screen.getByText('Lê Chuyên Môn')).toBeInTheDocument();
     });
 
-    expect(screen.getAllByText(/Toàn công ty \(COMPANY\)/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Nhánh bộ phận \(DEPARTMENT\)/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Chỉ cá nhân \(SELF\)/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Toàn công ty/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Nhánh bộ phận/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Chỉ cá nhân/i).length).toBeGreaterThan(0);
   });
 
   it('TC-02: RoleScopeModal validates department selection when scope is DEPARTMENT', async () => {
@@ -151,7 +151,7 @@ describe('Role & Data Scope Module — Acceptance Criteria Tests (NCL-01-CN-004)
 
     expect(screen.getByRole('heading', { name: /Bạn không có thẩm quyền/i })).toBeInTheDocument();
     expect(screen.getByText(/Bạn không có thẩm quyền truy cập màn hình này/i)).toBeInTheDocument();
-    expect(screen.getByText(/Chức năng Phân quyền theo vai trò và phạm vi dữ liệu chỉ dành riêng/i)).toBeInTheDocument();
+    expect(screen.getByText(/Trang này dành cho/i)).toBeInTheDocument();
   });
 
   it('TC-05: Admin users view stats, role capability matrix, and link to the full audit log', async () => {
@@ -160,9 +160,9 @@ describe('Role & Data Scope Module — Acceptance Criteria Tests (NCL-01-CN-004)
     );
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Phân quyền vai trò & phạm vi dữ liệu' })).toBeInTheDocument();
-      expect(screen.getByText('9 vai trò')).toBeInTheDocument();
-      expect(screen.getByText(/Xem nhật ký phân quyền đầy đủ/i)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Phân quyền' })).toBeInTheDocument();
+      expect(screen.getByText(/Vai trò & quyền hạn \(9\)/)).toBeInTheDocument();
+      expect(screen.getByText(/Xem nhật ký phân quyền/i)).toBeInTheDocument();
     });
 
     // Switch to Role Matrix tab

@@ -12,6 +12,7 @@ import com.serviceops.modules.expense.enums.ExpenseType;
 import com.serviceops.modules.expense.repository.ProjectExpenseRepository;
 import com.serviceops.modules.identity.employee.entity.Employee;
 import com.serviceops.modules.identity.user.entity.User;
+import com.serviceops.modules.invoice.validator.ContractValueLimitValidator;
 import com.serviceops.modules.invoice.dto.request.InvoiceProposalCreateReq;
 import com.serviceops.modules.invoice.dto.response.InvoiceProposalRes;
 import com.serviceops.modules.invoice.entity.InvoiceProposalLine;
@@ -77,7 +78,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DataJpaTest(properties = "spring.flyway.enabled=false")
 @ActiveProfiles("test")
 @Import({InvoiceProposalServiceImpl.class, RateResolutionServiceImpl.class, ContractBillRateServiceImpl.class,
-		BillRateServiceImpl.class, WorkTypeRateServiceImpl.class, InvoiceProposalIntegrationTest.ClockConfig.class})
+		BillRateServiceImpl.class, WorkTypeRateServiceImpl.class, ContractValueLimitValidator.class,
+		InvoiceProposalIntegrationTest.ClockConfig.class})
 class InvoiceProposalIntegrationTest {
 
 	@TestConfiguration

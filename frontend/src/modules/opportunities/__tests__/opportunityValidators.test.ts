@@ -13,9 +13,9 @@ import type { OpportunityCreatePayload, QuoteItemReq } from '../types/opportunit
 
 describe('Opportunity Validators & Stage Transition (NCL-03-CN-001 & NCL-03-CN-002)', () => {
   describe('canTransitionStage (QTN-06, TC-02, TC-03)', () => {
-    it('TC-02: cho phép chuyển giai đoạn kế tiếp liền kề (APPROACH -> PROPOSAL)', () => {
-      const result = canTransitionStage('APPROACH', 'PROPOSAL', 'OPEN');
-      expect(result.allowed).toBe(true);
+    it('TC-01/TC-02: cho phép chuyển kế tiếp liền kề tiếp cận -> khảo sát -> báo giá', () => {
+      expect(canTransitionStage('APPROACH', 'SURVEY', 'OPEN').allowed).toBe(true);
+      expect(canTransitionStage('SURVEY', 'PROPOSAL', 'OPEN').allowed).toBe(true);
     });
 
     it('TC-02: cho phép chuyển giai đoạn kế tiếp liền kề (PROPOSAL -> NEGOTIATION)', () => {
@@ -31,14 +31,23 @@ describe('Opportunity Validators & Stage Transition (NCL-03-CN-001 & NCL-03-CN-0
       expect(lostResult.allowed).toBe(true);
     });
 
-    it('TC-02: từ chối nhảy cóc (APPROACH -> NEGOTIATION hoặc APPROACH -> WON)', () => {
+    it('QTN-06: giai đoạn đích là Thua thì cho chuyển từ mọi giai đoạn đang mở', () => {
+      expect(canTransitionStage('APPROACH', 'LOST', 'OPEN').allowed).toBe(true);
+      expect(canTransitionStage('SURVEY', 'LOST', 'OPEN').allowed).toBe(true);
+    });
+
+    it('TC-02: từ chối nhảy cóc (APPROACH -> NEGOTIATION, APPROACH -> PROPOSAL) và chốt Thắng sớm', () => {
       const skipToNego = canTransitionStage('APPROACH', 'NEGOTIATION', 'OPEN');
       expect(skipToNego.allowed).toBe(false);
       expect(skipToNego.reason).toContain('Không thể nhảy cóc');
+      expect(skipToNego.reason).toContain('Khảo sát');
+
+      const skipSurvey = canTransitionStage('APPROACH', 'PROPOSAL', 'OPEN');
+      expect(skipSurvey.allowed).toBe(false);
 
       const skipToWon = canTransitionStage('APPROACH', 'WON', 'OPEN');
       expect(skipToWon.allowed).toBe(false);
-      expect(skipToWon.reason).toContain('Không thể nhảy cóc');
+      expect(skipToWon.reason).toContain('Đàm phán');
     });
 
     it('TC-02: từ chối chuyển lùi (PROPOSAL -> APPROACH hoặc NEGOTIATION -> PROPOSAL)', () => {
@@ -48,9 +57,9 @@ describe('Opportunity Validators & Stage Transition (NCL-03-CN-001 & NCL-03-CN-0
     });
 
     it('TC-03: từ chối chuyển giai đoạn khi cơ hội đã đóng (status = CLOSED)', () => {
-      const closedResult = canTransitionStage('WON', 'PROPOSAL', 'CLOSED');
+      const closedResult = canTransitionStage('LOST', 'NEGOTIATION', 'CLOSED');
       expect(closedResult.allowed).toBe(false);
-      expect(closedResult.reason).toContain('Cơ hội đã hoàn tất và đóng');
+      expect(closedResult.reason).toContain('Không thể mở lại');
     });
 
     it('cho phép giữ nguyên giai đoạn hiện tại (current === target)', () => {
@@ -60,9 +69,10 @@ describe('Opportunity Validators & Stage Transition (NCL-03-CN-001 & NCL-03-CN-0
   });
 
   describe('getNextAllowedStages', () => {
-    it('trả về đúng danh sách giai đoạn kế tiếp theo từng nấc', () => {
-      expect(getNextAllowedStages('APPROACH', 'OPEN')).toEqual(['PROPOSAL']);
-      expect(getNextAllowedStages('PROPOSAL', 'OPEN')).toEqual(['NEGOTIATION']);
+    it('trả về đúng danh sách giai đoạn kế tiếp theo từng nấc (kèm đóng Thua)', () => {
+      expect(getNextAllowedStages('APPROACH', 'OPEN')).toEqual(['SURVEY', 'LOST']);
+      expect(getNextAllowedStages('SURVEY', 'OPEN')).toEqual(['PROPOSAL', 'LOST']);
+      expect(getNextAllowedStages('PROPOSAL', 'OPEN')).toEqual(['NEGOTIATION', 'LOST']);
       expect(getNextAllowedStages('NEGOTIATION', 'OPEN')).toEqual(['WON', 'LOST']);
       expect(getNextAllowedStages('WON', 'CLOSED')).toEqual([]);
       expect(getNextAllowedStages('LOST', 'CLOSED')).toEqual([]);

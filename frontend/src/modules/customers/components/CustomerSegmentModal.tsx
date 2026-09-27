@@ -210,16 +210,13 @@ export default function CustomerSegmentModal({
                     {errors.priority}
                   </span>
                 )}
-                <span className="field-hint">
-                  Dùng để ưu tiên nguồn lực chăm sóc và lọc báo cáo theo nhóm khách hàng trọng điểm.
-                </span>
               </div>
             </div>
           </div>
 
           <div className="modal-footer">
             <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isSubmitting}>
-              Hủy bỏ
+              Hủy
             </button>
             <button
               type="submit"

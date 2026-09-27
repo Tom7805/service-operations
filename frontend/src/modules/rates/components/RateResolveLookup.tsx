@@ -78,8 +78,7 @@ export default function RateResolveLookup({ roleOptions, levelsByRole }: Props) 
         <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Tra đơn giá tại một thời điểm</h2>
       </div>
       <p className="field-hint" style={{ marginBottom: '14px' }}>
-        Dùng khi tính lại doanh thu cho giờ công đã ghi nhận trong quá khứ — hệ thống trả về dòng đơn giá có
-        hiệu lực gần nhất nhưng không vượt quá ngày phát sinh bạn nhập, kể cả khi đã có đơn giá mới hơn.
+        Trả về đơn giá đang có hiệu lực vào ngày phát sinh.
       </p>
 
       {serverError && (
@@ -177,7 +176,7 @@ export default function RateResolveLookup({ roleOptions, levelsByRole }: Props) 
               value: result.effectiveFrom === asOfQueried ? 'Đúng ngày tra cứu' : 'Dòng gần nhất trước ngày tra cứu',
             },
           ]}
-          footnote="Hệ thống chọn dòng có hiệu lực gần nhất nhưng không vượt quá ngày phát sinh, kể cả khi đã có đơn giá mới hơn (QTN-15)."
+          footnote="Hệ thống chọn dòng có hiệu lực gần nhất nhưng không vượt quá ngày phát sinh, kể cả khi đã có đơn giá mới hơn."
         />
       )}
     </div>

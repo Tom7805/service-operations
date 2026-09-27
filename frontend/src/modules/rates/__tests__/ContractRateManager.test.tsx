@@ -71,7 +71,8 @@ describe('ContractRateManager (NCL-07-CN-003 — Khai báo đơn giá riêng the
     const select = await screen.findByLabelText('Hợp đồng');
     expect(screen.queryByLabelText('ID hợp đồng')).toBeNull();
     fireEvent.change(select, { target: { value: '1' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Mở đơn giá hợp đồng' }));
+    // Chọn hợp đồng là mở ngay, không còn nút "Mở" riêng.
+    expect(screen.queryByRole('button', { name: 'Mở đơn giá hợp đồng' })).toBeNull();
 
     await waitFor(() => expect(ratesApi.fetchContractBillRates).toHaveBeenCalledWith(1));
     expect(await screen.findByText('HD-001')).toBeInTheDocument();

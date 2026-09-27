@@ -1,5 +1,6 @@
 import type {
   AuditLogPage,
+  MaskingRule,
   AuditLogSearchParams,
   SensitiveAccessLogPage,
   SensitiveAccessLogSearchParams,
@@ -82,4 +83,9 @@ export async function searchAuditLogs(params: AuditLogSearchParams): Promise<Aud
   return requestBackend<AuditLogPage>(`${API_BASE_URL}/audit-logs?${query.toString()}`, {
     method: 'GET',
   });
+}
+
+/** NCL-01-CN-005 (TC-04, QTN-02): quy tắc che dữ liệu lương/giá vốn đang hiệu lực. Chỉ VT-01/VT-05/VT-06. */
+export async function getMaskingRules(): Promise<MaskingRule[]> {
+  return requestBackend<MaskingRule[]>(`${API_BASE_URL}/masking-rules`, { method: 'GET' });
 }

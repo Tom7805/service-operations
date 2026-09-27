@@ -23,6 +23,7 @@ import DepartmentFormModal from '../components/DepartmentFormModal';
 import DepartmentMoveModal from '../components/DepartmentMoveModal';
 import DepartmentDeleteModal from '../components/DepartmentDeleteModal';
 import { ICONS } from '../../../components/common/icons';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface DepartmentTreePageProps {
   currentUserRoles?: string[];
@@ -102,12 +103,15 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
       setTreeData(treeRes);
       setFlatData(flatRes);
 
-      const managerOpts: ManagerUserOption[] = usersRes.map((u) => ({
-        id: u.id,
-        fullName: u.fullName,
-        username: u.username,
-        departmentId: u.departmentId,
-      }));
+      // Chỉ tài khoản nội bộ đang hoạt động mới được làm người quản lý bộ phận (backend cũng chặn).
+      const managerOpts: ManagerUserOption[] = usersRes
+        .filter((u) => u.status === 'ACTIVE' && !u.roleCodes.includes('VT-09'))
+        .map((u) => ({
+          id: u.id,
+          fullName: u.fullName,
+          username: u.username,
+          departmentId: u.departmentId,
+        }));
       setManagersList(managerOpts);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không thể tải cấu trúc cây tổ chức từ máy chủ.');
@@ -188,8 +192,7 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Chức năng Khai báo cây tổ chức chỉ dành riêng cho vai trò <strong>Quản trị viên</strong>.
-            Hệ thống đã ghi lại lần truy cập này vào nhật ký bảo mật.
+            Trang này dành cho <strong>Quản trị viên</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">{ICONS.shield} Thời điểm: {new Date().toLocaleString('vi-VN')}</span>
@@ -204,10 +207,6 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
   // Lưu ý: backend cấu hình Jackson bỏ hẳn field có giá trị null khỏi JSON
   // (default-property-inclusion: non_null), nên parentId của bộ phận gốc về
   // đến frontend là `undefined`, không phải `null` — phải dùng == thay vì ===.
-  const totalDepts = flatData.length;
-  const rootDepts = flatData.filter((d) => d.parentId == null).length;
-  const subDepts = flatData.filter((d) => d.parentId != null).length;
-  const uniqueManagers = new Set(flatData.map((d) => d.managerId).filter(Boolean)).size;
 
   return (
     <div className="user-management-page">
@@ -223,54 +222,16 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
       )}
 
       {/* Page Header */}
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Khai báo cây tổ chức</h1>
-          <p className="page-subtitle">Thiết lập sơ đồ phòng ban và gán người quản lý.</p>
-        </div>
-        <div className="page-header__actions">
+      <PageHeader
+        title="Tổ chức"
+        actions={
           <button type="button" className="btn-primary btn-lg" onClick={handleOpenCreateRoot}>
-            <span className="btn-icon icon-sm">{ICONS.building}</span> Thêm bộ phận cấp gốc
+            <span className="btn-icon icon-sm">{ICONS.building}</span> Thêm bộ phận gốc
           </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* KPI Summary Cards */}
-      <div className="stats-grid">
-        {/* Thẻ số liệu ở đây trước không có ô icon, trong khi trang Tài khoản và Phân quyền lại có —
-            cùng một thành phần mà đọc ra thành hai thứ khác nhau tùy trang. Bổ sung cho đồng bộ. */}
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--blue">{ICONS.building}</div>
-          <div>
-            <span className="stat-card__label">Tổng bộ phận</span>
-            <strong className="stat-card__value">{totalDepts}</strong>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--green">{ICONS.tree}</div>
-          <div>
-            <span className="stat-card__label">Đơn vị cấp gốc</span>
-            <strong className="stat-card__value text-success">{rootDepts}</strong>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--purple">{ICONS.folder}</div>
-          <div>
-            <span className="stat-card__label">Bộ phận phụ thuộc</span>
-            <strong className="stat-card__value">{subDepts}</strong>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--amber">{ICONS.userCheck}</div>
-          <div>
-            <span className="stat-card__label">Trưởng bộ phận</span>
-            <strong className="stat-card__value">{uniqueManagers}</strong>
-          </div>
-        </div>
-      </div>
 
       {/* Global Error Banner */}
       {error && (
@@ -305,7 +266,7 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
           <div className="toolbar-filters">
             <div className="filter-group">
               <span className="filter-label">Chế độ xem:</span>
-              <div className="status-tabs">
+              <div className="status-tabs" role="group" aria-label="Chế độ xem">
                 <button
                   type="button"
                   className={`status-tab ${viewMode === 'TREE' ? 'status-tab--active' : ''}`}
@@ -361,7 +322,7 @@ export const DepartmentTreePage: React.FC<DepartmentTreePageProps> = ({
       {/* Audit Log Stream section for TC-05 */}
       <div className="audit-log-card">
         <div className="audit-log-header">
-          <h3 className="audit-log-title"><span className="audit-log-title__icon">{ICONS.clipboardList}</span> Nhật ký khai báo cây tổ chức (Audit Log)</h3>
+          <h3 className="audit-log-title"><span className="audit-log-title__icon">{ICONS.clipboardList}</span> Nhật ký khai báo cây tổ chức</h3>
           <span className="badge-pulse">Lưu vết 100% realtime</span>
         </div>
         <div className="audit-log-list">

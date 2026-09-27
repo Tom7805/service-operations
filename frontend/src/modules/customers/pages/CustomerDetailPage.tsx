@@ -11,6 +11,7 @@ import CustomerSegmentPanel from '../components/CustomerSegmentPanel';
 import CustomerFormModal from '../components/CustomerFormModal';
 import { updateCustomer, updateCustomerWithOverride } from '../api/customersApi';
 import { ICONS } from '../../../components/common/icons';
+import PageHeader from '../../../components/common/PageHeader';
 
 type CustomerDetailTab = 'CONTACTS' | 'SEGMENT' | 'SUMMARY' | 'OVERVIEW';
 
@@ -25,6 +26,9 @@ interface CustomerDetailPageProps {
   onCustomerUpdated?: (updated: Customer) => void;
   // NCL-02-CN-005: cho phép mở thẳng tab "Phân nhóm" từ nút thao tác nhanh ở danh sách.
   initialTab?: CustomerDetailTab;
+  /** Từ "Lịch sử hợp tác": mở thẳng trang dự án / cơ hội (App điều hướng). */
+  onOpenProject?: (projectId: number) => void;
+  onOpenOpportunity?: (opportunityId: number) => void;
 }
 
 export default function CustomerDetailPage({
@@ -36,7 +40,9 @@ export default function CustomerDetailPage({
   onBack,
   initialContacts,
   onCustomerUpdated,
-  initialTab = 'CONTACTS',
+  initialTab,
+  onOpenProject,
+  onOpenOpportunity,
 }: CustomerDetailPageProps) {
   const [customer, setCustomer] = useState<Customer>(
     propCustomer || {
@@ -51,7 +57,10 @@ export default function CustomerDetailPage({
     }
   );
 
-  const [activeTab, setActiveTab] = useState<CustomerDetailTab>(initialTab);
+  const [activeTab, setActiveTab] = useState<CustomerDetailTab>(
+    // PM (VT-02) khong quan ly nguoi lien he (NCL-02-CN-003) -> mac dinh mo Ho so tong hop (NCL-02-CN-004).
+    initialTab ?? (currentUserRoles.includes('VT-04') ? 'CONTACTS' : 'SUMMARY')
+  );
   const [copiedCode, setCopiedCode] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
@@ -106,38 +115,25 @@ export default function CustomerDetailPage({
   return (
     <div className="customer-detail-page user-management-page" data-testid="customer-detail-page">
       {/* Header trang chi tiết */}
-      <div className="page-header customer-detail-header">
-        <div>
-          <div className="breadcrumb">
-            <button type="button" className="breadcrumb-btn" onClick={onBack}>
-              <span className="icon-sm">{ICONS.arrowLeft}</span> Khách hàng
+      <PageHeader
+        back={{ label: 'Khách hàng', onClick: onBack, testId: 'btn-back-to-customers' }}
+        title={customer.name}
+        meta={
+          <span className="customer-code-pill customer-code-pill--lg">
+            <span>{customer.code}</span>
+            <button
+              type="button"
+              className="btn-copy-code"
+              title="Sao chép mã khách hàng"
+              onClick={() => handleCopyCode(customer.code)}
+              aria-label={`Sao chép mã ${customer.code}`}
+            >
+              {copiedCode ? <span className="icon-sm">{ICONS.check}</span> : <span className="icon-sm">{ICONS.copy}</span>}
             </button>
-            <span>/</span>
-            <span className="active">{customer.code}</span>
-          </div>
-
-          <div className="customer-title-row">
-            <h1 className="page-title">{customer.name}</h1>
-            <div className="customer-code-pill customer-code-pill--lg">
-              <span>{customer.code}</span>
-              <button
-                type="button"
-                className="btn-copy-code"
-                title="Sao chép mã khách hàng"
-                onClick={() => handleCopyCode(customer.code)}
-                aria-label={`Sao chép mã ${customer.code}`}
-              >
-                {copiedCode ? <span className="icon-sm">{ICONS.check}</span> : <span className="icon-sm">{ICONS.copy}</span>}
-              </button>
-            </div>
-          </div>
-          <p className="page-subtitle">
-            Hồ sơ doanh nghiệp, kênh liên hệ điều hành và thông tin hợp đồng dự án.
-          </p>
-        </div>
-
-        <div className="customer-detail-header__actions">
-          {!isMerged && (
+          </span>
+        }
+        actions={
+          !isMerged && (
             <button
               type="button"
               className="btn btn-secondary"
@@ -145,34 +141,36 @@ export default function CustomerDetailPage({
               data-testid="btn-edit-customer"
             >
               <span className="icon-sm">{ICONS.edit}</span>
-              Chỉnh sửa hồ sơ
+              Sửa hồ sơ
             </button>
-          )}
-          <button
-            type="button"
-            className="btn btn-secondary btn-back"
-            onClick={onBack}
-            data-testid="btn-back-to-customers"
-          >
-            <span className="icon-sm">{ICONS.arrowLeft}</span>
-            Quay lại danh sách
-          </button>
+          )
+        }
+      />
+
+      {isMerged && (
+        <div className="alert-box alert-box--warning" role="status" data-testid="customer-merged-notice">
+          <span className="alert-box__icon">{ICONS.info}</span>
+          <div className="alert-box__content">
+            <strong>Hồ sơ đã được gộp</strong>
+            <p>
+              Hồ sơ này đã gộp vào hồ sơ {customer.mergedIntoId ? `#${customer.mergedIntoId}` : 'khác'} và chỉ còn để
+              tra cứu — không thể chỉnh sửa, phân nhóm hay thay đổi người liên hệ.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Thẻ thông tin tổng quan doanh nghiệp */}
       <div className="customer-overview-card">
-        <div className="customer-overview-header">
-          <div className="overview-brand-icon">{ICONS.building}</div>
-          <div className="overview-title-meta">
-            <h3>{customer.name}</h3>
-            <span className="customer-industry-badge">
-              <span className="icon-xs">{ICONS.tag}</span> {customer.industry || 'Chưa xác định ngành nghề'}
-            </span>
-          </div>
-        </div>
 
         <div className="customer-meta-grid">
+          <div className="meta-item">
+            <span className="meta-item__label">Ngành nghề</span>
+            <div className="meta-item__value">
+              {customer.industry || <span className="cell-muted">—</span>}
+            </div>
+          </div>
+
           <div className="meta-item">
             <span className="meta-item__label">Mã số thuế</span>
             <div className="meta-item__value">
@@ -185,7 +183,7 @@ export default function CustomerDetailPage({
           </div>
 
           <div className="meta-item">
-            <span className="meta-item__label">Số điện thoại hotline</span>
+            <span className="meta-item__label">Điện thoại</span>
             <div className="meta-item__value">
               {customer.phone ? (
                 <a href={`tel:${customer.phone}`} className="contact-link">
@@ -198,14 +196,14 @@ export default function CustomerDetailPage({
           </div>
 
           <div className="meta-item meta-item--wide">
-            <span className="meta-item__label">Địa chỉ trụ sở chính</span>
+            <span className="meta-item__label">Địa chỉ</span>
             <div className="meta-item__value address-text">
-              <span className="icon-xs">{ICONS.pin}</span> {customer.address || 'Chưa cập nhật địa chỉ'}
+              <span className="icon-xs">{ICONS.pin}</span> {customer.address || '—'}
             </div>
           </div>
 
           <div className="meta-item">
-            <span className="meta-item__label">Thời gian tạo hồ sơ</span>
+            <span className="meta-item__label">Ngày tạo</span>
             <div className="meta-item__value cell-date">
               <span className="icon-xs">{ICONS.calendar}</span> {formatDate(customer.createdAt)}
             </div>
@@ -222,7 +220,7 @@ export default function CustomerDetailPage({
           data-testid="tab-btn-contacts"
         >
           <span className="tab-icon">{ICONS.users}</span>
-          <span>Người liên hệ (Contacts)</span>
+          <span>Người liên hệ</span>
         </button>
 
         <button
@@ -242,7 +240,7 @@ export default function CustomerDetailPage({
           data-testid="tab-btn-summary"
         >
           <span className="tab-icon">{ICONS.chart}</span>
-          <span>Hồ sơ tổng hợp</span>
+          <span>Lịch sử hợp tác</span>
         </button>
 
         <button
@@ -266,6 +264,7 @@ export default function CustomerDetailPage({
             currentUserRoles={currentUserRoles}
             currentUserName={currentUserName}
             initialContacts={initialContacts}
+            readOnly={isMerged}
           />
         )}
 
@@ -275,6 +274,7 @@ export default function CustomerDetailPage({
             currentUserRoles={currentUserRoles}
             currentUserName={currentUserName}
             onSegmentUpdated={handleSegmentUpdated}
+            readOnly={isMerged}
           />
         )}
 
@@ -284,43 +284,42 @@ export default function CustomerDetailPage({
             customerName={customer.name}
             currentUserRoles={currentUserRoles}
             currentUserId={currentUserId}
+            onOpenProject={onOpenProject}
+            onOpenOpportunity={onOpenOpportunity}
           />
         )}
 
         {activeTab === 'OVERVIEW' && (
           <div className="overview-tab-pane user-table-card" style={{ padding: '24px' }}>
-            <h3 style={{ margin: '0 0 16px', fontSize: '17px', color: '#111111' }}>
-              Thông tin hành chính doanh nghiệp
-            </h3>
             <div className="form-grid">
               <div className="form-field">
-                <span className="form-label">Tên pháp nhân đầy đủ:</span>
-                <p style={{ fontWeight: 600, color: '#111111', margin: 0 }}>{customer.name}</p>
+                <span className="form-label">Tên pháp nhân</span>
+                <p style={{ fontWeight: 600, color: 'var(--ink-strong)', margin: 0 }}>{customer.name}</p>
               </div>
               <div className="form-field">
-                <span className="form-label">Mã khách hàng tự sinh:</span>
-                <p style={{ fontFamily: 'monospace', fontWeight: 700, color: '#111111', margin: 0 }}>
+                <span className="form-label">Mã khách hàng</span>
+                <p style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--ink-strong)', margin: 0 }}>
                   {customer.code}
                 </p>
               </div>
               <div className="form-field">
-                <span className="form-label">Mã số doanh nghiệp / MST:</span>
+                <span className="form-label">Mã số thuế</span>
                 <p style={{ margin: 0 }}>{customer.taxCode || '—'}</p>
               </div>
               <div className="form-field">
-                <span className="form-label">Ngành nghề kinh doanh:</span>
+                <span className="form-label">Ngành nghề</span>
                 <p style={{ margin: 0 }}>{customer.industry || '—'}</p>
               </div>
               <div className="form-field">
-                <span className="form-label">Quy mô công ty:</span>
+                <span className="form-label">Quy mô</span>
                 <p style={{ margin: 0 }}>{customer.companySize || '—'}</p>
               </div>
               <div className="form-field">
-                <span className="form-label">Mức độ ưu tiên:</span>
+                <span className="form-label">Mức độ ưu tiên</span>
                 <p style={{ margin: 0 }}>{customer.priority || '—'}</p>
               </div>
               <div className="form-field form-field--full">
-                <span className="form-label">Địa chỉ đăng ký kinh doanh:</span>
+                <span className="form-label">Địa chỉ đăng ký</span>
                 <p style={{ margin: 0 }}>{customer.address || '—'}</p>
               </div>
             </div>

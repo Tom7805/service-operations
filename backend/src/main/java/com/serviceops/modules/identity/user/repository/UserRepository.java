@@ -17,6 +17,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByUsernameIgnoreCase(String username);
 
+    /** NCL-13-CN-001: email dung de khoi phuc mat khau phai duy nhat (findByEmailIgnoreCase tra Optional). */
+    boolean existsByEmailIgnoreCase(String email);
+
     long countByDepartmentId(Long departmentId);
 
     List<User> findByUsernameContainingIgnoreCaseOrFullNameContainingIgnoreCase(String username, String fullName);

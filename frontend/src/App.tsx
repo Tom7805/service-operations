@@ -1,65 +1,233 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import LoginPage from './modules/auth/pages/LoginPage';
 import type { AuthSession } from './modules/auth/types/authTypes';
-import UserListPage from './modules/users/pages/UserListPage';
-import UserDetailPage from './modules/users/pages/UserDetailPage';
-import RolePermissionPage from './modules/users/pages/RolePermissionPage';
-import DepartmentTreePage from './modules/departments/pages/DepartmentTreePage';
-import SensitiveAccessLogPage from './modules/auditLog/pages/SensitiveAccessLogPage';
-import AuditLogPage from './modules/auditLog/pages/AuditLogPage';
-import EmployeeListPage from './modules/employees/pages/EmployeeListPage';
-import EmployeeDetailPage from './modules/employees/pages/EmployeeDetailPage';
-import ChangePasswordPage from './modules/auth/pages/ChangePasswordPage';
-import TwoFactorSetupPage from './modules/auth/pages/TwoFactorSetupPage';
-import CustomerListPage from './modules/customers/pages/CustomerListPage';
-import CustomerMergePage from './modules/customers/pages/CustomerMergePage';
-import ContractListPage from './modules/contracts/pages/ContractListPage';
-import ContractDetailPage from './modules/contracts/pages/ContractDetailPage';
-import InvoicesPage from './modules/invoices/pages/InvoicesPage';
-import InvoiceDetailPage from './modules/invoices/pages/InvoiceDetailPage';
-import BillRatePage from './modules/rates/pages/BillRatePage';
-import RateHistoryPage from './modules/rates/pages/RateHistoryPage';
-import OpportunityDetailPage from './modules/opportunities/pages/OpportunityDetailPage';
-import OpportunitySearchPicker from './modules/opportunities/components/OpportunitySearchPicker';
-import OpportunityListPage from './modules/opportunities/pages/OpportunityListPage';
-import RevenueForecastPage from './modules/opportunities/pages/RevenueForecastPage';
-import PipelineReportPage from './modules/reports/pages/PipelineReportPage';
-import MyWorkPage from './modules/mytasks/pages/MyWorkPage';
-import TimesheetApprovalPage from './modules/timesheets/pages/TimesheetApprovalPage';
-import TimesheetRejectPage from './modules/timesheets/pages/TimesheetRejectPage';
-import TimesheetAdjustmentPage from './modules/timesheets/pages/TimesheetAdjustmentPage';
-import TimesheetPeriodPage from './modules/timesheets/pages/TimesheetPeriodPage';
-import UnsubmittedTimesheetsPage from './modules/timesheets/pages/UnsubmittedTimesheetsPage';
-import ExpenseApprovalPage from './modules/expenses/pages/ExpenseApprovalPage';
-import OverheadAllocationPage from './modules/expenses/pages/OverheadAllocationPage';
-import MarginByCustomerPage from './modules/profitability/pages/MarginByCustomerPage';
-import MarginByEmployeePage from './modules/profitability/pages/MarginByEmployeePage';
-import ProjectLaborCostPage from './modules/profitability/pages/ProjectLaborCostPage';
-import PlannedVsActualPage from './modules/profitability/pages/PlannedVsActualPage';
-import ProfitForecastPage from './modules/profitability/pages/ProfitForecastPage';
-import ProjectRecognizedRevenuePage from './modules/profitability/pages/ProjectRecognizedRevenuePage';
-import ProjectMarginPage from './modules/profitability/pages/ProjectMarginPage';
-import MarginAlertThresholdPage from './modules/profitability/pages/MarginAlertThresholdPage';
-import NotificationCenterPage from './modules/notifications/pages/NotificationCenterPage';
+import { isPortalHash, portalFeatureOf } from './modules/portal/utils/portalRoute';
+import { NOTIFICATIONS_CHANGED_EVENT } from './modules/notifications/utils/notificationEvents';
 import NotificationList from './modules/notifications/components/NotificationList';
-import { getNotifications, getUnreadCount, markNotificationsRead } from './modules/notifications/api/notificationsApi';
+import {
+  getNotifications,
+  getUnreadCount,
+  markAllNotificationsRead,
+  markNotificationsRead,
+  NotificationsApiError,
+  openNotification,
+} from './modules/notifications/api/notificationsApi';
 import type { NotificationRes } from './modules/notifications/types/notificationTypes';
-import { getAllProjects } from './modules/projects/api/projectsApi';
+import { resolveNotificationDestination } from './modules/notifications/utils/notificationTarget';
+import { getAllProjects, getWorkBreakdown } from './modules/projects/api/projectsApi';
 import type { ProjectRes } from './modules/projects/types/projectTypes';
+import type { WorkBreakdownRes } from './modules/projects/types/taskTypes';
+import ProjectWbsModal from './modules/projects/components/ProjectWbsModal';
 import { ICONS } from './components/common/icons';
 import CommandPalette from './components/common/CommandPalette';
 import useScrollReveal from './hooks/useScrollReveal';
 import { roleLabels } from './utils/roleLabel';
 import { useSessionSync } from './hooks/useSessionSync';
+import { LAST_ACTIVITY_KEY, SESSION_IDLE_MINUTES, markActivity, useIdleLogout } from './hooks/useIdleLogout';
+import HubFrame from './layouts/components/HubFrame';
+import {
+  applyPreferences,
+  cachePreferences,
+  readCachedPreferences,
+  watchSystemTheme,
+  type UiPreferences,
+} from './utils/preferences';
+import { getPreferences, savePreferences } from './modules/settings/api/preferencesApi';
+import { SETTINGS_SECTION_LABELS, type SettingsSection } from './modules/settings/settingsSections';
+import type { SaveState } from './modules/settings/pages/SettingsPage';
+import Breadcrumb, { type Crumb } from './layouts/components/Breadcrumb';
 import {
   Tab,
   NavItem,
-  ALL_NAV_ITEMS,
-  canAccess,
+  REPORT_CHILD_LABELS,
+  accountLeavesFor,
   navGroupsFor,
   defaultTabFor,
+  entryTabOf,
+  findLeaf,
+  findNavItem,
+  groupOf,
   isTabVisible,
+  visibleTabsOf,
 } from './layouts/menuConfig';
+
+/**
+ * Moi man hinh la mot khoi ma rieng, tai khi can (React.lazy): trang dang nhap chi phai tai ma cua chinh
+ * no thay vi ca ~60 man hinh. Ngay sau khi dang nhap, 59 khoi nay duoc tai san luc trinh duyet ranh
+ * (preloadPages) nen chuyen menu van tuc thi, khong phai cho tai ma.
+ */
+const PAGE_LOADERS = {
+  UserListPage: () => import('./modules/users/pages/UserListPage'),
+  UserDetailPage: () => import('./modules/users/pages/UserDetailPage'),
+  RolePermissionPage: () => import('./modules/users/pages/RolePermissionPage'),
+  PortalAccountPage: () => import('./modules/portal/pages/PortalAccountPage'),
+  PortalAccessDeniedPage: () => import('./modules/portal/pages/PortalAccessDeniedPage'),
+  DepartmentTreePage: () => import('./modules/departments/pages/DepartmentTreePage'),
+  SensitiveAccessLogPage: () => import('./modules/auditLog/pages/SensitiveAccessLogPage'),
+  AuditLogPage: () => import('./modules/auditLog/pages/AuditLogPage'),
+  EmployeeListPage: () => import('./modules/employees/pages/EmployeeListPage'),
+  EmployeeDetailPage: () => import('./modules/employees/pages/EmployeeDetailPage'),
+  TwoFactorSetupPage: () => import('./modules/auth/pages/TwoFactorSetupPage'),
+  CustomerListPage: () => import('./modules/customers/pages/CustomerListPage'),
+  CustomerMergePage: () => import('./modules/customers/pages/CustomerMergePage'),
+  ContractListPage: () => import('./modules/contracts/pages/ContractListPage'),
+  ContractDetailPage: () => import('./modules/contracts/pages/ContractDetailPage'),
+  InvoicesPage: () => import('./modules/invoices/pages/InvoicesPage'),
+  InvoiceDetailPage: () => import('./modules/invoices/pages/InvoiceDetailPage'),
+  AcceptanceListPage: () => import('./modules/acceptance/pages/AcceptanceListPage'),
+  AcceptanceDetailPage: () => import('./modules/acceptance/pages/AcceptanceDetailPage'),
+  DeliverablePage: () => import('./modules/acceptance/pages/DeliverablePage'),
+  BillRatePage: () => import('./modules/rates/pages/BillRatePage'),
+  RateHistoryPage: () => import('./modules/rates/pages/RateHistoryPage'),
+  OpportunityDetailPage: () => import('./modules/opportunities/pages/OpportunityDetailPage'),
+  OpportunityListPage: () => import('./modules/opportunities/pages/OpportunityListPage'),
+  RevenueForecastPage: () => import('./modules/opportunities/pages/RevenueForecastPage'),
+  PipelineReportPage: () => import('./modules/reports/pages/PipelineReportPage'),
+  DashboardPage: () => import('./modules/reports/pages/DashboardPage'),
+  UtilizationReportPage: () => import('./modules/reports/pages/UtilizationReportPage'),
+  ProjectPerformanceReportPage: () => import('./modules/reports/pages/ProjectPerformanceReportPage'),
+  ReportExportPage: () => import('./modules/reports/pages/ReportExportPage'),
+  RevenueReportPage: () => import('./modules/reports/pages/RevenueReportPage'),
+  TimesheetReportPage: () => import('./modules/reports/pages/TimesheetReportPage'),
+  ReportCatalogPage: () => import('./modules/reports/pages/ReportCatalogPage'),
+  MyWorkPage: () => import('./modules/mytasks/pages/MyWorkPage'),
+  SettingsPage: () => import('./modules/settings/pages/SettingsPage'),
+  ProjectListPage: () => import('./modules/projects/pages/ProjectListPage'),
+  ProjectDetailPage: () => import('./modules/projects/pages/ProjectDetailPage'),
+  ProjectRiskPage: () => import('./modules/projects/pages/ProjectRiskPage'),
+  TimesheetApprovalPage: () => import('./modules/timesheets/pages/TimesheetApprovalPage'),
+  TimesheetAdjustmentPage: () => import('./modules/timesheets/pages/TimesheetAdjustmentPage'),
+  TimesheetPeriodPage: () => import('./modules/timesheets/pages/TimesheetPeriodPage'),
+  UnsubmittedTimesheetsPage: () => import('./modules/timesheets/pages/UnsubmittedTimesheetsPage'),
+  ExpenseApprovalPage: () => import('./modules/expenses/pages/ExpenseApprovalPage'),
+  OverheadAllocationPage: () => import('./modules/expenses/pages/OverheadAllocationPage'),
+  MarginByCustomerPage: () => import('./modules/profitability/pages/MarginByCustomerPage'),
+  MarginByEmployeePage: () => import('./modules/profitability/pages/MarginByEmployeePage'),
+  ProjectLaborCostPage: () => import('./modules/profitability/pages/ProjectLaborCostPage'),
+  PlannedVsActualPage: () => import('./modules/profitability/pages/PlannedVsActualPage'),
+  ProfitForecastPage: () => import('./modules/profitability/pages/ProfitForecastPage'),
+  ProjectRecognizedRevenuePage: () => import('./modules/profitability/pages/ProjectRecognizedRevenuePage'),
+  ProjectMarginPage: () => import('./modules/profitability/pages/ProjectMarginPage'),
+  MarginAlertThresholdPage: () => import('./modules/profitability/pages/MarginAlertThresholdPage'),
+  NotificationCenterPage: () => import('./modules/notifications/pages/NotificationCenterPage'),
+  NotificationDedupConfigPage: () => import('./modules/notifications/pages/NotificationDedupConfigPage'),
+  ServiceCatalogPage: () => import('./modules/admin/pages/ServiceCatalogPage'),
+  CompanySettingPage: () => import('./modules/admin/pages/CompanySettingPage'),
+  FiscalPeriodPage: () => import('./modules/admin/pages/FiscalPeriodPage'),
+  BackupRestorePage: () => import('./modules/admin/pages/BackupRestorePage'),
+  DataImportPage: () => import('./modules/admin/pages/DataImportPage'),
+  PortalApp: () => import('./modules/portal/PortalApp'),
+};
+
+function whenIdle(run: () => void) {
+  const idle = (window as Window & { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback;
+  if (idle) idle(run);
+  else window.setTimeout(run, 300);
+}
+
+/** Tai san moi man hinh luc trinh duyet ranh — goi mot lan sau khi dang nhap. */
+function preloadPages() {
+  whenIdle(() => Object.values(PAGE_LOADERS).forEach((load) => void load().catch(() => undefined)));
+}
+
+/**
+ * Trong luc nguoi dung go mat khau, tai san hai man hinh dich sau dang nhap (defaultTabFor: "To chuc"
+ * hoac "Viec cua toi") — bam Dang nhap xong la noi dung hien ngay, khong phai doi tai ma trang dau.
+ */
+function preloadLanding() {
+  whenIdle(() => [PAGE_LOADERS.MyWorkPage, PAGE_LOADERS.DepartmentTreePage].forEach((load) => void load().catch(() => undefined)));
+}
+
+const UserListPage = lazy(PAGE_LOADERS.UserListPage);
+const UserDetailPage = lazy(PAGE_LOADERS.UserDetailPage);
+const RolePermissionPage = lazy(PAGE_LOADERS.RolePermissionPage);
+const PortalAccountPage = lazy(PAGE_LOADERS.PortalAccountPage);
+const PortalAccessDeniedPage = lazy(PAGE_LOADERS.PortalAccessDeniedPage);
+const DepartmentTreePage = lazy(PAGE_LOADERS.DepartmentTreePage);
+const SensitiveAccessLogPage = lazy(PAGE_LOADERS.SensitiveAccessLogPage);
+const AuditLogPage = lazy(PAGE_LOADERS.AuditLogPage);
+const EmployeeListPage = lazy(PAGE_LOADERS.EmployeeListPage);
+const EmployeeDetailPage = lazy(PAGE_LOADERS.EmployeeDetailPage);
+const TwoFactorSetupPage = lazy(PAGE_LOADERS.TwoFactorSetupPage);
+const CustomerListPage = lazy(PAGE_LOADERS.CustomerListPage);
+const CustomerMergePage = lazy(PAGE_LOADERS.CustomerMergePage);
+const ContractListPage = lazy(PAGE_LOADERS.ContractListPage);
+const ContractDetailPage = lazy(PAGE_LOADERS.ContractDetailPage);
+const InvoicesPage = lazy(PAGE_LOADERS.InvoicesPage);
+const InvoiceDetailPage = lazy(PAGE_LOADERS.InvoiceDetailPage);
+const AcceptanceListPage = lazy(PAGE_LOADERS.AcceptanceListPage);
+const AcceptanceDetailPage = lazy(PAGE_LOADERS.AcceptanceDetailPage);
+const DeliverablePage = lazy(PAGE_LOADERS.DeliverablePage);
+const BillRatePage = lazy(PAGE_LOADERS.BillRatePage);
+const RateHistoryPage = lazy(PAGE_LOADERS.RateHistoryPage);
+const OpportunityDetailPage = lazy(PAGE_LOADERS.OpportunityDetailPage);
+const OpportunityListPage = lazy(PAGE_LOADERS.OpportunityListPage);
+const RevenueForecastPage = lazy(PAGE_LOADERS.RevenueForecastPage);
+const PipelineReportPage = lazy(PAGE_LOADERS.PipelineReportPage);
+const DashboardPage = lazy(PAGE_LOADERS.DashboardPage);
+const UtilizationReportPage = lazy(PAGE_LOADERS.UtilizationReportPage);
+const ProjectPerformanceReportPage = lazy(PAGE_LOADERS.ProjectPerformanceReportPage);
+const ReportExportPage = lazy(PAGE_LOADERS.ReportExportPage);
+const RevenueReportPage = lazy(PAGE_LOADERS.RevenueReportPage);
+const TimesheetReportPage = lazy(PAGE_LOADERS.TimesheetReportPage);
+const ReportCatalogPage = lazy(PAGE_LOADERS.ReportCatalogPage);
+const MyWorkPage = lazy(PAGE_LOADERS.MyWorkPage);
+const SettingsPage = lazy(PAGE_LOADERS.SettingsPage);
+const ProjectListPage = lazy(PAGE_LOADERS.ProjectListPage);
+const ProjectDetailPage = lazy(PAGE_LOADERS.ProjectDetailPage);
+const ProjectRiskPage = lazy(PAGE_LOADERS.ProjectRiskPage);
+const TimesheetApprovalPage = lazy(PAGE_LOADERS.TimesheetApprovalPage);
+const TimesheetAdjustmentPage = lazy(PAGE_LOADERS.TimesheetAdjustmentPage);
+const TimesheetPeriodPage = lazy(PAGE_LOADERS.TimesheetPeriodPage);
+const UnsubmittedTimesheetsPage = lazy(PAGE_LOADERS.UnsubmittedTimesheetsPage);
+const ExpenseApprovalPage = lazy(PAGE_LOADERS.ExpenseApprovalPage);
+const OverheadAllocationPage = lazy(PAGE_LOADERS.OverheadAllocationPage);
+const MarginByCustomerPage = lazy(PAGE_LOADERS.MarginByCustomerPage);
+const MarginByEmployeePage = lazy(PAGE_LOADERS.MarginByEmployeePage);
+const ProjectLaborCostPage = lazy(PAGE_LOADERS.ProjectLaborCostPage);
+const PlannedVsActualPage = lazy(PAGE_LOADERS.PlannedVsActualPage);
+const ProfitForecastPage = lazy(PAGE_LOADERS.ProfitForecastPage);
+const ProjectRecognizedRevenuePage = lazy(PAGE_LOADERS.ProjectRecognizedRevenuePage);
+const ProjectMarginPage = lazy(PAGE_LOADERS.ProjectMarginPage);
+const MarginAlertThresholdPage = lazy(PAGE_LOADERS.MarginAlertThresholdPage);
+const NotificationCenterPage = lazy(PAGE_LOADERS.NotificationCenterPage);
+const NotificationDedupConfigPage = lazy(PAGE_LOADERS.NotificationDedupConfigPage);
+const ServiceCatalogPage = lazy(PAGE_LOADERS.ServiceCatalogPage);
+const CompanySettingPage = lazy(PAGE_LOADERS.CompanySettingPage);
+const FiscalPeriodPage = lazy(PAGE_LOADERS.FiscalPeriodPage);
+const BackupRestorePage = lazy(PAGE_LOADERS.BackupRestorePage);
+const DataImportPage = lazy(PAGE_LOADERS.DataImportPage);
+const PortalApp = lazy(PAGE_LOADERS.PortalApp);
+
+/** Vai trò được backend cho liệt kê dự án (GET /projects). */
+const PROJECT_LIST_ROLES = ['VT-01', 'VT-02', 'VT-03', 'VT-05'];
+
+/** Các màn hình của "Lợi nhuận dự án" cùng xem MỘT dự án — chọn một lần ở đầu khu làm việc. */
+const PROJECT_SCOPED_TABS: Tab[] = [
+  'PROJECT_MARGIN',
+  'PROJECT_LABOR_COST',
+  'PROJECT_RECOGNIZED_REVENUE',
+  'PLANNED_VS_ACTUAL',
+  'PROFIT_FORECAST',
+];
+
+/** Tên màn hình con (chi tiết một bản ghi) trên đường dẫn của thanh tiêu đề. */
+const CHILD_LABELS: Partial<Record<Tab, string>> = {
+  ...REPORT_CHILD_LABELS,
+  CONTRACT_DETAIL: 'Chi tiết hợp đồng',
+  INVOICE_DETAIL: 'Chi tiết hóa đơn',
+  ACCEPTANCE_DETAIL: 'Chi tiết phiếu',
+  EMPLOYEE_DETAIL: 'Hồ sơ nhân sự',
+  DETAIL: 'Chi tiết tài khoản',
+  OPPORTUNITY_DETAIL: 'Hoạt động chăm sóc',
+};
+
+/** Màn hình tài khoản cũ (mở từ thông báo, bảng lệnh, liên kết) giờ là một mục của trang Cài đặt. */
+const SETTINGS_TAB_SECTION: Partial<Record<Tab, SettingsSection>> = {
+  CHANGE_PASSWORD: 'security',
+  NOTIFICATION_PREFERENCES: 'notifications',
+  MASKING_RULES: 'access',
+};
 
 function readStoredSession(): AuthSession | null {
   const raw = localStorage.getItem('session');
@@ -69,6 +237,12 @@ function readStoredSession(): AuthSession | null {
   } catch {
     return null;
   }
+}
+
+function wbsContainsTask(items: WorkBreakdownRes[], taskId: number): boolean {
+  return items.some(
+    (wp) => (wp.tasks ?? []).some((t) => t.id === taskId) || wbsContainsTask(wp.children ?? [], taskId)
+  );
 }
 
 function getInitials(fullName: string): string {
@@ -89,6 +263,11 @@ export default function App() {
   const [selectedContractId, setSelectedContractId] = useState<number | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
+  // MỘT "dự án đang chọn" dùng chung cho Dự án, Nghiệm thu và Lợi nhuận: chọn ở đâu thì các màn kia
+  // mở sẵn đúng dự án đó, không phải chọn lại (trước đây Nghiệm thu và Lợi nhuận giữ hai lựa chọn riêng).
+  const acceptanceProjectId = selectedProjectId;
+  const setAcceptanceProjectId = setSelectedProjectId;
+  const [selectedAcceptanceId, setSelectedAcceptanceId] = useState<number | null>(null);
 
   // Danh sách dự án dùng cho các ô chọn dạng dropdown ở màn hình Giá vốn/Biên lợi nhuận
   // (NCL-09) — nạp một lần từ GET /projects khi đăng nhập.
@@ -102,6 +281,20 @@ export default function App() {
    *  bán hàng" và tự mở đúng cơ hội đó lên để xử lý ngay (chuyển giai đoạn/
    *  chốt kết quả), thay vì chỉ biết mỗi con số ID không thao tác được gì. */
   const [focusOpportunityId, setFocusOpportunityId] = useState<number | null>(null);
+  /** Đường dẫn `#/portal/...` của cổng khách hàng — tài khoản nội bộ mở vào sẽ bị từ chối (NCL-13-CN-002-TC-04). */
+  const readPortalHash = () => (isPortalHash(window.location.hash) ? window.location.hash : '');
+  const [portalHashValue, setPortalHashValue] = useState<string>(readPortalHash);
+  const portalHashRequested = portalHashValue !== '';
+  useEffect(() => {
+    const onHash = () => setPortalHashValue(readPortalHash());
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  const leavePortalHash = () => {
+    if (!isPortalHash(window.location.hash)) return;
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    setPortalHashValue('');
+  };
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -109,14 +302,59 @@ export default function App() {
   const [notifications, setNotifications] = useState<NotificationRes[]>([]);
   const [notifLoading, setNotifLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notifOpeningId, setNotifOpeningId] = useState<number | null>(null);
   const notifRef = useRef<HTMLDivElement>(null);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(
-    () => localStorage.getItem('sidebarCollapsed') === '1'
+  // NCL-14-CN-001 TC-02: công việc/dự án được mở từ một thông báo — hiển thị cấu trúc công việc
+  // của dự án ngay trên màn hình hiện tại, tô sáng đúng công việc liên quan.
+  const [wbsFocus, setWbsFocus] = useState<{ project: ProjectRes | null; projectId: number; taskId: number | null } | null>(
+    null
   );
-
+  const [appToast, setAppToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const appToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function showAppToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
+    if (appToastTimer.current) clearTimeout(appToastTimer.current);
+    setAppToast({ message, type });
+    appToastTimer.current = setTimeout(() => setAppToast(null), 5000);
+  }
+  // Tùy chọn giao diện (Cài đặt › Giao diện). Áp ngay từ bản lưu trên máy (không nháy khi dùng giao diện
+  // tối), đồng bộ với máy chủ sau khi đăng nhập để đi theo tài khoản sang máy khác.
+  const [prefs, setPrefs] = useState<UiPreferences>(readCachedPreferences);
+  const prefsRef = useRef(prefs);
+  const [prefsSaveState, setPrefsSaveState] = useState<SaveState>('idle');
+  const prefsSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Người dùng đã đổi tùy chọn trong phiên này — bản trên máy chủ về muộn không được đè lên. */
+  const prefsDirtyRef = useRef(false);
   useEffect(() => {
-    localStorage.setItem('sidebarCollapsed', sidebarCollapsed ? '1' : '0');
-  }, [sidebarCollapsed]);
+    applyPreferences(prefs);
+    cachePreferences(prefs);
+    if (prefs.theme !== 'SYSTEM') return undefined;
+    // Chủ đề "Theo hệ thống": đổi theo ngay khi hệ điều hành chuyển Sáng/Tối.
+    return watchSystemTheme(() => applyPreferences(prefs));
+  }, [prefs]);
+  const updatePrefs = useCallback((patch: Partial<UiPreferences>) => {
+    const next = { ...prefsRef.current, ...patch };
+    prefsRef.current = next;
+    setPrefs(next);
+    if (!localStorage.getItem('token')) return;
+    prefsDirtyRef.current = true;
+    setPrefsSaveState('saving');
+    if (prefsSaveTimer.current) clearTimeout(prefsSaveTimer.current);
+    // Gộp các lần đổi liên tiếp (vd bấm qua lại Sáng/Tối) thành một lần lưu.
+    prefsSaveTimer.current = setTimeout(() => {
+      prefsSaveTimer.current = null;
+      savePreferences(next)
+        .then(() => setPrefsSaveState('saved'))
+        .catch(() => setPrefsSaveState('local'));
+    }, 450);
+  }, []);
+  const sidebarCollapsed = prefs.sidebarCollapsed;
+  const toggleSidebar = useCallback(
+    () => updatePrefs({ sidebarCollapsed: !prefsRef.current.sidebarCollapsed }),
+    [updatePrefs],
+  );
+  const [settingsSection, setSettingsSection] = useState<SettingsSection>('account');
+  /** Vừa đăng nhập: khi tùy chọn trên máy chủ về tới, mở "Màn hình mở đầu" người dùng đã chọn. */
+  const landingPendingRef = useRef(false);
 
   // Quet lai cac khoi "he lo khi cuon toi" moi lan doi trang.
   useScrollReveal(activeTab);
@@ -147,6 +385,9 @@ export default function App() {
     return () => document.removeEventListener('dragstart', preventTextDrag);
   }, []);
 
+  // Lý do phiên vừa kết thúc ngoài ý người dùng (hết hạn / không thao tác) — hiện trên màn đăng nhập.
+  const [loginNotice, setLoginNotice] = useState<string | null>(null);
+
   function persistSession(next: AuthSession) {
     localStorage.setItem('token', next.accessToken);
     localStorage.setItem('session', JSON.stringify(next));
@@ -154,23 +395,105 @@ export default function App() {
   }
 
   function handleAuthenticated(newSession: AuthSession) {
+    markActivity();
+    setLoginNotice(null);
+    const landing = prefsRef.current.landingTab as Tab | null;
+    setActiveTab(landing && isTabVisible(landing, newSession.roles) ? landing : defaultTabFor(newSession.roles));
+    landingPendingRef.current = true;
     persistSession(newSession);
   }
 
   function handleLogout() {
+    // Còn một lần lưu tùy chọn đang chờ gộp: gửi ngay khi token vẫn còn, kẻo mất thay đổi cuối.
+    if (prefsSaveTimer.current) {
+      clearTimeout(prefsSaveTimer.current);
+      prefsSaveTimer.current = null;
+      savePreferences(prefsRef.current).catch(() => undefined);
+    }
+    setPrefsSaveState('idle');
     localStorage.removeItem('token');
     localStorage.removeItem('session');
+    localStorage.removeItem(LAST_ACTIVITY_KEY);
     setSession(null);
+  }
+
+  function handleSessionExpired(reason: string) {
+    handleLogout();
+    setLoginNotice(reason);
   }
 
   // NCL-01-CN-004 TC-03: admin đổi vai trò ở tab/máy khác → phiên này áp dụng ngay
   // (làm mới khi focus lại + poll 30s), không bắt đăng nhập lại; 401 thì đăng xuất.
-  useSessionSync({ session, onRefresh: persistSession, onExpired: handleLogout });
+  useSessionSync({
+    session,
+    onRefresh: persistSession,
+    onExpired: () => handleSessionExpired('Phiên đăng nhập đã hết hiệu lực. Vui lòng đăng nhập lại.'),
+  });
+
+  // NCL-01-CN-001 TC-03: để quá lâu không thao tác thì bắt đăng nhập lại.
+  useIdleLogout({
+    enabled: session !== null,
+    onIdle: () =>
+      handleSessionExpired(
+        `Phiên làm việc đã kết thúc do không thao tác trong ${SESSION_IDLE_MINUTES} phút. Vui lòng đăng nhập lại.`,
+      ),
+  });
+
+  // Tùy chọn giao diện trên máy chủ (đi theo tài khoản) — nạp khi đăng nhập / đổi tài khoản.
+  const sessionUserId = session?.userId;
+  useEffect(() => {
+    if (!sessionUserId) return undefined;
+    let cancelled = false;
+    prefsDirtyRef.current = false;
+    getPreferences()
+      .then((server) => {
+        if (cancelled) return;
+        if (!prefsDirtyRef.current) {
+          prefsRef.current = server;
+          setPrefs(server);
+        }
+        if (landingPendingRef.current) {
+          landingPendingRef.current = false;
+          const landing = server.landingTab as Tab | null;
+          const roles = readStoredSession()?.roles ?? [];
+          if (landing && isTabVisible(landing, roles)) setActiveTab(landing);
+        }
+      })
+      // Máy chủ chưa có /me/preferences hoặc mất mạng: dùng tiếp bản lưu trên máy.
+      .catch(() => {
+        landingPendingRef.current = false;
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionUserId]);
+
+  // Phím tắt toàn cục: Ctrl/⌘+B thu gọn thanh bên, "?" mở Trợ giúp & phím tắt. Không bắt khi đang gõ.
+  useEffect(() => {
+    if (!sessionUserId) return undefined;
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      const typing = !!el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
+      if (typing || e.altKey) return;
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        toggleSidebar();
+      } else if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setSettingsSection('help');
+        setActiveTab('MY_SETTINGS');
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [sessionUserId, toggleSidebar]);
 
   // Nạp danh sách dự án cho các ô chọn dropdown (Giá vốn/Biên lợi nhuận) ngay khi đăng nhập —
   // trước đây các trang này dùng tạm mảng dữ liệu mẫu cố định nên không bao giờ thấy dự án thật.
   useEffect(() => {
-    if (!session) return;
+    // Chỉ vai trò được GET /projects mới nạp (VT-01/02/03/05) — vai trò khác (kinh doanh, nhân sự,
+    // quản trị, cổng khách hàng) gọi sẽ bị 403 và làm nhiễu nhật ký từ chối truy cập.
+    if (!session || !session.roles.some((r) => PROJECT_LIST_ROLES.includes(r))) return;
     let cancelled = false;
     void (async () => {
       try {
@@ -203,9 +526,13 @@ export default function App() {
     };
     void fetchUnread();
     const interval = setInterval(fetchUnread, 30000);
+    // NCL-14-CN-003: thao tác sinh thông báo tức thì (vd duyệt bảng chấm công) báo qua sự kiện này.
+    const onChanged = () => void fetchUnread();
+    window.addEventListener(NOTIFICATIONS_CHANGED_EVENT, onChanged);
     return () => {
       cancelled = true;
       clearInterval(interval);
+      window.removeEventListener(NOTIFICATIONS_CHANGED_EVENT, onChanged);
     };
   }, [session]);
 
@@ -240,6 +567,104 @@ export default function App() {
     }
   }
 
+  async function refreshUnreadCount() {
+    try {
+      setUnreadCount(await getUnreadCount());
+    } catch {
+      // Bỏ qua — lần poll 30s kế tiếp sẽ tự đồng bộ lại.
+    }
+  }
+
+  /** Tìm dự án chứa công việc — thông báo chỉ mang id công việc (TASK_BUDGET_EXCEEDED, TIMER_AUTO_STOPPED). */
+  async function findProjectOfTask(taskId: number): Promise<ProjectRes | null> {
+    const projects = allProjects.length > 0 ? allProjects : await getAllProjects().catch(() => [] as ProjectRes[]);
+    const results = await Promise.allSettled(
+      projects.map(async (p) => (wbsContainsTask(await getWorkBreakdown(p.id), taskId) ? p : null))
+    );
+    for (const r of results) {
+      if (r.status === 'fulfilled' && r.value) return r.value;
+    }
+    return null;
+  }
+
+  /**
+   * NCL-14-CN-001 TC-02: sau khi mở một thông báo, chuyển thẳng tới bản ghi liên quan. Màn hình
+   * đích vẫn tự kiểm tra quyền qua API của chính nó; ở đây chỉ chặn sớm màn hình người dùng không thấy.
+   */
+  async function navigateToNotification(opened: NotificationRes) {
+    const dest = resolveNotificationDestination(opened);
+    const roles = session?.roles ?? [];
+    if (dest.kind === 'NONE') {
+      showAppToast('Đã đánh dấu đã đọc. Thông báo này không gắn với bản ghi cụ thể nào.', 'info');
+      return;
+    }
+    if (dest.kind === 'TAB') {
+      if (!isTabVisible(dest.tab, roles)) {
+        showAppToast(`Bạn không có quyền mở màn hình "${dest.label}" liên quan tới thông báo này.`, 'error');
+        return;
+      }
+      if (dest.recordId != null) {
+        if (dest.tab === 'INVOICE_DETAIL') setSelectedInvoiceId(dest.recordId);
+        if (dest.tab === 'ACCEPTANCE_DETAIL') setSelectedAcceptanceId(dest.recordId);
+        if (dest.tab === 'CONTRACT_DETAIL') setSelectedContractId(dest.recordId);
+        if (dest.tab === 'PROJECT_MARGIN') setSelectedProjectId(dest.recordId);
+      }
+      leavePortalHash();
+      setActiveTab(dest.tab);
+      return;
+    }
+    if (dest.kind === 'PROJECT_WBS') {
+      const project = allProjects.find((p) => p.id === dest.projectId) ?? null;
+      setWbsFocus({ project, projectId: dest.projectId, taskId: null });
+      return;
+    }
+    showAppToast('Đang tìm công việc liên quan…', 'info');
+    const project = await findProjectOfTask(dest.taskId);
+    if (!project) {
+      showAppToast(
+        `Không tìm thấy công việc #${dest.taskId} — có thể công việc đã bị xóa hoặc bạn không còn quyền xem dự án chứa nó.`,
+        'error'
+      );
+      return;
+    }
+    setAppToast(null);
+    setWbsFocus({ project, projectId: project.id, taskId: dest.taskId });
+  }
+
+  /** Bấm một thông báo trong ô chuông: mở (đánh dấu đã đọc + ghi nhật ký) rồi điều hướng. */
+  async function handleOpenNotificationFromBell(notification: NotificationRes) {
+    if (notifOpeningId != null) return;
+    setNotifOpeningId(notification.id);
+    try {
+      const opened = await openNotification(notification.id);
+      setNotifications((prev) => prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n)));
+      void refreshUnreadCount();
+      setNotifOpen(false);
+      void navigateToNotification(opened);
+    } catch (err) {
+      showAppToast(
+        err instanceof NotificationsApiError && err.statusCode === 404
+          ? 'Thông báo không còn tồn tại hoặc không thuộc về bạn.'
+          : err instanceof Error
+            ? err.message
+            : 'Không thể mở thông báo.',
+        'error'
+      );
+    } finally {
+      setNotifOpeningId(null);
+    }
+  }
+
+  async function handleMarkAllFromBell() {
+    try {
+      await markAllNotificationsRead();
+      setNotifications((prev) => (notifTab === 'UNREAD' ? [] : prev.map((n) => ({ ...n, isRead: true }))));
+      setUnreadCount(0);
+    } catch (err) {
+      showAppToast(err instanceof Error ? err.message : 'Không thể đánh dấu tất cả đã đọc.', 'error');
+    }
+  }
+
   // Quyền truy cập luôn theo vai trò thật của tài khoản đang đăng nhập (trả về từ backend lúc dang nhap),
   // khong dung bat ky co che gia lap nao o phia giao dien.
   // Dùng mảng rỗng khi chưa đăng nhập (không được `return` sớm ở đây) — các hook
@@ -249,7 +674,9 @@ export default function App() {
   // giữa hai lần render liên tiếp, khiến React ném lỗi "Rendered more hooks than
   // during the previous render" và toàn bộ ứng dụng trắng trang — chỉ tải lại
   // trang (mount mới) mới hết vì lúc đó không còn xảy ra chuyển trạng thái nữa.
-  const currentRoles = session?.roles ?? [];
+  const sessionRoles = session?.roles;
+  const currentRoles = useMemo(() => sessionRoles ?? [], [sessionRoles]);
+  const isPortalUser = currentRoles.includes('VT-09');
 
   // Vai trò mới (đăng nhập / làm mới qua useSessionSync) → tab mở rộng mỗi lần
   // đổi trang. useSessionSync làm mới khi focus lại + poll 30s; 401 thì đăng xuất.
@@ -265,42 +692,137 @@ export default function App() {
   // Sidebar + bảng lệnh chỉ liệt kê chức năng người dùng thực sự thấy được
   // (có quyền, hoặc ở chế độ chỉ xem). Các mục bị khóa hoàn toàn không hiện ra.
   const navGroups = useMemo(() => navGroupsFor(currentRoles), [currentRoles]);
+  // Màn hình tài khoản có phân quyền (vd "Quyền xem dữ liệu") — mở từ menu tài khoản và bảng lệnh.
+  const accountLeaves = useMemo(() => accountLeavesFor(currentRoles), [currentRoles]);
+  // Chi tiết dự án + WBS: backend chỉ mở cho Ban giám đốc, Quản lý dự án, Nhân viên (NCL-05-CN-002).
+  const canOpenProjectDetail = currentRoles.some((r) => r === 'VT-01' || r === 'VT-02' || r === 'VT-03');
 
-  if (!session) return <LoginPage onAuthenticated={handleAuthenticated} />;
+  // Vua dang nhap xong: tai san ma moi man hinh luc trinh duyet ranh, de lan dau bam menu nao cung tuc thi.
+  // Con o trang dang nhap: chi tai san man hinh dich dau tien.
+  const signedIn = Boolean(session);
+  useEffect(() => {
+    if (signedIn) preloadPages();
+    else preloadLanding();
+  }, [signedIn]);
 
-  const activeNavItem =
-    ALL_NAV_ITEMS.find((item) => item.tab === activeTab) ??
-    ALL_NAV_ITEMS.find((item) => (item.matches ?? []).includes(activeTab));
+  if (!session) return <LoginPage onAuthenticated={handleAuthenticated} notice={loginNotice} />;
+
+  // Epic NCL-13: tài khoản Khách hàng (VT-09) dùng giao diện cổng riêng — không vào giao diện nội bộ (QTN-26).
+  if (isPortalUser) {
+    return (
+      <Suspense fallback={null}>
+        <PortalApp session={session} onLogout={handleLogout} />
+      </Suspense>
+    );
+  }
+
+  const activeNavItem = findNavItem(activeTab);
+  const activeLeaf = findLeaf(activeTab);
+  const hubTabs = activeNavItem?.tabs ? visibleTabsOf(activeNavItem, currentRoles) : [];
+  // Chỉ bọc khu làm việc khi đang ở chính một tab của nó (không phải màn hình chi tiết) và có từ hai tab.
+  const inHub = hubTabs.length > 1 && hubTabs.some((leaf) => leaf.tab === activeTab);
+
+  function goTo(tab: Tab) {
+    leavePortalHash();
+    setActiveTab(tab);
+  }
+
+  function openSettings(section: SettingsSection) {
+    leavePortalHash();
+    setSettingsSection(section);
+    setActiveTab('MY_SETTINGS');
+    setUserMenuOpen(false);
+  }
+
+  const inSettings = activeTab === 'MY_SETTINGS' || Boolean(SETTINGS_TAB_SECTION[activeTab]);
+  const currentSettingsSection = SETTINGS_TAB_SECTION[activeTab] ?? settingsSection;
 
   const renderNavGroup = (items: NavItem[]) =>
     items.map((item) => {
-      const isActive = activeTab === item.tab || (item.matches ?? []).includes(activeTab);
-      // `items` ở đây luôn là mục đã lọc theo vai trò (qua navGroupsFor), nên không
-      // còn mục bị khóa hoàn toàn. Chỉ mục "chỉ xem" (viewOnlyHint) vẫn hiện — người
-      // dùng vẫn xem được đường ống bán hàng; mục chặn hẳn đã ẩn ở navGroupsFor.
-      const isViewOnlyForUser = !canAccess(item, currentRoles) && Boolean(item.viewOnlyHint);
-      const title = isViewOnlyForUser ? item.viewOnlyHint : sidebarCollapsed ? item.label : undefined;
+      const isActive = activeNavItem?.id === item.id;
       return (
         <button
-          key={item.tab}
+          key={item.id}
           type="button"
           className={`side-nav__item ${isActive ? 'side-nav__item--active' : ''}`}
-          title={title}
-          onClick={() => setActiveTab(item.tab)}
+          title={sidebarCollapsed ? item.label : undefined}
+          onClick={() => goTo(entryTabOf(item, currentRoles))}
           aria-current={isActive ? 'page' : undefined}
+          data-testid={`nav-${item.id}`}
         >
           <span className="side-nav__item__icon" aria-hidden="true">
             {item.icon}
           </span>
           {!sidebarCollapsed && <span className="side-nav__item__label">{item.label}</span>}
-          {!sidebarCollapsed && isViewOnlyForUser && (
-            <span className="side-nav__item__view-only" aria-label="Chế độ chỉ xem">
-              Chỉ xem
-            </span>
-          )}
         </button>
       );
     });
+
+  /** Đường dẫn trên thanh tiêu đề: nhóm › mục › màn hình con. Mắt xích cha bấm được để quay về. */
+  function breadcrumbFor(): Crumb[] {
+    if (portalHashRequested) return [{ label: 'Cổng khách hàng' }];
+    if (activeTab === 'NOTIFICATIONS') return [{ label: 'Thông báo' }];
+    if (activeTab === 'MY_SETTINGS' || SETTINGS_TAB_SECTION[activeTab]) {
+      const section = SETTINGS_TAB_SECTION[activeTab] ?? settingsSection;
+      return [{ label: 'Cài đặt', onClick: () => openSettings('account') }, { label: SETTINGS_SECTION_LABELS[section] }];
+    }
+    if (activeTab === 'PROJECT_DETAIL' || activeTab === 'PROJECT_RISKS') {
+      const projectName = allProjects.find((p) => p.id === selectedProjectId)?.name ?? 'Chi tiết dự án';
+      const crumbs: Crumb[] = [{ label: 'Dự án', onClick: () => goTo('PROJECTS') }];
+      if (activeTab === 'PROJECT_RISKS') {
+        crumbs.push({ label: projectName, onClick: () => goTo('PROJECT_DETAIL') }, { label: 'Rủi ro' });
+      } else {
+        crumbs.push({ label: projectName });
+      }
+      return crumbs;
+    }
+    if (!activeNavItem) return [{ label: 'Vận hành dịch vụ' }];
+    const crumbs: Crumb[] = [];
+    const group = groupOf(activeNavItem);
+    if (group?.label) crumbs.push({ label: group.label });
+    const childLabel = activeLeaf && activeLeaf.tab !== activeTab ? CHILD_LABELS[activeTab] : undefined;
+    crumbs.push({
+      label: activeNavItem.label,
+      onClick: childLabel && activeLeaf ? () => goTo(activeLeaf.tab) : undefined,
+    });
+    if (childLabel) crumbs.push({ label: childLabel });
+    return crumbs;
+  }
+
+  /** Ô chọn dự án dùng chung cho các tab của "Lợi nhuận dự án" — đổi tab vẫn giữ dự án đang xem. */
+  const projectPicker = (
+    <label className="hub-picker">
+      <span className="hub-picker__label">Dự án</span>
+      <select
+        className="form-select"
+        value={selectedProjectId ?? ''}
+        onChange={(e) => setSelectedProjectId(e.target.value ? Number(e.target.value) : null)}
+        data-testid="project-selector-dropdown"
+      >
+        <option value="">Chọn dự án…</option>
+        {allProjects.map((proj) => (
+          <option key={proj.id} value={proj.id}>
+            {proj.projectCode} — {proj.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+
+  function wrapInHub(content: ReactNode) {
+    if (!inHub || !activeNavItem || portalHashRequested) return content;
+    return (
+      <HubFrame
+        title={activeNavItem.label}
+        tabs={hubTabs}
+        activeTab={activeTab}
+        onSelect={goTo}
+        toolbar={PROJECT_SCOPED_TABS.includes(activeTab) ? projectPicker : undefined}
+      >
+        {content}
+      </HubFrame>
+    );
+  }
 
   return (
     <div className="app-frame">
@@ -311,12 +833,30 @@ export default function App() {
       <CommandPalette
         items={[
           ...navGroups.flatMap((group) =>
-            group.items.map((i) => ({ id: i.tab, label: i.label, group: group.paletteLabel, icon: i.icon })),
+            group.items.flatMap((i) =>
+              i.tabs && i.tabs.length > 1
+                ? i.tabs.map((leaf) => ({ id: leaf.tab, label: leaf.label, group: i.label, icon: i.icon }))
+                : [{ id: entryTabOf(i, currentRoles), label: i.label, group: group.paletteLabel, icon: i.icon }],
+            ),
           ),
-          { id: 'CHANGE_PASSWORD', label: 'Đổi mật khẩu', group: 'Tài khoản của tôi', icon: ICONS.key },
           { id: 'NOTIFICATIONS', label: 'Thông báo', group: 'Tài khoản của tôi', icon: ICONS.bell },
+          { id: 'SETTINGS:account', label: 'Cài đặt tài khoản', group: 'Cài đặt', icon: ICONS.settings },
+          { id: 'SETTINGS:appearance', label: 'Giao diện — sáng/tối, mật độ', group: 'Cài đặt', icon: ICONS.sun },
+          { id: 'SETTINGS:notifications', label: 'Cài đặt nhận thông báo', group: 'Cài đặt', icon: ICONS.bell },
+          { id: 'SETTINGS:security', label: 'Đổi mật khẩu', group: 'Cài đặt', icon: ICONS.key },
+          ...(accountLeaves.length > 0
+            ? [{ id: 'SETTINGS:access', label: 'Quyền xem dữ liệu', group: 'Cài đặt', icon: ICONS.shield }]
+            : []),
+          { id: 'SETTINGS:help', label: 'Trợ giúp & phím tắt', group: 'Cài đặt', icon: ICONS.helpCircle },
         ]}
-        onSelect={(id) => setActiveTab(id as Tab)}
+        onSelect={(id) => {
+          leavePortalHash();
+          if (id.startsWith('SETTINGS:')) {
+            openSettings(id.slice('SETTINGS:'.length) as SettingsSection);
+            return;
+          }
+          setActiveTab(id as Tab);
+        }}
       />
 
       <div className="app-shell">
@@ -337,31 +877,127 @@ export default function App() {
             <button
               type="button"
               className="side-nav__toggle"
-              onClick={() => setSidebarCollapsed((v) => !v)}
-              title={sidebarCollapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
+              onClick={toggleSidebar}
+              title={`${sidebarCollapsed ? 'Mở rộng' : 'Thu gọn'} thanh bên (Ctrl B)`}
               aria-label={sidebarCollapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
             >
               {ICONS.panelToggle}
             </button>
           </div>
 
-          <nav className="side-nav__list" aria-label="Điều hưừng chính">
-            {navGroups.map((group) => (
+          {/* Các nhóm ngăn bằng đường kẻ mảnh, không nhãn chữ (tên nhóm vẫn có trong bảng lệnh Ctrl K). */}
+          <nav className="side-nav__list" aria-label="Điều hướng chính">
+            {navGroups.map((group, index) => (
               <Fragment key={group.id}>
-                {group.label !== null && (
-                  <div className="side-nav__group-label">{!sidebarCollapsed ? group.label : ''}</div>
-                )}
-                {renderNavGroup(group.items)}
+                {index > 0 && <div className="side-nav__divider" aria-hidden="true" />}
+                <div className="side-nav__group" role="group" aria-label={group.paletteLabel}>
+                  {renderNavGroup(group.items)}
+                </div>
               </Fragment>
             ))}
           </nav>
+
+          {/* Chân thanh bên: tùy chọn cá nhân, trợ giúp, tài khoản — như ảnh mẫu. Sáng/Tối nằm trong Cài đặt › Giao diện. */}
+          <div className="side-nav__footer">
+            <button
+              type="button"
+              className={`side-nav__item ${inSettings && currentSettingsSection !== 'help' ? 'side-nav__item--active' : ''}`}
+              title={sidebarCollapsed ? 'Cài đặt' : undefined}
+              onClick={() => openSettings(inSettings && currentSettingsSection !== 'help' ? currentSettingsSection : 'account')}
+              aria-current={inSettings && currentSettingsSection !== 'help' ? 'page' : undefined}
+              data-testid="nav-my-settings"
+            >
+              <span className="side-nav__item__icon" aria-hidden="true">{ICONS.settings}</span>
+              {!sidebarCollapsed && <span className="side-nav__item__label">Cài đặt</span>}
+            </button>
+            <button
+              type="button"
+              className={`side-nav__item ${inSettings && currentSettingsSection === 'help' ? 'side-nav__item--active' : ''}`}
+              title={sidebarCollapsed ? 'Trợ giúp' : undefined}
+              onClick={() => openSettings('help')}
+              aria-current={inSettings && currentSettingsSection === 'help' ? 'page' : undefined}
+              data-testid="nav-help"
+            >
+              <span className="side-nav__item__icon" aria-hidden="true">{ICONS.helpCircle}</span>
+              {!sidebarCollapsed && <span className="side-nav__item__label">Trợ giúp</span>}
+            </button>
+
+            <div className="side-nav__divider" aria-hidden="true" />
+
+            <div className="side-nav__account" ref={userMenuRef}>
+              <button
+                type="button"
+                className={`side-nav__account-trigger ${userMenuOpen ? 'side-nav__account-trigger--open' : ''}`}
+                onClick={() => setUserMenuOpen((open) => !open)}
+                aria-haspopup="menu"
+                aria-expanded={userMenuOpen}
+                aria-label={`Tài khoản: ${session.fullName}`}
+                title={sidebarCollapsed ? session.fullName : undefined}
+                data-testid="account-menu-trigger"
+              >
+                <span className="avatar-circle">{getInitials(session.fullName)}</span>
+                {!sidebarCollapsed && (
+                  <>
+                    <span className="side-nav__account-text">
+                      <strong>{session.fullName}</strong>
+                      <span>{roleLabels(currentRoles)}</span>
+                    </span>
+                    <span className="side-nav__account-more" aria-hidden="true">{ICONS.moreHorizontal}</span>
+                  </>
+                )}
+              </button>
+
+              {userMenuOpen && (
+                <div className="user-chip__menu side-nav__account-menu" role="menu">
+                  <div className="user-chip__menu-header">
+                    <strong>{session.fullName}</strong>
+                    <span>@{session.username}</span>
+                  </div>
+                  <button type="button" className="user-chip__menu-item" role="menuitem" onClick={() => openSettings('account')}>
+                    {ICONS.settings} Cài đặt
+                  </button>
+                  <button
+                    type="button"
+                    className="user-chip__menu-item"
+                    role="menuitem"
+                    onClick={() => openSettings('security')}
+                  >
+                    {ICONS.key} Đổi mật khẩu
+                  </button>
+                  {accountLeaves.length > 0 && (
+                    <button
+                      type="button"
+                      className="user-chip__menu-item"
+                      role="menuitem"
+                      onClick={() => openSettings('access')}
+                      data-testid="menu-masking_rules"
+                    >
+                      {ICONS.shield} Quyền xem dữ liệu
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="user-chip__menu-item user-chip__menu-item--danger"
+                    role="menuitem"
+                    onClick={handleLogout}
+                  >
+                    {ICONS.logout} Đăng xuất
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </aside>
 
         <div className="app-main">
         <div className="app-topbar-glow" aria-hidden="true" />
         <header className="app-topbar">
           <div className="app-topbar__brand">
-            <h1 className="app-topbar__title">{activeNavItem?.label ?? 'Vận hành dịch vụ'}</h1>
+            {/* Một mắt xích duy nhất sẽ trùng y tiêu đề trang ngay bên dưới — chỉ hiện khi có đường dẫn thật. */}
+            {(() => {
+              const crumbs = breadcrumbFor();
+              return crumbs.length > 1 ? <Breadcrumb crumbs={crumbs} /> : null;
+            })()}
           </div>
 
           <div className="app-topbar__actions">
@@ -377,8 +1013,16 @@ export default function App() {
               <span>Tìm nhanh</span>
               <kbd className="cmdk__kbd">Ctrl K</kbd>
             </button>
-            <button type="button" className="icon-btn" title="Trợ giúp" aria-label="Trợ giúp">
-              {ICONS.helpCircle}
+            {/* Trên điện thoại gợi ý phím tắt bị ẩn (không có bàn phím) — vẫn cần một lối vào
+                bảng lệnh để nhảy thẳng tới màn hình, nên hiện thành nút icon. */}
+            <button
+              type="button"
+              className="icon-btn cmdk-mobile"
+              aria-label="Tìm nhanh"
+              title="Tìm nhanh"
+              onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+            >
+              {ICONS.search}
             </button>
             <div className="notif" ref={notifRef}>
               <button
@@ -418,6 +1062,15 @@ export default function App() {
                       Chưa đọc
                     </button>
                     <span className="notif-panel__tabs-spacer" />
+                    <button
+                      type="button"
+                      className="notif-panel__mark-all"
+                      onClick={handleMarkAllFromBell}
+                      disabled={unreadCount === 0}
+                      data-testid="notif-panel-mark-all"
+                    >
+                      Đánh dấu tất cả đã đọc
+                    </button>
                   </div>
 
                   {notifLoading ? (
@@ -425,13 +1078,19 @@ export default function App() {
                       <p>Đang tải…</p>
                     </div>
                   ) : (
-                    <NotificationList notifications={notifications} onMarkRead={handleMarkNotificationRead} />
+                    <NotificationList
+                      notifications={notifications}
+                      onOpen={handleOpenNotificationFromBell}
+                      onMarkRead={handleMarkNotificationRead}
+                      openingId={notifOpeningId}
+                      emptyText={notifTab === 'UNREAD' ? 'Bạn đã đọc hết thông báo' : 'Chưa có thông báo nào'}
+                    />
                   )}
 
                   <button
                     type="button"
                     className="btn-link"
-                    style={{ width: '100%', textAlign: 'center', padding: '12px', borderTop: '1px solid #F1F0EE' }}
+                    style={{ width: '100%', textAlign: 'center', padding: '12px', borderTop: '1px solid var(--hairline)' }}
                     onClick={() => {
                       setNotifOpen(false);
                       setActiveTab('NOTIFICATIONS');
@@ -442,72 +1101,117 @@ export default function App() {
                 </div>
               )}
             </div>
-
-            <div className="user-chip" ref={userMenuRef}>
-              <button
-                type="button"
-                className={`user-chip__trigger ${userMenuOpen ? 'user-chip__trigger--open' : ''}`}
-                onClick={() => setUserMenuOpen((open) => !open)}
-                aria-haspopup="menu"
-                aria-expanded={userMenuOpen}
-              >
-                <span className="avatar-circle">{getInitials(session.fullName)}</span>
-                <span className="user-chip__name">{session.fullName}</span>
-                <span className="user-chip__chevron">{ICONS.chevronDown}</span>
-              </button>
-
-              {userMenuOpen && (
-                <div className="user-chip__menu" role="menu">
-                  <div className="user-chip__menu-header">
-                    <strong>{session.fullName}</strong>
-                    <span>@{session.username}</span>
-                    <div className="user-chip__role-badge">
-                      <span className="user-chip__role-dot" />
-                      <span>{roleLabels(currentRoles)}</span>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className="user-chip__menu-item"
-                    role="menuitem"
-                    onClick={() => {
-                      setActiveTab('CHANGE_PASSWORD');
-                      setUserMenuOpen(false);
-                    }}
-                  >
-                    {ICONS.key} Đổi mật khẩu
-                  </button>
-                  <button
-                    type="button"
-                    className="user-chip__menu-item user-chip__menu-item--danger"
-                    role="menuitem"
-                    onClick={handleLogout}
-                  >
-                    {ICONS.logout} Đăng xuất
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
         </header>
 
         {/* key doi theo tab: React thay toan bo cay con, nen hieu ung xo theo tang
             chay lai o MOI lan chuyen trang chu khong chi lan tai dau tien. */}
         <main className="app-content" id="noi-dung-chinh" tabIndex={-1} key={activeTab}>
-          {activeTab === 'CHANGE_PASSWORD' ? (
-            <ChangePasswordPage onBack={() => setActiveTab(defaultTab)} onPasswordChanged={handleLogout} />
+          {/* Man hinh chua tai xong ma (hiem — da tai san luc ranh): giu khung trong, khong nhay con quay. */}
+          <Suspense fallback={<div className="page-loading" aria-busy="true" />}>
+          {wrapInHub(portalHashRequested ? (
+            // NCL-13-CN-002-TC-04: tài khoản nội bộ mở đường dẫn cổng khách hàng → từ chối + backend ghi nhật ký.
+            <PortalAccessDeniedPage
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+              feature={portalFeatureOf(portalHashValue)}
+              onLeave={leavePortalHash}
+            />
+          ) : inSettings ? (
+            <SettingsPage
+              section={currentSettingsSection}
+              onSectionChange={openSettings}
+              fullName={session.fullName}
+              username={session.username}
+              roles={currentRoles}
+              prefs={prefs}
+              onChangePrefs={updatePrefs}
+              saveState={prefsSaveState}
+              landingOptions={navGroups.flatMap((g) =>
+                g.items.map((item) => ({ tab: entryTabOf(item, currentRoles), label: item.label })),
+              )}
+              showAccess={accountLeaves.length > 0}
+              idleMinutes={SESSION_IDLE_MINUTES}
+              onLogout={handleLogout}
+              onPasswordChanged={handleLogout}
+            />
           ) : activeTab === 'NOTIFICATIONS' ? (
-            <NotificationCenterPage />
+            <NotificationCenterPage
+              onNavigate={navigateToNotification}
+              onUnreadCountChange={setUnreadCount}
+              onOpenPreferences={() => setActiveTab('NOTIFICATION_PREFERENCES')}
+            />
+          ) : activeTab === 'BACKUP_RESTORE' ? (
+            <BackupRestorePage currentUserRoles={currentRoles} onViewAuditLog={() => setActiveTab('SYSTEM_AUDIT_LOG')} />
+          ) : activeTab === 'DATA_IMPORT' ? (
+            <DataImportPage currentUserRoles={currentRoles} onViewAuditLog={() => setActiveTab('SYSTEM_AUDIT_LOG')} />
+          ) : activeTab === 'COMPANY_SETTINGS' ? (
+            <CompanySettingPage
+              currentUserRoles={currentRoles}
+              onViewAuditLog={() => setActiveTab('SYSTEM_AUDIT_LOG')}
+              onViewFiscalPeriods={() => setActiveTab('FISCAL_PERIODS')}
+            />
+          ) : activeTab === 'FISCAL_PERIODS' ? (
+            <FiscalPeriodPage
+              currentUserRoles={currentRoles}
+              onOpenCompanySettings={currentRoles.includes('VT-07') ? () => setActiveTab('COMPANY_SETTINGS') : undefined}
+            />
+          ) : activeTab === 'SERVICE_CATALOG' ? (
+            <ServiceCatalogPage currentUserRoles={currentRoles} onViewAuditLog={() => setActiveTab('SYSTEM_AUDIT_LOG')} />
+          ) : activeTab === 'NOTIFICATION_DEDUP' ? (
+            <NotificationDedupConfigPage
+              currentUserRoles={currentRoles}
+              onViewAuditLog={() => setActiveTab('SYSTEM_AUDIT_LOG')}
+            />
           ) : activeTab === 'MY_WORK' ? (
             <MyWorkPage currentUserRoles={currentRoles} currentUserName={session.fullName} currentUserId={session.userId} />
+          ) : activeTab === 'PROJECTS' || ((activeTab === 'PROJECT_DETAIL' || activeTab === 'PROJECT_RISKS') && !selectedProjectId) ? (
+            <ProjectListPage
+              currentUserRoles={currentRoles}
+              onOpen={(project) => {
+                setSelectedProjectId(project.id);
+                // Kế toán không được đọc chi tiết dự án (backend 403) — mở thẳng số liệu lợi nhuận.
+                goTo(canOpenProjectDetail ? 'PROJECT_DETAIL' : 'PROJECT_MARGIN');
+              }}
+              onOpenAcceptance={
+                currentRoles.includes('VT-02')
+                  ? (project) => {
+                      setSelectedProjectId(project.id);
+                      goTo('ACCEPTANCES');
+                    }
+                  : undefined
+              }
+              onOpenProfit={(project) => {
+                setSelectedProjectId(project.id);
+                goTo('PROJECT_MARGIN');
+              }}
+            />
+          ) : activeTab === 'PROJECT_DETAIL' && selectedProjectId ? (
+            <ProjectDetailPage
+              key={selectedProjectId}
+              projectId={selectedProjectId}
+              initialProject={allProjects.find((p) => p.id === selectedProjectId)}
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+              onBack={() => goTo('PROJECTS')}
+              onOpenRisks={() => goTo('PROJECT_RISKS')}
+              onOpenAcceptance={currentRoles.includes('VT-02') ? () => goTo('ACCEPTANCES') : undefined}
+              onOpenProfit={() => goTo('PROJECT_MARGIN')}
+            />
+          ) : activeTab === 'PROJECT_RISKS' && selectedProjectId ? (
+            <ProjectRiskPage
+              key={selectedProjectId}
+              projectId={selectedProjectId}
+              currentUserRoles={currentRoles}
+              currentUserId={session.userId}
+              onBack={() => goTo('PROJECT_DETAIL')}
+            />
           ) : activeTab === 'TIMESHEET_APPROVAL' ? (
             <TimesheetApprovalPage
               currentUserRoles={currentRoles}
               currentUserName={session.fullName}
               onNavigateToAdjustment={() => setActiveTab('TIMESHEET_ADJUSTMENT')}
             />
-          ) : activeTab === 'TIMESHEET_REJECT' ? (
-            <TimesheetRejectPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'TIMESHEET_ADJUSTMENT' ? (
             <TimesheetAdjustmentPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'TIMESHEET_PERIOD' ? (
@@ -522,94 +1226,16 @@ export default function App() {
             <MarginByCustomerPage currentUserRoles={currentRoles} />
           ) : activeTab === 'MARGIN_BY_EMPLOYEE' ? (
             <MarginByEmployeePage currentUserRoles={currentRoles} />
+          ) : PROJECT_SCOPED_TABS.includes(activeTab) && !selectedProjectId ? (
+            <div className="table-empty-state hub-empty" data-testid="profitability-no-project">
+              <span className="empty-icon">{ICONS.briefcase}</span>
+              <h3>Chọn một dự án</h3>
+              <p>Số liệu lợi nhuận luôn tính theo từng dự án.</p>
+            </div>
           ) : activeTab === 'PROJECT_RECOGNIZED_REVENUE' && selectedProjectId ? (
-            <ProjectRecognizedRevenuePage
-              projectId={selectedProjectId}
-              currentUserRoles={currentRoles}
-              onBack={() => { setSelectedProjectId(null); }}
-            />
-          ) : activeTab === 'PROJECT_RECOGNIZED_REVENUE' ? (
-            <div className="user-management-page">
-              <div className="page-header">
-                <div>
-                  <div className="page-header__kicker">
-                    <span className="page-header__tag">{ICONS.chart} DOANH THU GHI NHẬN</span>
-                    <span className="page-header__dot" />
-                    <span className="page-header__meta">CHƯA CHỌN DỰ ÁN</span>
-                  </div>
-                  <h1 className="page-title">Doanh thu ghi nhận dự án</h1>
-                  <p className="page-subtitle">
-                    Chọn một dự án để xem doanh thu ghi nhận.
-                  </p>
-                </div>
-              </div>
-
-              <div style={{ marginTop: '16px' }}>
-                <select
-                  className="form-select"
-                  style={{ padding: '8px 12px', fontSize: '14px', minWidth: '320px' }}
-                  value=""
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val) setSelectedProjectId(Number(val));
-                  }}
-                  data-testid="project-selector-dropdown"
-                >
-                  <option value="" disabled>
-                    -- Chọn dự án --
-                  </option>
-                  {allProjects.map((proj) => (
-                    <option key={proj.id} value={proj.id}>
-                      {proj.projectCode} — {proj.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            <ProjectRecognizedRevenuePage key={selectedProjectId} projectId={selectedProjectId} currentUserRoles={currentRoles} />
           ) : activeTab === 'PROJECT_MARGIN' && selectedProjectId ? (
-            <ProjectMarginPage
-              projectId={selectedProjectId}
-              currentUserRoles={currentRoles}
-              onBack={() => { setSelectedProjectId(null); }}
-            />
-          ) : activeTab === 'PROJECT_MARGIN' ? (
-            <div className="user-management-page">
-              <div className="page-header">
-                <div>
-                  <div className="page-header__kicker">
-                    <span className="page-header__tag">{ICONS.chart} BIÊN LỢI NHUẬN</span>
-                    <span className="page-header__dot" />
-                    <span className="page-header__meta">CHƯA CHỌN DỰ ÁN</span>
-                  </div>
-                  <h1 className="page-title">Biên lợi nhuận thời gian thực</h1>
-                  <p className="page-subtitle">
-                    Chọn một dự án để xem biên lợi nhuận.
-                  </p>
-                </div>
-              </div>
-
-              <div style={{ marginTop: '16px' }}>
-                <select
-                  className="form-select"
-                  style={{ padding: '8px 12px', fontSize: '14px', minWidth: '320px' }}
-                  value=""
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val) setSelectedProjectId(Number(val));
-                  }}
-                  data-testid="project-selector-dropdown"
-                >
-                  <option value="" disabled>
-                    -- Chọn dự án --
-                  </option>
-                  {allProjects.map((proj) => (
-                    <option key={proj.id} value={proj.id}>
-                      {proj.projectCode} — {proj.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            <ProjectMarginPage key={selectedProjectId} projectId={selectedProjectId} currentUserRoles={currentRoles} />
           ) : activeTab === 'MARGIN_ALERT_THRESHOLD' ? (
             <MarginAlertThresholdPage currentUserRoles={currentRoles} />
           ) : activeTab === 'CUSTOMERS' ? (
@@ -617,6 +1243,24 @@ export default function App() {
               currentUserRoles={currentRoles}
               currentUserName={session.fullName}
               currentUserId={session.userId}
+              // Từ "Lịch sử hợp tác" đi thẳng tới trang dự án (chỉ vai trò mở được trang dự án từ mục
+              // "Dự án") và tới cơ hội ở màn Cơ hội (mở sẵn khung tiến trình của đúng cơ hội đó).
+              onOpenProject={
+                isTabVisible('PROJECT_DETAIL', currentRoles) && canOpenProjectDetail
+                  ? (projectId) => {
+                      setSelectedProjectId(projectId);
+                      goTo('PROJECT_DETAIL');
+                    }
+                  : undefined
+              }
+              onOpenOpportunity={
+                isTabVisible('OPPORTUNITIES', currentRoles)
+                  ? (opportunityId) => {
+                      setFocusOpportunityId(opportunityId);
+                      goTo('OPPORTUNITIES');
+                    }
+                  : undefined
+              }
             />
           ) : activeTab === 'CONTRACTS' ? (
             <ContractListPage
@@ -650,6 +1294,35 @@ export default function App() {
               currentUserRoles={currentRoles}
               currentUserName={session.fullName}
             />
+          ) : activeTab === 'ACCEPTANCE_DETAIL' && selectedAcceptanceId ? (
+            <AcceptanceDetailPage
+              key={selectedAcceptanceId}
+              certificateId={selectedAcceptanceId}
+              currentUserRoles={currentRoles}
+              onBack={() => setActiveTab('ACCEPTANCES')}
+            />
+          ) : activeTab === 'DELIVERABLES' ? (
+            <DeliverablePage
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+              currentUserId={session.userId}
+              projects={allProjects}
+              selectedProjectId={acceptanceProjectId}
+              onSelectProject={setAcceptanceProjectId}
+            />
+          ) : activeTab === 'ACCEPTANCES' || activeTab === 'ACCEPTANCE_DETAIL' ? (
+            <AcceptanceListPage
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+              currentUserId={session.userId}
+              projects={allProjects}
+              selectedProjectId={acceptanceProjectId}
+              onSelectProject={setAcceptanceProjectId}
+              onOpenCertificate={(id) => {
+                setSelectedAcceptanceId(id);
+                setActiveTab('ACCEPTANCE_DETAIL');
+              }}
+            />
           ) : activeTab === 'OPPORTUNITIES' ? (
             <OpportunityListPage
               currentUserRoles={currentRoles}
@@ -669,40 +1342,21 @@ export default function App() {
               currentUserName={session.fullName}
             />
           ) : activeTab === 'REPORTS' ? (
-            <div className="user-management-page">
-              <div className="page-header">
-                <div>
-                  <div className="page-header__kicker">
-                    <span className="page-header__tag">{ICONS.document} VẬN HÀNH</span>
-                    <span className="page-header__dot" />
-                    <span className="page-header__meta">TRUNG TÂM BÁO CÁO</span>
-                  </div>
-                  <h1 className="page-title">Báo cáo</h1>
-                  <p className="page-subtitle">
-                    Chọn một báo cáo để xem chi tiết. Danh sách sẽ mở rộng dần khi công ty cần thêm
-                    góc nhìn vận hành mới.
-                  </p>
-                </div>
-              </div>
-
-              <div className="report-catalog-grid">
-                <button
-                  type="button"
-                  className="report-card"
-                  onClick={() => setActiveTab('PIPELINE_REPORT')}
-                >
-                  <span className="report-card__icon">{ICONS.target}</span>
-                  <span className="report-card__body">
-                    <span className="report-card__title">Đường ống bán hàng theo giai đoạn</span>
-                    <span className="report-card__desc">
-                      Số cơ hội, giá trị dự kiến và số ngày trung bình đứng ở mỗi giai đoạn — kèm
-                      cảnh báo cơ hội đọng lâu bất thường.
-                    </span>
-                  </span>
-                  <span className="report-card__arrow">{ICONS.arrowRight}</span>
-                </button>
-              </div>
-            </div>
+            <ReportCatalogPage currentUserRoles={currentRoles} onOpen={goTo} />
+          ) : activeTab === 'OPERATIONAL_DASHBOARD' ? (
+            <DashboardPage
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+              onBack={() => setActiveTab('REPORTS')}
+              onViewNegativeMarginProjects={() => setActiveTab('PROJECT_MARGIN')}
+              onViewOverdueInvoices={() => setActiveTab('INVOICES')}
+            />
+          ) : activeTab === 'REVENUE_REPORT' ? (
+            <RevenueReportPage currentUserRoles={currentRoles} />
+          ) : activeTab === 'TIMESHEET_REPORT' ? (
+            <TimesheetReportPage currentUserRoles={currentRoles} />
+          ) : activeTab === 'REPORT_EXPORT' ? (
+            <ReportExportPage currentUserRoles={currentRoles} />
           ) : activeTab === 'PIPELINE_REPORT' ? (
             <PipelineReportPage
               currentUserRoles={currentRoles}
@@ -710,6 +1364,17 @@ export default function App() {
               onViewOpportunity={(id) => {
                 setFocusOpportunityId(id);
                 setActiveTab('OPPORTUNITIES');
+              }}
+            />
+          ) : activeTab === 'UTILIZATION_REPORT' ? (
+            <UtilizationReportPage currentUserRoles={currentRoles} onBack={() => setActiveTab('REPORTS')} />
+          ) : activeTab === 'PROJECT_PERFORMANCE_REPORT' ? (
+            <ProjectPerformanceReportPage
+              currentUserRoles={currentRoles}
+              onBack={() => setActiveTab('REPORTS')}
+              onViewProject={(id) => {
+                setSelectedProjectId(id);
+                setActiveTab('PROJECT_MARGIN');
               }}
             />
           ) : activeTab === 'CUSTOMER_MERGE' ? (
@@ -722,6 +1387,12 @@ export default function App() {
             <DepartmentTreePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'PERMISSIONS' ? (
             <RolePermissionPage
+              currentUserRoles={currentRoles}
+              currentUserName={session.fullName}
+              onViewAuditLog={() => setActiveTab('SYSTEM_AUDIT_LOG')}
+            />
+          ) : activeTab === 'PORTAL_ACCOUNTS' ? (
+            <PortalAccountPage
               currentUserRoles={currentRoles}
               currentUserName={session.fullName}
               onViewAuditLog={() => setActiveTab('SYSTEM_AUDIT_LOG')}
@@ -748,137 +1419,11 @@ export default function App() {
               }}
             />
             ) : activeTab === 'PROJECT_LABOR_COST' && selectedProjectId ? (
-            <ProjectLaborCostPage
-              projectId={selectedProjectId}
-              currentUserRoles={currentRoles}
-              onBack={() => { setSelectedProjectId(null); }}
-            />
-          ) : activeTab === 'PROJECT_LABOR_COST' ? (
-            <div className="user-management-page">
-              <div className="page-header">
-                <div>
-                  <div className="page-header__kicker">
-                    <span className="page-header__tag">{ICONS.money} GIÁ VỐN GIỜ CÔNG</span>
-                    <span className="page-header__dot" />
-                    <span className="page-header__meta">CHƯA CHỌN DỰ ÁN</span>
-                  </div>
-                  <h1 className="page-title">Giá vốn giờ công dự án</h1>
-                  <p className="page-subtitle">
-                    Chọn một dự án để xem giá vốn giờ công.
-                  </p>
-                </div>
-              </div>
-
-              <div style={{ marginTop: '16px' }}>
-                <select
-                  className="form-select"
-                  style={{ padding: '8px 12px', fontSize: '14px', minWidth: '320px' }}
-                  value=""
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val) setSelectedProjectId(Number(val));
-                  }}
-                  data-testid="project-selector-dropdown"
-                >
-                  <option value="" disabled>
-                    -- Chọn dự án --
-                  </option>
-                  {allProjects.map((proj) => (
-                    <option key={proj.id} value={proj.id}>
-                      {proj.projectCode} — {proj.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            <ProjectLaborCostPage key={selectedProjectId} projectId={selectedProjectId} currentUserRoles={currentRoles} />
           ) : activeTab === 'PLANNED_VS_ACTUAL' && selectedProjectId ? (
-            <PlannedVsActualPage
-              projectId={selectedProjectId}
-              currentUserRoles={currentRoles}
-              onBack={() => { setSelectedProjectId(null); }}
-            />
-          ) : activeTab === 'PLANNED_VS_ACTUAL' ? (
-            <div className="user-management-page">
-              <div className="page-header">
-                <div>
-                  <div className="page-header__kicker">
-                    <span className="page-header__tag">{ICONS.chart} SO SÁNH BIÊN LỢI NHUẬN</span>
-                    <span className="page-header__dot" />
-                    <span className="page-header__meta">CHƯA CHỌN DỰ ÁN</span>
-                  </div>
-                  <h1 className="page-title">Biên lợi nhuận dự kiến vs thực tế</h1>
-                  <p className="page-subtitle">
-                    Chọn một dự án để so sánh biên lợi nhuận dự kiến với thực tế.
-                  </p>
-                </div>
-              </div>
-
-              <div style={{ marginTop: '16px' }}>
-                <select
-                  className="form-select"
-                  style={{ padding: '8px 12px', fontSize: '14px', minWidth: '320px' }}
-                  value=""
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val) setSelectedProjectId(Number(val));
-                  }}
-                  data-testid="project-selector-dropdown-planned-vs-actual"
-                >
-                  <option value="" disabled>
-                    -- Chọn dự án --
-                  </option>
-                  {allProjects.map((proj) => (
-                    <option key={proj.id} value={proj.id}>
-                      {proj.projectCode} — {proj.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            <PlannedVsActualPage key={selectedProjectId} projectId={selectedProjectId} currentUserRoles={currentRoles} />
           ) : activeTab === 'PROFIT_FORECAST' && selectedProjectId ? (
-            <ProfitForecastPage
-              projectId={selectedProjectId}
-              currentUserRoles={currentRoles}
-              onBack={() => { setSelectedProjectId(null); }}
-            />
-          ) : activeTab === 'PROFIT_FORECAST' ? (
-            <div className="user-management-page">
-              <div className="page-header">
-                <div>
-                  <div className="page-header__kicker">
-                    <span className="page-header__tag">{ICONS.chart} DỰ BÁO LỢI NHUẬN</span>
-                    <span className="page-header__dot" />
-                    <span className="page-header__meta">CHƯA CHỌN DỰ ÁN</span>
-                  </div>
-                  <h1 className="page-title">Dự báo lợi nhuận tới khi kết thúc dự án</h1>
-                  <p className="page-subtitle">
-                    Chọn một dự án để xem dự báo lợi nhuận tới khi kết thúc.
-                  </p>
-                </div>
-              </div>
-
-              <div style={{ marginTop: '16px' }}>
-                <select
-                  className="form-select"
-                  style={{ padding: '8px 12px', fontSize: '14px', minWidth: '320px' }}
-                  value=""
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val) setSelectedProjectId(Number(val));
-                  }}
-                  data-testid="project-selector-dropdown-profit-forecast"
-                >
-                  <option value="" disabled>
-                    -- Chọn dự án --
-                  </option>
-                  {allProjects.map((proj) => (
-                    <option key={proj.id} value={proj.id}>
-                      {proj.projectCode} — {proj.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            <ProfitForecastPage key={selectedProjectId} projectId={selectedProjectId} currentUserRoles={currentRoles} />
           ) : activeTab === 'OPPORTUNITY_DETAIL' ? (
             selectedOpportunityId ? (
               <OpportunityDetailPage
@@ -902,33 +1447,17 @@ export default function App() {
                 }}
               />
             ) : (
-              <div className="user-management-page">
-                <div className="page-header">
-                  <div>
-                    <div className="page-header__kicker">
-                      <span className="page-header__tag">{ICONS.building} CƠ HỘI BÁN HÀNG</span>
-                      <span className="page-header__dot" />
-                      <span className="page-header__meta">CHĂM SÓC CƠ HỘI</span>
-                    </div>
-                    <h1 className="page-title">Ghi nhận hoạt động chăm sóc cơ hội</h1>
-                    <p className="page-subtitle">
-                      Đây là màn hình xem lại lịch sử chăm sóc và ghi nhận cuộc gọi, email hoặc buổi gặp mới cho
-                      một cơ hội cụ thể — tìm bằng tên cơ hội hoặc tên khách hàng bên dưới. Cách nhanh hơn: mở{' '}
-                      <strong>"Cơ hội bán hàng"</strong>, chọn một cơ hội rồi bấm <strong>"Ghi nhận chăm sóc"</strong>.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="user-table-card" style={{ padding: '24px' }}>
-                  <OpportunitySearchPicker
-                    onSelect={(id, name) => {
-                      setSelectedOpportunityId(id);
-                      setSelectedOpportunityName(name);
-                      setActivityOrigin('PICKER');
-                    }}
-                  />
-                </div>
-              </div>
+              <OpportunityListPage
+                currentUserRoles={currentRoles}
+                currentUserName={session.fullName}
+                onOpenActivities={(id, name) => {
+                  setSelectedOpportunityId(id);
+                  setSelectedOpportunityName(name);
+                  setActivityOrigin('LIST');
+                }}
+                focusOpportunityId={focusOpportunityId}
+                onFocusConsumed={() => setFocusOpportunityId(null)}
+              />
             )
           ) : activeTab === 'DETAIL' && selectedUserId ? (
             <UserDetailPage userId={selectedUserId} onBack={() => setActiveTab('USERS')} />
@@ -942,10 +1471,48 @@ export default function App() {
               }}
               onViewAuditLog={() => setActiveTab('SYSTEM_AUDIT_LOG')}
             />
-          )}
+          ))}
+          </Suspense>
         </main>
         </div>
       </div>
+
+      {wbsFocus && (
+        <ProjectWbsModal
+          isOpen
+          onClose={() => setWbsFocus(null)}
+          projectId={wbsFocus.projectId}
+          projectCode={wbsFocus.project?.projectCode}
+          projectName={wbsFocus.project?.name}
+          currentUserRoles={currentRoles}
+          currentUserId={session.userId}
+          focusTaskId={wbsFocus.taskId}
+        />
+      )}
+
+      {appToast && (
+        <div
+          className={`toast-notification toast-notification--${appToast.type}`}
+          role="alert"
+          aria-live="polite"
+          data-testid="app-toast"
+        >
+          <div className="toast-notification__content">
+            <span className="toast-notification__icon">
+              {appToast.type === 'success' ? ICONS.checkCircle : appToast.type === 'error' ? ICONS.alertTriangle : ICONS.info}
+            </span>
+            <span className="toast-notification__text">{appToast.message}</span>
+          </div>
+          <button
+            type="button"
+            className="toast-notification__close"
+            onClick={() => setAppToast(null)}
+            aria-label="Đóng thông báo"
+          >
+            <span className="icon-sm">{ICONS.close}</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

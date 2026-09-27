@@ -57,6 +57,9 @@ public class CustomerOverviewServiceImpl implements CustomerOverviewService {
 		audit.setDetail("Xem ho so tong hop khach hang: " + customerId);
 		var authentication = SecurityContextHolder.getContext().getAuthentication();
 		audit.setActorUsername(authentication == null ? null : authentication.getName());
+		if (authentication != null && authentication.getPrincipal() instanceof com.serviceops.security.CustomUserDetails details) {
+			audit.setActorUserId(details.getId());
+		}
 		auditLogRepository.save(audit);
 	}
 }

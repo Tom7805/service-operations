@@ -159,7 +159,7 @@ export default function ContractAppendixModal({
 
           <div className="modal-body">
             {!isAllowed && (
-              <div className="alert-box alert-box--danger">Yêu cầu vai trò Nhân viên kinh doanh (VT-04).</div>
+              <div className="alert-box alert-box--danger">Yêu cầu vai trò Nhân viên kinh doanh.</div>
             )}
 
             {serverError && <div className="alert-box alert-box--danger">{serverError}</div>}

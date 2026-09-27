@@ -137,9 +137,7 @@ export default function TimeEntryRateResolveLookup({ levelOptions }: Props) {
         <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Tra đơn giá áp dụng cho một dòng giờ công</h2>
       </div>
       <p className="field-hint" style={{ marginBottom: '14px' }}>
-        Chọn nhân sự, hệ thống tự đổ ra các dòng giờ công đã duyệt của người đó để chọn và tự điền sẵn cấp
-        bậc theo hồ sơ nhân sự — hệ thống tự suy ra vai trò, hợp đồng và ngày phát sinh để tra đúng đơn giá
-        đang dùng để tính doanh thu cho dòng đó.
+        Chọn nhân sự rồi chọn một dòng giờ công đã duyệt để xem đơn giá được dùng tính doanh thu.
       </p>
 
       {employeesError && (

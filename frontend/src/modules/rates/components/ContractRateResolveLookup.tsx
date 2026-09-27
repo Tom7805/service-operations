@@ -78,8 +78,7 @@ export default function ContractRateResolveLookup({ contractId, roleOptions, lev
         <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Tra đơn giá áp dụng cho hợp đồng này</h3>
       </div>
       <p className="field-hint" style={{ marginBottom: '14px' }}>
-        Tự động ưu tiên đơn giá riêng của hợp đồng; nếu chưa khai báo riêng, hệ thống rơi về đơn giá chung
-        công ty (QTN-16).
+        Dùng đơn giá riêng của hợp đồng nếu có, nếu không dùng đơn giá chung.
       </p>
 
       {serverError && (
@@ -182,7 +181,7 @@ export default function ContractRateResolveLookup({ contractId, roleOptions, lev
               value: result.isContractSpecific ? 'Khai báo riêng cho hợp đồng này' : 'Bảng đơn giá chung công ty',
             },
           ]}
-          footnote="Ưu tiên đơn giá riêng của hợp đồng; nếu chưa khai báo riêng, hệ thống rơi về đơn giá chung công ty (QTN-16)."
+          footnote="Ưu tiên đơn giá riêng của hợp đồng; nếu chưa khai báo riêng, hệ thống rơi về đơn giá chung công ty."
         />
       )}
     </div>

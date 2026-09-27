@@ -245,7 +245,7 @@ export default function CreateProjectFromTemplateModal({
     try {
       await deleteWorkPackage(createdProject.id, wp.id);
       setWbsToast({
-        message: `Đã xóa hạng mục "${wp.name}" khỏi dự án. Mẫu dự án gốc vẫn được giữ nguyên không đổi (TC-02).`,
+        message: `Đã xóa hạng mục "${wp.name}" khỏi dự án. Mẫu dự án gốc vẫn được giữ nguyên không đổi.`,
         type: 'success',
       });
       void loadCreatedProjectWbs(createdProject.id);
@@ -273,7 +273,7 @@ export default function CreateProjectFromTemplateModal({
           <div className="modal-header__title-wrap">
             <h3 id="create-project-template-modal-title" className="modal-title">
               <span className="modal-title__icon">{ICONS.folder}</span>
-              Tạo dự án từ mẫu công việc (NCL-05-CN-007)
+              Tạo dự án từ mẫu công việc
             </h3>
             <p className="field-hint">
               Hợp đồng: <strong>{contract.contractCode}</strong> — {contract.name}
@@ -288,7 +288,7 @@ export default function CreateProjectFromTemplateModal({
           {/* Kiểm tra phân quyền TC-03 */}
           {!isPM && (
             <div className="alert-box alert-box--danger" role="alert" data-testid="pm-role-alert">
-              <strong>Từ chối truy cập:</strong> Bạn không có quyền thực hiện chức năng này. Chức năng Tạo dự án từ mẫu chỉ dành cho vai trò <strong>Quản lý dự án (VT-02)</strong>.
+              <strong>Từ chối truy cập:</strong> Bạn không có quyền thực hiện chức năng này. Chức năng Tạo dự án từ mẫu chỉ dành cho vai trò <strong>Quản lý dự án</strong>.
             </div>
           )}
 
@@ -399,7 +399,7 @@ export default function CreateProjectFromTemplateModal({
                         </div>
                       )}
                       <div style={{ marginTop: '6px', color: 'var(--pale-blue-fg)', fontSize: '12px' }}>
-                        {ICONS.info} Hệ thống sẽ tự động nhân bản toàn bộ cây hạng mục, công việc và ngân sách giờ từ mẫu này sang dự án mới (TC-01).
+                        {ICONS.info} Hạng mục, công việc và ngân sách giờ sẽ được sao chép sang dự án mới.
                       </div>
                     </div>
                   )}
@@ -552,7 +552,7 @@ export default function CreateProjectFromTemplateModal({
 
                 <div className="modal-footer" style={{ padding: '16px 0 0', borderTop: '1px solid var(--line)', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                   <button type="button" className="btn btn-secondary" onClick={onClose}>
-                    Hủy bỏ
+                    Hủy
                   </button>
                   <button
                     type="submit"
@@ -571,12 +571,9 @@ export default function CreateProjectFromTemplateModal({
           {createdProject && (
             <div data-testid="project-created-success-section">
               <div className="alert-box alert-box--success" role="alert" style={{ marginBottom: '16px' }} data-testid="create-success-alert">
-                <h4 style={{ margin: '0 0 4px', fontSize: '15px' }}>Khởi tạo dự án từ mẫu thành công!</h4>
+                <h4 style={{ margin: '0 0 4px', fontSize: '15px' }}>Đã tạo dự án từ mẫu</h4>
                 <p style={{ margin: 0, fontSize: '13.5px' }}>
-                  Dự án <strong>{createdProject.projectCode}</strong> ({createdProject.name}) đã được tạo với toàn bộ cây hạng mục và công việc kèm ngân sách giờ được nhân bản từ mẫu <strong>{selectedTemplate?.name}</strong>.
-                </p>
-                <p style={{ margin: '6px 0 0', fontSize: '12.5px', opacity: 0.9 }}>
-                  Hệ thống đã tự động ghi nhận nhật ký hành động <code>CREATE_FROM_TEMPLATE</code> vào cơ sở dữ liệu (TC-04).
+                  <strong>{createdProject.projectCode}</strong> · {createdProject.name} — đã sao chép hạng mục, công việc và ngân sách giờ từ mẫu <strong>{selectedTemplate?.name}</strong>.
                 </p>
               </div>
 
@@ -594,20 +591,20 @@ export default function CreateProjectFromTemplateModal({
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <h4 style={{ margin: 0, fontSize: '14.5px', color: 'var(--ink-strong)' }}>
-                    Cây cơ cấu công việc (WBS) của dự án mới tạo (TC-01):
+                    Cây cơ cấu công việc (WBS) của dự án mới tạo:
                   </h4>
                   <span className="field-hint" style={{ fontSize: '12.5px' }}>
                     {wbs.length} hạng mục gốc
                   </span>
                 </div>
                 <p style={{ margin: '0 0 12px', fontSize: '13px', color: 'var(--ink-muted)' }}>
-                  <strong>Quy tắc độc lập mẫu (TC-02):</strong> Bạn có thể xóa các hạng mục không phù hợp trực tiếp trên dự án này mà không làm ảnh hưởng đến mẫu dự án gốc.
+                  Xóa hạng mục không phù hợp ở đây không ảnh hưởng tới mẫu gốc.
                 </p>
 
                 {loadingWbs ? (
                   <div className="field-hint">Đang tải cây WBS của dự án…</div>
                 ) : (
-                  <div style={{ border: '1px solid var(--line)', borderRadius: '8px', background: '#FFFFFF', maxHeight: '350px', overflowY: 'auto' }}>
+                  <div style={{ border: '1px solid var(--line)', borderRadius: '8px', background: 'var(--surface)', maxHeight: '350px', overflowY: 'auto' }}>
                     <WorkBreakdownTree
                       projectId={createdProject.id}
                       items={wbs}

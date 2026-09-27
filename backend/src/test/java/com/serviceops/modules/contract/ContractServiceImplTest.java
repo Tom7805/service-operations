@@ -23,6 +23,7 @@ import com.serviceops.modules.opportunity.logging.OpportunityAuditLogger;
 import com.serviceops.modules.opportunity.repository.OpportunityRepository;
 import com.serviceops.modules.quotation.entity.Quote;
 import com.serviceops.modules.quotation.repository.QuoteRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -87,6 +88,12 @@ contractRepository, customerRepository, contractMapper, auditLogger,
 contractLimitValidator, contractAuditLogger);
 SecurityContextHolder.getContext().setAuthentication(
 new TestingAuthenticationToken("sale01", "n/a"));
+}
+
+/** SecurityContextHolder la ThreadLocal: khong don thi nguoi dung o day ro sang test khac cung JVM. */
+@AfterEach
+void clearSecurityContext() {
+SecurityContextHolder.clearContext();
 }
 
 private Opportunity wonOpportunity(long id) {

@@ -129,9 +129,7 @@ export default function InvoiceListPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền quản lý hóa đơn</h2>
           <p>
-            Theo quy tắc phân quyền, toàn bộ nghiệp vụ hóa đơn (lập hóa đơn, ghi nhận thanh toán,
-            đề xuất hóa đơn, hóa đơn định kỳ, nhắc thu nợ) chỉ dành riêng cho <strong>Kế toán</strong> (VT-05).
-            Hệ thống đã ghi lại lần từ chối truy cập này vào nhật ký bảo mật (Audit Log).
+            Trang này dành cho <strong>Kế toán</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">
@@ -149,10 +147,6 @@ export default function InvoiceListPage({
 
   return (
     <div className="user-management-page">
-      <p className="page-subtitle" style={{ marginBottom: '16px' }}>
-        Toàn bộ hóa đơn đã lập từ mốc thanh toán hợp đồng, đề xuất hóa đơn hoặc lịch định kỳ.
-      </p>
-
       <div className="user-table-card">
         <div className="user-table-toolbar">
           <div className="search-box">
@@ -231,18 +225,20 @@ export default function InvoiceListPage({
           </div>
         ) : (
           <div className="table-responsive">
-            <table className="user-data-table" data-testid="invoice-table">
+            {/* Danh sách gọn: mỗi hàng một dòng. Mã hợp đồng thành dòng phụ dưới mã hóa đơn; "Đã thu"
+                (= tổng − còn lại) và lịch sử thanh toán xem ở trang chi tiết (bấm vào hàng). */}
+            <table className="user-data-table list-table" data-testid="invoice-table">
               <thead>
                 <tr>
-                  <th style={headStyle}>Mã hóa đơn</th>
-                  <th style={headStyle}>Hợp đồng</th>
-                  <th style={headStyle}>Khách hàng</th>
-                  <th style={{ ...headStyle, textAlign: 'right' }}>Tổng tiền</th>
-                  <th style={{ ...headStyle, textAlign: 'right' }}>Đã thu</th>
-                  <th style={{ ...headStyle, textAlign: 'right' }}>Còn lại</th>
-                  <th style={headStyle}>Hạn thanh toán</th>
-                  <th style={headStyle}>Trạng thái</th>
-                  <th style={{ ...headStyle, textAlign: 'right' }}>Hành động</th>
+                  <th style={{ ...headStyle, width: '18%' }}>Hóa đơn</th>
+                  <th className="list-table__hide-sm" style={{ ...headStyle, width: '24%' }}>Khách hàng</th>
+                  <th className="list-table__hide-sm" style={{ ...headStyle, width: '13%', textAlign: 'right' }}>Tổng tiền</th>
+                  <th style={{ ...headStyle, width: '13%', textAlign: 'right' }}>Còn lại</th>
+                  <th className="list-table__hide-sm" style={{ ...headStyle, width: '12%' }}>Hạn thanh toán</th>
+                  <th style={{ ...headStyle, width: '15%' }}>Trạng thái</th>
+                  <th className="list-table__actions" style={headStyle}>
+                    <span className="visually-hidden">Thao tác</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -251,23 +247,26 @@ export default function InvoiceListPage({
                   return (
                     <tr
                       key={inv.id}
+                      className="list-table__row"
                       onClick={() => onOpenInvoice(inv.id)}
-                      style={{ cursor: 'pointer' }}
                       data-testid={`invoice-row-${inv.id}`}
                     >
-                      <td style={{ fontFamily: 'var(--font-mono, monospace)', fontWeight: 600 }}>
-                        {inv.invoiceCode}
+                      <td>
+                        {/* Mã hóa đơn là tên của hàng: cùng kiểu chữ với tên ở các danh sách khác (mono đậm
+                            đọc ra nặng nề); mã hợp đồng ở dòng phụ vẫn là mono. */}
+                        <span className="list-table__name">{inv.invoiceCode}</span>
+                        <span className="list-table__sub">{inv.contractCode || '—'}</span>
                       </td>
-                      <td>{inv.contractCode || '—'}</td>
-                      <td>{inv.customerName || '—'}</td>
-                      <td style={{ textAlign: 'right' }}>{formatAmount(inv.totalAmount)}</td>
-                      <td style={{ textAlign: 'right' }}>{formatAmount(inv.paidAmount)}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatAmount(inv.remainingAmount)}</td>
-                      <td className="cell-muted">{formatDate(inv.dueDate)}</td>
+                      <td className="list-table__hide-sm">
+                        <span className="list-table__clip" title={inv.customerName || undefined}>{inv.customerName || '—'}</span>
+                      </td>
+                      <td className="list-table__hide-sm list-table__muted" style={{ textAlign: 'right' }}>{formatAmount(inv.totalAmount)}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{formatAmount(inv.remainingAmount)}</td>
+                      <td className="list-table__hide-sm list-table__muted">{formatDate(inv.dueDate)}</td>
                       <td>
                         <span className={`badge ${status.badge}`}>{status.label}</span>
                       </td>
-                      <td style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
+                      <td className="list-table__actions" onClick={(e) => e.stopPropagation()}>
                         <RowActionsMenu
                           ariaLabel={`Thao tác hóa đơn ${inv.invoiceCode}`}
                           actions={rowActions(inv)}

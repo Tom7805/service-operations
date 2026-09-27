@@ -1,5 +1,7 @@
 package com.serviceops.modules.identity.employee.service.impl;
 
+import com.serviceops.common.audit.AuditTargetType;
+import com.serviceops.common.audit.service.AuditLogService;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.identity.department.entity.Department;
@@ -15,6 +17,7 @@ import com.serviceops.modules.identity.employee.dto.response.EmployeeRes;
 import com.serviceops.modules.identity.employee.dto.response.EmploymentContractRes;
 import com.serviceops.modules.identity.employee.entity.Employee;
 import com.serviceops.modules.identity.employee.entity.EmploymentContract;
+import com.serviceops.modules.identity.employee.enums.EmploymentType;
 import com.serviceops.modules.identity.employee.mapper.EmployeeMapper;
 import com.serviceops.modules.identity.employee.repository.EmployeeRepository;
 import com.serviceops.modules.identity.employee.repository.EmploymentContractRepository;
@@ -54,6 +57,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final EmployeeMapper employeeMapper;
     private final EmploymentPeriodValidator employmentPeriodValidator;
     private final CurrentUserScopeProvider currentUserScopeProvider;
+    private final AuditLogService auditLogService;
 
     @Override
     @Transactional(readOnly = true)
@@ -116,6 +120,9 @@ public class EmployeeServiceImpl implements EmployeeService {
 
         log.info("EMPLOYEE_CREATED employeeId={} userId={} by={}", employee.getId(),
                 employee.getUser().getId(), currentUserScopeProvider.currentUserId());
+        // NCL-01-CN-007-TC-05: ghi lai nguoi thuc hien, noi dung va thoi diem.
+        auditLogService.record("Tạo hồ sơ nhân sự", AuditTargetType.EMPLOYEE, employee.getId(),
+                employee.getUser().getUsername(), "Tạo hồ sơ cho " + employee.getUser().getFullName() + ": " + describe(employee));
         return employeeMapper.toDetailResponse(employee, List.of());
     }
 
@@ -123,6 +130,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     public EmployeeDetailRes update(Long id, EmployeeUpdateReq request) {
         Employee employee = getEmployee(id);
         employmentPeriodValidator.validate(request.hireDate(), request.endDate());
+        String before = describe(employee);
 
         employee.setDepartment(findDepartment(request.departmentId()));
         employee.setProfessionalRole(normalize(request.professionalRole()));
@@ -133,6 +141,8 @@ public class EmployeeServiceImpl implements EmployeeService {
         employee = employeeRepository.save(employee);
 
         log.info("EMPLOYEE_UPDATED employeeId={} by={}", employee.getId(), currentUserScopeProvider.currentUserId());
+        auditLogService.record("Cập nhật hồ sơ nhân sự", AuditTargetType.EMPLOYEE, employee.getId(),
+                employee.getUser().getUsername(), "Trước: " + before + ". Sau: " + describe(employee) + ".");
         return employeeMapper.toDetailResponse(employee, findContracts(id));
     }
 
@@ -150,7 +160,21 @@ public class EmployeeServiceImpl implements EmployeeService {
 
         log.info("EMPLOYMENT_CONTRACT_CREATED employeeId={} contractId={} by={}", employeeId,
                 contract.getId(), currentUserScopeProvider.currentUserId());
+        auditLogService.record("Thêm hợp đồng lao động", AuditTargetType.EMPLOYEE, employeeId,
+                employee.getUser().getUsername(),
+                "Hợp đồng " + (contract.getContractType() == EmploymentType.PART_TIME ? "bán thời gian" : "toàn thời gian")
+                        + " từ " + contract.getStartDate()
+                        + (contract.getEndDate() != null ? " đến " + contract.getEndDate() : " (không xác định thời hạn)"));
         return employeeMapper.toContractResponse(contract);
+    }
+
+    private String describe(Employee employee) {
+        return "bộ phận " + (employee.getDepartment() != null ? employee.getDepartment().getName() : "(chưa gán)")
+                + ", vai trò chuyên môn " + (employee.getProfessionalRole() != null ? employee.getProfessionalRole() : "(chưa khai báo)")
+                + ", ngày vào làm " + employee.getHireDate()
+                + ", ngày kết thúc " + (employee.getEndDate() != null ? employee.getEndDate() : "(chưa có)")
+                + ", giờ chuẩn " + (employee.getStandardHoursPerWeek() != null
+                        ? employee.getStandardHoursPerWeek().stripTrailingZeros().toPlainString() : "?") + " giờ/tuần";
     }
 
     @Override

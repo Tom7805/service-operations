@@ -95,9 +95,30 @@ public class CustomerController {
 				customerService.updateWithOverride(customerId, request.customer(), request.override()));
 	}
 
-	/** NCL-02-CN-005: gan nganh nghe, quy mo va muc do uu tien cho khach hang. */
-	@PatchMapping("/{customerId}/segment")
+	/**
+	 * NCL-02-CN-001 TC-03: kiem tra quyen mo chuc nang ho so khach hang (khong lam gi ngoai kiem tra quyen).
+	 * Man hinh "Khong co tham quyen" o frontend goi endpoint nay de lan tu choi (403) duoc backend ghi
+	 * nhat ky that, thay vi chi hien chu "da ghi nhat ky" ma khong co request nao.
+	 */
+	@GetMapping("/access-check")
 	@PreAuthorize("hasRole('VT-04') or hasRole('VT-02')")
+	public BaseRes<Void> accessCheck() {
+		return BaseRes.ok(null);
+	}
+
+	/** NCL-02-CN-005 TC-03: kiem tra quyen mo chuc nang phan nhom (chi Nhan vien kinh doanh). */
+	@GetMapping("/segment/access-check")
+	@PreAuthorize("hasRole('VT-04')")
+	public BaseRes<Void> segmentAccessCheck() {
+		return BaseRes.ok(null);
+	}
+
+	/**
+	 * NCL-02-CN-005: gan nganh nghe, quy mo va muc do uu tien cho khach hang. TC-03 chi cho phep
+	 * Nhan vien kinh doanh (VT-04); vai tro khac bi tu choi va ghi nhat ky.
+	 */
+	@PatchMapping("/{customerId}/segment")
+	@PreAuthorize("hasRole('VT-04')")
 	public BaseRes<CustomerRes> updateSegment(@PathVariable Long customerId,
 			@Valid @RequestBody CustomerSegmentReq request) {
 		return BaseRes.ok("Cap nhat phan nhom khach hang thanh cong",

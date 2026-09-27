@@ -277,7 +277,7 @@ export default function ExpenseFormModal({ isOpen, onClose, projectId, expense =
                 style={{ padding: '16px 0 0', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}
               >
                 <button type="button" className="btn btn-secondary" onClick={onClose} disabled={submitting}>
-                  Hủy bỏ
+                  Hủy
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={submitting} data-testid="submit-expense-btn">
                   {submitting ? 'Đang lưu…' : isEdit ? 'Nộp lại' : 'Ghi nhận chi phí'}

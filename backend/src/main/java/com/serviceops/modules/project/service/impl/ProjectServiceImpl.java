@@ -5,6 +5,8 @@ import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.contract.entity.Contract;
 import com.serviceops.modules.contract.enums.ContractStatus;
 import com.serviceops.modules.contract.repository.ContractRepository;
+import com.serviceops.modules.customer.entity.Customer;
+import com.serviceops.modules.customer.repository.CustomerRepository;
 import com.serviceops.modules.identity.user.entity.User;
 import com.serviceops.modules.identity.user.enums.UserStatus;
 import com.serviceops.modules.identity.user.repository.UserRepository;
@@ -14,6 +16,7 @@ import com.serviceops.modules.project.entity.Project;
 import com.serviceops.modules.project.enums.ProjectStatus;
 import com.serviceops.modules.project.logging.ProjectAuditLogger;
 import com.serviceops.modules.project.repository.ProjectRepository;
+import com.serviceops.modules.project.security.ProjectDataScopeGuard;
 import com.serviceops.modules.project.service.ProjectService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -24,6 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +38,8 @@ public class ProjectServiceImpl implements ProjectService {
 	private final UserRepository userRepository;
 	private final ProjectRepository projectRepository;
 	private final ProjectAuditLogger auditLogger;
+	private final ProjectDataScopeGuard projectDataScopeGuard;
+	private final CustomerRepository customerRepository;
 
 	@Override
 	@Transactional
@@ -89,9 +97,12 @@ public class ProjectServiceImpl implements ProjectService {
 	@Override
 	@Transactional(readOnly = true)
 	public ProjectRes getProject(Long projectId) {
-		return projectRepository.findById(projectId).map(this::toResponse)
+		Project project = projectRepository.findById(projectId)
 				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
 						"Khong tim thay du an voi id=" + projectId));
+		// NCL-01-CN-004-TC-02: mo du an ngoai pham vi bang duong dan truc tiep -> 403 + ghi nhat ky.
+		projectDataScopeGuard.requireVisible(project);
+		return toResponse(project);
 	}
 
 	@Override
@@ -104,9 +115,25 @@ public class ProjectServiceImpl implements ProjectService {
 	@Override
 	@Transactional(readOnly = true)
 	public List<ProjectRes> listAll() {
-		return projectRepository.findAll(org.springframework.data.domain.Sort.by(
-				org.springframework.data.domain.Sort.Direction.DESC, "id")).stream()
-				.map(this::toResponse).toList();
+		// NCL-01-CN-004-TC-01: chi tra ve du an thuoc pham vi du lieu duoc phan (QTN-01).
+		List<Project> projects = projectDataScopeGuard.filterVisible(projectRepository.findAll(
+				org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id")));
+		// Ten khach hang va quan ly du an cho man "Du an": nap theo LO (2 truy van cho ca danh sach),
+		// khong tra cuu tung dong.
+		Map<Long, String> customerNames = customerRepository.findAllById(projects.stream()
+						.map(Project::getCustomerId).filter(Objects::nonNull).distinct().toList()).stream()
+				.collect(Collectors.toMap(Customer::getId, Customer::getName, (a, b) -> a));
+		Map<Long, String> managerNames = userRepository.findAllById(projects.stream()
+						.map(Project::getProjectManagerId).filter(Objects::nonNull).distinct().toList()).stream()
+				.collect(Collectors.toMap(User::getId, User::getFullName, (a, b) -> a));
+		return projects.stream().map(project -> withNames(toResponse(project),
+				customerNames.get(project.getCustomerId()), managerNames.get(project.getProjectManagerId()))).toList();
+	}
+
+	private static ProjectRes withNames(ProjectRes res, String customerName, String managerName) {
+		return new ProjectRes(res.id(), res.projectCode(), res.name(), res.contractId(), res.customerId(),
+				res.projectType(), res.limitValue(), res.startDate(), res.expectedEndDate(), res.projectManagerId(),
+				res.status(), res.createdBy(), res.createdAt(), customerName, managerName);
 	}
 
 	private ProjectRes toResponse(Project project) {

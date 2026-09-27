@@ -8,6 +8,11 @@ import com.serviceops.modules.opportunity.enums.OpportunityStatus;
 import com.serviceops.modules.customer.repository.CustomerRepository;
 import com.serviceops.modules.opportunity.repository.OpportunityRepository;
 import com.serviceops.modules.opportunity.service.impl.RevenueForecastServiceImpl;
+import com.serviceops.modules.opportunity.service.impl.OpportunityScopeGuard;
+import com.serviceops.modules.opportunity.logging.OpportunityAuditLogger;
+import com.serviceops.modules.identity.user.repository.UserRepository;
+import com.serviceops.security.scope.CurrentUserScopeProvider;
+import com.serviceops.security.scope.UserScope;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,11 +36,22 @@ class RevenueForecastServiceTest {
 	@Mock
 	private CustomerRepository customerRepository;
 
+	@Mock
+	private OpportunityAuditLogger auditLogger;
+
+	@Mock
+	private CurrentUserScopeProvider currentUserScopeProvider;
+
+	@Mock
+	private UserRepository userRepository;
+
 	private RevenueForecastServiceImpl service;
 
 	@BeforeEach
 	void setUp() {
-		service = new RevenueForecastServiceImpl(opportunityRepository, customerRepository);
+		service = new RevenueForecastServiceImpl(opportunityRepository, customerRepository,
+				new OpportunityScopeGuard(currentUserScopeProvider, userRepository), auditLogger);
+		org.mockito.Mockito.lenient().when(currentUserScopeProvider.currentScope()).thenReturn(UserScope.company());
 	}
 
 	@Test
@@ -99,6 +115,35 @@ class RevenueForecastServiceTest {
 		assertThat(result.totalExpectedRevenue()).isEqualByComparingTo("140000000");
 		assertThat(result.months()).singleElement()
 				.satisfies(month -> assertThat(month.month()).isEqualTo(YearMonth.of(2026, 10)));
+	}
+
+	@Test
+	void recordsForecastViewInAuditLog() {
+		when(opportunityRepository.findAll()).thenReturn(List.of(
+				opportunity("ERP", "100000000", "40", LocalDate.of(2026, 9, 30), OpportunityStatus.OPEN)));
+
+		service.forecast(new ForecastQueryReq(null, null));
+
+		// TC-04: moi lan xem ghi nhat ky nguoi thuc hien, noi dung va thoi diem.
+		org.mockito.Mockito.verify(auditLogger).recordForecastView(
+				org.mockito.ArgumentMatchers.contains("1 co hoi mo"));
+	}
+
+	@Test
+	void onlyForecastsOpportunitiesInViewerScope() {
+		Opportunity mine = opportunity("Mine", "100000000", "40", LocalDate.of(2026, 9, 30), OpportunityStatus.OPEN);
+		mine.setOwnerId(7L);
+		Opportunity others = opportunity("Others", "900000000", "40", LocalDate.of(2026, 9, 30), OpportunityStatus.OPEN);
+		others.setOwnerId(8L);
+		when(opportunityRepository.findAll()).thenReturn(List.of(mine, others));
+		when(currentUserScopeProvider.currentScope())
+				.thenReturn(new UserScope(com.serviceops.security.scope.DataScopeType.SELF, java.util.Set.of()));
+		when(currentUserScopeProvider.currentUserId()).thenReturn(7L);
+
+		RevenueForecastRes result = service.forecast(new ForecastQueryReq(null, null));
+
+		// QTN-01: pham vi SELF chi thay co hoi minh phu trach.
+		assertThat(result.totalExpectedRevenue()).isEqualByComparingTo("40000000");
 	}
 
 	private Opportunity opportunity(String name, String expectedValue, String probability, LocalDate closeDate,

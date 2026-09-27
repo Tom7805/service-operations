@@ -2,10 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import MaskedCell from '../../../components/common/MaskedCell';
 import { canViewSensitiveData } from '../../../hooks/usePermission';
-import type { ProjectRes } from '../../projects/types/projectTypes';
-import { getProject, ProjectsApiError } from '../../projects/api/projectsApi';
+import { ProjectsApiError } from '../../projects/api/projectsApi';
 import type { ProjectMarginRes } from '../types/profitabilityTypes';
 import { getProjectMargin, ProfitabilityApiError } from '../api/profitabilityApi';
+import PageHeader from '../../../components/common/PageHeader';
 
 export interface ProjectMarginPageProps {
   projectId: number;
@@ -23,6 +23,8 @@ function formatHours(hours: number): string {
 }
 
 function formatPercent(ratio: number): string {
+  // Doanh thu bằng 0 thì tỷ suất không xác định (0/0) — hiện gạch ngang thay vì "NaN%".
+  if (!Number.isFinite(ratio)) return '—';
   return new Intl.NumberFormat('vi-VN', { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
     ratio
   );
@@ -62,7 +64,6 @@ export default function ProjectMarginPage({
   const [margin, setMargin] = useState<ProjectMarginRes | null>(initialMargin ?? null);
   const [loading, setLoading] = useState(!initialMargin);
   const [error, setError] = useState<string | null>(null);
-  const [project, setProject] = useState<ProjectRes | null>(null);
   const [recalculating, setRecalculating] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -90,17 +91,6 @@ export default function ProjectMarginPage({
     }
   }, [loadData, initialMargin]);
 
-  useEffect(() => {
-    if (initialMargin) return;
-    void (async () => {
-      try {
-        const proj = await getProject(projectId);
-        setProject(proj);
-      } catch {
-        // Không báo lỗi nếu không lấy được thông tin dự án — vẫn hiển thị biên lợi nhuận.
-      }
-    })();
-  }, [projectId, initialMargin]);
 
   // Backend tính động biên lợi nhuận mỗi lần gọi GET, nên "tính lại" tương đương gọi
   // lại API để lấy kết quả mới nhất (không có endpoint recalculate riêng).
@@ -117,8 +107,7 @@ export default function ProjectMarginPage({
     return (
       <div className="user-management-page" data-testid="margin-forbidden">
         <div className="alert-box alert-box--danger" role="alert">
-          Bạn không có quyền xem biên lợi nhuận dự án này (yêu cầu vai trò Ban giám đốc
-          VT-01, Quản lý dự án VT-02 hoặc Kế toán VT-05).
+          Bạn không có quyền xem biên lợi nhuận dự án này.
         </div>
         {onBack && (
           <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
@@ -133,47 +122,32 @@ export default function ProjectMarginPage({
 
   return (
     <div className="user-management-page" data-testid="margin-page">
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {onBack && (
+      <PageHeader
+        back={onBack ? { label: 'Chọn dự án khác', onClick: onBack, testId: 'btn-back-margin' } : undefined}
+        title="Biên lợi nhuận"
+        actions={
+          <>
             <button
               type="button"
-              className="btn btn-secondary btn-sm btn-back"
-              onClick={onBack}
-              data-testid="btn-back-margin"
+              className="btn btn-secondary btn-sm"
+              onClick={loadData}
+              disabled={loading}
+              data-testid="btn-reload-margin"
             >
-              {ICONS.arrowLeft} Quay lại
+              {ICONS.refresh} Tải lại
             </button>
-          )}
-          <div>
-            <h1 className="page-title" style={{ margin: '4px 0' }}>
-              Biên lợi nhuận thời gian thực
-            </h1>
-            <p className="page-subtitle" data-testid="project-code">{project?.projectCode || `Mã: ${projectId}`}</p>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={loadData}
-            disabled={loading}
-            data-testid="btn-reload-margin"
-          >
-            {ICONS.refresh} Tải lại
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary btn-sm"
-            onClick={handleRecalculate}
-            disabled={recalculating || loading}
-            data-testid="btn-recalculate-margin"
-          >
-            {ICONS.wrench} {recalculating ? 'Đang tính...' : 'Tính lại'}
-          </button>
-        </div>
-      </div>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={handleRecalculate}
+              disabled={recalculating || loading}
+              data-testid="btn-recalculate-margin"
+            >
+              {ICONS.wrench} {recalculating ? 'Đang tính…' : 'Tính lại'}
+            </button>
+          </>
+        }
+      />
 
       {error && (
         <div
@@ -263,7 +237,7 @@ export default function ProjectMarginPage({
           {/* Chi tiết giá vốn giờ công — hourlyRate/laborCost bị che với VT-02 (QTN-02). */}
           <div className="user-table-card" style={{ padding: '20px', marginBottom: '20px' }} data-testid="margin-labor-cost-table">
             <div style={{ marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--ink-strong)' }}>
                 Chi tiết giá vốn giờ công
               </h3>
             </div>
@@ -323,7 +297,7 @@ export default function ProjectMarginPage({
           {/* Chi tiết doanh thu ghi nhận — không có trường nào bị che ở đây. */}
           <div className="user-table-card" style={{ padding: '20px' }} data-testid="margin-revenue-table">
             <div style={{ marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--ink-strong)' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--ink-strong)' }}>
                 Chi tiết doanh thu ghi nhận
               </h3>
             </div>

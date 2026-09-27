@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import CustomerFormModal from '../components/CustomerFormModal';
+import DuplicateWarningModal from '../components/DuplicateWarningModal';
 import * as customersApi from '../api/customersApi';
 
 vi.mock('../api/customersApi', async () => {
@@ -29,7 +30,7 @@ describe('CustomerFormModal Component (NCL-02-CN-001 & NCL-02-CN-002)', () => {
       <CustomerFormModal isOpen={true} onClose={vi.fn()} onSubmit={vi.fn()} />
     );
 
-    expect(screen.getByRole('heading', { name: /Tạo hồ sơ khách hàng mới/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Thêm khách hàng/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/Tên khách hàng/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Mã số thuế/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Số điện thoại/i)).toBeInTheDocument();
@@ -52,7 +53,7 @@ describe('CustomerFormModal Component (NCL-02-CN-001 & NCL-02-CN-002)', () => {
       <CustomerFormModal isOpen={true} onClose={vi.fn()} onSubmit={onSubmit} />
     );
 
-    const submitBtn = screen.getByRole('button', { name: /Lưu hồ sơ khách hàng/i });
+    const submitBtn = screen.getByRole('button', { name: /^Lưu$/i });
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
@@ -90,7 +91,7 @@ describe('CustomerFormModal Component (NCL-02-CN-001 & NCL-02-CN-002)', () => {
     fireEvent.change(industryInput, { target: { value: 'Công nghệ' } });
     fireEvent.change(addressInput, { target: { value: 'Hà Nội' } });
 
-    const submitBtn = screen.getByRole('button', { name: /Lưu hồ sơ khách hàng/i });
+    const submitBtn = screen.getByRole('button', { name: /^Lưu$/i });
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
@@ -133,7 +134,7 @@ describe('CustomerFormModal Component (NCL-02-CN-001 & NCL-02-CN-002)', () => {
     const nameInput = screen.getByLabelText(/Tên khách hàng/i);
     fireEvent.change(nameInput, { target: { value: 'Công ty Cổ phần Misa Telecom' } });
 
-    const submitBtn = screen.getByRole('button', { name: /Lưu hồ sơ khách hàng/i });
+    const submitBtn = screen.getByRole('button', { name: /^Lưu$/i });
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
@@ -177,7 +178,7 @@ describe('CustomerFormModal Component (NCL-02-CN-001 & NCL-02-CN-002)', () => {
     fireEvent.change(screen.getByLabelText(/Tên khách hàng/i), {
       target: { value: 'Công ty Cổ phần Misa Telecom' },
     });
-    fireEvent.click(screen.getByRole('button', { name: /Lưu hồ sơ khách hàng/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Lưu$/i }));
 
     // Đợi mở modal cảnh báo
     await waitFor(() => {
@@ -185,7 +186,7 @@ describe('CustomerFormModal Component (NCL-02-CN-001 & NCL-02-CN-002)', () => {
     });
 
     // Bấm nút Vẫn tạo mới
-    fireEvent.click(screen.getByRole('button', { name: /Vẫn tạo mới \(Bỏ qua cảnh báo\)/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Vẫn tạo mới$/i }));
 
     // Nhập lý do
     const reasonInput = screen.getByLabelText(/Giải trình lý do/i);
@@ -194,7 +195,7 @@ describe('CustomerFormModal Component (NCL-02-CN-001 & NCL-02-CN-002)', () => {
     });
 
     // Xác nhận
-    fireEvent.click(screen.getByRole('button', { name: /Xác nhận tạo mới \(Ghi nhật ký\)/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Xác nhận tạo mới$/i }));
 
     await waitFor(() => {
       expect(onOverrideSubmit).toHaveBeenCalledWith({
@@ -268,13 +269,13 @@ describe('CustomerFormModal Component (NCL-02-CN-001 & NCL-02-CN-002)', () => {
     // Copy phải phản ánh đúng ngữ cảnh "chỉnh sửa" — không gợi ý rằng thao tác này tạo hồ sơ mới
     expect(screen.getByText(/Hồ sơ đang chỉnh sửa/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Vẫn lưu thay đổi \(Bỏ qua cảnh báo\)/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Vẫn lưu$/i }));
 
     fireEvent.change(screen.getByLabelText(/Giải trình lý do/i), {
       target: { value: 'Hai chi nhánh hạch toán độc lập của Misa' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Xác nhận lưu \(Ghi nhật ký\)/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Xác nhận lưu$/i }));
 
     await waitFor(() => {
       expect(onOverrideSubmit).toHaveBeenCalledWith({
@@ -304,3 +305,46 @@ describe('CustomerFormModal Component (NCL-02-CN-001 & NCL-02-CN-002)', () => {
   });
 });
 
+
+describe('DuplicateWarningModal — mức độ giống & chọn hồ sơ đã có (NCL-02-CN-002)', () => {
+  const candidate = {
+    id: 7,
+    code: 'KH-000007',
+    name: 'Công ty TNHH ABC',
+    taxCode: '0101234567',
+    phone: null,
+    similarity: 0.95,
+    matchedFields: ['ten', 'maSoThue'],
+  };
+
+  it('TC-01: hiện danh sách hồ sơ nghi trùng kèm mức độ giống nhau', () => {
+    render(
+      <DuplicateWarningModal
+        isOpen
+        currentPayload={{ name: 'Cong ty TNHH ABC', taxCode: '0101234567' }}
+        candidates={[candidate]}
+        onBackToEdit={vi.fn()}
+        onConfirmOverride={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId('candidate-similarity-7')).toHaveTextContent('Giống 95%');
+  });
+
+  it('người dùng chọn dùng hồ sơ đã có thay vì tạo mới', () => {
+    const onSelectExisting = vi.fn();
+    render(
+      <DuplicateWarningModal
+        isOpen
+        currentPayload={{ name: 'Cong ty TNHH ABC', taxCode: '0101234567' }}
+        candidates={[candidate]}
+        onBackToEdit={vi.fn()}
+        onConfirmOverride={vi.fn()}
+        onSelectExisting={onSelectExisting}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('btn-use-existing-7'));
+    expect(onSelectExisting).toHaveBeenCalledWith(candidate);
+  });
+});

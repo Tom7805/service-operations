@@ -26,6 +26,8 @@ interface CustomerFormModalProps {
   mode?: 'create' | 'edit';
   /** Hồ sơ đang chỉnh sửa — bắt buộc khi mode = 'edit' (để prefill và loại chính nó khỏi cảnh báo trùng). */
   initialCustomer?: Customer | null;
+  /** NCL-02-CN-002: người dùng chọn dùng hồ sơ đã có trong cảnh báo trùng thay vì tạo mới. */
+  onSelectExisting?: (candidate: DuplicateCandidate) => void;
 }
 
 export default function CustomerFormModal({
@@ -35,6 +37,7 @@ export default function CustomerFormModal({
   onOverrideSubmit,
   mode = 'create',
   initialCustomer = null,
+  onSelectExisting,
 }: CustomerFormModalProps) {
   const isEdit = mode === 'edit';
   const [name, setName] = useState('');
@@ -185,21 +188,17 @@ export default function CustomerFormModal({
     } catch (err) {
       if (err instanceof CustomerApiError) {
         if (err.code === 'DUPLICATE_DATA' || err.statusCode === 409) {
-          // Trường hợp backend tự chặn 409 -> mở cảnh báo trùng
-          setDuplicateCandidates((prev) =>
-            prev.length > 0
-              ? prev
-              : [
-                  {
-                    id: 0,
-                    code: 'KH-UNKNOWN',
-                    name: currentPayload.name,
-                    similarity: 0.95,
-                    matchedFields: ['ten'],
-                  },
-                ]
-          );
-          setIsDuplicateModalOpen(true);
+          // Backend chặn 409 (vd có hồ sơ vừa được tạo sau lần kiểm tra trước) -> nạp lại danh sách
+          // nghi trùng thật để người dùng đối chiếu, thay vì dựng một ứng viên giả.
+          const fresh = await checkCustomerDuplicate(currentPayload).catch(() => [] as DuplicateCandidate[]);
+          const candidates =
+            isEdit && initialCustomer ? fresh.filter((c) => c.id !== initialCustomer.id) : fresh;
+          if (candidates.length > 0) {
+            setDuplicateCandidates(candidates);
+            setIsDuplicateModalOpen(true);
+          } else {
+            setServerError(err.message);
+          }
         } else {
           setServerError(err.message);
         }
@@ -254,12 +253,10 @@ export default function CustomerFormModal({
               </span>
               <div>
                 <h3 id="modal-title" className="modal-title">
-                  {isEdit ? 'Chỉnh sửa hồ sơ khách hàng' : 'Tạo hồ sơ khách hàng mới'}
+                  {isEdit ? 'Sửa hồ sơ khách hàng' : 'Thêm khách hàng'}
                 </h3>
                 <p className="modal-subtitle">
-                  {isEdit
-                    ? `Cập nhật thông tin doanh nghiệp cho hồ sơ ${initialCustomer?.code ?? ''}. Mã khách hàng không thay đổi.`
-                    : 'Nhập thông tin doanh nghiệp/đối tác. Mã khách hàng (KH-xxxxxx) sẽ được hệ thống cấp tự động sau khi lưu.'}
+                  {isEdit ? initialCustomer?.code : 'Mã khách hàng được cấp tự động khi lưu.'}
                 </p>
               </div>
             </div>
@@ -292,9 +289,7 @@ export default function CustomerFormModal({
                 <div className="info-callout__text">
                   {isEdit ? (
                     <>
-                      <strong>Lưu ý:</strong> Ngành nghề, quy mô và mức độ ưu tiên được quản lý ở tab
-                      <em> Phân nhóm</em>. Khi đổi Tên / MST / SĐT, hệ thống vẫn chạy kiểm tra chống
-                      trùng với các hồ sơ khác.
+                      Ngành nghề, quy mô và mức độ ưu tiên sửa ở tab <em>Phân nhóm</em>.
                     </>
                   ) : (
                     <>
@@ -498,7 +493,7 @@ export default function CustomerFormModal({
                 onClick={onClose}
                 disabled={submitting}
               >
-                Hủy bỏ
+                Hủy
               </button>
               <button
                 type="submit"
@@ -508,12 +503,12 @@ export default function CustomerFormModal({
                 {submitting ? (
                   <>
                     <span className="spinner-sm" aria-hidden="true" />
-                    <span>Đang kiểm tra & lưu hồ sơ...</span>
+                    <span>Đang lưu…</span>
                   </>
                 ) : (
                   <>
                     <span className="icon-sm">{ICONS.save}</span>
-                    <span>{isEdit ? 'Lưu thay đổi' : 'Lưu hồ sơ khách hàng'}</span>
+                    <span>{isEdit ? 'Lưu thay đổi' : 'Lưu'}</span>
                   </>
                 )}
               </button>
@@ -532,6 +527,15 @@ export default function CustomerFormModal({
         onConfirmOverride={handleConfirmOverride}
         isLoading={isOverriding}
         isEdit={isEdit}
+        onSelectExisting={
+          onSelectExisting && !isEdit
+            ? (candidate) => {
+                setIsDuplicateModalOpen(false);
+                onClose();
+                onSelectExisting(candidate);
+              }
+            : undefined
+        }
       />
     </>
   );

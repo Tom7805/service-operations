@@ -42,6 +42,31 @@ public class AccessDeniedAuditRecorder {
     private static final List<Rule> RULES = new ArrayList<>();
 
     static {
+        // Epic NCL-13 (cổng khách hàng) đứng trước mọi quy tắc khác: "/portal/acceptances/{id}/confirm"
+        // chứa "/acceptances/", "/portal/invoices" chứa "/invoices", "/portal/projects/..." chứa "/projects"...
+        // "/portal-accounts" (quản trị viên cấp tài khoản) không bắt đầu bằng "/portal/" nên tách riêng.
+        RULES.add(rule("/portal-accounts", new Feature(AuditTargetType.PORTAL, "Cấp tài khoản cổng khách hàng")));
+        RULES.add(rule("/portal/acceptances", new Feature(AuditTargetType.PORTAL, "Duyệt phiếu nghiệm thu trên cổng")));
+        RULES.add(rule("/portal/invoices", new Feature(AuditTargetType.PORTAL, "Xem hóa đơn và công nợ trên cổng")));
+        RULES.add(rule("/portal/projects", new Feature(AuditTargetType.PORTAL, "Cổng theo dõi dự án")));
+        RULES.add(rule(uri -> uri.contains("/portal/") || uri.endsWith("/portal"),
+                new Feature(AuditTargetType.PORTAL, "Cổng khách hàng")));
+        // Epic NCL-15 (quản trị hệ thống): tiền tố riêng, không trùng chuỗi con của quy tắc nào bên dưới —
+        // nhưng đặt sớm để "/imports/..." (nhập khách hàng/nhân sự) không bị các quy tắc sau bắt nhầm.
+        RULES.add(rule("/service-catalog", new Feature(AuditTargetType.SYSTEM, "Quản lý danh mục dịch vụ")));
+        RULES.add(rule("/company-settings", new Feature(AuditTargetType.SYSTEM, "Cấu hình công ty")));
+        RULES.add(rule("/fiscal-periods", new Feature(AuditTargetType.SYSTEM, "Kỳ tài chính")));
+        RULES.add(rule("/backups", new Feature(AuditTargetType.SYSTEM, "Sao lưu và phục hồi dữ liệu")));
+        RULES.add(rule("/imports", new Feature(AuditTargetType.SYSTEM, "Nhập dữ liệu từ tệp")));
+        // Epic NCL-12 đứng đầu danh sách: "/acceptances/{id}/reject" chứa "/reject" (từ chối bảng chấm công),
+        // "/contracts/{id}/milestone-acceptances" chứa "/contracts", "/projects/{id}/work-packages/..." v.v.
+        RULES.add(rule(uri -> uri.contains("/acceptances/") && (uri.endsWith("/confirm") || uri.endsWith("/reject")),
+                new Feature(AuditTargetType.ACCEPTANCE, "Xác nhận phiếu nghiệm thu")));
+        RULES.add(rule("/payment-milestone", new Feature(AuditTargetType.ACCEPTANCE, "Gắn phiếu nghiệm thu với mốc thanh toán")));
+        RULES.add(rule("/milestone-acceptances", new Feature(AuditTargetType.ACCEPTANCE, "Gắn phiếu nghiệm thu với mốc thanh toán")));
+        RULES.add(rule("/acceptance-readiness", new Feature(AuditTargetType.ACCEPTANCE, "Lập phiếu nghiệm thu hạng mục")));
+        RULES.add(rule("/acceptances", new Feature(AuditTargetType.ACCEPTANCE, "Lập phiếu nghiệm thu hạng mục")));
+        RULES.add(rule("/deliverables", new Feature(AuditTargetType.ACCEPTANCE, "Quản lý sản phẩm bàn giao")));
         // Phải đứng trước "/invoice": "/invoice-proposals" cũng chứa chuỗi "/invoice".
         RULES.add(rule("/invoice-proposals", new Feature(AuditTargetType.INVOICE, "Tạo đề nghị xuất hóa đơn từ giờ công")));
         RULES.add(rule("/receivables", new Feature(AuditTargetType.INVOICE, "Theo dõi công nợ quá hạn")));
@@ -61,6 +86,12 @@ public class AccessDeniedAuditRecorder {
         RULES.add(rule("/invoice", new Feature(AuditTargetType.INVOICE, "Lập hóa đơn theo mốc hợp đồng")));
         RULES.add(rule("/reports/margin/by-customer", new Feature(AuditTargetType.GENERAL, "Báo cáo biên lợi nhuận theo khách hàng")));
         RULES.add(rule("/reports/margin/by-employee", new Feature(AuditTargetType.GENERAL, "Báo cáo biên lợi nhuận theo nhân sự")));
+        RULES.add(rule("/reports/dashboard", new Feature(AuditTargetType.GENERAL, "Bảng điều khiển vận hành")));
+        RULES.add(rule("/reports/utilization", new Feature(AuditTargetType.GENERAL, "Báo cáo tỷ lệ giờ tính phí")));
+        RULES.add(rule("/reports/revenue", new Feature(AuditTargetType.GENERAL, "Báo cáo doanh thu theo tháng")));
+        RULES.add(rule("/reports/export",new Feature(AuditTargetType.GENERAL, "Xuất báo cáo ra tệp")));
+        RULES.add(rule("/reports/project-performance",new Feature(AuditTargetType.GENERAL, "Báo cáo hiệu quả theo dự án")));
+        RULES.add(rule("/reports/timesheet", new Feature(AuditTargetType.GENERAL, "Báo cáo giờ công theo nhân sự")));
         // "/contracts/{id}/milestones..." (NCL-04-CN-003, mốc thanh toán hợp đồng) và
         // "/projects/{id}/milestones..." (NCL-05-CN-008, mốc tiến độ dự án) đều chứa chuỗi con
         // "/milestones" nên không phân biệt được bằng một khoá chuỗi con — bắt riêng nhánh hợp đồng ở
@@ -77,6 +108,7 @@ public class AccessDeniedAuditRecorder {
         RULES.add(rule("/activities", new Feature(AuditTargetType.GENERAL, "Hoạt động chăm sóc cơ hội")));
         RULES.add(rule("/quotes", new Feature(AuditTargetType.GENERAL, "Báo giá cơ hội")));
         RULES.add(rule("/margin-alert-threshold", new Feature(AuditTargetType.GENERAL, "Ngưỡng cảnh báo dự án âm biên")));
+        RULES.add(rule("/dedup-configs", new Feature(AuditTargetType.NOTIFICATION, "Cấu hình chống gửi trùng thông báo")));
         RULES.add(rule("/bill-rates", new Feature(AuditTargetType.GENERAL, "Khai báo bảng đơn giá theo vai trò")));
         RULES.add(rule("/overhead-allocations", new Feature(AuditTargetType.EXPENSE, "Phân bổ chi phí chung cho dự án")));
         RULES.add(rule("/timesheet-periods", new Feature(AuditTargetType.TIMESHEET, "Khóa kỳ chấm công")));
@@ -99,9 +131,13 @@ public class AccessDeniedAuditRecorder {
         RULES.add(rule("/roles", new Feature(AuditTargetType.ROLE_SCOPE, "Phân quyền")));
         RULES.add(rule("/users", new Feature(AuditTargetType.USER, "Quản lý tài khoản")));
         RULES.add(rule("/rates", new Feature(AuditTargetType.MASKING, "Chi phí giờ công nội bộ")));
+        RULES.add(rule("/holidays", new Feature(AuditTargetType.GENERAL, "Lịch ngày nghỉ lễ")));
         RULES.add(rule("/employees", new Feature(AuditTargetType.USER, "Quản lý nhân sự")));
         RULES.add(rule("/departments", new Feature(AuditTargetType.DEPARTMENT, "Quản lý tổ chức")));
         RULES.add(rule("/auth/two-factor", new Feature(AuditTargetType.TWO_FACTOR, "Xác thực hai bước")));
+        // NCL-01-CN-004-TC-02: mở danh sách / chi tiết dự án ngoài phạm vi dữ liệu được phân.
+        RULES.add(rule(uri -> uri.matches(".*/projects(/\\d+)?/?$"),
+                new Feature(AuditTargetType.ROLE_SCOPE, "Xem dự án ngoài phạm vi dữ liệu")));
     }
 
     private static Rule rule(String substring, Feature feature) {

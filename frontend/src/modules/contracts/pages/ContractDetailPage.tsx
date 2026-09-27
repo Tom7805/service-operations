@@ -28,6 +28,9 @@ import ContractTypeLimitModal from '../components/ContractTypeLimitModal';
 import ContractMilestonesModal from '../components/ContractMilestonesModal';
 import ContractLimitAlert from '../components/ContractLimitAlert';
 import ContractExpiryReminderModal from '../components/ContractExpiryReminderModal';
+import MilestoneAcceptancePanel from '../../acceptance/components/MilestoneAcceptancePanel';
+import { checkMilestoneLinkAccess } from '../../acceptance/api/acceptanceApi';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface Props {
   contractId: number;
@@ -111,6 +114,15 @@ export default function ContractDetailPage({ contractId, currentUserRoles = [], 
   const [isMilestonesModalOpen, setIsMilestonesModalOpen] = useState(false);
   const [isLimitAlertOpen, setIsLimitAlertOpen] = useState(false);
   const [isExpiryReminderOpen, setIsExpiryReminderOpen] = useState(false);
+  // Tăng mỗi lần danh sách mốc được lưu lại ở modal quản lý mốc → khối nghiệm thu theo mốc nạp lại.
+  const [milestonesVersion, setMilestonesVersion] = useState(0);
+
+  // NCL-12-CN-003 TC-03: trang này là lối vào chức năng gắn nghiệm thu với mốc thanh toán — người không phải
+  // Kế toán mở vào thì gọi thật endpoint của chức năng để backend ghi nhật ký lần từ chối.
+  useEffect(() => {
+    if (isAllowed) return;
+    checkMilestoneLinkAccess(contractId).catch(() => undefined);
+  }, [isAllowed, contractId]);
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setToast({ text, type });
@@ -189,7 +201,9 @@ export default function ContractDetailPage({ contractId, currentUserRoles = [], 
         <div className="access-denied-card">
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền xem chi tiết hợp đồng</h2>
-          <p>Chức năng này chỉ dành riêng cho <strong>Kế toán</strong> (VT-05).</p>
+          <p>
+            Trang này dành cho <strong>Kế toán</strong>. Lần truy cập đã được ghi vào nhật ký.
+          </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">Tài khoản: {currentUserName}</span>
             <span className="security-log-badge__item">
@@ -254,29 +268,32 @@ export default function ContractDetailPage({ contractId, currentUserRoles = [], 
         </div>
       )}
 
-      <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginBottom: '16px' }}>
-        <span className="icon-xs">{ICONS.arrowLeft}</span> Quay lại danh sách hợp đồng
-      </button>
-
-      <div className="page-header">
-        <div>
-          <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+<PageHeader
+        back={{ label: 'Hợp đồng', onClick: onBack }}
+        title={
+          <span className="page-title__row">
             {contract.contractCode}
             <span className={`badge ${status.badge}`}>{status.label}</span>
-          </h1>
-          <p className="page-subtitle">
-            {contract.name} · {contract.customerName || '—'} · {CONTRACT_TYPE_LABEL[contract.contractType] ?? contract.contractType}
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button type="button" className="btn btn-secondary" onClick={() => setIsTypeLimitOpen(true)}>
-            <span className="icon-xs">{ICONS.document}</span> Sửa loại &amp; hạn mức
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={() => setIsExpiryReminderOpen(true)}>
-            <span className="icon-xs">{ICONS.clock}</span> Nhắc hết hạn
-          </button>
-        </div>
-      </div>
+          </span>
+        }
+        meta={
+          <>
+            <span>{contract.name}</span>
+            <span>{contract.customerName || '—'}</span>
+            <span>{CONTRACT_TYPE_LABEL[contract.contractType] ?? contract.contractType}</span>
+          </>
+        }
+        actions={
+          <>
+            <button type="button" className="btn btn-secondary" onClick={() => setIsTypeLimitOpen(true)}>
+              <span className="icon-xs">{ICONS.document}</span> Sửa loại &amp; hạn mức
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={() => setIsExpiryReminderOpen(true)}>
+              <span className="icon-xs">{ICONS.clock}</span> Nhắc hết hạn
+            </button>
+          </>
+        }
+      />
 
       {/* Tổng quan: giá trị, hạn mức đã dùng, hiệu lực */}
       <div className="stats-grid">
@@ -301,7 +318,7 @@ export default function ContractDetailPage({ contractId, currentUserRoles = [], 
                     style={{
                       height: '100%',
                       width: `${Math.min(100, usage.usedPercentage ?? 0)}%`,
-                      background: usage.overLimit ? 'var(--pale-red-fg)' : usage.nearLimit ? '#956400' : 'var(--pale-green-fg)',
+                      background: usage.overLimit ? 'var(--pale-red-fg)' : usage.nearLimit ? 'var(--pale-yellow-fg)' : 'var(--pale-green-fg)',
                     }}
                   />
                 </div>
@@ -321,7 +338,7 @@ export default function ContractDetailPage({ contractId, currentUserRoles = [], 
               {formatDate(contract.startDate)} → {formatDate(contract.endDate)}
             </div>
             {isExpiringSoon && (
-              <span className="cell-muted" style={{ fontSize: '11.5px', color: remaining! < 0 ? 'var(--pale-red-fg)' : '#956400' }}>
+              <span className="cell-muted" style={{ fontSize: '11.5px', color: remaining! < 0 ? 'var(--pale-red-fg)' : 'var(--pale-yellow-fg)' }}>
                 {remaining! < 0 ? `Đã quá hạn ${Math.abs(remaining!)} ngày` : `Còn ${remaining} ngày`}
               </span>
             )}
@@ -338,12 +355,23 @@ export default function ContractDetailPage({ contractId, currentUserRoles = [], 
 
       {/* Khối lập hóa đơn — nội dung đổi theo loại hợp đồng, không cần rời trang */}
       {(contract.contractType === 'FIXED_PRICE' || contract.contractType === 'MILESTONE') && (
-        <MilestonesSection
-          contract={contract}
-          milestones={milestones}
-          loading={milestonesLoading}
-          onManage={() => setIsMilestonesModalOpen(true)}
-        />
+        <>
+          <MilestonesSection
+            milestones={milestones}
+            loading={milestonesLoading}
+            onManage={() => setIsMilestonesModalOpen(true)}
+          />
+          {/* NCL-12-CN-003: gắn phiếu nghiệm thu với mốc — mốc chỉ lập hóa đơn khi phiếu đã xác nhận (QTN-25). */}
+          <MilestoneAcceptancePanel
+            key={milestonesVersion}
+            contractId={contract.id}
+            currentUserRoles={currentUserRoles}
+            onChanged={() => {
+              void loadMilestones();
+              void loadInvoices();
+            }}
+          />
+        </>
       )}
       {contract.contractType === 'TIME_AND_MATERIAL' && (
         <ProposalSection
@@ -375,7 +403,7 @@ export default function ContractDetailPage({ contractId, currentUserRoles = [], 
           <div className="table-empty-state" data-testid="contract-detail-invoices-empty">
             <div className="table-empty-state__icon">{ICONS.document}</div>
             <h3>Chưa có hóa đơn nào</h3>
-            <p>Hóa đơn được lập ở khối phía trên (theo mốc, đề xuất T&amp;M hoặc định kỳ) sẽ hiện ở đây.</p>
+            <p>Hóa đơn lập cho hợp đồng này sẽ hiện ở đây.</p>
           </div>
         ) : (
           <div className="table-responsive">
@@ -434,6 +462,7 @@ export default function ContractDetailPage({ contractId, currentUserRoles = [], 
           setIsMilestonesModalOpen(false);
           showToast('Đã lưu danh sách mốc thanh toán.');
           refreshAll();
+          setMilestonesVersion((v) => v + 1);
         }}
       />
 
@@ -458,12 +487,10 @@ export default function ContractDetailPage({ contractId, currentUserRoles = [], 
 
 /** FIXED_PRICE / MILESTONE — tóm tắt mốc thanh toán ngay tại trang, chi tiết/sửa mở modal đã có. */
 function MilestonesSection({
-  contract,
   milestones,
   loading,
   onManage,
 }: {
-  contract: ContractRes;
   milestones: ContractMilestoneRes[];
   loading: boolean;
   onManage: () => void;
@@ -473,9 +500,6 @@ function MilestonesSection({
       <div className="user-table-toolbar">
         <div>
           <h3 style={{ margin: 0, fontSize: '15px' }}>Mốc thanh toán</h3>
-          <p className="cell-muted" style={{ margin: '2px 0 0', fontSize: '12.5px' }}>
-            Hợp đồng {CONTRACT_TYPE_LABEL[contract.contractType]} lập hóa đơn theo mốc — nghiệm thu xong bấm "Lập hóa đơn" ngay tại mốc.
-          </p>
         </div>
         <button type="button" className="btn btn-primary" onClick={onManage}>
           <span className="icon-xs">{ICONS.calendar}</span> Quản lý mốc &amp; lập hóa đơn
@@ -649,9 +673,9 @@ function ProposalSection({
 
   return (
     <div className="user-table-card" style={{ marginTop: '20px', padding: '20px' }}>
-      <h3 style={{ margin: '0 0 4px', fontSize: '15px' }}>Đề xuất hóa đơn ({CONTRACT_TYPE_LABEL.TIME_AND_MATERIAL})</h3>
+      <h3 style={{ margin: '0 0 4px', fontSize: '15px' }}>Đề xuất hóa đơn</h3>
       <p className="cell-muted" style={{ margin: '0 0 14px', fontSize: '12.5px' }}>
-        Gom giờ công và chi phí đã duyệt, chưa từng đề xuất, phát sinh trong một kỳ của một dự án thuộc hợp đồng này.
+        Gom giờ công và chi phí đã duyệt chưa lập hóa đơn trong kỳ.
       </p>
 
       {projectsError && <div className="alert-box alert-box--danger" style={{ marginBottom: '12px' }}>{projectsError}</div>}
@@ -849,9 +873,9 @@ function RecurringSection({ contract, onSaved }: { contract: ContractRes; onSave
 
   return (
     <div className="user-table-card" style={{ marginTop: '20px', padding: '20px' }}>
-      <h3 style={{ margin: '0 0 4px', fontSize: '15px' }}>Hóa đơn định kỳ ({CONTRACT_TYPE_LABEL.MAINTENANCE})</h3>
+      <h3 style={{ margin: '0 0 4px', fontSize: '15px' }}>Hóa đơn định kỳ</h3>
       <p className="cell-muted" style={{ margin: '0 0 14px', fontSize: '12.5px' }}>
-        Hệ thống tự động tạo hóa đơn nháp đúng ngày đã khai mỗi tháng — kế toán soát lại rồi phát hành.
+        Hóa đơn nháp được tạo tự động vào ngày đã chọn mỗi tháng.
       </p>
 
       {saveError && <div className="alert-box alert-box--danger" role="alert" style={{ marginBottom: '12px' }}>{saveError}</div>}
@@ -862,7 +886,7 @@ function RecurringSection({ contract, onSaved }: { contract: ContractRes; onSave
         <>
           {scheduleNotFound && (
             <p className="field-hint" style={{ marginBottom: '10px' }}>
-              Hợp đồng này chưa có lịch hóa đơn định kỳ — điền form bên dưới để tạo mới.
+              Chưa có lịch hóa đơn định kỳ.
             </p>
           )}
           <form onSubmit={(e) => void handleSubmit(e)} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end' }}>

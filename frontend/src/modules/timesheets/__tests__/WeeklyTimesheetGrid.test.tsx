@@ -23,7 +23,7 @@ function makeEntry(overrides: Partial<TimeEntryRes>): TimeEntryRes {
 
 describe('WeeklyTimesheetGrid (NCL-06-CN-001)', () => {
   it('hiển thị trạng thái rỗng khi chưa có bản ghi nào trong tuần', () => {
-    render(<WeeklyTimesheetGrid weekFrom={WEEK_FROM} weekTo={WEEK_TO} summaries={[]} />);
+    render(<WeeklyTimesheetGrid weekFrom={WEEK_FROM} summaries={[]} />);
     expect(screen.getByTestId('weekly-grid-empty')).toBeInTheDocument();
   });
 
@@ -41,7 +41,7 @@ describe('WeeklyTimesheetGrid (NCL-06-CN-001)', () => {
       overBudgetWarning: true,
     };
 
-    render(<WeeklyTimesheetGrid weekFrom={WEEK_FROM} weekTo={WEEK_TO} summaries={[summary]} />);
+    render(<WeeklyTimesheetGrid weekFrom={WEEK_FROM} summaries={[summary]} />);
 
     expect(screen.getByTestId('weekly-grid')).toBeInTheDocument();
     expect(screen.getByText('Phỏng vấn người dùng')).toBeInTheDocument();
@@ -64,7 +64,7 @@ describe('WeeklyTimesheetGrid (NCL-06-CN-001)', () => {
       overBudgetWarning: true,
     };
 
-    render(<WeeklyTimesheetGrid weekFrom={WEEK_FROM} weekTo={WEEK_TO} summaries={[summary]} />);
+    render(<WeeklyTimesheetGrid weekFrom={WEEK_FROM} summaries={[summary]} />);
 
     expect(screen.getByTestId('weekly-grid-warning-20')).toHaveTextContent('100% / 8 giờ');
     expect(screen.getByTestId('weekly-grid-warning-20')).toHaveTextContent('⚠');
@@ -84,7 +84,7 @@ describe('WeeklyTimesheetGrid (NCL-06-CN-001)', () => {
       overBudgetWarning: false,
     };
 
-    render(<WeeklyTimesheetGrid weekFrom={WEEK_FROM} weekTo={WEEK_TO} summaries={[summary]} />);
+    render(<WeeklyTimesheetGrid weekFrom={WEEK_FROM} summaries={[summary]} />);
 
     expect(screen.getByText('Chưa đặt ngân sách')).toBeInTheDocument();
     expect(screen.queryByTestId('weekly-grid-warning-21')).not.toBeInTheDocument();

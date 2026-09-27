@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { getUserById } from '../api/usersApi';
 import type { User } from '../types/userTypes';
-import { SYSTEM_DEPARTMENTS, SYSTEM_ROLES } from '../types/userTypes';
+import { SYSTEM_ROLES } from '../types/userTypes';
+import { departmentName, useDepartmentOptions } from '../hooks/useDepartmentOptions';
 import { ICONS } from '../components/icons';
 
 interface UserDetailPageProps {
@@ -11,6 +12,7 @@ interface UserDetailPageProps {
 
 export const UserDetailPage: React.FC<UserDetailPageProps> = ({ userId, onBack }) => {
   const [user, setUser] = useState<User | null>(null);
+  const { departments } = useDepartmentOptions();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,7 +54,7 @@ export const UserDetailPage: React.FC<UserDetailPageProps> = ({ userId, onBack }
     );
   }
 
-  const dept = SYSTEM_DEPARTMENTS.find((d) => d.id === user.departmentId);
+
 
   return (
     <div className="user-detail-page">
@@ -86,7 +88,7 @@ export const UserDetailPage: React.FC<UserDetailPageProps> = ({ userId, onBack }
 
           <div className="detail-field">
             <span className="detail-label">Bộ phận / Phòng ban</span>
-            <strong className="detail-value">{dept ? `[${dept.code}] ${dept.name}` : 'Chưa gán'}</strong>
+            <strong className="detail-value">{departmentName(departments, user.departmentId)}</strong>
           </div>
 
           <div className="detail-field">

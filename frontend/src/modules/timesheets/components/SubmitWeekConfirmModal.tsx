@@ -92,7 +92,7 @@ export default function SubmitWeekConfirmModal({
               disabled={submitting}
               data-testid="btn-cancel-submit-week"
             >
-              Hủy bỏ
+              Hủy
             </button>
             <button
               type="button"
