@@ -5,6 +5,8 @@ import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.contract.entity.Contract;
 import com.serviceops.modules.contract.enums.ContractStatus;
 import com.serviceops.modules.contract.repository.ContractRepository;
+import com.serviceops.modules.customer.entity.Customer;
+import com.serviceops.modules.customer.repository.CustomerRepository;
 import com.serviceops.modules.identity.user.entity.User;
 import com.serviceops.modules.identity.user.enums.UserStatus;
 import com.serviceops.modules.identity.user.repository.UserRepository;
@@ -25,6 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +39,7 @@ public class ProjectServiceImpl implements ProjectService {
 	private final ProjectRepository projectRepository;
 	private final ProjectAuditLogger auditLogger;
 	private final ProjectDataScopeGuard projectDataScopeGuard;
+	private final CustomerRepository customerRepository;
 
 	@Override
 	@Transactional
@@ -110,9 +116,24 @@ public class ProjectServiceImpl implements ProjectService {
 	@Transactional(readOnly = true)
 	public List<ProjectRes> listAll() {
 		// NCL-01-CN-004-TC-01: chi tra ve du an thuoc pham vi du lieu duoc phan (QTN-01).
-		return projectDataScopeGuard.filterVisible(projectRepository.findAll(org.springframework.data.domain.Sort.by(
-				org.springframework.data.domain.Sort.Direction.DESC, "id"))).stream()
-				.map(this::toResponse).toList();
+		List<Project> projects = projectDataScopeGuard.filterVisible(projectRepository.findAll(
+				org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id")));
+		// Ten khach hang va quan ly du an cho man "Du an": nap theo LO (2 truy van cho ca danh sach),
+		// khong tra cuu tung dong.
+		Map<Long, String> customerNames = customerRepository.findAllById(projects.stream()
+						.map(Project::getCustomerId).filter(Objects::nonNull).distinct().toList()).stream()
+				.collect(Collectors.toMap(Customer::getId, Customer::getName, (a, b) -> a));
+		Map<Long, String> managerNames = userRepository.findAllById(projects.stream()
+						.map(Project::getProjectManagerId).filter(Objects::nonNull).distinct().toList()).stream()
+				.collect(Collectors.toMap(User::getId, User::getFullName, (a, b) -> a));
+		return projects.stream().map(project -> withNames(toResponse(project),
+				customerNames.get(project.getCustomerId()), managerNames.get(project.getProjectManagerId()))).toList();
+	}
+
+	private static ProjectRes withNames(ProjectRes res, String customerName, String managerName) {
+		return new ProjectRes(res.id(), res.projectCode(), res.name(), res.contractId(), res.customerId(),
+				res.projectType(), res.limitValue(), res.startDate(), res.expectedEndDate(), res.projectManagerId(),
+				res.status(), res.createdBy(), res.createdAt(), customerName, managerName);
 	}
 
 	private ProjectRes toResponse(Project project) {
