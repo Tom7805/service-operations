@@ -57,7 +57,16 @@ public class UserServiceImpl implements UserService {
         List<User> users = keyword == null || keyword.isBlank()
                 ? userRepository.findAll()
                 : userRepository.findByUsernameContainingIgnoreCaseOrFullNameContainingIgnoreCase(keyword.trim(), keyword.trim());
-        return users.stream().map(this::toResponse).toList();
+        if (users.isEmpty()) {
+            return List.of();
+        }
+        // Nap pham vi + vai tro cua ca danh sach trong mot truy van, roi ghep theo tai khoan.
+        java.util.Map<Long, List<UserRoleScope>> scopesByUser = userRoleScopeRepository
+                .findWithRoleByUserIdIn(users.stream().map(User::getId).toList()).stream()
+                .collect(Collectors.groupingBy(s -> s.getUser().getId()));
+        return users.stream()
+                .map(u -> toResponse(u, scopesByUser.getOrDefault(u.getId(), List.of())))
+                .toList();
     }
 
     @Override
@@ -249,7 +258,10 @@ public class UserServiceImpl implements UserService {
     }
 
     private UserRes toResponse(User user) {
-        List<UserRoleScope> scopes = userRoleScopeRepository.findByUser_Id(user.getId());
+        return toResponse(user, userRoleScopeRepository.findByUser_Id(user.getId()));
+    }
+
+    private UserRes toResponse(User user, List<UserRoleScope> scopes) {
         String scopeType = scopes.isEmpty() ? null : scopes.get(0).getScopeType();
         Long scopeDepartmentId = scopes.isEmpty() ? null : scopes.get(0).getScopeDepartmentId();
         List<String> roleCodes = scopes.stream().map(s -> s.getRole().getCode()).toList();

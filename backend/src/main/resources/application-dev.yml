@@ -7,10 +7,13 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: true
+    # In SQL ra console lam MOI request cham theo: cac luong xu ly phai xep hang ghi stdout (Windows
+    # console rat cham), nen trang goi 6-8 API song song bi keo dai 300-900ms. Tat mac dinh; can go loi
+    # thi bat lai bang bien moi truong: SHOW_SQL=true va SQL_LOG_LEVEL=DEBUG.
+    show-sql: ${SHOW_SQL:false}
     properties:
       hibernate:
-        format_sql: true
+        format_sql: ${SHOW_SQL:false}
   flyway:
     enabled: true
     locations: classpath:db/migration,classpath:db/seed
@@ -19,6 +22,6 @@ spring:
 
 logging:
   level:
-    com.serviceops: DEBUG
-    org.hibernate.SQL: DEBUG
+    com.serviceops: ${APP_LOG_LEVEL:INFO}
+    org.hibernate.SQL: ${SQL_LOG_LEVEL:INFO}
 

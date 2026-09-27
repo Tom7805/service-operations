@@ -3,6 +3,13 @@ spring:
     name: service-operations-backend
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
+  jpa:
+    properties:
+      hibernate:
+        # Nap quan he LAZY theo LO (toi da 100 khoa/truy van) thay vi tung dong mot: danh sach 50 nhan
+        # su truoc day ton 1 + 50 (tai khoan) + 50 (bo phan) truy van, nay con 3. Sua N+1 cho moi API
+        # doc danh sach ma khong phai viet lai tung truy van.
+        default_batch_fetch_size: 100
   jackson:
     default-property-inclusion: non_null
     serialization:
@@ -39,6 +46,11 @@ server:
   port: ${SERVER_PORT:8080}
   servlet:
     context-path: /api/v1
+  # Nen gzip phan hoi JSON tu 1 KB tro len — danh sach vai tram dong nho di 5-8 lan tren duong truyen.
+  compression:
+    enabled: true
+    mime-types: application/json,text/plain,text/csv
+    min-response-size: 1024
 
 app:
   jwt:
