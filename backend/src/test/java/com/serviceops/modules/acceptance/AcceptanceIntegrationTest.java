@@ -1,6 +1,8 @@
 package com.serviceops.modules.acceptance;
 
 import com.serviceops.common.audit.AuditTargetType;
+import com.serviceops.common.audit.SensitiveAccessLogger;
+import com.serviceops.common.audit.enums.SensitiveDataType;
 import com.serviceops.common.audit.service.AuditLogService;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
@@ -30,6 +32,7 @@ import com.serviceops.modules.acceptance.service.DeliverableService;
 import com.serviceops.modules.acceptance.service.impl.AcceptanceCertificateServiceImpl;
 import com.serviceops.modules.acceptance.service.impl.AcceptanceConfirmationServiceImpl;
 import com.serviceops.modules.acceptance.service.impl.AcceptanceMilestoneLinkServiceImpl;
+import com.serviceops.modules.acceptance.service.impl.AcceptanceValueEstimator;
 import com.serviceops.modules.acceptance.service.impl.AcceptanceViewAssembler;
 import com.serviceops.modules.acceptance.service.impl.DeliverableServiceImpl;
 import com.serviceops.modules.acceptance.validator.DeliverableVersionUniqueValidator;
@@ -46,6 +49,8 @@ import com.serviceops.modules.invoice.service.MilestoneInvoiceService;
 import com.serviceops.modules.invoice.service.impl.MilestoneInvoiceServiceImpl;
 import com.serviceops.modules.invoice.validator.ContractValueLimitValidator;
 import com.serviceops.modules.invoice.validator.MilestoneAcceptanceValidator;
+import com.serviceops.modules.profitability.enums.RecognitionMethod;
+import com.serviceops.modules.profitability.service.RevenueRecognitionService;
 import com.serviceops.modules.project.entity.Project;
 import com.serviceops.modules.project.entity.Task;
 import com.serviceops.modules.project.entity.WorkPackage;
@@ -96,6 +101,7 @@ import static org.mockito.Mockito.when;
 @ActiveProfiles("test")
 @Import({AcceptanceCertificateServiceImpl.class, AcceptanceConfirmationServiceImpl.class,
 		AcceptanceMilestoneLinkServiceImpl.class, DeliverableServiceImpl.class, AcceptanceViewAssembler.class,
+		AcceptanceValueEstimator.class,
 		AcceptanceMapper.class, DeliverableMapper.class, AcceptanceAccessGuard.class,
 		WorkPackageCompletionValidator.class, DeliverableVersionUniqueValidator.class,
 		ContractMilestoneServiceImpl.class, MilestoneInvoiceServiceImpl.class, MilestoneAcceptanceValidator.class,
@@ -118,6 +124,8 @@ class AcceptanceIntegrationTest {
 	@MockBean private AuditLogService auditLogService;
 	@MockBean private ContractAuditLogger contractAuditLogger;
 	@MockBean private CurrentUserScopeProvider currentUserScopeProvider;
+	@MockBean private RevenueRecognitionService revenueRecognitionService;
+	@MockBean private SensitiveAccessLogger sensitiveAccessLogger;
 
 	@Autowired private TestEntityManager em;
 	@Autowired private AcceptanceCertificateService certificateService;
@@ -165,7 +173,7 @@ class AcceptanceIntegrationTest {
 
 		assertThat(res.status()).isEqualTo(AcceptanceStatus.PENDING_CONFIRMATION);
 		assertThat(res.certificateCode()).startsWith("NT-20260924-");
-		assertThat(res.title()).isEqualTo("Nghiem thu hang muc Giai doan 1");
+		assertThat(res.title()).isEqualTo("Nghiệm thu hạng mục Giai doan 1");
 		assertThat(res.note()).isEqualTo("Dot 1");
 		assertThat(res.acceptedValue()).isEqualByComparingTo("300000000.00");
 		assertThat(res.tasks()).extracting(AcceptanceDetailRes.TaskItemRes::taskName)
@@ -176,6 +184,27 @@ class AcceptanceIntegrationTest {
 		});
 		verify(auditLogService).record(eq("Lập phiếu nghiệm thu hạng mục"), eq(AuditTargetType.ACCEPTANCE),
 				eq(res.id()), anyString(), anyString());
+	}
+
+	@Test
+	@DisplayName("NCL-12-CN-001: hang muc du dieu kien -> goi y gia tri = gia tri hop dong tron goi chia deu theo cong viec cua du an")
+	void readinessSuggestsValueFromFixedPriceContractShare() {
+		task(workPackage, "Phan tich yeu cau", TaskStatus.DONE);
+		WorkPackage later = workPackage(project, null, "Giai doan 2");
+		task(later, "Lap trinh", TaskStatus.TODO);
+		task(later, "Kiem thu", TaskStatus.TODO);
+		task(later, "Trien khai", TaskStatus.TODO);
+
+		AcceptanceReadinessRes readiness = certificateService.getReadiness(project.getId(), workPackage.getId());
+
+		assertThat(readiness.ready()).isTrue();
+		AcceptanceReadinessRes.ValueSuggestionRes suggestion = readiness.valueSuggestion();
+		assertThat(suggestion.method()).isEqualTo(RecognitionMethod.PERCENTAGE_OF_COMPLETION);
+		assertThat(suggestion.projectTaskCount()).isEqualTo(4);
+		assertThat(suggestion.suggestedValue()).isEqualByComparingTo("250000000");
+		assertThat(suggestion.tasks()).singleElement()
+				.satisfies(item -> assertThat(item.taskName()).isEqualTo("Phan tich yeu cau"));
+		verify(sensitiveAccessLogger).logView(eq(SensitiveDataType.REVENUE), eq(project.getId()), anyString(), anyString());
 	}
 
 	@Test
@@ -195,6 +224,7 @@ class AcceptanceIntegrationTest {
 
 		AcceptanceReadinessRes readiness = certificateService.getReadiness(project.getId(), workPackage.getId());
 		assertThat(readiness.ready()).isFalse();
+		assertThat(readiness.valueSuggestion()).isNull();
 		assertThat(readiness.totalTasks()).isEqualTo(3);
 		assertThat(readiness.unfinishedTasks()).extracting(AcceptanceReadinessRes.UnfinishedTaskRes::taskName)
 				.containsExactly("Kiem thu", "Trien khai");

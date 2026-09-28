@@ -9,6 +9,7 @@ import {
   TASK_STATUS_META,
   type AcceptanceDetailRes,
   type AcceptanceReadinessRes,
+  type AcceptanceValueSuggestionRes,
 } from '../types/acceptanceTypes';
 import type { FlatWorkPackage } from '../utils/workPackageTree';
 import {
@@ -37,6 +38,24 @@ function formatAmount(value: number): string {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 2 }).format(value);
 }
 
+/** Số gợi ý đưa vào ô nhập theo đúng dạng người dùng gõ ("1.800.000") để parseMoneyInput đọc lại được. */
+function toMoneyInput(value: number): string {
+  return new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 }).format(value);
+}
+
+function formatHoursShort(hours: number): string {
+  return `${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 }).format(hours)} giờ`;
+}
+
+/** Diễn giải số gợi ý để người lập biết hệ thống tính từ đâu. */
+function describeSuggestion(s: AcceptanceValueSuggestionRes): string {
+  if (s.method === 'HOURLY') {
+    const hours = s.tasks.reduce((sum, t) => sum + (t.billableHours ?? 0), 0);
+    return `${formatHoursShort(hours)} công đã duyệt của ${s.tasks.length} công việc = ${formatAmount(s.suggestedValue)}`;
+  }
+  return `giá trị hợp đồng chia đều ${s.projectTaskCount} công việc của dự án, hạng mục có ${s.tasks.length} công việc = ${formatAmount(s.suggestedValue)}`;
+}
+
 /**
  * NCL-12-CN-001 — Lập phiếu nghiệm thu hạng mục (Quản lý dự án, VT-02).
  *
@@ -61,6 +80,8 @@ export default function AcceptanceFormModal({
   const [workPackageId, setWorkPackageId] = useState<number | null>(initialWorkPackageId);
   const [title, setTitle] = useState('');
   const [acceptedValue, setAcceptedValue] = useState('');
+  // 'auto' = ô giá trị đang giữ số hệ thống tính; 'manual' = người lập đã tự gõ, không ghi đè nữa.
+  const [valueSource, setValueSource] = useState<'empty' | 'auto' | 'manual'>('empty');
   const [note, setNote] = useState('');
   const [errors, setErrors] = useState<AcceptanceFormErrors>({});
 
@@ -80,6 +101,7 @@ export default function AcceptanceFormModal({
     setWorkPackageId(initialWorkPackageId);
     setTitle('');
     setAcceptedValue('');
+    setValueSource('empty');
     setNote('');
     setErrors({});
     setReadiness(null);
@@ -120,7 +142,35 @@ export default function AcceptanceFormModal({
   const readinessMatches = readiness != null && readiness.workPackageId === workPackageId;
   const canSubmit =
     isAllowed && !projectClosed && readinessMatches && readiness.ready && !readinessLoading && !submitting;
-  const defaultTitle = selectedWp ? `Nghiem thu hang muc ${selectedWp.name}` : '';
+  const defaultTitle = selectedWp ? `Nghiệm thu hạng mục ${selectedWp.name}` : '';
+
+  const suggestion = readinessMatches && readiness.ready ? readiness.valueSuggestion ?? null : null;
+  const suggestedValue = suggestion && suggestion.suggestedValue > 0 ? suggestion.suggestedValue : null;
+  const taskValues = useMemo(
+    () => new Map((suggestion?.tasks ?? []).map((t) => [t.taskId, t])),
+    [suggestion]
+  );
+  const differsFromSuggestion =
+    suggestedValue != null && !Number.isNaN(parsedValue) && Math.abs(parsedValue - suggestedValue) >= 0.005;
+
+  // Tự điền số hệ thống tính khi hạng mục đủ điều kiện; đổi hạng mục thì điền lại, trừ khi người lập đã tự gõ.
+  useEffect(() => {
+    if (valueSource === 'manual') return;
+    if (suggestedValue != null) {
+      setAcceptedValue(toMoneyInput(suggestedValue));
+      setValueSource('auto');
+    } else if (valueSource === 'auto') {
+      setAcceptedValue('');
+      setValueSource('empty');
+    }
+  }, [suggestedValue, valueSource]);
+
+  const applySuggestedValue = () => {
+    if (suggestedValue == null) return;
+    setAcceptedValue(toMoneyInput(suggestedValue));
+    setValueSource('auto');
+    setErrors((prev) => ({ ...prev, acceptedValue: undefined }));
+  };
 
   if (!isOpen) return null;
 
@@ -209,6 +259,11 @@ export default function AcceptanceFormModal({
                   <div className="detail-field">
                     <span className="detail-label">Giá trị nghiệm thu</span>
                     <span className="detail-value" data-testid="acceptance-confirm-value">{formatAmount(parsedValue)}</span>
+                    {differsFromSuggestion && (
+                      <span className="field-hint acceptance-value-warn">
+                        Hệ thống tính {formatAmount(suggestedValue)}
+                      </span>
+                    )}
                   </div>
                   <div className="detail-field">
                     <span className="detail-label">Tiêu đề phiếu</span>
@@ -370,12 +425,23 @@ export default function AcceptanceFormModal({
                             <div>
                               <h4 className="acceptance-preview__title">Công việc đưa vào phiếu</h4>
                               <ul className="acceptance-task-list">
-                                {(selectedWp?.tasks ?? []).map((t) => (
-                                  <li key={t.id}>
-                                    <span>#{t.id} {t.name}</span>
-                                    <span className="badge badge--green">Hoàn thành</span>
-                                  </li>
-                                ))}
+                                {(selectedWp?.tasks ?? []).map((t) => {
+                                  const valued = taskValues.get(t.id);
+                                  return (
+                                    <li key={t.id}>
+                                      <span>
+                                        #{t.id} {t.name}
+                                        {valued && (
+                                          <span className="acceptance-task-list__value" data-testid={`acceptance-task-value-${t.id}`}>
+                                            {valued.billableHours != null && `${formatHoursShort(valued.billableHours)} · `}
+                                            {formatAmount(valued.value)}
+                                          </span>
+                                        )}
+                                      </span>
+                                      <span className="badge badge--green">Hoàn thành</span>
+                                    </li>
+                                  );
+                                })}
                               </ul>
                             </div>
                             <div>
@@ -420,6 +486,7 @@ export default function AcceptanceFormModal({
                       value={acceptedValue}
                       onChange={(e) => {
                         setAcceptedValue(e.target.value);
+                        setValueSource(e.target.value.trim() ? 'manual' : 'empty');
                         setErrors((prev) => ({ ...prev, acceptedValue: undefined }));
                       }}
                       disabled={submitting}
@@ -427,9 +494,34 @@ export default function AcceptanceFormModal({
                     {errors.acceptedValue ? (
                       <span className="field-error">{errors.acceptedValue}</span>
                     ) : (
-                      !Number.isNaN(parsedValue) && parsedValue >= 0 && (
+                      // Chỉ nhắc lại số khi người lập gõ dạng khó đọc (vd "3050000"); số đã có dấu chấm thì thôi.
+                      !Number.isNaN(parsedValue) && parsedValue >= 0 && acceptedValue.trim() !== toMoneyInput(parsedValue) && (
                         <span className="field-hint">= {formatAmount(parsedValue)}</span>
                       )
+                    )}
+                    {suggestion && suggestedValue != null && !differsFromSuggestion && (
+                      <span className="field-hint" data-testid="acceptance-value-suggestion">
+                        Hệ thống tính: {describeSuggestion(suggestion)}. Sửa được nếu hai bên thỏa thuận số khác.
+                      </span>
+                    )}
+                    {differsFromSuggestion && (
+                      <span className="field-hint acceptance-value-warn" data-testid="acceptance-value-differs">
+                        Khác số hệ thống tính ({formatAmount(suggestedValue)}).{' '}
+                        <button type="button" className="btn-link" onClick={applySuggestedValue}>
+                          Dùng số hệ thống
+                        </button>
+                      </span>
+                    )}
+                    {suggestion && suggestion.method === 'HOURLY' && suggestedValue == null && (
+                      <span className="field-hint" data-testid="acceptance-value-no-hours">
+                        Hạng mục chưa có giờ công đã duyệt, tính phí nên hệ thống chưa tính được — nhập theo thỏa thuận.
+                      </span>
+                    )}
+                    {suggestion && suggestion.missingRateEntryCount > 0 && (
+                      <span className="field-hint acceptance-value-warn">
+                        Còn {suggestion.missingRateEntryCount} dòng giờ công chưa có đơn giá nên chưa tính vào số gợi ý
+                        (khai báo ở mục Đơn giá).
+                      </span>
                     )}
                   </div>
                   <div className="form-field">

@@ -170,6 +170,75 @@ describe('AcceptanceFormModal — NCL-12-CN-001', () => {
     expect(acceptanceApi.getAcceptanceReadiness).toHaveBeenCalledTimes(2);
   });
 
+  describe('tự điền giá trị nghiệm thu từ công việc của hạng mục', () => {
+    const READY_HOURLY: AcceptanceReadinessRes = {
+      ...READY,
+      valueSuggestion: {
+        method: 'HOURLY', suggestedValue: 1800000, projectTaskCount: 3, missingRateEntryCount: 0,
+        tasks: [
+          { taskId: 100, taskName: 'Phan tich yeu cau', billableHours: 8, value: 1800000 },
+          { taskId: 103, taskName: 'Lap trinh phan he', billableHours: 0, value: 0 },
+        ],
+      },
+    };
+
+    it('hợp đồng theo giờ: điền sẵn tổng giờ công đã duyệt, hiện giờ và tiền từng công việc, lập phiếu với số đó', async () => {
+      vi.mocked(acceptanceApi.getAcceptanceReadiness).mockResolvedValue(READY_HOURLY);
+      vi.mocked(acceptanceApi.createAcceptance).mockResolvedValue(CREATED);
+      const { onCreated } = renderModal({ initialWorkPackageId: 40 });
+
+      await screen.findByTestId('acceptance-ready');
+      expect(screen.getByLabelText(/Giá trị nghiệm thu/)).toHaveValue('1.800.000');
+      expect(screen.getByTestId('acceptance-value-suggestion')).toHaveTextContent('8 giờ công đã duyệt của 2 công việc');
+      expect(screen.getByTestId('acceptance-task-value-100')).toHaveTextContent(/8 giờ · 1\.800\.000/);
+      expect(screen.getByTestId('acceptance-task-value-103')).toHaveTextContent(/0 giờ · 0/);
+
+      fireEvent.click(screen.getByTestId('acceptance-submit'));
+      expect(await screen.findByTestId('acceptance-confirm-step')).toHaveTextContent('Nghiệm thu hạng mục Giai doan 1');
+      fireEvent.click(screen.getByTestId('acceptance-confirm-submit'));
+
+      await waitFor(() => expect(onCreated).toHaveBeenCalledWith(CREATED));
+      expect(acceptanceApi.createAcceptance).toHaveBeenCalledWith(12, {
+        workPackageId: 40, title: null, acceptedValue: 1800000, note: null,
+      });
+    });
+
+    it('sửa khác số hệ thống tính → cảnh báo lệch, bấm "Dùng số hệ thống" để lấy lại', async () => {
+      vi.mocked(acceptanceApi.getAcceptanceReadiness).mockResolvedValue(READY_HOURLY);
+      renderModal({ initialWorkPackageId: 40 });
+      await screen.findByTestId('acceptance-ready');
+
+      fireEvent.change(screen.getByLabelText(/Giá trị nghiệm thu/), { target: { value: '3.050.000' } });
+      expect(screen.getByTestId('acceptance-value-differs')).toHaveTextContent(/Khác số hệ thống tính \(1\.800\.000/);
+      expect(screen.queryByTestId('acceptance-value-suggestion')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Dùng số hệ thống' }));
+      expect(screen.getByLabelText(/Giá trị nghiệm thu/)).toHaveValue('1.800.000');
+      expect(screen.queryByTestId('acceptance-value-differs')).not.toBeInTheDocument();
+    });
+
+    it('hợp đồng trọn gói: gợi ý phần giá trị hợp đồng chia đều theo công việc, không ghi giờ', async () => {
+      vi.mocked(acceptanceApi.getAcceptanceReadiness).mockResolvedValue({
+        ...READY,
+        valueSuggestion: {
+          method: 'PERCENTAGE_OF_COMPLETION', suggestedValue: 24250000, projectTaskCount: 4, missingRateEntryCount: 0,
+          tasks: [
+            { taskId: 100, taskName: 'Phan tich yeu cau', billableHours: null, value: 12125000 },
+            { taskId: 103, taskName: 'Lap trinh phan he', billableHours: null, value: 12125000 },
+          ],
+        },
+      });
+      renderModal({ initialWorkPackageId: 40 });
+      await screen.findByTestId('acceptance-ready');
+
+      expect(screen.getByLabelText(/Giá trị nghiệm thu/)).toHaveValue('24.250.000');
+      expect(screen.getByTestId('acceptance-value-suggestion')).toHaveTextContent(
+        'giá trị hợp đồng chia đều 4 công việc của dự án, hạng mục có 2 công việc'
+      );
+      expect(screen.getByTestId('acceptance-task-value-100')).not.toHaveTextContent('giờ');
+    });
+  });
+
   it('dự án đã đóng → không lập được phiếu', async () => {
     vi.mocked(acceptanceApi.getAcceptanceReadiness).mockResolvedValue(READY);
     renderModal({ initialWorkPackageId: 40, projectClosed: true });
