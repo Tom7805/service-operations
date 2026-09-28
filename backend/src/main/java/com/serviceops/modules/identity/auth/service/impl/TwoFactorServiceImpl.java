@@ -77,6 +77,7 @@ public class TwoFactorServiceImpl implements TwoFactorService {
 	private final LoginAttemptService loginAttemptService;
 	private final AuditLogService auditLogService;
 	private final TwoFactorVerificationTransaction verificationTransaction;
+	private final SecurityAlertNotifier securityAlertNotifier;
 
 	@Value("${app.two-factor.challenge-ttl-minutes:10}")
 	private long challengeTtlMinutes;
@@ -151,6 +152,10 @@ public class TwoFactorServiceImpl implements TwoFactorService {
 		if (outcome.thanhCong()) {
 			return outcome.loginRes();
 		}
+		if (outcome.vuaTamKhoaTaiKhoan()) {
+			// NCL-01-CN-009-TC-02: canh bao quan tri vien — chay SAU khi giao dich xac thuc da commit.
+			securityAlertNotifier.alertTwoFactorLock(outcome.lockedUserId(), outcome.lockedUsername(), lockSeconds);
+		}
 		throw new BusinessRuleException(outcome.errorCode(), outcome.message());
 	}
 
@@ -217,6 +222,12 @@ public class TwoFactorServiceImpl implements TwoFactorService {
 		log.info("TWO_FACTOR_CONFIG roleCode={} enabled={} updatedBy={} (TC-04)",
 				role.getCode(), setting.isEnabled(),
 				updater != null ? updater.getUsername() : null);
+		// TC-04: ngoai bang two_factor_config_audits con ghi vao Nhat ky he thong de tra cuu tren giao dien.
+		if (previousEnabled != newEnabled) {
+			auditLogService.record(newEnabled ? "Bật xác thực hai bước" : "Tắt xác thực hai bước",
+					AuditTargetType.TWO_FACTOR, role.getId(), role.getName(),
+					(newEnabled ? "Bật" : "Tắt") + " yêu cầu xác thực hai bước cho vai trò " + role.getName());
+		}
 
 		return toSetupRes(role, setting);
 	}

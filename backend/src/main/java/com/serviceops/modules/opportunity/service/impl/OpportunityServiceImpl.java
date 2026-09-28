@@ -25,7 +25,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -43,6 +42,7 @@ public class OpportunityServiceImpl implements OpportunityService {
 
 	private final OpportunityRepository opportunityRepository;
 	private final CustomerRepository customerRepository;
+	private final OpportunityScopeGuard scopeGuard;
 	private final OpportunityMapper opportunityMapper;
 	private final OpportunityAuditLogger auditLogger;
 	private final StageTransitionValidator stageTransitionValidator;
@@ -52,7 +52,8 @@ public class OpportunityServiceImpl implements OpportunityService {
 	@Override
 	@Transactional(readOnly = true)
 	public List<OpportunityRes> list() {
-		List<Opportunity> opportunities = opportunityRepository.findAllByOrderByCreatedAtDesc();
+		// QTN-01: chi hien co hoi thuoc pham vi du lieu cua nguoi xem.
+		List<Opportunity> opportunities = scopeGuard.filter(opportunityRepository.findAllByOrderByCreatedAtDesc());
 		if (opportunities.isEmpty()) {
 			return List.of();
 		}
@@ -78,6 +79,21 @@ public class OpportunityServiceImpl implements OpportunityService {
 				.map(o -> opportunityMapper.toResponse(
 						o, customerNameById.get(o.getCustomerId()), daysInStageById.get(o.getId())))
 				.toList();
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public OpportunityRes get(Long opportunityId) {
+		Opportunity opportunity = opportunityRepository.findById(opportunityId)
+				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
+						"Khong tim thay co hoi voi id=" + opportunityId));
+		scopeGuard.requireInScope(opportunity);
+		String customerName = customerRepository.findById(opportunity.getCustomerId())
+				.map(Customer::getName).orElse(null);
+		Long daysInStage = stageDurationCalculator
+				.daysInCurrentStageByOpportunity(List.of(opportunity), LocalDateTime.now())
+				.get(opportunity.getId());
+		return opportunityMapper.toResponse(opportunity, customerName, daysInStage);
 	}
 
 	@Override
@@ -139,4 +155,5 @@ public class OpportunityServiceImpl implements OpportunityService {
 		var authentication = SecurityContextHolder.getContext().getAuthentication();
 		return authentication == null ? null : authentication.getName();
 	}
+
 }

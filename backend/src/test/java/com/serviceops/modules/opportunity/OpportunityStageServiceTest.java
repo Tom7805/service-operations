@@ -16,9 +16,16 @@ import com.serviceops.modules.opportunity.logging.OpportunityAuditLogger;
 import com.serviceops.modules.opportunity.mapper.OpportunityMapper;
 import com.serviceops.modules.opportunity.repository.OpportunityRepository;
 import com.serviceops.modules.opportunity.repository.OpportunityStageHistoryRepository;
+import com.serviceops.modules.opportunity.service.impl.OpportunityScopeGuard;
 import com.serviceops.modules.opportunity.service.impl.OpportunityStageServiceImpl;
 import com.serviceops.modules.opportunity.validator.StageTransitionValidator;
+import com.serviceops.modules.customer.entity.Customer;
+import com.serviceops.modules.customer.repository.CustomerRepository;
+import com.serviceops.modules.identity.user.repository.UserRepository;
 import com.serviceops.security.scope.CurrentUserScopeProvider;
+import com.serviceops.security.scope.DataScopeType;
+import com.serviceops.security.scope.UserScope;
+import org.springframework.security.access.AccessDeniedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -29,6 +36,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -61,6 +69,12 @@ class OpportunityStageServiceTest {
 	@Mock
 	private OpportunityAuditLogger auditLogger;
 
+	@Mock
+	private UserRepository userRepository;
+
+	@Mock
+	private CustomerRepository customerRepository;
+
 	private final StageTransitionValidator stageTransitionValidator = new StageTransitionValidator();
 
 	private final OpportunityMapper opportunityMapper = new OpportunityMapper();
@@ -70,7 +84,9 @@ class OpportunityStageServiceTest {
 	@BeforeEach
 	void setUp() {
 		service = new OpportunityStageServiceImpl(opportunityRepository, stageHistoryRepository,
-				stageTransitionValidator, opportunityMapper, currentUserScopeProvider, auditLogger);
+				stageTransitionValidator, opportunityMapper, currentUserScopeProvider, auditLogger,
+				new OpportunityScopeGuard(currentUserScopeProvider, userRepository), customerRepository);
+		lenient().when(currentUserScopeProvider.currentScope()).thenReturn(UserScope.company());
 
 		lenient().when(opportunityRepository.save(any(Opportunity.class))).thenAnswer(inv -> inv.getArgument(0));
 	}
@@ -85,14 +101,58 @@ class OpportunityStageServiceTest {
 	}
 
 	@Test
-	@DisplayName("TC-01: chuyen giai doan thanh cong thi cap nhat xac suat tuong ung")
+	@DisplayName("TC-01: co hoi o giai doan khao sat chuyen sang bao gia thi cap nhat xac suat tuong ung")
 	void updatesProbabilityOnStageChange() {
-		when(opportunityRepository.findById(1L)).thenReturn(Optional.of(openOpportunity(1L, OpportunityStage.APPROACH)));
+		Opportunity opportunity = openOpportunity(1L, OpportunityStage.SURVEY);
+		opportunity.setCustomerId(10L);
+		when(opportunityRepository.findById(1L)).thenReturn(Optional.of(opportunity));
+		Customer customer = new Customer();
+		customer.setId(10L);
+		customer.setName("Cong ty ABC");
+		when(customerRepository.findById(10L)).thenReturn(Optional.of(customer));
 
 		OpportunityRes result = service.changeStage(new StageChangeReq(1L, OpportunityStage.PROPOSAL));
 
 		assertThat(result.stage()).isEqualTo("PROPOSAL");
 		assertThat(result.probability()).isEqualByComparingTo("40");
+		// Tra kem ten khach hang de dong trong bang khong bi mat ten sau khi cap nhat.
+		assertThat(result.customerName()).isEqualTo("Cong ty ABC");
+	}
+
+	@Test
+	@DisplayName("TC-01: tiep can chuyen sang khao sat voi xac suat 25%")
+	void movesFromApproachToSurvey() {
+		when(opportunityRepository.findById(1L)).thenReturn(Optional.of(openOpportunity(1L, OpportunityStage.APPROACH)));
+
+		OpportunityRes result = service.changeStage(new StageChangeReq(1L, OpportunityStage.SURVEY));
+
+		assertThat(result.stage()).isEqualTo("SURVEY");
+		assertThat(result.probability()).isEqualByComparingTo("25");
+	}
+
+	@Test
+	@DisplayName("TC-02: tiep can chuyen thang sang bao gia (bo qua khao sat) bi tu choi")
+	void rejectsSkippingSurvey() {
+		when(opportunityRepository.findById(1L)).thenReturn(Optional.of(openOpportunity(1L, OpportunityStage.APPROACH)));
+
+		assertThatThrownBy(() -> service.changeStage(new StageChangeReq(1L, OpportunityStage.PROPOSAL)))
+				.isInstanceOf(BusinessRuleException.class)
+				.hasMessageContaining("SURVEY");
+	}
+
+	@Test
+	@DisplayName("QTN-01: co hoi ngoai pham vi du lieu thi tu choi truy cap, khong luu")
+	void rejectsOpportunityOutsideScope() {
+		Opportunity opportunity = openOpportunity(1L, OpportunityStage.APPROACH);
+		opportunity.setOwnerId(99L);
+		when(opportunityRepository.findById(1L)).thenReturn(Optional.of(opportunity));
+		when(currentUserScopeProvider.currentScope()).thenReturn(new UserScope(DataScopeType.SELF, Set.of()));
+		when(currentUserScopeProvider.currentUserId()).thenReturn(7L);
+
+		assertThatThrownBy(() -> service.changeStage(new StageChangeReq(1L, OpportunityStage.SURVEY)))
+				.isInstanceOf(AccessDeniedException.class);
+
+		verify(opportunityRepository, never()).save(any());
 	}
 
 	@Test
@@ -184,22 +244,24 @@ class OpportunityStageServiceTest {
 		when(opportunityRepository.findById(1L)).thenReturn(Optional.of(openOpportunity(1L, OpportunityStage.APPROACH)));
 		when(currentUserScopeProvider.currentUserId()).thenReturn(7L);
 
-		service.changeStage(new StageChangeReq(1L, OpportunityStage.PROPOSAL));
+		service.changeStage(new StageChangeReq(1L, OpportunityStage.SURVEY));
 
 		ArgumentCaptor<OpportunityStageHistory> captor = ArgumentCaptor.forClass(OpportunityStageHistory.class);
 		verify(stageHistoryRepository).save(captor.capture());
 		OpportunityStageHistory saved = captor.getValue();
 		assertThat(saved.getOpportunityId()).isEqualTo(1L);
 		assertThat(saved.getFromStage()).isEqualTo(OpportunityStage.APPROACH);
-		assertThat(saved.getToStage()).isEqualTo(OpportunityStage.PROPOSAL);
+		assertThat(saved.getToStage()).isEqualTo(OpportunityStage.SURVEY);
 		assertThat(saved.getChangedBy()).isEqualTo(7L);
 		assertThat(saved.getChangedAt()).isNotNull();
+		// TC-05: nhat ky co hoi ghi nguoi thuc hien, noi dung va thoi diem.
+		verify(auditLogger).recordStageChange(eq(1L), org.mockito.ArgumentMatchers.contains("APPROACH -> SURVEY"));
 	}
 
 	@Test
 	@DisplayName("TC-05: lay lich su tra ve dung danh sach, moi nhat truoc")
 	void returnsStageHistoryOrderedByMostRecent() {
-		when(opportunityRepository.existsById(1L)).thenReturn(true);
+		when(opportunityRepository.findById(1L)).thenReturn(Optional.of(openOpportunity(1L, OpportunityStage.PROPOSAL)));
 		OpportunityStageHistory newest = new OpportunityStageHistory();
 		newest.setId(2L);
 		newest.setOpportunityId(1L);
@@ -222,7 +284,7 @@ class OpportunityStageServiceTest {
 	@Test
 	@DisplayName("TC-05: lay lich su cua co hoi khong ton tai thi bao RESOURCE_NOT_FOUND")
 	void rejectsHistoryWhenOpportunityMissing() {
-		when(opportunityRepository.existsById(99L)).thenReturn(false);
+		when(opportunityRepository.findById(99L)).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.history(99L))
 				.isInstanceOf(BusinessRuleException.class)
@@ -295,7 +357,21 @@ class OpportunityStageServiceTest {
 	}
 
 	@Test
-	@DisplayName("Co hoi chua o giai doan dam phan thi bao INVALID_STATE, khong luu")
+	@DisplayName("QTN-06: co hoi o giai doan som van chot THUA duoc (dich la thua), co ly do")
+	void allowsLostFromEarlyStage() {
+		when(opportunityRepository.findById(1L)).thenReturn(Optional.of(openOpportunity(1L, OpportunityStage.SURVEY)));
+
+		OpportunityRes result = service.closeOpportunity(1L,
+				new OpportunityCloseReq(OpportunityStage.LOST, LossReason.BUDGET_CUT, null, null));
+
+		assertThat(result.stage()).isEqualTo("LOST");
+		assertThat(result.status()).isEqualTo("CLOSED");
+		verify(auditLogger).recordClose(eq(1L), eq(OpportunityAuditAction.CLOSE_LOST),
+				org.mockito.ArgumentMatchers.contains("SURVEY"));
+	}
+
+	@Test
+	@DisplayName("Chot THANG khi chua o giai doan dam phan thi bao INVALID_STATE, khong luu")
 	void rejectsCloseWhenNotInNegotiation() {
 		when(opportunityRepository.findById(1L)).thenReturn(Optional.of(openOpportunity(1L, OpportunityStage.APPROACH)));
 

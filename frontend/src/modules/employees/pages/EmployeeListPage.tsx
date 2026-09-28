@@ -3,9 +3,9 @@ import { createEmployee, EmployeeApiError, getEmployees, updateEmployee } from '
 import EmployeeFormModal from '../components/EmployeeFormModal';
 import EmployeeTable from '../components/EmployeeTable';
 import type { Employee, EmployeeCreatePayload, EmployeeUpdatePayload } from '../types/employeeTypes';
-import { DEFAULT_STANDARD_HOURS_PER_WEEK } from '../types/employeeTypes';
 import { roleLabels } from '../../../utils/roleLabel';
 import { ICONS } from '../../../components/common/icons';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface EmployeeListPageProps {
   currentUserRoles?: string[];
@@ -84,9 +84,7 @@ export default function EmployeeListPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Chức năng Quản lý hồ sơ nhân sự chỉ dành riêng cho vai trò <strong>Nhân sự</strong> hoặc{' '}
-            <strong>Quản trị viên</strong>. Hệ thống đã ghi lại lần truy cập bị từ chối này vào nhật ký
-            bảo mật.
+            Trang này dành cho <strong>Nhân sự</strong> và <strong>Quản trị viên</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">{ICONS.shield} Thời điểm: {new Date().toLocaleString('vi-VN')}</span>
@@ -97,12 +95,6 @@ export default function EmployeeListPage({
       </div>
     );
   }
-
-  const totalCount = employees.length;
-  const customHoursCount = employees.filter(
-    (e) => Number(e.standardHoursPerWeek) !== DEFAULT_STANDARD_HOURS_PER_WEEK
-  ).length;
-  const endedCount = employees.filter((e) => e.endDate).length;
 
   return (
     <div className="user-management-page">
@@ -116,41 +108,15 @@ export default function EmployeeListPage({
         </div>
       )}
 
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Hồ sơ nhân sự & giờ làm việc</h1>
-          <p className="page-subtitle">Quản lý hồ sơ, hợp đồng lao động và giờ làm chuẩn.</p>
-        </div>
-        <div className="page-header-actions">
+      <PageHeader
+        title="Nhân sự"
+        actions={
           <button type="button" className="btn-primary btn-lg" onClick={handleOpenCreateModal}>
-            <span className="btn-icon">+</span> Thêm hồ sơ nhân sự
+            <span className="btn-icon">+</span> Thêm nhân sự
           </button>
-        </div>
-      </div>
+        }
+      />
 
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--blue">{ICONS.users}</div>
-          <div>
-            <span className="stat-card__label">Tổng hồ sơ nhân sự</span>
-            <strong className="stat-card__value">{totalCount}</strong>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--purple">{ICONS.clock}</div>
-          <div>
-            <span className="stat-card__label">Giờ chuẩn tùy chỉnh (≠ 40)</span>
-            <strong className="stat-card__value">{customHoursCount}</strong>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--red">{ICONS.userMinus}</div>
-          <div>
-            <span className="stat-card__label">Đã kết thúc làm việc</span>
-            <strong className="stat-card__value text-danger">{endedCount}</strong>
-          </div>
-        </div>
-      </div>
 
       {error && (
         <div className="alert alert--error mb-4" role="alert">

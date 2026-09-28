@@ -63,7 +63,7 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
       } else if (response.status === 401) {
         message = 'Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.';
       } else if (response.status === 400) {
-        message = 'Yêu cầu lập báo giá không hợp lệ. Cơ hội phải đang ở giai đoạn Đề xuất (PROPOSAL).';
+        message = 'Yêu cầu lập báo giá không hợp lệ. Cơ hội phải đang ở giai đoạn Báo giá.';
       } else {
         message = 'Đã xảy ra lỗi khi gửi yêu cầu lập báo giá.';
       }
@@ -83,6 +83,8 @@ async function requestBackend<T>(url: string, options: RequestInit = {}): Promis
 
 export interface BillRateOption {
   professionalRole: string;
+  /** Cấp bậc — bảng đơn giá khai báo theo (vai trò, cấp bậc) (NCL-07-CN-001). */
+  level?: string | null;
   dailyRate: number;
   effectiveFrom: string;
 }
@@ -119,6 +121,7 @@ export async function createOpportunityQuote(
       body: JSON.stringify({
         items: req.items.map((item) => ({
           professionalRole: item.professionalRole.trim(),
+          level: item.level?.trim() || null,
           workDays: Number(item.workDays),
         })),
       }),

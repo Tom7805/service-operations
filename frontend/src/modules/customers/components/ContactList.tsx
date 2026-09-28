@@ -17,6 +17,8 @@ interface ContactListProps {
   currentUserRoles?: string[];
   currentUserName?: string;
   initialContacts?: CustomerContact[];
+  /** Hồ sơ đã gộp (NCL-02-CN-006): chỉ xem danh sách, không thêm hay đổi đầu mối chính. */
+  readOnly?: boolean;
 }
 
 export default function ContactList({
@@ -25,6 +27,7 @@ export default function ContactList({
   currentUserRoles = ['VT-04'],
   currentUserName = 'Người dùng',
   initialContacts,
+  readOnly = false,
 }: ContactListProps) {
   // NCL-02-CN-003 / TC-03: Chỉ Nhân viên kinh doanh (VT-04) được quyền quản lý người liên hệ
   const isAllowed = currentUserRoles.includes('VT-04');
@@ -73,6 +76,14 @@ export default function ContactList({
   useEffect(() => {
     if (!initialContacts && customerId && isAllowed) {
       loadContacts();
+    }
+  }, [customerId, isAllowed]);
+
+  // TC-03: vai trò không được phép -> vẫn gửi yêu cầu lên backend để lần từ chối (403) được ghi
+  // vào Nhật ký hệ thống thật, đúng như thông báo "Ghi nhận Audit Log" trên màn hình.
+  useEffect(() => {
+    if (!isAllowed && customerId) {
+      fetchCustomerContacts(customerId).catch(() => undefined);
     }
   }, [customerId, isAllowed]);
 
@@ -173,7 +184,7 @@ export default function ContactList({
           <strong>Nhân viên kinh doanh</strong>.
         </p>
         <div className="security-log-badge">
-          <span className="security-log-badge__item">{ICONS.shield} Ghi nhận Audit Log: {new Date().toLocaleString('vi-VN')}</span>
+          <span className="security-log-badge__item">{ICONS.shield} Ghi nhật ký lúc {new Date().toLocaleString('vi-VN')}</span>
           <span className="security-log-badge__item">Tài khoản thực hiện: {currentUserName}</span>
           <span className="security-log-badge__item">Vai trò tài khoản: {roleLabels(currentUserRoles)}</span>
         </div>
@@ -211,19 +222,10 @@ export default function ContactList({
         )}
 
       {/* Header & Bộ công cụ Quản lý liên hệ */}
-      <div className="contact-manager-header">
-        <div>
-          <div className="contact-section-eyebrow">
-            <span className="dot-pulse" />
-            <span>Danh bạ đầu mối</span>
-          </div>
-          <h2 className="contact-section-title">Danh sách người liên hệ</h2>
-          <p className="contact-section-subtitle">
-            Quản lý các đầu mối giao tiếp, phân định đầu mối chính phụ phục vụ ký kết hợp đồng và triển khai dịch vụ.
-          </p>
-        </div>
+      <div className="contact-manager-header contact-manager-header--actions-only">
 
         <div className="contact-header-actions">
+          {!readOnly && (
           <button
             type="button"
             className="btn btn-primary btn-add-contact"
@@ -233,6 +235,7 @@ export default function ContactList({
             <span>+</span>
             <span>Thêm người liên hệ</span>
           </button>
+          )}
         </div>
       </div>
 
@@ -259,15 +262,6 @@ export default function ContactList({
           </div>
         </div>
 
-        <div className="contact-stat-card">
-          <div className="contact-stat-icon contact-stat-icon--role">{ICONS.briefcase}</div>
-          <div>
-            <span className="contact-stat-label">Quyền hạn thao tác</span>
-            <div className="contact-stat-value text-success" style={{ fontSize: '15px' }}>
-              Nhân viên kinh doanh
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Thanh tìm kiếm & lọc liên hệ */}
@@ -312,9 +306,7 @@ export default function ContactList({
         <div className="table-empty-state contact-empty-state" data-testid="contact-empty-state">
           <div className="table-empty-state__icon">{ICONS.users}</div>
           <h3>Chưa có người liên hệ nào</h3>
-          <p>
-            Hồ sơ khách hàng này chưa có người liên hệ được ghi nhận. Hãy thêm người liên hệ đầu tiên để thiết lập kênh kết nối.
-          </p>
+          {!readOnly && (
           <button
             type="button"
             className="btn btn-primary"
@@ -324,12 +316,13 @@ export default function ContactList({
             <span>+</span>
             <span>Thêm người liên hệ đầu tiên</span>
           </button>
+          )}
         </div>
       ) : filteredContacts.length === 0 ? (
         <div className="table-empty-state contact-empty-state">
           <div className="table-empty-state__icon">{ICONS.search}</div>
           <h3>Không tìm thấy người liên hệ phù hợp</h3>
-          <p>Không có kết quả nào khớp với từ khóa "{searchTerm}". Vui lòng thử từ khóa khác.</p>
+          <p>Không có ai khớp với "{searchTerm}".</p>
           <button
             type="button"
             className="btn btn-secondary"
@@ -347,7 +340,7 @@ export default function ContactList({
                 <th style={{ width: '60px', textAlign: 'center' }}>Vai trò</th>
                 <th style={{ minWidth: '220px' }}>Họ và tên</th>
                 <th style={{ minWidth: '180px' }}>Chức danh / Vị trí</th>
-                <th style={{ minWidth: '220px' }}>Thư điện tử (Email)</th>
+                <th style={{ minWidth: '220px' }}>Email</th>
                 <th style={{ width: '160px' }}>Số điện thoại</th>
                 <th style={{ width: '190px', textAlign: 'center' }}>Thao tác đầu mối</th>
               </tr>
@@ -476,6 +469,8 @@ export default function ContactList({
                         <span className="is-primary-indicator" data-testid={`current-primary-tag-${contact.id}`}>
                           <span className="icon-sm">{ICONS.check}</span> Đang là đầu mối chính
                         </span>
+                      ) : readOnly ? (
+                        <span className="cell-muted">—</span>
                       ) : (
                         <button
                           type="button"

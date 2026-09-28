@@ -6,10 +6,36 @@ package com.serviceops.common.audit;
  */
 public enum AuditTargetType {
 	USER,
+
+	/** Dang nhap va doi/khoi phuc mat khau (NCL-01-CN-001 TC-04, NCL-01-CN-008 TC-03). */
+	AUTH,
+
+	/** Ho so nhan su, hop dong lao dong va gio lam viec chuan (NCL-01-CN-007 TC-05). */
+	EMPLOYEE,
+
 	ROLE_SCOPE,
 	TWO_FACTOR,
 	DEPARTMENT,
 	CUSTOMER,
 	MASKING,
-	GENERAL
+	GENERAL,
+	TIMESHEET,
+
+	/** Chi phi du an va chi phi chung (NCL-08-CN-005). */
+	EXPENSE,
+
+	/** Hoa don va thanh toan (Epic NCL-10). */
+	INVOICE,
+
+	/** Phieu nghiem thu va san pham ban giao (Epic NCL-12). */
+	ACCEPTANCE,
+
+	/** Tai khoan cong khach hang va cac luot khach hang tra cuu tren cong (Epic NCL-13). */
+	PORTAL,
+
+	/** Quan tri he thong: danh muc dich vu, cau hinh cong ty, sao luu/phuc hoi, nhap du lieu (Epic NCL-15). */
+	SYSTEM,
+
+	/** Trung tam thong bao trong he thong — danh dau da doc, mo thong bao (NCL-14-CN-001). */
+	NOTIFICATION
 }

@@ -122,12 +122,11 @@ export interface CustomerOverviewItem {
   status: string | null;
   amount: number | null;
   date: string | null; // ISO date (yyyy-MM-dd)
-  /** Chỉ có giá trị với dòng hợp đồng; null với cơ hội/dự án khác. */
-  contractType?: string | null;
-  /** Chỉ có giá trị với dòng hợp đồng; null với cơ hội/dự án khác. */
-  endDate?: string | null;
-  /** Chỉ có giá trị với dòng hợp đồng; null với cơ hội/dự án khác hoặc hợp đồng chưa đặt hạn mức. */
-  limitValue?: number | null;
+  /** Chỉ có ở hợp đồng (ví dụ TIME_AND_MATERIAL) — null với cơ hội bán hàng. */
+  contractType: string | null;
+  /** Ngày kết thúc hợp đồng — chỉ có ở dòng hợp đồng, null với cơ hội/dự án. Dùng để tự
+   *  điền sẵn "Ngày kết thúc dự kiến" khi tạo dự án từ hợp đồng (NCL-05-CN-001). */
+  endDate: string | null;
 }
 
 /**
@@ -194,6 +193,8 @@ export interface CustomerMergePreview {
   targetCustomer: Customer;
   sourceCustomer: Customer;
   relatedRecordCount: number;
+  /** Số bản ghi sẽ chuyển theo từng loại — khóa là nhãn backend (vd "hop dong", "hoa don"). */
+  relatedRecordBreakdown?: Record<string, number>;
 }
 
 export interface CustomerMergeFormErrors {

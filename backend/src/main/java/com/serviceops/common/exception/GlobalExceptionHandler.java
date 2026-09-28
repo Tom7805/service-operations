@@ -1,5 +1,4 @@
 package com.serviceops.common.exception;
-
 import com.serviceops.common.api.ErrorResponse;
 import com.serviceops.common.api.FieldError;
 import com.serviceops.common.audit.AccessDeniedAuditRecorder;
@@ -9,13 +8,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -75,9 +78,47 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(body);
     }
 
+    // Thieu @RequestParam bat buoc (vd GET /me/time-entries thieu weekFrom/weekTo) — truoc day roi
+    // xuong handleUnexpected() va tra nham 500 INTERNAL_ERROR thay vi 400 VALIDATION_ERROR.
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingParam(MissingServletRequestParameterException ex) {
+        return ResponseEntity.badRequest()
+                .body(ErrorResponse.of(ErrorCode.VALIDATION_ERROR.name(),
+                        "Thieu tham so bat buoc: " + ex.getParameterName()));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        return ResponseEntity.badRequest()
+                .body(ErrorResponse.of(ErrorCode.VALIDATION_ERROR.name(),
+                        "Tham so " + ex.getName() + " khong dung dinh dang"));
+    }
+
+    // Body thieu, JSON hong hoac sai dinh dang (vd ngay "2026-13-45") — truoc day roi xuong handleUnexpected() va
+    // tra nham 500 INTERNAL_ERROR trong khi day la loi do du lieu nguoi dung gui.
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadableBody(HttpMessageNotReadableException ex) {
+        return ResponseEntity.badRequest()
+                .body(ErrorResponse.of(ErrorCode.VALIDATION_ERROR.name(),
+                        "Du lieu gui len thieu hoac sai dinh dang"));
+    }
+
+    // NCL-15-CN-004: tai tep nhap du lieu thieu phan "file" hoac vuot spring.servlet.multipart.max-file-size.
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ErrorResponse> handleMissingPart(MissingServletRequestPartException ex) {
+        return ResponseEntity.badRequest()
+                .body(ErrorResponse.of(ErrorCode.VALIDATION_ERROR.name(),
+                        "Thieu tep tai len: " + ex.getRequestPartName()));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUpload(MaxUploadSizeExceededException ex) {
+        return ResponseEntity.badRequest()
+                .body(ErrorResponse.of(ErrorCode.VALIDATION_ERROR.name(), "Tep vuot qua dung luong toi da 2 MB"));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex) {
-        // Truoc day khong log gi ca — loi 500 bien mat khong dau vet, khong the debug duoc tu server.
         log.error("UNEXPECTED_ERROR", ex);
         return ResponseEntity.internalServerError()
                 .body(ErrorResponse.of(ErrorCode.INTERNAL_ERROR.name(), "Da co loi xay ra, vui long thu lai sau"));

@@ -123,8 +123,7 @@ export default function ChangePasswordForm({ onSuccess }: ChangePasswordFormProp
       <div className="confirm-note-box">
         <span className="confirm-note-box__icon">{ICONS.info}</span>
         <span>
-          Sau khi đổi mật khẩu thành công, mọi phiên đăng nhập hiện tại (kể cả phiên bạn đang dùng) sẽ hết
-          hiệu lực và bạn cần đăng nhập lại.
+          Sau khi đổi, bạn sẽ được đăng xuất khỏi mọi thiết bị và cần đăng nhập lại.
         </span>
       </div>
 

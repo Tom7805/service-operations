@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
-import type { ProjectRes, TaskBudgetStatusRes, TaskRes, WorkBreakdownRes } from '../types/projectTypes';
+import type { ProjectRes, TaskAssignmentRes, TaskBudgetStatusRes, TaskRes, WorkBreakdownRes } from '../types/projectTypes';
 import {
   closeProject,
   deleteWorkPackage,
@@ -12,7 +12,11 @@ import WorkBreakdownTree from '../components/WorkBreakdownTree';
 import WorkPackageModal from '../components/WorkPackageModal';
 import TaskFormModal from '../components/TaskFormModal';
 import TaskBudgetModal from '../components/TaskBudgetModal';
+import TaskAssignModal from '../components/TaskAssignModal';
 import ProjectMilestoneTimeline from '../components/ProjectMilestoneTimeline';
+import PageHeader from '../../../components/common/PageHeader';
+import RowActionsMenu from '../../../components/common/RowActionsMenu';
+import { CONTRACT_TYPE_LABEL } from '../../contracts/types/contractTypes';
 
 export interface ProjectDetailPageProps {
   projectId: number;
@@ -21,6 +25,11 @@ export interface ProjectDetailPageProps {
   onBack?: () => void;
   /** NCL-05-CN-009: điều hướng sang trang rủi ro dự án (ProjectRiskPage) — do màn cha quyết định. */
   onOpenRisks?: (projectId: number) => void;
+  /** NCL-06-CN-001: điều hướng sang màn ghi giờ công (TimeEntryPage) cho một công việc — do màn cha quyết định. */
+  onLogTime?: (projectId: number, taskId: number, taskName: string) => void;
+  /** Lối tắt sang Nghiệm thu / Lợi nhuận với dự án này đã chọn sẵn — màn cha quyết định có hay không. */
+  onOpenAcceptance?: () => void;
+  onOpenProfit?: () => void;
   initialProject?: ProjectRes;
   initialWbs?: WorkBreakdownRes[];
 }
@@ -48,6 +57,9 @@ export default function ProjectDetailPage({
   currentUserRoles = ['VT-02'],
   onBack,
   onOpenRisks,
+  onLogTime,
+  onOpenAcceptance,
+  onOpenProfit,
   initialProject,
   initialWbs,
 }: ProjectDetailPageProps) {
@@ -88,6 +100,9 @@ export default function ProjectDetailPage({
     budgetHours: null,
   });
 
+  // Trạng thái modal phân công nhân sự (NCL-05-CN-003)
+  const [assignTarget, setAssignTarget] = useState<{ id: number; name: string } | null>(null);
+
   // Thông báo toast
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -99,6 +114,9 @@ export default function ProjectDetailPage({
   const canEdit = currentUserRoles.includes('VT-02') && isProjectOpen;
   // Quyền đóng dự án (NCL-05-CN-006): chỉ Quản lý dự án và dự án phải đang RUNNING
   const canClose = currentUserRoles.includes('VT-02') && isProjectOpen;
+  // Quyền ghi giờ công (NCL-06-CN-001): chỉ Nhân viên chuyên môn và dự án phải đang RUNNING
+  // (việc có đúng là người được giao công việc hay không do backend kiểm ở TimeEntryPage).
+  const canLogTime = currentUserRoles.includes('VT-03') && isProjectOpen;
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -114,7 +132,11 @@ export default function ProjectDetailPage({
         getProject(projectId),
         getWorkBreakdown(projectId),
       ]);
-      setProject(projData);
+      setProject((prev) => ({
+        ...projData,
+        customerName: projData.customerName ?? prev?.customerName ?? initialProject?.customerName,
+        projectManagerName: projData.projectManagerName ?? prev?.projectManagerName ?? initialProject?.projectManagerName,
+      }));
       setWbs(wbsData);
     } catch (err: unknown) {
       if (err instanceof ProjectsApiError) {
@@ -127,13 +149,15 @@ export default function ProjectDetailPage({
     } finally {
       setLoading(false);
     }
-  }, [projectId, isAllowedToView]);
+  }, [projectId, isAllowedToView, initialProject]);
 
   useEffect(() => {
     if (!initialProject || !initialWbs) {
       void loadData();
     }
-  }, [loadData, initialProject, initialWbs]);
+    // Chỉ nạp khi mở trang; initialProject chỉ là tên hiển thị tạm, không phải lý do nạp lại.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
 
   // Mở modal thêm hạng mục gốc
   const handleOpenAddRootPackage = () => {
@@ -169,6 +193,18 @@ export default function ProjectDetailPage({
         ? `Đã đặt ngân sách ${status.budgetHours} giờ — đã dùng ${(status.usageRatio * 100).toFixed(0)}%, gần/đã vượt ngân sách!`
         : `Đã đặt ngân sách ${status.budgetHours} giờ công thành công`,
       status.overBudgetWarning ? 'error' : 'success'
+    );
+    void loadData();
+  };
+
+  // Mở modal phân công / đổi phân công cho một công việc
+  const handleOpenAssign = (task: TaskRes) => setAssignTarget({ id: task.id, name: task.name });
+
+  const handleAssignSaved = (assignments: TaskAssignmentRes[]) => {
+    showToast(
+      assignments.length > 0
+        ? `Đã phân công ${assignments.length} nhân sự cho công việc "${assignTarget?.name ?? ''}"`
+        : `Đã bỏ phân công công việc "${assignTarget?.name ?? ''}"`
     );
     void loadData();
   };
@@ -215,7 +251,7 @@ export default function ProjectDetailPage({
     return (
       <div className="user-management-page" data-testid="project-detail-forbidden">
         <div className="alert-box alert-box--danger" role="alert">
-          Bạn không có quyền xem thông tin dự án này (yêu cầu vai trò Ban giám đốc VT-01, Quản lý dự án VT-02 hoặc Nhân viên chuyên môn VT-03).
+          Bạn không có quyền xem thông tin dự án này.
         </div>
         {onBack && (
           <button type="button" className="btn btn-secondary" onClick={onBack} style={{ marginTop: '16px' }}>
@@ -240,113 +276,122 @@ export default function ProjectDetailPage({
         </div>
       )}
 
-      {/* Header chi tiết dự án */}
-      <div className="page-header" style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {onBack && (
+      {/* Đầu trang: một hành động chính (thêm hạng mục), tải lại dạng icon, đóng dự án trong menu ⋮ —
+          hành động không hoàn tác được không đứng cạnh nút hay dùng. */}
+      <PageHeader
+        back={onBack ? { label: 'Dự án', onClick: onBack, testId: 'btn-back-project' } : undefined}
+        title={project?.name || 'Chi tiết dự án'}
+        meta={<span className="page-header__code">{project?.projectCode || `#${projectId}`}</span>}
+        actions={
+          <>
             <button
               type="button"
-              className="btn btn-secondary btn-sm btn-back"
-              onClick={onBack}
-              data-testid="btn-back-project"
+              className="btn-icon-refresh"
+              onClick={loadData}
+              disabled={loading}
+              title="Tải lại"
+              aria-label="Tải lại dự án"
+              data-testid="btn-reload-wbs"
             >
-              {ICONS.arrowLeft} Quay lại
+              {ICONS.refresh}
             </button>
-          )}
-          <div>
-            <div className="page-header__kicker">
-              <span className="page-header__tag">{ICONS.folder} DỰ ÁN</span>
-              <span className="page-header__dot" />
-              <span className="page-header__meta">{project?.projectCode || `Mã: ${projectId}`}</span>
-            </div>
-            <h1 className="page-title" style={{ margin: '4px 0' }}>
-              {project?.name || 'Chi tiết dự án'}
-            </h1>
-          </div>
-        </div>
+            {canClose && (
+              <RowActionsMenu
+                ariaLabel="Thao tác khác với dự án"
+                actions={[
+                  {
+                    key: 'close',
+                    label: closing ? 'Đang đóng…' : 'Đóng dự án',
+                    icon: ICONS.lock,
+                    tone: 'danger',
+                    disabled: closing,
+                    onClick: () => void handleCloseProject(),
+                    testId: 'btn-close-project',
+                  },
+                ]}
+              />
+            )}
+            {canEdit && (
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleOpenAddRootPackage}
+                data-testid="btn-add-root-package"
+              >
+                {ICONS.plus} Thêm hạng mục
+              </button>
+            )}
+          </>
+        }
+      />
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={loadData}
-            disabled={loading}
-            data-testid="btn-reload-wbs"
-          >
-            {ICONS.refresh} Tải lại
-          </button>
-          {canEdit && (
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              onClick={handleOpenAddRootPackage}
-              data-testid="btn-add-root-package"
-            >
-              + Thêm hạng mục gốc
-            </button>
-          )}
-          {onOpenRisks && currentUserRoles.includes('VT-02') && (
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => onOpenRisks(projectId)}
-              data-testid="btn-open-risks"
-            >
-              {ICONS.alertTriangle} Rủi ro dự án
-            </button>
-          )}
-          {canClose && (
-            <button
-              type="button"
-              className="btn btn-danger btn-sm"
-              onClick={handleCloseProject}
-              disabled={closing}
-              data-testid="btn-close-project"
-            >
-              {closing ? 'Đang đóng…' : 'Đóng dự án'}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {loading && (
-        <div className="alert-box" role="status" style={{ marginBottom: '16px' }} data-testid="project-loading">
-          Đang tải thông tin dự án & WBS…
-        </div>
+      {loading && !project && (
+        <div className="page-loading" aria-busy="true" data-testid="project-loading" style={{ minHeight: 120 }} />
       )}
 
-      {/* Thẻ thông tin tổng quan dự án */}
+      {/* Tổng quan: các thông tin để nhận ra dự án + lối tắt sang các việc theo dự án */}
       {project && (
-        <div className="project-preview-card" style={{ marginBottom: '20px' }}>
-          <div className="project-preview-grid">
-            <div className="project-preview-item">
-              <span className="field-hint">Trạng thái:</span>
-              <strong style={{ color: isProjectOpen ? '#15803D' : '#64748B' }}>
-                {project.status === 'RUNNING' ? 'RUNNING (Đang thực hiện)' : project.status}
-              </strong>
+        <section className="project-overview" aria-label="Tổng quan dự án">
+          <dl className="project-overview__grid">
+            <div>
+              <dt>Trạng thái</dt>
+              <dd>
+                {isProjectOpen ? (
+                  <span className="list-status list-status--on">Đang thực hiện</span>
+                ) : (
+                  <span className="list-status list-status--off">Đã đóng</span>
+                )}
+              </dd>
             </div>
-            <div className="project-preview-item">
-              <span className="field-hint">Loại dự án / Hợp đồng:</span>
-              <strong>{project.projectType || '—'}</strong>
+            <div>
+              <dt>Khách hàng</dt>
+              <dd>{project.customerName || '—'}</dd>
             </div>
-            <div className="project-preview-item">
-              <span className="field-hint">Hạn mức ngân sách:</span>
-              <strong>{formatAmount(project.limitValue)}</strong>
+            <div>
+              <dt>Quản lý dự án</dt>
+              <dd>{project.projectManagerName || '—'}</dd>
             </div>
-            <div className="project-preview-item">
-              <span className="field-hint">Thời gian:</span>
-              <strong>
-                {formatDate(project.startDate)} ➔ {formatDate(project.expectedEndDate)}
-              </strong>
+            <div>
+              <dt>Thời gian</dt>
+              <dd>
+                {formatDate(project.startDate)} → {formatDate(project.expectedEndDate)}
+              </dd>
             </div>
-          </div>
-        </div>
+            <div>
+              <dt>Loại hợp đồng</dt>
+              <dd>{(CONTRACT_TYPE_LABEL as Record<string, string>)[project.projectType] ?? (project.projectType || '—')}</dd>
+            </div>
+            <div>
+              <dt>Hạn mức ngân sách</dt>
+              <dd>{formatAmount(project.limitValue)}</dd>
+            </div>
+          </dl>
+          {(onOpenAcceptance || onOpenProfit || (onOpenRisks && currentUserRoles.includes('VT-02'))) && (
+            <nav className="project-overview__links" aria-label="Việc theo dự án">
+              {onOpenAcceptance && (
+                <button type="button" className="project-link" onClick={onOpenAcceptance}>
+                  {ICONS.check} Nghiệm thu <span aria-hidden="true">{ICONS.arrowRight}</span>
+                </button>
+              )}
+              {onOpenProfit && (
+                <button type="button" className="project-link" onClick={onOpenProfit}>
+                  {ICONS.percent} Lợi nhuận <span aria-hidden="true">{ICONS.arrowRight}</span>
+                </button>
+              )}
+              {onOpenRisks && currentUserRoles.includes('VT-02') && (
+                <button type="button" className="project-link" onClick={() => onOpenRisks(projectId)} data-testid="btn-open-risks">
+                  {ICONS.alertTriangle} Rủi ro <span aria-hidden="true">{ICONS.arrowRight}</span>
+                </button>
+              )}
+            </nav>
+          )}
+        </section>
       )}
 
       {/* Cảnh báo khi dự án đã đóng */}
       {project && !isProjectOpen && (
         <div className="alert-box alert-box--warning" role="alert" data-testid="project-closed-alert" style={{ marginBottom: '16px' }}>
-          Dự án đã đóng hoặc tạm dừng (trạng thái: {project.status}). Không thể tạo mới, chỉnh sửa hay xóa hạng mục và công việc.
+          Dự án đã đóng — chỉ xem, không thêm hay sửa hạng mục và công việc.
         </div>
       )}
 
@@ -360,8 +405,8 @@ export default function ProjectDetailPage({
       {/* Cây phân rã công việc WBS */}
       <div className="user-table-card" style={{ padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#1E293B' }}>
-            Cơ cấu hạng mục & công việc (WBS)
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--ink-strong)' }}>
+            Hạng mục & công việc
           </h3>
           <span className="field-hint" style={{ fontSize: '13px' }}>
             {wbs.length} hạng mục gốc
@@ -379,16 +424,20 @@ export default function ProjectDetailPage({
             items={wbs}
             isProjectOpen={isProjectOpen}
             canEdit={canEdit}
+            canLogTime={canLogTime}
             onAddSubPackage={handleOpenAddSubPackage}
             onAddTask={handleOpenAddTask}
             onDeletePackage={handleDeletePackage}
             onSetBudget={handleOpenSetBudget}
+            onAssign={handleOpenAssign}
+            onLogTime={onLogTime ? (task) => onLogTime(projectId, task.id, task.name) : undefined}
           />
         )}
       </div>
 
       {/* Mốc tiến độ dự án (NCL-05-CN-008) */}
-      {!loading && (
+      {/* Mốc tiến độ: backend chỉ mở cho Quản lý dự án — vai trò khác gọi sẽ bị 403 và ghi nhật ký từ chối. */}
+      {!loading && currentUserRoles.includes('VT-02') && (
         <ProjectMilestoneTimeline
           projectId={projectId}
           wbs={wbs}
@@ -436,6 +485,18 @@ export default function ProjectDetailPage({
         currentBudgetHours={budgetTarget.budgetHours}
         onSaved={handleBudgetSaved}
       />
+
+      {/* Modal phân công nhân sự (NCL-05-CN-003) — trước đây thiếu nên nút "Phân công" trên trang này không làm gì. */}
+      {assignTarget && (
+        <TaskAssignModal
+          isOpen
+          onClose={() => setAssignTarget(null)}
+          projectId={projectId}
+          taskId={assignTarget.id}
+          taskName={assignTarget.name}
+          onSaved={handleAssignSaved}
+        />
+      )}
     </div>
   );
 }

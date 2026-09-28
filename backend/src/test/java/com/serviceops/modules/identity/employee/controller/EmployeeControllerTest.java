@@ -57,7 +57,7 @@ class EmployeeControllerTest {
     @WithMockUser(authorities = "ROLE_VT-07")
     void allowsAdminRole() throws Exception {
         when(employeeService.findAll(any())).thenReturn(List.of(
-                new EmployeeRes(1L, 1L, "nhanvien01", "Nguyen Van A", null, null, null, null, null, null)));
+                new EmployeeRes(1L, 1L, "nhanvien01", "Nguyen Van A", null, null, null, null, null, null, null)));
 
         mockMvc.perform(get("/employees"))
                 .andExpect(status().isOk())

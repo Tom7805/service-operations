@@ -3,7 +3,7 @@ import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
 import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import { t } from '../../../i18n';
-import type { ContractRes } from '../types/contractTypes';
+import { CONTRACT_TYPE_LABEL, type ContractRes } from '../types/contractTypes';
 import { updateTypeAndLimit } from '../api/contractsApi';
 
 interface Props {
@@ -15,11 +15,24 @@ interface Props {
 }
 
 const CONTRACT_TYPE_OPTIONS = [
-  { value: 'TIME_AND_MATERIAL', label: 'Time & Material' },
-  { value: 'FIXED_PRICE', label: 'Fixed Price' },
-  { value: 'MAINTENANCE', label: 'Maintenance' },
-  { value: 'MILESTONE', label: 'Milestone' },
+  { value: 'TIME_AND_MATERIAL', label: CONTRACT_TYPE_LABEL.TIME_AND_MATERIAL },
+  { value: 'FIXED_PRICE', label: CONTRACT_TYPE_LABEL.FIXED_PRICE },
+  { value: 'MAINTENANCE', label: CONTRACT_TYPE_LABEL.MAINTENANCE },
+  { value: 'MILESTONE', label: CONTRACT_TYPE_LABEL.MILESTONE },
 ] as const;
+
+// Số tiền gõ liền không dấu tách rất dễ đọc nhầm/đếm nhầm số 0 (98000000 vs
+// 980000000) — hiển thị có dấu chấm ngăn cách hàng nghìn kiểu vi-VN (98.000.000)
+// khi gõ, vẫn lưu về number thường khi gửi lên server.
+function formatVnNumber(value: number | null): string {
+  if (value == null || Number.isNaN(value)) return '';
+  return value.toLocaleString('vi-VN');
+}
+
+function parseVnNumber(raw: string): number | null {
+  const digits = raw.replace(/\D/g, '');
+  return digits === '' ? null : Number(digits);
+}
 
 export default function ContractTypeLimitModal({
   contract,
@@ -124,11 +137,11 @@ export default function ContractTypeLimitModal({
             </label>
             <input
               aria-label="Giá trị hợp đồng"
-              type="number"
+              type="text"
+              inputMode="numeric"
               className={`form-input ${errors.totalValue ? 'form-input--error' : ''}`}
-              value={totalValue ?? ''}
-              onChange={(e) => setTotalValue(e.target.value === '' ? null : Number(e.target.value))}
-              min={0}
+              value={formatVnNumber(totalValue)}
+              onChange={(e) => setTotalValue(parseVnNumber(e.target.value))}
             />
             {errors.totalValue && <small className="field-error">{errors.totalValue}</small>}
 
@@ -137,11 +150,11 @@ export default function ContractTypeLimitModal({
             </label>
             <input
               aria-label="Hạn mức"
-              type="number"
+              type="text"
+              inputMode="numeric"
               className={`form-input ${errors.limitValue ? 'form-input--error' : ''}`}
-              value={limitValue ?? ''}
-              onChange={(e) => setLimitValue(e.target.value === '' ? null : Number(e.target.value))}
-              min={0}
+              value={formatVnNumber(limitValue)}
+              onChange={(e) => setLimitValue(parseVnNumber(e.target.value))}
             />
             {errors.limitValue && <small className="field-error">{errors.limitValue}</small>}
 

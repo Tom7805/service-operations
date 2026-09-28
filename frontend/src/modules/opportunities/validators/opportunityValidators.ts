@@ -72,7 +72,7 @@ export function validateQuoteCreate(items: QuoteItemReq[]): QuoteValidationResul
   if (!items || !Array.isArray(items) || items.length === 0) {
     return {
       valid: false,
-      generalError: 'Báo giá phải có ít nhất một dòng chuyên môn (TC-02)',
+      generalError: 'Báo giá phải có ít nhất một dòng chuyên môn',
       fieldErrors: {},
     };
   }
@@ -114,7 +114,8 @@ export function validateQuoteCreate(items: QuoteItemReq[]): QuoteValidationResul
 
 /**
  * Kiểm tra quy tắc chuyển giai đoạn theo thứ tự nghiêm ngặt (QTN-06 & NCL-03-CN-002, TC-02, TC-03)
- * APPROACH -> PROPOSAL -> NEGOTIATION -> [WON | LOST]
+ * APPROACH -> SURVEY -> PROPOSAL -> NEGOTIATION -> WON; LOST được chốt từ mọi giai đoạn đang mở
+ * (QTN-06: "giai đoạn đích là liền kề hoặc là thua").
  */
 export function canTransitionStage(
   currentStage: OpportunityStage | string,
@@ -125,15 +126,11 @@ export function canTransitionStage(
     return { allowed: false, reason: 'Giai đoạn không hợp lệ' };
   }
 
-  if (currentStage === targetStage) {
-    return { allowed: true };
-  }
-
   // TC-03: Cơ hội đã chốt hoặc đóng (CLOSED, WON, LOST) không thể chuyển tiếp
   if (status === 'CLOSED' || currentStage === 'WON' || currentStage === 'LOST') {
     return {
       allowed: false,
-      reason: 'Cơ hội đã hoàn tất và đóng (status = CLOSED). Không thể chuyển giai đoạn tiếp theo.',
+      reason: 'Cơ hội đã đóng (thắng hoặc thua). Không thể mở lại hoặc chuyển giai đoạn tiếp theo.',
     };
   }
 
@@ -142,11 +139,18 @@ export function canTransitionStage(
     return { allowed: false, reason: 'Giai đoạn hiện tại không xác định' };
   }
 
-  const isLastActive = currentIndex === ACTIVE_STAGES_ORDER.length - 1; // Đang ở NEGOTIATION
-
-  // Từ NEGOTIATION cho phép chốt sang WON hoặc LOST
-  if (isLastActive && (targetStage === 'WON' || targetStage === 'LOST')) {
+  if (currentStage === targetStage) {
     return { allowed: true };
+  }
+
+  if (targetStage === 'LOST') {
+    return { allowed: true };
+  }
+
+  if (targetStage === 'WON') {
+    return currentStage === 'NEGOTIATION'
+      ? { allowed: true }
+      : { allowed: false, reason: 'Chỉ được chốt Thành công khi cơ hội đang ở giai đoạn Đàm phán.' };
   }
 
   const targetIndex = ACTIVE_STAGES_ORDER.indexOf(targetStage as OpportunityStage);
@@ -164,11 +168,17 @@ export function canTransitionStage(
     const nextAllowed = ACTIVE_STAGES_ORDER[currentIndex + 1];
     return {
       allowed: false,
-      reason: `Quy tắc QTN-06: Không thể nhảy cóc. Giai đoạn kế tiếp hợp lệ là ${STAGE_CONFIGS[nextAllowed]?.shortLabel ?? nextAllowed}.`,
+      reason: `Không thể nhảy cóc. Giai đoạn kế tiếp hợp lệ là ${STAGE_CONFIGS[nextAllowed]?.shortLabel ?? nextAllowed}.`,
     };
   }
 
   return { allowed: true };
+}
+
+/** Giai đoạn đang hoạt động kế tiếp liền kề (null nếu đang ở Đàm phán hoặc đã đóng). */
+export function getNextActiveStage(currentStage: OpportunityStage | string): OpportunityStage | null {
+  const idx = ACTIVE_STAGES_ORDER.indexOf(currentStage as OpportunityStage);
+  return idx >= 0 && idx + 1 < ACTIVE_STAGES_ORDER.length ? ACTIVE_STAGES_ORDER[idx + 1] : null;
 }
 
 /**
@@ -178,23 +188,14 @@ export function getNextAllowedStages(
   currentStage: OpportunityStage | string,
   status?: string
 ): OpportunityStage[] {
-  if (status === 'CLOSED' || currentStage === 'WON' || currentStage === 'LOST') {
+  if (status === 'CLOSED' || !ACTIVE_STAGES_ORDER.includes(currentStage as OpportunityStage)) {
     return [];
   }
-
-  if (currentStage === 'APPROACH') {
-    return ['PROPOSAL'];
-  }
-
-  if (currentStage === 'PROPOSAL') {
-    return ['NEGOTIATION'];
-  }
-
   if (currentStage === 'NEGOTIATION') {
     return ['WON', 'LOST'];
   }
-
-  return [];
+  const next = getNextActiveStage(currentStage);
+  return next ? [next, 'LOST'] : ['LOST'];
 }
 
 /**
@@ -300,7 +301,7 @@ export function validateOpportunityClose(
   }
 
   if (payload.result === 'LOST' && !payload.lossReason) {
-    errors.lossReason = 'Vui lòng chọn lý do khi ghi nhận cơ hội thất bại (TC-02).';
+    errors.lossReason = 'Vui lòng chọn lý do khi ghi nhận cơ hội thất bại.';
   }
 
   if (payload.reasonDetail && payload.reasonDetail.trim().length > 500) {

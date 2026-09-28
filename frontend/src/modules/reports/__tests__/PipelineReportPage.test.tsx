@@ -43,7 +43,7 @@ describe('PipelineReportPage Component (NCL-03-CN-007)', () => {
       render(<PipelineReportPage currentUserRoles={['VT-01']} />);
 
       await waitFor(() => {
-        expect(screen.getByText('Báo cáo đường ống bán hàng theo giai đoạn')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { level: 1, name: 'Đường ống bán hàng' })).toBeInTheDocument();
       });
       expect(reportsApi.getPipelineReport).toHaveBeenCalledTimes(1);
     });
@@ -52,15 +52,17 @@ describe('PipelineReportPage Component (NCL-03-CN-007)', () => {
       render(<PipelineReportPage currentUserRoles={['VT-04']} />);
 
       await waitFor(() => {
-        expect(screen.getByText('Báo cáo đường ống bán hàng theo giai đoạn')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { level: 1, name: 'Đường ống bán hàng' })).toBeInTheDocument();
       });
     });
 
-    it('từ chối vai trò khác và không gọi API báo cáo', () => {
+    it('từ chối vai trò khác; chỉ gửi request để máy chủ ghi nhật ký lần từ chối', async () => {
       render(<PipelineReportPage currentUserRoles={['VT-03']} />);
 
       expect(screen.getByTestId('pipeline-report-access-denied')).toBeInTheDocument();
-      expect(reportsApi.getPipelineReport).not.toHaveBeenCalled();
+      // TC-03: request thật để máy chủ từ chối (403) và ghi nhật ký; màn hình không hiện dữ liệu.
+      await waitFor(() => expect(reportsApi.getPipelineReport).toHaveBeenCalledTimes(1));
+      expect(screen.queryByRole('heading', { level: 1, name: 'Đường ống bán hàng' })).toBeNull();
     });
   });
 

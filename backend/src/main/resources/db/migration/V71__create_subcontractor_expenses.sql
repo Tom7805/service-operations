@@ -1,0 +1,26 @@
+-- NCL-08-CN-004: ghi nhan chi phi thue ngoai cua du an.
+CREATE TABLE subcontractor_expenses (
+    id               BIGINT AUTO_INCREMENT PRIMARY KEY,
+    project_id       BIGINT NOT NULL,
+    user_id          BIGINT NOT NULL,
+    contractor_name  VARCHAR(200) NOT NULL,
+    work_scope       VARCHAR(1000) NOT NULL,
+    amount           DECIMAL(18,2) NOT NULL,
+    incurred_period  DATE NOT NULL,
+    status           VARCHAR(20) NOT NULL DEFAULT 'SUBMITTED',
+    created_by       VARCHAR(100) NULL,
+    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    approved_by      VARCHAR(100) NULL,
+    approved_at      DATETIME NULL,
+    rejected_by      VARCHAR(100) NULL,
+    rejected_at      DATETIME NULL,
+    reject_reason    VARCHAR(1000) NULL,
+    CONSTRAINT fk_subcontractor_expenses_project FOREIGN KEY (project_id) REFERENCES projects (id),
+    CONSTRAINT fk_subcontractor_expenses_user FOREIGN KEY (user_id) REFERENCES users (id),
+    CONSTRAINT chk_subcontractor_expenses_amount CHECK (amount > 0),
+    INDEX idx_subcontractor_expenses_project (project_id),
+    INDEX idx_subcontractor_expenses_user (user_id),
+    INDEX idx_subcontractor_expenses_period (incurred_period),
+    INDEX idx_subcontractor_expenses_status (status)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;

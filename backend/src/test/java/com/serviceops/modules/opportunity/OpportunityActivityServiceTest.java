@@ -13,6 +13,10 @@ import com.serviceops.modules.opportunity.mapper.OpportunityActivityMapper;
 import com.serviceops.modules.opportunity.repository.OpportunityActivityRepository;
 import com.serviceops.modules.opportunity.repository.OpportunityRepository;
 import com.serviceops.modules.opportunity.service.impl.OpportunityActivityServiceImpl;
+import com.serviceops.modules.opportunity.service.impl.OpportunityScopeGuard;
+import com.serviceops.modules.identity.user.repository.UserRepository;
+import com.serviceops.security.scope.CurrentUserScopeProvider;
+import com.serviceops.security.scope.UserScope;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -52,6 +56,12 @@ class OpportunityActivityServiceTest {
 	@Mock
 	private OpportunityAuditLogger auditLogger;
 
+	@Mock
+	private CurrentUserScopeProvider currentUserScopeProvider;
+
+	@Mock
+	private UserRepository userRepository;
+
 	private final OpportunityActivityMapper opportunityActivityMapper = new OpportunityActivityMapper();
 
 	private OpportunityActivityServiceImpl service;
@@ -59,7 +69,8 @@ class OpportunityActivityServiceTest {
 	@BeforeEach
 	void setUp() {
 		service = new OpportunityActivityServiceImpl(opportunityRepository, opportunityActivityRepository,
-				opportunityActivityMapper, auditLogger);
+				opportunityActivityMapper, auditLogger, new OpportunityScopeGuard(currentUserScopeProvider, userRepository));
+		lenient().when(currentUserScopeProvider.currentScope()).thenReturn(UserScope.company());
 
 		lenient().when(opportunityActivityRepository.save(any(OpportunityActivity.class))).thenAnswer(inv -> {
 			OpportunityActivity activity = inv.getArgument(0);
@@ -131,7 +142,7 @@ class OpportunityActivityServiceTest {
 	@Test
 	@DisplayName("NCL-03-CN-006 TC-02: co hoi da dong van xem duoc dong thoi gian cham soc (chi bi chan them moi)")
 	void allowsListingActivitiesEvenWhenOpportunityIsClosed() {
-		when(opportunityRepository.existsById(10L)).thenReturn(true);
+		when(opportunityRepository.findById(10L)).thenReturn(Optional.of(openOpportunity()));
 		OpportunityActivity activity = new OpportunityActivity();
 		activity.setId(1L);
 		activity.setOpportunityId(10L);
@@ -164,7 +175,7 @@ class OpportunityActivityServiceTest {
 	@Test
 	@DisplayName("Khong tim thay co hoi thi bao loi khi xem dong thoi gian")
 	void rejectsListingWhenOpportunityNotFound() {
-		when(opportunityRepository.existsById(99L)).thenReturn(false);
+		when(opportunityRepository.findById(99L)).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.listByOpportunity(99L))
 				.isInstanceOf(BusinessRuleException.class)
@@ -202,7 +213,7 @@ class OpportunityActivityServiceTest {
 	@Test
 	@DisplayName("Dong thoi gian cham soc: hoat dong dien ra gan nhat hien len dau")
 	void listOrdersMostRecentActivityFirst() {
-		when(opportunityRepository.existsById(10L)).thenReturn(true);
+		when(opportunityRepository.findById(10L)).thenReturn(Optional.of(openOpportunity()));
 
 		OpportunityActivity older = new OpportunityActivity();
 		older.setId(1L);
@@ -250,7 +261,7 @@ class OpportunityActivityServiceTest {
 	@Test
 	@DisplayName("Danh sach hoat dong rong khi co hoi chua co hoat dong nao")
 	void listReturnsEmptyWhenNoActivitiesYet() {
-		when(opportunityRepository.existsById(anyLong())).thenReturn(true);
+		when(opportunityRepository.findById(anyLong())).thenReturn(Optional.of(openOpportunity()));
 		when(opportunityActivityRepository.findByOpportunityIdOrderByOccurredAtDescIdDesc(anyLong()))
 				.thenReturn(List.of());
 

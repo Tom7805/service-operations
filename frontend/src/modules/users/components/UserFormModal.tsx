@@ -1,6 +1,7 @@
 import React, { FormEvent, useEffect, useState } from 'react';
 import type { CreateUserPayload, UpdateUserPayload, User } from '../types/userTypes';
-import { SYSTEM_DEPARTMENTS, SYSTEM_ROLES } from '../types/userTypes';
+import { SYSTEM_ROLES } from '../types/userTypes';
+import type { DepartmentInfo } from '../types/userTypes';
 import { validateCreateUser, validateUpdateUser, FormErrors } from '../validators/userValidators';
 import { ICONS } from './icons';
 import ModalPortal from '../../../components/common/ModalPortal';
@@ -12,6 +13,8 @@ interface UserFormModalProps {
   onClose: () => void;
   onSubmitCreate: (payload: CreateUserPayload) => Promise<void>;
   onSubmitUpdate: (id: number, payload: UpdateUserPayload) => Promise<void>;
+  /** Bộ phận thật từ cây tổ chức (GET /departments) — NCL-01-CN-002-TC-01 gán tài khoản vào bộ phận. */
+  departments?: DepartmentInfo[];
 }
 
 export const UserFormModal: React.FC<UserFormModalProps> = ({
@@ -20,6 +23,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   onClose,
   onSubmitCreate,
   onSubmitUpdate,
+  departments = [],
 }) => {
   const isEdit = Boolean(editingUser);
 
@@ -155,7 +159,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
               {/* Username */}
               <div className="form-field">
                 <label htmlFor="username-input" className="form-label">
-                  Tên tài khoản (Username) <span className="req">*</span>
+                  Tên đăng nhập <span className="req">*</span>
                 </label>
                 <input
                   id="username-input"
@@ -222,9 +226,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
                   disabled={submitting}
                 >
                   <option value="">-- Chưa gán phòng ban --</option>
-                  {SYSTEM_DEPARTMENTS.map((dept) => (
+                  {departments.map((dept) => (
                     <option key={dept.id} value={dept.id}>
-                      [{dept.code}] {dept.name}
+                      {dept.name}
                     </option>
                   ))}
                 </select>
@@ -296,7 +300,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
           <div className="modal-footer">
             <button type="button" className="btn-secondary" onClick={onClose} disabled={submitting}>
-              Hủy bỏ
+              Hủy
             </button>
             <button type="submit" className="btn-primary" disabled={submitting}>
               {submitting ? 'Đang lưu...' : isEdit ? 'Cập nhật thay đổi' : 'Tạo tài khoản'}

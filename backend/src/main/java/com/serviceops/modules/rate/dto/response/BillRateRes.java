@@ -9,7 +9,10 @@ import java.time.LocalDate;
  * go tay sai ten khien khong tra duoc don gia.
  */
 public record BillRateRes(
+		/** Id dong don gia — de man hinh bang gia sua dung dong (PUT /bill-rates/{id}). */
+		Long id,
 		String professionalRole,
+		String level,
 		BigDecimal dailyRate,
 		LocalDate effectiveFrom
 ) {}

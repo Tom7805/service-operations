@@ -4,6 +4,7 @@ import type { PipelineReportRes, PipelineStageRes } from '../types/pipelineRepor
 import { STAGE_CONFIGS, type OpportunityStage } from '../../opportunities/types/opportunityTypes';
 import { fetchOpportunities } from '../../opportunities/api/opportunitiesApi';
 import { ICONS } from '../../../components/common/icons';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface PipelineReportPageProps {
   currentUserRoles?: string[];
@@ -35,7 +36,7 @@ function stageLabel(stage: string): string {
  * Màu có CHỦ ĐÍCH ngữ nghĩa thay vì tô mỗi giai đoạn một màu cầu vồng tùy
  * tiện (5 màu pastel khác nhau chỉ để phân biệt là kiểu biểu đồ mặc định của
  * AI, không mang ý nghĩa gì). Ở đây:
- *  - 3 giai đoạn còn đang xử lý (Tiếp cận → Đề xuất → Đàm phán) dùng MỘT thang
+ *  - 4 giai đoạn còn đang xử lý (Tiếp cận → Khảo sát → Báo giá → Đàm phán) dùng MỘT thang
  *    xám đậm dần — càng đi sâu vào đường ống, khối càng đậm, gợi đúng ý "cơ
  *    hội càng chắc chắn hơn" mà không cần thêm màu mới.
  *  - Chỉ 2 màu thật sự mang nghĩa: xanh lá cho kết quả THẮNG, đỏ cho kết quả
@@ -43,15 +44,16 @@ function stageLabel(stage: string): string {
  *    khắp nơi.
  */
 const STAGE_TONE: Record<string, { bg: string; fg: string; dot: string }> = {
-  APPROACH: { bg: '#F1F0EE', fg: 'var(--ink-muted)', dot: '#C9C6BF' },
-  PROPOSAL: { bg: '#E2DFDA', fg: 'var(--ink)', dot: '#A6A29A' },
-  NEGOTIATION: { bg: '#C9C5BC', fg: 'var(--ink-strong)', dot: '#7A756B' },
-  WON: { bg: 'var(--pale-green-bg)', fg: 'var(--pale-green-fg)', dot: '#346538' },
-  LOST: { bg: 'var(--pale-red-bg)', fg: 'var(--pale-red-fg)', dot: '#9F2F2D' },
+  APPROACH: { bg: 'color-mix(in srgb, var(--ink-strong) 6%, var(--surface))', fg: 'var(--ink-muted)', dot: 'color-mix(in srgb, var(--ink-strong) 25%, var(--surface))' },
+  SURVEY: { bg: 'color-mix(in srgb, var(--ink-strong) 10%, var(--surface))', fg: 'var(--ink)', dot: 'color-mix(in srgb, var(--ink-strong) 35%, var(--surface))' },
+  PROPOSAL: { bg: 'color-mix(in srgb, var(--ink-strong) 14%, var(--surface))', fg: 'var(--ink)', dot: 'color-mix(in srgb, var(--ink-strong) 45%, var(--surface))' },
+  NEGOTIATION: { bg: 'color-mix(in srgb, var(--ink-strong) 22%, var(--surface))', fg: 'var(--ink-strong)', dot: 'color-mix(in srgb, var(--ink-strong) 65%, var(--surface))' },
+  WON: { bg: 'var(--pale-green-bg)', fg: 'var(--pale-green-fg)', dot: 'var(--pale-green-fg)' },
+  LOST: { bg: 'var(--pale-red-bg)', fg: 'var(--pale-red-fg)', dot: 'var(--pale-red-fg)' },
 };
 
 function stageTone(stage: string): { bg: string; fg: string; dot: string } {
-  return STAGE_TONE[stage] ?? { bg: '#F1F0EE', fg: 'var(--ink-muted)', dot: '#C9C6BF' };
+  return STAGE_TONE[stage] ?? { bg: 'color-mix(in srgb, var(--ink-strong) 6%, var(--surface))', fg: 'var(--ink-muted)', dot: 'color-mix(in srgb, var(--ink-strong) 25%, var(--surface))' };
 }
 
 export default function PipelineReportPage({
@@ -98,8 +100,14 @@ export default function PipelineReportPage({
   );
 
   useEffect(() => {
+    // TC-03: vai trò không được xem vẫn gửi request thật để máy chủ từ chối (403) và ghi
+    // nhật ký lần từ chối; kết quả bị bỏ qua vì màn hình đã hiện thông báo không có quyền.
+    if (!isAllowed) {
+      Promise.resolve().then(() => getPipelineReport()).catch(() => undefined);
+      return;
+    }
     load();
-  }, [load]);
+  }, [load, isAllowed]);
 
   useEffect(() => {
     if (!isAllowed) return;
@@ -143,8 +151,7 @@ export default function PipelineReportPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Báo cáo đường ống bán hàng theo giai đoạn chỉ dành riêng cho vai trò{' '}
-            <strong>Ban giám đốc</strong> hoặc <strong>Nhân viên kinh doanh</strong>.
+            Trang này dành cho <strong>Ban giám đốc</strong> và <strong>Nhân viên kinh doanh</strong>.
           </p>
         </div>
       </div>
@@ -157,17 +164,10 @@ export default function PipelineReportPage({
 
   return (
     <div className="user-management-page" data-testid="pipeline-report-page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Báo cáo đường ống bán hàng theo giai đoạn</h1>
-          <p className="page-subtitle">Số cơ hội và giá trị dự kiến theo từng giai đoạn, kèm cảnh báo quá hạn xử lý.</p>
-        </div>
-        <div className="page-header__actions">
-          {data && (
-            <span className="pipeline-generated-at">
-              Cập nhật lúc {new Date(data.generatedAt).toLocaleString('vi-VN')}
-            </span>
-          )}
+      <PageHeader
+        title="Đường ống bán hàng"
+        meta={data && <span>Cập nhật lúc {new Date(data.generatedAt).toLocaleString('vi-VN')}</span>}
+        actions={
           <button
             type="button"
             className="btn-primary"
@@ -176,10 +176,10 @@ export default function PipelineReportPage({
             data-testid="btn-refresh-pipeline"
           >
             {refreshing ? <span className="spinner-sm" aria-hidden="true" /> : ICONS.refresh}{' '}
-            {refreshing ? 'Đang tải lại...' : 'Làm mới báo cáo'}
+            {refreshing ? 'Đang tải lại…' : 'Làm mới'}
           </button>
-        </div>
-      </div>
+        }
+      />
 
       {error && (
         <div className="alert-box alert-box--danger" style={{ justifyContent: 'space-between' }}>
@@ -237,7 +237,7 @@ export default function PipelineReportPage({
                 <div className="pipeline-stalled-card__heading">
                   <h2 className="pipeline-stalled-card__title">Cơ hội quá hạn xử lý</h2>
                   <p className="pipeline-stalled-card__subtitle">
-                    Đứng quá {data.stalledThresholdDays} ngày ở cùng một giai đoạn — nên ưu tiên xử lý trước.
+                    Đứng quá {data.stalledThresholdDays} ngày ở cùng một giai đoạn
                   </p>
                 </div>
                 <span className="pipeline-stalled-card__count">{totalStalledCount}</span>
@@ -289,9 +289,6 @@ export default function PipelineReportPage({
             <div className="pipeline-flow-card">
               <div className="pipeline-flow-card__head">
                 <h2 className="pipeline-flow-card__title">Số cơ hội theo giai đoạn</h2>
-                <p className="pipeline-flow-card__subtitle">
-                  Đậm dần từ trái sang phải theo mức độ cơ hội đã tiến sâu vào đường ống
-                </p>
               </div>
 
               <div className="pipeline-flow">

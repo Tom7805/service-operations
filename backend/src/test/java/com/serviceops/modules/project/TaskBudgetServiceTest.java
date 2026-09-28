@@ -8,7 +8,9 @@ import com.serviceops.modules.project.entity.Project;
 import com.serviceops.modules.project.entity.Task;
 import com.serviceops.modules.project.entity.WorkPackage;
 import com.serviceops.modules.project.enums.ProjectStatus;
+import com.serviceops.modules.identity.user.repository.UserRepository;
 import com.serviceops.modules.project.repository.ProjectRepository;
+import com.serviceops.modules.project.repository.TaskAssignmentRepository;
 import com.serviceops.modules.project.repository.TaskRepository;
 import com.serviceops.modules.project.repository.WorkPackageRepository;
 import com.serviceops.modules.project.service.impl.WorkPackageServiceImpl;
@@ -34,13 +36,18 @@ class TaskBudgetServiceTest {
 	private WorkPackageRepository workPackageRepository;
 	@Mock
 	private TaskRepository taskRepository;
+	@Mock
+	private TaskAssignmentRepository taskAssignmentRepository;
+	@Mock
+	private UserRepository userRepository;
 
 	private WorkPackageServiceImpl service;
 	private Project project;
 
 	@BeforeEach
 	void setUp() {
-		service = new WorkPackageServiceImpl(projectRepository, workPackageRepository, taskRepository);
+		service = new WorkPackageServiceImpl(projectRepository, workPackageRepository, taskRepository,
+				taskAssignmentRepository, userRepository);
 		project = new Project();
 		project.setId(1L);
 		project.setStatus(ProjectStatus.RUNNING);

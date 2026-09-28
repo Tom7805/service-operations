@@ -31,8 +31,14 @@ public class OpportunityAccessDeniedAspect {
 			throwing = "ex")
 	public void logDenied(JoinPoint joinPoint, AccessDeniedException ex) {
 		try {
+			// Loi tu OpportunityScopeGuard mang thong diep rieng (co hoi ngoai pham vi — QTN-01);
+			// loi cua @PreAuthorize la thong diep mac dinh cua Spring (sai vai tro).
+			String reason = ex.getMessage() != null && ex.getMessage().contains("pham vi")
+					? ex.getMessage()
+					: "khong du vai tro";
 			auditLogger.logDeniedAccess(joinPoint.getSignature().toShortString(),
-					"Tu choi truy cap chuc nang co hoi ban hang (can Nhan vien kinh doanh)");
+					"Tu choi truy cap chuc nang co hoi ban hang " + joinPoint.getSignature().getName()
+							+ " (" + reason + ")");
 		} catch (RuntimeException loggingFailure) {
 			// Khong duoc lam hong trai nghiem tra ve 403 cua request goc.
 			log.warn("Khong ghi duoc nhat ky lan tu choi truy cap chuc nang co hoi", loggingFailure);

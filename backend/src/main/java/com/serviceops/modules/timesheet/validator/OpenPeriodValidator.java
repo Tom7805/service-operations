@@ -8,12 +8,11 @@ import java.time.Clock;
 import java.time.LocalDate;
 
 /**
- * Kiem tra ngay lam viec phai nam trong ky cham cong dang mo (NCL-06-CN-001).
+ * Kiem tra ngay lam viec khong o tuong lai (NCL-06-CN-001).
  *
- * <p>Hien tai chi kiem tra ngay khong duoc o tuong lai so voi dong ho he thong
- * ({@link Clock} inject tu {@code TimeConfig} de unit test thay the). Viec chan
- * ngay nam trong ky da khoá se duoc bo sung boi story khoa ky cham cong
- * (VHDV-70) khi bang {@code timesheet_periods} di vao hoat dong.</p>
+ * <p>Dung dong ho he thong ({@link Clock} inject tu {@code TimeConfig} de unit test thay the).
+ * Viec chan ngay nam trong ky da khoa la trach nhiem rieng cua {@link PeriodLockValidator}
+ * (NCL-06-CN-006) — hai validator doc lap, deu duoc goi truoc khi ghi/sua/xoa gio cong.</p>
  */
 @Component
 public class OpenPeriodValidator {

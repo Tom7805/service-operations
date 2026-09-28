@@ -77,6 +77,9 @@ class TwoFactorServiceTest {
 	@Mock
 	private com.serviceops.common.audit.service.AuditLogService auditLogService;
 
+	@Mock
+	private com.serviceops.modules.identity.auth.service.impl.SecurityAlertNotifier securityAlertNotifier;
+
 	private TwoFactorServiceImpl twoFactorService;
 	private UserSession session;
 	private User user;
@@ -90,7 +93,7 @@ class TwoFactorServiceTest {
 		twoFactorService = new TwoFactorServiceImpl(userSessionRepository, twoFactorSettingRepository,
 				twoFactorConfigAuditRepository, roleRepository, userRepository, userRoleScopeRepository,
 				jwtProvider, loginAttemptService, auditLogService,
-				verificationTransaction);
+				verificationTransaction, securityAlertNotifier);
 		ReflectionTestUtils.setField(twoFactorService, "lockSeconds", 900L);
 		ReflectionTestUtils.setField(twoFactorService, "challengeTtlMinutes", 10L);
 		ReflectionTestUtils.setField(twoFactorService, "issuer", "Van Hanh Dich Vu");
@@ -312,6 +315,8 @@ class TwoFactorServiceTest {
 		assertThat(session.getOtpAttempts()).as("lan sai thu ba phai dat nguong").isEqualTo(3);
 
 		verify(loginAttemptService).lockForTwoFactor(user, 900L);
+		// TC-02: dat nguong thi phai canh bao quan tri vien (dung mot lan, sau khi giao dich commit).
+		verify(securityAlertNotifier).alertTwoFactorLock(user.getId(), user.getUsername(), 900L);
 	}
 
 	@Test

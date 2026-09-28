@@ -119,6 +119,94 @@ public class ProjectAuditLogger {
 		repository.save(audit);
 	}
 
+	/** NCL-08-CN-001: ghi nhat ky khi tao phieu chi phi du an. */
+	public void recordExpenseCreated(Long projectId, Long expenseId, BigDecimal amount) {
+		ProjectAuditLog audit = new ProjectAuditLog();
+		audit.setProjectId(projectId);
+		audit.setActionType(ProjectAuditAction.EXPENSE_CREATED);
+		audit.setDetail("Tao phieu chi phi #" + expenseId + ": " + amount.toPlainString());
+		Long actorId = currentUserScopeProvider.currentUserId();
+		audit.setActorId(actorId == null ? 0L : actorId);
+		audit.setActorUsername(currentUsername());
+		audit.setActorRole(currentRole());
+		audit.setCreatedAt(LocalDateTime.now());
+		repository.save(audit);
+	}
+
+	public void recordExpenseApproved(Long projectId, Long expenseId, BigDecimal amount) {
+		ProjectAuditLog audit = new ProjectAuditLog();
+		audit.setProjectId(projectId);
+		audit.setActionType(ProjectAuditAction.EXPENSE_APPROVED);
+		audit.setDetail("Duyet phieu chi phi #" + expenseId + ": " + amount.toPlainString());
+		fillActor(audit);
+		repository.save(audit);
+	}
+
+	public void recordExpenseRejected(Long projectId, Long expenseId, String reason) {
+		ProjectAuditLog audit = new ProjectAuditLog();
+		audit.setProjectId(projectId);
+		audit.setActionType(ProjectAuditAction.EXPENSE_REJECTED);
+		audit.setDetail("Tu choi phieu chi phi #" + expenseId + ": " + reason);
+		fillActor(audit);
+		repository.save(audit);
+	}
+
+	public void recordExpenseResubmitted(Long projectId, Long expenseId) {
+		ProjectAuditLog audit = new ProjectAuditLog();
+		audit.setProjectId(projectId);
+		audit.setActionType(ProjectAuditAction.EXPENSE_RESUBMITTED);
+		audit.setDetail("Cap nhat va nop lai phieu chi phi #" + expenseId);
+		fillActor(audit);
+		repository.save(audit);
+	}
+
+	public void recordExpenseBillableUpdated(Long projectId, Long expenseId, Boolean billable) {
+		ProjectAuditLog audit = new ProjectAuditLog();
+		audit.setProjectId(projectId);
+		audit.setActionType(ProjectAuditAction.EXPENSE_BILLABLE_UPDATED);
+		audit.setDetail("Cap nhat phieu chi phi #" + expenseId + " tinh lai cho khach hang: " + billable);
+		fillActor(audit);
+		repository.save(audit);
+	}
+
+	/** NCL-08-CN-004: ghi nhat ky khi tao phieu chi phi thue ngoai. */
+	public void recordSubcontractorExpenseCreated(Long projectId, Long expenseId, String contractorName,
+			BigDecimal amount) {
+		ProjectAuditLog audit = new ProjectAuditLog();
+		audit.setProjectId(projectId);
+		audit.setActionType(ProjectAuditAction.SUBCONTRACTOR_EXPENSE_CREATED);
+		audit.setDetail("Tao phieu chi phi thue ngoai #" + expenseId + " (" + contractorName + "): "
+				+ amount.toPlainString());
+		fillActor(audit);
+		repository.save(audit);
+	}
+
+	public void recordSubcontractorExpenseApproved(Long projectId, Long expenseId, BigDecimal amount) {
+		ProjectAuditLog audit = new ProjectAuditLog();
+		audit.setProjectId(projectId);
+		audit.setActionType(ProjectAuditAction.SUBCONTRACTOR_EXPENSE_APPROVED);
+		audit.setDetail("Duyet phieu chi phi thue ngoai #" + expenseId + ": " + amount.toPlainString());
+		fillActor(audit);
+		repository.save(audit);
+	}
+
+	public void recordSubcontractorExpenseRejected(Long projectId, Long expenseId, String reason) {
+		ProjectAuditLog audit = new ProjectAuditLog();
+		audit.setProjectId(projectId);
+		audit.setActionType(ProjectAuditAction.SUBCONTRACTOR_EXPENSE_REJECTED);
+		audit.setDetail("Tu choi phieu chi phi thue ngoai #" + expenseId + ": " + reason);
+		fillActor(audit);
+		repository.save(audit);
+	}
+
+	private void fillActor(ProjectAuditLog audit) {
+		Long actorId = currentUserScopeProvider.currentUserId();
+		audit.setActorId(actorId == null ? 0L : actorId);
+		audit.setActorUsername(currentUsername());
+		audit.setActorRole(currentRole());
+		audit.setCreatedAt(LocalDateTime.now());
+	}
+
 	/** NCL-04-CN-007: hop dong duoc gia han thi day ngay ket thuc du kien cua du an RUNNING theo. */
 	public void recordTimelineSyncedFromContract(Long projectId, Long contractId, LocalDate previousEndDate,
 			LocalDate newEndDate) {

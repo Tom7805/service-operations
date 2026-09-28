@@ -133,7 +133,7 @@ describe('ContractExpiryReminderModal (NCL-04-CN-006)', () => {
       />
     );
 
-    expect(screen.getByText(/Chức năng yêu cầu vai trò Kế toán \(VT-05\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Chức năng yêu cầu vai trò Kế toán/i)).toBeInTheDocument();
     expect(contractsApi.fetchExpiringContracts).not.toHaveBeenCalled();
   });
 

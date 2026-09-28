@@ -10,10 +10,11 @@ public record CustomerOverviewItemRes(
 	String status,
 	BigDecimal amount,
 	LocalDate date,
-	/** Chi co gia tri voi hop dong (Contract.contractType); null voi co hoi/du an khac. */
+	/** Chi co o hop dong (vi du TIME_AND_MATERIAL) — null voi co hoi ban hang.
+	 * Man hinh "Tao du an tu hop dong" dung truc tiep gia tri nay thay vi goi
+	 * GET /contracts/{id} (endpoint do chi cap quyen cho VT-05, khong phai VT-02). */
 	String contractType,
-	/** Chi co gia tri voi hop dong (Contract.endDate); null voi co hoi/du an khac. */
-	LocalDate endDate,
-	/** Chi co gia tri voi hop dong (Contract.limitValue); null voi co hoi/du an khac hoac hop dong chua dat han muc. */
-	BigDecimal limitValue
+	/** Ngay ket thuc hop dong — chi co o dong hop dong, null voi co hoi/du an. Dung de
+	 * tu dien san "Ngay ket thuc du kien" khi tao du an tu hop dong (NCL-05-CN-001). */
+	LocalDate endDate
 ) {}

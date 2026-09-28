@@ -120,20 +120,19 @@ describe('WorkBreakdownTree Component (NCL-05-CN-002)', () => {
       />
     );
 
-    const addTaskButtons = screen.getAllByRole('button', { name: /\+ Thêm việc/i });
-    expect(addTaskButtons.length).toBeGreaterThan(0);
-    fireEvent.click(addTaskButtons[0]);
+    // Thao tác hạng mục nay gộp trong menu kebab (⋮) — mở đúng menu của hạng mục
+    // muốn thao tác rồi bấm vào mục con bên trong theo data-testid ổn định.
+    fireEvent.click(screen.getByLabelText('Thao tác hạng mục Giai đoạn 1: Thiết kế'));
+    fireEvent.click(screen.getByTestId('add-task-btn-101'));
     expect(onAddTask).toHaveBeenCalledWith(mockWbsData[0], null);
 
-    const addSubPkgButtons = screen.getAllByRole('button', { name: /\+ Mục con/i });
-    expect(addSubPkgButtons.length).toBeGreaterThan(0);
-    fireEvent.click(addSubPkgButtons[0]);
+    fireEvent.click(screen.getByLabelText('Thao tác hạng mục Giai đoạn 1: Thiết kế'));
+    fireEvent.click(screen.getByTestId('add-subpackage-btn-101'));
     expect(onAddSubPackage).toHaveBeenCalledWith(mockWbsData[0]);
 
     // Xóa chỉ hiển thị với hạng mục rỗng không có task và không có mục con (hạng mục 103)
-    const deleteButtons = screen.getAllByRole('button', { name: /Xóa/i });
-    expect(deleteButtons.length).toBeGreaterThan(0);
-    fireEvent.click(deleteButtons[0]);
+    fireEvent.click(screen.getByLabelText('Thao tác hạng mục Giai đoạn 3: Nghiệm thu'));
+    fireEvent.click(screen.getByTestId('delete-wp-btn-103'));
     expect(onDeletePackage).toHaveBeenCalledWith(mockWbsData[1]);
   });
 
@@ -147,10 +146,8 @@ describe('WorkBreakdownTree Component (NCL-05-CN-002)', () => {
       />
     );
 
-    expect(screen.queryByRole('button', { name: /\+ Thêm việc/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /\+ Mục con/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Xóa/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /\+ Việc con/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Thao tác hạng mục/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Thao tác công việc/i)).not.toBeInTheDocument();
   });
 
   it('hides modification buttons when isProjectOpen is false (closed project)', () => {
@@ -163,13 +160,11 @@ describe('WorkBreakdownTree Component (NCL-05-CN-002)', () => {
       />
     );
 
-    expect(screen.queryByRole('button', { name: /\+ Thêm việc/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /\+ Mục con/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Xóa/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /\+ Việc con/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Thao tác hạng mục/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Thao tác công việc/i)).not.toBeInTheDocument();
   });
 
-  it('calls onAddTask when clicking + Việc con on a task', () => {
+  it('calls onAddTask when clicking "Thêm việc con" on a task (thao tác nay gom trong menu kebab)', () => {
     const onAddTask = vi.fn();
 
     render(
@@ -182,9 +177,10 @@ describe('WorkBreakdownTree Component (NCL-05-CN-002)', () => {
       />
     );
 
-    const addSubTaskButtons = screen.getAllByRole('button', { name: /\+ Việc con/i });
-    expect(addSubTaskButtons.length).toBeGreaterThan(0);
-    fireEvent.click(addSubTaskButtons[0]);
+    const taskMenuButtons = screen.getAllByLabelText(/Thao tác công việc/i);
+    expect(taskMenuButtons.length).toBeGreaterThan(0);
+    fireEvent.click(taskMenuButtons[0]);
+    fireEvent.click(screen.getByText('Thêm việc con'));
     expect(onAddTask).toHaveBeenCalled();
   });
 
@@ -213,5 +209,14 @@ describe('WorkBreakdownTree Component (NCL-05-CN-002)', () => {
     fireEvent.click(expandBtns[0]);
 
     expect(screen.getByText('Thiết kế giao diện Figma')).toBeInTheDocument();
+  });
+
+  it('NCL-14-CN-001 TC-02: tô sáng công việc được mở từ thông báo', () => {
+    render(<WorkBreakdownTree projectId={1} items={mockWbsData} focusTaskId={201} />);
+
+    expect(screen.getByTestId('task-row-201')).toHaveAttribute('data-focused', 'true');
+    expect(screen.getByTestId('task-row-201')).toHaveClass('wbs-task-row--focus');
+    expect(screen.getByTestId('task-row-202')).not.toHaveAttribute('data-focused');
+    expect(screen.getByText('Mở từ thông báo')).toBeInTheDocument();
   });
 });

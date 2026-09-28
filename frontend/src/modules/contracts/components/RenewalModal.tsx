@@ -92,7 +92,7 @@ export default function RenewalModal({
     if (!isAllowed) return;
 
     if (!isActive) {
-      setServerError('Chỉ gia hạn được hợp đồng đang còn hiệu lực (ACTIVE); hợp đồng đã đóng vui lòng lập hợp đồng mới');
+      setServerError('Chỉ gia hạn được hợp đồng đang hiệu lực; hợp đồng đã đóng vui lòng lập hợp đồng mới');
       return;
     }
 
@@ -152,7 +152,7 @@ export default function RenewalModal({
             </h3>
             <p className="field-hint">
               {contract.contractCode} · {contract.name} · Trạng thái:{' '}
-              <strong style={{ color: isActive ? '#15803D' : '#6B7280' }}>{contract.status}</strong>
+              <strong style={{ color: isActive ? 'var(--pale-green-fg)' : 'var(--ink-muted)' }}>{contract.status}</strong>
             </p>
           </div>
           <button type="button" className="modal-close" onClick={onClose} disabled={submitting} aria-label="Đóng">
@@ -164,14 +164,14 @@ export default function RenewalModal({
           {/* Kiểm tra vai trò VT-04 (TC-04) */}
           {!isAllowed && (
             <div className="alert-box alert-box--danger" role="alert">
-              Yêu cầu vai trò Nhân viên kinh doanh (VT-04).
+              Yêu cầu vai trò Nhân viên kinh doanh.
             </div>
           )}
 
           {/* Kiểm tra trạng thái hợp đồng đã đóng (TC-02) */}
           {isAllowed && !isActive && (
             <div className="alert-box alert-box--warning" role="alert" data-testid="renewal-inactive-alert">
-              Chỉ gia hạn được hợp đồng đang còn hiệu lực (ACTIVE); hợp đồng đã đóng vui lòng lập hợp đồng mới.
+              Chỉ gia hạn được hợp đồng đang hiệu lực; hợp đồng đã đóng cần lập hợp đồng mới.
             </div>
           )}
 
@@ -251,12 +251,12 @@ export default function RenewalModal({
                 </div>
                 <div className="renewal-preview-row renewal-preview-row--highlight">
                   <span>Tổng giá trị hợp đồng mới:</span>
-                  <span style={{ color: isExceedingLimit ? '#DC2626' : '#111827' }}>
+                  <span style={{ color: isExceedingLimit ? 'var(--pale-red-fg)' : 'var(--ink-strong)' }}>
                     {formatAmount(previewValueAfter)}
                   </span>
                 </div>
                 {isExceedingLimit && (
-                  <small style={{ color: '#DC2626', fontSize: '12.5px' }}>
+                  <small style={{ color: 'var(--pale-red-fg)', fontSize: '12.5px' }}>
                     ⚠️ Cảnh báo: Tổng giá trị vượt hạn mức quy định ({formatAmount(contract.limitValue)}).
                   </small>
                 )}

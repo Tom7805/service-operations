@@ -1,10 +1,22 @@
 package com.serviceops.modules.rate.service;
 
+import com.serviceops.modules.rate.dto.request.BillRateCreateReq;
+import com.serviceops.modules.rate.dto.request.BillRateUpdateReq;
+import com.serviceops.modules.rate.dto.response.BillRateHistoryRes;
 import com.serviceops.modules.rate.dto.response.BillRateRes;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface BillRateService {
+
+	BillRateRes create(BillRateCreateReq request);
+
+	/**
+	 * Sua truc tiep mot dong don gia chua ap dung truoc hom nay (sua nham gia/ngay hieu luc). Dong da ap dung
+	 * tu truoc bi tu choi {@code INVALID_STATE} — doi gia bang cach khai bao muc moi (xem {@code RateEditRules}).
+	 */
+	BillRateRes update(Long id, BillRateUpdateReq request);
 
 	/**
 	 * Danh sach chuc danh dang co don gia ban hieu luc tinh den hom nay,
@@ -13,4 +25,20 @@ public interface BillRateService {
 	 * duoc don gia.
 	 */
 	List<BillRateRes> listCurrentlyEffective();
+
+	/**
+	 * Tra dung dong don gia hieu luc tai mot ngay phat sinh cu the (NCL-07-CN-002, QTN-15) —
+	 * dung de tinh doanh thu cho gio cong da ghi nhan trong qua khu ma khong bi anh huong boi
+	 * lan tang gia sau do. Nem {@code RESOURCE_NOT_FOUND} neu vai tro/cap bac chua co dong
+	 * don gia nao hieu luc truoc hoac dung {@code asOf}.
+	 */
+	BillRateRes resolve(String professionalRole, String level, LocalDate asOf);
+
+	/**
+	 * NCL-07-CN-007: toan bo cac moc hieu luc da khai bao cho mot cap (vai tro, cap bac), sap theo
+	 * effectiveFrom tang dan, kem khoang hieu luc tinh duoc va nguoi thay doi (tra tu audit_logs
+	 * cua chinh lan tao dong do — NCL-07-CN-001 da ghi san, khong can bang lich su rieng). Nem
+	 * {@code RESOURCE_NOT_FOUND} neu vai tro/cap bac chua tung co don gia nao (TC-01/TC-02).
+	 */
+	BillRateHistoryRes history(String professionalRole, String level);
 }

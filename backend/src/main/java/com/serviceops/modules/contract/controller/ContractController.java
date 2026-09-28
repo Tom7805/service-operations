@@ -1,6 +1,8 @@
 package com.serviceops.modules.contract.controller;
 
 import com.serviceops.common.api.BaseRes;
+import com.serviceops.common.exception.BusinessRuleException;
+import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.contract.dto.request.ContractAppendixCreateReq;
 import com.serviceops.modules.contract.dto.request.ContractTypeLimitReq;
 import com.serviceops.modules.contract.dto.request.ContractMilestoneReq;
@@ -12,6 +14,7 @@ import com.serviceops.modules.contract.dto.response.ContractMilestoneRes;
 import com.serviceops.modules.contract.dto.response.ContractRes;
 import com.serviceops.modules.contract.dto.response.ContractUsageRes;
 import com.serviceops.modules.contract.dto.response.RenewalRes;
+import com.serviceops.modules.contract.enums.ContractMilestoneStatus;
 import com.serviceops.modules.contract.service.ContractExpiryReminderService;
 import com.serviceops.modules.contract.service.ContractLimitService;
 import com.serviceops.modules.contract.service.ContractMilestoneService;
@@ -69,11 +72,17 @@ public BaseRes<List<ContractAppendixRes>> listAppendices(@PathVariable Long cont
 /**
  * Danh sach hop dong cho man hinh "Hop dong" danh rieng cho Ke toan (VT-05) -
  * loi vao de khai bao loai/han muc, moc thanh toan, kich hoat ma khong phai mo
- * ho so tong hop khach hang (chi VT-04/VT-02 vao duoc). Chi Ke toan (VT-05);
- * vai tro khac nhan 403 va bi ghi nhat ky tu choi boi {@code ContractAccessDeniedAspect}.
+ * ho so tong hop khach hang (chi VT-04/VT-02 vao duoc). Quan tri vien (VT-07)
+ * cung duoc mo endpoint nay tu 2026-09-22: VT-07 da co quyen quan ly don gia
+ * rieng theo hop dong (NCL-07-CN-003, xem ContractBillRateController) nhung
+ * truoc do khong liet ke duoc hop dong theo ten, phai go tay ID hop dong o
+ * ContractRateManager.tsx — nhat quan voi cac endpoint don gia khac
+ * (BillRateController/ContractBillRateController/RateLookupController) da
+ * cho ca VT-05 va VT-07. Vai tro khac van nhan 403 va bi ghi nhat ky tu choi
+ * boi {@code ContractAccessDeniedAspect}.
  */
 @GetMapping
-@PreAuthorize("hasRole('VT-05')")
+@PreAuthorize("hasRole('VT-05') or hasRole('VT-07')")
 public BaseRes<List<ContractRes>> listContracts() {
 	return BaseRes.ok(contractService.listAll());
 }
@@ -122,15 +131,20 @@ contractMilestoneService.replace(contractId, requests));
 }
 
 /**
- * NCL-04-CN-003: doi trang thai mot moc thanh toan (PENDING -> READY_TO_INVOICE
- * -> INVOICED). Dung de danh dau moc da duoc xuat hoa don khi he thong chua co
- * module hoa don rieng (Epic NCL-10) - so lieu nay la dau vao truc tiep cho
- * canh bao han muc o NCL-04-CN-005.
+ * NCL-04-CN-003: doi trang thai mot moc thanh toan (PENDING -> READY_TO_INVOICE).
+ * Trang thai INVOICED chi duoc dat boi {@code POST /contracts/{id}/milestones/{id}/invoice}
+ * (NCL-10-CN-002) de moc INVOICED luon di kem mot hoa don that; dat tay se lam mat kha nang
+ * lap hoa don cua moc do va sai lech so lieu han muc (NCL-04-CN-005).
  */
 @PatchMapping("/{contractId}/milestones/{milestoneId}/status")
 @PreAuthorize("hasRole('VT-05')")
 public BaseRes<ContractMilestoneRes> updateMilestoneStatus(@PathVariable Long contractId,
 		@PathVariable Long milestoneId, @Valid @RequestBody ContractMilestoneStatusReq request) {
+	if (request.status() == ContractMilestoneStatus.INVOICED) {
+		throw new BusinessRuleException(ErrorCode.INVALID_STATE,
+				"Khong the dat trang thai INVOICED thu cong; hay lap hoa don cho moc qua "
+						+ "POST /contracts/{contractId}/milestones/{milestoneId}/invoice (NCL-10-CN-002)");
+	}
 	return BaseRes.ok("Cap nhat trang thai moc thanh toan thanh cong",
 			contractMilestoneService.updateStatus(contractId, milestoneId, request.status()));
 }

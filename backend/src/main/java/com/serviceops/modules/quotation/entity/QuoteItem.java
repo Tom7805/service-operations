@@ -25,6 +25,10 @@ public class QuoteItem extends BaseEntity {
 	@Column(name = "professional_role", nullable = false, length = 255)
 	private String professionalRole;
 
+	/** Cap bac da chon khi lap bao gia (NCL-03-CN-003); null voi bao gia cu chi co vai tro. */
+	@Column(name = "level", length = 100)
+	private String level;
+
 	@Column(name = "work_days", nullable = false, precision = 10, scale = 2)
 	private BigDecimal workDays;
 

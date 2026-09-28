@@ -2,15 +2,20 @@ package com.serviceops.modules.project.service.impl;
 
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
+import com.serviceops.modules.identity.user.entity.User;
+import com.serviceops.modules.identity.user.repository.UserRepository;
 import com.serviceops.modules.project.dto.request.TaskCreateReq;
 import com.serviceops.modules.project.dto.request.WorkPackageReq;
+import com.serviceops.modules.project.dto.response.TaskAssignmentRes;
 import com.serviceops.modules.project.dto.response.TaskRes;
 import com.serviceops.modules.project.dto.response.WorkBreakdownRes;
 import com.serviceops.modules.project.entity.Project;
 import com.serviceops.modules.project.entity.Task;
+import com.serviceops.modules.project.entity.TaskAssignment;
 import com.serviceops.modules.project.entity.WorkPackage;
 import com.serviceops.modules.project.enums.ProjectStatus;
 import com.serviceops.modules.project.repository.ProjectRepository;
+import com.serviceops.modules.project.repository.TaskAssignmentRepository;
 import com.serviceops.modules.project.repository.TaskRepository;
 import com.serviceops.modules.project.repository.WorkPackageRepository;
 import com.serviceops.modules.project.service.WorkPackageService;
@@ -31,6 +36,8 @@ public class WorkPackageServiceImpl implements WorkPackageService {
 	private final ProjectRepository projectRepository;
 	private final WorkPackageRepository workPackageRepository;
 	private final TaskRepository taskRepository;
+	private final TaskAssignmentRepository assignmentRepository;
+	private final UserRepository userRepository;
 
 	@Override
 	public WorkBreakdownRes createWorkPackage(Long projectId, WorkPackageReq request) {
@@ -78,7 +85,7 @@ public class WorkPackageServiceImpl implements WorkPackageService {
 		task.setExpectedEndDate(request.expectedEndDate());
 		task.setCreatedBy(currentUsername());
 		task.setCreatedAt(LocalDateTime.now());
-		return toTaskResponse(taskRepository.save(task));
+		return toTaskResponse(taskRepository.save(task), List.of());
 	}
 
 	@Override
@@ -105,8 +112,19 @@ public class WorkPackageServiceImpl implements WorkPackageService {
 	public List<WorkBreakdownRes> getWorkBreakdown(Long projectId) {
 		requireProject(projectId);
 		List<WorkPackage> packages = workPackageRepository.findByProjectIdOrderBySortOrderAscIdAsc(projectId);
-		Map<Long, List<TaskRes>> tasksByPackage = taskRepository.findByProjectIdOrderByIdAsc(projectId).stream()
-				.map(this::toTaskResponse).collect(Collectors.groupingBy(TaskRes::workPackageId));
+		List<Task> tasks = taskRepository.findByProjectIdOrderByIdAsc(projectId);
+		List<Long> taskIds = tasks.stream().map(Task::getId).toList();
+		List<TaskAssignment> assignments = assignmentRepository.findByTaskIdInOrderByIdAsc(taskIds);
+		Map<Long, User> usersById = userRepository
+				.findAllById(assignments.stream().map(TaskAssignment::getUserId).distinct().toList()).stream()
+				.collect(Collectors.toMap(User::getId, user -> user));
+		Map<Long, List<TaskAssignmentRes>> assignmentsByTask = assignments.stream()
+				.map(assignment -> toAssignmentResponse(assignment, usersById.get(assignment.getUserId())))
+				.filter(java.util.Objects::nonNull)
+				.collect(Collectors.groupingBy(TaskAssignmentRes::taskId));
+		Map<Long, List<TaskRes>> tasksByPackage = tasks.stream()
+				.map(task -> toTaskResponse(task, assignmentsByTask.getOrDefault(task.getId(), List.of())))
+				.collect(Collectors.groupingBy(TaskRes::workPackageId));
 		Map<Long, List<WorkPackage>> childrenByParent = packages.stream()
 				.filter(item -> item.getParentId() != null)
 				.collect(Collectors.groupingBy(WorkPackage::getParentId));
@@ -142,10 +160,16 @@ public class WorkPackageServiceImpl implements WorkPackageService {
 		return new WorkBreakdownRes(item.getId(), item.getParentId(), item.getName(), item.getDescription(), tasks, children);
 	}
 
-	private TaskRes toTaskResponse(Task task) {
+	private TaskRes toTaskResponse(Task task, List<TaskAssignmentRes> assignments) {
 		return new TaskRes(task.getId(), task.getProjectId(), task.getWorkPackageId(), task.getParentTaskId(),
 				task.getName(), task.getDescription(), task.getExpectedStartDate(), task.getExpectedEndDate(),
-				task.getStatus(), task.getBudgetHours());
+				task.getStatus(), task.getBudgetHours(), assignments);
+	}
+
+	private TaskAssignmentRes toAssignmentResponse(TaskAssignment assignment, User user) {
+		if (user == null) return null;
+		return new TaskAssignmentRes(assignment.getId(), assignment.getTaskId(), user.getId(), user.getUsername(),
+				user.getFullName(), assignment.getExpectedStartDate(), assignment.getExpectedEndDate());
 	}
 
 	private String blankToNull(String value) {

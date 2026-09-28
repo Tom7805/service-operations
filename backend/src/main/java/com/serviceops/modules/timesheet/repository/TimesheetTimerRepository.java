@@ -1,0 +1,17 @@
+package com.serviceops.modules.timesheet.repository;
+
+import com.serviceops.modules.timesheet.entity.TimesheetTimer;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+/** Truy cap phien dong ho bam gio dang chay (NCL-06-CN-008). */
+public interface TimesheetTimerRepository extends JpaRepository<TimesheetTimer, Long> {
+
+	Optional<TimesheetTimer> findByUserId(Long userId);
+
+	/** TC-02: tim cac dong ho van con chay tu truoc moc thoi gian nay (qua han 12 gio, quen bam dung). */
+	List<TimesheetTimer> findByStartedAtBefore(LocalDateTime threshold);
+}

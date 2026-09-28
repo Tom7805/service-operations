@@ -17,5 +17,7 @@ public record EmployeeCreateReq(
         LocalDate hireDate,
         LocalDate endDate,
         @DecimalMin(value = "0.01", message = "Gio lam viec chuan phai lon hon khong")
-        BigDecimal standardHoursPerWeek
+        BigDecimal standardHoursPerWeek,
+        @Size(max = 100, message = "Cap bac khong duoc qua 100 ky tu")
+        String level
 ) {}

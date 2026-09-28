@@ -1,5 +1,4 @@
 package com.serviceops.common.audit.repository;
-
 import com.serviceops.common.audit.entity.SensitiveDataAccessLog;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;

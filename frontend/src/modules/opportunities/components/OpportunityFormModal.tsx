@@ -229,9 +229,6 @@ export default function OpportunityFormModal({
               </span>
               Tạo cơ hội bán hàng
             </h3>
-            <p className="field-hint" style={{ marginTop: '4px' }}>
-              Khởi tạo cơ hội kinh doanh mới gắn với hồ sơ khách hàng đã có trong hệ thống.
-            </p>
           </div>
           <button
             type="button"
@@ -368,7 +365,7 @@ export default function OpportunityFormModal({
                   customers.length === 0 &&
                   !loadingCustomers && (
                     <span className="field-hint">
-                      Chưa tìm thấy khách hàng nào. Vui lòng tạo hồ sơ khách hàng trước.
+                      Chưa có khách hàng nào — thêm khách hàng trước.
                     </span>
                   )}
               </div>
@@ -432,9 +429,6 @@ export default function OpportunityFormModal({
                     {errors.expectedCloseDate}
                   </span>
                 )}
-                {!errors.expectedCloseDate && (
-                  <span className="field-hint">Tùy chọn: Thời hạn dự kiến ký kết hoặc hoàn tất</span>
-                )}
               </div>
 
               {/* Giai đoạn & Trạng thái khởi tạo */}
@@ -476,7 +470,7 @@ export default function OpportunityFormModal({
                           background: 'currentColor',
                         }}
                       />
-                      Tiếp cận (APPROACH)
+                      Tiếp cận
                     </span>
                   </div>
                   <span style={{ color: 'var(--line)' }}>|</span>
@@ -503,7 +497,7 @@ export default function OpportunityFormModal({
                           background: 'currentColor',
                         }}
                       />
-                      Đang xử lý (OPEN)
+                      Đang xử lý
                     </span>
                   </div>
                 </div>
@@ -518,7 +512,7 @@ export default function OpportunityFormModal({
               onClick={onClose}
               disabled={submitting}
             >
-              Hủy bỏ
+              Hủy
             </button>
             <button
               type="submit"

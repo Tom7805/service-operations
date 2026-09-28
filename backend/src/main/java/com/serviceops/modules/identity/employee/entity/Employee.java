@@ -39,6 +39,14 @@ public class Employee extends BaseEntity {
     @Column(name = "professional_role", length = 255)
     private String professionalRole;
 
+    /**
+     * Cap bac (NCL-09-CN-002): dung de tu dong tra don gia (bill_rates/contract_bill_rates,
+     * khoa theo professionalRole + level + effectiveFrom) khi tinh doanh thu ghi nhan hang
+     * loat, thay vi bat nguoi dung nhap tay tung dong nhu {@code RateLookupReq} (NCL-07-CN-005).
+     */
+    @Column(length = 100)
+    private String level;
+
     @Column(name = "standard_hours_per_week", nullable = false, precision = 5, scale = 2)
     private BigDecimal standardHoursPerWeek;
 

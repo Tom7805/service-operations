@@ -7,72 +7,46 @@
 --  duoc tao boi V35 (NCL-03-CN-001) — file nay chi seed du lieu, khong tao
 --  bang.
 --
---  Muc dich: co san vai co hoi + vai hoat dong cham soc de xem ngay dong thoi
---  gian tren giao dien / thu API (GET, POST .../activities) ma khong phai tu
---  goi POST /opportunities truoc.
+--  RUT GON (2026-09-22): truoc day file nay + R__seed_sample_revenue_forecast_
+--  demo_opportunities.sql cong lai seed toi 22 co hoi, phan lon gan voi
+--  khach hang KHONG PHAI la 2 khach hang sale01 thuc su phu trach (1001, 1002)
+--  — dang nhap sale01 thay ten khach hang la nhung cong ty khac (Sao Viet,
+--  Logistics Toan Cau, VietTinBank...) rat kho hieu, gay nham tuong du lieu
+--  seed sai/mo coi. Gio CHI con dung 2 co hoi, moi co hoi mot khach hang, ca
+--  hai deu la khach hang THAT sale01 dang phu trach (owner_id = sale01) —
+--  dong bo voi nhung gi trang "Khach hang" cua sale01 dang hien (xem
+--  R__seed_sample_customers.sql: 1001, 1002 la 2/6 khach hang thuoc sale01).
 --
---  Co hoi 2001 gan voi khach hang 1001 (chu so huu sale01); co hoi 2002 gan
---  voi khach hang 1003 (chu so huu sale.lead) — dung tai khoan tuong ung de
---  dang nhap va thu chuc nang ghi nhan hoat dong cham soc. Ca hai deu o giai
---  doan APPROACH / trang thai OPEN nen van them duoc hoat dong moi.
+--  DON DEP: xoa toan bo cac co hoi mau CU (2003..2014) khong con dung nua —
+--  DELETE nam o day (khong phai o migration V, vi day la file repeatable,
+--  Flyway se CHAY LAI moi khi noi dung file thay doi) de dong doi keo code
+--  moi ve, seed lai tu dau, DB cua ho cung tu dong xoa sach cac ban ghi cu,
+--  khong con canh "moi nguoi mot bo du lieu khac nhau". opportunity_activities/
+--  opportunity_stage_history gan voi cac id nay tu xoa theo (ON DELETE CASCADE,
+--  xem V37/V40) — da kiem tra khong co quotes/contracts nao gan voi cac id
+--  nay nen xoa an toan, khong vuong khoa ngoai.
+-- ----------------------------------------------------------------------------
+DELETE FROM opportunities WHERE id IN (2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014);
+
+-- ----------------------------------------------------------------------------
+--  2 CO HOI CON LAI — moi co hoi mot khach hang, ca hai deu la khach hang that
+--  cua sale01 (1001, 1002). Ca hai o giai doan APPROACH / trang thai OPEN nen
+--  van them duoc hoat dong cham soc moi. probability = 10 dung QTN-06/
+--  StageTransitionValidator.initialProbability() (giai doan dau tien).
 --
---  probability = 10 (dung QTN-06/StageTransitionValidator.initialProbability())
---  vi ca hai deu o giai doan APPROACH — INSERT ban dau thieu cot nay khien
---  probability luon la NULL sau moi lan seed lai tu dau, lam thang 05/2026 va
---  06/2026 tren "Du bao doanh thu" luon hien 0 d du gia tri du kien khac 0
---  (phat hien khi doi chieu thu cong voi giao dien).
+--  owner_id gan bang JOIN toi users.id theo created_by ('sale01') — QUAN
+--  TRONG tu khi OpportunityServiceImpl.list() ap dung pham vi du lieu QTN-01:
+--  co hoi thieu owner_id se AN VOI tai khoan pham vi SELF/DEPARTMENT.
 --
 --  Idempotent qua ON DUPLICATE KEY UPDATE theo id co dinh.
 -- ----------------------------------------------------------------------------
-INSERT INTO opportunities (id, name, customer_id, expected_value, expected_close_date, stage, status, probability, created_by, created_at)
-VALUES
-    (2001, 'Trien khai he thong CRM cho Cong ty CP Giai Phap So Viet', 1001, 500000000, '2026-06-30', 'APPROACH', 'OPEN', 10, 'sale01', '2026-01-05 09:00:00'),
-    (2002, 'Tu van quy trinh xay dung so cho An Phat', 1003, 300000000, '2026-05-31', 'APPROACH', 'OPEN', 10, 'sale.lead', '2026-01-10 10:30:00')
-ON DUPLICATE KEY UPDATE
-    name                = VALUES(name),
-    expected_value      = VALUES(expected_value),
-    expected_close_date = VALUES(expected_close_date),
-    stage               = VALUES(stage),
-    status              = VALUES(status),
-    probability         = VALUES(probability),
-    created_by          = VALUES(created_by);
-
-INSERT INTO opportunity_activities (id, opportunity_id, activity_type, occurred_at, participants, content, created_by, created_at)
-VALUES
-    (3001, 2001, 'CALL', '2026-01-06 14:00:00', 'sale01, chi Lan (khach hang)',
-     'Goi gioi thieu giai phap CRM, khach hang quan tam module bao gia tu dong.', 'sale01', '2026-01-06 14:05:00'),
-    (3002, 2001, 'MEETING', '2026-01-12 09:30:00', 'sale01, anh Minh (khach hang), anh Tuan (khach hang)',
-     'Hop demo truc tiep tai van phong khach hang, hen gui bao gia truoc 20/01.', 'sale01', '2026-01-12 11:00:00'),
-    (3003, 2002, 'EMAIL', '2026-01-11 08:15:00', 'sale.lead',
-     'Gui thu gioi thieu dich vu tu van quy trinh, dinh kem ho so nang luc cong ty.', 'sale.lead', '2026-01-11 08:20:00')
-ON DUPLICATE KEY UPDATE
-    activity_type = VALUES(activity_type),
-    occurred_at   = VALUES(occurred_at),
-    participants  = VALUES(participants),
-    content       = VALUES(content),
-    created_by    = VALUES(created_by);
-
--- ----------------------------------------------------------------------------
---  DU LIEU NEN BO SUNG CHO NCL-03-CN-007 — BAO CAO DUONG ONG BAN HANG
---  10 co hoi (2003..2012) trai tren ca 5 giai doan de bao cao /opportunities/
---  pipeline-report co du lieu ngay (TC-01). Co hoi 2007 la co hoi "dong lau
---  bat thuong": NEGOTIATION / OPEN, created_at cach hien tai hon 60 ngay va
---  chua co ban ghi opportunity_stage_history nen so ngay o giai doan tinh tu
---  created_at (TC-02).
---  Idempotent qua ON DUPLICATE KEY UPDATE theo id co dinh.
--- ----------------------------------------------------------------------------
-INSERT INTO opportunities (id, name, customer_id, expected_value, expected_close_date, stage, status, probability, created_by, created_at)
-VALUES
-    (2003, 'Nang cap ha tang mang cho Thuong Mai Mien Bac',        1002, 120000000, '2026-11-30', 'APPROACH',    'OPEN',    10,  'sale01',    '2026-08-20 09:00:00'),
-    (2004, 'Trien khai cong thong tin noi bo Sao Viet',            1004, 180000000, '2026-12-15', 'APPROACH',    'OPEN',    10,  'pm01',      '2026-08-28 09:00:00'),
-    (2005, 'Chuan hoa quy trinh kho van Logistics Toan Cau',       1005, 260000000, '2026-10-31', 'PROPOSAL',    'OPEN',    40,  'pm.lead',   '2026-07-25 09:00:00'),
-    (2006, 'Tu van tai chinh - ke toan cho Minh Duc giai doan 2',  1006, 340000000, '2026-10-20', 'PROPOSAL',    'OPEN',    40,  'ketoan01',  '2026-08-05 09:00:00'),
-    (2012, 'Mo rong module bao gia cho Giai Phap So Viet',         1001, 300000000, '2026-11-10', 'PROPOSAL',    'OPEN',    40,  'sale01',    '2026-08-12 09:00:00'),
-    (2007, 'Dam phan hop dong CRM mo rong An Phat',                1003, 500000000, '2026-09-30', 'NEGOTIATION', 'OPEN',    70,  'sale.lead', '2026-05-20 09:00:00'),
-    (2008, 'Dam phan goi bao tri he thong Sao Viet',               1004, 300000000, '2026-10-05', 'NEGOTIATION', 'OPEN',    70,  'pm01',      '2026-08-18 09:00:00'),
-    (2009, 'Trien khai ERP giai doan 1 cho Minh Duc',              1006, 350000000, '2026-08-31', 'WON',         'CLOSED',  100, 'ketoan01',  '2026-06-10 09:00:00'),
-    (2010, 'Goi ho tro van hanh cho Logistics Toan Cau',          1005, 250000000, '2026-08-20', 'WON',         'CLOSED',  100, 'pm.lead',   '2026-06-25 09:00:00'),
-    (2011, 'Du an so hoa tai lieu Thuong Mai Mien Bac',            1002, 150000000, '2026-08-15', 'LOST',        'CLOSED',  0,   'sale01',    '2026-06-18 09:00:00')
+INSERT INTO opportunities (id, name, customer_id, expected_value, expected_close_date, stage, status, probability, created_by, created_at, owner_id)
+SELECT o.id, o.name, o.customer_id, o.expected_value, o.expected_close_date, o.stage, o.status, o.probability, o.created_by, o.created_at, u.id
+FROM (
+              SELECT 2001 AS id, 'Trien khai he thong CRM cho Cong ty CP Giai Phap So Viet' AS name, 1001 AS customer_id, 500000000 AS expected_value, '2026-06-30' AS expected_close_date, 'APPROACH' AS stage, 'OPEN' AS status, 10 AS probability, 'sale01' AS created_by, '2026-01-05 09:00:00' AS created_at
+    UNION ALL SELECT 2002, 'Nang cap ha tang mang cho Cong ty TNHH Thuong Mai Mien Bac', 1002, 120000000, '2026-11-30', 'APPROACH', 'OPEN', 10, 'sale01', '2026-01-10 10:30:00'
+) o
+JOIN users u ON u.username = o.created_by
 ON DUPLICATE KEY UPDATE
     name                = VALUES(name),
     customer_id         = VALUES(customer_id),
@@ -81,4 +55,20 @@ ON DUPLICATE KEY UPDATE
     stage               = VALUES(stage),
     status              = VALUES(status),
     probability         = VALUES(probability),
-    created_by          = VALUES(created_by);
+    created_by          = VALUES(created_by),
+    owner_id            = VALUES(owner_id);
+
+INSERT INTO opportunity_activities (id, opportunity_id, activity_type, occurred_at, participants, content, created_by, created_at)
+VALUES
+    (3001, 2001, 'CALL', '2026-01-06 14:00:00', 'sale01, chi Lan (khach hang)',
+     'Goi gioi thieu giai phap CRM, khach hang quan tam module bao gia tu dong.', 'sale01', '2026-01-06 14:05:00'),
+    (3002, 2001, 'MEETING', '2026-01-12 09:30:00', 'sale01, anh Minh (khach hang), anh Tuan (khach hang)',
+     'Hop demo truc tiep tai van phong khach hang, hen gui bao gia truoc 20/01.', 'sale01', '2026-01-12 11:00:00'),
+    (3003, 2002, 'EMAIL', '2026-01-11 08:15:00', 'sale01',
+     'Gui thu khao sat hien trang ha tang mang, hen lich khao sat truc tiep tuan sau.', 'sale01', '2026-01-11 08:20:00')
+ON DUPLICATE KEY UPDATE
+    activity_type = VALUES(activity_type),
+    occurred_at   = VALUES(occurred_at),
+    participants  = VALUES(participants),
+    content       = VALUES(content),
+    created_by    = VALUES(created_by);

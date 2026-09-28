@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
-import type { ProjectRes, TaskBudgetStatusRes, TaskRes, WorkBreakdownRes } from '../types/projectTypes';
+import type {
+  ProjectRes,
+  TaskAssignmentRes,
+  TaskBudgetStatusRes,
+  TaskRes,
+  WorkBreakdownRes,
+} from '../types/projectTypes';
 import {
   closeProject,
   deleteWorkPackage,
@@ -16,8 +22,10 @@ import TaskBudgetModal from './TaskBudgetModal';
 import TaskAssignModal from './TaskAssignModal';
 import ProjectMilestoneTimeline from './ProjectMilestoneTimeline';
 import ProjectRiskPage from '../pages/ProjectRiskPage';
+import ExpenseListPage from '../../expenses/pages/ExpenseListPage';
+import SubcontractorExpenseListPage from '../../expenses/pages/SubcontractorExpenseListPage';
 
-type WbsSection = 'WBS' | 'MILESTONES' | 'RISKS';
+type WbsSection = 'WBS' | 'MILESTONES' | 'RISKS' | 'EXPENSES' | 'SUBCONTRACTOR';
 
 export interface ProjectWbsModalProps {
   isOpen: boolean;
@@ -26,7 +34,12 @@ export interface ProjectWbsModalProps {
   projectCode?: string;
   projectName?: string;
   currentUserRoles?: string[];
+  /** Id tài khoản đang đăng nhập — dùng cho tab "Chi phí" (NCL-08-CN-001: chỉ chủ phiếu
+   * mới được sửa & nộp lại phiếu chi phí bị từ chối của chính mình). */
+  currentUserId?: number;
   onUpdated?: () => void;
+  /** NCL-14-CN-001 TC-02: mở từ thông báo — tô sáng và cuộn tới công việc này trong cây WBS. */
+  focusTaskId?: number | null;
 }
 
 export default function ProjectWbsModal({
@@ -35,8 +48,10 @@ export default function ProjectWbsModal({
   projectId,
   projectCode,
   projectName,
+  currentUserId,
   currentUserRoles = ['VT-02'],
   onUpdated,
+  focusTaskId = null,
 }: ProjectWbsModalProps) {
   const isAllowedToView =
     currentUserRoles.includes('VT-01') ||
@@ -76,7 +91,10 @@ export default function ProjectWbsModal({
 
   // Modal phân công nhân sự (NCL-05-CN-003)
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-  const [assignTarget, setAssignTarget] = useState<{ id: number; name: string }>({ id: 0, name: '' });
+  const [assignTarget, setAssignTarget] = useState<{ id: number; name: string }>({
+    id: 0,
+    name: '',
+  });
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -169,8 +187,8 @@ export default function ProjectWbsModal({
     setIsAssignModalOpen(true);
   };
 
-  const handleAssignSaved = () => {
-    showToast('Đã lưu phân công thành công');
+  const handleAssignSaved = (assignments: TaskAssignmentRes[]) => {
+    showToast(`Đã phân công ${assignments.length} nhân viên cho công việc thành công`);
     onUpdated?.();
     void loadData();
   };
@@ -235,7 +253,7 @@ export default function ProjectWbsModal({
               {project && (
                 <>
                   {' · '}Trạng thái:{' '}
-                  <strong style={{ color: isProjectOpen ? '#15803D' : '#64748B' }}>
+                  <strong style={{ color: isProjectOpen ? 'var(--pale-green-fg)' : 'var(--ink-muted)' }}>
                     {project.status}
                   </strong>
                 </>
@@ -250,7 +268,7 @@ export default function ProjectWbsModal({
         <div className="modal-body" style={{ overflowY: 'auto', maxHeight: '75vh' }}>
           {!isAllowedToView && (
             <div className="alert-box alert-box--danger" role="alert" data-testid="wbs-forbidden-alert">
-              Yêu cầu vai trò Quản lý dự án (VT-02), Nhân viên chuyên môn (VT-03) hoặc Ban giám đốc (VT-01).
+              Yêu cầu vai trò Quản lý dự án, Nhân viên chuyên môn hoặc Ban giám đốc.
             </div>
           )}
 
@@ -282,7 +300,7 @@ export default function ProjectWbsModal({
                   marginBottom: '14px',
                   gap: '10px',
                   flexWrap: 'wrap',
-                  borderBottom: '1px solid #E2E8F0',
+                  borderBottom: '1px solid var(--line)',
                   paddingBottom: '10px',
                 }}
               >
@@ -317,16 +335,41 @@ export default function ProjectWbsModal({
                   >
                     {ICONS.alertTriangle} Rủi ro
                   </button>
+                  {(currentUserRoles.includes('VT-02') || currentUserRoles.includes('VT-03')) && (
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeSection === 'EXPENSES'}
+                      className={`btn btn-xs ${activeSection === 'EXPENSES' ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => setActiveSection('EXPENSES')}
+                      data-testid="wbs-tab-expenses"
+                    >
+                      {ICONS.receipt} Chi phí
+                    </button>
+                  )}
+                  {currentUserRoles.includes('VT-02') && (
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeSection === 'SUBCONTRACTOR'}
+                      className={`btn btn-xs ${activeSection === 'SUBCONTRACTOR' ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => setActiveSection('SUBCONTRACTOR')}
+                      data-testid="wbs-tab-subcontractor"
+                    >
+                      {ICONS.briefcase} Thuê ngoài
+                    </button>
+                  )}
                 </div>
 
                 {canClose && (
                   <button
                     type="button"
-                    className="btn btn-danger btn-xs"
+                    className="btn btn-secondary btn-xs project-close-btn"
                     onClick={handleCloseProject}
                     disabled={closing}
                     data-testid="modal-btn-close-project"
                   >
+                    <span className="icon-xs">{ICONS.lock}</span>
                     {closing ? 'Đang đóng…' : 'Đóng dự án'}
                   </button>
                 )}
@@ -361,6 +404,7 @@ export default function ProjectWbsModal({
                     onDeletePackage={handleDeletePackage}
                     onSetBudget={handleOpenSetBudget}
                     onAssign={handleOpenAssign}
+                    focusTaskId={focusTaskId}
                   />
                 </>
               ) : activeSection === 'MILESTONES' ? (
@@ -371,8 +415,21 @@ export default function ProjectWbsModal({
                   isProjectOpen={isProjectOpen}
                   onNotify={showToast}
                 />
-              ) : (
+              ) : activeSection === 'RISKS' ? (
                 <ProjectRiskPage
+                  projectId={projectId}
+                  currentUserRoles={currentUserRoles}
+                  initialProject={project ?? undefined}
+                />
+              ) : activeSection === 'EXPENSES' ? (
+                <ExpenseListPage
+                  projectId={projectId}
+                  currentUserRoles={currentUserRoles}
+                  currentUserId={currentUserId}
+                  initialProject={project ?? undefined}
+                />
+              ) : (
+                <SubcontractorExpenseListPage
                   projectId={projectId}
                   currentUserRoles={currentUserRoles}
                   initialProject={project ?? undefined}

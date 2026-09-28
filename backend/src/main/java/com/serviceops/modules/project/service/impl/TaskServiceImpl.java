@@ -33,6 +33,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -68,6 +70,11 @@ public class TaskServiceImpl implements TaskService {
 
 		List<User> users = request.userIds().stream().map(this::requireAssignableUser).toList();
 		assignmentRepository.deleteByTaskId(task.getId());
+		// Ep flush ngay: Hibernate mac dinh flush INSERT truoc DELETE trong cung 1 transaction
+		// (theo thu tu action-queue, khong theo thu tu code) - neu khong flush o day, insert ben
+		// duoi co the chay truoc lenh xoa vua goi va vi pham unique constraint (task_id, user_id)
+		// khi phan cong lai voi mot nguoi da tung duoc giao truoc do.
+		assignmentRepository.flush();
 		List<TaskAssignment> assignments = users.stream().map(user -> {
 			TaskAssignment assignment = new TaskAssignment();
 			assignment.setTaskId(task.getId());
@@ -124,37 +131,44 @@ public class TaskServiceImpl implements TaskService {
 		if (currentUserId == null) {
 			return List.of();
 		}
-		List<TaskAssignment> assignments = assignmentRepository.findByUserIdOrderByIdDesc(currentUserId);
+		List<TaskAssignment> assignments = assignmentRepository.findByUserIdOrderByIdAsc(currentUserId);
 		if (assignments.isEmpty()) {
 			return List.of();
 		}
+
 		List<Long> taskIds = assignments.stream().map(TaskAssignment::getTaskId).distinct().toList();
-		var tasksById = taskRepository.findAllById(taskIds).stream()
-				.collect(java.util.stream.Collectors.toMap(Task::getId, task -> task));
+		Map<Long, Task> tasksById = taskRepository.findAllById(taskIds).stream()
+				.collect(Collectors.toMap(Task::getId, task -> task));
+
 		List<Long> projectIds = tasksById.values().stream().map(Task::getProjectId).distinct().toList();
-		var projectsById = projectRepository.findAllById(projectIds).stream()
-				.collect(java.util.stream.Collectors.toMap(Project::getId, project -> project));
+		Map<Long, Project> projectsById = projectRepository.findAllById(projectIds).stream()
+				.collect(Collectors.toMap(Project::getId, project -> project));
 
 		return assignments.stream()
-				.map(TaskAssignment::getTaskId)
-				.distinct()
-				.map(tasksById::get)
-				.filter(java.util.Objects::nonNull)
-				.map(task -> {
+				.map(assignment -> {
+					Task task = tasksById.get(assignment.getTaskId());
+					if (task == null) {
+						return null;
+					}
 					Project project = projectsById.get(task.getProjectId());
-					return new MyTaskRes(task.getId(), task.getProjectId(),
-							project != null ? project.getProjectCode() : null,
-							project != null ? project.getName() : null,
-							task.getName(), task.getDescription(), task.getExpectedStartDate(),
-							task.getExpectedEndDate(), task.getStatus());
+					if (project == null) {
+						return null;
+					}
+					return new MyTaskRes(task.getId(), task.getName(), task.getStatus(),
+							task.getExpectedStartDate(), task.getExpectedEndDate(),
+							project.getId(), project.getProjectCode(), project.getName(), project.getStatus(),
+							assignment.getExpectedStartDate(), assignment.getExpectedEndDate());
 				})
+				.filter(java.util.Objects::nonNull)
 				.toList();
 	}
 
 	private TaskRes toResponse(Task task) {
+		List<TaskAssignmentRes> assignments = assignmentRepository.findByTaskIdOrderByIdAsc(task.getId()).stream()
+				.map(this::toResponse).toList();
 		return new TaskRes(task.getId(), task.getProjectId(), task.getWorkPackageId(), task.getParentTaskId(),
 				task.getName(), task.getDescription(), task.getExpectedStartDate(), task.getExpectedEndDate(),
-				task.getStatus(), task.getBudgetHours());
+				task.getStatus(), task.getBudgetHours(), assignments);
 	}
 
 	private User requireAssignableUser(Long userId) {

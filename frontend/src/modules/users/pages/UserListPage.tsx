@@ -1,12 +1,22 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { createUser, getUsers, resetUserTwoFactor, updateUser, updateUserStatus, UserApiError } from '../api/usersApi';
-import RoleAssignModal from '../components/RoleAssignModal';
+import {
+  createUser,
+  getUsers,
+  resetUserTwoFactor,
+  updateUser,
+  updateUserRoleScope,
+  updateUserStatus,
+  UserApiError,
+} from '../api/usersApi';
+import RoleScopeModal from '../components/RoleScopeModal';
 import UserFormModal from '../components/UserFormModal';
 import UserTable from '../components/UserTable';
 import { ICONS } from '../components/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
 import { useBackdropClick } from '../../../hooks/useBackdropClick';
 import type { CreateUserPayload, ScopeType, UpdateUserPayload, User } from '../types/userTypes';
+import { useDepartmentOptions } from '../hooks/useDepartmentOptions';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface UserListPageProps {
   currentUserRoles?: string[];
@@ -26,6 +36,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
   const isAdmin = currentUserRoles.includes('VT-07');
 
   const [users, setUsers] = useState<User[]>([]);
+  const { departments } = useDepartmentOptions();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -97,10 +108,24 @@ export const UserListPage: React.FC<UserListPageProps> = ({
     await fetchUsersList();
   };
 
-  const handleSaveRoles = async (userId: number, roleCodes: string[], scopeType: ScopeType) => {
+  const handleSaveRoles = async (
+    userId: number,
+    roleCodes: string[],
+    scopeType: ScopeType,
+    scopeDepartmentId?: number | null
+  ) => {
     const target = users.find((u) => u.id === userId);
     if (!target) return;
-    const updated = await updateUser(userId, { fullName: target.fullName, roleCodes, scopeType });
+    // Gửi kèm đủ email + bộ phận hiện có: PUT /users/{id} ghi đè toàn bộ hồ sơ, thiếu trường nào là
+    // trường đó bị xóa trắng. Dùng chung hàm với màn Phân quyền để ánh xạ phạm vi đúng (PERSONAL -> SELF).
+    const updated = await updateUserRoleScope(userId, {
+      fullName: target.fullName,
+      email: target.email,
+      departmentId: target.departmentId,
+      roleCodes,
+      scopeType,
+      scopeDepartmentId,
+    });
     showToast(`Đã gán ${roleCodes.length} vai trò cho tài khoản @${updated.username}`);
     await fetchUsersList();
   };
@@ -151,8 +176,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền truy cập màn hình này</h2>
           <p>
-            Chức năng Quản lý tài khoản người dùng chỉ dành riêng cho vai trò <strong>Quản trị viên</strong>.
-            Hệ thống đã ghi lại lần truy cập bị từ chối này vào nhật ký bảo mật.
+            Trang này dành cho <strong>Quản trị viên</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">{ICONS.shield} Thời điểm: {new Date().toLocaleString('vi-VN')}</span>
@@ -162,12 +186,6 @@ export const UserListPage: React.FC<UserListPageProps> = ({
       </div>
     );
   }
-
-  // Dashboard Stats Counter
-  const totalCount = users.length;
-  const activeCount = users.filter((u) => u.status === 'ACTIVE').length;
-  const lockedCount = users.filter((u) => u.status === 'LOCKED').length;
-  const adminCount = users.filter((u) => u.roleCodes.includes('VT-07')).length;
 
   return (
     <div className="user-management-page">
@@ -181,52 +199,16 @@ export const UserListPage: React.FC<UserListPageProps> = ({
       )}
 
       {/* Page Header */}
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Quản lý tài khoản người dùng</h1>
-          <p className="page-subtitle">Tạo mới, phân quyền và theo dõi trạng thái tài khoản.</p>
-        </div>
-        <div className="page-header-actions">
+      <PageHeader
+        title="Tài khoản nhân viên"
+        actions={
           <button type="button" className="btn-primary btn-lg" onClick={handleOpenCreateModal}>
-            <span className="btn-icon">+</span> Thêm tài khoản mới
+            <span className="btn-icon">+</span> Thêm tài khoản
           </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Stats Summary Cards */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--blue">{ICONS.users}</div>
-          <div>
-            <span className="stat-card__label">Tổng tài khoản</span>
-            <strong className="stat-card__value">{totalCount}</strong>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--green">{ICONS.userCheck}</div>
-          <div>
-            <span className="stat-card__label">Đang hoạt động</span>
-            <strong className="stat-card__value text-success">{activeCount}</strong>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--red">{ICONS.lock}</div>
-          <div>
-            <span className="stat-card__label">Đang bị khóa</span>
-            <strong className="stat-card__value text-danger">{lockedCount}</strong>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--purple">{ICONS.shield}</div>
-          <div>
-            <span className="stat-card__label">Quản trị viên</span>
-            <strong className="stat-card__value">{adminCount}</strong>
-          </div>
-        </div>
-      </div>
 
       {/* Global Error Banner */}
       {error && (
@@ -249,6 +231,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
         onViewDetail={(u) => onNavigateDetail ? onNavigateDetail(u.id) : handleOpenEditModal(u)}
         onRefresh={fetchUsersList}
         onResetTwoFactor={(u) => setConfirmResetTwoFactorUser(u)}
+        departments={departments}
       />
 
       {/* TC-05: nhật ký thao tác tài khoản giờ nằm ở trang riêng biệt "Nhật ký hệ thống" — lưu thật
@@ -257,8 +240,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({
         <button type="button" className="audit-log-link" data-reveal-target onClick={onViewAuditLog}>
           <span className="audit-log-link__icon">{ICONS.clipboardList}</span>
           <span className="audit-log-link__text">
-            <strong>Xem nhật ký thao tác đầy đủ</strong>
-            <span>Toàn bộ lịch sử tạo/sửa/khóa tài khoản, phân quyền — lưu trên máy chủ</span>
+            <strong>Xem nhật ký tài khoản</strong>
           </span>
           <span className="audit-log-link__arrow icon-sm">{ICONS.arrowRight}</span>
         </button>
@@ -271,12 +253,14 @@ export const UserListPage: React.FC<UserListPageProps> = ({
         onClose={() => setIsFormOpen(false)}
         onSubmitCreate={handleSubmitCreate}
         onSubmitUpdate={handleSubmitUpdate}
+        departments={departments}
       />
 
       {/* Role Assign Modal */}
-      <RoleAssignModal
+      <RoleScopeModal
         isOpen={isRoleModalOpen}
         user={roleTargetUser}
+        departmentsList={departments}
         onClose={() => setIsRoleModalOpen(false)}
         onSave={handleSaveRoles}
       />
@@ -298,14 +282,10 @@ export const UserListPage: React.FC<UserListPageProps> = ({
                 Bạn có chắc chắn muốn {confirmStatusUser.status === 'LOCKED' ? 'mở khóa' : 'khóa'} tài khoản{' '}
                 <strong>@{confirmStatusUser.username}</strong> ({confirmStatusUser.fullName})?
               </p>
-              <div className="confirm-note-box">
-                <span className="confirm-note-box__icon">{ICONS.info}</span>
-                <span>Hành động này sẽ được ghi vết vào Nhật ký truy cập hệ thống kèm thời điểm và thông tin tài khoản thực hiện.</span>
-              </div>
             </div>
             <div className="modal-footer">
               <button type="button" className="btn-secondary" onClick={() => setConfirmStatusUser(null)}>
-                Hủy bỏ
+                Hủy
               </button>
               <button
                 type="button"
@@ -340,15 +320,14 @@ export const UserListPage: React.FC<UserListPageProps> = ({
               <div className="confirm-note-box">
                 <span className="confirm-note-box__icon">{ICONS.info}</span>
                 <span>
-                  Chỉ dùng khi người dùng đã mất/đổi điện thoại và không còn app Authenticator nào tạo được mã
-                  cho tài khoản này nữa. Sau khi đặt lại, app cũ sẽ ngừng hoạt động — lần đăng nhập kế tiếp của
-                  tài khoản này sẽ bắt buộc quét mã QR để liên kết app mới.
+                  Dùng khi người dùng mất hoặc đổi điện thoại. Ứng dụng cũ sẽ ngừng hoạt động và lần đăng nhập tới
+                  phải quét mã QR để liên kết lại.
                 </span>
               </div>
             </div>
             <div className="modal-footer">
               <button type="button" className="btn-secondary" onClick={() => setConfirmResetTwoFactorUser(null)} disabled={resettingTwoFactor}>
-                Hủy bỏ
+                Hủy
               </button>
               <button type="button" className="btn-primary btn-danger" onClick={handleConfirmResetTwoFactor} disabled={resettingTwoFactor}>
                 {resettingTwoFactor ? 'Đang xử lý...' : 'Xác nhận đặt lại'}

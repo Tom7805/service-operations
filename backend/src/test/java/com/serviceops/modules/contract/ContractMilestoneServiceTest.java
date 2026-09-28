@@ -1,6 +1,7 @@
 package com.serviceops.modules.contract;
 
 import com.serviceops.common.exception.BusinessRuleException;
+import com.serviceops.modules.acceptance.repository.AcceptanceCertificateRepository;
 import com.serviceops.modules.contract.dto.request.ContractMilestoneReq;
 import com.serviceops.modules.contract.entity.Contract;
 import com.serviceops.modules.contract.entity.ContractMilestone;
@@ -40,11 +41,15 @@ class ContractMilestoneServiceTest {
 	@Mock
 	private ContractAuditLogger auditLogger;
 
+	@Mock
+	private AcceptanceCertificateRepository acceptanceCertificateRepository;
+
 	private ContractMilestoneServiceImpl service;
 
 	@BeforeEach
 	void setUp() {
-		service = new ContractMilestoneServiceImpl(contractRepository, milestoneRepository, auditLogger);
+		service = new ContractMilestoneServiceImpl(contractRepository, milestoneRepository, auditLogger,
+				acceptanceCertificateRepository);
 		SecurityContextHolder.clearContext();
 	}
 
@@ -138,6 +143,24 @@ class ContractMilestoneServiceTest {
 				com.serviceops.modules.contract.enums.ContractMilestoneStatus.READY_TO_INVOICE))
 				.isInstanceOf(BusinessRuleException.class)
 				.hasMessageContaining("khong thuoc hop dong");
+	}
+
+	@Test
+	void rejectsRedeclaringMilestonesWhenOneIsAlreadyInvoiced() {
+		Contract contract = contract(5L, "1000000000.00");
+		when(contractRepository.findById(5L)).thenReturn(Optional.of(contract));
+		ContractMilestone invoiced = milestone(7L, 5L, "Tam ung");
+		invoiced.setStatus(com.serviceops.modules.contract.enums.ContractMilestoneStatus.INVOICED);
+		when(milestoneRepository.findByContractIdOrderByExpectedDateAscIdAsc(5L)).thenReturn(List.of(invoiced));
+
+		assertThatThrownBy(() -> service.replace(5L, List.of(
+				request("Giai doan 1", "50", null),
+				request("Giai doan 2", "50", null))))
+				.isInstanceOf(BusinessRuleException.class)
+				.hasMessageContaining("da xuat hoa don");
+
+		verify(milestoneRepository, never()).deleteByContractId(any());
+		verify(milestoneRepository, never()).saveAll(any());
 	}
 
 	private ContractMilestone milestone(Long id, Long contractId, String name) {

@@ -11,13 +11,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByUsername(String username);
 
+    List<User> findByStatusOrderByFullNameAsc(UserStatus status);
+
     Optional<User> findByEmailIgnoreCase(String email);
 
     boolean existsByUsernameIgnoreCase(String username);
 
+    /** NCL-13-CN-001: email dung de khoi phuc mat khau phai duy nhat (findByEmailIgnoreCase tra Optional). */
+    boolean existsByEmailIgnoreCase(String email);
+
     long countByDepartmentId(Long departmentId);
 
     List<User> findByUsernameContainingIgnoreCaseOrFullNameContainingIgnoreCase(String username, String fullName);
-
-    List<User> findByStatusOrderByFullNameAsc(UserStatus status);
 }

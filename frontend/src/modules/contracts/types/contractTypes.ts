@@ -1,5 +1,14 @@
 export type ContractType = 'TIME_AND_MATERIAL' | 'FIXED_PRICE' | 'MAINTENANCE' | 'MILESTONE';
 
+/** Nhãn tiếng Việt cho từng loại hợp đồng — dùng chung ở mọi nơi hiển thị (dropdown khai báo,
+ *  bảng danh sách, trang chi tiết) để không lệch cách gọi giữa các màn hình. */
+export const CONTRACT_TYPE_LABEL: Record<ContractType, string> = {
+  TIME_AND_MATERIAL: 'Theo giờ công & vật tư',
+  FIXED_PRICE: 'Trọn gói (giá cố định)',
+  MAINTENANCE: 'Bảo trì định kỳ',
+  MILESTONE: 'Theo mốc thanh toán',
+};
+
 export interface ContractCreateFromOpportunityReq {
   name?: string | null;
   contractType: ContractType;
@@ -34,9 +43,11 @@ export interface ContractRes {
 }
 
 /** Khớp đúng ContractMilestoneStatus (backend enum). Chuyển tuần tự
- *  PENDING → READY_TO_INVOICE → INVOICED qua `PATCH /contracts/{id}/milestones/{milestoneId}/status`
- *  (NCL-04-CN-003) — không nhảy cóc, không lùi lại. `INVOICED` là dữ liệu đầu vào
- *  cho cảnh báo hạn mức ở NCL-04-CN-005. */
+ *  PENDING → READY_TO_INVOICE → INVOICED, không nhảy cóc, không lùi lại. Chỉ bước đầu
+ *  (PENDING → READY_TO_INVOICE) đổi được qua `PATCH /contracts/{id}/milestones/{milestoneId}/status`
+ *  (NCL-04-CN-003); bước sau backend CHẶN đặt tay — `INVOICED` chỉ do
+ *  `POST /contracts/{id}/milestones/{milestoneId}/invoice` (NCL-10-CN-002) đặt, khi mốc thật sự có
+ *  một hóa đơn. `INVOICED` là dữ liệu đầu vào cho cảnh báo hạn mức ở NCL-04-CN-005. */
 export type ContractMilestoneStatus = 'PENDING' | 'READY_TO_INVOICE' | 'INVOICED';
 
 /** Khớp ContractMilestoneRes (backend). */

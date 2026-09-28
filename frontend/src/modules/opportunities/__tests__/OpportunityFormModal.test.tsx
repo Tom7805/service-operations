@@ -62,8 +62,8 @@ describe('OpportunityFormModal Component (NCL-03-CN-001 & FE-QA CV-05)', () => {
     expect(screen.getByLabelText(/Ngày dự kiến chốt/i)).toBeInTheDocument();
 
     // Hiển thị badge giai đoạn tiếp cận và trạng thái đang xử lý mặc định
-    expect(screen.getByText(/Tiếp cận \(APPROACH\)/i)).toBeInTheDocument();
-    expect(screen.getByText(/Đang xử lý \(OPEN\)/i)).toBeInTheDocument();
+    expect(screen.getAllByText('Tiếp cận')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('Đang xử lý')[0]).toBeInTheDocument();
   });
 
   it('tự động tải danh sách khách hàng có sẵn vào dropdown (TC-01)', async () => {
@@ -221,7 +221,7 @@ describe('OpportunityFormModal Component (NCL-03-CN-001 & FE-QA CV-05)', () => {
     const handleClose = vi.fn();
     render(<OpportunityFormModal isOpen={true} onClose={handleClose} initialCustomerList={mockCustomers} />);
 
-    const cancelBtn = screen.getByRole('button', { name: /Hủy bỏ/i });
+    const cancelBtn = screen.getByRole('button', { name: /^Hủy$/i });
     fireEvent.click(cancelBtn);
     expect(handleClose).toHaveBeenCalledTimes(1);
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateCreateEmployee, validateUpdateEmployee, validateContractForm } from '../employeeValidators';
+import { validateCreateEmployee, validateUpdateEmployee, validateContractForm, validateHourlyRateForm } from '../employeeValidators';
 
 describe('validateCreateEmployee (NCL-01-CN-007)', () => {
   it('yêu cầu phải chọn tài khoản nhân viên', () => {
@@ -76,6 +76,29 @@ describe('validateContractForm (NCL-01-CN-007)', () => {
 
   it('chấp nhận hợp đồng hợp lệ không có ngày kết thúc', () => {
     const errors = validateContractForm({ contractType: 'FULL_TIME', startDate: '2026-01-01' });
+    expect(Object.keys(errors)).toHaveLength(0);
+  });
+});
+
+describe('validateHourlyRateForm (NCL-07-CN-004)', () => {
+  it('yêu cầu chi phí giờ công và ngày hiệu lực không được để trống', () => {
+    const errors = validateHourlyRateForm({});
+    expect(errors.hourlyRate).toBeDefined();
+    expect(errors.effectiveFrom).toBeDefined();
+  });
+
+  it('từ chối chi phí giờ công âm', () => {
+    const errors = validateHourlyRateForm({ hourlyRate: -1, effectiveFrom: '2026-01-01' });
+    expect(errors.hourlyRate).toBeDefined();
+  });
+
+  it('chấp nhận chi phí giờ công = 0', () => {
+    const errors = validateHourlyRateForm({ hourlyRate: 0, effectiveFrom: '2026-01-01' });
+    expect(Object.keys(errors)).toHaveLength(0);
+  });
+
+  it('chấp nhận dữ liệu hợp lệ', () => {
+    const errors = validateHourlyRateForm({ hourlyRate: 250_000, effectiveFrom: '2026-01-01' });
     expect(Object.keys(errors)).toHaveLength(0);
   });
 });

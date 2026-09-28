@@ -40,8 +40,9 @@ public class Task extends BaseEntity {
 	private BigDecimal budgetHours;
 	@Column(name = "approved_hours", nullable = false, precision = 10, scale = 2)
 	private BigDecimal approvedHours = BigDecimal.ZERO;
-	@Column(name = "created_by", length = 100)
+@Column(name = "created_by", length = 100)
 	private String createdBy;
+
 	@Column(name = "created_at", nullable = false)
 	private LocalDateTime createdAt;
 }

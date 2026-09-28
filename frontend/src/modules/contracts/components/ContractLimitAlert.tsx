@@ -90,7 +90,7 @@ export default function ContractLimitAlert({
           <span className="alert-box__icon">{ICONS.alertTriangle}</span>
           <div className="alert-box__content">
             <strong>Từ chối truy cập</strong>
-            <p>Chức năng yêu cầu vai trò Quản lý dự án (VT-02) hoặc Kế toán (VT-05).</p>
+            <p>Chức năng yêu cầu vai trò Quản lý dự án hoặc Kế toán.</p>
           </div>
         </div>
       );
@@ -205,14 +205,14 @@ export default function ContractLimitAlert({
           </div>
 
           <div className="contract-limit-metric-card">
-            <div className="contract-limit-metric-label">Hạn mức trần (QTN-19)</div>
+            <div className="contract-limit-metric-label">Hạn mức trần</div>
             <div className="contract-limit-metric-value">
               {hasLimit ? formatAmount(usage.limitValue) : 'Chưa thiết lập'}
             </div>
           </div>
 
           <div className="contract-limit-metric-card">
-            <div className="contract-limit-metric-label">Đã xuất hóa đơn (INVOICED)</div>
+            <div className="contract-limit-metric-label">Đã xuất hóa đơn</div>
             <div className="contract-limit-metric-value">{formatAmount(usage.usedValue)}</div>
           </div>
 

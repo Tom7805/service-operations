@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { todayLocalIso } from '../../../utils/formatDate';
 import type { ProjectMilestoneRes } from '../types/projectTypes';
 import { completeMilestone, ProjectsApiError } from '../api/projectsApi';
 import { validateMilestoneCompleteForm } from '../validators/projectValidators';
@@ -13,9 +14,7 @@ export interface MilestoneCompleteModalProps {
   onSaved?: (milestone: ProjectMilestoneRes) => void;
 }
 
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+const today = todayLocalIso;
 
 export default function MilestoneCompleteModal({
   isOpen,
@@ -135,7 +134,7 @@ export default function MilestoneCompleteModal({
                 <p
                   className="field-error"
                   data-testid="error-milestone-actual-date"
-                  style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}
+                  style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}
                 >
                   {errors.actualDate}
                 </p>
@@ -147,7 +146,7 @@ export default function MilestoneCompleteModal({
               style={{ padding: '16px 0 0', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}
             >
               <button type="button" className="btn btn-secondary" onClick={onClose} disabled={submitting}>
-                Hủy bỏ
+                Hủy
               </button>
               <button
                 type="submit"

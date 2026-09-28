@@ -6,7 +6,9 @@ import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.config.SecurityConfig;
 import com.serviceops.modules.contract.controller.ContractController;
 import com.serviceops.modules.contract.dto.response.ContractAppendixRes;
+import com.serviceops.modules.contract.dto.response.ContractMilestoneRes;
 import com.serviceops.modules.contract.dto.response.ContractRes;
+import com.serviceops.modules.contract.enums.ContractMilestoneStatus;
 import com.serviceops.modules.contract.logging.ContractAccessDeniedAspect;
 import com.serviceops.modules.contract.logging.ContractAuditLogger;
 import com.serviceops.modules.contract.service.ContractService;
@@ -34,6 +36,7 @@ import java.time.LocalDateTime;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -199,12 +202,29 @@ void allowsAccountingRoleToListContracts() throws Exception {
 }
 
 @Test
-@DisplayName("NCL-04-CN-002: vai tro khac Ke toan bi tu choi 403 khi goi GET /contracts")
+@DisplayName("NCL-04-CN-002: vai tro khac Ke toan/Quan tri vien bi tu choi 403 khi goi GET /contracts")
 @WithMockUser(authorities = "ROLE_VT-04")
 void deniesNonAccountingRoleFromListingContracts() throws Exception {
 	mockMvc.perform(get("/contracts"))
 			.andExpect(status().isForbidden())
 			.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+}
+
+@Test
+@DisplayName("NCL-07-CN-003: Quan tri vien (VT-07) cung xem duoc danh sach hop dong de chon ten thay vi go ID")
+@WithMockUser(authorities = "ROLE_VT-07")
+void allowsAdminRoleToListContracts() throws Exception {
+	when(contractService.listAll()).thenReturn(java.util.List.of(new ContractRes(
+			5L, "HD-4K7X2Q9", "Hop dong ERP", 1L, 1L, "Cong ty TNHH ABC", 30L,
+			"TIME_AND_MATERIAL", new BigDecimal("500000000"), new BigDecimal("600000000"),
+			LocalDate.of(2026, 10, 1), LocalDate.of(2027, 9, 30), "DRAFT",
+			null, "ketoan01", LocalDateTime.now())));
+
+	mockMvc.perform(get("/contracts"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data[0].contractCode").value("HD-4K7X2Q9"));
+
+	verify(contractService).listAll();
 }
 
 @Test
@@ -232,5 +252,34 @@ void deniesOtherRolesFromGetOneContract() throws Exception {
 	mockMvc.perform(get("/contracts/5"))
 			.andExpect(status().isForbidden())
 			.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+}
+
+@Test
+@DisplayName("NCL-10-CN-002: khong cho dat tay trang thai moc INVOICED qua PATCH, phai lap hoa don")
+@WithMockUser(authorities = "ROLE_VT-05")
+void rejectsManualInvoicedMilestoneStatus() throws Exception {
+	mockMvc.perform(patch("/contracts/5/milestones/7/status")
+					.contentType("application/json")
+					.content("{\"status\":\"INVOICED\"}"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.errorCode").value("INVALID_STATE"));
+
+	verify(contractMilestoneService, never()).updateStatus(any(), any(), any());
+}
+
+@Test
+@DisplayName("NCL-10-CN-002: van cho Ke toan dua moc sang READY_TO_INVOICE qua PATCH")
+@WithMockUser(authorities = "ROLE_VT-05")
+void allowsMarkingMilestoneReadyToInvoice() throws Exception {
+	when(contractMilestoneService.updateStatus(5L, 7L, ContractMilestoneStatus.READY_TO_INVOICE))
+			.thenReturn(new ContractMilestoneRes(7L, 5L, "Nghiem thu giai doan 1",
+					new BigDecimal("30.00"), new BigDecimal("300000000.00"), LocalDate.of(2026, 11, 30),
+					null, "READY_TO_INVOICE", "ketoan01"));
+
+	mockMvc.perform(patch("/contracts/5/milestones/7/status")
+					.contentType("application/json")
+					.content("{\"status\":\"READY_TO_INVOICE\"}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.status").value("READY_TO_INVOICE"));
 }
 }

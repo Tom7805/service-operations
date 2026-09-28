@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
-import type {
-  ContractTargetForProject,
-  ProjectCreateFromContractReq,
-  ProjectRes,
+import { todayLocalIso } from '../../../utils/formatDate';
+import { getActiveUsersLookup, type UserLookup } from '../../users/api/usersApi';
+import {
+  CONTRACT_TYPE_LABEL,
+  type ContractTargetForProject,
+  type ProjectCreateFromContractReq,
+  type ProjectRes,
 } from '../types/contractTypes';
 import { createProjectFromContract, ProjectsApiError } from '../api/contractsApi';
-import { fetchAssignableProjectManagers } from '../../projects/api/projectsApi';
-import type { AssignableProjectManager } from '../../projects/types/projectTypes';
 import { validateProjectCreateForm } from '../../projects/validators/projectValidators';
 
 export type {
@@ -37,6 +38,11 @@ function formatAmount(value: number | null | undefined): string {
   return currencyFormatter.format(value);
 }
 
+function contractTypeLabel(value: string | null | undefined): string {
+  if (!value) return 'Chưa xác định';
+  return (CONTRACT_TYPE_LABEL as Record<string, string>)[value] ?? value;
+}
+
 export default function CreateProjectModal({
   isOpen,
   onClose,
@@ -57,26 +63,28 @@ export default function CreateProjectModal({
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Danh sách người dùng ACTIVE để chọn "Người quản lý dự án" (thay vì gõ tay ID không biết trước)
-  const [managers, setManagers] = useState<AssignableProjectManager[]>([]);
+  // Trước đây ô này bắt gõ tay ID người dùng — không ai nhớ ID của đồng nghiệp, nên đổi
+  // sang combobox chọn theo tên (GET /users/lookup, mở cho VT-02 chứ không chỉ VT-07).
+  const [managerOptions, setManagerOptions] = useState<UserLookup[]>([]);
   const [loadingManagers, setLoadingManagers] = useState(false);
-  const [managersError, setManagersError] = useState<string | null>(null);
+  const [managerLoadError, setManagerLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isOpen || !isAllowed || !isActive) return;
+    if (!isOpen) return;
     let cancelled = false;
     setLoadingManagers(true);
-    setManagersError(null);
-    fetchAssignableProjectManagers()
-      .then((list) => {
-        if (!cancelled) setManagers(list);
+    setManagerLoadError(null);
+    getActiveUsersLookup()
+      .then((users) => {
+        if (!cancelled) setManagerOptions(users);
       })
-      .catch((err) => {
-        if (!cancelled) {
-          setManagersError(
-            err instanceof ProjectsApiError ? err.message : 'Không thể tải danh sách người dùng.'
-          );
-        }
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setManagerOptions([]);
+        // Trước đây lỗi bị nuốt im lặng (chỉ để list rỗng) nên không ai biết vì sao
+        // dropdown trống — luôn hiện rõ lý do để còn debug (ví dụ backend chưa khởi
+        // động lại với endpoint /users/lookup mới, hoặc không đủ quyền VT-02/VT-07).
+        setManagerLoadError(err instanceof Error ? err.message : 'Không thể tải danh sách người dùng.');
       })
       .finally(() => {
         if (!cancelled) setLoadingManagers(false);
@@ -84,15 +92,15 @@ export default function CreateProjectModal({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, isAllowed, isActive]);
+  }, [isOpen]);
 
   // Khởi tạo giá trị mặc định khi mở modal
   useEffect(() => {
     if (isOpen) {
-      const defaultName = contract.name ? `Dự án: ${contract.name}` : '';
+      const defaultName = contract.name ?? '';
       setName(defaultName);
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = todayLocalIso();
       const initialStart = contract.startDate ? contract.startDate.split('T')[0] : today;
       setStartDate(initialStart);
 
@@ -188,7 +196,7 @@ export default function CreateProjectModal({
             </h3>
             <p className="field-hint">
               {contract.contractCode} · {contract.name} · Trạng thái:{' '}
-              <strong style={{ color: isActive ? '#15803D' : '#DC2626' }}>{contract.status}</strong>
+              <strong style={{ color: isActive ? 'var(--pale-green-fg)' : 'var(--pale-red-fg)' }}>{contract.status}</strong>
             </p>
           </div>
           <button
@@ -206,14 +214,14 @@ export default function CreateProjectModal({
           {/* Kiểm tra phân quyền vai trò VT-02 (TC-04) */}
           {!isAllowed && (
             <div className="alert-box alert-box--danger" role="alert" data-testid="project-role-alert">
-              Yêu cầu vai trò Quản lý dự án (VT-02).
+              Yêu cầu vai trò Quản lý dự án.
             </div>
           )}
 
           {/* Kiểm tra trạng thái hợp đồng không còn hiệu lực (TC-02) */}
           {isAllowed && !isActive && (
             <div className="alert-box alert-box--warning" role="alert" data-testid="project-inactive-alert">
-              Chỉ cho phép tạo dự án từ hợp đồng đang còn hiệu lực (ACTIVE).
+              Chỉ tạo được dự án từ hợp đồng đang hiệu lực.
             </div>
           )}
 
@@ -228,7 +236,7 @@ export default function CreateProjectModal({
             <form onSubmit={handleSubmit} noValidate data-testid="create-project-form">
               {/* Thẻ xem trước kế thừa thông tin từ hợp đồng */}
               <div className="project-preview-card" style={{ marginBottom: '16px' }}>
-                <div style={{ fontWeight: 600, marginBottom: '8px', color: '#1E293B' }}>
+                <div style={{ fontWeight: 600, marginBottom: '8px', color: 'var(--ink-strong)' }}>
                   Thông tin kế thừa từ hợp đồng
                 </div>
                 <div className="project-preview-grid">
@@ -238,7 +246,7 @@ export default function CreateProjectModal({
                   </div>
                   <div className="project-preview-item">
                     <span className="field-hint">Loại dự án / hợp đồng:</span>
-                    <strong>{contract.contractType || 'Kế thừa từ HĐ'}</strong>
+                    <strong>{contractTypeLabel(contract.contractType)}</strong>
                   </div>
                   <div className="project-preview-item">
                     <span className="field-hint">Hạn mức kế thừa:</span>
@@ -252,7 +260,7 @@ export default function CreateProjectModal({
                   </div>
                   <div className="project-preview-item">
                     <span className="field-hint">Trạng thái khởi tạo:</span>
-                    <strong style={{ color: '#15803D' }}>RUNNING (Đang triển khai)</strong>
+                    <strong style={{ color: 'var(--pale-green-fg)' }}>RUNNING (Đang triển khai)</strong>
                   </div>
                 </div>
               </div>
@@ -277,7 +285,7 @@ export default function CreateProjectModal({
                   autoFocus
                 />
                 {errors.name && (
-                  <p className="field-error" data-testid="error-name" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                  <p className="field-error" data-testid="error-name" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                     {errors.name}
                   </p>
                 )}
@@ -302,7 +310,7 @@ export default function CreateProjectModal({
                     disabled={submitting}
                   />
                   {errors.startDate && (
-                    <p className="field-error" data-testid="error-start-date" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                    <p className="field-error" data-testid="error-start-date" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                       {errors.startDate}
                     </p>
                   )}
@@ -325,7 +333,7 @@ export default function CreateProjectModal({
                     disabled={submitting}
                   />
                   {errors.expectedEndDate && (
-                    <p className="field-error" data-testid="error-expected-end-date" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                    <p className="field-error" data-testid="error-expected-end-date" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                       {errors.expectedEndDate}
                     </p>
                   )}
@@ -336,7 +344,7 @@ export default function CreateProjectModal({
               <div className="form-group" style={{ marginBottom: '18px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                   <label className="form-label" htmlFor="project-manager-id" style={{ margin: 0 }}>
-                    Người quản lý dự án (ID người dùng) <span className="field-required">*</span>
+                    Người quản lý dự án <span className="field-required">*</span>
                   </label>
                   <button
                     type="button"
@@ -358,22 +366,22 @@ export default function CreateProjectModal({
                   }}
                   disabled={submitting || loadingManagers}
                 >
-                  <option value="">-- Chọn người quản lý dự án --</option>
-                  {managers.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.fullName} ({m.username})
+                  <option value="">
+                    {loadingManagers ? 'Đang tải danh sách người dùng...' : '-- Chọn người quản lý dự án --'}
+                  </option>
+                  {managerOptions.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.fullName}
                     </option>
                   ))}
                 </select>
-                <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px', color: '#64748B' }}>
-                  {loadingManagers
-                    ? 'Đang tải danh sách người dùng...'
-                    : managersError
-                    ? managersError
-                    : 'Chỉ hiển thị tài khoản đang hoạt động (ACTIVE) trong hệ thống.'}
-                </p>
+                {managerLoadError ? (
+                  <p className="field-error" style={{ fontSize: '12px', marginTop: '4px', color: 'var(--pale-red-fg)' }}>
+                    {managerLoadError}
+                  </p>
+                ) : null}
                 {errors.projectManagerId && (
-                  <p className="field-error" data-testid="error-project-manager" style={{ color: '#DC2626', fontSize: '13px', marginTop: '4px' }}>
+                  <p className="field-error" data-testid="error-project-manager" style={{ color: 'var(--pale-red-fg)', fontSize: '13px', marginTop: '4px' }}>
                     {errors.projectManagerId}
                   </p>
                 )}
@@ -387,7 +395,7 @@ export default function CreateProjectModal({
                   onClick={onClose}
                   disabled={submitting}
                 >
-                  Hủy bỏ
+                  Hủy
                 </button>
                 <button
                   type="submit"

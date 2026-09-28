@@ -2,9 +2,12 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import CreateProjectModal from '../components/CreateProjectModal';
 import * as contractsApi from '../api/contractsApi';
-import * as projectsApi from '../../projects/api/projectsApi';
+import * as usersApi from '../../users/api/usersApi';
 import type { ContractTargetForProject, ProjectRes } from '../types/contractTypes';
-import type { AssignableProjectManager } from '../../projects/types/projectTypes';
+
+vi.mock('../../users/api/usersApi', () => ({
+  getActiveUsersLookup: vi.fn(),
+}));
 
 vi.mock('../api/contractsApi', () => ({
   createProjectFromContract: vi.fn(),
@@ -24,11 +27,6 @@ vi.mock('../api/contractsApi', () => ({
 vi.mock('../../projects/api/projectsApi', () => ({
   fetchAssignableProjectManagers: vi.fn(),
 }));
-
-const mockManagers: AssignableProjectManager[] = [
-  { id: 7, username: 'pm01', fullName: 'Nguyễn Văn A' },
-  { id: 42, username: 'pm02', fullName: 'Người dùng đang đăng nhập' },
-];
 
 const activeContract: ContractTargetForProject = {
   id: 5,
@@ -70,7 +68,12 @@ const mockProjectRes: ProjectRes = {
 describe('CreateProjectModal (NCL-05-CN-001 — Tạo dự án từ hợp đồng)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(projectsApi.fetchAssignableProjectManagers).mockResolvedValue(mockManagers);
+    // "Người quản lý dự án" giờ là combobox chọn tên (GET /users/lookup) thay vì ô gõ ID
+    // tự do — mock đủ id mà các test dưới cần chọn (7, 42).
+    vi.mocked(usersApi.getActiveUsersLookup).mockResolvedValue([
+      { id: 7, fullName: 'Người dùng 7' },
+      { id: 42, fullName: 'Người dùng 42' },
+    ]);
   });
 
   it('TC-01: Tạo dự án từ hợp đồng ACTIVE thành công với thông tin hợp lệ', async () => {
@@ -93,7 +96,7 @@ describe('CreateProjectModal (NCL-05-CN-001 — Tạo dự án từ hợp đồn
     // Kiểm tra thông tin kế thừa hiển thị
     expect(screen.getByText(/Tạo dự án từ hợp đồng/i)).toBeInTheDocument();
     expect(screen.getByText(/Công ty TNHH ABC/i)).toBeInTheDocument();
-    expect(screen.getByText(/FIXED_PRICE/i)).toBeInTheDocument();
+    expect(screen.getByText(/Trọn gói \(giá cố định\)/i)).toBeInTheDocument();
     expect(screen.getByText(/RUNNING \(Đang triển khai\)/i)).toBeInTheDocument();
 
     // Điền thông tin form
@@ -147,7 +150,7 @@ describe('CreateProjectModal (NCL-05-CN-001 — Tạo dự án từ hợp đồn
 
     // Xác nhận hiển thị cảnh báo hợp đồng không còn hiệu lực
     expect(screen.getByTestId('project-inactive-alert')).toHaveTextContent(
-      /Chỉ cho phép tạo dự án từ hợp đồng đang còn hiệu lực \(ACTIVE\)/i
+      /Chỉ tạo được dự án từ hợp đồng đang hiệu lực/i
     );
     // Form tạo dự án không hiển thị
     expect(screen.queryByTestId('create-project-form')).not.toBeInTheDocument();
@@ -251,7 +254,7 @@ describe('CreateProjectModal (NCL-05-CN-001 — Tạo dự án từ hợp đồn
     );
 
     expect(screen.getByTestId('project-role-alert')).toHaveTextContent(
-      /Yêu cầu vai trò Quản lý dự án \(VT-02\)/i
+      /Yêu cầu vai trò Quản lý dự án/i
     );
     expect(screen.queryByTestId('create-project-form')).not.toBeInTheDocument();
   });
@@ -297,6 +300,9 @@ describe('CreateProjectModal (NCL-05-CN-001 — Tạo dự án từ hợp đồn
       />
     );
 
+    await waitFor(() => {
+      expect((screen.getByLabelText(/Người quản lý dự án/i) as HTMLSelectElement).options.length).toBeGreaterThan(1);
+    });
     fireEvent.change(screen.getByLabelText(/Tên dự án/i), {
       target: { value: 'Dự án ERP' },
     });

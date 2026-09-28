@@ -2,13 +2,17 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import CreateProjectFromTemplateModal from '../components/CreateProjectFromTemplateModal';
 import * as projectsApi from '../api/projectsApi';
+import * as usersApi from '../../users/api/usersApi';
 import type {
-  AssignableProjectManager,
   ContractTargetForProject,
   ProjectRes,
   ProjectTemplateRes,
   WorkBreakdownRes,
 } from '../types/projectTypes';
+
+vi.mock('../../users/api/usersApi', () => ({
+  getActiveUsersLookup: vi.fn(),
+}));
 
 vi.mock('../api/projectsApi', () => {
   class MockProjectsApiError extends Error {
@@ -32,12 +36,6 @@ vi.mock('../api/projectsApi', () => {
     ProjectsApiError: MockProjectsApiError,
   };
 });
-
-const mockManagers: AssignableProjectManager[] = [
-  { id: 7, username: 'pm01', fullName: 'Nguyễn Văn A' },
-  { id: 12, username: 'pm02', fullName: 'Trần Thị B' },
-  { id: 99, username: 'boss', fullName: 'Người dùng đang đăng nhập' },
-];
 
 const mockContract: ContractTargetForProject = {
   id: 1,
@@ -126,7 +124,13 @@ const mockWbs: WorkBreakdownRes[] = [
 describe('CreateProjectFromTemplateModal Component (NCL-05-CN-007)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(projectsApi.fetchAssignableProjectManagers).mockResolvedValue(mockManagers);
+    // Danh sách để chọn "Người quản lý dự án" giờ là combobox (GET /users/lookup), không
+    // còn ô gõ ID tự do — mock đủ id mà các test bên dưới cần chọn (7, 12, 99).
+    vi.mocked(usersApi.getActiveUsersLookup).mockResolvedValue([
+      { id: 7, fullName: 'Người dùng 7' },
+      { id: 12, fullName: 'Người dùng 12' },
+      { id: 99, fullName: 'Người dùng 99' },
+    ]);
   });
 
   it('TC-03: từ chối truy cập và ẩn form đối với vai trò không phải Quản lý dự án (VT-02)', () => {
@@ -178,7 +182,7 @@ describe('CreateProjectFromTemplateModal Component (NCL-05-CN-007)', () => {
 
     expect(screen.getByText(/Thông tin kế thừa tự động từ hợp đồng/i)).toBeInTheDocument();
     expect(screen.getByText('Công ty Cổ phần Alpha')).toBeInTheDocument();
-    expect(screen.getByText('FIXED_PRICE')).toBeInTheDocument();
+    expect(screen.getByText('Trọn gói (giá cố định)')).toBeInTheDocument();
     expect(screen.getByText('RUNNING (Đang thực hiện)')).toBeInTheDocument();
 
     await waitFor(() => {
@@ -235,6 +239,7 @@ describe('CreateProjectFromTemplateModal Component (NCL-05-CN-007)', () => {
     );
 
     await waitFor(() => {
+      expect(screen.getByTestId('template-select')).toBeInTheDocument();
       expect((screen.getByTestId('pm-id-input') as HTMLSelectElement).options.length).toBeGreaterThan(1);
     });
 
@@ -294,7 +299,7 @@ describe('CreateProjectFromTemplateModal Component (NCL-05-CN-007)', () => {
     await waitFor(() => {
       expect(screen.getByTestId('create-success-alert')).toBeInTheDocument();
     });
-    expect(screen.getByText(/CREATE_FROM_TEMPLATE/i)).toBeInTheDocument();
+    expect(screen.getByText('Đã tạo dự án từ mẫu')).toBeInTheDocument();
 
     // Kiểm tra cây WBS được dựng sẵn từ mẫu (TC-01)
     await waitFor(() => {

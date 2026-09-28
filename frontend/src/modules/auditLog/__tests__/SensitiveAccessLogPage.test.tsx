@@ -56,7 +56,7 @@ describe('SensitiveAccessLogPage — Acceptance Criteria Tests (NCL-01-CN-006)',
     render(<SensitiveAccessLogPage currentUserRoles={['VT-02']} currentUserName="Nhân viên kinh doanh" />);
 
     expect(screen.getByRole('heading', { name: /Bạn không có thẩm quyền/i })).toBeInTheDocument();
-    expect(screen.getByText(/chỉ dành riêng cho vai trò/i)).toBeInTheDocument();
+    expect(screen.getByText(/Trang này dành cho/i)).toBeInTheDocument();
     expect(mockSearchLogs).not.toHaveBeenCalled();
   });
 

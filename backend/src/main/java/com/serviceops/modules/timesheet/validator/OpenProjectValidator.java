@@ -7,9 +7,10 @@ import com.serviceops.modules.project.enums.ProjectStatus;
 import org.springframework.stereotype.Component;
 
 /**
- * Chan ghi gio cong vao du an da dong (NCL-06-CN-001; thay the logic "du an
- * con treo" cua story VHDV-76 khi do vao hoat dong). Du an chi nhan gio cong
- * khi dang {@link ProjectStatus#RUNNING}.
+ * Chan ghi gio cong vao du an da dong (NCL-06-CN-007 "Chan ghi gio vao du an
+ * da dong", quy tac QTN-13; hien thuc lan dau boi story VHDV-76, ke thua cho
+ * story ghi gio theo cong viec NCL-06-CN-001). Du an chi nhan gio cong khi
+ * dang {@link ProjectStatus#RUNNING}.
  */
 @Component
 public class OpenProjectValidator {

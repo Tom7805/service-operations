@@ -78,3 +78,15 @@ describe('LoginForm (NCL-01-CN-001, NCL-01-CN-008)', () => {
     expect(onForgotPassword).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('LoginForm — hết phiên (NCL-01-CN-001-TC-03)', () => {
+  it('hiện lý do phiên trước kết thúc để người dùng biết phải đăng nhập lại', () => {
+    render(
+      <LoginForm
+        onAuthenticated={vi.fn()}
+        notice="Phiên làm việc đã kết thúc do không thao tác trong 30 phút. Vui lòng đăng nhập lại."
+      />
+    );
+    expect(screen.getByTestId('login-session-notice')).toHaveTextContent(/không thao tác trong 30 phút/);
+  });
+});

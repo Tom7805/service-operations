@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import RowActionsMenu, { type RowAction } from '../../../components/common/RowActionsMenu';
 import { roleLabels } from '../../../utils/roleLabel';
-import type { ContractRes, ContractStatus } from '../types/contractTypes';
+import { CONTRACT_TYPE_LABEL, type ContractRes, type ContractStatus } from '../types/contractTypes';
 import {
   fetchContracts,
   getContract,
@@ -14,20 +14,16 @@ import ContractTypeLimitModal from '../components/ContractTypeLimitModal';
 import ContractMilestonesModal from '../components/ContractMilestonesModal';
 import ContractLimitAlert from '../components/ContractLimitAlert';
 import ContractExpiryReminderModal from '../components/ContractExpiryReminderModal';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface ContractListPageProps {
   currentUserRoles?: string[];
   currentUserName?: string;
   /** Cho phép nạp sẵn dữ liệu trong test/SSR để bỏ qua bước gọi API. */
   initialContracts?: ContractRes[];
+  /** Mở trang chi tiết hợp đồng (gộp loại/hạn mức, mốc/đề xuất/định kỳ theo loại, hóa đơn, cảnh báo, gia hạn). */
+  onOpenDetail?: (contractId: number) => void;
 }
-
-const CONTRACT_TYPE_LABEL: Record<string, string> = {
-  TIME_AND_MATERIAL: 'Time & Material',
-  FIXED_PRICE: 'Fixed Price',
-  MAINTENANCE: 'Maintenance',
-  MILESTONE: 'Milestone',
-};
 
 const STATUS_META: Record<ContractStatus, { label: string; badge: string }> = {
   DRAFT: { label: 'Nháp', badge: 'badge--gold' },
@@ -79,6 +75,7 @@ export default function ContractListPage({
   currentUserRoles = [],
   currentUserName = 'Người dùng',
   initialContracts,
+  onOpenDetail,
 }: ContractListPageProps) {
   const isAllowed = currentUserRoles.includes('VT-05');
 
@@ -178,6 +175,13 @@ export default function ContractListPage({
   const rowActions = (c: ContractRes, busy: boolean): RowAction[] => {
     const actions: RowAction[] = [
       {
+        key: 'view-detail',
+        label: 'Xem chi tiết & lập hóa đơn',
+        icon: ICONS.receipt,
+        onClick: () => onOpenDetail?.(c.id),
+        testId: `contract-action-detail-${c.id}`,
+      },
+      {
         key: 'type-limit',
         label: 'Khai báo loại & hạn mức',
         icon: ICONS.document,
@@ -227,15 +231,6 @@ export default function ContractListPage({
     });
   }, [contracts, searchTerm, statusFilter]);
 
-  const stats = useMemo(() => {
-    return {
-      total: contracts.length,
-      active: contracts.filter((c) => c.status === 'ACTIVE').length,
-      draft: contracts.filter((c) => c.status === 'DRAFT').length,
-      noLimit: contracts.filter((c) => c.limitValue == null).length,
-    };
-  }, [contracts]);
-
   // NCL-04-CN-002 (TC-04): từ chối quyền cho vai trò khác Kế toán.
   if (!isAllowed) {
     return (
@@ -244,9 +239,7 @@ export default function ContractListPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Bạn không có thẩm quyền quản lý hợp đồng</h2>
           <p>
-            Theo quy tắc phân quyền, các nghiệp vụ khai báo loại &amp; hạn mức, mốc thanh toán,
-            kích hoạt và nhắc gia hạn hợp đồng chỉ dành riêng cho <strong>Kế toán</strong> (VT-05).
-            Hệ thống đã ghi lại lần từ chối truy cập này vào nhật ký bảo mật (Audit Log).
+            Trang này dành cho <strong>Kế toán</strong>. Lần truy cập đã được ghi vào nhật ký.
           </p>
           <div className="security-log-badge">
             <span className="security-log-badge__item">
@@ -292,56 +285,15 @@ export default function ContractListPage({
         </div>
       )}
 
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Hợp đồng</h1>
-          <p className="page-subtitle">
-            Khai báo loại &amp; hạn mức trần, quản lý mốc thanh toán, kích hoạt và nhắc gia hạn hợp đồng —
-            dành cho Kế toán, không cần đi qua hồ sơ khách hàng.
-          </p>
-        </div>
-        <div>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => setIsExpiryReminderOpen(true)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
-          >
-            <span className="icon-xs">{ICONS.clock}</span> Nhắc hợp đồng sắp hết hạn
+      <PageHeader
+        title="Hợp đồng"
+        actions={
+          <button type="button" className="btn btn-secondary" onClick={() => setIsExpiryReminderOpen(true)}>
+            <span className="icon-xs">{ICONS.clock}</span> Hợp đồng sắp hết hạn
           </button>
-        </div>
-      </div>
+        }
+      />
 
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--purple">{ICONS.document}</div>
-          <div>
-            <span className="stat-card__label">Tổng hợp đồng</span>
-            <div className="stat-card__value">{stats.total}</div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--green">{ICONS.checkCircle}</div>
-          <div>
-            <span className="stat-card__label">Đang hiệu lực</span>
-            <div className="stat-card__value">{stats.active}</div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--amber">{ICONS.clipboardList}</div>
-          <div>
-            <span className="stat-card__label">Đang ở bản nháp</span>
-            <div className="stat-card__value">{stats.draft}</div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__icon stat-card__icon--blue">{ICONS.alertTriangle}</div>
-          <div>
-            <span className="stat-card__label">Chưa đặt hạn mức trần</span>
-            <div className="stat-card__value">{stats.noLimit}</div>
-          </div>
-        </div>
-      </div>
 
       <div className="user-table-card">
         <div className="user-table-toolbar">
@@ -350,7 +302,7 @@ export default function ContractListPage({
             <input
               type="text"
               className="search-box__input"
-              placeholder="Tìm theo mã hợp đồng, tên hợp đồng hoặc tên khách hàng..."
+              placeholder="Tìm hợp đồng, khách hàng"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               aria-label="Tìm kiếm hợp đồng"
@@ -427,18 +379,20 @@ export default function ContractListPage({
           </div>
         ) : (
           <div className="table-responsive">
-            <table className="user-data-table" data-testid="contract-table">
+            {/* Danh sách gọn: mỗi hàng một dòng. Mã thành dòng phụ dưới tên; hạn mức trần và ngày bắt đầu
+                xem ở trang chi tiết (bấm vào hàng) — số hợp đồng chưa đặt hạn mức đã có ở ô chỉ số phía trên. */}
+            <table className="user-data-table list-table" data-testid="contract-table">
               <thead>
                 <tr>
-                  <th style={headStyle}>Mã hợp đồng</th>
-                  <th style={headStyle}>Tên hợp đồng</th>
-                  <th style={headStyle}>Khách hàng</th>
-                  <th style={headStyle}>Loại</th>
-                  <th style={{ ...headStyle, textAlign: 'right' }}>Giá trị</th>
-                  <th style={{ ...headStyle, textAlign: 'right' }}>Hạn mức trần</th>
-                  <th style={headStyle}>Hiệu lực</th>
-                  <th style={headStyle}>Trạng thái</th>
-                  <th style={{ ...headStyle, textAlign: 'right' }}>Hành động</th>
+                  <th style={{ ...headStyle, width: '26%' }}>Hợp đồng</th>
+                  <th className="list-table__hide-sm" style={{ ...headStyle, width: '19%' }}>Khách hàng</th>
+                  <th className="list-table__hide-sm" style={{ ...headStyle, width: '13%' }}>Loại</th>
+                  <th className="list-table__hide-sm" style={{ ...headStyle, width: '12%', textAlign: 'right' }}>Giá trị</th>
+                  <th className="list-table__hide-sm" style={{ ...headStyle, width: '11%' }}>Kết thúc</th>
+                  <th style={{ ...headStyle, width: '14%' }}>Trạng thái</th>
+                  <th className="list-table__actions" style={headStyle}>
+                    <span className="visually-hidden">Thao tác</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -446,26 +400,34 @@ export default function ContractListPage({
                   const status = STATUS_META[c.status] ?? { label: c.status, badge: 'badge--gray' };
                   const busy = busyContractId === c.id;
                   return (
-                    <tr key={c.id}>
-                      <td style={{ fontFamily: 'var(--font-mono, monospace)', fontWeight: 600 }}>{c.contractCode}</td>
-                      <td>{c.name || '—'}</td>
-                      <td>{c.customerName || '—'}</td>
-                      <td>{CONTRACT_TYPE_LABEL[c.contractType] ?? c.contractType}</td>
-                      <td style={{ textAlign: 'right' }}>{formatAmount(c.totalValue)}</td>
-                      <td style={{ textAlign: 'right' }}>
-                        {c.limitValue == null ? (
-                          <span className="cell-muted">Chưa đặt</span>
-                        ) : (
-                          formatAmount(c.limitValue)
-                        )}
+                    <tr
+                      key={c.id}
+                      className={onOpenDetail ? 'list-table__row' : undefined}
+                      onClick={onOpenDetail ? () => onOpenDetail(c.id) : undefined}
+                      data-testid={`contract-row-${c.id}`}
+                    >
+                      <td>
+                        <span className="list-table__clip" style={{ fontWeight: 500, color: 'var(--ink-strong)' }} title={c.name || undefined}>
+                          {c.name || '—'}
+                        </span>
+                        <span className="list-table__sub" title={`ID hợp đồng: ${c.id}`}>{c.contractCode}</span>
                       </td>
-                      <td className="cell-muted" style={{ whiteSpace: 'nowrap' }}>
-                        {formatDate(c.startDate)} → {formatDate(c.endDate)}
+                      <td className="list-table__hide-sm">
+                        <span className="list-table__clip" title={c.customerName || undefined}>{c.customerName || '—'}</span>
+                      </td>
+                      <td className="list-table__hide-sm">
+                        <span className="list-table__clip">{CONTRACT_TYPE_LABEL[c.contractType] ?? c.contractType}</span>
+                      </td>
+                      <td className="list-table__hide-sm" style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                        {formatAmount(c.totalValue)}
+                      </td>
+                      <td className="list-table__hide-sm list-table__muted" title={`${formatDate(c.startDate)} → ${formatDate(c.endDate)}`}>
+                        {formatDate(c.endDate)}
                       </td>
                       <td>
                         <span className={`badge ${status.badge}`}>{status.label}</span>
                       </td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td className="list-table__actions" onClick={(e) => e.stopPropagation()}>
                         <RowActionsMenu
                           ariaLabel={`Thao tác hợp đồng ${c.contractCode}`}
                           actions={rowActions(c, busy)}
@@ -480,11 +442,6 @@ export default function ContractListPage({
         )}
       </div>
 
-      <p className="customer-summary-scope-note cell-muted" style={{ marginTop: '12px' }}>
-        <span className="icon-xs">{ICONS.info}</span> Kế toán (VT-05) có phạm vi dữ liệu toàn công ty nên thấy mọi
-        hợp đồng. Mỗi lần khai báo loại/hạn mức hoặc đổi mốc thanh toán đều được ghi vào nhật ký hợp đồng
-        (người thực hiện · nội dung · thời điểm).
-      </p>
 
       {selectedContract && (
         <ContractTypeLimitModal

@@ -89,17 +89,16 @@ describe('EmployeeListPage — Acceptance Criteria Tests (NCL-01-CN-007)', () =>
       expect(screen.getByText('Nguyễn Văn A')).toBeInTheDocument();
     });
 
-    // Nhân sự mặc định 40 giờ — không gắn nhãn "Tùy chỉnh"
+    // Nhân sự mặc định 40 giờ — danh sách gọn không nhắc tới giờ chuẩn (xem ở trang chi tiết)
     const row40 = screen.getByText('Nguyễn Văn A').closest('tr');
     expect(row40).not.toBeNull();
-    expect(row40!.textContent).toContain('40');
     expect(row40!.textContent).not.toContain('Tùy chỉnh');
+    expect(row40!.textContent).not.toContain('giờ/tuần');
 
-    // Nhân sự bán thời gian 20 giờ — giữ nguyên giá trị, có gắn nhãn "Tùy chỉnh"
+    // Nhân sự bán thời gian 20 giờ — giữ nguyên giá trị, gắn nhãn "20 giờ/tuần" ngay trong hàng
     const row20 = screen.getByText('Trần Thị B').closest('tr');
     expect(row20).not.toBeNull();
-    expect(row20!.textContent).toContain('20');
-    expect(row20!.textContent).toContain('Tùy chỉnh');
+    expect(row20!.textContent).toContain('20 giờ/tuần');
   });
 
   it('Hiển thị trạng thái rỗng khi chưa có hồ sơ nhân sự nào', async () => {

@@ -41,6 +41,14 @@ vi.mock('../api/usersApi', () => ({
   createUser: vi.fn((payload: CreateUserPayload) => Promise.resolve({ id: 99, ...payload, status: 'ACTIVE', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() })),
   updateUser: vi.fn((id: number, payload: UpdateUserPayload) => Promise.resolve({ id, ...payload, updatedAt: new Date().toISOString() })),
   updateUserStatus: vi.fn((id: number, status: string) => Promise.resolve({ id, status, updatedAt: new Date().toISOString() })),
+  updateUserRoleScope: vi.fn((id: number, payload: UpdateUserPayload) => Promise.resolve({ id, ...payload })),
+  resetUserTwoFactor: vi.fn(() => Promise.resolve()),
+  getDepartmentsList: vi.fn(() =>
+    Promise.resolve([
+      { id: 1, name: 'Ban Giám Đốc', parentId: null },
+      { id: 2, name: 'Phòng Quản Lý Dự Án', parentId: 1 },
+    ])
+  ),
   UserApiError: class UserApiError extends Error {
     constructor(public code: string, message: string) {
       super(message);
@@ -144,7 +152,7 @@ describe('User Management Module — Acceptance Criteria Tests (NCL-01-CN-002)',
 
     expect(screen.getByRole('heading', { name: /Bạn không có thẩm quyền/i })).toBeInTheDocument();
     expect(screen.getByText(/Bạn không có thẩm quyền truy cập màn hình này/i)).toBeInTheDocument();
-    expect(screen.getByText(/Chức năng Quản lý tài khoản người dùng chỉ dành riêng cho vai trò/i)).toBeInTheDocument();
+    expect(screen.getByText(/Trang này dành cho/i)).toBeInTheDocument();
   });
 
   it('TC-05: Admin users (VT-07) view stats, table, and link to the full audit log', () => {
@@ -152,8 +160,9 @@ describe('User Management Module — Acceptance Criteria Tests (NCL-01-CN-002)',
       <UserListPage currentUserRoles={['VT-07']} currentUserName="Quản trị viên" onViewAuditLog={() => {}} />
     );
 
-    expect(screen.getByText('Quản lý tài khoản người dùng')).toBeInTheDocument();
-    expect(screen.getByText('Tổng tài khoản')).toBeInTheDocument();
-    expect(screen.getByText(/Xem nhật ký thao tác đầy đủ/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Tài khoản nhân viên' })).toBeInTheDocument();
+    // Số đếm nằm ở nút lọc trạng thái (không còn ô đếm đầu trang).
+    expect(screen.getByRole('tab', { name: /^Tất cả \(/ })).toBeInTheDocument();
+    expect(screen.getByText(/Xem nhật ký tài khoản/i)).toBeInTheDocument();
   });
 });

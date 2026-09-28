@@ -36,6 +36,16 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
 	Optional<TimeEntry> findByUserIdAndTaskIdAndWorkDate(Long userId, Long taskId, LocalDate workDate);
 
 	/**
+	 * Da co ban ghi (bat ky trang thai/vai tro nao) cho cap user/task/ngay nay chua.
+	 *
+	 * <p>Thay {@link #findByUserIdAndTaskIdAndWorkDate} lam dieu kien chan tao trung o
+	 * {@code TimeEntryServiceImpl#create} — sau khi bo rang buoc duy nhat DB (NCL-06-CN-005,
+	 * migration V60) mot cap co the co nhieu hon mot dong (goc + dao + sua), khien phuong thuc
+	 * tra {@code Optional} nem loi khi co nhieu hon mot ket qua.</p>
+	 */
+	boolean existsByUserIdAndTaskIdAndWorkDate(Long userId, Long taskId, LocalDate workDate);
+
+	/**
 	 * Tong gio cong da ghi cua mot cong viec, loc theo trang thai
 	 * (VD: chi tinh DRAFT + SUBMITTED de canh bao gan vuot ngan sach QTN-20;
 	 * chi tinh APPROVED khi cap nhat approved_hours sau khi duyet).
@@ -55,4 +65,96 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
 			WHERE e.userId = :userId AND e.workDate = :workDate
 			""")
 	BigDecimal sumHoursByUserIdAndWorkDate(@Param("userId") Long userId, @Param("workDate") LocalDate workDate);
+
+	/**
+	 * Cac dong gio cong DA DUYET va con la dong GOC (chua dao/sua) cua mot nhom cong viec —
+	 * nguon du lieu cho danh sach "co the dieu chinh" ma PM chon truc tiep thay vi phai tu
+	 * biet truoc Project ID/Task ID/Entry ID (NCL-06-CN-005).
+	 */
+	@Query("""
+			SELECT e FROM TimeEntry e
+			WHERE e.status = com.serviceops.modules.timesheet.enums.TimeEntryStatus.APPROVED
+			AND e.type = com.serviceops.modules.timesheet.enums.TimeEntryType.ORIGINAL
+			AND e.taskId IN :taskIds
+			ORDER BY e.workDate DESC, e.id DESC
+			""")
+	List<TimeEntry> findApprovedOriginalEntriesByTaskIdIn(@Param("taskIds") List<Long> taskIds);
+
+	/**
+	 * Danh sach nhan su co dong gio cong DRAFT trong mot tuan (NCL-06-CN-009).
+	 *
+	 * <p>Ung vien "chua nop bang cham cong": co gio cong ghi trong tuan nhung con
+	 * o trang thai nhap, chua chuyen SUBMITTED (tuc chua goi API nop tuan).</p>
+	 */
+	@Query("""
+			SELECT DISTINCT e.userId
+			FROM TimeEntry e
+			WHERE e.status = com.serviceops.modules.timesheet.enums.TimeEntryStatus.DRAFT
+			AND e.workDate BETWEEN :weekFrom AND :weekTo
+			""")
+	List<Long> findDistinctUserIdsWithDraftEntriesBetween(
+			@Param("weekFrom") LocalDate weekFrom, @Param("weekTo") LocalDate weekTo);
+
+	/**
+	 * Cac dong gio cong con NHAP (DRAFT) cua mot nhom cong viec — dung khi dong du an
+	 * (NCL-05-CN-006) de don sach cac dong nhap con sot lai truoc khi du an tro thanh
+	 * "ho so lich su chi doc": dong NHAP chua tung duoc nop/duyet nen khong anh huong
+	 * gio cong da duyet/doanh thu, xoa duoc an toan thay vi de mac ket vinh vien (khong
+	 * con sua/xoa duoc qua giao dien vi du an da dong, nhung van tinh vao so dong can
+	 * nop cua bang cham cong tuan).
+	 */
+	List<TimeEntry> findByTaskIdInAndStatus(List<Long> taskIds, TimeEntryStatus status);
+
+	/** Cac dong gio cong theo trang thai cua mot nhom cong viec, sap theo ngay lam viec. */
+	List<TimeEntry> findByTaskIdInAndStatusOrderByWorkDateAscIdAsc(List<Long> taskIds, TimeEntryStatus status);
+
+	/**
+	 * MOI dong gio cong (moi trang thai) cua mot nhom cong viec co ngay lam viec trong khoang — nguon du lieu tao
+	 * de nghi xuat hoa don (NCL-10-CN-001): can ca dong chua duyet de dem "so dong bi bo qua" (QTN-18).
+	 */
+	List<TimeEntry> findByTaskIdInAndWorkDateBetweenOrderByWorkDateAscIdAsc(
+			List<Long> taskIds, LocalDate workDateFrom, LocalDate workDateTo);
+
+	/**
+	 * Tong gio cong DA DUYET cua tung cong viec trong mot khoang ngay, nguon du lieu de
+	 * quy ve ty trong gio cong theo du an khi phan bo chi phi chung (NCL-08-CN-005 / QTN-29).
+	 * Tra ve mang {@code [taskId, tongGio]}; khong dung entity Task o day de tranh phu thuoc
+	 * nguoc tu module chi phi/ky sang module cham cong.
+	 */
+	@Query("""
+			SELECT e.taskId, COALESCE(SUM(e.hours), 0)
+			FROM TimeEntry e
+			WHERE e.status = com.serviceops.modules.timesheet.enums.TimeEntryStatus.APPROVED
+			AND e.workDate BETWEEN :from AND :to
+			GROUP BY e.taskId
+			""")
+	List<Object[]> sumApprovedHoursGroupByTaskIdBetween(@Param("from") LocalDate from, @Param("to") LocalDate to);
+
+	/**
+	 * Toan bo dong gio cong DA DUYET co ngay lam viec trong mot khoang ky — nguon du lieu cho bao cao
+	 * bien loi nhuan theo khach hang/nhan su (NCL-09-CN-005): moi dong deu da qua duyet (QTN-10) nen
+	 * dung duoc ngay cho ca giá von (moi dong) lan doanh thu (chi dong billable).
+	 */
+	List<TimeEntry> findByStatusAndWorkDateBetweenOrderByWorkDateAscIdAsc(
+			TimeEntryStatus status, LocalDate workDateFrom, LocalDate workDateTo);
+
+	/**
+	 * Danh sach ID nhan su DA TUNG co dong gio cong duoc duyet — nguon danh sach "Chon nhan su"
+	 * cho Ke toan/Quan tri vien khi tra don gia (NCL-07-CN-005): chi hien nguoi thuc su co du
+	 * lieu de tra, thay vi liet ke toan bo nhan su cong ty.
+	 */
+	@Query("""
+			SELECT DISTINCT e.userId
+			FROM TimeEntry e
+			WHERE e.status = com.serviceops.modules.timesheet.enums.TimeEntryStatus.APPROVED
+			""")
+	List<Long> findDistinctUserIdsWithApprovedEntries();
+
+	/**
+	 * Cac dong gio cong DA DUYET cua MOT nhan su, moi nhat truoc — nguon danh sach de Ke
+	 * toan/Quan tri vien CHON TRUC TIEP khi tra don gia (NCL-07-CN-005) thay vi phai tu biet
+	 * truoc "ID dong gio cong", con so ma truoc gio chi hien o man hinh danh cho PM
+	 * (NCL-06-CN-005, {@link #findApprovedOriginalEntriesByTaskIdIn}).
+	 */
+	List<TimeEntry> findByStatusAndUserIdOrderByWorkDateDescIdDesc(TimeEntryStatus status, Long userId);
 }

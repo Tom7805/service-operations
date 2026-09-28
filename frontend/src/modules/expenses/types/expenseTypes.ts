@@ -1,0 +1,149 @@
+/** Khớp enum ExpenseType phía backend (NCL-08-CN-001, Epic NCL-08). */
+export type ExpenseType = 'TRAVEL' | 'TOOLS' | 'OTHER';
+
+/** Khớp enum ExpenseStatus phía backend. */
+export type ExpenseStatus = 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+
+/**
+ * Một phiếu chi phí dự án trả về từ backend. Khớp `ExpenseRes` — dùng chung cho
+ * NCL-08-CN-001 (ghi nhận), NCL-08-CN-002 (duyệt/từ chối) và NCL-08-CN-003 (đánh dấu
+ * tính lại cho khách hàng). `approvedBy`/`rejectedBy` chỉ có giá trị khi phiếu đã được
+ * xử lý tương ứng.
+ */
+export interface ExpenseRes {
+  id: number;
+  projectId: number;
+  userId: number;
+  type: ExpenseType;
+  amount: number;
+  expenseDate: string; // YYYY-MM-DD
+  description: string;
+  receiptUrl: string | null;
+  billable: boolean;
+  status: ExpenseStatus;
+  createdAt: string;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  rejectedBy: string | null;
+  rejectedAt: string | null;
+  rejectReason: string | null;
+}
+
+/**
+ * Payload từ chối phiếu chi phí (NCL-08-CN-002).
+ * POST /expenses/{expenseId}/reject
+ *
+ * `reason` bắt buộc — thiếu nhận `400 VALIDATION_ERROR` trước khi backend chạm tới phiếu.
+ */
+export interface ExpenseRejectReq {
+  reason: string;
+}
+
+/**
+ * Payload đánh dấu/bỏ đánh dấu tính lại chi phí cho khách hàng (NCL-08-CN-003).
+ * PUT /expenses/{expenseId}/billable
+ */
+export interface ExpenseBillableReq {
+  billable: boolean;
+}
+
+/**
+ * Payload ghi nhận chi phí phát sinh của dự án (NCL-08-CN-001), dùng cả khi tạo mới
+ * (`POST /projects/{projectId}/expenses`) lẫn sửa và nộp lại phiếu bị từ chối
+ * (`PUT /expenses/{expenseId}`). Không có trường `billable` — việc đánh dấu tính lại cho
+ * khách hàng là thao tác riêng của Quản lý dự án (NCL-08-CN-003), không thuộc màn ghi nhận.
+ */
+export interface ExpenseCreateReq {
+  type: ExpenseType;
+  amount: number;
+  expenseDate: string; // YYYY-MM-DD
+  description: string;
+  receiptUrl: string | null;
+}
+
+/** Nhãn hiển thị cho từng loại chi phí (`ExpenseType`). */
+export const EXPENSE_TYPE_LABELS: Record<ExpenseType, string> = {
+  TRAVEL: 'Đi lại',
+  TOOLS: 'Công cụ, dụng cụ',
+  OTHER: 'Khác',
+};
+
+/** Nhãn hiển thị cho từng trạng thái phiếu chi phí (`ExpenseStatus`). */
+export const EXPENSE_STATUS_LABELS: Record<ExpenseStatus, string> = {
+  SUBMITTED: 'Chờ duyệt',
+  APPROVED: 'Đã duyệt',
+  REJECTED: 'Từ chối',
+};
+
+/** Class badge trạng thái tương ứng, dùng chung style `status-pill` của hệ thống. */
+export const EXPENSE_STATUS_PILL_CLASS: Record<ExpenseStatus, string> = {
+  SUBMITTED: 'status-pill--inactive',
+  APPROVED: 'status-pill--active',
+  REJECTED: 'status-pill--locked',
+};
+
+/**
+ * Một phiếu chi phí thuê ngoài (nhà thầu phụ) của dự án. Khớp `SubcontractorExpenseRes`
+ * (NCL-08-CN-004). Dùng chung `ExpenseStatus`/nhãn/badge với chi phí nội bộ — luồng
+ * duyệt/từ chối của Kế toán (VT-05) nằm ngoài phạm vi màn hình ghi nhận này.
+ */
+export interface SubcontractorExpenseRes {
+  id: number;
+  projectId: number;
+  userId: number;
+  contractorName: string;
+  workScope: string;
+  amount: number;
+  incurredPeriod: string; // YYYY-MM-DD
+  status: ExpenseStatus;
+  createdAt: string;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  rejectedBy: string | null;
+  rejectedAt: string | null;
+  rejectReason: string | null;
+}
+
+/**
+ * Payload ghi nhận chi phí thuê ngoài (NCL-08-CN-004).
+ * POST /projects/{projectId}/subcontractor-expenses
+ */
+export interface SubcontractorExpenseCreateReq {
+  contractorName: string;
+  workScope: string;
+  amount: number;
+  incurredPeriod: string; // YYYY-MM-DD
+}
+
+/**
+ * Phần chi phí chung mà một dự án nhận được trong một lần phân bổ (NCL-08-CN-005).
+ * Khớp `OverheadAllocationLineRes` — chỉ trả `projectId` (không có tên dự án); Kế toán
+ * (VT-05) không có quyền `GET /projects/{id}` nên màn hình hiển thị theo mã dự án.
+ */
+export interface OverheadAllocationLineRes {
+  projectId: number;
+  approvedHours: number;
+  allocatedAmount: number;
+}
+
+/**
+ * Kết quả một lần phân bổ chi phí chung (NCL-08-CN-005). Khớp `OverheadAllocationRes`.
+ */
+export interface OverheadAllocationRes {
+  id: number;
+  periodStart: string; // YYYY-MM-DD, luôn ngày đầu tháng
+  periodEnd: string; // YYYY-MM-DD, luôn ngày cuối tháng
+  totalAmount: number;
+  allocations: OverheadAllocationLineRes[];
+  createdAt: string;
+}
+
+/**
+ * Payload chạy phân bổ chi phí chung cho một kỳ (NCL-08-CN-005).
+ * POST /overhead-allocations/run
+ */
+export interface OverheadAllocationRunReq {
+  year: number;
+  month: number;
+  totalAmount: number;
+}

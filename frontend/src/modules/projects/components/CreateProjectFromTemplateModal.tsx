@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { todayLocalIso } from '../../../utils/formatDate';
 import type {
-  AssignableProjectManager,
   ContractTargetForProject,
   ProjectCreateFromTemplateReq,
   ProjectRes,
@@ -12,13 +12,14 @@ import type {
 import {
   createProjectFromTemplate,
   deleteWorkPackage,
-  fetchAssignableProjectManagers,
   fetchProjectTemplates,
   getWorkBreakdown,
   ProjectsApiError,
 } from '../api/projectsApi';
 import { validateProjectCreateFromTemplateForm } from '../validators/projectValidators';
 import WorkBreakdownTree from './WorkBreakdownTree';
+import { getActiveUsersLookup, type UserLookup } from '../../users/api/usersApi';
+import { CONTRACT_TYPE_LABEL } from '../../contracts/types/contractTypes';
 
 export interface CreateProjectFromTemplateModalProps {
   isOpen: boolean;
@@ -40,9 +41,12 @@ function formatAmount(value: number | null | undefined): string {
   return currencyFormatter.format(value);
 }
 
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+function contractTypeLabel(value: string | null | undefined): string {
+  if (!value) return 'Chưa xác định';
+  return (CONTRACT_TYPE_LABEL as Record<string, string>)[value] ?? value;
 }
+
+const todayIso = todayLocalIso;
 
 export default function CreateProjectFromTemplateModal({
   isOpen,
@@ -67,10 +71,33 @@ export default function CreateProjectFromTemplateModal({
   const [expectedEndDate, setExpectedEndDate] = useState('');
   const [projectManagerId, setProjectManagerId] = useState<number | ''>(currentUserId || '');
 
-  // Danh sách người dùng ACTIVE để chọn "Người quản lý dự án" (thay vì gõ tay ID không biết trước)
-  const [managers, setManagers] = useState<AssignableProjectManager[]>([]);
+  // Trước đây ô này bắt gõ tay User ID — đổi sang combobox chọn theo tên (GET
+  // /users/lookup) giống modal "Tạo dự án từ hợp đồng", vì không ai nhớ ID đồng nghiệp.
+  const [managerOptions, setManagerOptions] = useState<UserLookup[]>([]);
   const [loadingManagers, setLoadingManagers] = useState(false);
-  const [managersError, setManagersError] = useState<string | null>(null);
+  const [managerLoadError, setManagerLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    setLoadingManagers(true);
+    setManagerLoadError(null);
+    getActiveUsersLookup()
+      .then((users) => {
+        if (!cancelled) setManagerOptions(users);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setManagerOptions([]);
+        setManagerLoadError(err instanceof Error ? err.message : 'Không thể tải danh sách người dùng.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingManagers(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
 
   // Trạng thái xử lý form
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -132,31 +159,6 @@ export default function CreateProjectFromTemplateModal({
     }
   }, [isOpen, contract, isPM, isContractActive, currentUserId, loadTemplates]);
 
-  // Tải danh sách người dùng ACTIVE cho ô chọn "Người quản lý dự án"
-  useEffect(() => {
-    if (!isOpen || !isPM || !isContractActive) return;
-    let cancelled = false;
-    setLoadingManagers(true);
-    setManagersError(null);
-    fetchAssignableProjectManagers()
-      .then((list) => {
-        if (!cancelled) setManagers(list);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setManagersError(
-            err instanceof ProjectsApiError ? err.message : 'Không thể tải danh sách người dùng.'
-          );
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingManagers(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, isPM, isContractActive]);
-
   // Tải cây WBS của dự án vừa tạo
   const loadCreatedProjectWbs = useCallback(async (projectId: number) => {
     setLoadingWbs(true);
@@ -174,7 +176,7 @@ export default function CreateProjectFromTemplateModal({
 
   // Gán cho tôi
   const handleAssignToMe = () => {
-    setProjectManagerId(currentUserId || 7);
+    setProjectManagerId(currentUserId || '');
     if (fieldErrors.projectManagerId) {
       setFieldErrors((prev) => {
         const next = { ...prev };
@@ -242,7 +244,7 @@ export default function CreateProjectFromTemplateModal({
     try {
       await deleteWorkPackage(createdProject.id, wp.id);
       setWbsToast({
-        message: `Đã xóa hạng mục "${wp.name}" khỏi dự án. Mẫu dự án gốc vẫn được giữ nguyên không đổi (TC-02).`,
+        message: `Đã xóa hạng mục "${wp.name}" khỏi dự án. Mẫu dự án gốc vẫn được giữ nguyên không đổi.`,
         type: 'success',
       });
       void loadCreatedProjectWbs(createdProject.id);
@@ -270,7 +272,7 @@ export default function CreateProjectFromTemplateModal({
           <div className="modal-header__title-wrap">
             <h3 id="create-project-template-modal-title" className="modal-title">
               <span className="modal-title__icon">{ICONS.folder}</span>
-              Tạo dự án từ mẫu công việc (NCL-05-CN-007)
+              Tạo dự án từ mẫu công việc
             </h3>
             <p className="field-hint">
               Hợp đồng: <strong>{contract.contractCode}</strong> — {contract.name}
@@ -285,7 +287,7 @@ export default function CreateProjectFromTemplateModal({
           {/* Kiểm tra phân quyền TC-03 */}
           {!isPM && (
             <div className="alert-box alert-box--danger" role="alert" data-testid="pm-role-alert">
-              <strong>Từ chối truy cập:</strong> Bạn không có quyền thực hiện chức năng này. Chức năng Tạo dự án từ mẫu chỉ dành cho vai trò <strong>Quản lý dự án (VT-02)</strong>.
+              <strong>Từ chối truy cập:</strong> Bạn không có quyền thực hiện chức năng này. Chức năng Tạo dự án từ mẫu chỉ dành cho vai trò <strong>Quản lý dự án</strong>.
             </div>
           )}
 
@@ -301,7 +303,7 @@ export default function CreateProjectFromTemplateModal({
             <>
               {/* Thẻ xem trước kế thừa từ hợp đồng (TC-01) */}
               <div className="project-preview-card" style={{ marginBottom: '20px' }}>
-                <div style={{ marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                <div style={{ marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>
                   Thông tin kế thừa tự động từ hợp đồng:
                 </div>
                 <div className="project-preview-grid">
@@ -311,7 +313,7 @@ export default function CreateProjectFromTemplateModal({
                   </div>
                   <div className="project-preview-item">
                     <span className="field-hint">Loại dự án:</span>
-                    <strong>{contract.contractType || 'FIXED_PRICE'}</strong>
+                    <strong>{contractTypeLabel(contract.contractType)}</strong>
                   </div>
                   <div className="project-preview-item">
                     <span className="field-hint">Hạn mức ngân sách trần:</span>
@@ -319,7 +321,7 @@ export default function CreateProjectFromTemplateModal({
                   </div>
                   <div className="project-preview-item">
                     <span className="field-hint">Trạng thái khởi tạo:</span>
-                    <strong style={{ color: '#15803D' }}>RUNNING (Đang thực hiện)</strong>
+                    <strong style={{ color: 'var(--pale-green-fg)' }}>RUNNING (Đang thực hiện)</strong>
                   </div>
                 </div>
               </div>
@@ -380,9 +382,9 @@ export default function CreateProjectFromTemplateModal({
                       style={{
                         marginTop: '8px',
                         padding: '10px 12px',
-                        background: '#F8FAFC',
+                        background: 'var(--surface-alt)',
                         borderRadius: '6px',
-                        border: '1px solid #E2E8F0',
+                        border: '1px solid var(--line)',
                         fontSize: '13px',
                       }}
                       data-testid="template-preview-info"
@@ -391,12 +393,12 @@ export default function CreateProjectFromTemplateModal({
                         <strong>Mã mẫu:</strong> <code>{selectedTemplate.code}</code> · <strong>Loại:</strong> {selectedTemplate.projectType}
                       </div>
                       {selectedTemplate.description && (
-                        <div style={{ marginTop: '4px', color: '#64748B' }}>
+                        <div style={{ marginTop: '4px', color: 'var(--ink-muted)' }}>
                           {selectedTemplate.description}
                         </div>
                       )}
-                      <div style={{ marginTop: '6px', color: '#0369A1', fontSize: '12px' }}>
-                        {ICONS.info} Hệ thống sẽ tự động nhân bản toàn bộ cây hạng mục, công việc và ngân sách giờ từ mẫu này sang dự án mới (TC-01).
+                      <div style={{ marginTop: '6px', color: 'var(--pale-blue-fg)', fontSize: '12px' }}>
+                        {ICONS.info} Hạng mục, công việc và ngân sách giờ sẽ được sao chép sang dự án mới.
                       </div>
                     </div>
                   )}
@@ -503,8 +505,9 @@ export default function CreateProjectFromTemplateModal({
                       className="btn btn-secondary btn-xs"
                       onClick={handleAssignToMe}
                       data-testid="btn-assign-to-me"
+                      style={{ padding: '2px 8px', fontSize: '12px' }}
                     >
-                      {ICONS.user} Gán cho tôi
+                      Gán cho tôi
                     </button>
                   </div>
                   <select
@@ -525,20 +528,20 @@ export default function CreateProjectFromTemplateModal({
                     disabled={loadingManagers}
                     data-testid="pm-id-input"
                   >
-                    <option value="">-- Chọn người quản lý dự án --</option>
-                    {managers.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.fullName} ({m.username})
+                    <option value="">
+                      {loadingManagers ? 'Đang tải danh sách người dùng...' : '-- Chọn người quản lý dự án --'}
+                    </option>
+                    {managerOptions.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.fullName}
                       </option>
                     ))}
                   </select>
-                  <p className="field-hint" style={{ fontSize: '12px', marginTop: '4px', color: '#64748B' }}>
-                    {loadingManagers
-                      ? 'Đang tải danh sách người dùng...'
-                      : managersError
-                      ? managersError
-                      : 'Chỉ hiển thị tài khoản đang hoạt động (ACTIVE) trong hệ thống.'}
-                  </p>
+                  {managerLoadError && (
+                    <span className="field-error" role="alert">
+                      {managerLoadError}
+                    </span>
+                  )}
                   {fieldErrors.projectManagerId && (
                     <span className="field-error" role="alert" data-testid="error-projectManagerId">
                       {fieldErrors.projectManagerId}
@@ -546,9 +549,9 @@ export default function CreateProjectFromTemplateModal({
                   )}
                 </div>
 
-                <div className="modal-footer" style={{ padding: '16px 0 0', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <div className="modal-footer" style={{ padding: '16px 0 0', borderTop: '1px solid var(--line)', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                   <button type="button" className="btn btn-secondary" onClick={onClose}>
-                    Hủy bỏ
+                    Hủy
                   </button>
                   <button
                     type="submit"
@@ -567,12 +570,9 @@ export default function CreateProjectFromTemplateModal({
           {createdProject && (
             <div data-testid="project-created-success-section">
               <div className="alert-box alert-box--success" role="alert" style={{ marginBottom: '16px' }} data-testid="create-success-alert">
-                <h4 style={{ margin: '0 0 4px', fontSize: '15px' }}>Khởi tạo dự án từ mẫu thành công!</h4>
+                <h4 style={{ margin: '0 0 4px', fontSize: '15px' }}>Đã tạo dự án từ mẫu</h4>
                 <p style={{ margin: 0, fontSize: '13.5px' }}>
-                  Dự án <strong>{createdProject.projectCode}</strong> ({createdProject.name}) đã được tạo với toàn bộ cây hạng mục và công việc kèm ngân sách giờ được nhân bản từ mẫu <strong>{selectedTemplate?.name}</strong>.
-                </p>
-                <p style={{ margin: '6px 0 0', fontSize: '12.5px', opacity: 0.9 }}>
-                  Hệ thống đã tự động ghi nhận nhật ký hành động <code>CREATE_FROM_TEMPLATE</code> vào cơ sở dữ liệu (TC-04).
+                  <strong>{createdProject.projectCode}</strong> · {createdProject.name} — đã sao chép hạng mục, công việc và ngân sách giờ từ mẫu <strong>{selectedTemplate?.name}</strong>.
                 </p>
               </div>
 
@@ -589,21 +589,21 @@ export default function CreateProjectFromTemplateModal({
 
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <h4 style={{ margin: 0, fontSize: '14.5px', color: '#1E293B' }}>
-                    Cây cơ cấu công việc (WBS) của dự án mới tạo (TC-01):
+                  <h4 style={{ margin: 0, fontSize: '14.5px', color: 'var(--ink-strong)' }}>
+                    Cây cơ cấu công việc (WBS) của dự án mới tạo:
                   </h4>
                   <span className="field-hint" style={{ fontSize: '12.5px' }}>
                     {wbs.length} hạng mục gốc
                   </span>
                 </div>
-                <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#64748B' }}>
-                  <strong>Quy tắc độc lập mẫu (TC-02):</strong> Bạn có thể xóa các hạng mục không phù hợp trực tiếp trên dự án này mà không làm ảnh hưởng đến mẫu dự án gốc.
+                <p style={{ margin: '0 0 12px', fontSize: '13px', color: 'var(--ink-muted)' }}>
+                  Xóa hạng mục không phù hợp ở đây không ảnh hưởng tới mẫu gốc.
                 </p>
 
                 {loadingWbs ? (
                   <div className="field-hint">Đang tải cây WBS của dự án…</div>
                 ) : (
-                  <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', background: '#FFFFFF', maxHeight: '350px', overflowY: 'auto' }}>
+                  <div style={{ border: '1px solid var(--line)', borderRadius: '8px', background: 'var(--surface)', maxHeight: '350px', overflowY: 'auto' }}>
                     <WorkBreakdownTree
                       projectId={createdProject.id}
                       items={wbs}
@@ -615,7 +615,7 @@ export default function CreateProjectFromTemplateModal({
                 )}
               </div>
 
-              <div className="modal-footer" style={{ padding: '16px 0 0', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <div className="modal-footer" style={{ padding: '16px 0 0', borderTop: '1px solid var(--line)', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                 <button
                   type="button"
                   className="btn btn-primary"

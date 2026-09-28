@@ -97,7 +97,7 @@ describe('Customer Contact Management Frontend (NCL-02-CN-003)', () => {
       // 2. Nhập họ tên, chức danh, email, phone
       const nameInput = screen.getByLabelText(/Họ và tên người liên hệ/i);
       const titleInput = screen.getByLabelText(/Chức danh \/ Vị trí/i);
-      const emailInput = screen.getByLabelText(/Thư điện tử \(Email\)/i);
+      const emailInput = screen.getByLabelText(/^Email/i);
       const phoneInput = screen.getByLabelText(/Số điện thoại liên lạc/i);
       const primaryCheckbox = screen.getByLabelText(/Đặt làm Người liên hệ đầu mối chính/i);
 
@@ -148,11 +148,49 @@ describe('Customer Contact Management Frontend (NCL-02-CN-003)', () => {
       expect(customersApi.addCustomerContact).not.toHaveBeenCalled();
 
       // Nhập email sai định dạng
-      const emailInput = screen.getByLabelText(/Thư điện tử \(Email\)/i);
+      const emailInput = screen.getByLabelText(/^Email/i);
       fireEvent.change(emailInput, { target: { value: 'invalid-email' } });
       fireEvent.click(submitBtn);
 
       expect(screen.getByText('Thư điện tử không hợp lệ')).toBeInTheDocument();
+    });
+  });
+
+  describe('Bộ đếm chữ số khi nhập số điện thoại người liên hệ', () => {
+    it('đếm đúng số chữ số đã gõ (bỏ qua khoảng trắng) và đổi màu khi đạt đủ 10 số', () => {
+      render(
+        <ContactList
+          customerId={10}
+          currentUserRoles={['VT-04']}
+          initialContacts={[]}
+        />
+      );
+
+      fireEvent.click(screen.getByTestId('btn-open-add-contact'));
+      const phoneInput = screen.getByLabelText(/Số điện thoại liên lạc/i);
+      const counter = screen.getByTestId('contact-phone-digit-counter');
+
+      expect(counter).toHaveTextContent('0/10');
+
+      fireEvent.change(phoneInput, { target: { value: '091' } });
+      expect(counter).toHaveTextContent('3/10');
+      expect(counter.className).not.toContain('char-counter--complete');
+
+      fireEvent.change(phoneInput, { target: { value: '0912 345' } });
+      expect(counter).toHaveTextContent('7/10');
+
+      fireEvent.change(phoneInput, { target: { value: '0912 345 678' } });
+      expect(counter).toHaveTextContent('10/10');
+      expect(counter.className).toContain('char-counter--complete');
+
+      // Số cố định đầu 02 có thể dài tới 11 số — quá 11 mới coi là vượt mức.
+      fireEvent.change(phoneInput, { target: { value: '024 3812 3456' } });
+      expect(counter).toHaveTextContent('11/10');
+      expect(counter.className).not.toContain('char-counter--overflow');
+
+      fireEvent.change(phoneInput, { target: { value: '0912345678999' } });
+      expect(counter).toHaveTextContent('13/10');
+      expect(counter.className).toContain('char-counter--overflow');
     });
   });
 
@@ -200,6 +238,11 @@ describe('Customer Contact Management Frontend (NCL-02-CN-003)', () => {
   });
 
   describe('NCL-02-CN-003-TC-03: Không có quyền (Phân quyền bảo mật)', () => {
+    beforeEach(() => {
+      // Backend tra 403 cho vai tro khong phai VT-04 - man hinh van gui request de lan tu choi duoc ghi nhat ky.
+      vi.mocked(customersApi.fetchCustomerContacts).mockRejectedValue(new Error('403'));
+    });
+
     it('người dùng không có vai trò Nhân viên kinh doanh (VT-04) bị từ chối truy cập và ghi nhận nhật ký', () => {
       render(
         <ContactList
@@ -216,6 +259,7 @@ describe('Customer Contact Management Frontend (NCL-02-CN-003)', () => {
       expect(screen.getByText(/Trần Nhân Sự/i)).toBeInTheDocument();
       expect(screen.queryByTestId('btn-open-add-contact')).toBeNull();
       expect(screen.queryByTestId('contact-table')).toBeNull();
+      expect(customersApi.fetchCustomerContacts).toHaveBeenCalledWith(10);
     });
 
     it('từ chối truy cập đối với vai trò Kế toán (VT-05)', () => {
@@ -310,7 +354,7 @@ describe('Customer Contact Management Frontend (NCL-02-CN-003)', () => {
 
       // Chuyển sang Tab Hồ sơ chi tiết
       fireEvent.click(screen.getByTestId('tab-btn-overview'));
-      expect(screen.getByText('Thông tin hành chính doanh nghiệp')).toBeInTheDocument();
+      expect(screen.getByText('Tên pháp nhân')).toBeInTheDocument();
 
       // Không còn tab "Nhật ký kiểm toán" nhúng trong trang (chuyển sang trang /audit-logs riêng).
       expect(screen.queryByTestId('tab-btn-audit')).not.toBeInTheDocument();

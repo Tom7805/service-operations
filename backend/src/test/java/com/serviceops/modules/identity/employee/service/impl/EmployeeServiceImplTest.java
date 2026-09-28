@@ -1,5 +1,7 @@
 package com.serviceops.modules.identity.employee.service.impl;
 
+import com.serviceops.common.audit.AuditTargetType;
+import com.serviceops.common.audit.service.AuditLogService;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.identity.department.repository.DepartmentRepository;
@@ -28,6 +30,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -48,6 +52,8 @@ class EmployeeServiceImplTest {
     private DepartmentRepository departmentRepository;
     @Mock
     private CurrentUserScopeProvider currentUserScopeProvider;
+    @Mock
+    private AuditLogService auditLogService;
 
     private final EmployeeMapper employeeMapper = new EmployeeMapper();
     private final EmploymentPeriodValidator employmentPeriodValidator = new EmploymentPeriodValidator();
@@ -59,7 +65,8 @@ class EmployeeServiceImplTest {
     @BeforeEach
     void setUp() {
         service = new EmployeeServiceImpl(employeeRepository, employmentContractRepository, userRepository,
-                departmentRepository, employeeMapper, employmentPeriodValidator, currentUserScopeProvider);
+                departmentRepository, employeeMapper, employmentPeriodValidator, currentUserScopeProvider,
+                auditLogService);
 
         user = new User();
         user.setId(1L);
@@ -82,12 +89,25 @@ class EmployeeServiceImplTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
         EmployeeCreateReq req = new EmployeeCreateReq(1L, null, "Ky su phan mem",
-                LocalDate.of(2026, 1, 1), null, new BigDecimal("40.00"));
+                LocalDate.of(2026, 1, 1), null, new BigDecimal("40.00"), null);
 
         EmployeeDetailRes result = service.create(req);
 
         assertThat(result.standardHoursPerWeek()).isEqualByComparingTo("40.00");
         assertThat(result.username()).isEqualTo("nhanvien01");
+    }
+
+    @Test
+    @DisplayName("TC-05: tao ho so nhan su duoc ghi vao Nhat ky he thong")
+    void createRecordsAuditLog() {
+        when(employeeRepository.existsByUser_Id(1L)).thenReturn(false);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        service.create(new EmployeeCreateReq(1L, null, "Ky su phan mem",
+                LocalDate.of(2026, 1, 1), null, new BigDecimal("40.00"), null));
+
+        verify(auditLogService).record(eq("Tạo hồ sơ nhân sự"), eq(AuditTargetType.EMPLOYEE), eq(100L),
+                eq("nhanvien01"), contains("40"));
     }
 
     @Test
@@ -97,7 +117,7 @@ class EmployeeServiceImplTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
         EmployeeCreateReq req = new EmployeeCreateReq(1L, null, "Ke toan",
-                LocalDate.of(2026, 1, 1), null, new BigDecimal("20.00"));
+                LocalDate.of(2026, 1, 1), null, new BigDecimal("20.00"), null);
 
         EmployeeDetailRes result = service.create(req);
 
@@ -111,7 +131,7 @@ class EmployeeServiceImplTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
         EmployeeCreateReq req = new EmployeeCreateReq(1L, null, null,
-                LocalDate.of(2026, 1, 1), null, null);
+                LocalDate.of(2026, 1, 1), null, null, null);
 
         EmployeeDetailRes result = service.create(req);
 
@@ -122,7 +142,7 @@ class EmployeeServiceImplTest {
     @DisplayName("TC-03: ngay ket thuc som hon ngay vao lam thi bao loi va khong luu")
     void rejectsEndDateBeforeHireDate() {
         EmployeeCreateReq req = new EmployeeCreateReq(1L, null, null,
-                LocalDate.of(2026, 3, 1), LocalDate.of(2026, 1, 1), null);
+                LocalDate.of(2026, 3, 1), LocalDate.of(2026, 1, 1), null, null);
 
         assertThatThrownBy(() -> service.create(req))
                 .isInstanceOf(BusinessRuleException.class)
@@ -137,7 +157,7 @@ class EmployeeServiceImplTest {
     void rejectsDuplicateEmployeeProfileForSameUser() {
         when(employeeRepository.existsByUser_Id(1L)).thenReturn(true);
 
-        EmployeeCreateReq req = new EmployeeCreateReq(1L, null, null, LocalDate.of(2026, 1, 1), null, null);
+        EmployeeCreateReq req = new EmployeeCreateReq(1L, null, null, LocalDate.of(2026, 1, 1), null, null, null);
 
         assertThatThrownBy(() -> service.create(req))
                 .isInstanceOf(BusinessRuleException.class)
@@ -151,7 +171,7 @@ class EmployeeServiceImplTest {
         when(employeeRepository.existsByUser_Id(99L)).thenReturn(false);
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        EmployeeCreateReq req = new EmployeeCreateReq(99L, null, null, LocalDate.of(2026, 1, 1), null, null);
+        EmployeeCreateReq req = new EmployeeCreateReq(99L, null, null, LocalDate.of(2026, 1, 1), null, null, null);
 
         assertThatThrownBy(() -> service.create(req))
                 .isInstanceOf(BusinessRuleException.class)
@@ -170,7 +190,7 @@ class EmployeeServiceImplTest {
         when(employeeRepository.findById(5L)).thenReturn(Optional.of(existing));
 
         EmployeeUpdateReq req = new EmployeeUpdateReq(null, null,
-                LocalDate.of(2026, 5, 1), LocalDate.of(2026, 4, 1), null);
+                LocalDate.of(2026, 5, 1), LocalDate.of(2026, 4, 1), null, null);
 
         assertThatThrownBy(() -> service.update(5L, req))
                 .isInstanceOf(BusinessRuleException.class)

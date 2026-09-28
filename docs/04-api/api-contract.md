@@ -24,7 +24,7 @@ bổ sung thêm 1 mục theo đúng Epic/Story tương ứng bên dưới — Fr
   {
     "success": false,
     "errorCode": "INVALID_CREDENTIALS",
-    "message": "Ten tai khoan hoac mat khau khong dung",
+    "message": "Tên tài khoản hoặc mật khẩu không đúng.",
     "timestamp": "2026-08-20T16:44:42.4065497",
     "fieldErrors": null
   }
@@ -34,6 +34,559 @@ bổ sung thêm 1 mục theo đúng Epic/Story tương ứng bên dưới — Fr
 - **Danh sách mã lỗi:** xem [error-codes.md](error-codes.md).
 - **Swagger UI (tra cứu trực tiếp khi backend đang chạy):** `http://localhost:8080/api/v1/swagger-ui/index.html`
 - **OpenAPI JSON (import vào Postman/Insomnia):** `http://localhost:8080/api/v1/v3/api-docs`
+
+## Epic `NCL-09` — Biên lợi nhuận thực theo thời gian thực
+
+### `NCL-09-CN-001` — Tính giá vốn giờ công của dự án
+
+#### GET `/projects/{projectId}/profitability/labor-cost`
+
+Tính động giá vốn nhân sự từ các dòng giờ công `APPROVED` của dự án. Mỗi dòng được nhân với chi phí giờ công của nhân sự có `effectiveFrom` gần nhất nhưng không sau `workDate`; dòng chưa có chi phí hiệu lực vẫn được trả về với `missingCostData=true` và không cộng vào `totalLaborCost`.
+
+**Quyền**: `VT-01`, `VT-02`, `VT-05`.
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "projectId": 42,
+    "totalApprovedHours": 12.00,
+    "totalLaborCost": 3000000.00,
+    "missingCostEntryCount": 0,
+    "lines": [
+      {
+        "timeEntryId": 901,
+        "employeeId": 17,
+        "workDate": "2026-01-15",
+        "hours": 8.00,
+        "hourlyRate": 250000.00,
+        "laborCost": 2000000.00,
+        "missingCostData": false
+      }
+    ]
+  }
+}
+```
+
+`hourlyRate` và `laborCost` ở từng dòng là dữ liệu nhạy cảm và được che tự động theo `QTN-02`; mỗi lần đọc endpoint ghi một log truy cập dữ liệu `COST`. Dòng đảo/correction đã duyệt được tính theo đúng số giờ mang dấu của bản ghi.
+
+### `NCL-09-CN-002` — Tính doanh thu ghi nhận của dự án
+
+#### GET `/projects/{projectId}/profitability/revenue`
+
+Tính động doanh thu ghi nhận của dự án theo đúng loại hợp đồng (`Contract.contractType`) — khác với tiền
+đã thu/đã xuất hoá đơn (QTN-15: đơn giá áp theo thời điểm phát sinh).
+
+- **`TIME_AND_MATERIAL`** (hợp đồng theo giờ) — phương thức `HOURLY`: với mỗi dòng giờ công `APPROVED`
+  của dự án, nếu `billable=true` thì tra đơn giá áp dụng tại đúng `workDate` của dòng đó (kế thừa
+  `NCL-07-CN-005`/QTN-16, đã nhân hệ số `workType` theo `NCL-07-CN-006`), quy đổi đơn giá/ngày sang
+  đơn giá/giờ (giả định **1 ngày công = 8 giờ**) rồi nhân với số giờ để ra doanh thu của dòng; cộng dồn
+  thành `totalRecognizedRevenue`. Dòng `billable=false` bị loại khỏi doanh thu (vẫn tính vào giá vốn ở
+  `NCL-09-CN-001`) — trả về với `billable=false`. Dòng chưa tra được đơn giá (chưa khai báo cấp bậc,
+  chưa có đơn giá hiệu lực...) trả về với `missingRateData=true`, không cộng vào tổng.
+- **`FIXED_PRICE`** (hợp đồng trọn gói) — phương thức `PERCENTAGE_OF_COMPLETION`: `totalRecognizedRevenue`
+  = `Contract.totalValue` nhân `completionRate` (= số `Task.status = DONE` / tổng số công việc của dự án,
+  làm tròn 4 chữ số thập phân).
+- **`MAINTENANCE`, `MILESTONE`**: chưa được hỗ trợ — trả lỗi `400 INVALID_STATE`.
+
+**Quyền**: `VT-01` (Ban giám đốc), `VT-05` (Kế toán) — vai trò khác nhận `403 FORBIDDEN`.
+
+**Response `200 OK` (hợp đồng theo giờ):**
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "projectId": 42,
+    "contractId": 5,
+    "contractType": "TIME_AND_MATERIAL",
+    "recognitionMethod": "HOURLY",
+    "totalRecognizedRevenue": 2400000.00,
+    "totalBillableHours": 8.00,
+    "excludedLineCount": 0,
+    "missingRateEntryCount": 0,
+    "completionRate": null,
+    "totalTaskCount": null,
+    "doneTaskCount": null,
+    "lines": [
+      {
+        "timeEntryId": 901,
+        "employeeId": 17,
+        "workDate": "2026-06-30",
+        "hours": 8.00,
+        "appliedRate": 300000.0000,
+        "lineRevenue": 2400000.00,
+        "billable": true,
+        "missingRateData": false
+      }
+    ]
+  }
+}
+```
+
+**Response `200 OK` (hợp đồng trọn gói):** `totalBillableHours`/`excludedLineCount`/`missingRateEntryCount`/
+`lines` rỗng hoặc `0`; `completionRate`, `totalTaskCount`, `doneTaskCount` có giá trị, ví dụ
+`{ "recognitionMethod": "PERCENTAGE_OF_COMPLETION", "totalRecognizedRevenue": 60000000.00, "completionRate": 0.6000, "totalTaskCount": 5, "doneTaskCount": 3 }`.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 403 | `FORBIDDEN` | Không phải `VT-01`/`VT-05` — ghi nhật ký lần từ chối (TC-04) |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy dự án hoặc hợp đồng |
+| 400 | `INVALID_STATE` | Loại hợp đồng `MAINTENANCE`/`MILESTONE`, chưa được hỗ trợ |
+
+**Lưu ý:**
+- Mỗi lần đọc endpoint ghi một log truy cập dữ liệu `REVENUE` (TC-05).
+- Để tự động tra đơn giá cho từng dòng giờ công (thay vì bắt Frontend nhập tay `level` như
+  `NCL-07-CN-005`), hồ sơ nhân sự (`GET/POST/PUT /employees`) nay có thêm trường `level` (cấp bậc,
+  tùy chọn) — nhân sự chưa khai báo cấp bậc sẽ khiến các dòng giờ công của người đó bị đánh dấu
+  `missingRateData=true` thay vì chặn cả lượt tính doanh thu.
+
+### `NCL-09-CN-003` — Hiển thị biên lợi nhuận thời gian thực
+
+#### GET `/projects/{projectId}/profitability/margin`
+
+Tính động biên lợi nhuận gộp của dự án từ doanh thu ghi nhận và toàn bộ chi phí đã duyệt tại thời
+điểm đọc. Công thức: `totalCost = laborCost + projectExpenseCost + subcontractorCost`,
+`grossProfit = recognizedRevenue - totalCost`, `marginRate = grossProfit / recognizedRevenue`. Khi
+doanh thu bằng `0`, `marginRate` là `null` để tránh chia cho `0`. Hai danh sách
+`laborCostLines` và `revenueLines` cho phép truy ngược về các dòng cấu thành biên; dữ liệu giá vốn trong
+`laborCostLines` tiếp tục được che theo `QTN-02`.
+
+**Quyền**: `VT-01` (Ban giám đốc), `VT-02` (Quản lý dự án), `VT-05` (Kế toán).
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "projectId": 42,
+    "recognizedRevenue": 5000000.00,
+    "laborCost": 3000000.00,
+    "projectExpenseCost": 0.00,
+    "subcontractorCost": 0.00,
+    "totalCost": 3000000.00,
+    "grossProfit": 2000000.00,
+    "marginRate": 0.4000,
+    "missingCostEntryCount": 0,
+    "missingRateEntryCount": 0,
+    "laborCostLines": [],
+    "revenueLines": []
+  }
+}
+```
+
+`recognizedRevenue` dùng đúng quy tắc của `NCL-09-CN-002`; `laborCost` dùng đúng quy tắc của
+`NCL-09-CN-001`. Nếu thiếu đơn giá hoặc giá vốn, tổng chỉ cộng các dòng đủ dữ liệu và hai bộ đếm
+`missing*EntryCount` cho biết phần còn thiếu.
+
+**Response lỗi:** `403 FORBIDDEN` nếu không thuộc ba vai trò trên; `404 RESOURCE_NOT_FOUND` hoặc
+`400 INVALID_STATE` được truyền theo quy tắc của các phép tính doanh thu và giá vốn thành phần.
+
+### `NCL-09-CN-004` — Cảnh báo dự án âm biên
+
+Ngưỡng biên lợi nhuận tối thiểu là cấu hình **toàn công ty** (không theo từng dự án) do Ban giám đốc
+đặt. Mỗi lần `GET /projects/{projectId}/profitability/margin` được gọi (tức mỗi lần "tính lại" biên
+lợi nhuận, QTN-21), hệ thống tự động so `marginRate` với ngưỡng hiện hành và gửi thông báo trong ứng
+dụng cho **quản lý dự án** (`Project.projectManagerId`) và **toàn bộ Ban giám đốc** (`VT-01`) nếu thấp
+hơn. Dự án chưa phát sinh doanh thu (`marginRate = null`, xem `NCL-09-CN-003`) được bỏ qua thay vì báo
+âm biên. Mỗi dự án chỉ nhận tối đa một lượt cảnh báo mỗi ngày (chống spam khi được xem lại nhiều lần).
+
+#### `GET /profitability/margin-alert-threshold`
+
+Xem ngưỡng hiện hành. **Quyền**: `VT-01`, `VT-02`, `VT-05`.
+
+**Response `200 OK`:**
+```json
+{ "success": true, "data": { "minMarginRate": 0.1500, "updatedBy": "giamdoc", "updatedAt": "2026-09-18T17:03:56" } }
+```
+Các trường đều `null` nếu Ban giám đốc chưa từng đặt ngưỡng — khi đó hệ thống không cảnh báo cho bất kỳ
+dự án nào.
+
+#### `PUT /profitability/margin-alert-threshold`
+
+Đặt/đổi ngưỡng. **Quyền**: chỉ `VT-01` (TC-03) — vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký
+lần từ chối tự động.
+
+**Request:**
+```json
+{ "minMarginRate": 0.15 }
+```
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `minMarginRate` | number | có | Tỷ lệ dạng phân số (0.15 = 15%), cùng đơn vị với `marginRate` của `NCL-09-CN-003`. |
+
+**Response thành công:** cùng cấu trúc `GET` ở trên. Mỗi lần đặt/đổi ngưỡng thành công ghi một dòng vào
+Nhật ký hệ thống — người thực hiện, nội dung, thời điểm (TC-04).
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 403 | `FORBIDDEN` | Không phải Ban giám đốc (`VT-01`) — ghi nhật ký lần từ chối (TC-03) |
+| 400 | `VALIDATION_ERROR` | Thiếu `minMarginRate` hoặc ngoài khoảng `[-1.0, 1.0]` |
+
+**Lưu ý cho Frontend:** thông báo cảnh báo (`type = NEGATIVE_MARGIN_ALERT`) đọc qua API có sẵn của
+Epic thông báo (`GET /notifications`) — không có API riêng để "xem lịch sử cảnh báo".
+
+### `NCL-09-CN-005` — Báo cáo biên lợi nhuận theo khách hàng và theo nhân sự
+
+Gộp doanh thu ghi nhận và giá vốn giờ công của mọi dòng giờ công **đã duyệt** (`APPROVED`) có `workDate`
+nằm trong kỳ `from`..`to`, theo hai chiều: khách hàng (qua dự án) và nhân sự thực hiện.
+
+- **Giá vốn** (mọi dòng, kể cả không tính phí — `QTN-17`): `hours × chi phí giờ công của nhân sự hiệu lực tại workDate`.
+- **Doanh thu** (chỉ dòng `billable=true` — theo đúng quy tắc của `NCL-09-CN-002-TC-03`): `hours × (đơn giá ngày hiệu lực tại workDate × hệ số loại hình công việc ÷ 8)`, đơn giá ưu tiên đơn giá riêng hợp đồng rồi mới đến bảng giá chung (`QTN-15`/`QTN-16`).
+- Dòng thiếu chi phí giờ công hiệu lực bị loại khỏi giá vốn (đếm vào `missingCostEntryCount`); dòng có tính phí nhưng nhân sự chưa khai báo cấp bậc (`Employee.level`) hoặc thiếu đơn giá bán hiệu lực ở đúng cặp (vai trò, cấp bậc) đó bị loại khỏi doanh thu (đếm vào `missingRevenueEntryCount`). Hai trường hợp này **không** làm lỗi cả báo cáo.
+- `marginPercent` là `null` khi doanh thu bằng 0 (không chia được).
+
+**Quyền**: chỉ `VT-01` (Ban giám đốc) — vai trò khác bị từ chối `403 FORBIDDEN` và được ghi vào Nhật ký hệ thống (`QTN-01`/`QTN-03`). Mỗi lần xem thành công ghi một log truy cập dữ liệu `MARGIN`.
+
+#### GET `/reports/margin/by-customer?from={yyyy-MM-dd}&to={yyyy-MM-dd}`
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "periodFrom": "2026-01-01",
+    "periodTo": "2026-01-31",
+    "totalRevenue": 6000000.00,
+    "totalCost": 2400000.00,
+    "totalMargin": 3600000.00,
+    "totalMarginPercent": 60.00,
+    "missingCostEntryCount": 0,
+    "missingRevenueEntryCount": 0,
+    "lines": [
+      {
+        "customerId": 1000,
+        "customerCode": "KH001",
+        "customerName": "Công ty A",
+        "approvedHours": 8.00,
+        "revenue": 4000000.00,
+        "cost": 1600000.00,
+        "margin": 2400000.00,
+        "marginPercent": 60.00
+      }
+    ]
+  }
+}
+```
+
+#### GET `/reports/margin/by-employee?from={yyyy-MM-dd}&to={yyyy-MM-dd}`
+
+Cùng khuôn dạng, `lines[]` gồm `employeeId`, `employeeName`, `professionalRole`, `approvedHours`, `revenue`,
+`cost`, `margin`, `marginPercent` thay cho các trường theo khách hàng.
+
+`from`/`to` là tham số bắt buộc (`GET` query) — thiếu tham số trả `400 VALIDATION_ERROR`; `from` sau `to` cũng trả `400 VALIDATION_ERROR`. Kỳ không phát sinh giờ công đã duyệt nào trả `lines: []` và các tổng bằng `0` (không phải lỗi). `totalCost`, `totalMargin`, `totalMarginPercent` và các trường `cost`/`margin`/`marginPercent` của từng dòng là dữ liệu nhạy cảm, được che tự động theo `QTN-02` với vai trò không đủ quyền (tuy endpoint đã giới hạn `VT-01` nên trong thực tế không phát sinh).
+
+### `NCL-09-CN-006` — So sánh biên lợi nhuận dự kiến với thực tế
+
+#### GET `/projects/{projectId}/profitability/planned-vs-actual-margin`
+
+So sánh biên lợi nhuận **dự kiến** (từ báo giá mới nhất đã dùng sẵn cho hợp đồng của dự án —
+`NCL-04-CN-001`) với biên lợi nhuận **thực tế** (từ mọi dòng giờ công **đã duyệt** của dự án tính đến
+hiện tại, cùng công thức QTN-15/16/17 với `NCL-09-CN-005`).
+
+- **Doanh thu dự kiến** = `totalAmount` của báo giá. **Chi phí dự kiến** ước tính theo từng dòng báo giá:
+  `số ngày công × 8 × chi phí giờ công bình quân của các nhân sự đang giữ cùng vai trò chuyên môn` (báo
+  giá lập trước khi giao việc cho người cụ thể nên chưa biết chính xác ai sẽ làm). Dòng báo giá có vai
+  trò chưa có nhân sự nào đảm nhiệm bị loại khỏi chi phí dự kiến, đếm vào `missingPlannedCostItemCount`.
+- **Doanh thu/chi phí thực tế**: tính như `NCL-09-CN-005` nhưng gộp toàn bộ dự án (không giới hạn kỳ).
+- `marginGapPercentPoints` = `actualMarginPercent - plannedMarginPercent` (điểm phần trăm; `null` nếu
+  thiếu dữ liệu để tính 1 trong 2 vế). `gapReasons` là danh sách diễn giải ngắn theo hai nguyên nhân:
+  giờ công thực tế vượt kế hoạch, và/hoặc chi phí giờ công bình quân thực tế cao hơn dự kiến.
+
+**Quyền**: chỉ `VT-02` (Quản lý dự án) — vai trò khác bị từ chối `403 FORBIDDEN` và được ghi vào Nhật ký
+hệ thống (`QTN-01`/`QTN-03`). Mỗi lần xem thành công ghi một log truy cập dữ liệu `MARGIN`. Khác với
+`labor-cost` (che chi phí/giờ công theo TỪNG nhân sự), endpoint này chỉ trả số liệu tổng hợp cấp dự án
+nên **không** áp dụng che dữ liệu `QTN-02` (PM là người dùng chính của báo cáo).
+
+**Response `200 OK`**
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "projectId": 42,
+    "quoteId": 7,
+    "quoteVersion": 2,
+    "plannedWorkDays": 20.00,
+    "plannedRevenue": 100000000.00,
+    "plannedCost": 70000000.00,
+    "plannedMargin": 30000000.00,
+    "plannedMarginPercent": 30.00,
+    "actualHours": 178.00,
+    "actualRevenue": 100000000.00,
+    "actualCost": 82000000.00,
+    "actualMargin": 18000000.00,
+    "actualMarginPercent": 18.00,
+    "marginGapPercentPoints": -12.00,
+    "hoursVarianceVsPlanned": 18.00,
+    "gapReasons": [
+      "Gio cong thuc te vuot ke hoach 18.00 gio (tuong duong 2.25 ngay cong).",
+      "Chi phi gio cong thuc te binh quan (460674.16/gio) cao hon du kien (437500.00/gio)."
+    ],
+    "missingPlannedCostItemCount": 0,
+    "missingActualCostEntryCount": 0,
+    "missingActualRevenueEntryCount": 0
+  }
+}
+```
+
+**Response lỗi — dự án chưa có báo giá nào gắn kèm (`404 RESOURCE_NOT_FOUND`, TC-02):**
+```json
+{
+  "success": false,
+  "errorCode": "RESOURCE_NOT_FOUND",
+  "message": "Du an chua co bao gia nao gan kem de so sanh bien du kien voi thuc te",
+  "timestamp": "2026-09-18T10:00:00",
+  "fieldErrors": null
+}
+```
+
+### `NCL-09-CN-007` — Dự báo lợi nhuận tới khi kết thúc dự án
+
+#### GET `/projects/{projectId}/profitability/profit-forecast`
+
+Ngoại suy lợi nhuận của dự án **tới khi hoàn thành**, từ dữ liệu giờ công/chi phí/doanh thu thực tế
+hiện hành (tái dùng `NCL-09-CN-001`/`NCL-09-CN-002`) và ngân sách giờ công của các công việc
+(`Task.budgetHours`, `NCL-05-CN-005`) — không lưu snapshot, cùng mô hình "tính động" với các báo cáo
+khác của Epic 9.
+
+- **`remainingHours`** (giờ còn lại): khi dự án **chưa** vượt ngân sách (`overBudget=false`, TC-01) =
+  `budgetHours - actualHours` (đúng phần ngân sách chưa dùng). Khi **đã** vượt ngân sách (TC-02), ngân
+  sách không còn là mốc tin cậy nên ngoại suy theo tốc độ tiêu hao thực tế:
+  `estimatedTotalHoursAtCompletion = actualHours / taskCompletionRate` (tỷ lệ hoàn thành = số công việc
+  `DONE` / tổng số công việc), rồi `remainingHours` là phần còn thiếu tới mốc đó. Dự án chưa khai báo
+  ngân sách giờ công cho công việc nào thì `remainingHours = 0` kèm cảnh báo trong `warnings`.
+- **`forecastCost`** = chi phí thực tế + `remainingHours × đơn giá vốn bình quân thực tế` (=
+  `actualCost / actualHours`).
+- **`forecastRevenue`**: hợp đồng trọn gói (`FIXED_PRICE`) là trọn giá trị hợp đồng (doanh thu ghi nhận
+  theo tỷ lệ hoàn thành công việc, không phụ thuộc số giờ); hợp đồng theo giờ
+  (`TIME_AND_MATERIAL`) = doanh thu thực tế + `remainingHours × đơn giá bán bình quân thực tế`.
+- `marginVariancePercentPoints` = `forecastMarginPercent - actualMarginPercent` (điểm phần trăm; `null`
+  nếu thiếu dữ liệu để tính 1 trong 2 vế). `riskOfLoss=true` khi `forecastMargin` âm — kèm cảnh báo
+  tương ứng trong `warnings` (cùng danh sách với cảnh báo vượt ngân sách/thiếu ngân sách giờ công).
+
+**Quyền**: chỉ `VT-02` (Quản lý dự án) — vai trò khác bị từ chối `403 FORBIDDEN` và được ghi vào Nhật ký
+hệ thống (`QTN-01`/`QTN-03`). Mỗi lần xem thành công ghi một log truy cập dữ liệu `MARGIN`. Cùng lý do
+với `planned-vs-actual-margin` (chỉ trả số liệu tổng hợp cấp dự án, PM là người dùng chính), endpoint
+này **không** áp dụng che dữ liệu `QTN-02`.
+
+**Response `200 OK` (TC-02, dự án đã vượt ngân sách giờ công):**
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "projectId": 42,
+    "budgetHours": 160.00,
+    "actualHours": 200.00,
+    "remainingHours": 40.00,
+    "overBudget": true,
+    "taskCompletionRate": 0.8000,
+    "estimatedTotalHoursAtCompletion": 240.00,
+    "actualRevenue": 80000000.00,
+    "actualCost": 60000000.00,
+    "actualMargin": 20000000.00,
+    "actualMarginPercent": 25.00,
+    "forecastRevenue": 96000000.00,
+    "forecastCost": 72000000.00,
+    "forecastMargin": 24000000.00,
+    "forecastMarginPercent": 25.00,
+    "marginVariancePercentPoints": 0.00,
+    "riskOfLoss": false,
+    "warnings": [
+      "Du an da vuot ngan sach gio cong (200.00/160.00 gio) - phan con lai duoc uoc tinh theo toc do tieu hao thuc te."
+    ]
+  }
+}
+```
+
+## Epic `NCL-08` — Chi phí dự án
+
+### `NCL-08-CN-001` — Ghi nhận chi phí phát sinh của dự án
+
+#### `POST /projects/{projectId}/expenses`
+
+Yêu cầu token của nhân viên chuyên môn (`VT-03`). Chỉ dự án đang chạy mới nhận chi phí.
+
+**Request:**
+```json
+{
+  "type": "TRAVEL",
+  "amount": 2000000,
+  "expenseDate": "2026-09-10",
+  "description": "Chi phi di lai gap khach hang",
+  "receiptUrl": "https://files.example/receipt-1.pdf",
+  "billable": false
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `projectId` | number | có | Lấy từ URL. Phải trỏ tới dự án đang chạy. |
+| `type` | string | có | `TRAVEL`, `TOOLS` hoặc `OTHER`. |
+| `amount` | number | có | Lớn hơn `0`, đơn vị tiền tệ của công ty. |
+| `expenseDate` | date | có | Định dạng `YYYY-MM-DD`, không được ở tương lai. |
+| `description` | string | có | Không rỗng, tối đa 1000 ký tự. |
+| `receiptUrl` | string | không | Đường dẫn chứng từ mô phỏng, tối đa 500 ký tự. |
+| `billable` | boolean | không | Có tính lại cho khách hàng hay không; mặc định `false`. |
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Ghi nhan chi phi thanh cong",
+  "data": {
+    "id": 30,
+    "projectId": 1,
+    "userId": 7,
+    "type": "TRAVEL",
+    "amount": 2000000.00,
+    "expenseDate": "2026-09-10",
+    "description": "Chi phi di lai gap khach hang",
+    "receiptUrl": "https://files.example/receipt-1.pdf",
+    "billable": false,
+    "status": "SUBMITTED",
+    "createdAt": "2026-09-10T08:00:00"
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Thiếu/sai loại chi phí, số tiền không dương, mô tả rỗng hoặc ngày ở tương lai. |
+| 400 | `INVALID_STATE` | Dự án đã đóng hoặc không còn ở trạng thái `RUNNING`. |
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-03`. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy dự án. |
+
+Sau khi tạo, phiếu ở trạng thái `SUBMITTED`; hệ thống ghi audit gồm người tạo, thời điểm và nội dung thao tác.
+
+### `NCL-08-CN-002` — Duyệt chi phí dự án
+
+Kế toán (`VT-05`) xem hàng chờ duyệt, duyệt hoặc từ chối phiếu chi phí. Phiếu được duyệt là dữ liệu
+được phép đưa vào giá vốn dự án; phiếu từ chối giữ nguyên dữ liệu gốc và lưu lý do để người tạo xử lý lại.
+
+#### `GET /expenses/pending`
+
+Trả về các phiếu đang ở trạng thái `SUBMITTED`, sắp xếp theo ngày phát sinh tăng dần rồi tới mã phiếu.
+Yêu cầu token của kế toán (`VT-05`).
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": 30,
+      "projectId": 1,
+      "userId": 7,
+      "type": "TRAVEL",
+      "amount": 2000000.00,
+      "expenseDate": "2026-09-10",
+      "description": "Chi phi di lai gap khach hang",
+      "receiptUrl": "https://files.example/receipt-1.pdf",
+      "billable": false,
+      "status": "SUBMITTED",
+      "createdAt": "2026-09-10T08:00:00",
+      "approvedBy": null,
+      "approvedAt": null,
+      "rejectedBy": null,
+      "rejectedAt": null,
+      "rejectReason": null
+    }
+  ]
+}
+```
+
+#### `POST /expenses/{expenseId}/approve`
+
+Duyệt một phiếu đang `SUBMITTED`. Không cần request body. Khi thành công, phiếu chuyển sang `APPROVED`,
+lưu người duyệt và thời điểm duyệt, đồng thời ghi audit. Chỉ phiếu `APPROVED` được tính vào giá vốn dự án.
+
+**Response thành công — `200 OK`:** trả về cùng cấu trúc `ExpenseRes` như hàng chờ, với `status` là
+`APPROVED`, `approvedBy` và `approvedAt` có giá trị.
+
+#### `POST /expenses/{expenseId}/reject`
+
+Từ chối một phiếu đang `SUBMITTED`. Yêu cầu token của kế toán (`VT-05`) và lý do là bắt buộc.
+
+**Request:**
+```json
+{
+  "reason": "Thieu chung tu goc"
+}
+```
+
+**Response thành công — `200 OK`:** trả về cùng cấu trúc `ExpenseRes`, với `status` là `REJECTED`,
+`rejectedBy`, `rejectedAt` và `rejectReason` có giá trị.
+
+**Response lỗi cho cả ba endpoint:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Request từ chối thiếu lý do hoặc lý do dài hơn 1000 ký tự. |
+| 400 | `INVALID_STATE` | Phiếu không còn ở trạng thái `SUBMITTED` (đã duyệt hoặc đã từ chối). |
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-05`. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy phiếu chi phí. |
+
+Mọi thao tác duyệt/từ chối đều ghi audit gồm người thực hiện, thời điểm, phiếu và lý do từ chối nếu có.
+
+#### `PUT /expenses/{expenseId}`
+
+Người tạo phiếu (`VT-03`) dùng lại request tạo chi phí để sửa và nộp lại phiếu đang `REJECTED`.
+Hệ thống kiểm tra người gọi đúng là `userId` của phiếu, dự án còn `RUNNING`, sau đó xóa thông tin từ chối,
+chuyển trạng thái về `SUBMITTED` và đưa phiếu trở lại hàng chờ duyệt. Phiếu `SUBMITTED` hoặc `APPROVED`
+không được sửa.
+
+### `NCL-08-CN-003` — Đánh dấu chi phí tính lại cho khách hàng
+
+#### `PUT /expenses/{expenseId}/billable`
+
+Yêu cầu token của quản lý dự án (`VT-02`). Chỉ phiếu chi phí đã được kế toán duyệt (`APPROVED`) mới được
+đánh dấu hoặc bỏ đánh dấu tính lại cho khách hàng. Endpoint là idempotent: gửi lại cùng giá trị không tạo thêm
+thay đổi dữ liệu ngoài bản ghi audit.
+
+**Request:**
+```json
+{
+  "billable": true
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `expenseId` | number | có | Lấy từ URL; phải trỏ tới phiếu chi phí đã duyệt. |
+| `billable` | boolean | có | `true` để tính lại cho khách hàng, `false` để bỏ đánh dấu. |
+
+**Response thành công — `200 OK`:** trả về cùng cấu trúc `ExpenseRes`, với `billable` bằng giá trị vừa cập nhật
+và `status` là `APPROVED`.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Thiếu trường `billable` hoặc giá trị không phải boolean. |
+| 400 | `INVALID_STATE` | Phiếu chưa được duyệt, đã ở trạng thái khác `APPROVED`, hoặc đã nằm trong hóa đơn khi yêu cầu bỏ đánh dấu. |
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-02`. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy phiếu chi phí. |
+
+Mỗi lần cập nhật ghi audit gồm người thực hiện, thời điểm, phiếu và giá trị `billable` mới.
 
 ---
 
@@ -151,6 +704,9 @@ Cập nhật `fullName`, `email`, `departmentId`, `roleCodes` và tùy chọn `p
 ```
 
 `status` nhận `ACTIVE`, `LOCKED` hoặc `INACTIVE`. Khi mở lại bằng `ACTIVE`, hệ thống xóa bộ đếm đăng nhập sai và thời gian khóa tạm.
+
+Khi chuyển sang `LOCKED`/`INACTIVE`, **mọi phiên đang mở của tài khoản mất hiệu lực ngay**: lần gọi API kế tiếp bằng
+token cũ nhận `401 UNAUTHORIZED` (không phải chờ token hết hạn). Mở lại tài khoản thì người dùng phải đăng nhập lại.
 
 Các lỗi riêng của story: `DUPLICATE_DATA` (409), `RESOURCE_NOT_FOUND` (404), `INVALID_STATE` (400), `FORBIDDEN` (403).
 
@@ -376,6 +932,42 @@ Danh sách hợp đồng lao động của một hồ sơ, mới nhất trước
 | 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy tài khoản, bộ phận hoặc hồ sơ nhân sự |
 | 409 | `DUPLICATE_DATA` | Tài khoản đã có hồ sơ nhân sự |
 | 400 | `INVALID_STATE` | `endDate` sớm hơn ngày bắt đầu (TC-03) |
+
+#### Lịch ngày nghỉ lễ (`/holidays`) — bổ sung cho QTN-23
+
+Ngày lễ **không tính vào giờ làm việc chuẩn** của báo cáo tỷ lệ giờ tính phí (`NCL-11-CN-002`) và KPI
+`billableHoursRatio` của bảng điều khiển (`NCL-11-CN-001`). Cùng phân quyền với hồ sơ nhân sự: chỉ Nhân sự
+(`VT-06`) và Quản trị viên (`VT-07`); vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối. Bảng
+chưa có dữ liệu mẫu — đến khi được khai báo, mọi ngày thứ Hai đến thứ Sáu đều tính là ngày làm việc. Mỗi lần thêm,
+sửa, xóa đều ghi Nhật ký hệ thống (người thực hiện, nội dung, thời điểm).
+
+**Body** của `POST /holidays` và `PUT /holidays/{id}`:
+```json
+{ "name": "Quoc khanh", "holidayDate": "2026-09-02", "recurringYearly": true }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `name` | string | có | Tối đa 255 ký tự |
+| `holidayDate` | date (`yyyy-MM-dd`) | có | Mỗi ngày chỉ khai báo được một lần |
+| `recurringYearly` | boolean | không | `true` cho ngày lễ cố định theo dương lịch (1/1, 30/4, 1/5, 2/9): áp dụng cùng ngày/tháng của mọi năm từ năm của `holidayDate` (29/2 chỉ ở năm nhuận). Mặc định `false` cho ngày lễ một lần (Tết Nguyên đán, Giỗ Tổ, ngày nghỉ bù) |
+
+- `GET /holidays` — danh sách ngày lễ theo `holidayDate` tăng dần, mỗi phần tử `{ id, name, holidayDate, recurringYearly }`.
+- `POST /holidays` — thêm một ngày lễ, trả ngày lễ vừa tạo.
+- `PUT /holidays/{id}` — sửa ngày lễ, trả bản sau khi sửa.
+- `DELETE /holidays/{id}` — xóa ngày lễ.
+
+Quy tắc tính giờ chuẩn: chỉ ngày lễ rơi vào thứ Hai đến thứ Sáu mới bị trừ (cuối tuần vốn không có giờ chuẩn), và chỉ
+ngày lễ nằm trong thời gian làm việc của nhân sự. Nhân sự bán thời gian mất đúng số giờ/ngày của mình (`standardHoursPerWeek` ÷ 5).
+**Giờ công làm vào ngày lễ vẫn được cộng vào giờ tính phí** nhưng không cộng thêm giờ chuẩn, nên tỷ lệ của người làm ngày
+lễ có thể vượt 100%. Chưa hỗ trợ "làm bù" vào ngày cuối tuần: chỉ khai báo được ngày nghỉ, không khai báo được ngày làm thêm.
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 403 | `FORBIDDEN` | Không phải Nhân sự/Quản trị viên |
+| 400 | `VALIDATION_ERROR` | Thiếu `name` hoặc `holidayDate`, `name` quá 255 ký tự, hoặc ngày sai định dạng |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy ngày lễ `{id}` khi sửa/xóa |
+| 409 | `DUPLICATE_DATA` | Ngày này đã được khai báo là ngày lễ |
 
 ---
 
@@ -633,6 +1225,24 @@ Bỏ trống hết → trả toàn bộ. Không có hồ sơ nào khớp → `da
 - `data` là mảng thuần, **không phân trang** — Frontend tự lọc/sắp trên máy khách nếu cần.
 - Khi `data` rỗng → hiển thị trạng thái rỗng (“Chưa có hồ sơ khách hàng nào”), không phải lỗi.
 - Đây là nguồn dữ liệu để mở màn hình Xem hồ sơ tổng hợp (`GET /customers/{customerId}/overview`, `NCL-02-CN-004`).
+- `GET /customers/access-check` (`VT-04`/`VT-02`): không làm gì ngoài kiểm tra quyền, trả `200` hoặc `403`. Màn hình
+  "Không có thẩm quyền" gọi endpoint này để lần từ chối được backend ghi nhật ký thật (TC-03).
+
+#### `GET /customers/{customerId}/overview` (`NCL-02-CN-004`)
+
+Token `VT-04` hoặc `VT-02`. Trả `CustomerOverviewRes` gồm `customer` và năm nhóm `opportunities`, `contracts`,
+`projects`, `invoices`, `receivables` — mỗi phần tử là `CustomerOverviewItemRes`
+(`id, code, name, status, amount, date, contractType, endDate`), đã sắp theo `date` tăng dần (TC-01).
+
+- `invoices`: hóa đơn đã phát hành (`ISSUED`, `PARTIALLY_PAID`, `PAID`) — `amount` là tổng hóa đơn, `date` là ngày
+  lập, `endDate` là hạn thanh toán.
+- `receivables`: hóa đơn còn phải thu — `amount` là **số còn phải thu**, `date` là hạn thanh toán, `status` là
+  `OVERDUE` khi đã quá hạn.
+- **Phạm vi dữ liệu (TC-02, QTN-01)** — người có phạm vi toàn công ty thấy hết; người còn lại chỉ thấy: dự án trong
+  phạm vi (cùng quy tắc với danh sách dự án); hợp đồng chưa có dự án hoặc có ít nhất một dự án trong phạm vi;
+  hóa đơn/công nợ của các hợp đồng đó; cơ hội do chính mình (SELF) hoặc người thuộc nhánh được phân (DEPARTMENT)
+  phụ trách.
+- Mỗi lần gọi backend ghi nhật ký `VIEW_OVERVIEW` (người xem, thời điểm) — TC-03.
 
 ---
 
@@ -684,6 +1294,10 @@ Body giống hệt `POST /customers` (dùng lại `CustomerCreateReq`).
 - `matchedFields` cho biết trường nào khớp: `"ten"`, `"maSoThue"`, `"soDienThoai"` — dùng để giải thích lý do
   nghi trùng cho người dùng (ví dụ tô đậm ô mã số thuế nếu `matchedFields` chứa `"maSoThue"`).
 - Danh sách sắp xếp giảm dần theo `similarity`.
+- Tập so khớp là **mọi hồ sơ còn hiệu lực** (bỏ qua hồ sơ đã gộp `MERGED`); tên được so gần đúng (Levenshtein)
+  sau khi bỏ dấu tiếng Việt và dấu câu — "Công ty Ánh Dương" và "Cong ty Anh Duong." được coi là gần giống (TC-01).
+- Frontend hiển thị `similarity` dạng phần trăm cạnh từng hồ sơ và cho người dùng **chọn dùng hồ sơ đã có**
+  thay vì tạo mới (mở hồ sơ đó), hoặc xác nhận tạo mới kèm lý do.
 
 **Response lỗi:**
 
@@ -804,6 +1418,7 @@ người dùng nhập lý do → gọi `POST /customers/{customerId}/update-with
 
 Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`) — khác với `NCL-02-CN-001`/`002`, vai trò **Quản lý dự án
 không được truy cập** nhóm API này; vai trò khác (kể cả `VT-02`) nhận `403 FORBIDDEN` (TC-03).
+Hồ sơ đã gộp (`status = MERGED`) chỉ còn để tra cứu: thêm người liên hệ / đổi đầu mối chính trả `400 INVALID_STATE`.
 
 Mỗi khách hàng có thể có nhiều người liên hệ nhưng **chỉ duy nhất một người là đầu mối chính** tại một thời điểm
 (`isPrimary = true`). Có hai cách để một người liên hệ trở thành đầu mối chính, cả hai đều tự động chuyển đầu
@@ -981,9 +1596,10 @@ thống nhất, gợi ý:
 | HTTP | `errorCode` | Khi nào xảy ra |
 |---|---|---|
 | 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
-| 403 | `FORBIDDEN` | Không phải `VT-04`/`VT-02` — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh (`VT-04`) — kể cả Quản lý dự án; hệ thống ghi nhật ký lần từ chối (TC-03) |
 | 400 | `VALIDATION_ERROR` | Thiếu / để trống một trong ba nhãn, hoặc vượt quá độ dài cho phép |
 | 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy `customerId` |
+| 400 | `VALIDATION_ERROR` | Hồ sơ đã bị gộp (`status = MERGED`) — không thể phân nhóm tiếp |
 
 **Lưu ý cho Frontend:**
 - Sau khi gán nhãn, lọc danh sách bằng `GET /customers?industry=...&companySize=...&priority=...` (khớp **chính
@@ -991,6 +1607,8 @@ thống nhất, gợi ý:
 - Nhóm lọc không có khách hàng nào → `data: []`; Frontend hiển thị trạng thái "không có kết quả phù hợp" (TC-02).
 - Mỗi lần cập nhật phân nhóm được backend tự ghi nhật ký (`SEGMENT_UPDATE`: người thực hiện · nội dung · thời
   điểm) vào bảng nhật ký khách hàng dùng chung với `NCL-02-CN-002` (TC-04) — Frontend không cần gọi thêm API.
+- `GET /customers/segment/access-check` (chỉ `VT-04`): không làm gì ngoài kiểm tra quyền, trả `200` hoặc `403`.
+  Màn hình "Không có quyền phân nhóm" gọi endpoint này để lần từ chối được ghi nhật ký thật (TC-03).
 
 ---
 
@@ -1020,13 +1638,16 @@ Xem trước ảnh hưởng trước khi gộp thật — **không làm thay đ�
   "data": {
     "targetCustomer": { "id": 1, "code": "KH-000001", "name": "Cong ty TNHH ABC", "...": "..." },
     "sourceCustomer": { "id": 2, "code": "KH-000002", "name": "Cong ty TNHH ABC (chi nhanh)", "...": "..." },
-    "relatedRecordCount": 3
+    "relatedRecordCount": 3,
+    "relatedRecordBreakdown": { "co hoi": 0, "hop dong": 1, "du an": 1, "hoa don": 1, "de nghi xuat hoa don": 0, "nhat ky khach hang": 0, "nhat ky bo qua canh bao trung": 0 }
   }
 }
 ```
 
-- `relatedRecordCount`: tổng số bản ghi hiện có của hồ sơ bị gộp (nhật ký khách hàng + lý do bỏ qua cảnh báo
-  trùng) sẽ được chuyển về hồ sơ giữ lại khi gộp thật.
+- `relatedRecordCount`: tổng số bản ghi hiện có của hồ sơ bị gộp sẽ được chuyển về hồ sơ giữ lại khi gộp thật —
+  cơ hội, hợp đồng, dự án, hoá đơn, đề nghị xuất hoá đơn, nhật ký khách hàng và lý do bỏ qua cảnh báo trùng.
+- `relatedRecordBreakdown`: số bản ghi theo từng loại (khóa là nhãn không dấu, thứ tự cố định) để màn hình xác nhận
+  hiển thị rõ sẽ chuyển những gì.
 
 **Response lỗi:**
 
@@ -1048,6 +1669,12 @@ Thực hiện gộp hai hồ sơ (TC-01). Body giống hệt `POST /customers/me
 
 Luôn thực hiện gộp — **không kiểm tra hay chặn** theo bất kỳ điều kiện nào của dữ liệu liên quan của hồ sơ bị
 gộp (ví dụ còn công nợ chưa thanh toán); dữ liệu đó vẫn được chuyển về hồ sơ giữ lại kèm dấu vết nguồn gốc (TC-02).
+
+Dữ liệu được chuyển trong cùng giao dịch: **cơ hội, hợp đồng, dự án, hoá đơn (giữ nguyên trạng thái và công nợ),
+đề nghị xuất hoá đơn**, nhật ký khách hàng, lý do bỏ qua cảnh báo trùng. Mỗi bản ghi nghiệp vụ được chuyển lưu
+khách hàng gốc ở cột `original_customer_id` (chỉ ghi ở lần gộp đầu tiên). Người liên hệ **không** chuyển — mỗi khách
+hàng chỉ có một đầu mối chính. Nhật ký gộp (`movedRecordSummary`) ghi số bản ghi đã chuyển theo từng loại.
+Migration `V85` chuyển bù dữ liệu của các lần gộp đã thực hiện trước bản sửa này.
 
 **Response thành công — `200 OK`:**
 ```json
@@ -1094,7 +1721,7 @@ gộp (ví dụ còn công nợ chưa thanh toán); dữ liệu đó vẫn đư�
 Yêu cầu token của **Ban giám đốc** (`VT-01`) hoặc **Nhân viên kinh doanh** (`VT-04`).
 API chỉ tính các cơ hội có `status = OPEN` và có `expectedCloseDate`; cơ hội đã
 đóng, bao gồm cơ hội `LOST`, và cơ hội chưa có ngày dự kiến ký sẽ được loại khỏi
-dự báo (TC-02).
+dự báo (TC-02). Chỉ tính cơ hội thuộc phạm vi dữ liệu của người xem (QTN-01).
 
 #### `GET /opportunities/revenue-forecast`
 
@@ -1148,8 +1775,9 @@ dùng giá trị `0`.
 | 403 | `FORBIDDEN` | Không phải Ban giám đốc hoặc Nhân viên kinh doanh |
 | 400 | `VALIDATION_ERROR` | `from` sau `to` hoặc sai định dạng ngày |
 
-API không làm thay đổi dữ liệu cơ hội và không cần endpoint riêng để tính lại; mỗi
-lần gọi sẽ đọc stage, status, probability và expected close date hiện tại.
+API không làm thay đổi dữ liệu cơ hội và không cần endpoint riêng để tính lại; mỗi lần gọi đọc stage, status,
+probability và expected close date hiện tại. Mỗi lần xem được ghi nhật ký cơ hội `FORECAST_VIEW` (người xem, khoảng
+lọc, số tháng, tổng dự báo — TC-04); lần bị từ chối (`403`) cũng được ghi nhật ký.
 
 ---
 
@@ -1213,7 +1841,7 @@ không truyền lên được, hệ thống tự gán.
 | HTTP | `errorCode` | Khi nào xảy ra |
 |---|---|---|
 | 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
-| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh, hoặc cơ hội ngoài phạm vi dữ liệu (QTN-01) — hệ thống ghi nhật ký lần từ chối (TC-03) |
 | 400 | `VALIDATION_ERROR` | Thiếu/để trống `name`, thiếu `customerId`, hoặc `expectedValue` để trống/bằng 0/âm (TC-02) |
 | 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy hồ sơ khách hàng ứng với `customerId` (TC-01) |
 
@@ -1223,8 +1851,10 @@ không truyền lên được, hệ thống tự gán.
 - `stage`/`status` chỉ hiển thị, không có ô nhập trên form tạo — mọi cơ hội mới đều bắt đầu ở `APPROACH`/`OPEN`.
 - Mọi lần tạo và mọi lần bị từ chối truy cập đều được backend tự ghi nhật ký (TC-04) — Frontend không cần gọi
   thêm API nào để việc ghi log này xảy ra.
-- Chuyển giai đoạn cơ hội (kanban) xem mục `NCL-03-CN-002` bên dưới. Chưa có API xem danh sách/chi tiết cơ hội
-  (`GET /opportunities`, `GET /opportunities/{id}`) trong phạm vi Epic `NCL-03` hiện tại.
+- Chuyển giai đoạn cơ hội xem mục `NCL-03-CN-002` bên dưới. Danh sách cơ hội: `GET /opportunities`; chi tiết một
+  cơ hội: `GET /opportunities/{id}` (VT-01/VT-02/VT-04, cùng cấu trúc `OpportunityRes`, kèm `daysInCurrentStage`).
+  Cả hai chỉ trả cơ hội thuộc **phạm vi dữ liệu** của người xem (QTN-01: COMPANY / DEPARTMENT theo phòng ban người
+  phụ trách / SELF theo `ownerId`); mở chi tiết cơ hội ngoài phạm vi trả `403 FORBIDDEN` và được ghi nhật ký.
 
 ---
 
@@ -1241,43 +1871,47 @@ Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`) — cùng phân quy�
 
 | Trường | Kiểu | Bắt buộc | Ghi chú |
 |---|---|---|---|
-| `targetStage` | string | có | Một trong `APPROACH` · `PROPOSAL` · `NEGOTIATION` · `WON` · `LOST` |
+| `targetStage` | string | có | Một trong `APPROACH` · `SURVEY` · `PROPOSAL` · `NEGOTIATION` (chốt `WON`/`LOST` phải dùng `POST .../close`) |
 
 **Quy tắc chuyển giai đoạn (QTN-06, TC-02):**
 - Chỉ được chuyển sang giai đoạn **kế tiếp liền kề** theo đúng thứ tự
-  `APPROACH → PROPOSAL → NEGOTIATION → (WON | LOST)` — **không được nhảy cóc** (ví dụ `APPROACH` → `NEGOTIATION`
-  hoặc `APPROACH` → `WON` đều bị từ chối) và **không được chuyển lùi**.
-- Từ `NEGOTIATION` được chốt sang **`WON`** hoặc **`LOST`** — hai giai đoạn này ngang hàng nhau, không phải bước
-  nối tiếp nhau.
-- Khi giai đoạn đích là `WON` hoặc `LOST`, hệ thống tự động **đóng cơ hội** (`status` chuyển sang `CLOSED`) —
-  sau đó **không thể chuyển giai đoạn tiếp** cho cơ hội này nữa dù gọi lại API (TC-03).
+  `APPROACH (tiếp cận) → SURVEY (khảo sát) → PROPOSAL (báo giá) → NEGOTIATION (đàm phán)` — **không được nhảy
+  cóc** (ví dụ `APPROACH` → `PROPOSAL` hay `APPROACH` → `NEGOTIATION` đều bị từ chối, `message` nêu giai đoạn hợp
+  lệ kế tiếp) và **không được chuyển lùi**.
+- Kết quả cuối (`WON`/`LOST`) chỉ ghi nhận qua `POST .../close` (bắt buộc lý do khi thua): **`LOST` được chốt từ
+  mọi giai đoạn đang mở** (QTN-06: "giai đoạn đích là liền kề hoặc là thua"), **`WON` chỉ từ `NEGOTIATION`**.
+  Gửi `WON`/`LOST` vào `PATCH .../stage` bị từ chối `VALIDATION_ERROR`.
+- Cơ hội đã đóng (`status = CLOSED`) **không thể mở lại hay chuyển giai đoạn tiếp** (TC-03).
+- Mỗi lần chuyển ghi lịch sử giai đoạn (`GET .../stage-history`) và nhật ký cơ hội `STAGE_CHANGE` (TC-05).
 
 **Xác suất trúng (`probability`) được hệ thống tự cập nhật theo giai đoạn mới (TC-01), không truyền lên được:**
 
 | `stage` | `probability` |
 |---|---|
 | `APPROACH` | 10 |
+| `SURVEY` | 25 |
 | `PROPOSAL` | 40 |
 | `NEGOTIATION` | 70 |
 | `WON` | 100 |
 | `LOST` | 0 |
 
 **Response thành công — `200 OK`:** giống hệt cấu trúc `OpportunityRes` của `POST /opportunities`, với `stage`,
-`status`, `probability` đã cập nhật theo giai đoạn mới.
+`status`, `probability` đã cập nhật theo giai đoạn mới, kèm `customerName` và `daysInCurrentStage = 0`.
 
 **Response lỗi:**
 
 | HTTP | `errorCode` | Khi nào xảy ra |
 |---|---|---|
 | 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
-| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh, hoặc cơ hội ngoài phạm vi dữ liệu (QTN-01) — hệ thống ghi nhật ký lần từ chối (TC-03) |
 | 400 | `VALIDATION_ERROR` | Thiếu `targetStage` |
 | 400 | `INVALID_STATE` | Chuyển giai đoạn không hợp lệ (nhảy cóc/lùi, TC-02) hoặc cơ hội đã đóng (TC-03) — xem `message` để biết giai đoạn hợp lệ kế tiếp |
 | 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy cơ hội ứng với `opportunityId` |
 
 #### `GET /opportunities/{opportunityId}/stage-history`
 
-Lịch sử mọi lần chuyển giai đoạn của một cơ hội (TC-05), mới nhất lên đầu.
+Lịch sử mọi lần chuyển giai đoạn của một cơ hội (TC-05), mới nhất lên đầu. Chỉ đọc — cho phép VT-01 / VT-02 / VT-04
+(cùng nhóm được xem danh sách, để panel tiến trình ở chế độ chỉ xem vẫn xem được lịch sử).
 
 **Response thành công — `200 OK`:**
 ```json
@@ -1312,7 +1946,7 @@ Lịch sử mọi lần chuyển giai đoạn của một cơ hội (TC-05), m�
 | HTTP | `errorCode` | Khi nào xảy ra |
 |---|---|---|
 | 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
-| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh (hoặc với lịch sử giai đoạn: không thuộc VT-01/VT-02/VT-04), hoặc cơ hội ngoài phạm vi dữ liệu |
 | 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy cơ hội ứng với `opportunityId` |
 
 **Lưu ý cho Frontend:**
@@ -1328,15 +1962,15 @@ Lịch sử mọi lần chuyển giai đoạn của một cơ hội (TC-05), m�
 
 ### `NCL-03-CN-003` — Lập báo giá cho cơ hội
 
-Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`). Cơ hội phải đang ở giai đoạn
-`PROPOSAL`; mỗi lần lập báo giá tạo một phiên bản mới và không ghi đè phiên bản cũ.
+Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`). Cơ hội phải đang ở giai đoạn báo giá
+`PROPOSAL`; mỗi lần lập báo giá tạo một phiên bản mới và không ghi đè phiên bản cũ (TC-03).
 
 #### `POST /opportunities/{opportunityId}/quotes`
 
 ```json
 {
   "items": [
-    { "professionalRole": "Lap trinh vien cao cap", "workDays": 20 },
+    { "professionalRole": "Lap trinh vien", "level": "Cao cap", "workDays": 20 },
     { "professionalRole": "Kiem thu", "workDays": 10 }
   ]
 }
@@ -1345,13 +1979,14 @@ Yêu cầu token của **Nhân viên kinh doanh** (`VT-04`). Cơ hội phải đ
 | Trường | Kiểu | Bắt buộc | Ghi chú |
 |---|---|---|---|
 | `items` | array | có | Ít nhất một dòng báo giá |
-| `items[].professionalRole` | string | có | Vai trò chuyên môn, không để trống |
+| `items[].professionalRole` | string | có | Vai trò chuyên môn, không để trống (tối đa 255 ký tự) |
+| `items[].level` | string | không | Cấp bậc (tối đa 100 ký tự). Có thì tra đơn giá của đúng cặp (vai trò, cấp bậc); không có thì lấy đơn giá hiệu lực gần nhất của vai trò |
 | `items[].workDays` | number | có | Số ngày công dự kiến, phải lớn hơn 0 |
 
-Backend tra đơn giá bán có `effectiveFrom <= ngày lập`, chọn bản ghi mới nhất của
-từng vai trò rồi tính `amount = workDays * dailyRate`. Vai trò chưa có đơn giá
-được trả trong `missingRates`, dòng đó có `unitRate: null`, `amount: null` và không
-được cộng vào `totalAmount` (TC-02). Đơn giá không nhận từ request.
+Backend tra đơn giá bán có `effectiveFrom <= ngày lập` (QTN-15), chọn bản ghi mới nhất rồi tính
+`amount = workDays * dailyRate`. Vai trò chưa có đơn giá được trả trong `missingRates`, dòng đó có
+`unitRate: null`, `amount: null`, `priced: false` và không được cộng vào `totalAmount` (TC-02). Đơn giá không nhận
+từ request. Danh mục (vai trò, cấp bậc, đơn giá) đang hiệu lực để dựng ô chọn: `GET /bill-rates/current`.
 
 **Response thành công — `200 OK`:**
 ```json
@@ -1362,17 +1997,27 @@ từng vai trò rồi tính `amount = workDays * dailyRate`. Vai trò chưa có 
     "id": 1,
     "opportunityId": 12,
     "version": 1,
-    "totalAmount": 150000000,
+    "latest": true,
+    "totalAmount": 100000000,
     "items": [
       {
-        "professionalRole": "Lap trinh vien cao cap",
+        "professionalRole": "Lap trinh vien",
+        "level": "Cao cap",
         "workDays": 20,
         "unitRate": 5000000,
         "amount": 100000000,
         "priced": true
+      },
+      {
+        "professionalRole": "Kiem thu",
+        "level": null,
+        "workDays": 10,
+        "unitRate": null,
+        "amount": null,
+        "priced": false
       }
     ],
-    "missingRates": [],
+    "missingRates": ["Kiem thu"],
     "createdBy": "sale01",
     "createdAt": "2026-09-03T10:00:00"
   }
@@ -1384,22 +2029,24 @@ từng vai trò rồi tính `amount = workDays * dailyRate`. Vai trò chưa có 
 | HTTP | `errorCode` | Khi nào xảy ra |
 |---|---|---|
 | 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
-| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh, hoặc cơ hội ngoài phạm vi dữ liệu — ghi nhật ký lần từ chối (TC-04) |
 | 400 | `VALIDATION_ERROR` | Không có dòng, vai trò trống hoặc số ngày công không dương |
 | 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy cơ hội |
 | 400 | `INVALID_STATE` | Cơ hội chưa ở giai đoạn `PROPOSAL` |
 
-Mọi lần lập báo giá được ghi vào nhật ký cơ hội. `version` tăng tuần tự theo từng
-cơ hội; phiên bản trước vẫn giữ nguyên để đối chiếu khi khách hàng yêu cầu giảm giá.
+Mọi lần lập báo giá được ghi nhật ký cơ hội `QUOTE_CREATE` (phiên bản, tổng tiền, vai trò thiếu đơn giá — TC-05).
+
+#### `GET /opportunities/{opportunityId}/quotes`
+
+Lịch sử mọi phiên bản báo giá của cơ hội, phiên bản mới nhất lên đầu; đúng một phần tử có `latest: true` (TC-03).
+`missingRates` được suy lại từ các dòng chưa có đơn giá nên cảnh báo TC-02 vẫn hiện khi xem lại. Cùng phân quyền
+và phạm vi dữ liệu với `POST`.
 
 **Lưu ý cho Frontend:**
-- Chưa có API xem lại các phiên bản báo giá đã lập (`GET .../quotes`) trong phạm vi Epic `NCL-03` hiện tại —
-  Frontend cần tự lưu response của lần gọi `POST` gần nhất nếu muốn hiển thị lại trong phiên làm việc.
-- Dòng nào rơi vào `missingRates` (chưa có đơn giá hiệu lực cho vai trò đó) vẫn được trả về trong `items` với
-  `unitRate`/`amount` là `null` và `priced: false` — nên hiển thị cảnh báo thay vì ẩn dòng, vì dòng đó **không**
-  được cộng vào `totalAmount`.
-- Mọi lần lập báo giá và mọi lần bị từ chối truy cập đều được backend tự ghi nhật ký — Frontend không cần gọi
-  thêm API nào để việc ghi log này xảy ra.
+- Mở cửa sổ báo giá nên gọi `GET .../quotes` để hiện ngay phiên bản mới nhất đã lập, tránh người dùng tưởng chưa
+  có báo giá và lập trùng.
+- Dòng nào rơi vào `missingRates` vẫn được trả về trong `items` với `priced: false` — nên hiển thị cảnh báo thay vì
+  ẩn dòng, vì dòng đó **không** được cộng vào `totalAmount`.
 
 ---
 
@@ -1410,9 +2057,9 @@ nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối (TC-03, dùng c
 
 #### `POST /opportunities/{opportunityId}/close`
 
-Điều kiện bắt đầu: **cơ hội phải đang ở giai đoạn đàm phán (`NEGOTIATION`)** — dùng chung luật thứ tự giai đoạn
-với `NCL-03-CN-002` (QTN-06: chỉ từ `NEGOTIATION` mới được chốt sang `WON`/`LOST`). Đây là API **chuyên dụng** để
-đóng cơ hội kèm ghi nhận lý do — khác với `PATCH .../stage` (dùng cho kéo-thả Kanban qua các giai đoạn trung
+Điều kiện: cơ hội đang mở. Theo QTN-06, **`WON` chỉ chốt được từ giai đoạn đàm phán (`NEGOTIATION`)**, còn
+**`LOST` chốt được từ mọi giai đoạn đang mở** (`APPROACH`/`SURVEY`/`PROPOSAL`/`NEGOTIATION`). Đây là API
+**chuyên dụng** để đóng cơ hội kèm ghi nhận lý do — khác với `PATCH .../stage` (chỉ dùng cho các giai đoạn trung
 gian), API này **bắt buộc** phải nhập lý do khi kết quả là thua.
 
 ```json
@@ -1426,14 +2073,14 @@ gian), API này **bắt buộc** phải nhập lý do khi kết quả là thua.
 
 | Trường | Kiểu | Bắt buộc | Ghi chú |
 |---|---|---|---|
-| `result` | string | có | Chỉ chấp nhận `WON` hoặc `LOST` — giá trị khác (`APPROACH`/`PROPOSAL`/`NEGOTIATION`) bị từ chối |
+| `result` | string | có | Chỉ chấp nhận `WON` hoặc `LOST` — giá trị khác (`APPROACH`/`SURVEY`/`PROPOSAL`/`NEGOTIATION`) bị từ chối |
 | `lossReason` | string | **có, chỉ khi `result = LOST`** | Một trong `PRICE_TOO_HIGH` · `LOST_TO_COMPETITOR` · `BUDGET_CUT` · `TIMING_NOT_RIGHT` · `REQUIREMENT_MISMATCH` · `NO_RESPONSE` · `OTHER` — để trống khi thua bị từ chối (TC-02). Bỏ qua/không lưu khi `result = WON` |
 | `reasonDetail` | string | không | Ghi chú chi tiết thêm (tối đa 500 ký tự), dùng được cho cả hai kết quả |
 | `competitorName` | string | không | Tên đối thủ cạnh tranh nếu có (tối đa 255 ký tự) |
 
 Khi đóng thành công, hệ thống tự động: cập nhật `stage` = `result`, `status` = `CLOSED`, `probability` = `100`
 (nếu `WON`) hoặc `0` (nếu `LOST`) — giống bảng xác suất ở mục `NCL-03-CN-002`; ghi thêm một bản ghi vào lịch sử
-chuyển giai đoạn (`GET .../stage-history`, `fromStage = NEGOTIATION`); và ghi nhật ký riêng `CLOSE_WON`/`CLOSE_LOST`
+chuyển giai đoạn (`GET .../stage-history`, `fromStage` = giai đoạn lúc đóng); và ghi nhật ký riêng `CLOSE_WON`/`CLOSE_LOST`
 kèm lý do/đối thủ (TC-04). Sau khi đóng, cơ hội **không thể mở lại hay đóng lần nữa** (gọi lại API này hay
 `PATCH .../stage` đều bị từ chối `INVALID_STATE`, giống `NCL-03-CN-002` TC-03).
 
@@ -1477,7 +2124,7 @@ mới (luôn có mặt trên `OpportunityRes` kể từ story này, `null` nếu
 | HTTP | `errorCode` | Khi nào xảy ra |
 |---|---|---|
 | 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
-| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh — hệ thống ghi nhật ký lần từ chối (TC-03) |
+| 403 | `FORBIDDEN` | Không phải Nhân viên kinh doanh, hoặc cơ hội ngoài phạm vi dữ liệu (QTN-01) — hệ thống ghi nhật ký lần từ chối (TC-03) |
 | 400 | `VALIDATION_ERROR` | Thiếu `result`, hoặc `result` không phải `WON`/`LOST`, hoặc `result = LOST` mà thiếu `lossReason` (TC-02) |
 | 400 | `INVALID_STATE` | Cơ hội chưa ở giai đoạn `NEGOTIATION` (điều kiện bắt đầu của story), hoặc cơ hội đã đóng từ trước — không cho đóng lại |
 | 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy cơ hội ứng với `opportunityId` |
@@ -1622,6 +2269,7 @@ Không có tham số. Báo cáo là ảnh chụp **hiện tại** của toàn b�
     "generatedAt": "2026-09-04T11:20:31",
     "stages": [
       { "stage": "APPROACH",    "opportunityCount": 4, "totalExpectedValue": 700000000,  "averageDaysInStage": 18, "stalledCount": 0, "stalledOpportunityIds": [] },
+       { "stage": "SURVEY",      "opportunityCount": 2, "totalExpectedValue": 400000000,  "averageDaysInStage": 12, "stalledCount": 0, "stalledOpportunityIds": [] },
       { "stage": "PROPOSAL",    "opportunityCount": 3, "totalExpectedValue": 900000000,  "averageDaysInStage": 25, "stalledCount": 0, "stalledOpportunityIds": [] },
       { "stage": "NEGOTIATION", "opportunityCount": 2, "totalExpectedValue": 800000000,  "averageDaysInStage": 47, "stalledCount": 1, "stalledOpportunityIds": [2007] },
       { "stage": "WON",         "opportunityCount": 2, "totalExpectedValue": 600000000,  "averageDaysInStage": 5,  "stalledCount": 0, "stalledOpportunityIds": [] },
@@ -1637,7 +2285,7 @@ Không có tham số. Báo cáo là ảnh chụp **hiện tại** của toàn b�
 | `totalExpectedValue` | number | Tổng `expectedValue` của tất cả cơ hội. |
 | `stalledThresholdDays` | number | Ngưỡng (ngày) để coi một cơ hội còn mở là "đọng lâu bất thường" — hiện cố định `60` (TC-02). |
 | `generatedAt` | string (`date-time`) | Thời điểm máy chủ sinh báo cáo — cũng là mốc tính `averageDaysInStage`. |
-| `stages` | array | **Luôn đủ 5 dòng** theo đúng thứ tự `APPROACH → PROPOSAL → NEGOTIATION → WON → LOST`; giai đoạn không có cơ hội trả về các số `0` / mảng rỗng (không bị bỏ khỏi danh sách). |
+| `stages` | array | **Luôn đủ 6 dòng** theo đúng thứ tự `APPROACH → SURVEY → PROPOSAL → NEGOTIATION → WON → LOST`; giai đoạn không có cơ hội trả về các số `0` / mảng rỗng (không bị bỏ khỏi danh sách). Chỉ tính cơ hội thuộc phạm vi dữ liệu của người xem (QTN-01). |
 | `stages[].opportunityCount` | number | Số cơ hội đang ở giai đoạn đó (TC-01). |
 | `stages[].totalExpectedValue` | number | Tổng giá trị dự kiến của các cơ hội trong giai đoạn (TC-01). |
 | `stages[].averageDaysInStage` | number | Số ngày trung bình (làm tròn) mỗi cơ hội đã nằm ở giai đoạn hiện tại; `0` khi không có cơ hội. Mốc bắt đầu là lần **chuyển vào** giai đoạn hiện tại (bản ghi `opportunity_stage_history` mới nhất có `toStage` = giai đoạn hiện tại), hoặc `createdAt` nếu cơ hội chưa từng chuyển giai đoạn (TC-01). |
@@ -2095,6 +2743,39 @@ trúc từng phần tử như response của `GET`.
 | 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`); hệ thống ghi `DENIED_ACCESS`. |
 | 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hợp đồng với `{contractId}`. |
 | 400 | `VALIDATION_ERROR` | Mảng rỗng, thiếu tỷ lệ/số tiền, số tiền không hợp lệ, tỷ lệ không khớp số tiền hoặc tổng mốc khác `totalValue`. |
+| 400 | `INVALID_STATE` | Hợp đồng đã có mốc `INVOICED` (đã lập hóa đơn, `NCL-10-CN-002`) — không được khai báo lại danh sách mốc; hoặc có mốc đang gắn phiếu nghiệm thu (`NCL-12-CN-003`) — phải gỡ liên kết trước. |
+
+#### `PATCH /contracts/{contractId}/milestones/{milestoneId}/status`
+
+Đổi trạng thái một mốc. Chỉ đi **đúng một bước tiến** theo trình tự `PENDING` → `READY_TO_INVOICE` →
+`INVOICED`; không nhảy cóc, không lùi.
+
+**QTN-25 (từ `NCL-12-CN-003`):** mốc **đã gắn phiếu nghiệm thu** thì do luồng nghiệm thu tự mở/khóa — khi phiếu
+được khách hàng xác nhận mốc tự sang `READY_TO_INVOICE`; mở tay mốc đó khi phiếu chưa `ACCEPTED` bị chặn
+(`400 INVALID_STATE`). Mốc **chưa gắn phiếu** vẫn mở tay được qua endpoint này như trước.
+
+**Trạng thái `INVOICED` không đặt được qua endpoint này** — nó chỉ do
+`POST /contracts/{contractId}/milestones/{milestoneId}/invoice` (`NCL-10-CN-002`) đặt, để mốc `INVOICED` luôn đi
+kèm một hóa đơn thật.
+
+**Request:**
+
+```json
+{ "status": "READY_TO_INVOICE" }
+```
+
+**Response thành công — `200 OK`:** `data` là mốc sau khi cập nhật (cùng cấu trúc phần tử của `GET`). Ghi
+`MILESTONE_STATUS_UPDATE` vào `contract_audit_logs`.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`); hệ thống ghi `DENIED_ACCESS`. |
+| 404 | `RESOURCE_NOT_FOUND` | Không có hợp đồng `{contractId}`, không có mốc `{milestoneId}` hoặc mốc không thuộc hợp đồng. |
+| 400 | `VALIDATION_ERROR` | Thiếu `status` hoặc giá trị không thuộc `PENDING`/`READY_TO_INVOICE`/`INVOICED`. |
+| 400 | `INVALID_STATE` | `status` = `INVOICED` (phải lập hóa đơn qua `NCL-10-CN-002`); hoặc chuyển nhảy cóc/lùi/giữ nguyên trạng thái; hoặc mở mốc đang gắn phiếu nghiệm thu chưa được khách hàng xác nhận (QTN-25). |
 
 ### `NCL-04-CN-004` — Lập phụ lục điều chỉnh hợp đồng
 
@@ -2786,7 +3467,7 @@ Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại
 - Dự án phải đang `RUNNING` — dự án đã đóng nhận `400 INVALID_STATE` (thay thế nguồn dữ liệu "còn treo"
   mà `NCL-05-CN-006` từng dẫn chiếu, tương ứng câu chuyện chặn ghi giờ vào dự án đã đóng `VHDV-76`).
 - Ngày làm việc (`workDate`) không được ở tương lai; tổng giờ công của một nhân sự trong một ngày trên
-  mọi công việc không vượt `24` giờ.
+  mọi công việc không vượt `12` giờ (QTN-14 — giới hạn giờ công trong ngày).
 - Mỗi cặp **(công việc, ngày)** chỉ có **một** bản ghi của một nhân sự — ghi trùng nhận `409 DUPLICATE_DATA`
   kèm gợi ý sửa bản ghi có sẵn bằng `PUT`.
 - Bản ghi chỉ sửa/xoá được khi còn `DRAFT`; sau khi nộp/duyệt phải đi qua luồng điều chỉnh bằng bút toán
@@ -2794,13 +3475,43 @@ Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại
 - Mỗi lần ghi/sửa/xoá ghi một dòng `TIME_ENTRY_UPDATED` vào `project_audit_logs` — người thực hiện, nội dung
   (số giờ, ngày, thao tác), thời điểm (TC-04).
 
+#### `GET /me/time-entry-tasks`
+
+Trả danh sách công việc mà nhân viên chuyên môn hiện tại được giao và thuộc các dự án đang `RUNNING`.
+Endpoint này là nguồn dữ liệu cho danh sách chọn dự án/công việc khi ghi giờ; dự án `CLOSED` không xuất hiện.
+Việc lọc chỉ có tác dụng hỗ trợ giao diện, vì các API tạo/sửa/xoá bên dưới vẫn kiểm tra lại trạng thái dự án
+tại thời điểm thực hiện để xử lý trường hợp dự án vừa bị đóng.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "projectId": 1,
+      "projectName": "Du an dang chay",
+      "taskId": 20,
+      "taskName": "Phan tich quy trinh",
+      "taskStatus": "IN_PROGRESS"
+    }
+  ]
+}
+```
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Người gọi không phải Nhân viên chuyên môn (`VT-03`). |
+
 #### `POST /projects/{projectId}/tasks/{taskId}/time-entries`
 
 ```json
 {
   "workDate": "2026-09-10",
   "hours": 3.5,
-  "note": "Phân tích quy trình hiện tại"
+  "note": "Phân tích quy trình hiện tại",
+  "billable": true
 }
 ```
 
@@ -2808,7 +3519,8 @@ Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại
 |---|---|---|---|
 | `workDate` | date | có | Ngày làm việc, không được ở tương lai. |
 | `hours` | number | có | Lớn hơn 0 (giới hạn kiểm tra `@DecimalMin("0.01")`). |
-| `note` | string | không | Tối đa 1000 ký tự. |
+| `note` | string | có | Tối đa 1000 ký tự, không được để trống. |
+| `billable` | boolean | không | Có tính phí hay không — mặc định `true`. |
 
 **Response thành công — `200 OK`:**
 
@@ -2824,6 +3536,7 @@ Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại
     "hours": 3.5,
     "status": "DRAFT",
     "note": "Phân tích quy trình hiện tại",
+    "billable": true,
     "createdAt": "2026-09-10T15:20:00"
   }
 }
@@ -2833,8 +3546,8 @@ Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại
 
 | HTTP | `errorCode` | Khi nào xảy ra |
 |---|---|---|
-| 400 | `VALIDATION_ERROR` | Thiếu `workDate`/`hours`, `hours <= 0`, `note` vượt 1000 ký tự. |
-| 400 | `INVALID_STATE` | Dự án đã đóng (`CLOSED`), ngày làm việc ở tương lai, hoặc tổng giờ trong ngày vượt 24. |
+| 400 | `VALIDATION_ERROR` | Thiếu `workDate`/`hours`/`note`, `hours <= 0`, `note` rỗng/vượt 1000 ký tự. |
+| 400 | `INVALID_STATE` | Dự án đã đóng (`CLOSED`), ngày làm việc ở tương lai, hoặc tổng giờ trong ngày vượt 12 (QTN-14). |
 | 409 | `DUPLICATE_DATA` | Đã có bản ghi giờ công của chính mình trên công việc này trong cùng ngày. |
 | 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
 | 403 | `FORBIDDEN` | Không phải `VT-03` — hệ thống ghi nhật ký lần từ chối (TC-03); **hoặc** là `VT-03` nhưng không nằm trong danh sách người được giao công việc này (TC-02). |
@@ -2843,16 +3556,17 @@ Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại
 #### `PUT /projects/{projectId}/tasks/{taskId}/time-entries/{entryId}`
 
 ```json
-{ "hours": 4, "note": "Đã chỉnh sửa sau khi soát lại" }
+{ "hours": 4, "note": "Đã chỉnh sửa sau khi soát lại", "billable": true }
 ```
 
 | Trường | Kiểu | Bắt buộc | Ghi chú |
 |---|---|---|---|
 | `hours` | number | có | Lớn hơn 0 — ghi đè số giờ cũ. |
 | `note` | string | không | Ghi đè ghi chú cũ. |
+| `billable` | boolean | không | Có tính phí hay không — không truyền thì giữ nguyên giá trị cũ. |
 
 Chỉ sửa được bản ghi **DRAFT của chính mình trên đúng công việc** trong path; `workDate` và công việc không
-đổi — muốn đổi ngày thì xoá bản ghi cũ rồi ghi bản ghi mới. Kèm kiểm tra lại trần 24 giờ/ngày sau khi thay
+đổi — muốn đổi ngày thì xoá bản ghi cũ rồi ghi bản ghi mới. Kèm kiểm tra lại trần 12 giờ/ngày (QTN-14) sau khi thay
 đổi số giờ.
 
 **Response lỗi:** giống `POST`, thêm:
@@ -2867,6 +3581,59 @@ Chỉ sửa được bản ghi **DRAFT của chính mình trên đúng công vi�
 Xoá bản ghi giờ công **DRAFT của chính mình**. Không cần body. Thành công trả
 `{ "success": true, "message": "Xoa ban ghi gio cong thanh cong", "data": null }`.
 Response lỗi giống `PUT` (`404` khi không phải bản ghi của mình, `400 INVALID_STATE` khi bản ghi không còn DRAFT).
+
+### `NCL-06-CN-008` — Ghi giờ công bằng đồng hồ bấm giờ
+
+Các endpoint dưới đây yêu cầu token của **Nhân viên chuyên môn** (`VT-03`). Mỗi nhân sự chỉ có một phiên
+đồng hồ đang chạy. Phiên được lưu riêng trong `timesheet_timers`; khi dừng, hệ thống tính số giờ từ
+`startedAt` đến thời điểm dừng, làm tròn 2 chữ số thập phân (tối thiểu `0.01` giờ), rồi tạo một bản ghi
+`timesheet_entries` trạng thái `DRAFT`. Các quy tắc dự án đang chạy, kỳ chấm công mở, người được giao và
+giới hạn 12 giờ/ngày vẫn được kiểm tra như API ghi giờ thủ công.
+
+#### `POST /projects/{projectId}/tasks/{taskId}/time-entry-timer`
+
+```json
+{ "note": "Phân tích quy trình hiện tại", "billable": true }
+```
+
+`note` bắt buộc, tối đa 1000 ký tự; `billable` không bắt buộc và mặc định là `true`.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Bat dong ho bam gio thanh cong",
+  "data": {
+    "timerId": 40,
+    "projectId": 1,
+    "taskId": 20,
+    "userId": 7,
+    "startedAt": "2026-09-10T15:20:00",
+    "elapsedHours": 0.00,
+    "note": "Phân tích quy trình hiện tại",
+    "billable": true
+  }
+}
+```
+
+#### `GET /me/time-entry-timer`
+
+Trả phiên đang chạy theo cùng cấu trúc `data` của endpoint start; `data: null` nếu không có phiên.
+
+#### `POST /me/time-entry-timer/stop`
+
+Không cần body. Thành công trả về `TimeEntryRes` của bản ghi DRAFT vừa tạo, theo cùng cấu trúc response
+của `POST /projects/{projectId}/tasks/{taskId}/time-entries`.
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Thiếu `note` hoặc `note` vượt 1000 ký tự khi bắt đầu. |
+| 400 | `INVALID_STATE` | Dự án đã đóng, kỳ đã khóa, vượt 12 giờ/ngày, đã có timer đang chạy, hoặc dừng khi không có timer. |
+| 409 | `DUPLICATE_DATA` | Khi dừng, ngày/công việc đã có bản ghi giờ công gốc của chính mình. |
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Người gọi không phải `VT-03`, hoặc không được giao công việc. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại dự án/công việc của timer. |
 
 #### `GET /me/time-entries?weekFrom=2026-09-07&weekTo=2026-09-13`
 
@@ -2884,7 +3651,7 @@ phần tử là một `TimesheetSummaryRes`:
       "weekTo": "2026-09-13",
       "entries": [
         { "id": 30, "taskId": 20, "userId": 7, "workDate": "2026-09-09", "hours": 5,
-          "status": "DRAFT", "note": null, "createdAt": "2026-09-09T17:00:00" }
+          "status": "DRAFT", "note": null, "billable": true, "createdAt": "2026-09-09T17:00:00" }
       ],
       "totalHours": 8,
       "budgetHours": 8,
@@ -2899,7 +3666,8 @@ phần tử là một `TimesheetSummaryRes`:
 - `totalHours` — tổng giờ của công việc trong khoảng ngày.
 - `usageRatio` là phân số `0.0`–`1.0+` (nhân `100` khi hiển thị); `overBudgetWarning = true` khi
   `usageRatio >= 0.80` (QTN-20); cả hai là `null`/`false` khi công việc chưa đặt ngân sách.
-- `400 VALIDATION_ERROR` khi `weekTo` sớm hơn `weekFrom`.
+- `400 VALIDATION_ERROR` khi `weekTo` sớm hơn `weekFrom`, khi thiếu `weekFrom`/`weekTo`, hoặc khi giá trị
+  không đúng định dạng ngày `yyyy-MM-dd`.
 
 **Lưu ý cho Frontend:**
 
@@ -2912,7 +3680,3840 @@ phần tử là một `TimesheetSummaryRes`:
 - Các endpoint `POST/PUT/DELETE` trả `400 INVALID_STATE` khi dự án đã đóng — sau khi `NCL-05-CN-006` đóng dự
   án, ẩn/vô hiệu hoá form ghi giờ công để tránh gọi rồi mới nhận lỗi.
 
+### `NCL-06-CN-002` — Nộp bảng chấm công theo tuần
+
+Yêu cầu token của **Nhân viên chuyên môn** (`VT-03`), chỉ nộp bảng chấm công **của chính mình**. Khi nộp,
+hệ thống chuyển toàn bộ dòng giờ công `DRAFT` trong tuần sang `SUBMITTED` và tạo/cập nhật bảng tuần
+(bảng `timesheets`) ở trạng thái `PENDING_APPROVAL` cho PM duyệt — kể từ đó người dùng không sửa được
+các dòng giờ công của tuần (TC-03).
+
+Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại):
+
+- **Điều kiện bắt đầu**: tuần phải có **ít nhất một dòng `DRAFT`** — tuần trống hoặc toàn dòng đã nộp
+  nhận `400 INVALID_STATE`.
+- **QTN-14 — giới hạn 12 giờ/ngày**: nếu tồn tại ngày có tổng giờ công vượt `12`, nộp bị chặn
+  `400 INVALID_STATE` kèm `message` **liệt kê từng ngày vi phạm và tổng giờ** dạng
+  `... tai ngay: 2026-09-10 (14 gio), 2026-09-11 (13.5 gio)` (TC-02) — không dòng nào bị chuyển trạng thái.
+- **Không nộp lại** khi bảng tuần đang `PENDING_APPROVAL` hoặc đã `APPROVED` (TC-03); bảng bị
+  `REJECTED` cho phép nộp lại — hệ thống cập nhật lại đúng bản ghi bảng tuần cũ (unique người dùng + tuần).
+- **Lưu lịch sử (TC-05)**: mỗi lần nộp ghi một dòng nhật ký hệ thống `Nop bang cham cong tuan` — người
+  thực hiện (tự điền từ phiên đăng nhập), nội dung (tuần, tổng giờ, số dòng chuyển duyệt), thời điểm.
+- **Thông báo người duyệt (TC-01)**: sau khi nộp thành công, hệ thống gửi **thông báo in-app** cho
+  **từng Quản lý dự án** của các dự án có dòng giờ công trong tuần (`NotificationType.TIMESHEET_SUBMITTED`,
+  nội dung gồm tuần nộp, tổng giờ, số dòng chuyển duyệt). PM vẫn nhìn thấy bảng qua hàng đợi chờ duyệt
+  (`GET /timesheets/pending`, bảng ở trạng thái `PENDING_APPROVAL`).
+
+#### `POST /me/timesheets/{weekStartDate}/submit`
+
+Không cần body (gửi `{}` nếu client yêu cầu). `{weekStartDate}` là **ngày đầu tuần** — hệ thống tự lấy
+khoảng 7 ngày liên kếp (`weekStartDate` → `weekStartDate + 6`), trùng khớp với `weekFrom`/`weekTo` trên
+lưới `GET /me/time-entries`.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Nop bang cham cong tuan thanh cong",
+  "data": {
+    "id": 50,
+    "userId": 7,
+    "weekStartDate": "2026-09-07",
+    "weekEndDate": "2026-09-13",
+    "status": "PENDING_APPROVAL",
+    "totalHours": 8,
+    "submittedBy": "nv01",
+    "submittedAt": "2026-09-13T10:00:00"
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Khoảng tuần không hợp lệ (qua endpoint này tuần luôn 7 ngày nên hiếm gặp). |
+| 400 | `INVALID_STATE` | Tuần chưa có dòng `DRAFT` nào; tồn tại ngày vượt 12 giờ (QTN-14, `message` liệt kê ngày); hoặc bảng tuần đã nộp (`PENDING_APPROVAL`/`APPROVED`). |
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-03` — hệ thống ghi nhật ký lần từ chối (TC-04); gọi được thì luôn nộp bảng của chính mình. |
+
+**Lưu ý cho Frontend:**
+
+- Chỉ bật nút "Nộp bảng" khi lưới tuần có ít nhất một dòng `DRAFT` (trạng thái khác ẩn nút để tránh gọi
+  rồi mới nhận `400`).
+- Nhận `400 INVALID_STATE` kèm danh sách ngày vượt ngưỡng → hiển thị nguyên `message` cho người dùng
+  (dạng "Vượt 12 giờ/ngày tại ngày: …") và **không** làm thay đổi lưới — hệ thống không chuyển dòng nào.
+- Sau khi nộp thành công (`data.status = "PENDING_APPROVAL"`): chuyển toàn bộ dòng của tuần sang chế độ
+  chỉ đọc — mọi lời gọi `PUT/DELETE time-entries` với dòng đã `SUBMITTED` sẽ nhận `400 INVALID_STATE`.
+- Dùng `weekStartDate` của lưới tuần đang hiển thị làm `{weekStartDate}` trên path — khớp tự nhiên với
+  dữ liệu `GET /me/time-entries`.
+
+### `NCL-06-CN-002` — Notification API (Thông báo in-app)
+
+Khi nhân viên nộp bảng chấm công (CN-002), hệ thống gửi **thông báo in-app** cho từng PM của các dự án có dòng giờ công trong tuần (`NotificationType.TIMESHEET_SUBMITTED`). PM có thể lấy danh sách thông báo qua:
+
+#### `GET /notifications?unreadOnly=false&page=0&size=20`
+
+Trả về danh sách thông báo của người dùng hiện tại, phân trang.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 100,
+      "recipientId": 2,
+      "type": "TIMESHEET_SUBMITTED",
+      "title": "Bang cham cong moi can duyet",
+      "content": "Nhan su #7 da nop bang cham cong tuan 2026-09-07 - 2026-09-13 (8 gio, 2 dong)",
+      "channel": "IN_APP",
+      "referenceId": null,
+      "referenceType": "Timesheet",
+      "targetType": "TIMESHEET",
+      "isRead": false,
+      "readAt": null,
+      "sentAt": "2026-09-13T10:05:00",
+      "notificationGroup": "TIMESHEET",
+      "severity": "WARNING"
+    }
+  ]
+}
+```
+
+> `targetType`, `notificationGroup`, `severity` và tham số `group` bổ sung ở `NCL-14-CN-001` — xem chi tiết bên dưới.
+
+#### `GET /notifications/unread-count`
+
+Trả về số lượng thông báo chưa đọc.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": 3
+}
+```
+
+#### `POST /notifications/read`
+
+Đánh dấu thông báo đã đọc.
+
+```json
+{ "notificationIds": [100, 101] }
+```
+
+**Response thành công — `200 OK`:**
+
+```json
+{ "success": true, "message": "Da danh dau da doc" }
+```
+
 ---
+
+### `NCL-14-CN-001` — Trung tâm thông báo trong hệ thống
+
+Mở rộng Notification API ở trên (`NCL-06-CN-002`) để "bấm vào một thông báo là mở thẳng tới bản ghi
+liên quan và đánh dấu đã đọc" (TC-02), và ghi lại lịch sử thao tác trên trung tâm thông báo (TC-03).
+
+#### `targetType` — loại bản ghi để Frontend điều hướng
+
+Mỗi thông báo trong `GET /notifications` giờ có thêm trường `targetType`, suy ra **từ `type`** (không
+phải từ `referenceType`) nên áp dụng được cho cả thông báo đã gửi từ trước, không cần chạy migrate dữ
+liệu. Lý do không dùng `referenceType`: ở một số loại thông báo (`DUNNING_REMINDER`,
+`NEGATIVE_MARGIN_ALERT`), `referenceType` đang được dùng làm khóa chống gửi trùng (QTN-27, ví dụ
+`"Dunning:5:FIRST_REMINDER:2026-09-01"`), không phải tên loại bản ghi, nên không dùng để điều hướng được.
+
+| `type` | `targetType` | `referenceId` trỏ tới |
+|---|---|---|
+| `TIMESHEET_SUBMITTED`, `TIMESHEET_REJECTED` | `TIMESHEET` | id của Timesheet |
+| `TIMESHEET_REMINDER` | `TIMESHEET` | **userId của chính người nhận** (nhắc chung, không phải id một Timesheet cụ thể) |
+| `TIMER_AUTO_STOPPED` | `TASK` | id của Task |
+| `TASK_BUDGET_EXCEEDED` | `TASK` | id của Task (cảnh báo vượt 80% ngân sách giờ — ví dụ của TC-02) |
+| `DAILY_DIGEST_SUMMARY` | `NONE` | `null` — không điều hướng, chỉ đánh dấu đã đọc |
+| `EXPENSE_SUBMITTED` | `EXPENSE` | (chưa có nơi gửi loại này) |
+| `PROJECT_MILESTONE_DUE`, `NEGATIVE_MARGIN_ALERT` | `PROJECT` | id của Project |
+| `CONTRACT_EXPIRING` | `CONTRACT` | (chưa có nơi gửi loại này) |
+| `INVOICE_PROPOSAL_CREATED` | `INVOICE_PROPOSAL` | id của InvoiceProposal |
+| `DUNNING_REMINDER`, `RECURRING_INVOICE_GENERATED` | `INVOICE` | id của Invoice |
+| `ACCEPTANCE_DECIDED_ON_PORTAL` | `ACCEPTANCE_CERTIFICATE` | id của AcceptanceCertificate |
+
+Frontend tự chịu trách nhiệm gọi API chi tiết tương ứng của module đích (vd `GET /tasks/{id}`,
+`GET /invoices/{id}`) sau khi có `targetType` + `referenceId` — API đó đã tự kiểm tra quyền truy cập
+của module đó rồi (`FORBIDDEN`/`RESOURCE_NOT_FOUND` sẽ đến từ chính API này nếu bản ghi đã bị xóa hoặc
+người dùng không còn quyền xem). `POST /notifications/{id}/open` **không** re-check quyền trên bản ghi
+được tham chiếu.
+
+#### `POST /notifications/{id}/open`
+
+Mở một thông báo cụ thể của chính mình: đánh dấu đã đọc (nếu chưa đọc) và trả về đầy đủ dữ liệu kèm
+`targetType`/`referenceId` để Frontend điều hướng. Ghi một dòng nhật ký `Mo thong bao` (TC-03) khi
+thông báo thực sự chuyển từ chưa đọc sang đã đọc.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 100,
+    "recipientId": 2,
+    "type": "ACCEPTANCE_DECIDED_ON_PORTAL",
+    "title": "Khach hang da xac nhan phieu nghiem thu",
+    "content": "...",
+    "channel": "IN_APP",
+    "referenceId": 45,
+    "referenceType": "ACCEPTANCE_CERTIFICATE",
+    "targetType": "ACCEPTANCE_CERTIFICATE",
+    "isRead": true,
+    "readAt": "2026-09-25T09:12:00",
+    "sentAt": "2026-09-25T09:00:00"
+  }
+}
+```
+
+**Response lỗi — `404 RESOURCE_NOT_FOUND`:** thông báo không tồn tại, hoặc tồn tại nhưng không thuộc về
+người gọi (cố tình trả cùng lỗi như "không tồn tại", không phân biệt 403, để không lộ thông tin thông
+báo của người khác).
+
+#### Phân loại theo mức độ và nhóm — `severity`, `notificationGroup` (bổ sung)
+
+Mỗi phần tử của `GET /notifications` và `POST /notifications/{id}/open` có thêm 2 trường (suy ra từ `type`,
+áp dụng cả cho dữ liệu cũ — các trường cũ giữ nguyên, `data` vẫn là **mảng**, không đổi shape):
+
+| Trường | Giá trị | Ghi chú cho FE |
+|---|---|---|
+| `severity` | `CRITICAL` \| `WARNING` \| `INFO` | Tô màu/biểu tượng: đỏ / vàng / xám |
+| `notificationGroup` | `TIMESHEET` \| `EXPENSE` \| `PROJECT` \| `CONTRACT` \| `INVOICE` \| `ACCEPTANCE` \| `null` | `null` với `DAILY_DIGEST_SUMMARY` và `SECURITY_ALERT` |
+
+| `severity` | Gồm các `type` |
+|---|---|
+| `CRITICAL` | `NEGATIVE_MARGIN_ALERT`, `TASK_BUDGET_EXCEEDED`, `DUNNING_REMINDER`, `CONTRACT_EXPIRING`, `SECURITY_ALERT` |
+| `WARNING` | `TIMESHEET_SUBMITTED`, `TIMESHEET_REJECTED`, `TIMER_AUTO_STOPPED`, `TIMESHEET_REMINDER`, `EXPENSE_SUBMITTED`, `PROJECT_MILESTONE_DUE`, `INVOICE_PROPOSAL_CREATED`, `ACCEPTANCE_DECIDED_ON_PORTAL` |
+| `INFO` | `RECURRING_INVOICE_GENERATED`, `DAILY_DIGEST_SUMMARY` |
+
+#### `GET /notifications` — tham số đầy đủ
+
+| Tham số | Kiểu | Mặc định | Ghi chú |
+|---|---|---|---|
+| `unreadOnly` | boolean | `false` | Chỉ lấy chưa đọc |
+| `group` | enum `notificationGroup` | (không lọc) | Lọc theo nhóm — sai giá trị enum → `400` |
+| `page` | int | `0` | < 0 được ép về 0 |
+| `size` | int | `20` | Kẹp trong khoảng 1–100 |
+
+Sắp xếp: `sentAt` giảm dần, rồi `id` giảm dần (ổn định khi phân trang). Không trả tổng số bản ghi — FE coi
+"còn trang sau" khi số phần tử trả về bằng `size`. Số đếm trên biểu tượng chuông lấy từ
+`GET /notifications/unread-count` (TC-01), **không** tự đếm từ trang đang hiển thị.
+
+#### `POST /notifications/read-all` (bổ sung)
+
+Đánh dấu **tất cả** thông báo chưa đọc của chính người gọi là đã đọc. Không có body.
+
+```json
+{ "success": true, "message": "Da danh dau tat ca thong bao da doc", "data": 5 }
+```
+
+`data` = số thông báo thực sự đổi trạng thái (0 nếu không có gì). Ghi nhật ký `Danh dau tat ca thong bao da
+doc` khi `data > 0` (TC-03). Sau khi gọi, FE đặt lại badge về 0 hoặc gọi lại `unread-count`.
+
+#### `POST /notifications/read` — ghi nhật ký (TC-03)
+
+Mỗi lần đánh dấu đã đọc (đơn lẻ qua `/open` hoặc hàng loạt qua `/read`) mà có ít nhất 1 thông báo thực
+sự chuyển trạng thái, hệ thống ghi 1 dòng nhật ký hệ thống (`Danh dau da doc thong bao` /
+`Mo thong bao`) — người thực hiện, nội dung (số lượng/tiêu đề), thời điểm. Không ghi nhật ký nếu tất cả
+thông báo được chọn đã đọc từ trước hoặc không thuộc về người gọi.
+
+---
+
+### `NCL-14-CN-002` — Cấu hình kênh và tần suất nhận thông báo
+
+Cho phép người dùng bật/tắt từng **nhóm thông báo** và chọn tần suất nhận: `IMMEDIATE` (nhận ngay,
+hành vi mặc định như trước giờ) hoặc `DAILY_DIGEST` (gộp thành một thông báo tổng hợp gửi cuối ngày —
+TC-02). Không có cấu hình cho một nhóm nghĩa là mặc định **bật + IMMEDIATE** (không đổi hành vi cho
+người dùng chưa từng cấu hình).
+
+Nhóm thông báo (`notificationGroup`) hiện có, gộp từ các `NotificationType` đang tồn tại
+(`NotificationType.group()`):
+
+| `notificationGroup` | Gồm các `type` |
+|---|---|
+| `TIMESHEET` | `TIMESHEET_SUBMITTED`, `TIMESHEET_REJECTED`, `TIMER_AUTO_STOPPED`, `TIMESHEET_REMINDER` |
+| `EXPENSE` | `EXPENSE_SUBMITTED` |
+| `PROJECT` | `PROJECT_MILESTONE_DUE`, `NEGATIVE_MARGIN_ALERT`, `TASK_BUDGET_EXCEEDED` |
+| `CONTRACT` | `CONTRACT_EXPIRING` |
+| `INVOICE` | `INVOICE_PROPOSAL_CREATED`, `DUNNING_REMINDER`, `RECURRING_INVOICE_GENERATED` |
+| `ACCEPTANCE` | `ACCEPTANCE_DECIDED_ON_PORTAL` |
+
+> Kênh (`channel`): hiện chỉ có `IN_APP` được gửi thật (thư điện tử/SMS ngoài phạm vi, chỉ có trong enum).
+> FE chỉ cần hiển thị bật/tắt + tần suất, không cần chọn kênh.
+
+> Riêng `NotificationType.DAILY_DIGEST_SUMMARY` (bản tổng hợp cuối ngày, xem dưới) không thuộc nhóm
+> nào — không thể tắt hoặc gộp chính nó, tránh vòng lặp gộp-của-gộp.
+
+#### `GET /notifications/preferences`
+
+Trả cấu hình hiện tại của người gọi, luôn đủ cả 6 nhóm (điền mặc định cho nhóm chưa từng cấu hình).
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": [
+    { "notificationGroup": "TIMESHEET", "enabled": true, "frequency": "IMMEDIATE" },
+    { "notificationGroup": "EXPENSE", "enabled": true, "frequency": "IMMEDIATE" },
+    { "notificationGroup": "PROJECT", "enabled": true, "frequency": "IMMEDIATE" },
+    { "notificationGroup": "CONTRACT", "enabled": true, "frequency": "IMMEDIATE" },
+    { "notificationGroup": "INVOICE", "enabled": false, "frequency": "IMMEDIATE" },
+    { "notificationGroup": "ACCEPTANCE", "enabled": true, "frequency": "DAILY_DIGEST" }
+  ]
+}
+```
+
+#### `PUT /notifications/preferences`
+
+```json
+{
+  "preferences": [
+    { "notificationGroup": "INVOICE", "enabled": false, "frequency": "IMMEDIATE" },
+    { "notificationGroup": "ACCEPTANCE", "enabled": true, "frequency": "DAILY_DIGEST" }
+  ]
+}
+```
+
+Chỉ cần truyền các nhóm muốn thay đổi — nhóm không có trong `preferences` giữ nguyên cấu hình hiện
+tại (hoặc mặc định nếu chưa từng cấu hình). Ghi một dòng nhật ký hệ thống `Cap nhat cau hinh nhan
+thong bao` — người thực hiện, số nhóm đã cập nhật, thời điểm (TC-03).
+
+**Response thành công — `200 OK`:**
+
+```json
+{ "success": true, "message": "Da luu cau hinh nhan thong bao" }
+```
+
+**Response lỗi — `400 VALIDATION_ERROR`:** `preferences` rỗng, hoặc một phần tử thiếu
+`notificationGroup`/`frequency`, hoặc giá trị không thuộc các enum ở trên.
+
+#### Hành vi khi một nhóm bị tắt (TC-01)
+
+Thông báo thuộc nhóm bị tắt **không được tạo ra** — không xuất hiện trong `GET /notifications`,
+không tính vào `GET /notifications/unread-count`. Áp dụng ngay từ thời điểm tắt; không hồi tố các
+thông báo đã gửi trước đó (nếu sau đó bật lại, không có gì để "gửi bù").
+
+#### Hành vi khi tần suất là `DAILY_DIGEST` (TC-02)
+
+Thông báo thuộc nhóm này không xuất hiện ngay trong trung tâm thông báo khi phát sinh. Hệ thống gộp
+toàn bộ thông báo cùng nhóm, cùng người nhận, phát sinh trong ngày thành **một** thông báo tổng hợp
+duy nhất, tạo vào 20:00 mỗi ngày (`type = "DAILY_DIGEST_SUMMARY"`, `targetType = "NONE"` — không có
+đích điều hướng). Ngày không có thông báo nào thuộc nhóm đó thì không tạo bản tổng hợp nào.
+
+**Ví dụ một thông báo tổng hợp trong `GET /notifications`:**
+
+```json
+{
+  "id": 205,
+  "recipientId": 7,
+  "type": "DAILY_DIGEST_SUMMARY",
+  "title": "Tong hop 4 thong bao trong ngay (INVOICE)",
+  "content": "- Hoa don HD-102 toi han thanh toan hom nay: con phai thu 15.000.000\n- Hoa don HD-108 qua han 7 ngay: con phai thu 8.500.000",
+  "channel": "IN_APP",
+  "referenceId": null,
+  "referenceType": "Digest:7:INVOICE:2026-09-25",
+  "targetType": "NONE",
+  "isRead": false,
+  "readAt": null,
+  "sentAt": "2026-09-25T20:00:00"
+}
+```
+
+---
+
+### `NCL-14-CN-003` — Chống gửi trùng thông báo
+
+Mỗi thông báo phát sinh từ tác vụ nền rà soát định kỳ được gắn khóa gồm loại sự kiện + bản ghi liên
+quan + người nhận + **đợt cảnh báo (episode)** — lần rà soát sau bỏ qua nếu khóa đã tồn tại (`QTN-27`).
+Cơ chế này áp dụng cho những sự kiện **mới** dùng nó (hiện tại: `TASK_BUDGET_EXCEEDED`) — **không thay thế** các cơ chế chống trùng riêng đã ổn định của cảnh báo âm biên
+(`NCL-09-CN-004`), nhắc nộp bảng chấm công (`NCL-06-CN-009`), nhắc thu nợ (`NCL-10-CN-006`).
+
+Một "đợt cảnh báo" (episode) bắt đầu khi bản ghi chuyển từ bình thường sang trạng thái cần cảnh báo
+(hoặc hết cooldown mà vẫn còn cảnh báo); trong cùng một đợt, mỗi người nhận chỉ được gửi **đúng một
+lần** (TC-01). Nếu bản ghi thoát rồi vượt ngưỡng lại, hệ thống coi là đợt mới và gửi lại (TC-02).
+
+#### Tác vụ nền `TaskBudgetAlertScheduler` (bổ sung — nguồn phát thật của `TASK_BUDGET_EXCEEDED`)
+
+- Chạy **mỗi giờ, phút thứ 5** (`0 5 * * * *`); quét các công việc có `budgetHours > 0` thuộc dự án `RUNNING`.
+- `approvedHours / budgetHours ≥ 0.80` (QTN-20) → đang vượt ngưỡng; người nhận là PM của dự án.
+- Thông báo: `type = TASK_BUDGET_EXCEEDED`, `targetType = TASK`, `referenceId = taskId`, `severity = CRITICAL`,
+  `notificationGroup = PROJECT` (nên tuân theo cấu hình bật/tắt/gộp của `NCL-14-CN-002`).
+- Kịch bản TC-01: lần chạy sau 1 giờ công việc vẫn vượt → không gửi lại. TC-02: PM tăng ngân sách (tỷ lệ < 80%)
+  ở một lần quét, sau đó duyệt thêm giờ làm vượt lại → lần quét kế tiếp gửi cảnh báo mới.
+- **Cảnh báo ngay khi duyệt:** `POST` duyệt bảng chấm công (`NCL-06-CN-003`) đánh giá lại các công việc vừa duyệt và
+  gửi `TASK_BUDGET_EXCEEDED` ngay **sau khi giao dịch duyệt commit** — dùng chung cơ chế chống trùng, nên lần quét
+  định kỳ sau đó không gửi lại cho cùng đợt (TC-01). Lỗi khi gửi cảnh báo không làm hỏng việc duyệt; tác vụ nền sẽ
+  gửi bù ở lần quét kế tiếp. Response duyệt vẫn trả `overBudgetWarnings` như trước để FE hiện toast ngay.
+- Tác vụ nền vẫn cần cho các thay đổi không đi qua luồng duyệt (PM đổi ngân sách, bút toán đảo) — tức TC-02.
+- FE: sau khi duyệt thành công, gọi lại `GET /notifications/unread-count` để badge của PM cập nhật.
+
+#### `GET /notifications/dedup-configs`
+
+Danh sách cấu hình chống gửi trùng theo loại sự kiện. **Quyền**: chỉ `VT-07` (Quản trị viên, TC-03) —
+vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối tự động. Chỉ liệt kê những loại sự
+kiện thực sự dùng cơ chế này (hiện tại chỉ `TASK_BUDGET_EXCEEDED`) — sửa cấu hình cho loại khác (margin
+alert/timesheet reminder/dunning...) sẽ không có tác dụng gì nên không hiển thị.
+
+**Response `200 OK`:**
+```json
+{
+  "success": true,
+  "data": [
+    { "eventType": "TASK_BUDGET_EXCEEDED", "dedupEnabled": true, "cooldownHours": null, "updatedBy": null, "updatedAt": null }
+  ]
+}
+```
+Loại sự kiện chưa từng được cấu hình riêng trả về mặc định: `dedupEnabled = true`, `cooldownHours = null`.
+
+#### `PUT /notifications/dedup-configs/{eventType}`
+
+Đặt/đổi cấu hình cho một loại sự kiện. **Quyền**: chỉ `VT-07`.
+
+**Request:**
+```json
+{ "dedupEnabled": false, "cooldownHours": 24 }
+```
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `dedupEnabled` | boolean | có | `false` = luôn gửi, không chiếm khóa (tắt chống trùng cho loại này). |
+| `cooldownHours` | number | không | Số giờ tối thiểu giữa 2 lần nhắc trong cùng một đợt cảnh báo nếu sự kiện kéo dài; `null`/bỏ qua = không nhắc lại trong đợt. Nếu có, phải ≥ 1. |
+
+**Response thành công:** `{ "success": true, "message": "Da luu cau hinh chong gui trung thong bao" }`.
+Mỗi lần đổi ghi một dòng nhật ký hệ thống — người thực hiện, nội dung, thời điểm (TC-04).
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 403 | `FORBIDDEN` | Không phải Quản trị viên (`VT-07`) — ghi nhật ký lần từ chối (TC-03) |
+| 400 | `VALIDATION_ERROR` | Thiếu `dedupEnabled`, `cooldownHours` < 1, hoặc `eventType` không thuộc loại sự kiện dùng cơ chế này |
+
+**Lưu ý cho Frontend:** đây là cơ chế nội bộ, không có API riêng để tra "đợt cảnh báo hiện tại" của
+một bản ghi — thông báo tạo ra vẫn đọc qua API có sẵn của Epic thông báo (`GET /notifications`).
+
+### Ghi chú tích hợp Frontend — Epic `NCL-14` (đối chiếu tiêu chí chấp nhận)
+
+| Tiêu chí | Màn hình / hành vi FE cần có | API |
+|---|---|---|
+| CN-001 TC-01 | Danh sách thông báo có dấu chưa đọc; badge số đếm trên biểu tượng chuông; màu theo `severity`; bộ lọc "chưa đọc" và theo nhóm | `GET /notifications`, `GET /notifications/unread-count` |
+| CN-001 TC-02 | Bấm 1 thông báo → gọi `/open` → điều hướng theo `targetType` + `referenceId` (`NONE` thì không điều hướng); giảm badge | `POST /notifications/{id}/open` |
+| CN-001 TC-03 | Không cần UI riêng — backend tự ghi nhật ký khi đánh dấu đã đọc / mở / đọc tất cả | `POST /notifications/read`, `/read-all` |
+| CN-002 TC-01 | Màn cấu hình: 6 nhóm, công tắc bật/tắt | `GET`/`PUT /notifications/preferences` |
+| CN-002 TC-02 | Mỗi nhóm chọn `IMMEDIATE` / `DAILY_DIGEST`; hiển thị thông báo tổng hợp (`DAILY_DIGEST_SUMMARY`, `content` nhiều dòng `\n`) | như trên |
+| CN-002 TC-03 | Toast "Da luu..." — nhật ký do backend ghi | `PUT /notifications/preferences` |
+| CN-003 TC-01/02 | Không cần UI — hành vi do tác vụ nền; kiểm thử bằng cách quan sát `GET /notifications` | — |
+| CN-003 TC-03 | Màn cấu hình chống trùng chỉ hiện cho `VT-07`; vai trò khác nhận `403` → hiện trang "không có quyền" | `GET`/`PUT /notifications/dedup-configs` |
+| CN-003 TC-04 | Hiển thị `updatedBy` / `updatedAt` trên màn cấu hình | `GET /notifications/dedup-configs` |
+
+Gợi ý bảng điều hướng theo `targetType` (dùng route FE hiện có): `TIMESHEET` → màn bảng chấm công,
+`TASK` / `PROJECT` → chi tiết dự án/công việc, `INVOICE` / `INVOICE_PROPOSAL` → hóa đơn/đề nghị,
+`ACCEPTANCE_CERTIFICATE` → phiếu nghiệm thu, `CONTRACT` → hợp đồng, `EXPENSE` → chi phí, `NONE` → ở lại trang.
+Kiểu TypeScript `NotificationRes` cần thêm 2 trường tuỳ chọn: `notificationGroup`, `severity`.
+
+---
+
+### `NCL-06-CN-003` — Duyệt bảng chấm công
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`). PM duyệt các dòng giờ công `SUBMITTED` thuộc **dự án mình
+quản lý** (TC-02) — duyệt được cả nguyên bảng lẫn từng dòng; dòng đã duyệt chuyển `APPROVED` và **không
+sửa/xoá trực tiếp được** (QTN-10). Tổng giờ đã duyệt được cộng vào `approvedHours` của từng công việc —
+nguồn cho `usageRatio` của `NCL-05-CN-005` và tính lợi nhuận dự án (TC-01).
+
+Quy tắc nghiệp vụ (backend tự kiểm, Frontend không phải lặp lại):
+
+- **TC-02 — phạm vi PM**: chỉ entry thuộc dự án có `projectManagerId` trùng với người gọi mới được duyệt.
+  Khi **duyệt nguyên bảng**, các dòng thuộc dự án của PM khác được **giữ nguyên** `SUBMITTED` cho PM đó
+  xử lý; bảng chỉ chuyển `APPROVED` khi **không còn** dòng `SUBMITTED` nào trong tuần (phần cuối cùng của
+  PM cuối). Khi **duyệt từng dòng** (`entryIds`), dòng thuộc dự án người khác nhận `403 FORBIDDEN`.
+- **TC-01**: sau khi duyệt, `approvedHours` của công việc được tính lại bằng tổng giờ `APPROVED`; khi tuần
+  được duyệt hết, bảng nhận `status = APPROVED` cùng `approvedBy`/`approvedAt`.
+- **TC-03 — vượt ngân sách vẫn duyệt được**: nếu một công việc sau duyệt đạt từ **80%** ngân sách giờ công
+  trở lên (QTN-20), hệ thống **vẫn duyệt** và trả `overBudgetWarnings` — danh sách cảnh báo từng công việc
+  (`data.overBudgetWarnings`) kèm dòng chữ cảnh báo trong `message`.
+- **TC-04**: mỗi lần duyệt ghi một dòng nhật ký hệ thống `Duyet bang cham cong` — người duyệt, nội dung
+  (tuần, số dòng, số giờ), thời điểm.
+- Bảng phải đang `PENDING_APPROVAL` — đã duyệt/từ chối nhận `400 INVALID_STATE`.
+
+#### `GET /timesheets/pending`
+
+Hàng đợi của PM hiện tại: các bảng `PENDING_APPROVAL` có **ít nhất một** dòng `SUBMITTED` thuộc dự án
+mình quản lý, kèm `pendingEntries`/`pendingHours` (phần con của chính PM này):
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "timesheetId": 50,
+      "userId": 7,
+      "weekStartDate": "2026-09-07",
+      "weekEndDate": "2026-09-13",
+      "totalHours": 10,
+      "pendingEntries": 1,
+      "pendingHours": 5,
+      "submittedAt": "2026-09-13T10:00:00"
+    }
+  ]
+}
+```
+
+#### `POST /timesheets/{timesheetId}/approve`
+
+```json
+{ "entryIds": [30], "note": "Duyet cho dot nay" }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `entryIds` | number[] | không | Bỏ qua/null/rỗng = **duyệt nguyên bảng** (tất cả dòng `SUBMITTED` thuộc dự án của PM); truyền id = duyệt từng dòng. |
+| `note` | string | không | Ghi chú của PM, tối đa 1000 ký tự. |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Duyet bang cham cong thanh cong — canh bao: Cong viec #20 Phan tich: 8/8 gio — da vuot nguong 80% ngan sach (QTN-20)",
+  "data": {
+    "timesheet": {
+      "id": 50,
+      "userId": 7,
+      "weekStartDate": "2026-09-07",
+      "weekEndDate": "2026-09-13",
+      "status": "APPROVED",
+      "totalHours": 10,
+      "submittedBy": "nv01",
+      "submittedAt": "2026-09-13T10:00:00"
+    },
+    "overBudgetWarnings": [
+      "Cong viec #20 Phan tich: 8/8 gio — da vuot nguong 80% ngan sach (QTN-20)"
+    ]
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `INVALID_STATE` | Bảng không ở trạng thái `PENDING_APPROVAL`, hoặc không còn dòng `SUBMITTED` nào. |
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-02` — hệ thống ghi nhật ký lần từ chối (TC-03 của chung); **hoặc** `VT-02` hợp lệ nhưng duyệt dòng thuộc dự án người khác (TC-02, `entryIds` riêng lẻ). |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại bảng chấm công, hoặc `entryIds` chứa id không thuộc danh sách dòng chờ duyệt. |
+
+**Lưu ý cho Frontend:**
+
+- `message` có thể chứa cảnh báo vượt ngân sách dù request thành công — ưu tiên hiển thị cả
+  `data.overBudgetWarnings` (danh sách có cấu trúc) thay vì parse `message`.
+- Bảng hiển thị `data.timesheet.status = "PENDING_APPROVAL"` khi tuần còn phần của PM khác — nút duyệt
+  vẫn hiển thị cho phần của mình (dựa trên `pendingEntries` của hàng đợi).
+- Dòng đã `APPROVED` không sửa/xoá được — các API `PUT/DELETE time-entries` trả `400 INVALID_STATE` (QTN-10).
+- Sau khi duyệt, lưới giờ công trên màn hình công việc (`NCL-05-CN-005`) tự phản ánh `approvedHours` mới
+  qua `usageRatio`.
+
+---
+
+### `NCL-06-CN-004` — Từ chối bảng chấm công
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`). Cùng cơ chế phạm vi PM như `NCL-06-CN-003`: từ chối được
+cả nguyên bảng lẫn từng dòng, chỉ áp dụng cho dòng `SUBMITTED` thuộc **dự án mình quản lý**. Dòng bị từ
+chối quay về `DRAFT` để nhân viên sửa lại và nộp lại; bảng chỉ chuyển hẳn sang `REJECTED` khi không còn
+dòng `SUBMITTED` nào (của bất kỳ PM nào) trong tuần.
+
+#### `POST /timesheets/{timesheetId}/reject`
+
+```json
+{ "entryIds": [30], "reason": "Sai du an, can ghi lai" }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `entryIds` | number[] | không | Bỏ qua/null/rỗng = **từ chối nguyên bảng** (mọi dòng `SUBMITTED` thuộc dự án của PM); truyền id = từ chối từng dòng. |
+| `reason` | string | **có** | Lý do từ chối, tối đa 1000 ký tự — thiếu bị `400 VALIDATION_ERROR` trước khi chạm tới bảng chấm công. |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Tu choi bang cham cong thanh cong",
+  "data": {
+    "timesheet": {
+      "id": 50,
+      "userId": 7,
+      "weekStartDate": "2026-09-07",
+      "weekEndDate": "2026-09-13",
+      "status": "REJECTED",
+      "totalHours": 10,
+      "submittedBy": "nv01",
+      "submittedAt": "2026-09-13T10:00:00"
+    },
+    "rejectedEntries": 2
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Thiếu `reason` hoặc vượt 1000 ký tự. |
+| 400 | `INVALID_STATE` | Bảng không ở trạng thái `PENDING_APPROVAL`, hoặc không còn dòng `SUBMITTED` nào. |
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-02`; **hoặc** `VT-02` hợp lệ nhưng từ chối dòng thuộc dự án người khác. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại bảng chấm công, hoặc `entryIds` chứa id không thuộc danh sách dòng chờ duyệt. |
+
+**Lưu ý cho Frontend:**
+
+- Sau khi từ chối, dòng quay về `DRAFT` — hiển thị lại được trên lưới giờ công tuần (`GET /me/time-entries`)
+  để nhân viên sửa và nộp lại qua `POST /me/timesheets/{weekStartDate}/submit` (`NCL-06-CN-002`).
+- `data.timesheet.status` có thể vẫn là `PENDING_APPROVAL` nếu tuần còn phần của PM khác chưa xử lý —
+  tương tự cơ chế duyệt từng phần của `NCL-06-CN-003`.
+- Kênh thông báo in-app cho người nộp biết bị từ chối **chưa triển khai** (chờ Epic `NCL-14`) — hiện tại
+  chỉ có Nhật ký hệ thống ghi lại lý do/thời điểm, Frontend tạm thời có thể polling lại trạng thái bảng.
+
+---
+
+### `NCL-06-CN-005` — Điều chỉnh giờ công đã duyệt bằng bút toán đảo
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`), chỉ điều chỉnh được dòng thuộc dự án mình quản lý. Giờ công
+đã `APPROVED` là **bất biến** (QTN-10) — không sửa/xoá trực tiếp; muốn sửa phải đi qua bút toán đảo (QTN-11):
+hệ thống tự sinh một dòng **đảo** (số giờ âm, bù trừ đúng dòng gốc) và một dòng **sửa** (số giờ đúng), **giữ
+nguyên dòng gốc** — cả ba dòng đều tra cứu lại được.
+
+#### `POST /projects/{projectId}/tasks/{taskId}/time-entries/{entryId}/reversal`
+
+```json
+{ "correctedHours": 6, "reason": "Ghi nham 8 gio, thuc te lam 6 gio" }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `correctedHours` | number | **có** | Số giờ đúng sau khi sửa, từ 0.01 trở lên. |
+| `reason` | string | **có** | Lý do điều chỉnh, tối đa 1000 ký tự. |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Dieu chinh gio cong thanh cong",
+  "data": {
+    "adjustmentId": 5,
+    "originalEntry": { "id": 30, "hours": 8, "status": "APPROVED" },
+    "reversalEntry": { "id": 31, "hours": -8, "status": "APPROVED" },
+    "correctedEntry": { "id": 32, "hours": 6, "status": "APPROVED" },
+    "reason": "Ghi nham 8 gio, thuc te lam 6 gio",
+    "adjustedBy": "pm01",
+    "adjustedAt": "2026-09-14T10:00:00"
+  }
+}
+```
+
+#### `GET /projects/{projectId}/tasks/{taskId}/adjustments`
+
+Lịch sử điều chỉnh của một công việc, mới nhất trước — cùng cấu trúc `AdjustmentTraceRes` như trên, trả
+mảng `data`.
+
+**Response lỗi (áp dụng cho cả hai endpoint):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Thiếu `reason`, `correctedHours` <= 0, hoặc vượt giới hạn ký tự. |
+| 400 | `INVALID_STATE` | Dòng gốc chưa `APPROVED`; dòng không phải bản gốc (đã từng bị điều chỉnh — chỉ điều chỉnh được dòng gốc, TC-02); hoặc kỳ chấm công chứa dòng gốc đã bị **khóa** (`NCL-06-CN-006`, QTN-12). |
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-02`; **hoặc** `VT-02` hợp lệ nhưng công việc không thuộc dự án mình quản lý. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại dự án/công việc/dòng giờ công. |
+
+**Lưu ý cho Frontend:**
+
+- Hiển thị cả ba dòng (`originalEntry`/`reversalEntry`/`correctedEntry`) khi xem lịch sử để người dùng
+  hiểu rõ dấu vết — không ẩn dòng gốc hay dòng đảo dù chúng không còn "hiệu lực hiển thị".
+- Nếu backend trả `400 INVALID_STATE` với nội dung nhắc tới kỳ đã khóa, hướng người dùng liên hệ Kế toán
+  (chỉ `VT-05` mở lại được kỳ qua `NCL-06-CN-006`).
+
+---
+
+### `NCL-06-CN-006` — Khóa kỳ chấm công
+
+Yêu cầu token của **Kế toán** (`VT-05`). Kỳ tính theo **tháng** — khóa/mở đồng loạt cả tháng, không khóa
+theo tuần lẻ. Khi kỳ đã `LOCKED`, mọi thao tác ghi/sửa/điều chỉnh giờ công có ngày làm việc rơi vào kỳ đó
+đều bị chặn (QTN-12), dù dòng đó đang ở trạng thái nào.
+
+#### `GET /timesheet-periods`
+
+Danh sách kỳ chấm công, mới nhất trước.
+
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 3, "periodStart": "2026-09-01", "periodEnd": "2026-09-30", "status": "OPEN", "lockedBy": null, "lockedAt": null }
+  ]
+}
+```
+
+#### `POST /timesheet-periods/lock`
+
+```json
+{ "year": 2026, "month": 9 }
+```
+
+Khóa kỳ của tháng chỉ định — nếu kỳ chưa tồn tại, hệ thống **tự tạo rồi khóa luôn**. Chặn khóa nếu còn
+bảng chấm công `PENDING_APPROVAL` giao với khoảng ngày của kỳ.
+
+#### `POST /timesheet-periods/{periodId}/unlock`
+
+Mở lại một kỳ đã khóa (không cần body).
+
+**Response thành công — `200 OK`** (cả 2 API POST): trả về `TimesheetPeriodRes` như ở `GET` phía trên.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | Thiếu `year`/`month`, hoặc `month` ngoài khoảng 1-12. |
+| 400 | `INVALID_STATE` | Khóa một kỳ đã `LOCKED` sẵn; mở một kỳ đang `OPEN`; hoặc khóa khi còn bảng `PENDING_APPROVAL` giao với kỳ. |
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-05`. |
+| 404 | `RESOURCE_NOT_FOUND` | `periodId` không tồn tại (chỉ áp dụng `unlock`). |
+
+**Lưu ý cho Frontend:**
+
+- Trước khi cho Kế toán bấm khóa, gợi ý gọi thử và hiển thị rõ lỗi `INVALID_STATE` liệt kê **còn bảng nào
+  đang chờ duyệt** (nếu backend trả danh sách trong `message`) để Kế toán biết cần nhắc PM xử lý trước.
+- Sau khi khóa, các màn hình ghi giờ công / điều chỉnh bút toán đảo của tháng đó nên vô hiệu hoá nút
+  ghi/sửa ngay khi nhận `400 INVALID_STATE` nhắc tới kỳ khóa, tránh người dùng thử lại nhiều lần.
+
+---
+
+### `NCL-06-CN-009` — Nhắc nộp bảng chấm công
+
+Mỗi **Chủ Nhật 20h00** (giờ server), hệ thống tự động rà soát tuần Thứ Hai–Chủ Nhật vừa kết thúc: nhân sự
+nào còn dòng giờ công `DRAFT` trong tuần nhưng **chưa nộp** (chưa gọi `POST /me/timesheets/{weekStartDate}/submit`,
+hoặc bảng bị `REJECTED` mà chưa nộp lại) sẽ nhận thông báo in-app nhắc nộp (`NotificationType.TIMESHEET_REMINDER`).
+PM phụ trách các dự án liên quan cũng nhận một thông báo tổng hợp danh sách nhân sự còn thiếu. Cơ chế
+này **tự động, không cần Frontend gọi API để kích hoạt** — Frontend chỉ cần hiển thị thông báo qua API
+Notification đã có (`NCL-06-CN-002` ở trên) và, nếu cần màn hình riêng, dùng endpoint tra cứu dưới đây.
+
+Chống gửi trùng (QTN-27): trong cùng một tuần, mỗi người (nhân viên lẫn PM) chỉ nhận **đúng một** thông
+báo nhắc dù hệ thống có chạy rà soát lại nhiều lần.
+
+#### `GET /timesheets/unsubmitted?weekStartDate=2026-09-07`
+
+Yêu cầu token của **Quản lý dự án** (`VT-02`) hoặc **Nhân viên chuyên môn** (`VT-03`). Trả về danh sách
+`userId` còn chưa nộp bảng chấm công của tuần bắt đầu từ `weekStartDate` (luôn là một ngày Thứ Hai).
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": [
+    { "userId": 102, "weekStartDate": "2026-09-07", "weekEndDate": "2026-09-13" }
+  ]
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Vai trò không phải `VT-02` hoặc `VT-03` — ghi nhật ký lần từ chối (TC-03). |
+
+**Lưu ý cho Frontend:**
+
+- `weekStartDate` bắt buộc là ngày Thứ Hai (giống tham số của `POST /me/timesheets/{weekStartDate}/submit`).
+- Response chỉ trả `userId` (không kèm họ tên) — muốn hiển thị tên, ghép thêm với danh sách nhân sự đã
+  có sẵn ở màn hình quản lý người dùng (`NCL-01-CN-002`).
+- Endpoint này phục vụ **xem lại** danh sách (vd PM muốn chủ động kiểm tra tuần hiện tại), không thay thế
+  cơ chế nhắc tự động — không cần gọi endpoint này để "kích hoạt" gửi nhắc.
+
+---
+
+## Epic `NCL-07` — Quản lý đơn giá
+
+### `NCL-07-CN-001` — Khai báo bảng đơn giá theo vai trò
+
+Yêu cầu token của **Kế toán** (`VT-05`) hoặc **Quản trị viên** (`VT-07`) — vai trò khác nhận `403 FORBIDDEN`
+và bị ghi nhật ký lần từ chối vào Nhật ký hệ thống (`audit_logs`, TC-03, `AccessDeniedAuditRecorder`).
+
+Mỗi dòng đơn giá gồm **vai trò chuyên môn**, **cấp bậc** và **đơn giá theo ngày công** — đơn vị tiền là
+theo **ngày**, không phải theo giờ, để khớp với cách `NCL-03-CN-003` (Lập báo giá) đang tính
+`amount = workDays * dailyRate`. Khoá duy nhất là `(professionalRole, level, effectiveFrom)` — cùng
+vai trò + cấp bậc không được khai báo hai lần cho cùng một ngày hiệu lực (TC-02 phần dữ liệu trùng).
+Khai báo thành công ghi một dòng vào Nhật ký hệ thống — người thực hiện, nội dung (vai trò/cấp bậc/đơn
+giá/ngày hiệu lực), thời điểm (TC-04); Frontend không cần gọi thêm API nào để việc ghi log này xảy ra.
+
+> **Không ảnh hưởng luồng báo giá hiện có.** `NCL-03-CN-003` tra cứu đơn giá **chỉ theo tên vai trò**
+> (chưa biết khái niệm cấp bậc), lấy dòng có `effectiveFrom` gần nhất không vượt quá ngày lập báo giá.
+> Nếu một vai trò có nhiều cấp bậc khai báo trùng ngày hiệu lực, báo giá sẽ lấy dòng bất kỳ trong số đó —
+> Frontend màn hình báo giá không cần và không nên gửi `level`.
+
+#### `POST /bill-rates`
+
+```json
+{
+  "professionalRole": "Lap trinh vien cao cap",
+  "level": "Cao cap",
+  "dailyRate": 2500000,
+  "effectiveFrom": "2026-01-01"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `professionalRole` | string | có | Vai trò chuyên môn, không để trống |
+| `level` | string | có | Cấp bậc (vd "Trung cấp", "Cao cấp", "Quản lý"), không để trống |
+| `dailyRate` | number | có | Đơn giá theo ngày công, không được âm |
+| `effectiveFrom` | date (`yyyy-MM-dd`) | có | Ngày bắt đầu hiệu lực |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Tao bang don gia theo vai tro thanh cong",
+  "data": {
+    "professionalRole": "Lap trinh vien cao cap",
+    "level": "Cao cap",
+    "dailyRate": 2500000,
+    "effectiveFrom": "2026-01-01"
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) hoặc Quản trị viên (`VT-07`) — ghi nhật ký lần từ chối (TC-03) |
+| 400 | `VALIDATION_ERROR` | Thiếu `professionalRole`/`level`/`effectiveFrom`; hoặc `dailyRate` âm (TC-02) |
+| 409 | `DUPLICATE_DATA` | Đã tồn tại đơn giá cho cùng `professionalRole` + `level` tại `effectiveFrom` đã chọn |
+
+#### `GET /bill-rates/current`
+
+Danh sách mỗi cặp (vai trò, cấp bậc) đang có đơn giá hiệu lực tính đến hôm nay — dùng cho ô chọn vai trò
+ở màn hình lập báo giá (`NCL-03-CN-003`) thay vì gõ tay tự do. Yêu cầu token **Nhân viên kinh doanh**
+(`VT-04`), **Kế toán** (`VT-05`) hoặc **Quản trị viên** (`VT-07`).
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": [
+    { "professionalRole": "Lap trinh vien cao cap", "level": "Cao cap", "dailyRate": 2500000, "effectiveFrom": "2024-01-01" }
+  ]
+}
+```
+
+**Lưu ý cho Frontend:**
+- `professionalRole` ở đây là chuỗi hiển thị/khớp chính xác dùng khi gửi `items[].professionalRole` cho
+  `POST /opportunities/{opportunityId}/quotes` — `level` chỉ để hiển thị thêm, không gửi kèm khi lập báo giá.
+- Đơn giá mới khai báo (`effectiveFrom` trong tương lai) sẽ **không** xuất hiện ở endpoint này cho tới đúng
+  ngày hiệu lực — đây là chủ đích (QTN-15: đơn giá áp theo thời điểm phát sinh).
+
+### `NCL-07-CN-002` — Đặt hiệu lực theo thời điểm cho đơn giá
+
+Không có bảng/API riêng — đây là hệ quả trực tiếp của cách `NCL-07-CN-001` đã thiết kế: `POST /bill-rates`
+**luôn tạo dòng mới**, không bao giờ ghi đè hay xoá dòng cũ (khoá duy nhất `(professionalRole, level,
+effectiveFrom)` đã buộc mỗi mốc hiệu lực là một dòng riêng — TC-01, TC-03). Phần còn thiếu của story này
+là **tra đúng dòng hiệu lực tại một ngày phát sinh cụ thể** (TC-02, QTN-15), bổ sung ở endpoint dưới đây.
+
+#### `GET /bill-rates/resolve`
+
+Trả về dòng đơn giá có hiệu lực tại một ngày phát sinh cụ thể — dùng khi tính doanh thu cho một dòng giờ
+công đã ghi nhận trong quá khứ, để dòng đó **luôn áp giá đang hiệu lực tại đúng ngày nó phát sinh**, không
+bị ảnh hưởng bởi lần tăng giá sau đó (TC-02). Yêu cầu token **Kế toán** (`VT-05`) hoặc **Quản trị viên**
+(`VT-07`) — cùng nhóm quyền với thao tác khai báo, vì đây cũng là một phần của "quản lý hiệu lực của đơn
+giá" (TC-04); vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối.
+
+```
+GET /bill-rates/resolve?professionalRole=Lap+trinh+vien+cao+cap&level=Cao+cap&asOf=2026-06-30
+```
+
+| Query param | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `professionalRole` | string | có | Vai trò chuyên môn, khớp chính xác (không phân biệt hoa/thường) |
+| `level` | string | có | Cấp bậc, khớp chính xác (không phân biệt hoa/thường) |
+| `asOf` | date (`yyyy-MM-dd`) | có | Ngày phát sinh cần tra giá (vd ngày công của dòng giờ công) |
+
+Backend chọn dòng có `effectiveFrom` **gần nhất nhưng không vượt quá** `asOf` — đúng dòng hiệu lực tại
+thời điểm đó, kể cả khi đã có dòng hiệu lực mới hơn (ngày trong tương lai so với `asOf`) được khai báo sau.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "professionalRole": "Lap trinh vien cao cap",
+    "level": "Cao cap",
+    "dailyRate": 500000,
+    "effectiveFrom": "2026-01-01"
+  }
+}
+```
+
+`effectiveFrom` trong response là ngày hiệu lực của **dòng được áp dụng** (có thể khác `asOf` đã gửi) —
+Frontend nên hiển thị giá trị này để kế toán thấy rõ giá đang tính dựa trên mốc hiệu lực nào.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) hoặc Quản trị viên (`VT-07`) — ghi nhật ký lần từ chối (TC-04) |
+| 400 | `VALIDATION_ERROR` | Thiếu `professionalRole`/`level`/`asOf` |
+| 404 | `RESOURCE_NOT_FOUND` | Chưa có dòng đơn giá nào hiệu lực **trước hoặc đúng** `asOf` cho vai trò + cấp bậc đó |
+
+**Lưu ý cho Frontend:**
+- Khác với `GET /bill-rates/current` (luôn lấy theo **hôm nay**), endpoint này nhận `asOf` tuỳ ý — dùng
+  cho màn hình xem lại/tính doanh thu của các kỳ trước, không phải màn hình lập báo giá mới.
+- `404` không phải lỗi hệ thống — nghĩa là vai trò/cấp bậc đó **chưa từng có đơn giá** tại thời điểm
+  `asOf` (vd `asOf` sớm hơn cả dòng đầu tiên từng khai báo); nên hiển thị thông báo "chưa có đơn giá tại
+  thời điểm này" thay vì lỗi chung chung.
+
+### `NCL-07-CN-003` — Khai báo đơn giá riêng theo hợp đồng
+
+Yêu cầu token của **Kế toán** (`VT-05`) hoặc **Quản trị viên** (`VT-07`) — vai trò khác nhận `403 FORBIDDEN` và hệ thống ghi nhật ký lần từ chối (TC-03).
+
+Khác với bảng đơn giá chung công ty (`NCL-07-CN-001`), đơn giá riêng theo hợp đồng (`contract_bill_rates`) cho phép định nghĩa mức giá đàm phán riêng cho một hợp đồng cụ thể. Quy tắc ưu tiên (QTN-16): Khi tính doanh thu cho một dòng giờ công của vai trò/cấp bậc trong hợp đồng, hệ thống ưu tiên lấy đơn giá riêng theo hợp đồng (nếu có), nếu không khai báo đơn giá riêng thì hệ thống quay về dùng đơn giá chung của công ty (TC-01, TC-02).
+
+Thao tác khai báo/thay đổi đơn giá riêng thành công sẽ tự động ghi nhật ký lịch sử (`audit_logs`) thông tin người thực hiện, nội dung thay đổi và thời điểm (TC-04).
+
+#### `POST /contracts/{contractId}/bill-rates`
+
+Khai báo đơn giá riêng cho hợp đồng `{contractId}`.
+
+```json
+{
+  "professionalRole": "Lap trinh vien cao cap",
+  "level": "Cao cap",
+  "dailyRate": 3000000,
+  "effectiveFrom": "2026-01-01"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `professionalRole` | string | có | Vai trò chuyên môn, không để trống |
+| `level` | string | có | Cấp bậc, không để trống |
+| `dailyRate` | number | có | Đơn giá theo ngày công, không được âm |
+| `effectiveFrom` | date (`yyyy-MM-dd`) | có | Ngày bắt đầu hiệu lực |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Khai bao don gia rieng theo hop dong thanh cong",
+  "data": {
+    "contractId": 1,
+    "professionalRole": "Lap trinh vien cao cap",
+    "level": "Cao cap",
+    "dailyRate": 3000000,
+    "effectiveFrom": "2026-01-01"
+  }
+}
+```
+
+#### `GET /contracts/{contractId}/bill-rates/resolve`
+
+Tra cứu đơn giá áp dụng cho hợp đồng `{contractId}` tại ngày phát sinh `asOf`. Tự động áp dụng quy tắc QTN-16: ưu tiên đơn giá riêng theo hợp đồng, nếu không có sẽ tự rơi về đơn giá chung công ty.
+
+```
+GET /contracts/{contractId}/bill-rates/resolve?professionalRole=Lap+trinh+vien+cao+cap&level=Cao+cap&asOf=2026-06-30
+```
+
+| Query param | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `professionalRole` | string | có | Vai trò chuyên môn |
+| `level` | string | có | Cấp bậc |
+| `asOf` | date (`yyyy-MM-dd`) | có | Ngày phát sinh cần tính doanh thu |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "dailyRate": 3000000,
+    "effectiveFrom": "2026-01-01",
+    "isContractSpecific": true
+  }
+}
+```
+
+| Trường | Kiểu | Ghi chú |
+|---|---|---|
+| `dailyRate` | number | Mức đơn giá được áp dụng |
+| `effectiveFrom` | date | Ngày hiệu lực của mốc đơn giá được áp dụng |
+| `isContractSpecific` | boolean | `true` nếu áp dụng đơn giá riêng hợp đồng (TC-01), `false` nếu rơi về đơn giá chung công ty (TC-02) |
+
+**Response lỗi (áp dụng cho cả 2 endpoint trên):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) hoặc Quản trị viên (`VT-07`) — ghi nhật ký lần từ chối (TC-03) |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy Hợp đồng `{contractId}`, hoặc không tìm thấy đơn giá chung lẫn riêng hợp lệ tại mốc `asOf` |
+| 400 | `VALIDATION_ERROR` | Thiếu thông tin bắt buộc hoặc `dailyRate` âm |
+| 409 | `DUPLICATE_DATA` | Đã tồn tại đơn giá riêng cho cùng `professionalRole` + `level` + `effectiveFrom` trong hợp đồng |
+
+### `NCL-07-CN-004` — Khai báo chi phí giờ công nội bộ
+
+Khai báo và tra cứu chi phí giờ công nội bộ của từng nhân sự theo mốc thời gian (`employee_hourly_rates`), phục vụ việc tính giá vốn dự án (QTN-17).
+
+Quyền truy cập:
+- Khai báo (`POST`): Yêu cầu token **Nhân sự** (`VT-06`) hoặc **Quản trị viên** (`VT-07`).
+- Xem lịch sử & tra cứu giá vốn (`GET`): Cho phép **Nhân sự** (`VT-06`), **Kế toán** (`VT-05`), **Ban giám đốc** (`VT-01`), **Quản trị viên** (`VT-07`).
+- Vai trò khác (ví dụ Quản lý dự án `VT-02`) bị chặn `403 FORBIDDEN` và tự động ghi nhật ký lần từ chối (TC-02).
+
+Nhật ký dữ liệu nhạy cảm (TC-04): Mọi thao tác khai báo, chỉnh sửa hoặc xem danh sách chi phí giờ công đều được tự động ghi nhận vào `sensitive_data_access_logs` (loại dữ liệu `SALARY` / `COST`).
+
+#### `POST /employees/{employeeId}/rates`
+
+Khai báo mốc chi phí giờ công nội bộ cho nhân sự `{employeeId}`. Hệ thống lưu bản ghi mới và giữ nguyên bản ghi lịch sử cũ (TC-01).
+
+```json
+{
+  "hourlyRate": 250000,
+  "effectiveFrom": "2026-01-01"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `hourlyRate` | number | có | Chi phí giờ công nội bộ, không được âm |
+| `effectiveFrom` | date (`yyyy-MM-dd`) | có | Ngày bắt đầu hiệu lực của mức chi phí |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Khai bao chi phi gio cong noi bo thanh cong",
+  "data": {
+    "id": 10,
+    "employeeId": 1,
+    "hourlyRate": 250000,
+    "effectiveFrom": "2026-01-01"
+  }
+}
+```
+
+#### `GET /employees/{employeeId}/rates`
+
+Xem danh sách lịch sử chi phí giờ công nội bộ của nhân sự `{employeeId}` (mới nhất xếp trước).
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 10, "employeeId": 1, "hourlyRate": 250000, "effectiveFrom": "2026-01-01" }
+  ]
+}
+```
+
+#### `GET /employees/{employeeId}/rates/resolve?asOf=2026-06-01`
+
+Tra cứu chi phí giờ công của nhân sự `{employeeId}` tại mốc thời điểm `asOf` phát sinh dòng giờ công.
+
+| Query param | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `asOf` | date (`yyyy-MM-dd`) | có | Ngày phát sinh dòng giờ công cần tính giá vốn |
+
+**Response thành công — `200 OK` (có dữ liệu):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "employeeId": 1,
+    "hourlyRate": 250000,
+    "effectiveFrom": "2026-01-01",
+    "missingCostData": false
+  }
+}
+```
+
+**Response thành công — `200 OK` (ngoại lệ TC-03: `asOf` sớm hơn mọi mốc hiệu lực đã khai báo):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "employeeId": 1,
+    "hourlyRate": null,
+    "effectiveFrom": null,
+    "missingCostData": true
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Người dùng không có vai trò được phép (ví dụ VT-02) — ghi nhật ký từ chối (TC-02) |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy hồ sơ nhân sự `{employeeId}` |
+| 400 | `VALIDATION_ERROR` | Thiếu `hourlyRate` / `effectiveFrom` hoặc `hourlyRate` âm |
+| 409 | `DUPLICATE_DATA` | Đã tồn tại khai báo chi phí giờ công cho nhân sự tại ngày hiệu lực đã chọn |
+
+### `NCL-07-CN-005` — Tra cứu đơn giá áp dụng cho một dòng giờ công
+
+Cho một dòng giờ công (`timesheet_entries`) đã ghi nhận, tra ra **đúng đơn giá đang được dùng để tính
+doanh thu** cho dòng đó — không cần Frontend tự tra `professionalRole`/`contractId`/`asOf` rồi gọi tiếp
+`GET /contracts/{contractId}/bill-rates/resolve`. Backend tự suy ra:
+
+- `professionalRole`: lấy từ hồ sơ nhân sự (`employees.professional_role`) của người ghi dòng giờ công đó.
+- `contractId`: lấy từ `dòng giờ công → công việc (task) → dự án (project) → hợp đồng`.
+- `asOf`: chính là `workDate` (ngày công) của dòng giờ công — đảm bảo dòng luôn áp giá đang hiệu lực tại
+  đúng ngày nó phát sinh, không bị ảnh hưởng bởi lần tăng giá sau đó (kế thừa nguyên tắc QTN-15 của
+  `NCL-07-CN-002`).
+
+Sau khi suy ra 3 giá trị trên, endpoint áp dụng đúng quy tắc ưu tiên **QTN-16** đã có ở `NCL-07-CN-003`
+(ưu tiên đơn giá riêng theo hợp đồng, không có thì rơi về đơn giá chung công ty).
+
+`level` (cấp bậc) **không tự suy ra được** — hồ sơ nhân sự hiện chưa lưu cấp bậc — nên Frontend phải gửi
+kèm qua query param (ví dụ lấy từ lựa chọn của Kế toán khi xem dòng giờ công đó).
+
+Yêu cầu token **Kế toán** (`VT-05`) hoặc **Quản trị viên** (`VT-07`) — cùng nhóm quyền với các endpoint
+tra cứu đơn giá khác vì đây cũng là một phần của "quản lý hiệu lực của đơn giá" phục vụ tính doanh thu;
+vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối.
+
+#### `GET /timesheet-entries/{entryId}/bill-rate/resolve`
+
+```
+GET /timesheet-entries/100/bill-rate/resolve?level=Cao+cap
+```
+
+| Tham số | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `entryId` | path, number | có | ID dòng giờ công (`timesheet_entries.id`) cần tra đơn giá |
+| `level` | query, string | có | Cấp bậc của người thực hiện dòng giờ công đó, không để trống |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "timeEntryId": 100,
+    "taskId": 5,
+    "projectId": 2,
+    "contractId": 1,
+    "professionalRole": "Lap trinh vien cao cap",
+    "level": "Cao cap",
+    "workDate": "2026-06-30",
+    "hours": 8.00,
+    "workType": "OVERTIME",
+    "dailyRate": 3000000,
+    "effectiveFrom": "2026-01-01",
+    "isContractSpecific": true,
+    "rateFactor": 1.50,
+    "appliedDailyRate": 4500000.00
+  }
+}
+```
+
+| Trường | Kiểu | Ghi chú |
+|---|---|---|
+| `workDate` | date | Ngày công của dòng giờ công — cũng chính là mốc `asOf` dùng để tra đơn giá |
+| `hours` | number | Số giờ công đã ghi của dòng, trả kèm để đối chiếu (không dùng để tính `dailyRate`) |
+| `workType` | string (enum) | Loại hình công việc của dòng giờ công — `NORMAL`/`OVERTIME`/`WEEKEND`/`HOLIDAY` (`NCL-07-CN-006`) |
+| `dailyRate` | number | Đơn giá theo vai trò/cấp bậc **trước khi** nhân hệ số loại hình công việc |
+| `effectiveFrom` | date | Ngày hiệu lực của mốc đơn giá được áp dụng (có thể khác `workDate`) |
+| `isContractSpecific` | boolean | `true` nếu áp dụng đơn giá riêng hợp đồng, `false` nếu rơi về đơn giá chung công ty (QTN-16) |
+| `rateFactor` | number | Hệ số nhân theo `workType` (`NCL-07-CN-006`), tra từ `GET /work-type-rates` |
+| `appliedDailyRate` | number | **Đơn giá cuối cùng** = `dailyRate * rateFactor` (làm tròn 2 chữ số thập phân) — dùng số này để tính doanh thu, không dùng `dailyRate` |
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) hoặc Quản trị viên (`VT-07`) — ghi nhật ký lần từ chối |
+| 400 | `VALIDATION_ERROR` | Thiếu `level` (rỗng/chỉ khoảng trắng) |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy dòng giờ công `{entryId}`, hoặc không tìm thấy hồ sơ nhân sự của người thực hiện, hoặc chưa có đơn giá nào (chung lẫn riêng hợp đồng) hiệu lực trước hoặc đúng `workDate` cho vai trò + cấp bậc đó, hoặc chưa khai báo hệ số cho `workType` của dòng đó (`NCL-07-CN-006`) |
+
+**Lưu ý cho Frontend:**
+- Đây là endpoint tổng hợp — Frontend **không cần** tự gọi `GET /contracts/{contractId}/bill-rates/resolve`
+  nữa cho màn hình xem chi tiết dòng giờ công; chỉ cần biết `entryId` và hỏi người dùng chọn `level`.
+- `404` không phải lỗi hệ thống — có thể do dòng giờ công không tồn tại, người thực hiện chưa có hồ sơ nhân
+  sự đầy đủ, hoặc vai trò/cấp bậc đó chưa từng có đơn giá tại thời điểm `workDate`; nên hiển thị thông báo
+  phù hợp với từng trường hợp thay vì lỗi chung chung.
+- `effectiveFrom` trong response có thể khác `workDate` đã gửi — luôn hiển thị giá trị này để kế toán thấy
+  rõ giá đang tính dựa trên mốc hiệu lực nào.
+- Kể từ `NCL-07-CN-006`, response có thêm `workType`/`rateFactor`/`appliedDailyRate` — đây là bổ sung thêm
+  trường (backward-compatible), Frontend đang tích hợp từ trước không cần đổi gì nếu chưa dùng các trường
+  mới; nhưng **nên chuyển sang hiển thị `appliedDailyRate`** thay vì `dailyRate` vì đó mới là đơn giá cuối
+  cùng dùng để tính doanh thu cho dòng giờ công.
+
+### `NCL-07-CN-006` — Đơn giá theo loại hình công việc
+
+Cho phép khai báo **hệ số nhân đơn giá** theo loại hình công việc của một dòng giờ công — ví dụ giờ ngoài
+giờ hành chính (`OVERTIME`) nhân `1.5`, giờ cuối tuần (`WEEKEND`) nhân `2.0`, giờ lễ/Tết (`HOLIDAY`) nhân
+`3.0` — áp dụng lên đơn giá theo vai trò/cấp bậc (`NCL-07-CN-001`..`003`) để ra đơn giá cuối cùng cho dòng
+đó. Bốn loại hình cố định (`NORMAL`/`OVERTIME`/`WEEKEND`/`HOLIDAY`) đã có sẵn hệ số mặc định
+(`1.00`/`1.50`/`2.00`/`3.00`) khi triển khai — Kế toán/Quản trị viên có thể sửa lại qua endpoint dưới đây.
+
+Dòng giờ công (`timesheet_entries`) nay có thêm trường `workType` (mặc định `NORMAL` nếu không chọn) khi
+ghi/sửa giờ công (`POST`/`PUT .../time-entries`, Epic `NCL-06`) — người ghi giờ công (Nhân viên chuyên môn,
+`VT-03`) tự chọn loại hình phù hợp với dòng mình ghi. `GET /timesheet-entries/{entryId}/bill-rate/resolve`
+(`NCL-07-CN-005`) tự động nhân hệ số này vào `dailyRate` để ra `appliedDailyRate` — Frontend **không cần**
+tự nhân hệ số.
+
+Khai báo/sửa hệ số yêu cầu token **Kế toán** (`VT-05`) hoặc **Quản trị viên** (`VT-07`) — cùng nhóm quyền
+với các endpoint quản lý đơn giá khác; vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối. Xem
+danh sách hệ số cho phép thêm **Nhân viên chuyên môn** (`VT-03`) vì họ cần biết các lựa chọn hợp lệ khi ghi
+giờ công.
+
+#### `POST /work-type-rates`
+
+Khai báo hệ số cho một loại hình công việc — nếu loại hình đó đã có hệ số thì **ghi đè** giá trị cũ (không
+giữ lịch sử theo ngày hiệu lực như `BillRate`, vì đây là hệ số nghiệp vụ ít thay đổi chứ không phải mức giá
+đàm phán).
+
+```json
+{
+  "workType": "OVERTIME",
+  "factor": 1.5
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `workType` | string (enum) | có | Một trong `NORMAL`/`OVERTIME`/`WEEKEND`/`HOLIDAY` |
+| `factor` | number | có | Hệ số nhân, phải lớn hơn 0 |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Khai bao he so don gia theo loai hinh cong viec thanh cong",
+  "data": {
+    "workType": "OVERTIME",
+    "factor": 1.5
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) hoặc Quản trị viên (`VT-07`) — ghi nhật ký lần từ chối |
+| 400 | `VALIDATION_ERROR` | Thiếu `workType`/`factor`, `workType` không thuộc 4 giá trị hợp lệ, hoặc `factor` ≤ 0 |
+
+#### `GET /work-type-rates`
+
+Danh sách hệ số hiện tại của tất cả loại hình công việc, sắp theo tên loại hình.
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": [
+    { "workType": "NORMAL", "factor": 1.00 },
+    { "workType": "OVERTIME", "factor": 1.50 },
+    { "workType": "WEEKEND", "factor": 2.00 },
+    { "workType": "HOLIDAY", "factor": 3.00 }
+  ]
+}
+```
+
+**Lưu ý cho Frontend:**
+- Dùng danh sách này để dựng ô chọn `workType` ở màn hình ghi giờ công (Epic `NCL-06`) — tránh gõ tay sai
+  giá trị enum.
+- Nếu một loại hình chưa từng được khai báo hệ số (trường hợp hiếm — chỉ xảy ra nếu dữ liệu mặc định bị xoá
+  thủ công), `GET /timesheet-entries/{entryId}/bill-rate/resolve` cho dòng giờ công thuộc loại hình đó sẽ
+  trả `404 RESOURCE_NOT_FOUND` thay vì coi hệ số là `1.00` — hiển thị thông báo "chưa khai báo hệ số cho
+  loại hình công việc này" thay vì lỗi chung chung.
+
+### `NCL-07-CN-007` — Xem lịch sử thay đổi đơn giá
+
+Trả về toàn bộ các mốc đơn giá đã từng khai báo cho một cặp (vai trò, cấp bậc), giúp Kế toán giải trình vì
+sao doanh thu giữa hai kỳ khác nhau (ví dụ do công ty tăng giá giữa chừng — `NCL-07-CN-002`). Không có bảng
+lưu lịch sử riêng: mỗi lần `POST /bill-rates` tạo dòng mới (không bao giờ ghi đè — `NCL-07-CN-001`/`002`),
+nên "lịch sử" chính là toàn bộ các dòng `bill_rates` của cặp đó, sắp theo `effectiveFrom`; "người thay đổi"
+tra lại từ `audit_logs` mà `POST /bill-rates` đã tự ghi tại thời điểm tạo — không cần Frontend hay Backend
+ghi thêm gì mới khi xem màn hình này.
+
+Yêu cầu token **Kế toán** (`VT-05`) hoặc **Quản trị viên** (`VT-07`) — cùng nhóm quyền với các endpoint quản
+lý đơn giá khác; vai trò khác nhận `403 FORBIDDEN` và bị ghi nhật ký lần từ chối (TC-03).
+
+#### `GET /bill-rates/history`
+
+```
+GET /bill-rates/history?professionalRole=Lap+trinh+vien+cao+cap&level=Cao+cap
+```
+
+| Query param | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `professionalRole` | string | có | Vai trò chuyên môn, khớp chính xác (không phân biệt hoa/thường) |
+| `level` | string | có | Cấp bậc, khớp chính xác (không phân biệt hoa/thường) |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "professionalRole": "Lap trinh vien cao cap",
+    "level": "Cao cap",
+    "everChanged": true,
+    "entries": [
+      {
+        "id": 1,
+        "dailyRate": 500000,
+        "effectiveFrom": "2025-01-01",
+        "effectiveTo": "2025-12-31",
+        "current": false,
+        "changedBy": "ke.toan01",
+        "changedAt": "2025-01-01T09:00:00"
+      },
+      {
+        "id": 2,
+        "dailyRate": 600000,
+        "effectiveFrom": "2026-01-01",
+        "effectiveTo": null,
+        "current": true,
+        "changedBy": "ke.toan02",
+        "changedAt": "2025-12-20T14:00:00"
+      }
+    ]
+  }
+}
+```
+
+| Trường | Kiểu | Ghi chú |
+|---|---|---|
+| `everChanged` | boolean | `false` khi `entries` chỉ có đúng 1 phần tử — Frontend hiển thị rõ "chưa từng thay đổi" thay vì bảng có 1 dòng trông giống lỗi tải thiếu dữ liệu (TC-02) |
+| `entries[].id` | number | Mã dòng đơn giá, không cần hiển thị cho người dùng — chỉ để làm `key` khi render danh sách |
+| `entries[].effectiveFrom` | date | Ngày bắt đầu hiệu lực của mốc này |
+| `entries[].effectiveTo` | date \| null | Ngày cuối cùng còn hiệu lực (`effectiveFrom` của mốc kế tiếp trừ 1 ngày); `null` nếu đây là mốc mới nhất |
+| `entries[].current` | boolean | `true` cho đúng một phần tử — mốc mới nhất, đang áp dụng (luôn đi kèm `effectiveTo = null`) |
+| `entries[].changedBy` | string \| null | Tên đăng nhập người đã khai báo mốc này; `null` nếu dòng được tạo từ dữ liệu seed trước khi có audit log — Frontend nên hiển thị "—" thay vì để trống |
+| `entries[].changedAt` | datetime \| null | Thời điểm khai báo; `null` cùng điều kiện với `changedBy` |
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) hoặc Quản trị viên (`VT-07`) — ghi nhật ký lần từ chối (TC-03) |
+| 400 | `VALIDATION_ERROR` | Thiếu `professionalRole` hoặc `level` |
+| 404 | `RESOURCE_NOT_FOUND` | Vai trò + cấp bậc đó chưa từng có đơn giá nào được khai báo |
+
+**Lưu ý cho Frontend:**
+- `entries` luôn sắp theo `effectiveFrom` **tăng dần** (cũ nhất trước) — nếu muốn hiển thị mới nhất trước
+  thì tự đảo mảng phía Frontend.
+- Khác với `GET /bill-rates/current` (chỉ trả các cặp **đang** hiệu lực hôm nay), endpoint này trả **toàn
+  bộ** lịch sử kể cả các mốc đã hết hiệu lực từ lâu — dùng cho màn hình tra cứu/giải trình, không phải màn
+  hình chọn giá khi lập báo giá.
+- `404` không phải lỗi hệ thống — nghĩa là vai trò/cấp bậc đó **chưa từng được khai báo đơn giá lần nào**;
+  nên phân biệt với trường hợp "có 1 mốc" (vẫn trả `200` kèm `everChanged: false`).
+
+---
+
+## Epic `NCL-10` — Hóa đơn và thanh toán
+
+### `NCL-10-CN-001` — Tạo đề nghị xuất hóa đơn từ giờ công đã duyệt
+
+Yêu cầu token của **Kế toán** (`VT-05`). Kế toán chọn một dự án và một kỳ (khoảng ngày công); hệ thống gom các
+dòng giờ công **đã duyệt**, **có tính phí** và **chưa từng nằm trong một đề nghị nào** của dự án đó thành một
+**đề nghị xuất hóa đơn** kèm danh sách dòng và tổng tiền (QTN-18). Chỉ áp dụng cho hợp đồng theo giờ
+(`TIME_AND_MATERIAL`) — hợp đồng trọn gói/theo mốc đi qua `NCL-10-CN-002`, hợp đồng duy trì đi qua `NCL-10-CN-005`.
+
+**Dòng nào được gom** — xét theo `workDate` nằm trong `periodFrom`..`periodTo` (gồm cả hai đầu):
+
+| Dòng giờ công | Xử lý | Đếm ở `skipped` |
+|---|---|---|
+| Đã duyệt (`APPROVED`), có tính phí, chưa vào đề nghị nào, tra được đơn giá | **Được gom** | — |
+| Chưa duyệt (nháp, chờ duyệt hoặc bị từ chối) | Bỏ qua (TC-02) | `notApprovedCount` |
+| Đã duyệt nhưng không tính phí (`billable=false`) | Bỏ qua | `nonBillableCount` |
+| Đã nằm trong một đề nghị trước đó (TC-03) | Bỏ qua | `alreadyProposedCount` |
+| Đã duyệt, có tính phí nhưng chưa tra được đơn giá bán (nhân sự chưa khai báo cấp bậc, chưa có đơn giá hiệu lực...) | Bỏ qua — **không** làm lỗi cả đề nghị | `missingRateCount` |
+
+**Thành tiền mỗi dòng giờ công** = `hours × unitRate`, trong đó `unitRate` = đơn giá **ngày** áp dụng tại đúng
+`workDate` của dòng ÷ 8 (1 ngày công = 8 giờ). Đơn giá ngày lấy từ cùng nguồn với doanh thu ghi nhận
+`NCL-09-CN-002`: ưu tiên đơn giá riêng của hợp đồng rồi mới đến bảng giá chung (QTN-16), có hiệu lực tại ngày công
+(QTN-15) và đã nhân hệ số loại hình công việc (`NCL-07-CN-006`) — nên số tiền trên đề nghị khớp với báo cáo doanh thu.
+Dòng đảo/điều chỉnh đã duyệt (bút toán đảo, QTN-11) mang giờ **âm** nên thành tiền **âm**; vì vậy `laborAmount` và
+`totalAmount` có thể nhỏ hơn tổng các dòng dương, và trong trường hợp kỳ chỉ còn dòng đảo có thể âm.
+
+**Phiếu chi phí tính lại cho khách hàng:** cùng lượt gom, các phiếu chi phí của dự án có `expenseDate` trong kỳ,
+đã được duyệt (`APPROVED`), đã được đánh dấu tính lại (`billable=true`, `NCL-08-CN-003`) và chưa nằm trong đề nghị
+nào (`invoiced=false`) cũng được đưa vào đề nghị dưới dạng dòng `EXPENSE` (thành tiền = số tiền phiếu). Các phiếu này
+được đặt `invoiced=true`, nên từ đó `PUT /expenses/{expenseId}/billable` với `billable=false` bị từ chối
+(`400 INVALID_STATE`, xem `NCL-08-CN-003`).
+
+**Chống gom trùng:** mỗi dòng giờ công và mỗi phiếu chi phí chỉ nằm được trong **một** đề nghị (ràng buộc `UNIQUE`
+ở cơ sở dữ liệu). Các lượt tạo đề nghị của cùng một hợp đồng được xếp hàng tuần tự (khoá ghi dòng hợp đồng) nên hai
+kế toán bấm cùng lúc không thể gom trùng một dòng — người bấm sau sẽ thấy các dòng đó ở `alreadyProposedCount`.
+
+Mỗi lần tạo thành công ghi Nhật ký hệ thống (`action` = "Tao de nghi xuat hoa don tu gio cong", `targetType` =
+`INVOICE`, `targetId` = id đề nghị; người thực hiện và vai trò do hệ thống tự điền từ phiên đăng nhập, nội dung nêu dự án, kỳ,
+số dòng, tổng tiền và số dòng bị bỏ qua — TC-05) và gửi **thông báo trong ứng dụng** (`type` = `INVOICE_PROPOSAL_CREATED`,
+`referenceType` = `InvoiceProposal`, `referenceId` = id đề nghị) cho quản lý dự án (`Project.projectManagerId`). Lần bị
+từ chối quyền ghi "Từ chối truy cập" — chức năng "Tạo đề nghị xuất hóa đơn từ giờ công" (TC-04).
+
+#### `POST /projects/{projectId}/invoice-proposals`
+
+**Request:**
+
+```json
+{
+  "periodFrom": "2026-09-01",
+  "periodTo": "2026-09-30",
+  "note": "Ky thang 9"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `projectId` | number | có | Lấy từ URL; dự án phải tồn tại. |
+| `periodFrom` | date (`yyyy-MM-dd`) | có | Ngày công đầu tiên của kỳ. |
+| `periodTo` | date (`yyyy-MM-dd`) | có | Ngày công cuối cùng của kỳ; không được trước `periodFrom`. |
+| `note` | string | không | Ghi chú, tối đa 1000 ký tự; khoảng trắng hai đầu bị cắt. |
+
+**Response thành công — `200 OK`** (ví dụ rút gọn: kỳ có 3 dòng giờ công đã duyệt và 5 dòng còn chờ duyệt — TC-02; mảng `laborLines` chỉ hiển thị 1 trong 3 dòng):
+
+```json
+{
+  "success": true,
+  "message": "Tao de nghi xuat hoa don thanh cong: bo qua 5 dong gio cong (5 chua duyet, 0 khong tinh phi, 0 da nam trong de nghi truoc, 0 chua co don gia)",
+  "data": {
+    "id": 100,
+    "proposalCode": "IP-20261001-A1B2C3",
+    "projectId": 1,
+    "contractId": 5,
+    "customerId": 9,
+    "periodFrom": "2026-09-01",
+    "periodTo": "2026-09-30",
+    "status": "PENDING",
+    "laborAmount": 7200000.00,
+    "expenseAmount": 2000000.00,
+    "totalAmount": 9200000.00,
+    "note": "Ky thang 9",
+    "laborLines": [
+      {
+        "id": 1001,
+        "lineType": "LABOR",
+        "timeEntryId": 11,
+        "projectExpenseId": null,
+        "lineDate": "2026-09-10",
+        "userId": 3,
+        "hours": 8.00,
+        "unitRate": 300000.0000,
+        "description": "Gio cong ngay 2026-09-10 - Phat trien API",
+        "amount": 2400000.00
+      }
+    ],
+    "expenseLines": [
+      {
+        "id": 1004,
+        "lineType": "EXPENSE",
+        "timeEntryId": null,
+        "projectExpenseId": 50,
+        "lineDate": "2026-09-12",
+        "userId": null,
+        "hours": null,
+        "unitRate": null,
+        "description": "Chi phi TRAVEL: Ve may bay cong tac",
+        "amount": 2000000.00
+      }
+    ],
+    "skipped": {
+      "notApprovedCount": 5,
+      "nonBillableCount": 0,
+      "alreadyProposedCount": 0,
+      "missingRateCount": 0
+    },
+    "createdBy": "ketoan01",
+    "createdAt": "2026-10-01T10:00:00"
+  }
+}
+```
+
+`laborLines` và `expenseLines` sắp theo ngày tăng dần; `laborAmount` = tổng `amount` của `laborLines`,
+`expenseAmount` = tổng `amount` của `expenseLines`, `totalAmount` = `laborAmount + expenseAmount`. `message` chỉ
+kèm phần "bo qua N dong gio cong (...)" khi có ít nhất một dòng bị bỏ qua; số chi tiết luôn có ở `data.skipped`.
+`status` của đề nghị mới luôn là `PENDING` (chờ lập hóa đơn).
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`); hệ thống ghi "Từ chối truy cập" (TC-04). |
+| 404 | `RESOURCE_NOT_FOUND` | Không có dự án `{projectId}` hoặc không tìm thấy hợp đồng của dự án. |
+| 400 | `INVALID_STATE` | Hợp đồng của dự án không phải `TIME_AND_MATERIAL`; hoặc kỳ **không có dòng giờ công/phiếu chi phí nào đủ điều kiện** (khi đó `message` nêu số dòng bị bỏ qua theo từng lý do và **không** tạo đề nghị rỗng). |
+| 400 | `VALIDATION_ERROR` | Thiếu `periodFrom`/`periodTo` (kèm `fieldErrors`), ngày sai định dạng hoặc không có body, `periodFrom` sau `periodTo`, hoặc `note` quá dài. |
+
+**Ghi chú cho Frontend:**
+- Sau khi tạo, nếu `skipped.total > 0` nên hiển thị cảnh báo "bỏ qua N dòng" kèm chi tiết từng lý do; với
+  `notApprovedCount > 0` gợi ý quản lý dự án duyệt nốt bảng chấm công rồi tạo lại đề nghị cho các dòng còn lại; với
+  `missingRateCount > 0` gợi ý bổ sung cấp bậc nhân sự / đơn giá (`NCL-07-CN-001`, `NCL-01-CN-007`).
+- Tạo lại đề nghị cho **cùng kỳ** là hợp lệ: các dòng đã vào đề nghị trước hiện ở `alreadyProposedCount`, chỉ các dòng
+  mới duyệt thêm được gom. Nếu không còn dòng nào, API trả `400 INVALID_STATE` (không phải đề nghị rỗng).
+- `totalAmount` có thể `<= 0` khi kỳ chỉ còn dòng đảo (QTN-11) — hiển thị số âm, không coi là lỗi.
+- Thông báo `INVOICE_PROPOSAL_CREATED` đọc qua `GET /notifications` như các thông báo khác; loại này chưa có biểu
+  tượng riêng ở màn hình Thông báo nên sẽ dùng biểu tượng chuông mặc định.
+- Chưa có API đọc/liệt kê đề nghị hoặc lập hóa đơn từ đề nghị (các story sau của Epic `NCL-10`); dùng `data` của response
+  trên để hiển thị.
+
+### `NCL-10-CN-002` — Lập hóa đơn theo mốc hợp đồng
+
+Yêu cầu token của **Kế toán** (`VT-05`). Kế toán chọn một mốc thanh toán đã **đủ điều kiện lập hóa đơn**
+(`READY_TO_INVOICE`, xem `NCL-04-CN-003`) và hệ thống lập hóa đơn có giá trị **đúng bằng giá trị mốc**; mốc
+chuyển sang `INVOICED` trong cùng giao dịch. Chỉ áp dụng cho hợp đồng `FIXED_PRICE` (trọn gói) hoặc
+`MILESTONE` (theo mốc) — hợp đồng theo giờ đi qua `NCL-10-CN-001`, hợp đồng duy trì đi qua `NCL-10-CN-005`.
+
+**QTN-19:** tổng hóa đơn **chưa huỷ** đã lập của hợp đồng cộng hóa đơn mới không được vượt `totalValue`
+(đã gồm phụ lục, `NCL-04-CN-004`) — và không vượt `limitValue` nếu hợp đồng có đặt hạn mức. Vượt thì bị chặn
+với thông báo yêu cầu lập phụ lục điều chỉnh trước. Các lượt lập hóa đơn của cùng một hợp đồng được xếp hàng
+tuần tự (khoá ghi dòng hợp đồng) nên hai kế toán bấm cùng lúc không thể lập trùng mốc hay cùng vượt giá trị.
+
+Mỗi lần lập thành công ghi Nhật ký hệ thống (`action` = "Lập hóa đơn theo mốc hợp đồng", `targetType` =
+`INVOICE`, `targetId` = id hóa đơn) và `MILESTONE_STATUS_UPDATE` vào `contract_audit_logs`. Lần bị từ chối
+quyền ghi "Từ chối truy cập" — chức năng "Lập hóa đơn theo mốc hợp đồng" (TC-03).
+
+#### `POST /contracts/{contractId}/milestones/{milestoneId}/invoice`
+
+**Request** — toàn bộ body là tùy chọn (có thể không gửi body):
+
+```json
+{
+  "invoiceDate": "2026-09-30",
+  "dueDate": "2026-10-30",
+  "note": "Thanh toan dot 1"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `invoiceDate` | date | không | Ngày hóa đơn; mặc định là ngày hôm nay. |
+| `dueDate` | date | không | Hạn thanh toán (`NCL-10-CN-004` dựa vào đây để tính công nợ quá hạn); mặc định `invoiceDate` + 30 ngày; không được trước `invoiceDate`. |
+| `note` | string | không | Ghi chú, tối đa 1000 ký tự. |
+
+**Response thành công — `200 OK`:**
+
+```json
+{
+  "success": true,
+  "message": "Lap hoa don theo moc hop dong thanh cong",
+  "data": {
+    "id": 100,
+    "invoiceCode": "INV-20260921-A1B2C3",
+    "contractId": 5,
+    "milestoneId": 101,
+    "milestoneName": "Nghiem thu giai doan 1",
+    "status": "ISSUED",
+    "totalAmount": 300000000.00,
+    "invoiceDate": "2026-09-21",
+    "dueDate": "2026-10-21",
+    "note": null,
+    "contractValue": 1000000000.00,
+    "invoicedTotal": 300000000.00,
+    "createdBy": "ketoan01",
+    "createdAt": "2026-09-21T10:00:00"
+  }
+}
+```
+
+`invoicedTotal` là tổng đã xuất hóa đơn của hợp đồng **sau khi tính hóa đơn này**; `contractValue -
+invoicedTotal` là phần còn có thể lập.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`); hệ thống ghi "Từ chối truy cập" (TC-03). |
+| 404 | `RESOURCE_NOT_FOUND` | Không có hợp đồng `{contractId}`, không có mốc `{milestoneId}`, hoặc mốc không thuộc hợp đồng này. |
+| 400 | `INVALID_STATE` | Loại hợp đồng không phải `FIXED_PRICE`/`MILESTONE`; mốc còn `PENDING` (chưa nghiệm thu, QTN-25) hoặc đã `INVOICED`; hoặc mốc gắn phiếu nghiệm thu chưa được khách hàng xác nhận (`NCL-12-CN-003` TC-02). |
+| 400 | `VALIDATION_ERROR` | Tổng hóa đơn lũy kế vượt giá trị hợp đồng hoặc hạn mức (TC-02, QTN-19) — `message` yêu cầu lập phụ lục trước; hoặc `dueDate` trước `invoiceDate`; hoặc `note` quá dài. |
+
+**Ghi chú cho Frontend:**
+- Với lỗi `VALIDATION_ERROR` do QTN-19, hiển thị đúng `message` backend trả về và gợi ý lối đi tới
+  `POST /contracts/{contractId}/appendices` (`NCL-04-CN-004`, vai trò `VT-04`).
+- Muốn lập hóa đơn, mốc phải là `READY_TO_INVOICE`: mốc `PENDING` bị chặn (`400 INVALID_STATE`, QTN-25). Đưa mốc sang
+  `READY_TO_INVOICE` bằng `PATCH /contracts/{contractId}/milestones/{milestoneId}/status` (`NCL-04-CN-003`); không
+  có cách đặt `INVOICED` thủ công — ẩn lựa chọn này khỏi màn hình đổi trạng thái mốc.
+- Sau khi lập hóa đơn, mốc đã là `INVOICED`. `PUT /contracts/{contractId}/milestones` **bị từ chối**
+  (`400 INVALID_STATE`) khi hợp đồng đã có mốc `INVOICED` — ẩn nút "Khai báo lại mốc" trong trường hợp này.
+- Danh sách và chi tiết hóa đơn đọc qua `GET /invoices` và `GET /invoices/{id}` (mục `NCL-10-CN-003` bên dưới).
+
+### `NCL-10-CN-003` — Ghi nhận thanh toán của khách hàng
+
+Yêu cầu token của **Kế toán** (`VT-05`). Kế toán ghi nhận một lần khách hàng trả tiền cho một hóa đơn (số tiền,
+ngày, hình thức); hệ thống cập nhật **số đã thu**, **số còn phải thu** và **trạng thái hóa đơn** trong cùng
+giao dịch: thu đủ → `PAID`, còn thiếu → `PARTIALLY_PAID`. Số đã thu = tổng các lần thanh toán của hóa đơn (không
+lưu cột riêng trên hóa đơn). Các lần ghi thanh toán của cùng một hóa đơn được xếp hàng tuần tự (khoá ghi dòng
+hóa đơn) nên hai kế toán ghi cùng lúc không thể cùng làm hóa đơn bị thu thừa.
+
+Chỉ hóa đơn `ISSUED` hoặc `PARTIALLY_PAID` nhận thanh toán. Mỗi lần ghi thành công ghi Nhật ký hệ thống
+(`action` = "Ghi nhan thanh toan cua khach hang", `targetType` = `INVOICE`, `targetId` = id hóa đơn); lần bị từ
+chối quyền ghi "Từ chối truy cập" — chức năng "Ghi nhận thanh toán của khách hàng" (TC-04).
+
+#### `POST /invoices/{invoiceId}/payments`
+
+**Request:**
+
+```json
+{
+  "amount": 60000000,
+  "paymentDate": "2026-09-20",
+  "method": "BANK_TRANSFER",
+  "note": "Khach chuyen khoan dot 1"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `amount` | number | có | Lớn hơn `0`, tối đa 2 chữ số thập phân; không được lớn hơn số còn phải thu của hóa đơn (TC-03). |
+| `paymentDate` | date | có | Không được ở tương lai (được phép trùng hoặc trước ngày hóa đơn — khách trả trước). |
+| `method` | string | có | `BANK_TRANSFER` (chuyển khoản) · `CASH` (tiền mặt) · `OTHER` (khác). |
+| `note` | string | không | Tối đa 1000 ký tự. |
+
+**Response thành công — `200 OK`** (TC-02: trả 60 triệu trên hóa đơn 100 triệu):
+
+```json
+{
+  "success": true,
+  "message": "Ghi nhan thanh toan cua khach hang thanh cong",
+  "data": {
+    "id": 500,
+    "invoiceId": 9,
+    "invoiceCode": "INV-20260921-A1B2C3",
+    "amount": 60000000.00,
+    "paymentDate": "2026-09-20",
+    "method": "BANK_TRANSFER",
+    "note": "Khach chuyen khoan dot 1",
+    "totalAmount": 100000000.00,
+    "paidAmount": 60000000.00,
+    "remainingAmount": 40000000.00,
+    "invoiceStatus": "PARTIALLY_PAID",
+    "createdBy": "ketoan01",
+    "createdAt": "2026-09-21T10:00:00"
+  }
+}
+```
+
+`paidAmount` và `remainingAmount` là số **sau khi tính lần thanh toán này**; `invoiceStatus` là trạng thái mới
+của hóa đơn (`PAID` khi `remainingAmount = 0`, TC-01).
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`); hệ thống ghi "Từ chối truy cập" (TC-04). |
+| 404 | `RESOURCE_NOT_FOUND` | Không tồn tại hóa đơn `{invoiceId}`. |
+| 400 | `INVALID_STATE` | Hóa đơn còn nháp (`DRAFT`), đã `PAID` hoặc đã `CANCELLED`. |
+| 400 | `VALIDATION_ERROR` | Thiếu/sai `amount`, `paymentDate`, `method`; `amount` ≤ 0; ngày thanh toán ở tương lai; hoặc `amount` lớn hơn số còn phải thu (TC-03). |
+
+**Ghi chú cho Frontend:**
+- Hiển thị đúng `message` backend trả về khi `VALIDATION_ERROR` do vượt số còn phải thu.
+- Sau khi ghi thành công, dùng `remainingAmount`/`invoiceStatus` trong response để cập nhật màn hình, không cần
+  gọi lại API khác.
+- Để chọn hóa đơn cần ghi thanh toán, gọi `GET /invoices?status=ISSUED&status=PARTIALLY_PAID` (bên dưới);
+  `invoiceId` cũng lấy được từ `data.id` của `POST /contracts/{contractId}/milestones/{milestoneId}/invoice`
+  (`NCL-10-CN-002`).
+
+#### `GET /invoices`
+
+Danh sách hóa đơn kèm **số đã thu / còn phải thu**, hóa đơn mới nhất trước. Chỉ `VT-05`. Không phân trang.
+
+| Query param | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `contractId` | number | không | Chỉ lấy hóa đơn của hợp đồng này. |
+| `status` | string, lặp lại được | không | `DRAFT` · `ISSUED` · `PARTIALLY_PAID` · `PAID` · `CANCELLED`. Bỏ trống = mọi trạng thái. Để chọn hóa đơn cần thu tiền dùng `?status=ISSUED&status=PARTIALLY_PAID`. |
+
+**Response thành công — `200 OK`** (danh sách rỗng khi không có hóa đơn nào khớp):
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": 9,
+      "invoiceCode": "INV-20260921-A1B2C3",
+      "contractId": 5,
+      "contractCode": "HD-LK3F9A",
+      "customerId": 3,
+      "customerName": "Cong ty A",
+      "status": "PARTIALLY_PAID",
+      "totalAmount": 100000000.00,
+      "paidAmount": 60000000.00,
+      "remainingAmount": 40000000.00,
+      "invoiceDate": "2026-09-21",
+      "dueDate": "2026-10-21",
+      "note": null,
+      "createdBy": "ketoan01",
+      "createdAt": "2026-09-21T10:00:00"
+    }
+  ]
+}
+```
+
+#### `GET /invoices/{invoiceId}`
+
+Một hóa đơn với cùng cấu trúc như phần tử của `GET /invoices`. Chỉ `VT-05`.
+
+#### `GET /invoices/{invoiceId}/payments`
+
+Lịch sử các lần thanh toán của hóa đơn, `paymentDate` mới nhất trước (cùng ngày thì lần ghi sau đứng trước).
+Chỉ `VT-05`. Hóa đơn chưa có lần thanh toán nào trả `data: []`.
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": 501,
+      "amount": 40000000.00,
+      "paymentDate": "2026-09-21",
+      "method": "CASH",
+      "note": null,
+      "createdBy": "ketoan01",
+      "createdAt": "2026-09-21T10:00:00"
+    }
+  ]
+}
+```
+
+**Response lỗi cho cả ba API đọc:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`); hệ thống ghi "Từ chối truy cập" (chức năng "Tra cứu hóa đơn và công nợ" hoặc "Ghi nhận thanh toán của khách hàng"). |
+| 404 | `RESOURCE_NOT_FOUND` | (`GET /invoices/{id}` và `.../payments`) không tồn tại hóa đơn `{invoiceId}`. |
+| 400 | — | `status` không thuộc danh sách trên (lỗi kiểu tham số của framework). |
+
+### `NCL-10-CN-004` — Theo dõi công nợ quá hạn
+
+Yêu cầu token của **Kế toán** (`VT-05`). Hệ thống liệt kê các hóa đơn **quá hạn thanh toán** tại ngày hôm nay,
+phân nhóm theo **số ngày quá hạn** kèm khách hàng và **số tiền còn lại**, để Kế toán nhắc khách hàng kịp thời.
+Chỉ đọc — không đổi dữ liệu.
+
+**Hóa đơn nào bị coi là quá hạn:** trạng thái `ISSUED` hoặc `PARTIALLY_PAID`, `dueDate` **trước** hôm nay
+và số còn phải thu (`totalAmount − paidAmount`) lớn hơn `0`. Hóa đơn `DRAFT`, `PAID`, `CANCELLED` và hóa đơn chưa
+tới hạn (kể cả đúng ngày `dueDate`) không có mặt. Hóa đơn quá hạn từ ngày kế tiếp `dueDate`, nên
+`daysOverdue` nhỏ nhất là `1`; ghi nhận thanh toán đủ (`NCL-10-CN-003`) làm hóa đơn tự rời khỏi danh sách.
+
+**Hạn thanh toán (`dueDate`):** lấy từ hóa đơn — do Kế toán nhập khi lập hóa đơn theo mốc
+(`NCL-10-CN-002`, trường `dueDate`), mặc định `invoiceDate` + 30 ngày. Hóa đơn lập trước khi có trường này được
+điền `invoiceDate` + 30 ngày (migration `V79`).
+
+**Nhóm tuổi nợ** (luôn trả đủ bốn nhóm, theo thứ tự dưới đây):
+
+| `bucket` | `label` | `fromDays` | `toDays` |
+|---|---|---|---|
+| `DAYS_1_30` | Qua han 1-30 ngay | 1 | 30 |
+| `DAYS_31_60` | Qua han 31-60 ngay | 31 | 60 |
+| `DAYS_61_90` | Qua han 61-90 ngay | 61 | 90 |
+| `OVER_90` | Qua han tren 90 ngay | 91 | `null` |
+
+Hóa đơn quá hạn **trên 30 ngày** nằm ở `DAYS_31_60` trở đi — ví dụ hóa đơn quá hạn 40 ngày nằm ở `DAYS_31_60`
+(TC-01). Trong mỗi nhóm, hóa đơn quá hạn lâu nhất đứng trước.
+
+Lần bị từ chối quyền ghi Nhật ký hệ thống "Từ chối truy cập" — chức năng "Theo dõi công nợ quá hạn" (TC-03).
+Endpoint chỉ đọc nên chỉ ghi nhật ký lần bị từ chối, không ghi lượt xem thành công (giống `GET /invoices`).
+
+#### `GET /receivables/overdue`
+
+| Query param | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `customerId` | number | không | Chỉ lấy hóa đơn của khách hàng này. |
+| `bucket` | string | không | `DAYS_1_30` · `DAYS_31_60` · `DAYS_61_90` · `OVER_90`. Chỉ giữ hóa đơn thuộc nhóm này; `totalInvoiceCount`/`totalRemainingAmount` tính theo bộ lọc, các nhóm còn lại vẫn có mặt nhưng rỗng. |
+
+**Response thành công — `200 OK`** (ví dụ rút gọn: một hóa đơn 100 triệu, đã thu 40 triệu, quá hạn 40 ngày — TC-01):
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "asOfDate": "2026-09-21",
+    "totalInvoiceCount": 1,
+    "totalRemainingAmount": 60000000.00,
+    "buckets": [
+      { "bucket": "DAYS_1_30", "label": "Qua han 1-30 ngay", "fromDays": 1, "toDays": 30,
+        "invoiceCount": 0, "remainingAmount": 0.00, "invoices": [] },
+      {
+        "bucket": "DAYS_31_60", "label": "Qua han 31-60 ngay", "fromDays": 31, "toDays": 60,
+        "invoiceCount": 1,
+        "remainingAmount": 60000000.00,
+        "invoices": [
+          {
+            "id": 9,
+            "invoiceCode": "INV-20260713-A1B2C3",
+            "contractId": 5,
+            "contractCode": "HD-LK3F9A",
+            "customerId": 3,
+            "customerName": "Cong ty A",
+            "status": "PARTIALLY_PAID",
+            "totalAmount": 100000000.00,
+            "paidAmount": 40000000.00,
+            "remainingAmount": 60000000.00,
+            "invoiceDate": "2026-07-13",
+            "dueDate": "2026-08-12",
+            "daysOverdue": 40
+          }
+        ]
+      },
+      { "bucket": "DAYS_61_90", "label": "Qua han 61-90 ngay", "fromDays": 61, "toDays": 90,
+        "invoiceCount": 0, "remainingAmount": 0.00, "invoices": [] },
+      { "bucket": "OVER_90", "label": "Qua han tren 90 ngay", "fromDays": 91, "toDays": null,
+        "invoiceCount": 0, "remainingAmount": 0.00, "invoices": [] }
+    ]
+  }
+}
+```
+
+`daysOverdue` = số ngày từ `dueDate` tới `asOfDate` (luôn `>= 1`); `remainingAmount` của nhóm = tổng
+`remainingAmount` các hóa đơn trong nhóm; `totalRemainingAmount` = tổng cả bốn nhóm.
+
+**Không có công nợ quá hạn — vẫn `200 OK`** (TC-02): `totalInvoiceCount` = `0`, `totalRemainingAmount` = `0.00`,
+bốn nhóm đều `invoiceCount` = `0` và `invoices` = `[]`, và `message` = `"Khong co cong no qua han"`:
+
+```json
+{
+  "success": true,
+  "message": "Khong co cong no qua han",
+  "data": { "asOfDate": "2026-09-21", "totalInvoiceCount": 0, "totalRemainingAmount": 0.00, "buckets": [ "..." ] }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`); hệ thống ghi "Từ chối truy cập" — chức năng "Theo dõi công nợ quá hạn" (TC-03). |
+| 400 | `VALIDATION_ERROR` | `bucket` không thuộc bốn giá trị trên hoặc `customerId` không phải số (lỗi kiểu tham số của framework, không có `fieldErrors`). |
+
+**Ghi chú cho Frontend:**
+- Khi `data.totalInvoiceCount = 0` hiển thị `message` ("không có công nợ quá hạn") thay vì bảng trống; bốn nhóm vẫn
+  có mặt để dựng sẵn các thẻ tổng hợp bằng `0`.
+- Mỗi nhóm dùng `label`, `fromDays`, `toDays` để hiển thị khoảng — không tự suy ngưỡng ở phía Frontend.
+- Bấm một hóa đơn mở `GET /invoices/{id}` và `GET /invoices/{id}/payments` (`NCL-10-CN-003`); để thu tiền dùng
+  `POST /invoices/{invoiceId}/payments`. Sau khi ghi thanh toán đủ, tải lại danh sách để hóa đơn biến mất.
+- `dueDate` cũng có trong `GET /invoices` và `GET /invoices/{id}` (`NCL-10-CN-003`) và trong response lập hóa đơn
+  theo mốc (`NCL-10-CN-002`); màn hình lập hóa đơn nên cho nhập `dueDate` (mặc định gợi ý `invoiceDate` + 30 ngày).
+- Chưa có nhắc nợ tự động — thuộc `NCL-10-CN-006`.
+
+### `NCL-10-CN-005` — Hóa đơn định kỳ cho hợp đồng duy trì
+
+Toàn bộ endpoint dưới đây chỉ dành cho Kế toán (`VT-05`) — vai trò khác nhận `403 FORBIDDEN` và bị ghi
+Nhật ký hệ thống lần từ chối (TC-03). Story này tạo bản ghi trên cùng bảng `invoices` dùng chung của
+Epic `NCL-10` (không có cột riêng để phân biệt nguồn phát sinh): hóa đơn định kỳ dùng chung tiền tố mã
+`INV-` với hóa đơn theo mốc (`NCL-10-CN-002`) và ghi rõ kỳ trong `note`.
+
+#### `POST /contracts/{contractId}/recurring-invoice-schedule`
+
+Khai báo điều khoản lập hóa đơn định kỳ cho một hợp đồng duy trì. Chỉ hợp đồng loại
+`MAINTENANCE` mới khai báo được; mỗi hợp đồng tối đa một điều khoản đang hiệu lực.
+
+**Request:**
+```json
+{
+  "billingDayOfMonth": 5,
+  "amount": 10000000,
+  "notes": "Phi bao tri hang thang goi Chuan"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `contractId` | number | có | Lấy từ URL. Phải là hợp đồng loại `MAINTENANCE`. |
+| `billingDayOfMonth` | number | có | Từ `1` đến `28` (tránh các tháng không có ngày 29-31). |
+| `amount` | number | có | Lớn hơn `0`, giá trị hóa đơn mỗi kỳ. |
+| `notes` | string | không | Tối đa 500 ký tự. |
+| `active` | boolean | không | Mặc định `true` khi tạo mới. |
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Khai bao dieu khoan lap hoa don dinh ky thanh cong",
+  "data": {
+    "id": 1,
+    "contractId": 1,
+    "billingDayOfMonth": 5,
+    "amount": 10000000.00,
+    "active": true,
+    "lastGeneratedPeriod": null,
+    "notes": "Phi bao tri hang thang goi Chuan",
+    "createdAt": "2026-09-01T08:00:00",
+    "updatedAt": null
+  }
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 400 | `VALIDATION_ERROR` | `billingDayOfMonth` ngoài khoảng 1-28, hoặc `amount` không dương/để trống. |
+| 400 | `INVALID_STATE` | Hợp đồng không phải loại `MAINTENANCE`. |
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-05`. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy hợp đồng. |
+| 409 | `DUPLICATE_DATA` | Hợp đồng đã có điều khoản lập hóa đơn định kỳ. |
+
+Mỗi lần khai báo đều ghi Nhật ký hệ thống (TC-04).
+
+#### `PUT /contracts/{contractId}/recurring-invoice-schedule`
+
+Cập nhật điều khoản đã khai báo (ngày lập, giá trị, ghi chú, bật/tắt qua `active`). Cùng khuôn dạng
+request/response với endpoint tạo. Trả `404 RESOURCE_NOT_FOUND` nếu hợp đồng chưa có điều khoản nào.
+Ghi Nhật ký hệ thống mỗi lần cập nhật (TC-04).
+
+#### `GET /contracts/{contractId}/recurring-invoice-schedule`
+
+Xem điều khoản lập hóa đơn định kỳ hiện hành của một hợp đồng. Trả `404 RESOURCE_NOT_FOUND` nếu chưa
+khai báo.
+
+#### `POST /recurring-invoices/run`
+
+Chạy rà soát toàn bộ điều khoản đang bật (`active = true`): điều khoản nào có `billingDayOfMonth` trùng
+ngày rà soát **và** chưa sinh hóa đơn cho kỳ (tháng) đó thì tạo một hóa đơn nháp (`status = "DRAFT"`)
+đúng giá trị điều khoản (TC-01). Hệ thống tự chạy hằng ngày lúc 06:00 (giờ server); endpoint này cho phép
+Kế toán chạy thủ công hoặc mô phỏng một ngày cụ thể qua `asOf` khi kiểm thử.
+
+**Request** (tùy chọn, có thể gửi body rỗng `{}`):
+```json
+{
+  "asOf": "2026-09-05"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `asOf` | date | không | Định dạng `YYYY-MM-DD`. Để trống = lấy ngày hệ thống hôm nay. |
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Ra soat lap hoa don dinh ky thanh cong",
+  "data": {
+    "asOf": "2026-09-05",
+    "created": [
+      {
+        "id": 500,
+        "invoiceCode": "INV-20260905-4F2A9C",
+        "contractId": 1,
+        "customerId": 100,
+        "periodStart": "2026-09-01",
+        "periodEnd": "2026-09-30",
+        "invoiceDate": "2026-09-05",
+        "amount": 10000000.00,
+        "status": "DRAFT"
+      }
+    ],
+    "skipped": [
+      {
+        "contractId": 2,
+        "reason": "Hợp đồng HD-0002 đã hết hiệu lực (trạng thái ACTIVE, ngày kết thúc 2026-08-31), cần kiểm tra việc gia hạn trước khi lập hóa đơn"
+      }
+    ]
+  }
+}
+```
+
+Ý nghĩa từng trường hợp trong `skipped` (TC-02 và QTN-19):
+- Hợp đồng đã hết hiệu lực tại ngày rà soát (`endDate` đã qua, hoặc trạng thái `TERMINATED`/`COMPLETED`) →
+  không tạo hóa đơn, nhắc kiểm tra gia hạn.
+- Tổng giá trị đã lập hóa đơn (dùng chung phép kiểm tra với `NCL-10-CN-002`, `ContractValueLimitValidator`)
+  cộng thêm hóa đơn kỳ này vượt hạn mức/giá trị hợp đồng → không tạo hóa đơn, nhắc lập phụ lục điều chỉnh
+  (QTN-19).
+
+Điều khoản chưa tới ngày lập trong tháng, hoặc đã sinh hóa đơn cho kỳ hiện tại rồi, không xuất hiện ở cả
+`created` lẫn `skipped` (không phải trường hợp cần Kế toán xử lý). Hóa đơn tạo ra có `dueDate` mặc định
+`invoiceDate + 30 ngày`, cùng quy ước với hóa đơn theo mốc (`Invoice.DEFAULT_PAYMENT_TERM_DAYS`).
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-05`. |
+| 400 | `VALIDATION_ERROR` | `asOf` sai định dạng hoặc không đọc được body. |
+
+Mỗi hóa đơn được tạo đều ghi Nhật ký hệ thống riêng (TC-04), kèm mã hóa đơn và giá trị, **và** gửi
+thông báo trong ứng dụng (`type` = `RECURRING_INVOICE_GENERATED`, `referenceType` = `Invoice`,
+`referenceId` = id hóa đơn) cho toàn bộ Kế toán (vai trò `VT-05`) — đây là phần "báo cho kế toán" của
+TC-01, tách khỏi Nhật ký hệ thống (Nhật ký chỉ tra cứu được, không chủ động báo ai). Đọc qua
+`GET /notifications` như các thông báo khác.
+
+### `NCL-10-CN-006` — Nhắc thu nợ tự động
+
+Toàn bộ endpoint dưới đây chỉ dành cho Kế toán (`VT-05`) — vai trò khác nhận `403 FORBIDDEN` và bị ghi
+Nhật ký hệ thống lần từ chối (TC-03). Áp dụng cho mọi hóa đơn còn công nợ (`status` là `ISSUED` hoặc
+`PARTIALLY_PAID` và còn phải thu `> 0`), theo ba mốc:
+
+- **Trước hạn 3 ngày** (`UPCOMING_3_DAYS`): `dueDate` còn đúng 3 ngày nữa.
+- **Đúng hạn** (`DUE_TODAY`): `dueDate` là hôm nay.
+- **Sau hạn theo chu kỳ 7 ngày** (`OVERDUE`): số ngày quá hạn là bội số của 7 (7, 14, 21…) — lặp lại
+  đều đặn cho tới khi hóa đơn được thanh toán đủ, không giới hạn số lần.
+
+Người nhận mỗi lần nhắc: toàn bộ Kế toán (vai trò `VT-05`) và người phụ trách khách hàng của hóa đơn đó
+(`Customer.ownerId`, nhân viên kinh doanh), không trùng lặp.
+
+#### `POST /dunning/run`
+
+Chạy rà soát toàn bộ hóa đơn còn công nợ: hóa đơn nào đang ở đúng một mốc (TC-01) **và** mốc đó
+chưa từng được nhắc thì gửi thông báo trong hệ thống cho từng người nhận và ghi một dòng lịch sử nhắc
+nợ. Hệ thống tự chạy hằng ngày lúc 07:00 (giờ server, sau giờ chạy hóa đơn định kỳ lúc 06:00); endpoint
+này cho phép Kế toán chạy thủ công hoặc mô phỏng một ngày cụ thể qua `asOf` khi kiểm thử.
+
+**Request** (tùy chọn, có thể gửi body rỗng `{}`):
+```json
+{
+  "asOf": "2026-09-21"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `asOf` | date | không | Định dạng `YYYY-MM-DD`. Để trống = lấy ngày hệ thống hôm nay. |
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": "Ra soat nhac thu no thanh cong",
+  "data": {
+    "asOf": "2026-09-21",
+    "sent": [
+      {
+        "id": 500,
+        "invoiceId": 9,
+        "stage": "UPCOMING_3_DAYS",
+        "referenceDate": "2026-09-24",
+        "daysOverdue": null,
+        "remainingAmount": 40000000.00,
+        "recipientIds": [1, 2, 3],
+        "sentAt": "2026-09-21T07:00:00"
+      }
+    ],
+    "skippedAlreadySentCount": 2
+  }
+}
+```
+
+| Trường | Ghi chú |
+|---|---|
+| `sent[].stage` | `UPCOMING_3_DAYS`, `DUE_TODAY` hoặc `OVERDUE`. |
+| `sent[].referenceDate` | Mốc gắn với lần nhắc: hạn thanh toán (`UPCOMING_3_DAYS`/`DUE_TODAY`) hoặc ngày ứng với mốc 7 ngày quá hạn (`OVERDUE`). |
+| `sent[].daysOverdue` | `null` với `UPCOMING_3_DAYS`; `0` với `DUE_TODAY`; bội số của 7 với `OVERDUE`. |
+| `skippedAlreadySentCount` | Số hóa đơn đang ở đúng một mốc nhưng mốc đó **đã được nhắc trước đó** (TC-02) — chạy lại trong cùng ngày sẽ không tăng thêm `sent`. |
+
+Hóa đơn chưa tới mốc nào (còn hơn 3 ngày, hoặc quá hạn nhưng chưa đúng bội số 7 ngày) không xuất hiện ở
+cả `sent` lẫn không tính vào `skippedAlreadySentCount`.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-05`. |
+| 400 | `VALIDATION_ERROR` | `asOf` sai định dạng hoặc không đọc được body. |
+
+Có gửi nhắc thì ghi một dòng Nhật ký hệ thống tổng hợp cho cả lượt chạy (TC-04).
+
+#### `GET /invoices/{invoiceId}/dunning-logs`
+
+Lịch sử nhắc thu nợ của một hóa đơn, mới nhất trước.
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": 500,
+      "invoiceId": 9,
+      "stage": "UPCOMING_3_DAYS",
+      "referenceDate": "2026-09-24",
+      "daysOverdue": null,
+      "remainingAmount": 40000000.00,
+      "recipientIds": [1, 2, 3],
+      "sentAt": "2026-09-21T07:00:00"
+    }
+  ]
+}
+```
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-05`. |
+| 404 | `RESOURCE_NOT_FOUND` | Không tìm thấy hóa đơn `{invoiceId}`. |
+
+---
+
+## Epic `NCL-11` — Báo cáo và bảng điều khiển
+
+### `NCL-11-CN-001` — Bảng điều khiển vận hành
+
+#### `GET /reports/dashboard`
+
+Các chỉ số chính của kỳ chọn cho Ban giám đốc. Chỉ dành cho `VT-01` (QTN-01) — vai trò khác nhận
+`403 FORBIDDEN` và bị ghi Nhật ký hệ thống lần từ chối (TC-03). Mỗi lượt xem thành công ghi một dòng
+Nhật ký hệ thống ("Xem bảng điều khiển vận hành": người thực hiện, vai trò, kỳ, thời điểm) và một dòng
+Nhật ký truy cập dữ liệu nhạy cảm loại `MARGIN` (TC-04).
+
+**Query params** (bắt buộc cả hai, định dạng `YYYY-MM-DD`, gồm cả hai đầu):
+
+| Tham số | Ghi chú |
+|---|---|
+| `from` | Ngày đầu kỳ. |
+| `to` | Ngày cuối kỳ, không được trước `from`. |
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "from": "2026-01-01",
+    "to": "2026-01-31",
+    "kpis": {
+      "recognizedRevenue": 4000000.00,
+      "averageMarginRate": 0.1000,
+      "billableHoursRatio": 0.4444,
+      "negativeMarginProjectCount": 1,
+      "overdueInvoiceCount": 2
+    },
+    "missingCostEntryCount": 0,
+    "missingRevenueEntryCount": 0
+  }
+}
+```
+
+| Trường | Cách tính |
+|---|---|
+| `recognizedRevenue` | Tổng doanh thu của các dòng giờ công **đã duyệt** (`APPROVED`) có `workDate` trong kỳ và tính phí (`billable`): giờ × đơn giá bán theo hợp đồng ÷ 8 × hệ số loại hình công việc (cùng công thức báo cáo biên `NCL-09-CN-005`). |
+| `averageMarginRate` | Phân số, không phải %: (tổng doanh thu − tổng giá vốn nhân công) ÷ tổng doanh thu của kỳ, làm tròn 4 chữ số. `0.1000` = 10%. Gộp có trọng số, không lấy trung bình cộng từng dự án. |
+| `billableHoursRatio` | Phân số theo QTN-23: giờ công tính phí đã duyệt trong kỳ (dòng đảo/sửa mang dấu nên cộng thẳng) ÷ tổng **giờ làm việc chuẩn** của mọi nhân sự trong kỳ. Giờ chuẩn của một người = số ngày thứ Hai đến thứ Sáu (trừ ngày lễ) trong phần giao giữa kỳ và `[hireDate, endDate]` × `standardHoursPerWeek` ÷ 5, không kể ngày lễ khai báo ở `/holidays`. Nhân sự vào làm giữa kỳ chỉ tính từ ngày vào làm. `0` khi tổng giờ chuẩn bằng 0. Có thể vượt `1` khi làm thêm giờ. |
+| `negativeMarginProjectCount` | Số dự án có (doanh thu − giá vốn nhân công) `< 0` trong kỳ. Dự án chỉ có giờ không tính phí hoặc thiếu đơn giá bán (doanh thu 0) mà có giá vốn cũng bị tính là âm biên. |
+| `overdueInvoiceCount` | Số hóa đơn `ISSUED`/`PARTIALLY_PAID` còn phải thu `> 0` có `dueDate` **trước** `min(hôm nay, to)`. Trạng thái và số đã thu là hiện tại, hệ thống không dựng lại lịch sử thanh toán tới cuối kỳ. |
+| `missingCostEntryCount` / `missingRevenueEntryCount` | Số dòng giờ công đã duyệt thiếu đơn giá vốn / đơn giá bán. Dòng đó không làm hỏng bảng nhưng khiến doanh thu và biên thấp hơn thực tế — nên hiển thị cảnh báo khi `> 0`. |
+
+Kỳ không có dữ liệu (TC-02) trả `200` với mọi chỉ số bằng `0`, không báo lỗi.
+
+Giới hạn hiện tại: giá vốn chỉ gồm nhân công (chưa gồm chi phí dự án/thuê ngoài); doanh thu tính theo giờ công
+nên hợp đồng trọn gói không được quy đổi theo tiến độ hoàn thành. Vì vậy số liệu khớp báo cáo biên
+`NCL-09-CN-005` cùng kỳ nhưng có thể khác `GET /projects/{projectId}/profitability` (tính toàn thời gian, đủ các khoản chi phí).
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-01`. |
+| 400 | `VALIDATION_ERROR` | Thiếu `from`/`to`, sai định dạng ngày, hoặc `from` sau `to`. |
+
+### `NCL-11-CN-002` — Báo cáo tỷ lệ giờ tính phí
+
+#### `GET /reports/utilization`
+
+Tỷ lệ giờ tính phí của kỳ theo **toàn công ty, từng bộ phận và từng người**. Chỉ dành cho `VT-01` — vai trò
+khác nhận `403 FORBIDDEN` và bị ghi Nhật ký hệ thống lần từ chối (TC-04). Mỗi lượt xem thành công ghi một dòng
+Nhật ký hệ thống "Xem báo cáo tỷ lệ giờ tính phí" (người thực hiện, vai trò, kỳ, thời điểm — TC-05).
+
+**Query params** (bắt buộc cả hai, định dạng `YYYY-MM-DD`, gồm cả hai đầu): `from`, `to` (không được trước `from`).
+
+**Response thành công — `200 OK`:**
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "from": "2026-02-01",
+    "to": "2026-02-28",
+    "totalBillableHours": 300.00,
+    "totalStandardHours": 640.00,
+    "totalRatio": 0.4688,
+    "unlistedBillableHours": 24.00,
+    "departments": [
+      {
+        "departmentId": 1,
+        "departmentName": "Phong ky thuat",
+        "employeeCount": 3,
+        "billableHours": 160.00,
+        "standardHours": 400.00,
+        "ratio": 0.4000
+      },
+      {
+        "departmentId": null,
+        "departmentName": "Chưa gán bộ phận",
+        "employeeCount": 1,
+        "billableHours": 80.00,
+        "standardHours": 160.00,
+        "ratio": 0.5000
+      }
+    ],
+    "employees": [
+      {
+        "employeeId": 11,
+        "userId": 201,
+        "fullName": "Nhan su A",
+        "professionalRole": "Ky su phan mem",
+        "departmentId": 1,
+        "departmentName": "Phong ky thuat",
+        "billableHours": 120.00,
+        "standardHours": 160.00,
+        "ratio": 0.7500
+      }
+    ]
+  }
+}
+```
+
+| Trường | Cách tính |
+|---|---|
+| `billableHours` | Tổng giờ công **đã duyệt** (`APPROVED`) và tính phí (`billable`) có `workDate` trong kỳ. Dòng đảo/sửa mang dấu nên cộng thẳng. |
+| `standardHours` | Giờ làm việc chuẩn của kỳ (QTN-23): số ngày thứ Hai đến thứ Sáu, không phải ngày lễ, trong phần giao giữa kỳ và `[hireDate, endDate]` của nhân sự × `standardHoursPerWeek` ÷ 5. Người vào làm giữa kỳ chỉ tính từ ngày vào làm (TC-02); người nghỉ việc giữa kỳ chỉ tính đến ngày nghỉ. Ngày lễ lấy từ lịch `/holidays`; người làm vào ngày lễ vẫn có giờ tính phí ở tử số nên tỷ lệ có thể vượt `1`. |
+| `ratio` | Phân số, không phải %: `billableHours ÷ standardHours`, làm tròn 4 chữ số (`0.7500` = 75%), không chặn trần nên có thể vượt `1` khi làm thêm giờ. Người đang làm việc trong kỳ nhưng chưa ghi giờ nào có `ratio = 0` và vẫn hiện trong báo cáo (TC-03). `null` khi `standardHours = 0` mà vẫn có giờ tính phí (thường do nhập sai ngày vào/nghỉ việc). |
+| `departments` | Chỉ tính nhân sự **trực tiếp** thuộc bộ phận đó, không cộng dồn bộ phận con. `ratio` là tổng giờ tính phí ÷ tổng giờ chuẩn của bộ phận (không phải trung bình cộng các tỷ lệ). Nhân sự chưa gán bộ phận gộp vào một dòng `departmentId = null` xếp cuối, nên tổng các dòng luôn bằng số toàn công ty. Sắp theo tên bộ phận. |
+| `employees` | Sắp theo họ tên. Người không làm việc ngày nào trong kỳ và không có giờ tính phí (vào làm sau kỳ, nghỉ trước kỳ) không xuất hiện. |
+| `totalBillableHours`, `totalStandardHours`, `totalRatio` | Tổng của mọi người trong `employees`; `totalRatio = null` khi `totalStandardHours = 0`. Bằng `billableHoursRatio` của `GET /reports/dashboard` cùng kỳ khi `unlistedBillableHours = 0`. |
+| `unlistedBillableHours` | Giờ tính phí đã duyệt của tài khoản không xuất hiện trong báo cáo (chưa có hồ sơ nhân sự hoặc không làm việc ngày nào trong kỳ). `totalBillableHours + unlistedBillableHours` bằng mọi giờ tính phí đã duyệt của kỳ. |
+
+Giới hạn hiện tại: chưa có dữ liệu nghỉ phép nên người nghỉ phép dài ngày ra `0` giống người chưa ghi giờ nào. Ngày lễ chỉ có hiệu lực khi
+Nhân sự đã khai báo ở `/holidays`; chưa khai báo thì mọi ngày thứ Hai đến thứ Sáu đều tính là ngày làm việc.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-01`. |
+| 400 | `VALIDATION_ERROR` | Thiếu `from`/`to`, sai định dạng ngày, hoặc `from` sau `to`. |
+
+### `NCL-11-CN-003` — Báo cáo hiệu quả theo dự án
+
+So **kế hoạch trong báo giá** với **thực tế tính đến hiện tại** của các dự án theo ba cặp: giờ công dự kiến – giờ
+công thực tế, giá trị hợp đồng – doanh thu ghi nhận, biên dự kiến – biên thực tế. Không giới hạn theo kỳ (tính toàn
+thời gian của dự án, giống `planned-vs-actual-margin` của `NCL-09-CN-006`).
+
+**Quyền**: chỉ `VT-02` (Quản lý dự án). Vai trò khác (kể cả `VT-01`, `VT-05`) nhận `403 FORBIDDEN` và bị ghi Nhật ký
+hệ thống lần từ chối với nhãn "Báo cáo hiệu quả theo dự án" (TC-03). Người xem chỉ thấy dự án có
+`projectManagerId` là chính mình (QTN-01). Mỗi lượt xem thành công ghi một dòng Nhật ký hệ thống "Xem báo cáo hiệu
+quả theo dự án" và một dòng Nhật ký truy cập dữ liệu nhạy cảm loại `MARGIN` (TC-04).
+
+**Che dữ liệu (QTN-02, `NCL-01-CN-005-TC-01`)**: `plannedCost`, `actualCost`, `hoursVarianceCostImpact` gắn
+`@MaskSensitive(COST)` nên luôn trả về chuỗi `"***"` với Quản lý dự án. Doanh thu và các chỉ số biên theo phần trăm
+vẫn hiển thị.
+
+**Định dạng phần trăm**: mọi trường `*Percent` và `*PercentPoints` là số phần trăm 2 chữ số, không phải phân số:
+`18.75` nghĩa là 18,75%, `100.00` nghĩa là 100%.
+
+#### `GET /reports/project-performance`
+
+**Query params:**
+
+| Tham số | Bắt buộc | Ghi chú |
+|---|---|---|
+| `status` | Không | `RUNNING` hoặc `CLOSED`. Bỏ trống = mọi trạng thái. Giá trị khác → `400`. |
+
+**Response thành công — `200 OK`** (ví dụ TC-01: báo giá 800 giờ, thực tế 950 giờ; TC-02: dự án chưa có báo giá):
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "status": null,
+    "projectCount": 2,
+    "projectsWithoutPlanCount": 1,
+    "overPlannedHoursProjectCount": 1,
+    "belowPlannedMarginProjectCount": 1,
+    "projects": [
+      {
+        "projectId": 1,
+        "projectCode": "DA-01",
+        "projectName": "Trien khai ERP",
+        "status": "RUNNING",
+        "customerId": 3,
+        "contractId": 500,
+        "contractCode": "HD-500",
+        "contractType": "TIME_AND_MATERIAL",
+        "planAvailable": true,
+        "quoteId": 7,
+        "quoteVersion": 2,
+        "plannedHours": 800.00,
+        "actualHours": 950.00,
+        "hoursVariance": 150.00,
+        "hoursVariancePercent": 18.75,
+        "contractValue": 200000000.00,
+        "recognizedRevenue": 95000000.00,
+        "revenueRecognitionMethod": "HOURLY",
+        "revenueToContractPercent": 47.50,
+        "plannedRevenue": 120000000.00,
+        "plannedCost": "***",
+        "actualCost": "***",
+        "plannedMarginPercent": 50.00,
+        "actualMarginPercent": 47.37,
+        "marginGapPercentPoints": -2.63,
+        "hoursVarianceCostImpact": "***",
+        "hoursVarianceMarginImpactPercentPoints": -6.25,
+        "missingPlannedCostItemCount": 0,
+        "missingActualCostEntryCount": 0,
+        "missingActualRevenueEntryCount": 0,
+        "warnings": [
+          "Giờ công thực tế vượt kế hoạch 150.00 giờ (18.75%), làm biên lợi nhuận giảm 6.25 điểm phần trăm."
+        ]
+      },
+      {
+        "projectId": 2,
+        "projectCode": "DA-02",
+        "projectName": "Bao tri website",
+        "status": "RUNNING",
+        "customerId": 4,
+        "contractId": 501,
+        "contractCode": "HD-501",
+        "contractType": "TIME_AND_MATERIAL",
+        "planAvailable": false,
+        "quoteId": null,
+        "quoteVersion": null,
+        "plannedHours": null,
+        "actualHours": 40.00,
+        "hoursVariance": null,
+        "hoursVariancePercent": null,
+        "contractValue": 50000000.00,
+        "recognizedRevenue": 20000000.00,
+        "revenueRecognitionMethod": "HOURLY",
+        "revenueToContractPercent": 40.00,
+        "plannedRevenue": null,
+        "plannedCost": "***",
+        "actualCost": "***",
+        "plannedMarginPercent": null,
+        "actualMarginPercent": 35.00,
+        "marginGapPercentPoints": null,
+        "hoursVarianceCostImpact": "***",
+        "hoursVarianceMarginImpactPercentPoints": null,
+        "missingPlannedCostItemCount": 0,
+        "missingActualCostEntryCount": 0,
+        "missingActualRevenueEntryCount": 0,
+        "warnings": ["Dự án chưa có báo giá gắn kèm nên thiếu dữ liệu kế hoạch để so sánh."]
+      }
+    ]
+  }
+}
+```
+
+| Trường | Cách tính |
+|---|---|
+| `planAvailable` | `false` khi hợp đồng của dự án chưa gắn báo giá (TC-02). Dự án vẫn có trong danh sách (không trả 404). Mọi trường `planned*` và các trường so sánh với kế hoạch bằng `null`, còn `warnings[0]` báo thiếu dữ liệu kế hoạch. |
+| `plannedHours` | Tổng số ngày công các dòng báo giá × 8. |
+| `actualHours` | Tổng giờ mọi dòng giờ công **đã duyệt** của dự án, gồm cả dòng tính phí và không tính phí. Dòng đảo/sửa mang dấu nên cộng thẳng. |
+| `hoursVariance` / `hoursVariancePercent` | `actualHours − plannedHours` (dương là vượt kế hoạch) và phần trăm của nó so với `plannedHours` (`null` khi `plannedHours = 0`). |
+| `contractValue` | `totalValue` hiện hành của hợp đồng (đã gồm phụ lục/gia hạn). |
+| `recognizedRevenue` | Tính như `NCL-09-CN-002`. `FIXED_PRICE`: `contractValue` × số công việc `DONE` ÷ tổng số công việc (`PERCENTAGE_OF_COMPLETION`). Các loại khác: tổng giờ tính phí đã duyệt × đơn giá áp dụng (`HOURLY`). `MAINTENANCE`/`MILESTONE` chưa có cách ghi nhận riêng nên tạm tính theo giờ và có cảnh báo trong `warnings`. |
+| `revenueToContractPercent` | `recognizedRevenue ÷ contractValue × 100`; `null` khi `contractValue = 0`. |
+| `plannedRevenue` / `plannedCost` / `plannedMarginPercent` | Cùng nguồn với `NCL-09-CN-006`: doanh thu = `totalAmount` của báo giá. Chi phí ước tính = ngày công × 8 × chi phí giờ công bình quân của các nhân sự đang giữ vai trò đó tại ngày lập báo giá. |
+| `actualCost` / `actualMarginPercent` | Giá vốn nhân công các dòng đã duyệt + chi phí dự án + chi phí thuê ngoài **đã duyệt** (như `NCL-09-CN-003`). Biên = (doanh thu ghi nhận − giá vốn) ÷ doanh thu ghi nhận × 100; `null` khi doanh thu bằng 0. |
+| `marginGapPercentPoints` | `actualMarginPercent − plannedMarginPercent` (điểm phần trăm, âm là thấp hơn kế hoạch). `null` nếu thiếu một trong hai vế. |
+| `hoursVarianceCostImpact` / `hoursVarianceMarginImpactPercentPoints` | Ảnh hưởng của chênh lệch giờ tới biên (TC-01): `hoursVariance` × chi phí nhân công bình quân thực tế mỗi giờ, và `−impact ÷ plannedRevenue × 100`. Âm là biên bị giảm. |
+| `missing*Count` | Số dòng báo giá chưa ước tính được chi phí, số dòng giờ công thiếu đơn giá vốn, và số dòng giờ công tính phí thiếu đơn giá bán. Tài khoản chưa có hồ sơ nhân sự cũng được đếm vào đây. Khi `> 0` thì số liệu thấp hơn thực tế, nên hiển thị cảnh báo. |
+| `warnings` | Diễn giải sẵn bằng tiếng Việt, hiển thị nguyên văn được. Không bao giờ chứa số tiền giá vốn. |
+| Bộ đếm cấp báo cáo | `overPlannedHoursProjectCount`: số dự án có `hoursVariance > 0`. `belowPlannedMarginProjectCount`: số dự án có `marginGapPercentPoints < 0`. |
+
+Thứ tự: dự án `RUNNING` trước `CLOSED`, sau đó theo `projectCode`. Người không quản lý dự án nào nhận `200` với
+`projects: []`.
+
+#### `GET /reports/project-performance/{projectId}`
+
+Trả về **một** phần tử cùng cấu trúc với `projects[i]` ở trên, dùng cho màn hình chi tiết. Nhật ký ghi kèm
+`targetId = projectId`.
+
+**Response lỗi (cả hai endpoint):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | — | Chưa đăng nhập. |
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-02`, hoặc (endpoint chi tiết) dự án do quản lý khác phụ trách. Cả hai trường hợp đều ghi nhật ký lần từ chối. |
+| 404 | `RESOURCE_NOT_FOUND` | (endpoint chi tiết) Không tìm thấy dự án `{projectId}`. |
+| 400 | `VALIDATION_ERROR` | `status` không phải `RUNNING`/`CLOSED`. |
+
+Giới hạn hiện tại: báo giá chỉ có kế hoạch nhân công nên `plannedCost` không gồm chi phí dự án/thuê ngoài, trong khi
+`actualCost` có gồm. Vì vậy dự án có nhiều chi phí ngoài giờ công sẽ có `marginGapPercentPoints` âm hơn phần do giờ
+công gây ra; `hoursVarianceMarginImpactPercentPoints` cho biết riêng phần do giờ công.
+
+### `NCL-11-CN-004` — Xuất báo cáo ra tệp
+
+Quản lý dự án chọn báo cáo và kỳ, hệ thống trả về **tệp bảng tính** để gửi khách hàng hoặc lưu trữ ngoài hệ thống.
+Số liệu lấy từ cùng nguồn với màn hình báo cáo tương ứng nên tệp khớp với những gì người dùng thấy.
+
+**Quyền**: chỉ `VT-02` (Quản lý dự án). Vai trò khác nhận `403 FORBIDDEN` và bị ghi Nhật ký hệ thống lần từ chối
+với nhãn "Xuất báo cáo ra tệp" (TC-03). Người xuất chỉ nhận dữ liệu của dự án mình phụ trách (QTN-01).
+
+**Nhật ký (TC-04, QTN-03)**: mỗi lần xuất **thành công** ghi một dòng Nhật ký hệ thống (hành động "Xuất báo cáo",
+nhãn "Xuất báo cáo ra tệp", chi tiết gồm loại báo cáo, kỳ, số dòng, có/không cột giá vốn và tên tệp) và một dòng
+Nhật ký truy cập dữ liệu nhạy cảm `action = EXPORT`, `dataType = MARGIN`, `targetRef = <reportType>`. Cả hai ghi cùng
+transaction: không ghi được nhật ký thì không trả tệp. Lần xuất bị từ chối vì kỳ trống (TC-02) không ghi nhật ký
+xuất.
+
+**Che dữ liệu (QTN-02, `NCL-01-CN-005-TC-02`)**: với người không thuộc `VT-01`/`VT-05`/`VT-06`, các cột giá vốn
+**không có mặt** trong tệp (bỏ hẳn cả tên cột, không thay bằng `***`). Người giữ đồng thời `VT-02` và một vai trò được
+xem giá vốn thì nhận đủ cột.
+
+#### `GET /reports/export`
+
+**Query params:**
+
+| Tham số | Bắt buộc | Ghi chú |
+|---|---|---|
+| `reportType` | Có | Loại báo cáo. Hiện có `PROJECT_PERFORMANCE` (báo cáo hiệu quả theo dự án — `NCL-11-CN-003`). Giá trị khác → `400 VALIDATION_ERROR`. |
+| `from` | Có | Ngày bắt đầu kỳ, `yyyy-MM-dd`, gồm cả ngày này. |
+| `to` | Có | Ngày kết thúc kỳ, `yyyy-MM-dd`, gồm cả ngày này. Không được trước `from`. |
+| `format` | Không | Định dạng tệp. Hiện có `CSV` (mặc định). |
+
+**Kỳ với `PROJECT_PERFORMANCE`**: lấy các dự án người xuất phụ trách **hoạt động trong kỳ**, tức
+`startDate <= to` và (`expectedEndDate` trống hoặc `expectedEndDate >= from`); ngày còn trống coi là mở. Số liệu của
+từng dự án tính như `GET /reports/project-performance` (toàn thời gian dự án, không cắt theo kỳ). Thứ tự dòng: dự án
+`RUNNING` trước `CLOSED`, sau đó theo `projectCode`.
+
+**Response thành công — `200 OK`**: thân response là **nội dung tệp**, không bọc `BaseRes`.
+
+| Header | Giá trị |
+|---|---|
+| `Content-Type` | `text/csv; charset=UTF-8` |
+| `Content-Disposition` | `attachment; filename="bao-cao-hieu-qua-du-an_2026-07-01_2026-09-30.csv"; filename*=UTF-8''bao-cao-hieu-qua-du-an_2026-07-01_2026-09-30.csv` |
+| `X-Report-Row-Count` | Số dòng dữ liệu (không tính dòng tiêu đề), ví dụ `2` |
+
+Cả `Content-Disposition` và `X-Report-Row-Count` đã được mở qua CORS (`Access-Control-Expose-Headers`) để frontend
+đọc được. Tên tệp: `<slug-báo-cáo>_<from>_<to>.<đuôi>`, chỉ ký tự ASCII.
+
+**Định dạng CSV**: mã hóa UTF-8 **có BOM** (Excel mở đúng tiếng Việt), ngăn cách bằng dấu phẩy, xuống dòng `CRLF`,
+trích dẫn theo RFC 4180 (ô chứa dấu phẩy, dấu nháy kép hoặc xuống dòng được bọc trong `"…"`, dấu `"` nhân đôi). Số in
+dạng thập phân thuần với dấu chấm (`200000000.00`, `18.75`); phần trăm là số phần trăm như ở `NCL-11-CN-003`. Ô trống
+là giá trị `null`. Ô văn bản bắt đầu bằng `=`, `+`, `-`, `@` được thêm dấu `'` phía trước để bảng tính không hiểu
+thành công thức (chống CSV injection); ô số âm không bị đổi.
+
+**Các cột của `PROJECT_PERFORMANCE`** (theo đúng thứ tự; cột đánh dấu 🔒 chỉ có khi người xuất được xem giá vốn):
+
+| Cột | Nguồn (`ProjectPerformanceRes`) |
+|---|---|
+| Mã dự án | `projectCode` |
+| Tên dự án | `projectName` |
+| Trạng thái | `status`: `Đang chạy` / `Đã đóng` |
+| Mã hợp đồng | `contractCode` |
+| Loại hợp đồng | `contractType`: `Theo giờ` / `Trọn gói` / `Duy trì` / `Theo mốc` |
+| Có kế hoạch | `planAvailable`: `Có` / `Không` |
+| Giờ dự kiến | `plannedHours` |
+| Giờ thực tế | `actualHours` |
+| Chênh lệch giờ | `hoursVariance` |
+| Chênh lệch giờ (%) | `hoursVariancePercent` |
+| Giá trị hợp đồng | `contractValue` |
+| Doanh thu ghi nhận | `recognizedRevenue` |
+| Doanh thu / giá trị hợp đồng (%) | `revenueToContractPercent` |
+| Doanh thu dự kiến | `plannedRevenue` |
+| 🔒 Giá vốn dự kiến | `plannedCost` |
+| 🔒 Giá vốn thực tế | `actualCost` |
+| Biên dự kiến (%) | `plannedMarginPercent` |
+| Biên thực tế (%) | `actualMarginPercent` |
+| Chênh lệch biên (điểm %) | `marginGapPercentPoints` |
+| 🔒 Chi phí do chênh lệch giờ | `hoursVarianceCostImpact` |
+| Ảnh hưởng biên do chênh lệch giờ (điểm %) | `hoursVarianceMarginImpactPercentPoints` |
+| Cảnh báo | `warnings` nối bằng ` \| ` |
+
+Ví dụ tệp của Quản lý dự án (không có cột 🔒):
+```csv
+Mã dự án,Tên dự án,Trạng thái,Mã hợp đồng,Loại hợp đồng,Có kế hoạch,Giờ dự kiến,Giờ thực tế,Chênh lệch giờ,Chênh lệch giờ (%),Giá trị hợp đồng,Doanh thu ghi nhận,Doanh thu / giá trị hợp đồng (%),Doanh thu dự kiến,Biên dự kiến (%),Biên thực tế (%),Chênh lệch biên (điểm %),Ảnh hưởng biên do chênh lệch giờ (điểm %),Cảnh báo
+DA-01,Trien khai ERP,Đang chạy,HD-500,Theo giờ,Có,800.00,950.00,150.00,18.75,200000000.00,95000000.00,47.50,120000000.00,50.00,47.37,-2.63,-6.25,"Giờ công thực tế vượt kế hoạch 150.00 giờ (18.75%), làm biên lợi nhuận giảm 6.25 điểm phần trăm."
+DA-02,Bao tri website,Đang chạy,HD-501,Theo giờ,Không,,40.00,,,50000000.00,20000000.00,40.00,,,35.00,,,Dự án chưa có báo giá gắn kèm nên thiếu dữ liệu kế hoạch để so sánh.
+```
+
+**Response lỗi** — luôn là JSON lỗi chuẩn (`success = false`) dù response thành công là tệp. Frontend cần kiểm tra
+`response.ok` trước khi đọc thân response thành tệp:
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | — | Chưa đăng nhập. |
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-02` (TC-03). Có ghi nhật ký lần từ chối. |
+| 400 | `INVALID_STATE` | Kỳ đã chọn không có số liệu để xuất (TC-02) — `message`: `Khong co du lieu de xuat trong ky <from> den <to>`. |
+| 400 | `VALIDATION_ERROR` | Thiếu `reportType`/`from`/`to`, ngày sai định dạng, `from` sau `to`, hoặc `reportType`/`format` không nằm trong danh sách. |
+
+Ví dụ lỗi TC-02:
+```json
+{
+  "success": false,
+  "errorCode": "INVALID_STATE",
+  "message": "Khong co du lieu de xuat trong ky 2026-07-01 den 2026-09-30",
+  "timestamp": "2026-09-24T14:05:11.1234567",
+  "fieldErrors": null
+}
+```
+
+**Giao diện**: mục điều hướng "Xuất báo cáo" (chỉ `VT-02`) mở danh sách báo cáo xuất được; chọn một báo cáo sẽ mở hộp
+thoại chọn kỳ (mặc định từ đầu tháng tới hôm nay). Form kiểm tra `from ≤ to` trước khi gửi, sau đó tải tệp và báo số
+dòng đã xuất.
+
+### `NCL-11-CN-005` — Báo cáo doanh thu theo tháng
+
+Doanh thu ghi nhận **từng tháng** trong kỳ, tách theo **loại hợp đồng** và so với **cùng tháng năm trước**.
+
+**Quyền**: `VT-01` (Ban giám đốc) và `VT-05` (Kế toán). Vai trò khác nhận `403 FORBIDDEN` và bị ghi Nhật ký hệ thống
+lần từ chối với nhãn "Báo cáo doanh thu theo tháng" (TC-03). Mỗi lượt xem thành công ghi một dòng Nhật ký hệ thống
+"Xem báo cáo doanh thu theo tháng" (TC-04). Báo cáo chỉ có doanh thu, không có giá vốn, nên không che cột nào và không
+ghi Nhật ký truy cập dữ liệu nhạy cảm.
+
+**Cách tính**: doanh thu một tháng = tổng các dòng giờ công **đã duyệt, tính phí** có `workDate` trong tháng × đơn giá
+bán áp dụng tại ngày đó (đơn giá riêng hợp đồng ưu tiên hơn bảng giá chung, nhân hệ số loại hình công việc — QTN-15,
+QTN-16). Dòng đảo/sửa mang dấu nên cộng thẳng. Đây là **cùng nguồn** với chỉ số doanh thu của bảng điều khiển
+(`NCL-11-CN-001`): cùng một tháng xem ở hai nơi ra cùng số. Loại hợp đồng lấy từ hợp đồng của dự án chứa dòng giờ công.
+
+> **Giới hạn với hợp đồng trọn gói**: `NCL-09-CN-002` ghi nhận doanh thu `FIXED_PRICE` theo tỷ lệ công việc hoàn
+> thành, nhưng công việc không lưu ngày hoàn thành nên con số đó chỉ có lũy kế tới hiện tại, không chia được theo
+> tháng. Báo cáo này vì vậy quy doanh thu trọn gói theo tháng từ giờ công tính phí × đơn giá. Khi kỳ có doanh thu
+> trọn gói, `warnings` nêu rõ điều này.
+
+#### `GET /reports/revenue/monthly`
+
+**Query params:**
+
+| Tham số | Bắt buộc | Ghi chú |
+|---|---|---|
+| `fromMonth` | Có | Tháng đầu kỳ, dạng `yyyy-MM`, gồm cả tháng này. |
+| `toMonth` | Có | Tháng cuối kỳ, dạng `yyyy-MM`, gồm cả tháng này. Không được trước `fromMonth`. Tối đa **36 tháng** mỗi lần xem. |
+
+**Response thành công — `200 OK`** (ví dụ TC-01, rút gọn còn 2 tháng):
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "fromMonth": "2026-01",
+    "toMonth": "2026-02",
+    "hasData": true,
+    "totalRevenue": 23000000.00,
+    "totalByContractType": {
+      "TIME_AND_MATERIAL": 18000000.00,
+      "FIXED_PRICE": 5000000.00,
+      "MAINTENANCE": 0.00,
+      "MILESTONE": 0.00
+    },
+    "previousYearTotalRevenue": 12000000.00,
+    "totalChangePercent": 91.67,
+    "months": [
+      {
+        "month": "2026-01",
+        "revenue": 15000000.00,
+        "byContractType": {
+          "TIME_AND_MATERIAL": 10000000.00,
+          "FIXED_PRICE": 5000000.00,
+          "MAINTENANCE": 0.00,
+          "MILESTONE": 0.00
+        },
+        "previousYearRevenue": 12000000.00,
+        "changePercent": 25.00
+      },
+      {
+        "month": "2026-02",
+        "revenue": 8000000.00,
+        "byContractType": {
+          "TIME_AND_MATERIAL": 8000000.00,
+          "FIXED_PRICE": 0.00,
+          "MAINTENANCE": 0.00,
+          "MILESTONE": 0.00
+        },
+        "previousYearRevenue": 0.00,
+        "changePercent": null
+      }
+    ],
+    "missingRevenueEntryCount": 0,
+    "warnings": [
+      "Doanh thu hợp đồng trọn gói theo tháng quy từ giờ công tính phí × đơn giá; số lũy kế theo tỷ lệ hoàn thành xem ở màn hình doanh thu ghi nhận của từng dự án."
+    ]
+  }
+}
+```
+
+| Trường | Ý nghĩa |
+|---|---|
+| `hasData` | `false` khi kỳ không có dòng giờ công đã duyệt, tính phí nào (TC-02). Khi đó vẫn trả `200`: `months` vẫn đủ các tháng với giá trị `0`, và giao diện hiện "Không có dữ liệu doanh thu trong kỳ". |
+| `months` | Luôn đủ **mọi** tháng từ `fromMonth` tới `toMonth` theo thứ tự tăng dần, kể cả tháng bằng 0. Kỳ 12 tháng cho đúng 12 phần tử. |
+| `byContractType` / `totalByContractType` | Luôn đủ 4 khóa `TIME_AND_MATERIAL`, `FIXED_PRICE`, `MAINTENANCE`, `MILESTONE` (loại không có doanh thu là `0.00`). |
+| `previousYearRevenue` / `previousYearTotalRevenue` | Doanh thu của cùng tháng (cùng kỳ) năm trước, tính cùng cách. |
+| `changePercent` / `totalChangePercent` | `(hiện tại − năm trước) ÷ năm trước × 100`, số phần trăm 2 chữ số (`25.00` = 25%). `null` khi năm trước bằng 0. |
+| `missingRevenueEntryCount` | Số dòng giờ công tính phí thiếu đơn giá bán hoặc thiếu hồ sơ nhân sự. Các dòng này bị loại khỏi doanh thu thay vì làm hỏng cả báo cáo; khi `> 0` thì `warnings` có cảnh báo doanh thu thấp hơn thực tế. |
+| `warnings` | Diễn giải sẵn bằng tiếng Việt, hiển thị nguyên văn được. |
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | — | Chưa đăng nhập. |
+| 403 | `FORBIDDEN` | Token không có vai trò `VT-01` hoặc `VT-05` (TC-03). Có ghi nhật ký lần từ chối. |
+| 400 | `VALIDATION_ERROR` | Thiếu `fromMonth`/`toMonth`, sai định dạng `yyyy-MM`, `fromMonth` sau `toMonth`, hoặc kỳ dài hơn 36 tháng. |
+
+**Giao diện**: thẻ "Doanh thu theo tháng" trong trung tâm Báo cáo (chỉ hiện với `VT-01`/`VT-05`). Trang gồm bộ lọc
+tháng (mặc định từ tháng 1 tới tháng hiện tại của năm nay), ba ô tổng (kỳ này, cùng kỳ năm trước, % thay đổi), biểu
+đồ cột chồng theo loại hợp đồng với vạch ngang đánh dấu doanh thu cùng tháng năm trước (cùng một trục tiền), chi tiết
+khi rê chuột, và bảng số liệu đầy đủ.
+
+---
+
+## Epic `NCL-12` — Nghiệm thu và bàn giao
+
+Chung cho cả Epic:
+
+- **Hạng mục** = `work package` của `NCL-05-CN-002` (`GET /projects/{projectId}/work-breakdown`). Hạng mục có thể
+  lồng nhiều cấp; "công việc của hạng mục" gồm cả công việc của mọi hạng mục con cháu.
+- **Phạm vi dữ liệu (QTN-01):** Quản lý dự án (`VT-02`) chỉ thao tác trên dự án mình là `projectManagerId`. Đúng vai
+  trò nhưng khác dự án cũng nhận `403 FORBIDDEN`. Mọi lượt 403 được ghi Nhật ký hệ thống "Từ chối truy cập" kèm tên
+  chức năng (TC-03 của cả 4 story).
+- **Lưu lịch sử (TC-04):** mọi thao tác thay đổi ghi Nhật ký hệ thống với `targetType` = `ACCEPTANCE` (lọc được trên
+  trang Nhật ký); lịch sử xác nhận/từ chối của khách hàng còn được trả trong `decisions` của chi tiết phiếu.
+- Tệp (biên bản nghiệm thu, tệp bàn giao) là **đường dẫn mô phỏng** dạng chuỗi — giống `receiptUrl` của chi phí.
+
+**Trạng thái phiếu nghiệm thu (`status`):**
+
+| Giá trị | Ý nghĩa | Chuyển tiếp |
+|---|---|---|
+| `PENDING_CONFIRMATION` | Chờ khách hàng xác nhận | → `ACCEPTED` (confirm) · → `NEEDS_REVISION` (reject) |
+| `NEEDS_REVISION` | Khách hàng từ chối, cần chỉnh sửa | → `PENDING_CONFIRMATION` (nộp lại, `revisionNo` + 1) |
+| `ACCEPTED` | Đã nghiệm thu — **nội dung bị khoá**, trạng thái cuối | — |
+
+**Enum khác:** `deliverableType` ∈ `DOCUMENT`, `SOURCE_CODE`, `SOFTWARE_BUILD`, `DESIGN`, `REPORT`, `OTHER` ·
+`confirmationChannel`/`decisions[].channel` ∈ `INTERNAL` (QLDA ghi nhận), `PORTAL` (dành cho `NCL-13-CN-003`) ·
+`decisions[].decision` ∈ `ACCEPTED`, `REJECTED`.
+
+**Bản đồ endpoint:**
+
+| Story | Method & path | Vai trò |
+|---|---|---|
+| CN-001 | `GET /projects/{projectId}/work-packages/{workPackageId}/acceptance-readiness` | `VT-02` (PM dự án) |
+| CN-001 | `POST /projects/{projectId}/acceptances` | `VT-02` (PM dự án) |
+| CN-001 | `GET /projects/{projectId}/acceptances` | `VT-02` (PM dự án) |
+| CN-001/003 | `GET /acceptances?contractId=&projectId=&status=` | `VT-02` (chỉ dự án mình), `VT-05` (tất cả) |
+| CN-001/003 | `GET /acceptances/{certificateId}` | `VT-02` (PM dự án), `VT-05` |
+| CN-002 | `PUT /acceptances/{certificateId}` (nộp lại) | `VT-02` (PM dự án) |
+| CN-002 | `POST /acceptances/{certificateId}/confirm` | `VT-02` (PM dự án) |
+| CN-002 | `POST /acceptances/{certificateId}/reject` | `VT-02` (PM dự án) |
+| CN-003 | `PUT /acceptances/{certificateId}/payment-milestone` | `VT-05` |
+| CN-003 | `DELETE /acceptances/{certificateId}/payment-milestone` | `VT-05` |
+| CN-003 | `GET /contracts/{contractId}/milestone-acceptances` | `VT-05` |
+| CN-004 | `POST /projects/{projectId}/deliverables` | `VT-02` (PM dự án) |
+| CN-004 | `GET /projects/{projectId}/deliverables?workPackageId=` | `VT-02` (PM dự án) |
+| CN-004 | `GET /deliverables/{deliverableId}` | `VT-02` (PM dự án) |
+| CN-004 | `POST /deliverables/{deliverableId}/versions` | `VT-02` (PM dự án) |
+| CN-004 | `GET /deliverables/{deliverableId}/versions` | `VT-02` (PM dự án) |
+
+### `NCL-12-CN-001` — Lập phiếu nghiệm thu hạng mục
+
+**QTN-24:** chỉ lập phiếu khi **toàn bộ** công việc của hạng mục (kể cả hạng mục con) ở trạng thái `DONE`. Hệ
+thống tự dựng nội dung phiếu: danh sách công việc + **phiên bản mới nhất** của từng sản phẩm bàn giao của hạng mục
+(sản phẩm chưa bàn giao lần nào thì không vào phiếu). Nội dung được chụp lại tại thời điểm lập/nộp lại.
+
+Mỗi nhánh cây hạng mục chỉ có **một** phiếu: nếu chính hạng mục, hạng mục con cháu hoặc hạng mục cha đã có phiếu (bất
+kỳ trạng thái nào) thì bị chặn `409` — tránh nghiệm thu một công việc hai lần. Phiếu bị từ chối thì **nộp lại** chứ
+không lập phiếu mới. Dự án đã đóng (`CLOSED`) không lập/nộp lại phiếu được.
+
+#### `GET /projects/{projectId}/work-packages/{workPackageId}/acceptance-readiness`
+
+Xem trước trước khi bấm lập phiếu — dùng để liệt kê công việc còn dang dở (TC-02) và xem trước sản phẩm bàn giao.
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "projectId": 12,
+    "workPackageId": 40,
+    "workPackageName": "Giai doan 1",
+    "ready": false,
+    "totalTasks": 3,
+    "doneTasks": 1,
+    "unfinishedTasks": [
+      { "taskId": 101, "taskName": "Kiem thu", "status": "IN_PROGRESS" },
+      { "taskId": 102, "taskName": "Trien khai", "status": "TODO" }
+    ],
+    "deliverables": [
+      { "deliverableId": 7, "deliverableName": "Tai lieu thiet ke", "latestVersionId": 15, "latestVersionNo": "1.1" },
+      { "deliverableId": 8, "deliverableName": "Ban cai dat", "latestVersionId": null, "latestVersionNo": null }
+    ],
+    "activeCertificateId": null,
+    "activeCertificateCode": null,
+    "activeCertificateStatus": null
+  }
+}
+```
+
+`ready` = dự án đang chạy **và** hạng mục có ≥ 1 công việc **và** không còn công việc dang dở **và** nhánh cây chưa
+có phiếu (`activeCertificate*` khác `null` là phiếu đang chặn).
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 403 | `FORBIDDEN` | Không phải `VT-02`, hoặc không phải PM của dự án. |
+| 404 | `RESOURCE_NOT_FOUND` | Không có dự án, hoặc hạng mục không thuộc dự án. |
+
+#### `POST /projects/{projectId}/acceptances`
+
+**Request:**
+
+```json
+{
+  "workPackageId": 40,
+  "title": "Nghiem thu giai doan 1",
+  "acceptedValue": 300000000,
+  "note": "Theo moc 1 cua hop dong"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `workPackageId` | number | có | Hạng mục thuộc dự án. |
+| `title` | string | không | ≤ 255 ký tự; bỏ trống → `"Nghiem thu hang muc <tên hạng mục>"`. |
+| `acceptedValue` | number | có | Giá trị nghiệm thu, ≥ 0, tối đa 2 chữ số thập phân. |
+| `note` | string | không | ≤ 1000 ký tự. |
+
+**Response thành công — `200 OK`** (TC-01) — `data` là **chi tiết phiếu** (dùng chung cho mọi endpoint trả chi
+tiết của Epic này):
+
+```json
+{
+  "success": true,
+  "message": "Lap phieu nghiem thu thanh cong",
+  "data": {
+    "id": 5,
+    "certificateCode": "NT-20260924-A1B2C3",
+    "projectId": 12,
+    "projectCode": "DA-001",
+    "projectName": "Trien khai ERP",
+    "contractId": 3,
+    "workPackageId": 40,
+    "workPackageName": "Giai doan 1",
+    "title": "Nghiem thu giai doan 1",
+    "acceptedValue": 300000000.00,
+    "note": "Theo moc 1 cua hop dong",
+    "status": "PENDING_CONFIRMATION",
+    "revisionNo": 1,
+    "lastRejectionReason": null,
+    "signerName": null,
+    "signedDate": null,
+    "minutesUrl": null,
+    "confirmationChannel": null,
+    "confirmedBy": null,
+    "confirmedAt": null,
+    "paymentMilestone": null,
+    "linkedBy": null,
+    "linkedAt": null,
+    "tasks": [
+      { "taskId": 100, "taskName": "Phan tich yeu cau" },
+      { "taskId": 103, "taskName": "Lap trinh phan he" }
+    ],
+    "deliverables": [
+      { "deliverableId": 7, "deliverableVersionId": 15, "deliverableName": "Tai lieu thiet ke", "versionNo": "1.1" }
+    ],
+    "decisions": [],
+    "createdBy": "pm01",
+    "createdAt": "2026-09-24T10:00:00",
+    "updatedAt": "2026-09-24T10:00:00"
+  }
+}
+```
+
+`paymentMilestone` (khi đã gắn mốc — `NCL-12-CN-003`):
+`{ "id": 101, "name": "Dot 1", "amount": 300000000.00, "expectedDate": "2026-11-30", "status": "READY_TO_INVOICE" }`.
+
+**Response lỗi:**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-02`, hoặc không phải PM của dự án (TC-03). |
+| 404 | `RESOURCE_NOT_FOUND` | Không có dự án, hoặc hạng mục không thuộc dự án. |
+| 400 | `VALIDATION_ERROR` | Thiếu `workPackageId`/`acceptedValue`, giá trị âm, chuỗi quá dài. |
+| 400 | `INVALID_STATE` | Dự án đã đóng; hạng mục chưa có công việc; **còn công việc chưa `DONE`** (TC-02 — `message` liệt kê `#id tên (trạng thái)` từng công việc; màn hình nên dùng `acceptance-readiness` để hiển thị có cấu trúc). |
+| 409 | `DUPLICATE_DATA` | Hạng mục (hoặc hạng mục cha/con) đã có phiếu. |
+
+#### `GET /projects/{projectId}/acceptances` · `GET /acceptances` · `GET /acceptances/{certificateId}`
+
+- `GET /projects/{projectId}/acceptances`: phiếu của một dự án (PM dự án), mới nhất trước.
+- `GET /acceptances?contractId=&projectId=&status=`: tra cứu — **Kế toán** thấy mọi phiếu (lọc `contractId` để chọn
+  phiếu gắn mốc); **PM** chỉ thấy phiếu của dự án mình. Tham số đều tùy chọn; `status` là một giá trị enum trạng thái.
+- Hai endpoint danh sách trả mảng **tóm tắt**:
+
+```json
+{
+  "id": 5, "certificateCode": "NT-20260924-A1B2C3", "projectId": 12, "projectCode": "DA-001",
+  "projectName": "Trien khai ERP", "contractId": 3, "workPackageId": 40, "workPackageName": "Giai doan 1",
+  "title": "Nghiem thu giai doan 1", "acceptedValue": 300000000.00, "status": "ACCEPTED", "revisionNo": 1,
+  "contractMilestoneId": 101, "contractMilestoneName": "Dot 1", "createdBy": "pm01",
+  "createdAt": "2026-09-24T10:00:00", "confirmedAt": "2026-09-25T09:00:00"
+}
+```
+
+- `GET /acceptances/{certificateId}`: chi tiết phiếu (cấu trúc như response của `POST` ở trên). PM khác dự án → `403`;
+  không có phiếu → `404`.
+
+### `NCL-12-CN-002` — Khách hàng xác nhận phiếu nghiệm thu
+
+Quản lý dự án ghi nhận kết quả khách hàng đưa ra (kênh `INTERNAL`, kèm biên bản mô phỏng). Chỉ phiếu
+`PENDING_CONFIRMATION` mới xác nhận/từ chối được. Mỗi lần xác nhận/từ chối thêm một dòng vào `decisions` (không ghi
+đè). Xác nhận và từ chối không yêu cầu dự án còn chạy (khách hàng có thể ký sau khi dự án đóng).
+
+#### `POST /acceptances/{certificateId}/confirm` (TC-01)
+
+```json
+{ "signerName": "Nguyen Van A", "signedDate": "2026-09-25", "minutesUrl": "/files/bien-ban-nt-gd1.pdf" }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `signerName` | string | có | Người đại diện khách hàng ký, ≤ 255 ký tự. |
+| `signedDate` | date | có | Không ở tương lai, không trước ngày lập phiếu. |
+| `minutesUrl` | string | có | Đường dẫn biên bản đã ký (mô phỏng), ≤ 500 ký tự. |
+
+Kết quả: phiếu → `ACCEPTED`, **khóa nội dung** (không nộp lại/sửa được nữa); nếu phiếu đã gắn mốc thanh toán đang
+`PENDING` thì mốc **tự chuyển `READY_TO_INVOICE`** trong cùng giao dịch (QTN-25) — ghi thêm `MILESTONE_STATUS_UPDATE`
+vào nhật ký hợp đồng. `data` là chi tiết phiếu.
+
+#### `POST /acceptances/{certificateId}/reject` (TC-02)
+
+```json
+{ "reason": "Thieu tai lieu huong dan su dung", "signerName": "Nguyen Van A", "minutesUrl": null }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `reason` | string | có | Lý do từ chối, ≤ 1000 ký tự — lưu vào `lastRejectionReason` và `decisions[].reason`. |
+| `signerName` | string | không | ≤ 255 ký tự. |
+| `minutesUrl` | string | không | ≤ 500 ký tự. |
+
+Kết quả: phiếu → `NEEDS_REVISION`.
+
+#### `PUT /acceptances/{certificateId}` — nộp lại sau khi bị từ chối
+
+Body giống `POST /projects/{projectId}/acceptances` nhưng **không có** `workPackageId`
+(`{ "title": "...", "acceptedValue": 250000000, "note": "..." }`). Hệ thống kiểm tra lại QTN-24, chụp lại nội dung
+(công việc, phiên bản sản phẩm mới nhất), tăng `revisionNo`, xoá `lastRejectionReason`, đưa phiếu về
+`PENDING_CONFIRMATION`. Chỉ phiếu `NEEDS_REVISION` và dự án đang chạy.
+
+**Response lỗi (chung cho confirm / reject / nộp lại):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-02`, hoặc không phải PM của dự án (TC-03). |
+| 404 | `RESOURCE_NOT_FOUND` | Không có phiếu `{certificateId}`. |
+| 400 | `VALIDATION_ERROR` | Thiếu trường bắt buộc; `signedDate` ở tương lai hoặc trước ngày lập phiếu. |
+| 400 | `INVALID_STATE` | confirm/reject khi phiếu không ở `PENDING_CONFIRMATION` (đã `ACCEPTED`, hoặc đang `NEEDS_REVISION` — phải nộp lại trước); nộp lại khi phiếu không ở `NEEDS_REVISION`, dự án đã đóng, hoặc hạng mục lại có công việc chưa `DONE`. |
+
+### `NCL-12-CN-003` — Gắn phiếu nghiệm thu với mốc thanh toán
+
+Chỉ **Kế toán** (`VT-05`). Mỗi mốc gắn tối đa một phiếu, mỗi phiếu gắn tối đa một mốc; mốc phải thuộc **hợp đồng của
+dự án** có phiếu. Sau khi gắn/gỡ, trạng thái mốc được đồng bộ theo phiếu (**QTN-25**):
+
+| Phiếu | Mốc trước | Mốc sau |
+|---|---|---|
+| `ACCEPTED` | `PENDING` | `READY_TO_INVOICE` — lập được hóa đơn (TC-01) |
+| chưa `ACCEPTED` | `READY_TO_INVOICE` (mở tay trước đó) | `PENDING` — giữ chờ nghiệm thu |
+| chưa `ACCEPTED` | `PENDING` | `PENDING` |
+| gỡ liên kết | `READY_TO_INVOICE` | `PENDING` (mất căn cứ mở mốc) |
+
+Khi phiếu gắn kèm chưa `ACCEPTED`: `POST /contracts/{id}/milestones/{id}/invoice` bị chặn `400 INVALID_STATE` (TC-02)
+và `PATCH .../status` sang `READY_TO_INVOICE` cũng bị chặn. Mốc đã `INVOICED` thì không gắn/gỡ được nữa.
+
+#### `PUT /acceptances/{certificateId}/payment-milestone`
+
+```json
+{ "contractMilestoneId": 101 }
+```
+
+Gắn lại sang mốc khác được (mốc cũ, nếu đang `READY_TO_INVOICE`, về `PENDING`); gắn lại đúng mốc hiện tại thì không
+đổi gì. `data` là chi tiết phiếu (xem `paymentMilestone.status` để biết mốc đã mở chưa).
+
+#### `DELETE /acceptances/{certificateId}/payment-milestone`
+
+Gỡ phiếu khỏi mốc. `data` là chi tiết phiếu với `paymentMilestone` = `null`.
+
+**Response lỗi (gắn / gỡ):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải Kế toán (`VT-05`) (TC-03). |
+| 404 | `RESOURCE_NOT_FOUND` | Không có phiếu hoặc mốc. |
+| 400 | `VALIDATION_ERROR` | Thiếu `contractMilestoneId`; mốc không thuộc hợp đồng của dự án. |
+| 400 | `INVALID_STATE` | Mốc (mới hoặc cũ) đã `INVOICED`; gỡ khi phiếu chưa gắn mốc nào. |
+| 409 | `DUPLICATE_DATA` | Mốc đã gắn với phiếu khác. |
+
+#### `GET /contracts/{contractId}/milestone-acceptances`
+
+Danh sách mốc của hợp đồng kèm phiếu đã gắn — màn hình Kế toán dùng để biết mốc nào đủ điều kiện lập hóa đơn.
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "milestoneId": 101, "contractId": 3, "milestoneName": "Dot 1", "amount": 300000000.00,
+      "expectedDate": "2026-11-30", "acceptanceCondition": "Khach hang ky bien ban nghiem thu",
+      "milestoneStatus": "READY_TO_INVOICE",
+      "certificateId": 5, "certificateCode": "NT-20260924-A1B2C3", "certificateStatus": "ACCEPTED",
+      "projectCode": "DA-001", "workPackageName": "Giai doan 1"
+    },
+    {
+      "milestoneId": 102, "contractId": 3, "milestoneName": "Dot 2", "amount": 700000000.00,
+      "expectedDate": "2027-03-31", "acceptanceCondition": null, "milestoneStatus": "PENDING",
+      "certificateId": null, "certificateCode": null, "certificateStatus": null,
+      "projectCode": null, "workPackageName": null
+    }
+  ]
+}
+```
+
+Lỗi: `403` (không phải `VT-05`), `404` (không có hợp đồng).
+
+### `NCL-12-CN-004` — Quản lý sản phẩm bàn giao và phiên bản
+
+Sản phẩm bàn giao gắn với một hạng mục; tên không trùng trong cùng hạng mục (không phân biệt hoa thường). Mỗi lần
+bàn giao tạo **phiên bản mới**, phiên bản cũ giữ nguyên, không sửa/xoá (TC-01). Số phiên bản không được trùng trong
+cùng sản phẩm (không phân biệt hoa thường, bỏ khoảng trắng đầu/cuối — TC-02). "Mới nhất" = ngày bàn giao lớn nhất
+(cùng ngày thì bản ghi sau). Thêm sản phẩm/phiên bản yêu cầu dự án đang chạy.
+
+#### `POST /projects/{projectId}/deliverables`
+
+```json
+{ "workPackageId": 40, "name": "Tai lieu thiet ke", "deliverableType": "DOCUMENT", "description": "SRS + thiet ke CSDL" }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `workPackageId` | number | có | Hạng mục thuộc dự án. |
+| `name` | string | có | ≤ 255 ký tự. |
+| `deliverableType` | enum | có | Xem enum đầu mục Epic. |
+| `description` | string | không | ≤ 1000 ký tự. |
+
+**Response** — `data` là sản phẩm (cấu trúc dùng chung cho `GET` danh sách/chi tiết):
+
+```json
+{
+  "id": 7, "projectId": 12, "workPackageId": 40, "workPackageName": "Giai doan 1",
+  "name": "Tai lieu thiet ke", "deliverableType": "DOCUMENT", "description": "SRS + thiet ke CSDL",
+  "versionCount": 2,
+  "latestVersion": { "id": 15, "deliverableId": 7, "versionNo": "1.1", "deliveredDate": "2026-09-23",
+    "receiverName": "Le Van C", "fileUrl": "/files/tkcsdl-1.1.pdf", "note": null, "latest": true,
+    "createdBy": "pm01", "createdAt": "2026-09-23T15:00:00" },
+  "versions": [ "... cùng cấu trúc latestVersion, mới nhất trước ..." ],
+  "createdBy": "pm01", "createdAt": "2026-09-20T09:00:00"
+}
+```
+
+Sản phẩm mới tạo có `versionCount` = 0, `latestVersion` = `null`, `versions` = `[]`.
+
+#### `GET /projects/{projectId}/deliverables?workPackageId=` · `GET /deliverables/{deliverableId}`
+
+Danh sách (lọc theo hạng mục nếu có `workPackageId`) và chi tiết sản phẩm, kèm toàn bộ lịch sử phiên bản.
+
+#### `POST /deliverables/{deliverableId}/versions`
+
+```json
+{ "versionNo": "1.1", "deliveredDate": "2026-09-23", "receiverName": "Le Van C", "fileUrl": "/files/tkcsdl-1.1.pdf", "note": "Bo sung chuong 4" }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `versionNo` | string | có | ≤ 50 ký tự, duy nhất trong sản phẩm. |
+| `deliveredDate` | date | có | Không ở tương lai. |
+| `receiverName` | string | có | Người nhận phía khách hàng, ≤ 255 ký tự. |
+| `fileUrl` | string | không | Đường dẫn tệp mô phỏng, ≤ 500 ký tự. |
+| `note` | string | không | ≤ 1000 ký tự. |
+
+`data` là phiên bản vừa lưu (`latest` cho biết nó có phải bản mới nhất không — bàn giao bù một phiên bản ngày cũ
+thì `latest` = `false`).
+
+#### `GET /deliverables/{deliverableId}/versions`
+
+Mảng phiên bản, mới nhất trước.
+
+**Response lỗi (CN-004):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-02`, hoặc không phải PM của dự án (TC-03). |
+| 404 | `RESOURCE_NOT_FOUND` | Không có dự án/sản phẩm; hạng mục không thuộc dự án. |
+| 400 | `VALIDATION_ERROR` | Thiếu trường bắt buộc, chuỗi quá dài, `deliveredDate` ở tương lai. |
+| 400 | `INVALID_STATE` | Dự án đã đóng. |
+| 409 | `DUPLICATE_DATA` | Trùng tên sản phẩm trong hạng mục, hoặc trùng số phiên bản (TC-02). |
+
+**Ghi chú cho Frontend (Epic NCL-12):**
+- Nút "Lập phiếu nghiệm thu" nên gọi `acceptance-readiness` trước; `ready = false` thì hiển thị `unfinishedTasks`.
+- Phiếu `ACCEPTED`: ẩn mọi thao tác sửa/xác nhận/từ chối. Phiếu `NEEDS_REVISION`: hiện `lastRejectionReason` và nút nộp lại.
+- Màn hình mốc thanh toán của Kế toán nên dùng `GET /contracts/{id}/milestone-acceptances`; mốc có `certificateId`
+  thì ẩn nút mở tay (`PATCH .../status`) — backend sẽ chặn nếu phiếu chưa `ACCEPTED`.
+
+## Epic `NCL-13` — Cổng khách hàng
+
+Chung cho cả Epic:
+
+- **Hai nhóm endpoint tách bạch:**
+  - `/portal-accounts/**` — màn hình quản trị, chỉ **Quản trị viên** (`VT-07`) — `NCL-13-CN-001`.
+  - `/portal/**` — cổng khách hàng, chỉ tài khoản **Khách hàng** (`VT-09`) — `NCL-13-CN-002/003/004`.
+- **Đăng nhập cổng** dùng chung `POST /auth/login` (không có endpoint đăng nhập riêng). `roles` trong response chứa
+  `VT-09` → Frontend điều hướng sang giao diện cổng. Đổi mật khẩu/khôi phục mật khẩu dùng chung `/auth/**`.
+- **Hàng rào QTN-26 ở tầng bảo mật** (`SecurityConfig`):
+  - Tài khoản `VT-09` **chỉ** gọi được `/portal/**`, `/auth/**`, `/notifications/**`. Mọi API nội bộ khác (kể cả API
+    không gắn vai trò như `GET /departments`, `GET /me/tasks`) → `403 FORBIDDEN`.
+  - Tài khoản nội bộ gọi `/portal/**` → `403 FORBIDDEN` (TC "Không có quyền" của CN-002/003/004).
+  - Mọi lượt 403 ghi Nhật ký hệ thống "Từ chối truy cập" (`targetType = PORTAL`) kèm tên chức năng.
+- **Phạm vi dữ liệu (QTN-26):** tài khoản cổng chỉ thấy dữ liệu của **đúng khách hàng** được gán khi cấp tài khoản
+  (cộng các hồ sơ đã gộp vào khách hàng đó — `NCL-02-CN-006`, cùng một pháp nhân). Mở bản ghi ngoài phạm vi bằng
+  đường dẫn trực tiếp → `403 FORBIDDEN` + ghi nhật ký. **Bản ghi không tồn tại cũng trả `403`** (không trả `404`)
+  để khách hàng không dò được mã bản ghi của khách hàng khác.
+- **Không lộ dữ liệu nội bộ:** response cổng là DTO riêng, chỉ gồm các trường liệt kê dưới đây — không có mô tả/ghi
+  chú nội bộ, giờ công, ngân sách, giá vốn, rủi ro, hạn mức hợp đồng, tài khoản nhân viên đã thao tác.
+- **Lưu lịch sử:** mọi thao tác của quản trị viên và mọi lượt khách hàng xem/duyệt ghi Nhật ký hệ thống — lọc
+  `targetType = PORTAL` (xem/cấp/khoá) hoặc `ACCEPTANCE` (xác nhận/từ chối phiếu). Các `action` phía khách hàng:
+  "Khách hàng xem danh sách dự án", "Khách hàng xem tiến độ dự án", "Khách hàng xem danh sách phiếu nghiệm thu",
+  "Khách hàng xem phiếu nghiệm thu", "Khách hàng xem hóa đơn và công nợ" (danh sách + chi tiết),
+  "Khách hàng xem tổng hợp công nợ".
+
+**Bản đồ endpoint:**
+
+| Story | Method & path | Vai trò |
+|---|---|---|
+| CN-001 | `GET /portal-accounts/candidates?customerId=` | `VT-07` |
+| CN-001 | `POST /portal-accounts` | `VT-07` |
+| CN-001 | `GET /portal-accounts?customerId=&status=` | `VT-07` |
+| CN-001 | `GET /portal-accounts/{accountId}` | `VT-07` |
+| CN-001 | `PATCH /portal-accounts/{accountId}/status` | `VT-07` |
+| CN-002 | `GET /portal/projects` | `VT-09` |
+| CN-002 | `GET /portal/projects/{projectId}` | `VT-09` |
+| CN-003 | `GET /portal/acceptances?projectId=&status=` | `VT-09` |
+| CN-003 | `GET /portal/acceptances/{certificateId}` | `VT-09` |
+| CN-003 | `POST /portal/acceptances/{certificateId}/confirm` | `VT-09` |
+| CN-003 | `POST /portal/acceptances/{certificateId}/reject` | `VT-09` |
+| CN-004 | `GET /portal/invoices?status=&overdueOnly=` | `VT-09` |
+| CN-004 | `GET /portal/invoices/summary` | `VT-09` |
+| CN-004 | `GET /portal/invoices/{invoiceId}` | `VT-09` |
+
+### `NCL-13-CN-001` — Cấp tài khoản cổng cho khách hàng
+
+Quản trị viên chọn **một người liên hệ** của khách hàng (`NCL-02-CN-003`) và cấp tài khoản.
+Hệ thống tạo tài khoản đăng nhập vai trò `VT-09`, phạm vi `SELF`, **ngoài cây tổ chức** (`departmentId = null`),
+họ tên/email lấy từ người liên hệ, và **gắn cố định** với khách hàng của người liên hệ (TC-01). Mỗi người liên hệ tối
+đa một tài khoản cổng.
+
+#### `GET /portal-accounts/candidates?customerId=`
+
+Người liên hệ của khách hàng kèm tài khoản cổng đã cấp (nếu có) — để chọn người được cấp. Đầu mối chính đứng đầu.
+Cần endpoint riêng vì `GET /customers/{customerId}/contacts` chỉ dành cho Nhân viên kinh doanh (`NCL-02-CN-003-TC-03`).
+
+```json
+[
+  { "contactId": 11, "fullName": "Tran Van B", "title": "Giam doc", "email": "b@abc.example", "role": "PRIMARY",
+    "portalAccountId": null, "portalUsername": null, "portalStatus": null },
+  { "contactId": 12, "fullName": "Nguyen Thi Nhi", "title": "Truong phong Cong nghe", "email": "nhi@abc.example",
+    "role": "SECONDARY", "portalAccountId": 3, "portalUsername": "nhi.abc", "portalStatus": "ACTIVE" }
+]
+```
+
+`customerId` bắt buộc; khách hàng không tồn tại → `404 RESOURCE_NOT_FOUND`.
+
+#### `POST /portal-accounts`
+
+**Request:**
+
+```json
+{ "contactId": 12, "username": "nhi.abc", "password": "Matkhau123" }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `contactId` | number | có | Người liên hệ được cấp tài khoản. Khách hàng suy ra từ người liên hệ — **không** nhận `customerId` từ client. |
+| `username` | string | có | 3–100 ký tự, chỉ gồm chữ, số và `. _ @ -`; không trùng (không phân biệt hoa thường) với tài khoản nào. |
+| `password` | string | có | 8–100 ký tự, có ít nhất một chữ cái và một chữ số (cùng luật `NCL-01-CN-008`). Quản trị viên gửi cho khách hàng qua kênh riêng; khách hàng tự đổi bằng `POST /auth/change-password`. |
+
+**Response thành công — `200 OK`** — `data` là **tài khoản cổng** (dùng chung cho mọi endpoint của story này):
+
+```json
+{
+  "success": true,
+  "message": "Cap tai khoan cong khach hang thanh cong",
+  "data": {
+    "id": 3,
+    "userId": 41,
+    "username": "nhi.abc",
+    "fullName": "Nguyen Thi Nhi",
+    "email": "nhi@khachhang-abc.example",
+    "status": "ACTIVE",
+    "customerId": 1001,
+    "customerCode": "KH-100001",
+    "customerName": "Cong ty CP Giai Phap So Viet",
+    "contactId": 12,
+    "contactName": "Nguyen Thi Nhi",
+    "contactTitle": "Truong phong Cong nghe",
+    "contactRole": "SECONDARY",
+    "statusReason": null,
+    "statusChangedBy": null,
+    "statusChangedAt": null,
+    "createdBy": "admin",
+    "createdAt": "2026-09-24T10:00:00"
+  }
+}
+```
+
+`status` đọc trực tiếp từ tài khoản đăng nhập (`users.status`): `ACTIVE` hoặc `LOCKED` — khoá ở đây hay ở màn hình
+Quản lý tài khoản đều cho cùng kết quả.
+
+#### `GET /portal-accounts?customerId=&status=` · `GET /portal-accounts/{accountId}`
+
+Danh sách (mới nhất trước) / chi tiết tài khoản cổng. `customerId`, `status` (`ACTIVE`|`LOCKED`) tùy chọn.
+
+#### `PATCH /portal-accounts/{accountId}/status` (TC-02)
+
+```json
+{ "status": "LOCKED", "reason": "Nguoi lien he da nghi viec" }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `status` | string | có | `LOCKED` (khoá) hoặc `ACTIVE` (mở lại). `INACTIVE` bị từ chối. |
+| `reason` | string | không | ≤ 500 ký tự — lưu vào `statusReason`. |
+
+Khoá: tài khoản **không đăng nhập được nữa** (`POST /auth/login` trả `401 ACCOUNT_INACTIVE`) và **mọi phiên đang mở
+mất hiệu lực ngay** (tăng `tokenVersion`). **Không xoá dữ liệu nào** — tài khoản, liên kết khách hàng, lịch sử xác
+nhận nghiệm thu giữ nguyên. Mở lại: đặt lại số lần đăng nhập sai. `message` = `"Khoa tai khoan cong thanh cong"` /
+`"Mo khoa tai khoan cong thanh cong"`.
+
+**Response lỗi (CN-001):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải `VT-07` (TC-03). |
+| 404 | `RESOURCE_NOT_FOUND` | Không có người liên hệ `contactId` / tài khoản `accountId`; chưa khai báo vai trò `VT-09`. |
+| 400 | `VALIDATION_ERROR` | Thiếu trường; `username` sai định dạng; mật khẩu không đạt luật; `status` = `INACTIVE`. |
+| 400 | `INVALID_STATE` | Khách hàng của người liên hệ đã bị gộp (`MERGED`) — cấp từ hồ sơ giữ lại; khoá tài khoản đang khoá / mở tài khoản đang mở. |
+| 409 | `DUPLICATE_DATA` | Người liên hệ đã có tài khoản cổng; trùng `username`; email người liên hệ đã là email của tài khoản khác (email dùng để khôi phục mật khẩu phải duy nhất). |
+
+### `NCL-13-CN-002` — Khách hàng xem tiến độ dự án
+
+#### `GET /portal/projects` (TC-01)
+
+Mảng dự án của chính khách hàng (cả đang chạy lẫn đã đóng), mới nhất trước:
+
+```json
+{
+  "id": 12,
+  "projectCode": "DA-001",
+  "name": "Trien khai ERP",
+  "status": "RUNNING",
+  "startDate": "2026-09-01",
+  "expectedEndDate": "2026-12-31",
+  "contractCode": "HD-2026-001",
+  "projectManagerName": "Nguyen Van Dung",
+  "totalTasks": 12,
+  "doneTasks": 8,
+  "progressPercent": 67,
+  "totalMilestones": 3,
+  "doneMilestones": 1,
+  "lateMilestones": 1,
+  "nextMilestoneName": "Ban giao giai doan 1",
+  "nextMilestoneDate": "2026-09-19"
+}
+```
+
+`progressPercent` = số công việc `DONE` / tổng số công việc, làm tròn số nguyên (0 khi chưa có công việc).
+`nextMilestone*` = mốc chưa hoàn thành có ngày kế hoạch sớm nhất (kể cả mốc đang trễ).
+
+#### `GET /portal/projects/{projectId}` (TC-01, TC-02, TC-03)
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "project": { "...": "cùng cấu trúc phần tử của GET /portal/projects" },
+    "workPackages": [
+      { "id": 40, "parentId": null, "name": "Giai doan 1", "totalTasks": 3, "doneTasks": 2,
+        "progressPercent": 67, "acceptanceStatus": "PENDING_CONFIRMATION" },
+      { "id": 41, "parentId": 40, "name": "Thiet ke", "totalTasks": 1, "doneTasks": 1,
+        "progressPercent": 100, "acceptanceStatus": null }
+    ],
+    "milestones": [
+      { "id": 7, "name": "Ban giao giai doan 1", "plannedDate": "2026-09-19", "actualDate": null,
+        "status": "LATE", "daysLate": 5 }
+    ],
+    "deliverables": [
+      { "deliverableId": 7, "workPackageId": 41, "workPackageName": "Thiet ke", "name": "Tai lieu thiet ke",
+        "deliverableType": "DOCUMENT", "latestVersionNo": "1.1", "latestDeliveredDate": "2026-09-22",
+        "latestFileUrl": "/files/tai-lieu-thiet-ke-1.1.pdf", "versionCount": 2 }
+    ]
+  }
+}
+```
+
+- `workPackages`: mọi hạng mục (lồng cấp qua `parentId`); số công việc tính **cả hạng mục con cháu**.
+  `acceptanceStatus` = trạng thái phiếu nghiệm thu của hạng mục (`NCL-12`), `null` nếu chưa lập phiếu.
+- `milestones[].status` ∈ `DONE`, `ON_TRACK`, `LATE` — cùng quy tắc `NCL-05-CN-008`; `daysLate` chỉ có khi `LATE`.
+- `deliverables`: chỉ sản phẩm **đã bàn giao ít nhất một lần**, kèm phiên bản mới nhất.
+- **TC-03 — không hiển thị ghi chú nội bộ:** response **không có** mô tả của hạng mục, công việc, mốc, sản phẩm,
+  ghi chú phiên bản bàn giao, tên từng công việc, giờ công/ngân sách giờ, giá trị hạn mức, rủi ro dự án.
+
+**Response lỗi (CN-002):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải tài khoản cổng (TC-04); dự án của khách hàng khác hoặc không tồn tại (TC-02); tài khoản `VT-09` chưa được gắn khách hàng; tài khoản đã bị khoá. |
+
+### `NCL-13-CN-003` — Khách hàng duyệt phiếu nghiệm thu trên cổng
+
+Cùng luồng trạng thái với `NCL-12-CN-002`, khác ở **kênh** `PORTAL`: khách hàng tự bấm thay vì Quản lý dự án ghi
+nhận. Chỉ phiếu `PENDING_CONFIRMATION` mới xác nhận/từ chối được. Sau mỗi quyết định, Quản lý dự án của dự án nhận
+thông báo trong hệ thống (`type = ACCEPTANCE_DECIDED_ON_PORTAL`, `referenceType = ACCEPTANCE_CERTIFICATE`).
+
+#### `GET /portal/acceptances?projectId=&status=` · `GET /portal/acceptances/{certificateId}`
+
+Danh sách (mới nhất trước) — phần tử **tóm tắt**:
+
+```json
+{
+  "id": 5, "certificateCode": "NT-20260924-A1B2C3", "projectId": 12, "projectCode": "DA-001",
+  "projectName": "Trien khai ERP", "workPackageName": "Giai doan 1", "title": "Nghiem thu giai doan 1",
+  "acceptedValue": 300000000.00, "status": "PENDING_CONFIRMATION", "revisionNo": 1, "awaitingDecision": true,
+  "createdAt": "2026-09-24T10:00:00", "updatedAt": "2026-09-24T10:00:00", "confirmedAt": null
+}
+```
+
+Chi tiết — `data` dùng chung cho `GET` chi tiết, `confirm`, `reject`:
+
+```json
+{
+  "id": 5, "certificateCode": "NT-20260924-A1B2C3", "projectId": 12, "projectCode": "DA-001",
+  "projectName": "Trien khai ERP", "workPackageName": "Giai doan 1", "title": "Nghiem thu giai doan 1",
+  "acceptedValue": 300000000.00, "note": "Theo moc 1 cua hop dong",
+  "status": "ACCEPTED", "revisionNo": 1, "lastRejectionReason": null,
+  "signerName": "Nguyen Thi Nhi", "signedDate": "2026-09-25",
+  "confirmationChannel": "PORTAL", "confirmedAt": "2026-09-25T09:00:00", "awaitingDecision": false,
+  "tasks": ["Phan tich yeu cau", "Lap trinh phan he"],
+  "deliverables": [ { "deliverableName": "Tai lieu thiet ke", "versionNo": "1.1" } ],
+  "decisions": [
+    { "decision": "ACCEPTED", "channel": "PORTAL", "revisionNo": 1, "signerName": "Nguyen Thi Nhi",
+      "signedDate": "2026-09-25", "reason": null, "recordedAt": "2026-09-25T09:00:00" }
+  ],
+  "createdAt": "2026-09-24T10:00:00", "updatedAt": "2026-09-25T09:00:00"
+}
+```
+
+Không có trong response cổng: mốc thanh toán đã gắn, đường dẫn biên bản nội bộ, tài khoản nhân viên đã lập/ghi nhận.
+
+#### `POST /portal/acceptances/{certificateId}/confirm` (TC-01)
+
+Không có body. Kết quả: phiếu → `ACCEPTED`, **khoá nội dung**; `signerName` = họ tên người liên hệ đang đăng nhập,
+`signedDate` = hôm nay, `confirmationChannel` = `PORTAL`, `confirmedAt` = thời điểm bấm (tài khoản cổng được lưu
+làm người xác nhận). Nếu phiếu đã gắn mốc thanh toán đang `PENDING` thì mốc **tự chuyển `READY_TO_INVOICE`**
+(QTN-25) trong cùng giao dịch. `message` = `"Xac nhan nghiem thu thanh cong"`.
+
+#### `POST /portal/acceptances/{certificateId}/reject` (TC-02)
+
+```json
+{ "reason": "Thieu tai lieu huong dan su dung" }
+```
+
+| Trường | Kiểu | Bắt buộc | Ghi chú |
+|---|---|---|---|
+| `reason` | string | có | Không được để trống/chỉ khoảng trắng, ≤ 1000 ký tự. |
+
+Kết quả: phiếu → `NEEDS_REVISION`, lý do lưu vào `lastRejectionReason` và `decisions[]`. `message` =
+`"Tu choi nghiem thu thanh cong"`.
+
+**Response lỗi (CN-003):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải tài khoản cổng (TC-03, kể cả Quản lý dự án); phiếu/dự án của khách hàng khác hoặc không tồn tại. |
+| 400 | `VALIDATION_ERROR` | Từ chối mà thiếu `reason` (TC-02) hoặc quá 1000 ký tự; thiếu body. |
+| 400 | `INVALID_STATE` | Phiếu không ở `PENDING_CONFIRMATION` (đã `ACCEPTED`, hoặc đang `NEEDS_REVISION` chờ Quản lý dự án nộp lại). |
+
+### `NCL-13-CN-004` — Khách hàng xem hóa đơn và công nợ
+
+Chỉ hoá đơn **đã phát hành** (`ISSUED`, `PARTIALLY_PAID`, `PAID`, `CANCELLED`) — hoá đơn nháp `DRAFT` không hiển thị
+trên cổng. Số đã trả/còn lại/quá hạn tính cùng cách `NCL-10-CN-003/004`.
+
+#### `GET /portal/invoices?status=&overdueOnly=` (TC-01)
+
+`status` tùy chọn (không nhận `DRAFT`); `overdueOnly=true` chỉ lấy hoá đơn quá hạn. Mảng, mới nhất trước:
+
+```json
+{
+  "id": 9, "invoiceCode": "INV-20260901-A1B2C3", "contractId": 3, "contractCode": "HD-2026-001",
+  "invoiceDate": "2026-08-15", "dueDate": "2026-09-14", "status": "PARTIALLY_PAID",
+  "totalAmount": 100000000.00, "paidAmount": 60000000.00, "remainingAmount": 40000000.00,
+  "overdue": true, "daysOverdue": 10
+}
+```
+
+`remainingAmount` = `totalAmount` − `paidAmount` (0 với hoá đơn `CANCELLED`). `overdue` = còn phải trả **và** đã qua
+`dueDate`.
+
+#### `GET /portal/invoices/summary`
+
+Tổng hợp công nợ (không tính hoá đơn đã huỷ):
+
+```json
+{
+  "customerId": 1001, "customerCode": "KH-100001", "customerName": "Cong ty CP Giai Phap So Viet",
+  "invoiceCount": 3, "totalInvoiced": 180000000.00, "totalPaid": 90000000.00, "totalOutstanding": 90000000.00,
+  "overdueInvoiceCount": 1, "totalOverdue": 40000000.00,
+  "nextDueDate": "2026-10-14", "nextDueAmount": 50000000.00
+}
+```
+
+`nextDueDate` = hạn thanh toán gần nhất (hôm nay trở đi) của hoá đơn còn nợ; `null` nếu không có.
+
+#### `GET /portal/invoices/{invoiceId}` (TC-02)
+
+```json
+{
+  "invoice": { "...": "cùng cấu trúc phần tử của GET /portal/invoices" },
+  "lines": [ { "description": "Dot 1 - Nghiem thu giai doan 1", "amount": 100000000.00 } ],
+  "payments": [ { "paymentDate": "2026-09-20", "amount": 60000000.00, "method": "BANK_TRANSFER" } ]
+}
+```
+
+Không có trong response cổng: ghi chú của kế toán trên hoá đơn/lần thanh toán, tài khoản đã lập/ghi nhận.
+
+**Response lỗi (CN-004):**
+
+| HTTP | `errorCode` | Khi nào xảy ra |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | Chưa gửi hoặc gửi sai token. |
+| 403 | `FORBIDDEN` | Không phải tài khoản cổng (TC-03); hoá đơn của khách hàng khác, hoá đơn nháp hoặc không tồn tại (TC-02). |
+| 400 | `VALIDATION_ERROR` | `status` = `DRAFT` hoặc sai giá trị enum; `overdueOnly` không phải `true`/`false`. |
+
+**Ghi chú cho Frontend (Epic NCL-13):**
+- Sau đăng nhập, `roles` chứa `VT-09` → chỉ hiển thị giao diện cổng; **không** gọi API nội bộ nào (đều trả 403).
+  Menu hiện tại cho `VT-09` thấy "Công việc của tôi" và "Cơ hội" — hai màn hình này sẽ nhận 403 từ backend.
+- Nút xác nhận/từ chối chỉ hiện khi `awaitingDecision = true`; từ chối bắt buộc ô lý do.
+- Màn hình quản trị: chọn khách hàng (`GET /customers`) rồi gọi `GET /portal-accounts/candidates?customerId=` —
+  người liên hệ có `portalAccountId = null` thì hiện nút "Cấp tài khoản".
+
+## Epic `NCL-15` — Quản trị hệ thống và danh mục
+
+Chung cho cả Epic:
+
+- **Vai trò:** mọi chức năng quản trị chỉ dành cho **Quản trị viên** (`VT-07`). Vai trò khác → `403 FORBIDDEN` và
+  Nhật ký hệ thống ghi "Từ chối truy cập" (`targetType = SYSTEM`) kèm tên chức năng: "Quản lý danh mục dịch vụ",
+  "Cấu hình công ty", "Kỳ tài chính", "Sao lưu và phục hồi dữ liệu", "Nhập dữ liệu từ tệp" — đây là TC "Không có
+  quyền" của cả 4 story. **Ngoại lệ chỉ đọc** (ghi rõ ở cột Vai trò bên dưới): danh sách dịch vụ chọn được và giá áp
+  dụng (cho người lập báo giá / hóa đơn), kỳ tài chính (cho người xem báo cáo).
+- **Lưu lịch sử (TC cuối của mỗi story):** mọi thao tác ghi Nhật ký hệ thống, lọc `GET /audit-logs?targetType=SYSTEM`.
+  Các `action`: "Tạo dịch vụ trong danh mục", "Cập nhật dịch vụ trong danh mục", "Ngừng dịch vụ trong danh mục",
+  "Mở lại dịch vụ trong danh mục", "Thêm mốc giá dịch vụ", "Cập nhật cấu hình công ty", "Sao lưu dữ liệu",
+  "Sao lưu dữ liệu thất bại", "Yêu cầu phục hồi dữ liệu", "Từ chối phục hồi dữ liệu",
+  "Xác nhận phục hồi dữ liệu thất bại", "Phục hồi dữ liệu", "Phục hồi dữ liệu thất bại", "Tải tệp nhập dữ liệu",
+  "Nhập dữ liệu từ tệp".
+- **Ngày tháng:** `yyyy-MM-dd` cho ngày, `yyyy-MM-ddTHH:mm:ss` cho thời điểm (giờ máy chủ).
+- **Trường `null` bị lược** khỏi JSON (cấu hình Jackson `non_null`) — Frontend coi trường vắng mặt là `null`.
+
+**Bản đồ endpoint:**
+
+| Story | Method & path | Vai trò |
+|---|---|---|
+| CN-001 | `GET /service-catalog?keyword=&active=&asOf=` | `VT-07` |
+| CN-001 | `GET /service-catalog/{id}?asOf=` | `VT-07` |
+| CN-001 | `POST /service-catalog` | `VT-07` |
+| CN-001 | `PUT /service-catalog/{id}` | `VT-07` |
+| CN-001 | `PATCH /service-catalog/{id}/status` | `VT-07` |
+| CN-001 | `POST /service-catalog/{id}/prices` | `VT-07` |
+| CN-001 | `GET /service-catalog/selectable?date=` | `VT-07`, `VT-01`, `VT-02`, `VT-04`, `VT-05` |
+| CN-001 | `GET /service-catalog/{id}/effective-price?date=` | `VT-07`, `VT-01`, `VT-02`, `VT-04`, `VT-05` |
+| CN-002 | `GET /company-settings` | `VT-07` |
+| CN-002 | `PUT /company-settings` | `VT-07` |
+| CN-002 | `GET /fiscal-periods/{fiscalYear}` | `VT-07`, `VT-01`, `VT-02`, `VT-05` |
+| CN-002 | `GET /fiscal-periods/current?date=` | `VT-07`, `VT-01`, `VT-02`, `VT-05` |
+| CN-003 | `GET /backups` | `VT-07` |
+| CN-003 | `GET /backups/{backupId}` | `VT-07` |
+| CN-003 | `POST /backups` | `VT-07` |
+| CN-003 | `POST /backups/{backupId}/restore-requests` (bước 1) | `VT-07` |
+| CN-003 | `POST /backups/restore-requests/{requestId}/confirm` (bước 2) | `VT-07` |
+| CN-004 | `GET /imports/templates/{targetType}` | `VT-07` |
+| CN-004 | `POST /imports/preview` (multipart) | `VT-07` |
+| CN-004 | `POST /imports/{jobId}/commit` | `VT-07` |
+| CN-004 | `GET /imports` | `VT-07` |
+| CN-004 | `GET /imports/{jobId}` | `VT-07` |
+
+### `NCL-15-CN-001` — Quản lý danh mục dịch vụ và giá
+
+Mỗi dịch vụ có **một tên duy nhất** và **một chuỗi mốc giá theo ngày hiệu lực** (QTN-28). Đổi giá **không sửa giá
+cũ** mà thêm một mốc giá mới; mọi mốc cũ giữ lại để báo giá / hóa đơn đã lập vẫn giải thích được. Giá áp dụng cho một
+ngày = mốc có `effectiveFrom` gần nhất **trước hoặc bằng** ngày đó.
+
+**Đối tượng `ServiceCatalogRes`** (dùng chung cho mọi API của story):
+
+```json
+{
+  "id": 3,
+  "code": "DV00003",
+  "name": "Tư vấn triển khai",
+  "unit": "giờ",
+  "description": "Tư vấn tại chỗ cho khách hàng",
+  "active": true,
+  "asOf": "2026-09-25",
+  "hasEffectivePrice": true,
+  "currentPrice": 450000.00,
+  "currentPriceEffectiveFrom": "2026-07-01",
+  "createdBy": "admin",
+  "createdAt": "2026-01-02T09:00:00",
+  "updatedAt": "2026-07-01T08:30:00",
+  "prices": [
+    { "id": 12, "price": 480000.00, "effectiveFrom": "2027-01-01", "current": false,
+      "createdBy": "admin", "createdAt": "2026-09-20T10:00:00" },
+    { "id": 9, "price": 450000.00, "effectiveFrom": "2026-07-01", "effectiveTo": "2026-12-31", "current": true,
+      "note": "Tăng giá giữa năm", "createdBy": "admin", "createdAt": "2026-06-25T10:00:00" },
+    { "id": 5, "price": 400000.00, "effectiveFrom": "2026-01-01", "effectiveTo": "2026-06-30", "current": false,
+      "note": "Gia khoi tao", "createdBy": "admin", "createdAt": "2026-01-02T09:00:00" }
+  ]
+}
+```
+
+| Trường | Ý nghĩa |
+|---|---|
+| `code` | Mã sinh tự động `DV` + 5 chữ số theo id — không nhập tay. |
+| `asOf` | Ngày dùng để tính `currentPrice` (tham số `asOf`/`date`, mặc định hôm nay). |
+| `hasEffectivePrice` | `false` khi chưa có mốc giá nào hiệu lực tại `asOf` (VD mốc đầu tiên ở tương lai) → **không được chọn** khi lập báo giá / hóa đơn. Khi đó không có `currentPrice`. |
+| `prices` | Lịch sử mốc giá, mới nhất trước. **Chỉ có ở `GET /service-catalog/{id}` và response của các API ghi**; danh sách không có trường này. `effectiveTo` = ngày trước mốc kế tiếp, vắng mặt = chưa có mốc sau. `current` đánh dấu mốc đang áp dụng tại `asOf`. |
+
+#### `GET /service-catalog?keyword=&active=&asOf=`
+
+Danh sách dịch vụ, sắp xếp theo tên. `keyword` tìm theo tên hoặc mã (không phân biệt hoa thường); `active=true|false`
+lọc trạng thái (bỏ trống = tất cả). Trả `ServiceCatalogRes[]` (không có `prices`).
+
+#### `GET /service-catalog/{id}?asOf=`
+
+Chi tiết + lịch sử mốc giá. `404 RESOURCE_NOT_FOUND` nếu id không tồn tại.
+
+#### `POST /service-catalog` (TC-01, TC-02)
+
+```json
+{
+  "name": "Tư vấn triển khai",
+  "unit": "giờ",
+  "description": "Tư vấn tại chỗ cho khách hàng",
+  "price": 400000,
+  "effectiveFrom": "2026-01-01"
+}
+```
+
+| Trường | Bắt buộc | Ràng buộc |
+|---|---|---|
+| `name` | ✔ | ≤ 255 ký tự |
+| `unit` | ✔ | ≤ 50 ký tự (giờ, ngày công, gói, buổi…) |
+| `description` | | ≤ 1000 ký tự |
+| `price` | ✔ | > 0, tối đa 16 chữ số nguyên + 2 chữ số thập phân |
+| `effectiveFrom` | ✔ | Ngày hiệu lực của mốc giá đầu tiên (được phép ở quá khứ hoặc tương lai) |
+
+- `200` — `message: "Tao dich vu thanh cong"`, `data`: `ServiceCatalogRes` (có `prices`). Dịch vụ xuất hiện ngay trong
+  danh mục dùng chung (TC-01).
+- `409 DUPLICATE_DATA` — đã có dịch vụ cùng tên (TC-02). So sánh **không phân biệt hoa thường và khoảng trắng thừa**
+  ("Tư vấn  triển khai" = "tư vấn triển khai"), nhưng **giữ dấu** ("Bảo trì" ≠ "Bao tri"). Không tạo gì cả.
+- `400 VALIDATION_ERROR` — thiếu/sai trường, xem `fieldErrors`.
+
+#### `PUT /service-catalog/{id}`
+
+Sửa mô tả dịch vụ — **không sửa giá ở đây**.
+
+```json
+{ "name": "Tư vấn triển khai hệ thống", "unit": "giờ", "description": null }
+```
+
+`200` (`"Cap nhat dich vu thanh cong"`) · `409 DUPLICATE_DATA` nếu tên mới trùng dịch vụ **khác** (giữ nguyên tên
+của chính nó thì được) · `404`.
+
+#### `PATCH /service-catalog/{id}/status`
+
+```json
+{ "active": false }
+```
+
+Ngừng / mở lại dịch vụ. Dịch vụ ngừng vẫn giữ lịch sử nhưng không còn trong `/selectable` và `effective-price` trả lỗi.
+`400 INVALID_STATE` nếu đặt đúng trạng thái đang có (ngừng dịch vụ đã ngừng, mở dịch vụ đang hoạt động).
+
+#### `POST /service-catalog/{id}/prices` (QTN-28)
+
+```json
+{ "price": 450000, "effectiveFrom": "2026-07-01", "note": "Tăng giá giữa năm" }
+```
+
+Thêm mốc giá mới; trả `ServiceCatalogRes` đã cập nhật. `409 DUPLICATE_DATA` nếu dịch vụ đã có mốc giá cùng
+`effectiveFrom` — chọn ngày khác. `note` ≤ 500 ký tự.
+
+#### `GET /service-catalog/selectable?date=` — dùng cho màn hình lập báo giá / hóa đơn (QTN-28)
+
+Chỉ trả dịch vụ **đang hoạt động VÀ có giá hiệu lực** tại `date` (mặc định hôm nay) — `date` nên là **ngày lập chứng
+từ**. Dịch vụ thiếu giá hiệu lực bị loại khỏi danh sách ("không cho chọn dịch vụ đó"). Trả `ServiceCatalogRes[]`.
+
+#### `GET /service-catalog/{id}/effective-price?date=` (QTN-28)
+
+```json
+{
+  "serviceItemId": 3, "code": "DV00003", "name": "Tư vấn triển khai", "unit": "giờ",
+  "date": "2026-09-25", "price": 450000.00, "effectiveFrom": "2026-07-01"
+}
+```
+
+`400 INVALID_STATE` khi dịch vụ đã ngừng hoặc **chưa có giá hiệu lực tại ngày lập** — message
+"Dich vu DV00003 chua co gia hieu luc tai ngay …, khong chon duoc khi lap bao gia/hoa don". Backend các module báo
+giá / hóa đơn gọi `ServiceCatalogService.resolveEffectivePrice(id, date)` để có cùng quy tắc.
+
+### `NCL-15-CN-002` — Cấu hình thông tin công ty và kỳ tài chính
+
+Một bộ cấu hình duy nhất cho toàn hệ thống.
+
+**Đối tượng `CompanySettingRes`:**
+
+```json
+{
+  "configured": true,
+  "companyName": "Công ty TNHH Mô Phỏng Dịch Vụ",
+  "taxCode": "0101234567",
+  "address": "Số 1 Đường Mô Phỏng, Hà Nội",
+  "phone": "02438123456",
+  "email": "lienhe@mophong.example",
+  "currency": "VND",
+  "fiscalYearStartMonth": 4,
+  "standardWorkingDaysPerMonth": 22,
+  "updatedBy": "admin",
+  "updatedAt": "2026-09-25T10:00:00"
+}
+```
+
+#### `GET /company-settings`
+
+Chưa cấu hình lần nào → `configured: false` kèm giá trị mặc định (`currency: "VND"`, `fiscalYearStartMonth: 1`,
+`standardWorkingDaysPerMonth: 22`, các trường khác vắng mặt). Frontend dùng cờ này để hiện lời nhắc "Chưa khai báo
+thông tin công ty".
+
+#### `PUT /company-settings` (TC-01, TC-02)
+
+```json
+{
+  "companyName": "Công ty TNHH Mô Phỏng Dịch Vụ",
+  "taxCode": "0101234567",
+  "address": "Số 1 Đường Mô Phỏng, Hà Nội",
+  "phone": "02438123456",
+  "email": "lienhe@mophong.example",
+  "currency": "VND",
+  "fiscalYearStartMonth": 4,
+  "standardWorkingDaysPerMonth": 22
+}
+```
+
+| Trường | Bắt buộc | Ràng buộc |
+|---|---|---|
+| `companyName` | ✔ | ≤ 255 ký tự, không được chỉ có khoảng trắng |
+| `taxCode` | | 10 chữ số, hoặc 10 số + `-` + 3 số (chi nhánh) |
+| `address` | | ≤ 500 ký tự |
+| `phone` | | 10–11 chữ số, bắt đầu bằng `0` |
+| `email` | | đúng định dạng email |
+| `currency` | ✔ | `VND` \| `USD` \| `EUR` |
+| `fiscalYearStartMonth` | ✔ | 1–12 |
+| `standardWorkingDaysPerMonth` | ✔ | 1–31 |
+
+- `200` — `"Luu cau hinh cong ty thanh cong"`, `data`: `CompanySettingRes`. Đổi `fiscalYearStartMonth` áp dụng
+  **ngay** cho lần chia kỳ kế tiếp (TC-01) — không có dữ liệu kỳ nào lưu sẵn cần đồng bộ lại.
+- `400 VALIDATION_ERROR` — thiếu tên công ty (TC-02, `fieldErrors[0].field = "companyName"`) hoặc trường sai ràng buộc.
+- Nhật ký ghi rõ các trường đã đổi, VD `"Thay doi: thang bat dau nam tai chinh: 1 -> 4"`.
+
+#### `GET /fiscal-periods/{fiscalYear}` · `GET /fiscal-periods/current?date=` (TC-01)
+
+Chia năm tài chính theo `fiscalYearStartMonth`. **Quy ước:** năm tài chính mang số của năm dương lịch chứa ngày bắt
+đầu. VD bắt đầu tháng 4 → năm tài chính 2026 = `2026-04-01` … `2027-03-31`. `current` trả năm tài chính chứa `date`
+(mặc định hôm nay). `fiscalYear` phải trong 2000–2100, ngoài khoảng → `400 VALIDATION_ERROR`.
+
+```json
+{
+  "fiscalYear": 2026,
+  "startMonth": 4,
+  "startDate": "2026-04-01",
+  "endDate": "2027-03-31",
+  "quarters": [
+    { "quarter": 1, "startDate": "2026-04-01", "endDate": "2026-06-30" },
+    { "quarter": 2, "startDate": "2026-07-01", "endDate": "2026-09-30" },
+    { "quarter": 3, "startDate": "2026-10-01", "endDate": "2026-12-31" },
+    { "quarter": 4, "startDate": "2027-01-01", "endDate": "2027-03-31" }
+  ],
+  "months": [
+    { "period": 1, "yearMonth": "2026-04", "startDate": "2026-04-01", "endDate": "2026-04-30" },
+    "… 12 phần tử …",
+    { "period": 12, "yearMonth": "2027-03", "startDate": "2027-03-01", "endDate": "2027-03-31" }
+  ]
+}
+```
+
+Màn hình báo cáo theo năm/quý lấy `startDate`/`endDate` của năm hoặc quý ở đây rồi truyền làm `from`/`to` cho các API
+báo cáo (`/reports/**`). Backend dùng `FiscalPeriodService.resolve(date)` cho cùng quy tắc.
+
+### `NCL-15-CN-003` — Sao lưu và phục hồi dữ liệu
+
+- **Nội dung bản sao:** toàn bộ dữ liệu vận hành (mọi bảng nghiệp vụ, kể cả bảng thêm ở các Epic sau). **Không** sao
+  lưu và **không** bị phục hồi đè: Nhật ký hệ thống (`audit_logs`), nhật ký truy cập dữ liệu nhạy cảm, danh sách bản
+  sao lưu / yêu cầu phục hồi, phiên nhập dữ liệu, phiên đăng nhập và mã khôi phục mật khẩu — nên dấu vết "ai đã phục
+  hồi lúc nào" luôn còn.
+- **Tệp:** JSON, lưu trong `app.backup.dir` (biến môi trường `BACKUP_DIR`, mặc định `./data/backups`), kèm SHA-256.
+- **Sao lưu theo lịch:** đặt `BACKUP_CRON` (cron 6 trường của Spring, VD `0 0 2 * * *` = 02h00 hằng ngày); mặc định
+  tắt. Bản sao theo lịch có `triggerType: "SCHEDULED"` và không có `createdBy`.
+- **Chỉ một thao tác sao lưu HOẶC phục hồi chạy cùng lúc** — gọi khi đang có thao tác khác → `400 INVALID_STATE`
+  "Dang sao luu du lieu / phuc hoi du lieu, vui long thu lai sau…".
+
+**Đối tượng `BackupRecordRes`:**
+
+```json
+{
+  "id": 8,
+  "code": "BK-20260925-100000-8",
+  "status": "COMPLETED",
+  "triggerType": "MANUAL",
+  "fileName": "BK-20260925-100000-8.json",
+  "sizeBytes": 482113,
+  "checksumSha256": "9f2c…64 ký tự hex…",
+  "tableCount": 71,
+  "rowCount": 5230,
+  "note": "Truoc khi nang cap",
+  "createdBy": "admin",
+  "startedAt": "2026-09-25T10:00:00",
+  "completedAt": "2026-09-25T10:00:02",
+  "restorable": true
+}
+```
+
+| `status` | Ý nghĩa | Phục hồi được? |
+|---|---|---|
+| `IN_PROGRESS` | Đang tạo, hoặc tiến trình chết giữa chừng (bản sao dở dang) | ✘ (TC-02) |
+| `COMPLETED` | Hoàn tất | ✔ — nếu tệp còn nguyên (kiểm checksum khi phục hồi) |
+| `FAILED` | Lỗi khi tạo, lý do ở `errorMessage` | ✘ (TC-02) |
+
+`restorable` = `status == COMPLETED` (dùng để bật/tắt nút "Phục hồi"). Tính toàn vẹn tệp chỉ kiểm khi tạo yêu cầu phục hồi.
+
+#### `GET /backups` · `GET /backups/{backupId}`
+
+Danh sách mới nhất trước / chi tiết. `404` nếu id không tồn tại.
+
+#### `POST /backups` (TC-01)
+
+Body tùy chọn: `{ "note": "Truoc khi nang cap" }` (≤ 500 ký tự; có thể gửi không body).
+
+- `200` + `status: "COMPLETED"`, `message: "Tao ban sao luu thanh cong"` — kèm thời điểm (`startedAt`/`completedAt`)
+  và dung lượng (`sizeBytes`).
+- Lỗi giữa chừng (hết dung lượng đĩa…) **vẫn trả `200`** với `status: "FAILED"`, `errorMessage`,
+  `message: "Tao ban sao luu that bai"` — Frontend phải kiểm tra `data.status`, không chỉ HTTP status.
+
+#### Phục hồi — xác nhận hai bước (QTN-30)
+
+**Bước 1 — `POST /backups/{backupId}/restore-requests`** (không body)
+
+Hệ thống kiểm tra bản sao: trạng thái `COMPLETED`, tệp còn tồn tại, SHA-256 khớp. Hợp lệ → cấp mã xác nhận:
+
+```json
+{
+  "requestId": 15,
+  "backupId": 8,
+  "backupCode": "BK-20260925-100000-8",
+  "backupCreatedAt": "2026-09-25T10:00:00",
+  "confirmationToken": "q3N0y…43 ký tự…",
+  "expiresAt": "2026-09-25T10:35:00",
+  "warning": "Phuc hoi se THAY TOAN BO du lieu van hanh hien tai bang du lieu tai thoi diem cua ban sao. …"
+}
+```
+
+- `confirmationToken` **chỉ trả về một lần ở đây** (CSDL chỉ lưu bản băm), hết hạn sau 5 phút
+  (`BACKUP_RESTORE_TOKEN_TTL_MINUTES`). Frontend giữ trong bộ nhớ của hộp thoại xác nhận, **không lưu localStorage**.
+- `400 INVALID_STATE` (TC-02) — bản sao không hợp lệ, message dạng
+  `"Ban sao luu BK-… khong hop le (ban sao con dang tao do dang | ban sao bi loi khi tao: … | khong tim thay tep sao luu | tep sao luu da bi thay doi hoac hong (sai checksum)), khong the phuc hoi"`.
+  Lượt bị chặn ghi nhật ký "Từ chối phục hồi dữ liệu".
+
+**Bước 2 — `POST /backups/restore-requests/{requestId}/confirm`**
+
+Hộp thoại hiện `warning`, bắt quản trị viên **nhập lại mật khẩu đăng nhập** rồi gửi kèm mã của bước 1:
+
+```json
+{ "confirmationToken": "q3N0y…", "password": "MatKhauCuaQuanTriVien" }
+```
+
+- `200` — `"Phuc hoi du lieu thanh cong"`:
+  ```json
+  {
+    "requestId": 15, "backupId": 8, "backupCode": "BK-20260925-100000-8", "status": "COMPLETED",
+    "tablesRestored": 71, "rowsRestored": 5230,
+    "restoredToPointInTime": "2026-09-25T10:00:00", "completedAt": "2026-09-25T10:31:12"
+  }
+  ```
+  Dữ liệu về đúng thời điểm `restoredToPointInTime`. Việc phục hồi chạy trong **một giao dịch**: lỗi giữa chừng thì
+  rollback, dữ liệu hiện tại giữ nguyên. Sau khi phục hồi, bảng tài khoản cũng về thời điểm bản sao — Frontend nên
+  tải lại trang; nếu tài khoản đang dùng không tồn tại ở thời điểm đó thì người dùng sẽ bị đăng xuất.
+- `400 VALIDATION_ERROR` — sai mã xác nhận hoặc sai mật khẩu (**không nói rõ sai cái nào**). Sai **3 lần**
+  (`BACKUP_RESTORE_MAX_ATTEMPTS`) → yêu cầu bị huỷ, message "…yeu cau phuc hoi da bi huy"; phải làm lại bước 1.
+- `400 INVALID_STATE` — mã đã hết hạn; yêu cầu đã kết thúc (`COMPLETED`/`FAILED`/`EXPIRED`); bản sao bị sửa trong lúc
+  chờ xác nhận; bản sao không khớp cấu trúc dữ liệu hiện tại (tạo trước một lần nâng cấp CSDL); đang có sao lưu/phục
+  hồi khác.
+- `403 FORBIDDEN` — quản trị viên **khác** người tạo yêu cầu (mỗi yêu cầu chỉ người tạo xác nhận được).
+- `404 RESOURCE_NOT_FOUND` — `requestId` không tồn tại.
+
+### `NCL-15-CN-004` — Nhập dữ liệu khách hàng và nhân sự từ tệp
+
+Luồng hai bước: **tải tệp → bảng xem trước → xác nhận nhập**. Bước xem trước **chưa ghi dữ liệu nào**. Bước xác nhận
+**kiểm tra lại** trên dữ liệu mới nhất (hồ sơ có thể vừa được tạo ở màn hình khác) rồi mới ghi.
+
+- **Định dạng tệp:** CSV (`.csv`, tối đa **2 MB**, tối đa **2000 dòng** dữ liệu). Từ Excel: *Lưu thành → CSV UTF-8*.
+  Chấp nhận dấu phân cách `,` `;` hoặc tab; mã hóa UTF-8 (có/không BOM) hoặc windows-1258. Tiêu đề cột so khớp không
+  phân biệt hoa thường, dấu và khoảng trắng; cột lạ → lỗi "Tệp không đúng mẫu". Dòng trống hoàn toàn bị bỏ qua.
+  Số dòng (`rowNumber`) tính theo tệp, **dòng tiêu đề là dòng 1**.
+- **`targetType`:** `CUSTOMER` | `EMPLOYEE`.
+- **QTN-04:** mọi response có `notice` nhắc chỉ dùng dữ liệu mô phỏng — Frontend hiện nổi bật trên màn hình nhập.
+
+**Cột của tệp** (tiêu đề chính · tên thay thế được chấp nhận):
+
+| `targetType` | Cột | Bắt buộc | Quy tắc (giống màn hình nhập tay) |
+|---|---|---|---|
+| `CUSTOMER` | Tên khách hàng · Tên công ty · `name` | ✔ | ≤ 255 ký tự; không trùng tên dòng khác trong tệp |
+| | Mã số thuế · MST · `taxCode` | | 10 số hoặc 10 số-3 số; không trùng dòng khác trong tệp |
+| | Số điện thoại · SĐT · `phone` | | di động 10 số hoặc cố định 02x |
+| | Lĩnh vực · Ngành nghề · `industry` | | ≤ 255 |
+| | Địa chỉ · `address` | | ≤ 500 |
+| `EMPLOYEE` | Tên đăng nhập · Tài khoản · `username` | ✔ | tài khoản **phải có sẵn** (tạo ở Quản lý tài khoản); không trùng dòng khác |
+| | Bộ phận · Phòng ban · `department` | | tên bộ phận đã có (không phân biệt hoa thường) |
+| | Vai trò chuyên môn · Chức danh · `professionalRole` | | ≤ 255 |
+| | Cấp bậc · `level` | | ≤ 100 |
+| | Ngày vào làm · `hireDate` | ✔ | `yyyy-MM-dd` hoặc `dd/MM/yyyy` |
+| | Ngày kết thúc · `endDate` | | không sớm hơn ngày vào làm |
+| | Giờ chuẩn/tuần · Giờ làm việc chuẩn · `standardHoursPerWeek` | | > 0 và ≤ 168; bỏ trống = 40 |
+
+**Trùng hồ sơ đã có (TC-03):** khách hàng — cùng thuật toán chống trùng `NCL-02-CN-002`, độ giống ≥ 0.9 (VD trùng mã
+số thuế); nhân sự — tài khoản đã có hồ sơ nhân sự.
+
+#### `GET /imports/templates/{targetType}`
+
+Tải tệp mẫu: `Content-Type: text/csv;charset=UTF-8`,
+`Content-Disposition: attachment; filename="mau-nhap-customer.csv"` (hoặc `mau-nhap-employee.csv`). Có BOM để Excel
+hiện đúng tiếng Việt, gồm dòng tiêu đề + 1 dòng dữ liệu mô phỏng. Gọi bằng `fetch`/axios với `responseType: 'blob'`
+(cần header `Authorization`, không mở link trực tiếp).
+
+#### `POST /imports/preview` — bước 1 (TC-02, TC-03)
+
+`Content-Type: multipart/form-data`, hai phần: `targetType` (text) và `file` (tệp).
+
+```json
+{
+  "jobId": 21,
+  "targetType": "CUSTOMER",
+  "fileName": "khach-hang.csv",
+  "status": "PREVIEWED",
+  "totalRows": 4,
+  "validRows": 2,
+  "invalidRows": 1,
+  "duplicateRows": 1,
+  "notice": "Chi nhap du lieu MO PHONG phuc vu trinh dien (QTN-04). Khong dua du lieu khach hang hay nhan su that vao he thong.",
+  "rows": [
+    { "rowNumber": 2, "status": "VALID", "data": { "name": "Công ty Mô Phỏng A", "taxCode": "0109999991" }, "errors": [] },
+    { "rowNumber": 3, "status": "INVALID", "data": { "taxCode": "0109999992" },
+      "errors": ["Ten khach hang khong duoc de trong"] },
+    { "rowNumber": 4, "status": "DUPLICATE", "data": { "name": "Công ty Đã Có", "taxCode": "0107777777" },
+      "errors": ["Trung ho so khach hang da co KH000007 - Công ty Đã Có (maSoThue)"],
+      "duplicateOfId": 7, "duplicateOfLabel": "KH000007 - Công ty Đã Có" },
+    { "rowNumber": 5, "status": "VALID", "data": { "name": "Công ty Mô Phỏng B" }, "errors": [] }
+  ]
+}
+```
+
+| `rows[].status` | Ý nghĩa | Khi xác nhận nhập |
+|---|---|---|
+| `VALID` | Hợp lệ | Tạo mới (TC-01) |
+| `INVALID` | Thiếu / sai dữ liệu, lý do trong `errors` (TC-02) | **Không bao giờ nhập** — liệt kê để sửa |
+| `DUPLICATE` | Trùng hồ sơ `duplicateOfId` (TC-03) | Bỏ qua hoặc cập nhật hồ sơ đó — theo lựa chọn ở bước 2 |
+
+`data` chỉ chứa ô có giá trị, khoá là tên trường chuẩn (`name`, `taxCode`, `phone`, `industry`, `address` /
+`username`, `department`, `professionalRole`, `level`, `hireDate`, `endDate`, `standardHoursPerWeek`).
+
+Lỗi: `400 VALIDATION_ERROR` — thiếu phần `file`, tệp rỗng, không phải `.csv`, vượt 2 MB / 2000 dòng, sai mẫu (cột
+lạ), chỉ có dòng tiêu đề, `targetType` không hợp lệ.
+
+#### `POST /imports/{jobId}/commit` — bước 2 (TC-01, TC-03)
+
+```json
+{
+  "duplicateAction": "SKIP",
+  "rowActions": [ { "rowNumber": 4, "action": "UPDATE" } ]
+}
+```
+
+- `duplicateAction` (`SKIP` | `UPDATE`): lựa chọn **mặc định** cho mọi dòng trùng. `rowActions`: lựa chọn riêng từng
+  dòng, ghi đè mặc định. Tệp không có dòng trùng thì gửi body rỗng / không body.
+- Còn dòng `DUPLICATE` chưa có lựa chọn → `400 VALIDATION_ERROR` "Tep co dong trung ho so da co [4], hay chon bo qua
+  (SKIP) hoac cap nhat (UPDATE) truoc khi nhap" — **không nhập dòng nào**.
+- `UPDATE` ghi đè hồ sơ đã có bằng dữ liệu trong tệp (khách hàng: tên, MST, SĐT, lĩnh vực, địa chỉ; nhân sự: bộ phận,
+  vai trò, cấp bậc, ngày vào làm/kết thúc, giờ chuẩn). Ô trống trong tệp = xoá giá trị cũ của trường đó (riêng giờ chuẩn/tuần trống = 40).
+- Mỗi dòng ghi độc lập: một dòng ghi thất bại **không** làm các dòng khác rollback — dòng đó vào `errors` với
+  `stage: "COMMIT"`.
+- `200` — `message: "Da nhap du lieu"`, `data`: `ImportResultRes`:
+
+```json
+{
+  "jobId": 21,
+  "targetType": "CUSTOMER",
+  "fileName": "khach-hang.csv",
+  "status": "COMMITTED",
+  "totalRows": 4, "validRows": 2, "invalidRows": 1, "duplicateRows": 1,
+  "createdCount": 2, "updatedCount": 1, "skippedCount": 0, "failedCount": 0,
+  "duplicateAction": "SKIP",
+  "createdBy": "admin", "createdAt": "2026-09-25T10:00:00",
+  "committedBy": "admin", "committedAt": "2026-09-25T10:02:00",
+  "notice": "Chi nhap du lieu MO PHONG …",
+  "errors": [
+    { "rowNumber": 3, "stage": "VALIDATION", "message": "Ten khach hang khong duoc de trong",
+      "rawData": " | 0109999992 |  |  | " }
+  ]
+}
+```
+
+| `status` | Ý nghĩa |
+|---|---|
+| `PREVIEWED` | Đã xem trước, chưa nhập |
+| `COMMITTED` | Đã nhập, không dòng nào ghi thất bại (có thể vẫn có dòng `INVALID` không được nhập) |
+| `COMMITTED_WITH_ERRORS` | Đã nhập nhưng có dòng ghi thất bại (`failedCount > 0`) — xem `errors` với `stage: "COMMIT"` |
+
+Các số liệu tổng (`validRows`…) là kết quả kiểm tra **lại** lúc nhập, có thể khác bảng xem trước.
+`400 INVALID_STATE` — phiên đã nhập rồi hoặc đang được xử lý (bấm hai lần); muốn nhập thêm thì tải tệp lên lại.
+`404` — `jobId` không tồn tại.
+
+#### `GET /imports` · `GET /imports/{jobId}`
+
+Lịch sử phiên nhập (mới nhất trước; danh sách **không** có `errors`, `notice`) / chi tiết một phiên kèm danh sách
+dòng lỗi để sửa lại.
 
 ## Ghi chú tích hợp Frontend — Epic `NCL-05` (Dự án và công việc)
 

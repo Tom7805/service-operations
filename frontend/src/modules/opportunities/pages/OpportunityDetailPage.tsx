@@ -2,19 +2,20 @@ import { useEffect, useMemo, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import {
   createOpportunityActivity,
-  fetchOpportunities,
+  fetchOpportunity,
   fetchOpportunityActivities,
   OpportunityApiError,
 } from '../api/opportunitiesApi';
 import type { ContractRes } from '../../contracts/types/contractTypes';
 import CreateContractModal from '../components/CreateContractModal';
-import type { Opportunity } from '../types/opportunityTypes';
+import { STAGE_CONFIGS, type Opportunity, type OpportunityStage } from '../types/opportunityTypes';
 import type {
   OpportunityActivity,
   OpportunityActivityCreatePayload,
   OpportunityActivityFormErrors,
   OpportunityStatus,
 } from '../types/opportunityTypes';
+import PageHeader from '../../../components/common/PageHeader';
 
 interface OpportunityDetailPageProps {
   opportunityId: number;
@@ -101,65 +102,53 @@ export default function OpportunityDetailPage({
   const [errors, setErrors] = useState<OpportunityActivityFormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+  // Thông báo tạo hợp đồng riêng, KHÔNG dùng chung submitMessage của form "Ghi nhận chăm
+  // sóc" — submitMessage render tít dưới cùng form đó (sau ô "Nội dung trao đổi"), cách rất
+  // xa nút "Tạo hợp đồng" ở đầu trang nên người dùng không thấy được kết quả vừa tạo.
+  const [contractCreatedMessage, setContractCreatedMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isSalesAllowed) return;
     let cancelled = false;
 
-    async function loadOpportunityStatus() {
-      try {
-        const all = await fetchOpportunities();
-        const found = all.find((o) => o.id === opportunityId);
-        if (!cancelled && found) {
-          setResolvedStatus(found.status as OpportunityStatus);
-          setResolvedName(found.name);
-          setCustomerName(found.customerName ?? null);
-        }
-      } catch {
-        // Trạng thái không tải được thì tạm dùng giá trị mặc định từ props;
-        // nếu người dùng cố lưu vào cơ hội thực đã đóng, backend vẫn chặn.
-      }
+    // TC-03: vai trò khác Nhân viên kinh doanh vẫn gửi request thật để máy chủ từ chối (403)
+    // và GHI NHẬT KÝ lần từ chối — chỉ ẩn giao diện ở phía trình duyệt thì không có dấu vết.
+    if (!isSalesAllowed) {
+      Promise.resolve().then(() => fetchOpportunityActivities(opportunityId)).catch(() => undefined);
+      return;
     }
 
-    loadOpportunityStatus();
-    return () => {
-      cancelled = true;
-    };
-  }, [opportunityId, isSalesAllowed]);
-
-  useEffect(() => {
-    if (!isSalesAllowed) return;
-    let cancelled = false;
-
-    async function loadActivities() {
+    async function load() {
       setIsLoading(true);
       setLoadError(null);
-      try {
-        const data = await fetchOpportunityActivities(opportunityId);
-        if (!cancelled) setActivities(data);
-        // also try to fetch basic opportunity info from the list
-        try {
-          const list = await fetchOpportunities();
-          if (!cancelled) setOpportunity(list.find((o) => o.id === opportunityId) ?? null);
-        } catch {
-          // ignore
-        }
-      } catch (err) {
-        if (!cancelled) {
-          const message =
-            err instanceof OpportunityApiError
-              ? err.message
-              : err instanceof Error
-              ? err.message
-              : 'Không thể tải lịch sử chăm sóc cơ hội.';
-          setLoadError(message);
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
+      // Trạng thái/giai đoạn lấy trực tiếp từ máy chủ (GET /opportunities/{id}) — cơ hội có thể
+      // đã đổi trạng thái sau khi người dùng mở màn này từ danh sách.
+      const [detail, timeline] = await Promise.allSettled([
+        fetchOpportunity(opportunityId),
+        fetchOpportunityActivities(opportunityId),
+      ]);
+      if (cancelled) return;
+
+      if (detail.status === 'fulfilled' && detail.value) {
+        setOpportunity(detail.value);
+        setResolvedStatus(detail.value.status as OpportunityStatus);
+        setResolvedName(detail.value.name);
+        setCustomerName(detail.value.customerName ?? null);
       }
+
+      if (timeline.status === 'fulfilled') {
+        setActivities(timeline.value);
+      } else {
+        const err = timeline.reason;
+        setLoadError(
+          err instanceof OpportunityApiError || err instanceof Error
+            ? err.message
+            : 'Không thể tải lịch sử chăm sóc cơ hội.'
+        );
+      }
+      setIsLoading(false);
     }
 
-    loadActivities();
+    load();
     return () => {
       cancelled = true;
     };
@@ -174,7 +163,8 @@ export default function OpportunityDetailPage({
     } catch (e) {
       void e;
     }
-    setSubmitMessage('Tạo hợp đồng thành công.');
+    setContractCreatedMessage(`Đã tạo hợp đồng ${c.contractCode} thành công.`);
+    setTimeout(() => setContractCreatedMessage(null), 5000);
   };
 
   const validationErrors = useMemo(() => {
@@ -245,7 +235,7 @@ export default function OpportunityDetailPage({
           <div className="access-denied-icon">{ICONS.shieldOff}</div>
           <h2>Không có quyền ghi nhận hoạt động chăm sóc</h2>
           <p>
-            Theo quy định, chỉ <strong>Nhân viên kinh doanh</strong> mới được thao tác với lịch sử chăm sóc cơ hội.
+            Chỉ <strong>Nhân viên kinh doanh</strong> ghi nhận được hoạt động chăm sóc.
           </p>
           {onBack && (
             <button type="button" className="btn-secondary" onClick={onBack}>
@@ -259,42 +249,46 @@ export default function OpportunityDetailPage({
 
   return (
     <div className="opportunity-detail-page" data-testid="opportunity-detail-page">
-      {onBack && (
-        <button type="button" className="activity-back-link" onClick={onBack}>
-          {ICONS.arrowLeft} {backLabel}
-        </button>
-      )}
-      <div className="page-header">
-        <div>
-          <div className="page-header__kicker">
-            <span className="page-header__tag">{ICONS.target} CƠ HỘI BÁN HÀNG</span>
-            <span className="page-header__dot" />
-            <span className="page-header__meta">GHI NHẬN CHĂM SÓC</span>
+<PageHeader
+        back={onBack ? { label: backLabel, onClick: onBack } : undefined}
+        title={displayName}
+        meta={
+          <>
+            {customerName && <span>{customerName}</span>}
+            {opportunity && (
+              <span data-testid="opportunity-summary-line">
+                {STAGE_CONFIGS[opportunity.stage as OpportunityStage]?.label ?? opportunity.stage} · xác suất{' '}
+                {opportunity.probability ?? 0}% ·{' '}
+                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(
+                  opportunity.expectedValue ?? 0
+                )}
+              </span>
+            )}
+          </>
+        }
+        actions={
+          <>
+            <span className={`activity-status-pill${isClosed ? ' activity-status-pill--closed' : ''}`}>
+              <span className="activity-status-pill__dot" />
+              {isClosed ? 'Đã đóng' : 'Đang mở'}
+            </span>
+            {opportunity && opportunity.stage === 'WON' && (
+              <button type="button" className="btn btn-secondary" onClick={() => setIsCreateContractOpen(true)}>
+                {ICONS.document} Tạo hợp đồng
+              </button>
+            )}
+          </>
+        }
+      />
+
+      {contractCreatedMessage && (
+        <div className="alert-box alert-box--success" data-testid="contract-created-banner">
+          <span className="alert-box__icon">{ICONS.checkCircle}</span>
+          <div className="alert-box__content">
+            <p>{contractCreatedMessage}</p>
           </div>
-          <h1>{displayName}</h1>
-          {customerName && (
-            <div className="activity-customer-line">
-              {ICONS.building} Khách hàng: <strong>{customerName}</strong>
-            </div>
-          )}
         </div>
-        <div className="page-header__actions">
-          <span className={`activity-status-pill${isClosed ? ' activity-status-pill--closed' : ''}`}>
-            <span className="activity-status-pill__dot" />
-            {isClosed ? 'Đã đóng' : 'Đang mở'}
-          </span>
-          {opportunity && opportunity.stage === 'WON' && (
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ marginLeft: '12px' }}
-              onClick={() => setIsCreateContractOpen(true)}
-            >
-              {ICONS.document} Tạo hợp đồng
-            </button>
-          )}
-        </div>
-      </div>
+      )}
 
       {isClosed && (
         <div className="alert-box alert-box--info" data-testid="activity-readonly-banner">

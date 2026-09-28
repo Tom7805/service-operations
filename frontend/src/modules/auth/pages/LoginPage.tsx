@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import type { AuthSession, TwoFactorChallenge } from '../types/authTypes';
 import LoginForm from '../components/LoginForm';
@@ -6,7 +6,11 @@ import ForgotPasswordForm from '../components/ForgotPasswordForm';
 import ResetPasswordForm from '../components/ResetPasswordForm';
 import TwoFactorVerifyForm from '../components/TwoFactorVerifyForm';
 
-interface LoginPageProps { onAuthenticated: (session: AuthSession) => void }
+interface LoginPageProps {
+  onAuthenticated: (session: AuthSession) => void;
+  /** Lý do phiên trước kết thúc ngoài ý người dùng (hết hạn, không thao tác) — NCL-01-CN-001-TC-03. */
+  notice?: string | null;
+}
 
 const HIGHLIGHTS = [
   { number: '01', title: 'Sức khỏe dự án', caption: 'Nhìn rõ tiến độ và biên lợi nhuận theo thời gian thực.', detail: 'Quyết định sớm, đúng thời điểm.' },
@@ -14,26 +18,20 @@ const HIGHLIGHTS = [
   { number: '03', title: 'Dữ liệu vững tin', caption: 'Theo dõi toàn bộ vận hành từ cơ hội đến lợi nhuận thực.', detail: 'Minh bạch cho mọi quyết định.' },
 ];
 
+/**
+ * Ba điểm nhấn chỉ đổi khi người dùng tự bấm. Bản trước tự chuyển mỗi 5 giây kèm thanh tiến độ
+ * chạy liên tục — chuyển động không do người dùng gây ra, kéo mắt khỏi ô đăng nhập đúng lúc cần gõ.
+ */
 function Highlights() {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
-
-  useEffect(() => {
-    if (paused) return;
-    const timer = window.setInterval(() => setActiveIndex((current) => (current + 1) % HIGHLIGHTS.length), 5000);
-    return () => window.clearInterval(timer);
-  }, [paused]);
 
   const active = HIGHLIGHTS[activeIndex];
   return (
-    <div className="highlights" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocusCapture={() => setPaused(true)} onBlurCapture={(event) => {
-      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setPaused(false);
-    }}>
+    <div className="highlights">
       <div className="story" role="tablist" aria-label="Các lợi ích của nền tảng">
         <div className="story__line" />
         {HIGHLIGHTS.map((item, index) => <button key={item.number} type="button" role="tab" aria-selected={index === activeIndex} className={`story__item ${index === activeIndex ? 'story__item--active' : ''}`} onClick={() => setActiveIndex(index)}>
           <span>{item.number}</span><strong>{item.title}</strong><p>{item.caption}</p>
-          {index === activeIndex && !paused && <i className="story__progress" />}
         </button>)}
       </div>
       <div className="highlight-detail" role="tabpanel" aria-live="polite">
@@ -45,7 +43,7 @@ function Highlights() {
 
 type AuthView = 'LOGIN' | 'FORGOT' | 'RESET' | 'TWO_FACTOR';
 
-export default function LoginPage({ onAuthenticated }: LoginPageProps) {
+export default function LoginPage({ onAuthenticated, notice }: LoginPageProps) {
   const [view, setView] = useState<AuthView>('LOGIN');
   /** Email đang khôi phục — mã được tra cứu theo người dùng nên phải mang theo. */
   const [resetEmail, setResetEmail] = useState<string | null>(null);
@@ -84,6 +82,7 @@ export default function LoginPage({ onAuthenticated }: LoginPageProps) {
       <section className="login-panel">
         {view === 'LOGIN' && (
           <LoginForm
+            notice={notice}
             onAuthenticated={onAuthenticated}
             onForgotPassword={() => setView('FORGOT')}
             onTwoFactorRequired={(challenge) => {

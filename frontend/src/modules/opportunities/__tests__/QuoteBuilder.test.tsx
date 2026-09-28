@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import QuoteBuilder from '../components/QuoteBuilder';
 import * as quotesApi from '../api/quotesApi';
@@ -9,6 +9,8 @@ vi.mock('../api/quotesApi', async () => {
   return {
     ...actual,
     createOpportunityQuote: vi.fn(),
+    fetchOpportunityQuoteHistory: vi.fn(),
+    fetchCurrentBillRates: vi.fn(),
   };
 });
 
@@ -93,9 +95,81 @@ const mockMissingRatesQuoteRes: QuoteRes = {
   createdAt: '2026-09-04T10:00:00Z',
 };
 
+function fillRow(row: number, role: string, days: string) {
+  fireEvent.change(screen.getByLabelText(`Vị trí / chức danh dòng ${row}`), { target: { value: role } });
+  fireEvent.change(screen.getByLabelText(`Số ngày công dòng ${row}`), { target: { value: days } });
+}
+
+function fillDefaultQuoteRows() {
+  fillRow(1, 'Lập trình viên cao cấp', '20');
+  fireEvent.click(screen.getByRole('button', { name: /Thêm dòng báo giá/i }));
+  fillRow(2, 'Kỹ sư kiểm thử phần mềm', '10');
+}
+
 describe('QuoteBuilder Component (NCL-03-CN-003-CV-03 & CV-05)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(quotesApi.fetchOpportunityQuoteHistory).mockResolvedValue([]);
+    vi.mocked(quotesApi.fetchCurrentBillRates).mockResolvedValue([]);
+  });
+
+  it('TC-03: mở lại cửa sổ thì hiện phiên bản mới nhất đã lập, lịch sử giữ mọi phiên bản và đánh dấu bản mới nhất', async () => {
+    const v2: QuoteRes = { ...mockSuccessQuoteRes, id: 502, version: 2, latest: true, totalAmount: 40_000_000 };
+    const v1: QuoteRes = { ...mockSuccessQuoteRes, id: 501, version: 1, latest: false };
+    vi.mocked(quotesApi.fetchOpportunityQuoteHistory).mockResolvedValue([v2, v1]);
+
+    render(
+      <QuoteBuilder
+        opportunity={mockOpportunityProposal}
+        isOpen={true}
+        onClose={vi.fn()}
+        currentUserRoles={['VT-04']}
+      />
+    );
+
+    expect(await screen.findByText(/Báo giá Phiên bản #2/i)).toBeInTheDocument();
+    expect(quotesApi.fetchOpportunityQuoteHistory).toHaveBeenCalledWith(101);
+
+    fireEvent.click(screen.getByRole('button', { name: /Lịch sử báo giá/i }));
+    const latestItem = await screen.findByTestId('quote-history-item-2');
+    expect(latestItem).toHaveTextContent(/Mới nhất/);
+    expect(screen.getByTestId('quote-history-item-1')).not.toHaveTextContent(/Mới nhất/);
+
+    // Xem lại phiên bản cũ — vẫn tra cứu được, gắn nhãn "Phiên bản cũ".
+    fireEvent.click(within(screen.getByTestId('quote-history-item-1')).getByRole('button', { name: /Xem chi tiết/i }));
+    expect(await screen.findByText(/Báo giá Phiên bản #1/i)).toBeInTheDocument();
+    expect(screen.getByTestId('quote-older-version-badge')).toBeInTheDocument();
+  });
+
+  it('TC-01: chọn chức danh theo cấp bậc từ bảng đơn giá và gửi kèm cấp bậc', async () => {
+    vi.mocked(quotesApi.fetchCurrentBillRates).mockResolvedValue([
+      { professionalRole: 'Lập trình viên', level: 'Junior', dailyRate: 1_000_000, effectiveFrom: '2026-01-01' },
+      { professionalRole: 'Lập trình viên', level: 'Senior', dailyRate: 2_000_000, effectiveFrom: '2026-01-01' },
+    ]);
+    vi.mocked(quotesApi.createOpportunityQuote).mockResolvedValueOnce(mockSuccessQuoteRes);
+
+    render(
+      <QuoteBuilder
+        opportunity={mockOpportunityProposal}
+        isOpen={true}
+        onClose={vi.fn()}
+        currentUserRoles={['VT-04']}
+      />
+    );
+
+    // Chờ danh mục đơn giá tải xong: mỗi cặp (chức danh, cấp bậc) là một lựa chọn riêng.
+    const seniorOption = await screen.findByRole('option', { name: /Senior/ });
+    const roleSelect = seniorOption.closest('select') as HTMLSelectElement;
+    expect(within(roleSelect).getAllByRole('option', { name: /Lập trình viên/ })).toHaveLength(2);
+    fireEvent.change(roleSelect, { target: { value: (seniorOption as HTMLOptionElement).value } });
+    fireEvent.change(screen.getByLabelText(/Số ngày công dòng 1/i), { target: { value: '10' } });
+    fireEvent.click(screen.getByRole('button', { name: /Lưu & Tạo báo giá/i }));
+
+    await waitFor(() => {
+      expect(quotesApi.createOpportunityQuote).toHaveBeenCalledWith(101, {
+        items: [{ professionalRole: 'Lập trình viên', level: 'Senior', workDays: 10 }],
+      });
+    });
   });
 
   it('không hiển thị khi isOpen = false', () => {
@@ -124,9 +198,10 @@ describe('QuoteBuilder Component (NCL-03-CN-003-CV-03 & CV-05)', () => {
     expect(screen.getByText(/Công ty Cổ phần Công nghệ ABC/)).toBeInTheDocument();
     expect(screen.getByText(/Tư vấn Chuyển đổi số Doanh nghiệp/)).toBeInTheDocument();
 
-    // Có ít nhất 2 dòng mặc định
-    expect(screen.getByDisplayValue('Lập trình viên cao cấp')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Kỹ sư kiểm thử phần mềm')).toBeInTheDocument();
+    // Chỉ có 1 dòng trống, không điền sẵn dữ liệu
+    expect(screen.getByLabelText('Vị trí / chức danh dòng 1')).toHaveValue('');
+    expect(screen.getByLabelText('Số ngày công dòng 1')).toHaveValue(null);
+    expect(screen.queryByLabelText('Vị trí / chức danh dòng 2')).not.toBeInTheDocument();
   });
 
   it('chặn thao tác và cảnh báo quy tắc QTN-06 khi cơ hội KHÔNG ở giai đoạn PROPOSAL', () => {
@@ -141,7 +216,7 @@ describe('QuoteBuilder Component (NCL-03-CN-003-CV-03 & CV-05)', () => {
 
     // Cảnh báo giai đoạn không hợp lệ
     expect(
-      screen.getByText(/Báo giá chỉ được phép khởi tạo khi cơ hội ở giai đoạn/i)
+      screen.getByText(/Báo giá chỉ được phép lập khi cơ hội/i)
     ).toBeInTheDocument();
 
     // Nút submit bị vô hiệu hoá
@@ -181,10 +256,10 @@ describe('QuoteBuilder Component (NCL-03-CN-003-CV-03 & CV-05)', () => {
     fireEvent.click(addBtn);
 
     const roleInputs = screen.getAllByPlaceholderText(/Nhập hoặc chọn vị trí/i);
-    expect(roleInputs.length).toBe(3);
+    expect(roleInputs.length).toBe(2);
 
-    fireEvent.change(roleInputs[2], { target: { value: 'Kiến trúc sư giải pháp' } });
-    expect(roleInputs[2]).toHaveValue('Kiến trúc sư giải pháp');
+    fireEvent.change(roleInputs[1], { target: { value: 'Kiến trúc sư giải pháp' } });
+    expect(roleInputs[1]).toHaveValue('Kiến trúc sư giải pháp');
   });
 
   it('cho phép xóa dòng báo giá khi có nhiều hơn 1 dòng, và không thể xóa khi chỉ còn 1 dòng', () => {
@@ -197,6 +272,7 @@ describe('QuoteBuilder Component (NCL-03-CN-003-CV-03 & CV-05)', () => {
       />
     );
 
+    fireEvent.click(screen.getByRole('button', { name: /Thêm dòng báo giá/i }));
     const deleteButtons = screen.getAllByRole('button', { name: /Xóa dòng/i });
     expect(deleteButtons.length).toBe(2);
 
@@ -218,11 +294,7 @@ describe('QuoteBuilder Component (NCL-03-CN-003-CV-03 & CV-05)', () => {
       />
     );
 
-    const roleInput = screen.getByDisplayValue('Lập trình viên cao cấp');
-    fireEvent.change(roleInput, { target: { value: '' } });
-
-    const daysInput = screen.getByDisplayValue('20');
-    fireEvent.change(daysInput, { target: { value: '0' } });
+    fillRow(1, '', '0');
 
     const submitBtn = screen.getByRole('button', { name: /Lưu & Tạo báo giá/i });
     fireEvent.click(submitBtn);
@@ -249,6 +321,7 @@ describe('QuoteBuilder Component (NCL-03-CN-003-CV-03 & CV-05)', () => {
       />
     );
 
+    fillDefaultQuoteRows();
     const submitBtn = screen.getByRole('button', { name: /Lưu & Tạo báo giá/i });
     fireEvent.click(submitBtn);
 
@@ -288,6 +361,8 @@ describe('QuoteBuilder Component (NCL-03-CN-003-CV-03 & CV-05)', () => {
       />
     );
 
+    fillDefaultQuoteRows();
+
     const submitBtn = screen.getByRole('button', { name: /Lưu & Tạo báo giá/i });
     fireEvent.click(submitBtn);
 
@@ -316,6 +391,7 @@ describe('QuoteBuilder Component (NCL-03-CN-003-CV-03 & CV-05)', () => {
       />
     );
 
+    fillDefaultQuoteRows();
     const submitBtn = screen.getByRole('button', { name: /Lưu & Tạo báo giá/i });
     fireEvent.click(submitBtn);
 

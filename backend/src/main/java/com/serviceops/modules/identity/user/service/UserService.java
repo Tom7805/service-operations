@@ -4,6 +4,7 @@ import com.serviceops.modules.identity.user.dto.request.CreateUserReq;
 import com.serviceops.modules.identity.user.dto.request.UpdateUserReq;
 import com.serviceops.modules.identity.user.dto.request.UserStatusReq;
 import com.serviceops.modules.identity.user.dto.response.AssignableProjectManagerRes;
+import com.serviceops.modules.identity.user.dto.response.UserLookupRes;
 import com.serviceops.modules.identity.user.dto.response.UserRes;
 
 import java.util.List;
@@ -14,5 +15,6 @@ public interface UserService {
     UserRes create(CreateUserReq request);
     UserRes update(Long id, UpdateUserReq request);
     UserRes updateStatus(Long id, UserStatusReq request);
+    List<UserLookupRes> lookupActive();
     List<AssignableProjectManagerRes> findAssignableProjectManagers();
 }
