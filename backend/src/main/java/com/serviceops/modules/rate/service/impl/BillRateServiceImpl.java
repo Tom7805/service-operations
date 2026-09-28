@@ -6,12 +6,14 @@ import com.serviceops.common.audit.service.AuditLogService;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.rate.dto.request.BillRateCreateReq;
+import com.serviceops.modules.rate.dto.request.BillRateUpdateReq;
 import com.serviceops.modules.rate.dto.response.BillRateHistoryEntryRes;
 import com.serviceops.modules.rate.dto.response.BillRateHistoryRes;
 import com.serviceops.modules.rate.dto.response.BillRateRes;
 import com.serviceops.modules.rate.entity.BillRate;
 import com.serviceops.modules.rate.repository.BillRateRepository;
 import com.serviceops.modules.rate.service.BillRateService;
+import com.serviceops.modules.rate.validator.RateEditRules;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -65,13 +67,41 @@ public class BillRateServiceImpl implements BillRateService {
 		auditLogService.record("Khởi tạo bảng đơn giá theo vai trò", AuditTargetType.GENERAL, saved.getId(),
 				role, "Tạo đơn giá mới: " + role + " (" + level + ") = " + request.dailyRate()
 						+ " / ngày, hiệu lực từ " + request.effectiveFrom());
-		return new BillRateRes(saved.getProfessionalRole(), saved.getLevel(), saved.getDailyRate(), saved.getEffectiveFrom());
+		return new BillRateRes(saved.getId(), saved.getProfessionalRole(), saved.getLevel(), saved.getDailyRate(), saved.getEffectiveFrom());
+	}
+
+	@Override
+	@Transactional
+	public BillRateRes update(Long id, BillRateUpdateReq request) {
+		BillRate rate = billRateRepository.findById(id)
+				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
+						"Không tìm thấy dòng đơn giá với ID: " + id));
+		RateEditRules.assertEditable(rate.getEffectiveFrom(), request.dailyRate(), request.effectiveFrom(), LocalDate.now());
+
+		billRateRepository.findByProfessionalRoleIgnoreCaseAndLevelIgnoreCaseAndEffectiveFrom(
+						rate.getProfessionalRole(), rate.getLevel(), request.effectiveFrom())
+				.filter(other -> !other.getId().equals(rate.getId()))
+				.ifPresent(other -> {
+					throw new BusinessRuleException(ErrorCode.DUPLICATE_DATA,
+							"Đã có đơn giá cho vai trò và cấp bậc này tại ngày hiệu lực đã chọn");
+				});
+
+		String before = rate.getDailyRate().toPlainString() + " / ngày, hiệu lực từ " + RateEditRules.formatDate(rate.getEffectiveFrom());
+		rate.setDailyRate(request.dailyRate());
+		rate.setEffectiveFrom(request.effectiveFrom());
+		BillRate saved = billRateRepository.save(rate);
+		auditLogService.record("Sửa đơn giá theo vai trò", AuditTargetType.GENERAL, saved.getId(),
+				saved.getProfessionalRole(), "Sửa đơn giá " + saved.getProfessionalRole() + " (" + saved.getLevel() + "): "
+						+ before + " → " + saved.getDailyRate().toPlainString() + " / ngày, hiệu lực từ "
+						+ RateEditRules.formatDate(saved.getEffectiveFrom()));
+		return new BillRateRes(saved.getId(), saved.getProfessionalRole(), saved.getLevel(), saved.getDailyRate(),
+				saved.getEffectiveFrom());
 	}
 
 	@Override
 	public List<BillRateRes> listCurrentlyEffective() {
 		return billRateRepository.findAllCurrentlyEffective(LocalDate.now()).stream()
-				.map(rate -> new BillRateRes(rate.getProfessionalRole(), rate.getLevel(), rate.getDailyRate(), rate.getEffectiveFrom()))
+				.map(rate -> new BillRateRes(rate.getId(), rate.getProfessionalRole(), rate.getLevel(), rate.getDailyRate(), rate.getEffectiveFrom()))
 				.toList();
 	}
 
@@ -94,7 +124,7 @@ public class BillRateServiceImpl implements BillRateService {
 						role, lvl, asOf)
 				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
 						"Chưa có đơn giá hiệu lực cho " + role + " (" + lvl + ") tại ngày " + asOf));
-		return new BillRateRes(rate.getProfessionalRole(), rate.getLevel(), rate.getDailyRate(), rate.getEffectiveFrom());
+		return new BillRateRes(rate.getId(), rate.getProfessionalRole(), rate.getLevel(), rate.getDailyRate(), rate.getEffectiveFrom());
 	}
 
 	@Override

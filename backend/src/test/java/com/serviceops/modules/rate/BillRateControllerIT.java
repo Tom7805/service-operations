@@ -6,6 +6,7 @@ import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.config.SecurityConfig;
 import com.serviceops.modules.rate.controller.BillRateController;
 import com.serviceops.modules.rate.dto.request.BillRateCreateReq;
+import com.serviceops.modules.rate.dto.request.BillRateUpdateReq;
 import com.serviceops.modules.rate.dto.response.BillRateHistoryEntryRes;
 import com.serviceops.modules.rate.dto.response.BillRateHistoryRes;
 import com.serviceops.modules.rate.dto.response.BillRateRes;
@@ -31,6 +32,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -58,7 +60,7 @@ class BillRateControllerIT {
 	@WithMockUser(authorities = "ROLE_VT-05")
 	void allowsAccountantToCreateBillRate() throws Exception {
 		BillRateCreateReq req = new BillRateCreateReq("Lập trình viên cao cấp", "Cao cấp", new BigDecimal("2500000"), LocalDate.of(2025, 1, 1));
-		BillRateRes res = new BillRateRes("Lập trình viên cao cấp", "Cao cấp", new BigDecimal("2500000"), LocalDate.of(2025, 1, 1));
+		BillRateRes res = new BillRateRes(1L, "Lập trình viên cao cấp", "Cao cấp", new BigDecimal("2500000"), LocalDate.of(2025, 1, 1));
 		when(billRateService.create(any())).thenReturn(res);
 
 		mockMvc.perform(post("/bill-rates")
@@ -115,7 +117,7 @@ class BillRateControllerIT {
 	@DisplayName("Ke toan tra dung don gia hieu luc tai ngay gio cong phat sinh (NCL-07-CN-002 TC-02)")
 	@WithMockUser(authorities = "ROLE_VT-05")
 	void resolvesRateAsOfWorkDate() throws Exception {
-		BillRateRes res = new BillRateRes("Lập trình viên cao cấp", "Cao cấp", new BigDecimal("500000"), LocalDate.of(2026, 1, 1));
+		BillRateRes res = new BillRateRes(1L, "Lập trình viên cao cấp", "Cao cấp", new BigDecimal("500000"), LocalDate.of(2026, 1, 1));
 		when(billRateService.resolve("Lập trình viên cao cấp", "Cao cấp", LocalDate.of(2026, 6, 30))).thenReturn(res);
 
 		mockMvc.perform(get("/bill-rates/resolve")
@@ -220,5 +222,33 @@ class BillRateControllerIT {
 					.param("level", "Trung cấp"))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.errorCode").value("RESOURCE_NOT_FOUND"));
+	}
+
+	@Test
+	@DisplayName("Ke toan (VT-05) sua duoc dong don gia qua PUT /bill-rates/{id}")
+	@WithMockUser(authorities = "ROLE_VT-05")
+	void allowsAccountantToEditRate() throws Exception {
+		BillRateUpdateReq req = new BillRateUpdateReq(new BigDecimal("3600000"), LocalDate.of(2026, 9, 27));
+		when(billRateService.update(eq(7L), any())).thenReturn(
+				new BillRateRes(7L, "Lập trình viên", "Cao cấp", new BigDecimal("3600000"), LocalDate.of(2026, 9, 27)));
+
+		mockMvc.perform(put("/bill-rates/7")
+					.contentType("application/json")
+					.content(objectMapper.writeValueAsString(req)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.id").value(7))
+				.andExpect(jsonPath("$.data.dailyRate").value(3600000));
+	}
+
+	@Test
+	@DisplayName("Quan ly du an (VT-02) khong duoc sua don gia")
+	@WithMockUser(authorities = "ROLE_VT-02")
+	void deniesEditForOtherRoles() throws Exception {
+		BillRateUpdateReq req = new BillRateUpdateReq(new BigDecimal("3600000"), LocalDate.of(2026, 9, 27));
+
+		mockMvc.perform(put("/bill-rates/7")
+					.contentType("application/json")
+					.content(objectMapper.writeValueAsString(req)))
+				.andExpect(status().isForbidden());
 	}
 }

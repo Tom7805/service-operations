@@ -2,6 +2,7 @@ package com.serviceops.modules.rate.controller;
 
 import com.serviceops.common.api.BaseRes;
 import com.serviceops.modules.rate.dto.request.BillRateCreateReq;
+import com.serviceops.modules.rate.dto.request.BillRateUpdateReq;
 import com.serviceops.modules.rate.dto.response.BillRateHistoryRes;
 import com.serviceops.modules.rate.dto.response.BillRateRes;
 import com.serviceops.modules.rate.service.BillRateService;
@@ -10,7 +11,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -30,6 +33,16 @@ public class BillRateController {
 	@PreAuthorize("hasRole('VT-05') or hasRole('VT-07')")
 	public BaseRes<BillRateRes> create(@Valid @RequestBody BillRateCreateReq request) {
 		return BaseRes.ok("Tao bang don gia theo vai tro thanh cong", billRateService.create(request));
+	}
+
+	/**
+	 * Sua truc tiep mot dong don gia chua ap dung truoc hom nay (sua nham gia/ngay hieu luc). Dong da ap
+	 * dung tu truoc tra 400 INVALID_STATE — doi gia bang POST mot muc moi (RateEditRules).
+	 */
+	@PutMapping("/{id}")
+	@PreAuthorize("hasRole('VT-05') or hasRole('VT-07')")
+	public BaseRes<BillRateRes> update(@PathVariable Long id, @Valid @RequestBody BillRateUpdateReq request) {
+		return BaseRes.ok("Sua don gia thanh cong", billRateService.update(id, request));
 	}
 
 	/**
