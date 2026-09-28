@@ -30,8 +30,8 @@ function formatHours(hours: number): string {
  * được backend masquing khi người dùng không có quyền xem dữ liệu lương/giá vốn —
  * frontend dùng `canViewSensitiveData` để hiển thị bằng MaskedCell.
  *
- * Vì `employeeId` trong response là `Employee.id` (không phải `User.id`), nên không thể
- * dùng `/users/lookup` để giải quyết tên — hiển thị dưới dạng "Mã nhân sự: {id}" thay thế.
+ * Mỗi dòng hiển thị `employeeName` do backend trả kèm; chỉ khi thiếu tên mới rơi về
+ * "Mã nhân sự: {id}" (`employeeId` là `Employee.id`, không tra được qua `/users/lookup`).
  */
 export default function ProjectLaborCostPage({
   projectId,
@@ -219,7 +219,7 @@ export default function ProjectLaborCostPage({
                   <thead>
                     <tr>
                       <th>Ngày công</th>
-                      <th>Mã nhân sự</th>
+                      <th>Nhân sự</th>
                       <th style={{ textAlign: 'right' }}>Số giờ</th>
                       <th style={{ textAlign: 'right' }}>Đơn giá/giờ</th>
                       <th style={{ textAlign: 'right' }}>Giá vốn</th>
@@ -230,7 +230,7 @@ export default function ProjectLaborCostPage({
                     {laborCost.lines.map((line) => (
                       <tr key={line.timeEntryId} data-testid={`labor-cost-line-${line.timeEntryId}`}>
                         <td>{line.workDate}</td>
-                        <td>Mã nhân sự: {line.employeeId}</td>
+                        <td>{line.employeeName ?? `Mã nhân sự: ${line.employeeId}`}</td>
                         <td style={{ textAlign: 'right' }}>{formatHours(line.hours)}</td>
                         <td style={{ textAlign: 'right' }}>
                           <MaskedCell canView={sensitive} maskedText="••••••">

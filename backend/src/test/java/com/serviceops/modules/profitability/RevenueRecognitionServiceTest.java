@@ -100,6 +100,7 @@ class RevenueRecognitionServiceTest {
 		emp.setId(id);
 		User user = new User();
 		user.setId(userId);
+		user.setFullName("Nhân sự #" + id);
 		emp.setUser(user);
 		return emp;
 	}
@@ -132,6 +133,7 @@ class RevenueRecognitionServiceTest {
 		assertThat(result.missingRateEntryCount()).isZero();
 		assertThat(result.excludedLineCount()).isZero();
 		assertThat(result.lines()).hasSize(1);
+		assertThat(result.lines().get(0).employeeName()).isEqualTo("Nhân sự #10");
 
 		verify(sensitiveAccessLogger).logView(SensitiveDataType.REVENUE, 1L, "ProjectRecognizedRevenue",
 				"Xem doanh thu ghi nhan cua du an #1");
