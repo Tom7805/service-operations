@@ -15,8 +15,13 @@
 [![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Tests](https://img.shields.io/badge/tests-2.300%2B-3F9142?style=flat-square)](#kiểm-thử)
 [![Version](https://img.shields.io/badge/version-0.1.0-555?style=flat-square)](#)
+[![License](https://img.shields.io/badge/license-proprietary-555?style=flat-square)](LICENSE)
 
-[Tính năng](#tính-năng) · [Bắt đầu nhanh](#bắt-đầu-nhanh) · [Kiến trúc](#kiến-trúc) · [API](#api) · [Triển khai](#triển-khai) · [Tài liệu](#tài-liệu)
+[Tính năng](#tính-năng) · [Giao diện](#giao-diện) · [Bắt đầu nhanh](#bắt-đầu-nhanh) · [Kiến trúc](#kiến-trúc) · [API](#api) · [Triển khai](#triển-khai) · [Tài liệu](#tài-liệu)
+
+<br/>
+
+<img src="docs/assets/readme/project-detail.png" width="100%" alt="Màn hình chi tiết dự án: thông tin hợp đồng, cấu trúc hạng mục và công việc, ngân sách giờ và người được giao" />
 
 </div>
 
@@ -72,6 +77,76 @@ flowchart LR
 
 Mỗi mũi tên là một bước chuyển dữ liệu do hệ thống thực hiện: tạo hợp đồng từ cơ hội, tạo dự án từ hợp đồng, sinh
 đề nghị hóa đơn từ giờ công đã duyệt, đẩy doanh thu và giá vốn sang báo cáo lợi nhuận. Không ai phải nhập lại.
+
+## Giao diện
+
+Mỗi vai trò nhìn thấy một không gian làm việc riêng, chỉ gồm những gì họ cần.
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <b>Chấm công theo tuần</b> · Nhân viên chuyên môn<br/>
+      <sub>Ghi giờ theo công việc, theo dõi ngân sách giờ còn lại, nộp bảng tuần để duyệt.</sub><br/><br/>
+      <img src="docs/assets/readme/timesheet.png" alt="Bảng chấm công tuần của nhân viên" />
+    </td>
+    <td width="50%" valign="top">
+      <b>Duyệt giờ công</b> · Quản lý dự án<br/>
+      <sub>Hàng đợi bảng chấm công chờ duyệt, duyệt hoặc từ chối cả bảng hay từng dòng.</sub><br/><br/>
+      <img src="docs/assets/readme/timesheet-approval.png" alt="Hàng đợi duyệt giờ công của quản lý dự án" />
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <b>Lợi nhuận dự án</b> · Ban giám đốc, Kế toán<br/>
+      <sub>Doanh thu ghi nhận, giá vốn nhân công, chi phí và biên lợi nhuận gộp của từng dự án.</sub><br/><br/>
+      <img src="docs/assets/readme/profitability.png" alt="Báo cáo biên lợi nhuận của một dự án" />
+    </td>
+    <td width="50%" valign="top">
+      <b>Hóa đơn và thanh toán</b> · Kế toán<br/>
+      <sub>Hóa đơn sinh từ giờ công đã duyệt, ghi nhận thanh toán từng phần, lịch sử nhắc nợ.</sub><br/><br/>
+      <img src="docs/assets/readme/invoice-detail.png" alt="Chi tiết hóa đơn đã thanh toán một phần" />
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <b>Đường ống bán hàng</b> · Kinh doanh<br/>
+      <sub>Số cơ hội, giá trị và tỷ trọng ở từng giai đoạn, cảnh báo cơ hội đọng lâu.</sub><br/><br/>
+      <img src="docs/assets/readme/sales-pipeline.png" alt="Báo cáo đường ống bán hàng theo giai đoạn" />
+    </td>
+    <td width="50%" valign="top">
+      <b>Bảng điều khiển</b> · Ban giám đốc<br/>
+      <sub>Doanh thu, biên lợi nhuận bình quân, tỷ lệ giờ tính phí, dự án âm biên, công nợ quá hạn.</sub><br/><br/>
+      <img src="docs/assets/readme/dashboard.png" alt="Bảng điều khiển các chỉ số vận hành" />
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <b>Cổng khách hàng</b> · Khách hàng<br/>
+      <sub>Tiến độ dự án, mốc tiến độ, phiếu nghiệm thu và hóa đơn của riêng khách hàng đó.</sub><br/><br/>
+      <img src="docs/assets/readme/customer-portal.png" alt="Cổng khách hàng: danh sách dự án và tiến độ" />
+    </td>
+    <td width="50%" valign="top">
+      <b>Cây tổ chức</b> · Quản trị viên<br/>
+      <sub>Bốn tầng Trung tâm, Ban, Phòng, Tổ/Nhóm, làm nền cho phân quyền theo phạm vi dữ liệu.</sub><br/><br/>
+      <img src="docs/assets/readme/organization.png" alt="Sơ đồ cây tổ chức của công ty" />
+    </td>
+  </tr>
+</table>
+
+<details>
+<summary><b>Trên điện thoại và màn hình đăng nhập</b></summary>
+<br/>
+<p align="center">
+  <img src="docs/assets/readme/mobile-portal.png" width="240" alt="Cổng khách hàng trên điện thoại" />
+  &nbsp;&nbsp;
+  <img src="docs/assets/readme/mobile-invoice.png" width="240" alt="Chi tiết hóa đơn trên điện thoại" />
+</p>
+<p align="center">
+  <img src="docs/assets/readme/login.png" width="720" alt="Màn hình đăng nhập" />
+</p>
+</details>
+
+<sub>Ảnh chụp từ môi trường demo với dữ liệu mẫu. Mọi tên người, công ty và số liệu đều là giả lập.</sub>
 
 ## Tính năng
 
@@ -535,6 +610,10 @@ con) · `dev.lead`, `dev02` (bán thời gian 20 giờ/tuần), `consult.lead`, 
 > Mỗi lần backend khởi động ở profile `dev`, các tài khoản demo được **khôi phục về mật khẩu `Password@123` và mở
 > khóa**. Dữ liệu demo chỉ nạp ở profile `dev`; profile `prod` không chứa tài khoản nào. Không chạy profile `dev`
 > trên môi trường có dữ liệu thật.
+>
+> Theo [hướng dẫn triển khai](docs/07-operations/deployment-guide.md) hiện tại, máy chủ demo công khai chạy profile
+> `dev`, nên **bất kỳ ai đọc README này cũng đăng nhập được vào máy chủ đó**, kể cả bằng tài khoản `admin`. Chỉ dùng máy chủ demo cho dữ liệu giả lập. Khi cần
+> đưa dữ liệu thật lên, chuyển sang profile `prod` và tạo tài khoản quản trị riêng.
 
 ## Cấu hình
 
@@ -739,11 +818,12 @@ dựng lại schema và dữ liệu nền.
 | [Hệ thống thiết kế](DESIGN.md) | Màu, kiểu chữ, khoảng cách, component giao diện |
 | [Định hướng sản phẩm](PRODUCT.md) | Người dùng, bối cảnh sử dụng, nguyên tắc sản phẩm |
 | [Quy ước đóng góp](CONTRIBUTING.md) | Nhánh, commit, Pull Request, migration |
+| [Ảnh chụp màn hình](docs/assets/readme/) | Ảnh giao diện theo từng vai trò, trên máy tính và điện thoại |
 
 ## Giấy phép
 
-Bản quyền © 2026 nhóm phát triển Vận Hành Dịch Vụ. Mọi quyền được bảo lưu. Không sao chép, phân phối hoặc sử dụng
-mã nguồn khi chưa có sự đồng ý bằng văn bản của nhóm phát triển.
+Phần mềm độc quyền. Bản quyền © 2026 Nhóm phát triển Vận Hành Dịch Vụ, mọi quyền được bảo lưu. Không sao chép, phân
+phối hoặc triển khai cho bên thứ ba khi chưa có văn bản chấp thuận của nhóm phát triển. Điều khoản đầy đủ: [LICENSE](LICENSE).
 
 <div align="center">
 
