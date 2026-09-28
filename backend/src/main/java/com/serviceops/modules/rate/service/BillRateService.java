@@ -1,6 +1,7 @@
 package com.serviceops.modules.rate.service;
 
 import com.serviceops.modules.rate.dto.request.BillRateCreateReq;
+import com.serviceops.modules.rate.dto.request.BillRateUpdateReq;
 import com.serviceops.modules.rate.dto.response.BillRateHistoryRes;
 import com.serviceops.modules.rate.dto.response.BillRateRes;
 
@@ -10,6 +11,12 @@ import java.util.List;
 public interface BillRateService {
 
 	BillRateRes create(BillRateCreateReq request);
+
+	/**
+	 * Sua truc tiep mot dong don gia chua ap dung truoc hom nay (sua nham gia/ngay hieu luc). Dong da ap dung
+	 * tu truoc bi tu choi {@code INVALID_STATE} — doi gia bang cach khai bao muc moi (xem {@code RateEditRules}).
+	 */
+	BillRateRes update(Long id, BillRateUpdateReq request);
 
 	/**
 	 * Danh sach chuc danh dang co don gia ban hieu luc tinh den hom nay,

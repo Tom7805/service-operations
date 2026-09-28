@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { todayLocalIso } from '../../../utils/formatDate';
 import type {
   ContractTargetForProject,
   ProjectCreateFromTemplateReq,
@@ -45,9 +46,7 @@ function contractTypeLabel(value: string | null | undefined): string {
   return (CONTRACT_TYPE_LABEL as Record<string, string>)[value] ?? value;
 }
 
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+const todayIso = todayLocalIso;
 
 export default function CreateProjectFromTemplateModal({
   isOpen,

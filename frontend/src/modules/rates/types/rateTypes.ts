@@ -5,6 +5,8 @@
 
 /** Một dòng đơn giá: (vai trò chuyên môn, cấp bậc) -> đơn giá theo NGÀY công. */
 export interface BillRateRes {
+  /** Id dòng đơn giá — có từ khi hỗ trợ sửa (PUT /bill-rates/{id}). */
+  id?: number;
   professionalRole: string;
   level: string;
   dailyRate: number;
@@ -40,6 +42,8 @@ export interface ResolveBillRateQuery {
  * bảng đơn giá chung công ty khi tính doanh thu (QTN-16).
  */
 export interface ContractBillRateRes {
+  /** Id dòng đơn giá riêng — để sửa (PUT /contracts/{contractId}/bill-rates/{id}). */
+  id?: number;
   contractId: number;
   professionalRole: string;
   level: string;
@@ -192,4 +196,11 @@ export interface BillRateHistoryRes {
   entries: BillRateHistoryEntryRes[];
   /** `false` khi chỉ có đúng 1 mốc — hiển thị rõ "chưa từng thay đổi" (TC-02), tránh trông như lỗi tải thiếu. */
   everChanged: boolean;
+}
+
+/** Sửa một dòng đơn giá chưa áp dụng trước hôm nay: chỉ đổi mức giá và ngày hiệu lực. */
+export interface RateUpdatePayload {
+  dailyRate: number;
+  /** `yyyy-MM-dd`, không trước hôm nay */
+  effectiveFrom: string;
 }

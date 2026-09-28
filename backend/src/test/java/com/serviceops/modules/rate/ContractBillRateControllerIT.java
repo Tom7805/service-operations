@@ -58,7 +58,7 @@ class ContractBillRateControllerIT {
 	void allowsAccountantToCreateContractBillRate() throws Exception {
 		ContractBillRateCreateReq req = new ContractBillRateCreateReq("Lập trình viên", "Cao cấp",
 				new BigDecimal("3000000"), LocalDate.of(2026, 1, 1));
-		ContractBillRateRes res = new ContractBillRateRes(1L, "Lập trình viên", "Cao cấp",
+		ContractBillRateRes res = new ContractBillRateRes(1L, 1L, "Lập trình viên", "Cao cấp",
 				new BigDecimal("3000000"), LocalDate.of(2026, 1, 1));
 
 		when(contractBillRateService.create(eq(1L), any())).thenReturn(res);

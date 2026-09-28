@@ -242,4 +242,31 @@ class ProjectServiceImplTest {
 		user.setStatus(UserStatus.ACTIVE);
 		return user;
 	}
+
+	@Test
+	@DisplayName("Chi tiet du an tra kem ten khach hang va quan ly du an (trang Chi tiet du an khong con hien \"—\")")
+	void getProjectIncludesCustomerAndManagerNames() {
+		Project project = new Project();
+		project.setId(3L);
+		project.setProjectCode("DA-MUK3Q1VP");
+		project.setName("Phát triển phần mềm cốt lõi");
+		project.setContractId(3L);
+		project.setCustomerId(1008L);
+		project.setProjectManagerId(7L);
+		project.setStatus(com.serviceops.modules.project.enums.ProjectStatus.RUNNING);
+		when(projectRepository.findById(3L)).thenReturn(Optional.of(project));
+		com.serviceops.modules.customer.entity.Customer customer = new com.serviceops.modules.customer.entity.Customer();
+		customer.setId(1008L);
+		customer.setName("Công Ty CP MB Bank");
+		when(customerRepository.findById(1008L)).thenReturn(Optional.of(customer));
+		User manager = activeUser(7L);
+		manager.setFullName("Trần Thu Hà");
+		when(userRepository.findById(7L)).thenReturn(Optional.of(manager));
+
+		ProjectRes res = service.getProject(3L);
+
+		assertThat(res.customerName()).isEqualTo("Công Ty CP MB Bank");
+		assertThat(res.projectManagerName()).isEqualTo("Trần Thu Hà");
+		verify(projectDataScopeGuard).requireVisible(project);
+	}
 }

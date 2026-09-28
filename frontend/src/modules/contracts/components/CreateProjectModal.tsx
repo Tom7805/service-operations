@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { todayLocalIso } from '../../../utils/formatDate';
 import { getActiveUsersLookup, type UserLookup } from '../../users/api/usersApi';
 import {
   CONTRACT_TYPE_LABEL,
@@ -99,7 +100,7 @@ export default function CreateProjectModal({
       const defaultName = contract.name ?? '';
       setName(defaultName);
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = todayLocalIso();
       const initialStart = contract.startDate ? contract.startDate.split('T')[0] : today;
       setStartDate(initialStart);
 
