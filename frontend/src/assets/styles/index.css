@@ -5019,7 +5019,7 @@ select.form-input:disabled, select.form-select:disabled, select.filter-select:di
 .brand-copy, .login-card, .story__item, .highlight-detail__content { animation-timing-function: var(--ease-out); }
 .field input { border-color: var(--line-input); border-radius: var(--radius-md); }
 .field input:focus { border-color: var(--accent); box-shadow: var(--shadow-focus); }
-.field__toggle:hover { transform: none; }
+.field__toggle:hover { transform: translateY(-50%); }
 .checkbox input:checked { transform: none; }
 .form-options a { color: var(--accent-ink); }
 @media (hover: none) {
