@@ -28,9 +28,15 @@ vi.mock('../api/projectsApi', () => {
     updateMilestone: vi.fn(),
     completeMilestone: vi.fn(),
     deleteMilestone: vi.fn(),
+    getTaskAssignments: vi.fn(() => Promise.resolve([])),
+    assignTask: vi.fn(),
     ProjectsApiError: MockProjectsApiError,
   };
 });
+
+vi.mock('../../users/api/usersApi', () => ({
+  getActiveUsersLookup: vi.fn(() => Promise.resolve([{ id: 7, fullName: 'Lý Văn Cường' }])),
+}));
 
 const mockProjectRunning: ProjectRes = {
   id: 1,
@@ -299,5 +305,31 @@ describe('ProjectDetailPage Component (NCL-05-CN-002)', () => {
       await waitFor(() => expect(screen.getByText('PRJ-2026-001')).toBeInTheDocument());
       expect(screen.queryByTestId('btn-open-risks')).not.toBeInTheDocument();
     });
+  });
+
+  it('menu ⋮ của công việc → "Phân công" mở hộp thoại phân công nhân sự (trước đây bấm không có tác dụng)', async () => {
+    const wbsWithTask: WorkBreakdownRes[] = [
+      {
+        ...mockWbs[0],
+        tasks: [
+          {
+            id: 55, projectId: 1, workPackageId: 10, parentTaskId: null, name: 'Phân tích vi mô', description: null,
+            expectedStartDate: '2026-09-20', expectedEndDate: '2026-09-30', status: 'TODO', assignments: [],
+          },
+        ],
+      },
+    ];
+    vi.mocked(projectsApi.getProject).mockResolvedValue(mockProjectRunning);
+    vi.mocked(projectsApi.getWorkBreakdown).mockResolvedValue(wbsWithTask);
+
+    render(<ProjectDetailPage projectId={1} currentUserRoles={['VT-02']} />);
+    await screen.findByText('Phân tích vi mô');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Thao tác công việc Phân tích vi mô' }));
+    fireEvent.click(screen.getByTestId('assign-task-btn-55'));
+
+    expect(await screen.findByRole('heading', { name: /Phân công nhân sự/ })).toBeInTheDocument();
+    expect(screen.getByText('Phân tích vi mô', { selector: 'strong' })).toBeInTheDocument();
+    await waitFor(() => expect(projectsApi.getTaskAssignments).toHaveBeenCalledWith(1, 55));
   });
 });

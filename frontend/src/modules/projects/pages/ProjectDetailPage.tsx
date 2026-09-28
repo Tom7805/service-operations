@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
-import type { ProjectRes, TaskBudgetStatusRes, TaskRes, WorkBreakdownRes } from '../types/projectTypes';
+import type { ProjectRes, TaskAssignmentRes, TaskBudgetStatusRes, TaskRes, WorkBreakdownRes } from '../types/projectTypes';
 import {
   closeProject,
   deleteWorkPackage,
@@ -12,6 +12,7 @@ import WorkBreakdownTree from '../components/WorkBreakdownTree';
 import WorkPackageModal from '../components/WorkPackageModal';
 import TaskFormModal from '../components/TaskFormModal';
 import TaskBudgetModal from '../components/TaskBudgetModal';
+import TaskAssignModal from '../components/TaskAssignModal';
 import ProjectMilestoneTimeline from '../components/ProjectMilestoneTimeline';
 import PageHeader from '../../../components/common/PageHeader';
 import RowActionsMenu from '../../../components/common/RowActionsMenu';
@@ -98,6 +99,9 @@ export default function ProjectDetailPage({
     name: '',
     budgetHours: null,
   });
+
+  // Trạng thái modal phân công nhân sự (NCL-05-CN-003)
+  const [assignTarget, setAssignTarget] = useState<{ id: number; name: string } | null>(null);
 
   // Thông báo toast
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -189,6 +193,18 @@ export default function ProjectDetailPage({
         ? `Đã đặt ngân sách ${status.budgetHours} giờ — đã dùng ${(status.usageRatio * 100).toFixed(0)}%, gần/đã vượt ngân sách!`
         : `Đã đặt ngân sách ${status.budgetHours} giờ công thành công`,
       status.overBudgetWarning ? 'error' : 'success'
+    );
+    void loadData();
+  };
+
+  // Mở modal phân công / đổi phân công cho một công việc
+  const handleOpenAssign = (task: TaskRes) => setAssignTarget({ id: task.id, name: task.name });
+
+  const handleAssignSaved = (assignments: TaskAssignmentRes[]) => {
+    showToast(
+      assignments.length > 0
+        ? `Đã phân công ${assignments.length} nhân sự cho công việc "${assignTarget?.name ?? ''}"`
+        : `Đã bỏ phân công công việc "${assignTarget?.name ?? ''}"`
     );
     void loadData();
   };
@@ -413,6 +429,7 @@ export default function ProjectDetailPage({
             onAddTask={handleOpenAddTask}
             onDeletePackage={handleDeletePackage}
             onSetBudget={handleOpenSetBudget}
+            onAssign={handleOpenAssign}
             onLogTime={onLogTime ? (task) => onLogTime(projectId, task.id, task.name) : undefined}
           />
         )}
@@ -468,6 +485,18 @@ export default function ProjectDetailPage({
         currentBudgetHours={budgetTarget.budgetHours}
         onSaved={handleBudgetSaved}
       />
+
+      {/* Modal phân công nhân sự (NCL-05-CN-003) — trước đây thiếu nên nút "Phân công" trên trang này không làm gì. */}
+      {assignTarget && (
+        <TaskAssignModal
+          isOpen
+          onClose={() => setAssignTarget(null)}
+          projectId={projectId}
+          taskId={assignTarget.id}
+          taskName={assignTarget.name}
+          onSaved={handleAssignSaved}
+        />
+      )}
     </div>
   );
 }
