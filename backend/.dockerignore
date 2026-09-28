@@ -1,0 +1,8 @@
+# Không gửi vào build context: kết quả build cũ, bí mật cục bộ, cấu hình IDE.
+target/
+.env
+.env.*
+*.log
+.idea/
+.vscode/
+*.iml
