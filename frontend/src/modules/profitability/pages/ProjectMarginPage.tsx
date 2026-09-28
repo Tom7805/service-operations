@@ -43,8 +43,8 @@ function formatPercent(ratio: number): string {
  * tiết giá vốn giờ công" mới bị che với Quản lý dự án (VT-02, không có quyền xem dữ liệu
  * lương QTN-02), theo đúng cơ chế `@MaskSensitive(COST)` của backend.
  *
- * Vì `employeeId` trong response là `Employee.id` (không phải `User.id`), nên không thể
- * dùng `/users/lookup` để giải quyết tên — hiển thị dưới dạng "Mã nhân sự: {id}" thay thế.
+ * Mỗi dòng hiển thị `employeeName` do backend trả kèm; chỉ khi thiếu tên mới rơi về
+ * "Mã nhân sự: {id}" (`employeeId` là `Employee.id`, không tra được qua `/users/lookup`).
  */
 export default function ProjectMarginPage({
   projectId,
@@ -252,7 +252,7 @@ export default function ProjectMarginPage({
                   <thead>
                     <tr>
                       <th>Ngày công</th>
-                      <th>Mã nhân sự</th>
+                      <th>Nhân sự</th>
                       <th style={{ textAlign: 'right' }}>Số giờ</th>
                       <th style={{ textAlign: 'right' }}>Đơn giá/giờ</th>
                       <th style={{ textAlign: 'right' }}>Giá vốn</th>
@@ -263,7 +263,7 @@ export default function ProjectMarginPage({
                     {margin.laborCostLines.map((line) => (
                       <tr key={line.timeEntryId} data-testid={`margin-labor-cost-line-${line.timeEntryId}`}>
                         <td>{line.workDate}</td>
-                        <td>Mã nhân sự: {line.employeeId}</td>
+                        <td>{line.employeeName ?? `Mã nhân sự: ${line.employeeId}`}</td>
                         <td style={{ textAlign: 'right' }}>{formatHours(line.hours)}</td>
                         <td style={{ textAlign: 'right' }}>
                           <MaskedCell canView={sensitive} maskedText="••••••">
@@ -312,7 +312,7 @@ export default function ProjectMarginPage({
                   <thead>
                     <tr>
                       <th>Ngày công</th>
-                      <th>Mã nhân sự</th>
+                      <th>Nhân sự</th>
                       <th style={{ textAlign: 'right' }}>Số giờ</th>
                       <th style={{ textAlign: 'right' }}>Đơn giá/giờ</th>
                       <th style={{ textAlign: 'right' }}>Doanh thu</th>
@@ -324,7 +324,7 @@ export default function ProjectMarginPage({
                     {margin.revenueLines.map((line) => (
                       <tr key={line.timeEntryId} data-testid={`margin-revenue-line-${line.timeEntryId}`}>
                         <td>{line.workDate}</td>
-                        <td>Mã nhân sự: {line.employeeId}</td>
+                        <td>{line.employeeName ?? `Mã nhân sự: ${line.employeeId}`}</td>
                         <td style={{ textAlign: 'right' }}>{formatHours(line.hours)}</td>
                         <td style={{ textAlign: 'right' }}>{formatCurrency(line.appliedRate)}</td>
                         <td style={{ textAlign: 'right' }}>{formatCurrency(line.lineRevenue)}</td>

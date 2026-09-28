@@ -61,6 +61,7 @@ const RUNNING_PROJECT: ProjectRes = {
 const LABOR_LINE: LaborCostLineRes = {
   timeEntryId: 100,
   employeeId: 7,
+  employeeName: 'Lý Văn Cường',
   workDate: '2026-09-10',
   hours: 8.0,
   hourlyRate: 250000,
@@ -81,6 +82,7 @@ const LABOR_LINE_MISSING: LaborCostLineRes = {
 const REVENUE_LINE: RevenueLineRes = {
   timeEntryId: 900,
   employeeId: 7,
+  employeeName: 'Lý Văn Cường',
   workDate: '2026-09-10',
   hours: 8.0,
   appliedRate: 300000,
@@ -136,6 +138,19 @@ describe('ProjectMarginPage (NCL-09-CN-003 — Biên lợi nhuận thời gian t
     await screen.findByTestId('margin-labor-cost-line-100');
     expect(screen.getByTestId('margin-labor-cost-line-100')).toHaveTextContent('250.000');
     expect(screen.getByTestId('margin-labor-cost-line-100')).toHaveTextContent('2.000.000');
+  });
+
+  it('hiển thị họ tên nhân sự, chỉ rơi về mã nhân sự khi backend không trả tên', async () => {
+    vi.mocked(projectsApi.getProject).mockResolvedValue(RUNNING_PROJECT);
+    vi.mocked(profitabilityApi.getProjectMargin).mockResolvedValue(MARGIN_DATA);
+
+    render(<ProjectMarginPage projectId={1} currentUserRoles={['VT-01']} />);
+
+    await screen.findByTestId('margin-labor-cost-line-100');
+    expect(screen.getByTestId('margin-labor-cost-line-100')).toHaveTextContent('Lý Văn Cường');
+    expect(screen.getByTestId('margin-labor-cost-line-100')).not.toHaveTextContent('Mã nhân sự');
+    expect(screen.getByTestId('margin-labor-cost-line-101')).toHaveTextContent('Mã nhân sự: 8');
+    expect(screen.getByTestId('margin-revenue-line-900')).toHaveTextContent('Lý Văn Cường');
   });
 
   it('VT-02 (Quản lý dự án) vẫn xem được KPI tổng hợp nhưng bảng chi tiết giá vốn bị che theo QTN-02', async () => {

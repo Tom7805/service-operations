@@ -83,8 +83,8 @@ public class LaborCostServiceImpl implements LaborCostService {
 				laborCost = entry.getHours().multiply(resolved.hourlyRate());
 				totalLaborCost = totalLaborCost.add(laborCost);
 			}
-			lines.add(new LaborCostLineRes(entry.getId(), employee.getId(), entry.getWorkDate(), entry.getHours(),
-					resolved.hourlyRate(), laborCost, resolved.missingCostData()));
+			lines.add(new LaborCostLineRes(entry.getId(), employee.getId(), employee.getUser().getFullName(),
+					entry.getWorkDate(), entry.getHours(), resolved.hourlyRate(), laborCost, resolved.missingCostData()));
 		}
 
 		sensitiveAccessLogger.logView(SensitiveDataType.COST, projectId, "ProjectLaborCost",

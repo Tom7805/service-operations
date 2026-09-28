@@ -109,11 +109,12 @@ public class RevenueRecognitionServiceImpl implements RevenueRecognitionService 
 		for (TimeEntry entry : entries) {
 			Employee employee = employeesByUserId.get(entry.getUserId());
 			Long employeeId = employee == null ? null : employee.getId();
+			String employeeName = employee == null ? null : employee.getUser().getFullName();
 			boolean billable = Boolean.TRUE.equals(entry.getBillable());
 			if (!billable) {
 				// TC-03: dong khong tinh phi bi loai khoi doanh thu (van con trong gia von - NCL-09-CN-001).
 				excludedLineCount++;
-				lines.add(new RevenueLineRes(entry.getId(), employeeId, entry.getWorkDate(), entry.getHours(),
+				lines.add(new RevenueLineRes(entry.getId(), employeeId, employeeName, entry.getWorkDate(), entry.getHours(),
 						null, BigDecimal.ZERO, false, false));
 				continue;
 			}
@@ -125,13 +126,13 @@ public class RevenueRecognitionServiceImpl implements RevenueRecognitionService 
 						.divide(HOURS_PER_WORKDAY, 4, RoundingMode.HALF_UP);
 				BigDecimal lineRevenue = entry.getHours().multiply(hourlyRate).setScale(2, RoundingMode.HALF_UP);
 				totalRevenue = totalRevenue.add(lineRevenue);
-				lines.add(new RevenueLineRes(entry.getId(), employeeId, entry.getWorkDate(), entry.getHours(),
+				lines.add(new RevenueLineRes(entry.getId(), employeeId, employeeName, entry.getWorkDate(), entry.getHours(),
 						hourlyRate, lineRevenue, true, false));
 			} catch (BusinessRuleException ex) {
 				// Chua co don gia hieu luc, chua khai bao cap bac/vai tro... — danh dau thieu du lieu,
 				// khong chan ca luot tinh doanh thu (cung cach LaborCostServiceImpl xu ly missingCostData).
 				missingRateEntryCount++;
-				lines.add(new RevenueLineRes(entry.getId(), employeeId, entry.getWorkDate(), entry.getHours(),
+				lines.add(new RevenueLineRes(entry.getId(), employeeId, employeeName, entry.getWorkDate(), entry.getHours(),
 						null, BigDecimal.ZERO, true, true));
 			}
 		}
