@@ -88,7 +88,7 @@ class ContractBillRateServiceImplTest {
 						contractId, "Kiểm thử", "Trung cấp", LocalDate.of(2026, 6, 30)))
 				.thenReturn(Optional.empty());
 
-		BillRateRes generalRate = new BillRateRes("Kiểm thử", "Trung cấp", new BigDecimal("1600000"), LocalDate.of(2024, 1, 1));
+		BillRateRes generalRate = new BillRateRes(1L, "Kiểm thử", "Trung cấp", new BigDecimal("1600000"), LocalDate.of(2024, 1, 1));
 		when(billRateService.resolve("Kiểm thử", "Trung cấp", LocalDate.of(2026, 6, 30))).thenReturn(generalRate);
 
 		ResolvedContractBillRateRes result = service.resolve(contractId, "Kiểm thử", "Trung cấp", LocalDate.of(2026, 6, 30));

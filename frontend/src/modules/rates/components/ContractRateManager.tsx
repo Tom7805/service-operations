@@ -3,10 +3,18 @@ import type { FormEvent } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import { fetchContracts } from '../../contracts/api/contractsApi';
 import type { ContractRes } from '../../contracts/types/contractTypes';
-import { fetchContractBillRates, RatesApiError } from '../api/ratesApi';
-import type { ContractBillRateRes } from '../types/rateTypes';
+import { RowActionsMenu } from '../../../components/common/RowActionsMenu';
+import {
+  createContractBillRate,
+  fetchContractBillRates,
+  RatesApiError,
+  updateContractBillRate,
+} from '../api/ratesApi';
+import type { ContractBillRateRes, RateUpdatePayload } from '../types/rateTypes';
+import { formatIsoDate, formatVnd, type RateEditMode } from '../utils/rateFormat';
 import ContractRateFormModal from './ContractRateFormModal';
 import ContractRateResolveLookup from './ContractRateResolveLookup';
+import RateEditModal from './RateEditModal';
 
 interface Props {
   currentUserRoles?: string[];
@@ -14,17 +22,6 @@ interface Props {
   roleOptions: string[];
   /** Cấp bậc đã khai báo cho từng vai trò — dùng để lọc lựa chọn cấp bậc theo vai trò đã chọn. */
   levelsByRole: Record<string, string[]>;
-}
-
-function formatDailyRate(value: number): string {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(
-    value
-  );
-}
-
-function formatDate(value: string): string {
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString('vi-VN');
 }
 
 /**
@@ -47,6 +44,7 @@ export default function ContractRateManager({ currentUserRoles = [], roleOptions
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [editing, setEditing] = useState<ContractBillRateRes | null>(null);
 
   useEffect(() => {
     if (!canListContracts) return;
@@ -86,10 +84,38 @@ export default function ContractRateManager({ currentUserRoles = [], roleOptions
 
   const useContractSelect = canListContracts && !contractsLoadError;
 
+  const showToast = (text: string) => {
+    setToast(text);
+    window.setTimeout(() => setToast(null), 4500);
+  };
+
+  const byNewest = (a: ContractBillRateRes, b: ContractBillRateRes) => b.effectiveFrom.localeCompare(a.effectiveFrom);
+
   const handleCreated = (created: ContractBillRateRes) => {
     setRates((prev) => [created, ...prev]);
-    setToast(`Đã khai báo đơn giá riêng cho hợp đồng #${created.contractId}: ${created.professionalRole} (${created.level}).`);
-    window.setTimeout(() => setToast(null), 4500);
+    showToast(`Đã khai báo đơn giá riêng cho hợp đồng #${created.contractId}: ${created.professionalRole} (${created.level}).`);
+  };
+
+  // Bảng này liệt kê MỌI mốc giá của hợp đồng: sửa thẳng thay đúng dòng, ghi mức mới thì thêm một mốc.
+  const handleEditSubmit = async (mode: RateEditMode, payload: RateUpdatePayload) => {
+    if (!editing || editing.id == null || activeContractId == null) return;
+    const saved =
+      mode === 'edit'
+        ? await updateContractBillRate(activeContractId, editing.id, payload)
+        : await createContractBillRate(activeContractId, {
+            professionalRole: editing.professionalRole,
+            level: editing.level,
+            dailyRate: payload.dailyRate,
+            effectiveFrom: payload.effectiveFrom,
+          });
+    setRates((prev) =>
+      (mode === 'edit' ? prev.map((r) => (r.id === saved.id ? saved : r)) : [saved, ...prev]).sort(byNewest)
+    );
+    showToast(
+      mode === 'edit'
+        ? `Đã sửa đơn giá riêng ${saved.professionalRole} (${saved.level}): ${formatVnd(saved.dailyRate)}/ngày từ ${formatIsoDate(saved.effectiveFrom)}.`
+        : `Đã đổi đơn giá riêng ${saved.professionalRole} (${saved.level}) thành ${formatVnd(saved.dailyRate)}/ngày từ ${formatIsoDate(saved.effectiveFrom)}. Mức cũ vẫn áp dụng cho giai đoạn trước.`
+    );
   };
 
   // Vai trò/cấp bậc để chọn ở "Tra đơn giá áp dụng cho hợp đồng này" phải gồm cả những
@@ -114,7 +140,7 @@ export default function ContractRateManager({ currentUserRoles = [], roleOptions
   }, [levelsByRole, rates]);
 
   return (
-    <div className="user-table-card" style={{ marginTop: '16px', padding: '20px' }} data-testid="contract-rate-manager">
+    <div className="user-table-card" style={{ padding: '20px' }} data-testid="contract-rate-manager">
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
         <span className="icon-xs">{ICONS.receipt}</span>
         <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Đơn giá riêng theo hợp đồng</h2>
@@ -226,6 +252,7 @@ export default function ContractRateManager({ currentUserRoles = [], roleOptions
                     <th>Cấp bậc</th>
                     <th style={{ textAlign: 'right' }}>Đơn giá / ngày công</th>
                     <th>Hiệu lực từ</th>
+                    <th style={{ width: '52px' }} aria-label="Thao tác" />
                   </tr>
                 </thead>
                 <tbody>
@@ -234,9 +261,25 @@ export default function ContractRateManager({ currentUserRoles = [], roleOptions
                       <td>{r.professionalRole}</td>
                       <td>{r.level}</td>
                       <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono, monospace)' }}>
-                        {formatDailyRate(r.dailyRate)}
+                        {formatVnd(r.dailyRate)}
                       </td>
-                      <td className="cell-muted">{formatDate(r.effectiveFrom)}</td>
+                      <td className="cell-muted">{formatIsoDate(r.effectiveFrom)}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        {r.id != null && (
+                          <RowActionsMenu
+                            ariaLabel={`Thao tác với đơn giá riêng ${r.professionalRole} (${r.level})`}
+                            actions={[
+                              {
+                                key: 'edit',
+                                label: 'Sửa đơn giá',
+                                icon: ICONS.edit,
+                                onClick: () => setEditing(r),
+                                testId: `contract-rate-edit-${r.id}`,
+                              },
+                            ]}
+                          />
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -248,6 +291,14 @@ export default function ContractRateManager({ currentUserRoles = [], roleOptions
             contractId={activeContractId}
             roleOptions={contractRoleOptions}
             levelsByRole={contractLevelsByRole}
+          />
+
+          <RateEditModal
+            rate={editing && editing.id != null ? { ...editing, id: editing.id } : null}
+            scopeLabel={contracts.find((c) => c.id === activeContractId)?.contractCode ?? `Hợp đồng #${activeContractId}`}
+            historyHint="vẫn nằm trong bảng đơn giá của hợp đồng này"
+            onClose={() => setEditing(null)}
+            onSubmit={handleEditSubmit}
           />
 
           <ContractRateFormModal

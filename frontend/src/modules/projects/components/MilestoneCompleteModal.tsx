@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import ModalPortal from '../../../components/common/ModalPortal';
+import { todayLocalIso } from '../../../utils/formatDate';
 import type { ProjectMilestoneRes } from '../types/projectTypes';
 import { completeMilestone, ProjectsApiError } from '../api/projectsApi';
 import { validateMilestoneCompleteForm } from '../validators/projectValidators';
@@ -13,9 +14,7 @@ export interface MilestoneCompleteModalProps {
   onSaved?: (milestone: ProjectMilestoneRes) => void;
 }
 
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+const today = todayLocalIso;
 
 export default function MilestoneCompleteModal({
   isOpen,

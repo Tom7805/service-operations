@@ -1,6 +1,7 @@
 package com.serviceops.modules.rate.controller;
 
 import com.serviceops.common.api.BaseRes;
+import com.serviceops.modules.rate.dto.request.BillRateUpdateReq;
 import com.serviceops.modules.rate.dto.request.ContractBillRateCreateReq;
 import com.serviceops.modules.rate.dto.response.ContractBillRateRes;
 import com.serviceops.modules.rate.dto.response.ResolvedContractBillRateRes;
@@ -12,6 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -33,6 +35,14 @@ public class ContractBillRateController {
 											   @Valid @RequestBody ContractBillRateCreateReq request) {
 		return BaseRes.ok("Khai bao don gia rieng theo hop dong thanh cong",
 				contractBillRateService.create(contractId, request));
+	}
+
+	@PutMapping("/{rateId}")
+	@PreAuthorize("hasRole('VT-05') or hasRole('VT-07')")
+	public BaseRes<ContractBillRateRes> update(@PathVariable Long contractId, @PathVariable Long rateId,
+											   @Valid @RequestBody BillRateUpdateReq request) {
+		return BaseRes.ok("Sua don gia rieng theo hop dong thanh cong",
+				contractBillRateService.update(contractId, rateId, request));
 	}
 
 	@GetMapping

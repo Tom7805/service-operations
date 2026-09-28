@@ -13,6 +13,8 @@ export type Tab =
   | 'REVENUE_FORECAST'
   | 'CUSTOMER_MERGE'
   | 'BILL_RATES'
+  | 'CONTRACT_RATES'
+  | 'RATE_LOOKUP'
   | 'RATE_HISTORY'
   | 'INVOICES'
   | 'INVOICE_DETAIL'
@@ -163,8 +165,11 @@ const FINANCE: NavItem[] = [
   },
   {
     id: 'rates', tab: 'BILL_RATES', icon: ICONS.coins, label: 'Đơn giá',
+    // Mỗi việc một tab thay cho một trang xếp chồng 5 khối (người dùng thấy trang "dài dằng dặc").
     tabs: [
-      { tab: 'BILL_RATES', label: 'Bảng đơn giá', requires: ['VT-05', 'VT-07'] },
+      { tab: 'BILL_RATES', label: 'Bảng giá chung', requires: ['VT-05', 'VT-07'] },
+      { tab: 'CONTRACT_RATES', label: 'Theo hợp đồng', requires: ['VT-05', 'VT-07'] },
+      { tab: 'RATE_LOOKUP', label: 'Tra cứu', requires: ['VT-05', 'VT-07'] },
       { tab: 'RATE_HISTORY', label: 'Lịch sử thay đổi', requires: ['VT-05', 'VT-07'] },
     ],
   },

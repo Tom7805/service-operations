@@ -102,7 +102,13 @@ public class ProjectServiceImpl implements ProjectService {
 						"Khong tim thay du an voi id=" + projectId));
 		// NCL-01-CN-004-TC-02: mo du an ngoai pham vi bang duong dan truc tiep -> 403 + ghi nhat ky.
 		projectDataScopeGuard.requireVisible(project);
-		return toResponse(project);
+		// Trang "Chi tiet du an" hien ten khach hang va quan ly du an — truoc day chi danh sach co ten nen trang
+		// chi tiet hien "—" khi mo thang (tu thong bao, lich su hop tac) ma chua nap danh sach.
+		String customerName = project.getCustomerId() == null ? null
+				: customerRepository.findById(project.getCustomerId()).map(Customer::getName).orElse(null);
+		String managerName = project.getProjectManagerId() == null ? null
+				: userRepository.findById(project.getProjectManagerId()).map(User::getFullName).orElse(null);
+		return withNames(toResponse(project), customerName, managerName);
 	}
 
 	@Override

@@ -5,6 +5,7 @@ import com.serviceops.common.audit.service.AuditLogService;
 import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.modules.contract.repository.ContractRepository;
+import com.serviceops.modules.rate.dto.request.BillRateUpdateReq;
 import com.serviceops.modules.rate.dto.request.ContractBillRateCreateReq;
 import com.serviceops.modules.rate.dto.response.BillRateRes;
 import com.serviceops.modules.rate.dto.response.ContractBillRateRes;
@@ -13,6 +14,7 @@ import com.serviceops.modules.rate.entity.ContractBillRate;
 import com.serviceops.modules.rate.repository.ContractBillRateRepository;
 import com.serviceops.modules.rate.service.BillRateService;
 import com.serviceops.modules.rate.service.ContractBillRateService;
+import com.serviceops.modules.rate.validator.RateEditRules;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -83,7 +85,36 @@ public class ContractBillRateServiceImpl implements ContractBillRateService {
 				role, "Tạo đơn giá riêng cho HĐ #" + contractId + ": " + role + " (" + level + ") = "
 						+ request.dailyRate() + " / ngày, hiệu lực từ " + request.effectiveFrom());
 
-		return new ContractBillRateRes(saved.getContractId(), saved.getProfessionalRole(),
+		return new ContractBillRateRes(saved.getId(), saved.getContractId(), saved.getProfessionalRole(),
+				saved.getLevel(), saved.getDailyRate(), saved.getEffectiveFrom());
+	}
+
+	@Override
+	@Transactional
+	public ContractBillRateRes update(Long contractId, Long rateId, BillRateUpdateReq request) {
+		ContractBillRate rate = contractBillRateRepository.findById(rateId)
+				.filter(r -> r.getContractId().equals(contractId))
+				.orElseThrow(() -> new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND,
+						"Không tìm thấy đơn giá riêng với ID " + rateId + " trong hợp đồng #" + contractId));
+		RateEditRules.assertEditable(rate.getEffectiveFrom(), request.dailyRate(), request.effectiveFrom(), LocalDate.now());
+
+		contractBillRateRepository.findByContractIdAndProfessionalRoleIgnoreCaseAndLevelIgnoreCaseAndEffectiveFrom(
+						contractId, rate.getProfessionalRole(), rate.getLevel(), request.effectiveFrom())
+				.filter(other -> !other.getId().equals(rate.getId()))
+				.ifPresent(other -> {
+					throw new BusinessRuleException(ErrorCode.DUPLICATE_DATA,
+							"Hợp đồng này đã có đơn giá riêng cho vai trò, cấp bậc tại ngày hiệu lực đã chọn");
+				});
+
+		String before = rate.getDailyRate().toPlainString() + " / ngày, hiệu lực từ " + RateEditRules.formatDate(rate.getEffectiveFrom());
+		rate.setDailyRate(request.dailyRate());
+		rate.setEffectiveFrom(request.effectiveFrom());
+		ContractBillRate saved = contractBillRateRepository.save(rate);
+		auditLogService.record("Sửa đơn giá riêng theo hợp đồng", AuditTargetType.GENERAL, contractId,
+				saved.getProfessionalRole(), "Sửa đơn giá riêng HĐ #" + contractId + ": " + saved.getProfessionalRole()
+						+ " (" + saved.getLevel() + ") " + before + " → " + saved.getDailyRate().toPlainString()
+						+ " / ngày, hiệu lực từ " + RateEditRules.formatDate(saved.getEffectiveFrom()));
+		return new ContractBillRateRes(saved.getId(), saved.getContractId(), saved.getProfessionalRole(),
 				saved.getLevel(), saved.getDailyRate(), saved.getEffectiveFrom());
 	}
 
@@ -93,7 +124,7 @@ public class ContractBillRateServiceImpl implements ContractBillRateService {
 			throw new BusinessRuleException(ErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy hợp đồng với ID: " + contractId);
 		}
 		return contractBillRateRepository.findByContractIdOrderByEffectiveFromDesc(contractId).stream()
-				.map(rate -> new ContractBillRateRes(rate.getContractId(), rate.getProfessionalRole(),
+				.map(rate -> new ContractBillRateRes(rate.getId(), rate.getContractId(), rate.getProfessionalRole(),
 						rate.getLevel(), rate.getDailyRate(), rate.getEffectiveFrom()))
 				.toList();
 	}
