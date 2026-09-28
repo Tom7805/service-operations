@@ -646,6 +646,10 @@ form label { color: var(--ink); font-size: 13.5px; font-weight: 500; margin: 0 0
 
 .status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--radius-lg); font-size: 13.5px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
 .status-pill__dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+/* Viên trạng thái chứa cả câu (vd thông báo đã nộp bảng chấm công): được xuống dòng thay vì
+   tràn khỏi màn hình hẹp; chấm màu bám theo dòng đầu. */
+.status-pill--wrap { white-space: normal; align-items: flex-start; max-width: 100%; flex-shrink: 1; }
+.status-pill--wrap .status-pill__dot { flex-shrink: 0; margin-top: calc(0.7em - 3px); }
 .status-pill--active { background: var(--pale-green-bg); color: var(--pale-green-fg); }
 .status-pill--locked { background: var(--pale-red-bg); color: var(--pale-red-fg); }
 .status-pill--inactive { background: var(--surface-sunken); color: var(--ink-muted); }

@@ -35,7 +35,8 @@ export default function WeeklyTimesheetGrid({ weekFrom, summaries }: WeeklyTimes
       <table className="user-data-table">
         <thead>
           <tr>
-            <th>Công việc</th>
+            {/* Màn hẹp: giữ tên công việc đủ rộng, bảng cuộn ngang thay vì ép mỗi dòng một từ. */}
+            <th style={{ minWidth: '180px' }}>Công việc</th>
             {days.map((day) => (
               <th key={day} style={{ width: '70px', textAlign: 'center' }}>
                 {weekdayLabel(day)}

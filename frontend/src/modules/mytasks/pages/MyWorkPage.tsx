@@ -278,8 +278,10 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserId }: MyW
             <table className="user-data-table" data-testid="my-tasks-table">
               <thead>
                 <tr>
-                  <th>Dự án</th>
-                  <th>Công việc</th>
+                  {/* Độ rộng tối thiểu cho cột chữ: màn hẹp thì bảng cuộn ngang gọn gàng,
+                      thay vì ép tên dự án/công việc xuống mỗi dòng một từ. */}
+                  <th style={{ minWidth: '180px' }}>Dự án</th>
+                  <th style={{ minWidth: '180px' }}>Công việc</th>
                   <th>Khung ngày dự kiến</th>
                   <th>Trạng thái</th>
                   {canLogTime && <th>Giờ công</th>}
@@ -420,7 +422,7 @@ export default function MyWorkPage({ currentUserRoles = [], currentUserId }: MyW
           </div>
 
           {submitBanner && (
-            <div className={`status-pill status-pill--${submitBanner.tone}`} style={{ marginBottom: '16px' }} data-testid="submit-week-banner">
+            <div className={`status-pill status-pill--wrap status-pill--${submitBanner.tone}`} style={{ marginBottom: '16px' }} data-testid="submit-week-banner">
               <span className="status-pill__dot" />
               {submitBanner.text}
             </div>
