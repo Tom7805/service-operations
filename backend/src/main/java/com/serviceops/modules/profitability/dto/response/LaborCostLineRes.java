@@ -9,6 +9,7 @@ import java.time.LocalDate;
 public record LaborCostLineRes(
 		Long timeEntryId,
 		Long employeeId,
+		String employeeName,
 		LocalDate workDate,
 		BigDecimal hours,
 		@MaskSensitive(MaskingLevel.COST) BigDecimal hourlyRate,

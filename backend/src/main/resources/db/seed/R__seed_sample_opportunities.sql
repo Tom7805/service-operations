@@ -43,8 +43,8 @@ DELETE FROM opportunities WHERE id IN (2003, 2004, 2005, 2006, 2007, 2008, 2009,
 INSERT INTO opportunities (id, name, customer_id, expected_value, expected_close_date, stage, status, probability, created_by, created_at, owner_id)
 SELECT o.id, o.name, o.customer_id, o.expected_value, o.expected_close_date, o.stage, o.status, o.probability, o.created_by, o.created_at, u.id
 FROM (
-              SELECT 2001 AS id, 'Trien khai he thong CRM cho Cong ty CP Giai Phap So Viet' AS name, 1001 AS customer_id, 500000000 AS expected_value, '2026-06-30' AS expected_close_date, 'APPROACH' AS stage, 'OPEN' AS status, 10 AS probability, 'sale01' AS created_by, '2026-01-05 09:00:00' AS created_at
-    UNION ALL SELECT 2002, 'Nang cap ha tang mang cho Cong ty TNHH Thuong Mai Mien Bac', 1002, 120000000, '2026-11-30', 'APPROACH', 'OPEN', 10, 'sale01', '2026-01-10 10:30:00'
+              SELECT 2001 AS id, 'Triển khai hệ thống CRM cho Công ty CP Giải Pháp Số Việt' AS name, 1001 AS customer_id, 500000000 AS expected_value, '2026-06-30' AS expected_close_date, 'APPROACH' AS stage, 'OPEN' AS status, 10 AS probability, 'sale01' AS created_by, '2026-01-05 09:00:00' AS created_at
+    UNION ALL SELECT 2002, 'Nâng cấp hạ tầng mạng cho Công ty TNHH Thương Mại Miền Bắc', 1002, 120000000, '2026-11-30', 'APPROACH', 'OPEN', 10, 'sale01', '2026-01-10 10:30:00'
 ) o
 JOIN users u ON u.username = o.created_by
 ON DUPLICATE KEY UPDATE
@@ -60,12 +60,12 @@ ON DUPLICATE KEY UPDATE
 
 INSERT INTO opportunity_activities (id, opportunity_id, activity_type, occurred_at, participants, content, created_by, created_at)
 VALUES
-    (3001, 2001, 'CALL', '2026-01-06 14:00:00', 'sale01, chi Lan (khach hang)',
-     'Goi gioi thieu giai phap CRM, khach hang quan tam module bao gia tu dong.', 'sale01', '2026-01-06 14:05:00'),
-    (3002, 2001, 'MEETING', '2026-01-12 09:30:00', 'sale01, anh Minh (khach hang), anh Tuan (khach hang)',
-     'Hop demo truc tiep tai van phong khach hang, hen gui bao gia truoc 20/01.', 'sale01', '2026-01-12 11:00:00'),
+    (3001, 2001, 'CALL', '2026-01-06 14:00:00', 'sale01, chị Lan (khách hàng)',
+     'Gọi giới thiệu giải pháp CRM, khách hàng quan tâm module báo giá tự động.', 'sale01', '2026-01-06 14:05:00'),
+    (3002, 2001, 'MEETING', '2026-01-12 09:30:00', 'sale01, anh Minh (khách hàng), anh Tuấn (khách hàng)',
+     'Họp demo trực tiếp tại văn phòng khách hàng, hẹn gửi báo giá trước 20/01.', 'sale01', '2026-01-12 11:00:00'),
     (3003, 2002, 'EMAIL', '2026-01-11 08:15:00', 'sale01',
-     'Gui thu khao sat hien trang ha tang mang, hen lich khao sat truc tiep tuan sau.', 'sale01', '2026-01-11 08:20:00')
+     'Gửi thư khảo sát hiện trạng hạ tầng mạng, hẹn lịch khảo sát trực tiếp tuần sau.', 'sale01', '2026-01-11 08:20:00')
 ON DUPLICATE KEY UPDATE
     activity_type = VALUES(activity_type),
     occurred_at   = VALUES(occurred_at),

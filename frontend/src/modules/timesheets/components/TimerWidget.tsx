@@ -169,7 +169,7 @@ export default function TimerWidget({ projectId, taskId, canStart, onStopped, on
       {isTimerForOtherTask && timer && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
           <div>
-            <span className="status-pill status-pill--rejected">
+            <span className="status-pill status-pill--wrap status-pill--rejected">
               <span className="status-pill__dot" />
               Đang bấm giờ cho công việc khác (#{timer.taskId})
             </span>

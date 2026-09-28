@@ -76,6 +76,7 @@ export type RecognitionMethod = 'HOURLY' | 'PERCENTAGE_OF_COMPLETION';
 export interface LaborCostLineRes {
   timeEntryId: number;
   employeeId: number;
+  employeeName?: string | null; // Họ tên nhân sự (User.fullName)
   workDate: string; // YYYY-MM-DD (LocalDate)
   hours: number; // BigDecimal → number
   hourlyRate: number; // @MaskSensitive COST
@@ -146,6 +147,7 @@ export interface PlannedVsActualMarginRes {
 export interface RevenueLineRes {
   timeEntryId: number;
   employeeId: number;
+  employeeName?: string | null; // Họ tên nhân sự (User.fullName)
   workDate: string; // YYYY-MM-DD (LocalDate)
   hours: number; // BigDecimal → number
   appliedRate: number; // BigDecimal — đơn giá/giờ áp dụng tại workDate

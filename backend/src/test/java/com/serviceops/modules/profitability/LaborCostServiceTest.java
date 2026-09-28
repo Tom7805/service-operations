@@ -50,6 +50,7 @@ class LaborCostServiceTest {
 		employee.setId(10L);
 		User user = new User();
 		user.setId(100L);
+		user.setFullName("Lý Văn Cường");
 		employee.setUser(user);
 		when(employeeRepository.findByUser_IdIn(List.of(100L))).thenReturn(List.of(employee));
 	}
@@ -73,6 +74,8 @@ class LaborCostServiceTest {
 		assertThat(result.totalLaborCost()).isEqualByComparingTo("2000000.00");
 		assertThat(result.missingCostEntryCount()).isZero();
 		assertThat(result.lines()).hasSize(1);
+		assertThat(result.lines().get(0).employeeId()).isEqualTo(10L);
+		assertThat(result.lines().get(0).employeeName()).isEqualTo("Lý Văn Cường");
 	}
 
 	@Test

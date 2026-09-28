@@ -60,6 +60,7 @@ Tính động giá vốn nhân sự từ các dòng giờ công `APPROVED` của
       {
         "timeEntryId": 901,
         "employeeId": 17,
+        "employeeName": "Lý Văn Cường",
         "workDate": "2026-01-15",
         "hours": 8.00,
         "hourlyRate": 250000.00,
@@ -70,6 +71,9 @@ Tính động giá vốn nhân sự từ các dòng giờ công `APPROVED` của
   }
 }
 ```
+
+`employeeId` là `Employee.id` (không phải `User.id`); `employeeName` là họ tên nhân sự (`User.fullName`) để hiển thị.
+Ở `GET .../revenue` (bên dưới), hai trường này vắng mặt nếu dòng giờ công không tìm được hồ sơ nhân sự.
 
 `hourlyRate` và `laborCost` ở từng dòng là dữ liệu nhạy cảm và được che tự động theo `QTN-02`; mỗi lần đọc endpoint ghi một log truy cập dữ liệu `COST`. Dòng đảo/correction đã duyệt được tính theo đúng số giờ mang dấu của bản ghi.
 
@@ -116,6 +120,7 @@ Tính động doanh thu ghi nhận của dự án theo đúng loại hợp đồ
       {
         "timeEntryId": 901,
         "employeeId": 17,
+        "employeeName": "Lý Văn Cường",
         "workDate": "2026-06-30",
         "hours": 8.00,
         "appliedRate": 300000.0000,

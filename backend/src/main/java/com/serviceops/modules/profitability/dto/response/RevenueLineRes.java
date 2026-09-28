@@ -10,6 +10,7 @@ import java.time.LocalDate;
 public record RevenueLineRes(
 		Long timeEntryId,
 		Long employeeId,
+		String employeeName,
 		LocalDate workDate,
 		BigDecimal hours,
 		BigDecimal appliedRate,

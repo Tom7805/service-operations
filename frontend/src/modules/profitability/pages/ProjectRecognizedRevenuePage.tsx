@@ -52,8 +52,8 @@ function formatPercent(ratio: number): string {
  * Chỉ Ban giám đốc (VT-01) và Kế toán (VT-05) được xem — không có luồng masking từng
  * phần như NCL-09-CN-001, vì hai vai trò còn lại đều không được cấp quyền màn hình này.
  *
- * Vì `employeeId` trong response là `Employee.id` (không phải `User.id`), nên không thể
- * dùng `/users/lookup` để giải quyết tên — hiển thị dưới dạng "Mã nhân sự: {id}" thay thế.
+ * Mỗi dòng hiển thị `employeeName` do backend trả kèm; chỉ khi thiếu tên mới rơi về
+ * "Mã nhân sự: {id}" (`employeeId` là `Employee.id`, không tra được qua `/users/lookup`).
  */
 export default function ProjectRecognizedRevenuePage({
   projectId,
@@ -268,7 +268,7 @@ export default function ProjectRecognizedRevenuePage({
                     <thead>
                       <tr>
                         <th>Ngày công</th>
-                        <th>Mã nhân sự</th>
+                        <th>Nhân sự</th>
                         <th style={{ textAlign: 'right' }}>Số giờ</th>
                         <th style={{ textAlign: 'right' }}>Đơn giá/giờ</th>
                         <th style={{ textAlign: 'right' }}>Doanh thu</th>
@@ -280,7 +280,7 @@ export default function ProjectRecognizedRevenuePage({
                       {revenue.lines.map((line) => (
                         <tr key={line.timeEntryId} data-testid={`revenue-line-${line.timeEntryId}`}>
                           <td>{line.workDate}</td>
-                          <td>Mã nhân sự: {line.employeeId}</td>
+                          <td>{line.employeeName ?? `Mã nhân sự: ${line.employeeId}`}</td>
                           <td style={{ textAlign: 'right' }}>{formatHours(line.hours)}</td>
                           <td style={{ textAlign: 'right' }}>{formatCurrency(line.appliedRate)}</td>
                           <td style={{ textAlign: 'right' }}>{formatCurrency(line.lineRevenue)}</td>

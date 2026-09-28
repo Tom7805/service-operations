@@ -1,0 +1,34 @@
+GIẤY PHÉP SỬ DỤNG PHẦN MỀM ĐỘC QUYỀN
+Vận Hành Dịch Vụ (Service Operations Platform)
+
+Bản quyền © 2026 Nhóm phát triển Vận Hành Dịch Vụ. Mọi quyền được bảo lưu.
+
+1. Quyền sở hữu
+   Phần mềm này, bao gồm mã nguồn, mã đã biên dịch, lược đồ cơ sở dữ liệu, tài liệu,
+   thiết kế giao diện và mọi tài sản đi kèm (gọi chung là "Phần mềm"), thuộc quyền sở
+   hữu của Nhóm phát triển Vận Hành Dịch Vụ và được bảo hộ theo pháp luật về sở hữu
+   trí tuệ.
+
+2. Phạm vi được phép
+   Việc truy cập kho mã nguồn này chỉ nhằm mục đích phát triển, kiểm thử, đánh giá và
+   review nội bộ của các thành viên và người được Nhóm phát triển mời tham gia.
+
+3. Hành vi bị cấm khi chưa có văn bản chấp thuận của Nhóm phát triển
+   a) Sao chép, chỉnh sửa, tạo sản phẩm phái sinh từ toàn bộ hoặc một phần Phần mềm;
+   b) Phân phối, cho thuê, cho mượn, bán lại hoặc cấp phép lại Phần mềm dưới bất kỳ
+      hình thức nào;
+   c) Triển khai Phần mềm để phục vụ bên thứ ba hoặc cho mục đích thương mại;
+   d) Gỡ bỏ hoặc thay đổi thông báo bản quyền này.
+
+4. Thành phần bên thứ ba
+   Các thư viện mã nguồn mở mà Phần mềm sử dụng (Spring Boot, React và các thư viện
+   khác được khai báo trong backend/pom.xml và frontend/package.json) tuân theo giấy
+   phép riêng của từng thư viện. Giấy phép này không thay đổi các điều khoản đó.
+
+5. Không bảo đảm
+   Phần mềm được cung cấp "nguyên trạng", không kèm bất kỳ bảo đảm nào, dù rõ ràng hay
+   ngụ ý. Nhóm phát triển không chịu trách nhiệm về bất kỳ thiệt hại nào phát sinh từ
+   việc sử dụng Phần mềm ngoài phạm vi được phép.
+
+Mọi yêu cầu cấp phép sử dụng, vui lòng liên hệ Nhóm phát triển qua kho mã nguồn
+https://github.com/Tom7805/service-operations.

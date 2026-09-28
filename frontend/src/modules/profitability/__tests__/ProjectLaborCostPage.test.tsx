@@ -61,6 +61,7 @@ const RUNNING_PROJECT: ProjectRes = {
 const LABOR_LINE_COMPLETED: LaborCostLineRes = {
   timeEntryId: 100,
   employeeId: 7,
+  employeeName: 'Lý Văn Cường',
   workDate: '2026-09-10',
   hours: 8.0,
   hourlyRate: 250000,
@@ -105,7 +106,9 @@ describe('ProjectLaborCostPage (NCL-09-CN-001 — Tính giá vốn giờ công d
 
     expect(await screen.findByTestId('labor-cost-page')).toBeInTheDocument();
     expect(screen.getByTestId('kpi-total-hours')).toHaveTextContent('14,50');
-    expect(screen.getByTestId('labor-cost-line-100')).toHaveTextContent('Mã nhân sự: 7');
+    expect(screen.getByTestId('labor-cost-line-100')).toHaveTextContent('Lý Văn Cường');
+    expect(screen.getByTestId('labor-cost-line-100')).not.toHaveTextContent('Mã nhân sự');
+    // Backend không trả tên (hồ sơ thiếu tài khoản) thì rơi về mã nhân sự.
     expect(screen.getByTestId('labor-cost-line-101')).toHaveTextContent('Mã nhân sự: 8');
   });
 
