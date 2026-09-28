@@ -5719,3 +5719,40 @@ select.form-input:disabled, select.form-select:disabled, select.filter-select:di
 /* Công tắc tắt: rãnh sáng mờ; con trượt vẫn trắng. */
 :root[data-theme="dark"] .settings-switch { background: rgba(242, 241, 236, 0.22); }
 :root[data-theme="dark"] .settings-switch--on { background: var(--accent); }
+
+/* ---------- 31. Khu Đơn giá: dải hệ số loại giờ (tab Bảng giá chung), tab Tra cứu ---------- */
+/* 4 hệ số chỉ là 4 con số ít đổi: một vùng nền mềm ngay trên bảng, đọc cùng đơn giá ngày — không thành khối riêng. */
+.rate-factor-strip {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px;
+  margin: 16px 20px 0; padding: 8px 8px 8px 14px; border-radius: 12px;
+  background: rgb(var(--ink-rgb) / 0.035);
+}
+.rate-factor-strip__label { font-size: 13px; color: var(--ink-muted); cursor: help; }
+/* Không cho danh sách co về 0 (chữ bị nút đè): hẹp hơn ~360px thì cả danh sách xuống dòng riêng. */
+.rate-factor-strip__list {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; flex: 1 1 360px;
+  font-size: 13.5px; color: var(--ink);
+}
+.rate-factor { white-space: nowrap; }
+.rate-factor strong { margin-left: 2px; font-weight: 500; color: var(--ink-strong); font-variant-numeric: tabular-nums; }
+.rate-factor-strip__note { color: var(--ink-muted); }
+.rate-lookup > .segmented { margin-top: 2px; }
+/* Hộp thoại "Sửa đơn giá": ai đang được sửa (vai trò · cấp bậc · bảng nào) + vùng giải thích sửa thẳng / mức mới. */
+.rate-edit__who { display: flex; flex-direction: column; gap: 2px; margin-bottom: 12px; }
+.rate-edit__who strong { font-size: 15px; font-weight: 600; color: var(--ink-strong); }
+.rate-edit__who span { font-size: 13px; color: var(--ink-muted); }
+.rate-edit__note {
+  margin: 0 0 16px; padding: 10px 14px; border-radius: 12px; font-size: 13.5px; line-height: 1.55;
+  color: var(--ink); background: rgb(var(--ink-rgb) / 0.035); text-wrap: pretty;
+}
+.rate-edit__note strong { font-weight: 500; color: var(--ink-strong); font-variant-numeric: tabular-nums; }
+/* Điện thoại: nhãn + nút "Sửa hệ số" trên một hàng, các hệ số xuống hàng dưới đủ bề ngang. */
+@media (max-width: 640px) {
+  .rate-factor-strip {
+    display: grid; grid-template-columns: 1fr auto; grid-template-areas: "label edit" "list list";
+    margin: 12px 12px 0;
+  }
+  .rate-factor-strip__label { grid-area: label; }
+  .rate-factor-strip > .btn { grid-area: edit; }
+  .rate-factor-strip__list { grid-area: list; gap: 4px 16px; }
+}

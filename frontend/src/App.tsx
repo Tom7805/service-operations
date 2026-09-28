@@ -78,6 +78,8 @@ const PAGE_LOADERS = {
   AcceptanceDetailPage: () => import('./modules/acceptance/pages/AcceptanceDetailPage'),
   DeliverablePage: () => import('./modules/acceptance/pages/DeliverablePage'),
   BillRatePage: () => import('./modules/rates/pages/BillRatePage'),
+  ContractRatePage: () => import('./modules/rates/pages/ContractRatePage'),
+  RateLookupPage: () => import('./modules/rates/pages/RateLookupPage'),
   RateHistoryPage: () => import('./modules/rates/pages/RateHistoryPage'),
   OpportunityDetailPage: () => import('./modules/opportunities/pages/OpportunityDetailPage'),
   OpportunityListPage: () => import('./modules/opportunities/pages/OpportunityListPage'),
@@ -159,6 +161,8 @@ const AcceptanceListPage = lazy(PAGE_LOADERS.AcceptanceListPage);
 const AcceptanceDetailPage = lazy(PAGE_LOADERS.AcceptanceDetailPage);
 const DeliverablePage = lazy(PAGE_LOADERS.DeliverablePage);
 const BillRatePage = lazy(PAGE_LOADERS.BillRatePage);
+const ContractRatePage = lazy(PAGE_LOADERS.ContractRatePage);
+const RateLookupPage = lazy(PAGE_LOADERS.RateLookupPage);
 const RateHistoryPage = lazy(PAGE_LOADERS.RateHistoryPage);
 const OpportunityDetailPage = lazy(PAGE_LOADERS.OpportunityDetailPage);
 const OpportunityListPage = lazy(PAGE_LOADERS.OpportunityListPage);
@@ -441,8 +445,10 @@ export default function App() {
 
   // Tùy chọn giao diện trên máy chủ (đi theo tài khoản) — nạp khi đăng nhập / đổi tài khoản.
   const sessionUserId = session?.userId;
+  // Tài khoản Khách hàng (VT-09) chỉ được gọi /portal/** (QTN-26) và không có trang Cài đặt — không nạp.
+  const sessionIsPortal = session?.roles?.includes('VT-09') ?? false;
   useEffect(() => {
-    if (!sessionUserId) return undefined;
+    if (!sessionUserId || sessionIsPortal) return undefined;
     let cancelled = false;
     prefsDirtyRef.current = false;
     getPreferences()
@@ -466,7 +472,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [sessionUserId]);
+  }, [sessionUserId, sessionIsPortal]);
 
   // Phím tắt toàn cục: Ctrl/⌘+B thu gọn thanh bên, "?" mở Trợ giúp & phím tắt. Không bắt khi đang gõ.
   useEffect(() => {
@@ -1381,6 +1387,10 @@ export default function App() {
             <CustomerMergePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'BILL_RATES' ? (
             <BillRatePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+          ) : activeTab === 'CONTRACT_RATES' ? (
+            <ContractRatePage currentUserRoles={currentRoles} currentUserName={session.fullName} />
+          ) : activeTab === 'RATE_LOOKUP' ? (
+            <RateLookupPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'RATE_HISTORY' ? (
             <RateHistoryPage currentUserRoles={currentRoles} currentUserName={session.fullName} />
           ) : activeTab === 'DEPARTMENTS' ? (

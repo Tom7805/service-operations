@@ -8,6 +8,7 @@ import type {
   ResolveContractBillRateQuery,
   ResolvedContractBillRateRes,
   ResolvedTimeEntryRateRes,
+  RateUpdatePayload,
   TimeEntryLookupCandidateRes,
   TimeEntryLookupEmployeeRes,
   WorkTypeRateFactorPayload,
@@ -81,6 +82,17 @@ export async function createBillRate(payload: BillRateCreatePayload): Promise<Bi
 }
 
 /**
+ * PUT /bill-rates/{id} — sửa thẳng một dòng CHƯA áp dụng trước hôm nay (sửa nhầm giá/ngày). Dòng đã áp dụng
+ * từ trước trả 400 INVALID_STATE: đổi giá cho dòng đó bằng `createBillRate` với ngày hiệu lực mới.
+ */
+export async function updateBillRate(id: number, payload: RateUpdatePayload): Promise<BillRateRes> {
+  return requestBackend<BillRateRes>(`${API_BASE_URL}/bill-rates/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
  * GET /bill-rates/current — danh sách mỗi cặp (vai trò, cấp bậc) đang có đơn giá
  * hiệu lực tính đến hôm nay. Đơn giá vừa khai báo với `effectiveFrom` trong
  * tương lai sẽ KHÔNG xuất hiện ở đây cho tới đúng ngày hiệu lực — đây là chủ đích
@@ -131,6 +143,18 @@ export async function createContractBillRate(
 ): Promise<ContractBillRateRes> {
   return requestBackend<ContractBillRateRes>(`${API_BASE_URL}/contracts/${contractId}/bill-rates`, {
     method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/** PUT /contracts/{contractId}/bill-rates/{rateId} — cùng quy tắc sửa với `updateBillRate`. */
+export async function updateContractBillRate(
+  contractId: number,
+  rateId: number,
+  payload: RateUpdatePayload
+): Promise<ContractBillRateRes> {
+  return requestBackend<ContractBillRateRes>(`${API_BASE_URL}/contracts/${contractId}/bill-rates/${rateId}`, {
+    method: 'PUT',
     body: JSON.stringify(payload),
   });
 }
