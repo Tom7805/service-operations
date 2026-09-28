@@ -61,6 +61,7 @@ const RUNNING_PROJECT: ProjectRes = {
 const REVENUE_LINE_BILLABLE: RevenueLineRes = {
   timeEntryId: 901,
   employeeId: 17,
+  employeeName: 'Ngô Thanh Tùng',
   workDate: '2026-06-30',
   hours: 8.0,
   appliedRate: 300000,
@@ -146,7 +147,8 @@ describe('ProjectRecognizedRevenuePage (NCL-09-CN-002 — Tính doanh thu ghi nh
     expect(await screen.findByTestId('revenue-page')).toBeInTheDocument();
     expect(screen.getByTestId('kpi-total-revenue')).toHaveTextContent('2.400.000');
     expect(screen.getByTestId('kpi-total-hours')).toHaveTextContent('8,00');
-    expect(screen.getByTestId('revenue-line-901')).toHaveTextContent('Mã nhân sự: 17');
+    expect(screen.getByTestId('revenue-line-901')).toHaveTextContent('Ngô Thanh Tùng');
+    expect(screen.getByTestId('revenue-line-902')).toHaveTextContent('Mã nhân sự: 18');
   });
 
   it('VT-05 (Kế toán) xem được màn hình', async () => {
