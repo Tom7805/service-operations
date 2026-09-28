@@ -41,6 +41,29 @@ export interface AcceptanceReadinessRes {
   activeCertificateId: number | null;
   activeCertificateCode: string | null;
   activeCertificateStatus: AcceptanceStatus | null;
+  /** Giá trị nghiệm thu hệ thống tự tính — chỉ có khi hạng mục đủ điều kiện và loại hợp đồng tính được. */
+  valueSuggestion?: AcceptanceValueSuggestionRes | null;
+}
+
+/**
+ * HOURLY: tổng doanh thu giờ công đã duyệt, tính phí của công việc trong nhánh (hợp đồng theo giờ).
+ * PERCENTAGE_OF_COMPLETION: giá trị hợp đồng trọn gói chia đều cho `projectTaskCount` công việc của dự án.
+ */
+export interface AcceptanceValueSuggestionRes {
+  method: 'HOURLY' | 'PERCENTAGE_OF_COMPLETION';
+  suggestedValue: number;
+  projectTaskCount: number;
+  /** Số dòng giờ công chưa tra được đơn giá — chưa tính vào gợi ý. */
+  missingRateEntryCount: number;
+  tasks: AcceptanceTaskValueRes[];
+}
+
+export interface AcceptanceTaskValueRes {
+  taskId: number;
+  taskName: string;
+  /** null với hợp đồng trọn gói (không tính theo giờ). */
+  billableHours: number | null;
+  value: number;
 }
 
 /** POST /projects/{projectId}/acceptances */

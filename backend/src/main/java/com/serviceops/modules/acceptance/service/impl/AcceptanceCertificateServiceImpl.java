@@ -83,11 +83,13 @@ public class AcceptanceCertificateServiceImpl implements AcceptanceCertificateSe
 	private final WorkPackageCompletionValidator completionValidator;
 	private final AcceptanceAccessGuard accessGuard;
 	private final AcceptanceViewAssembler assembler;
+	private final AcceptanceValueEstimator valueEstimator;
 	private final AuditLogService auditLogService;
 	private final Clock clock;
 
 	@Override
-	@Transactional(readOnly = true)
+	// Khong readOnly: goi y gia tri (AcceptanceValueEstimator) ghi nhat ky xem doanh thu trong cung transaction (QTN-03).
+	@Transactional
 	public AcceptanceReadinessRes getReadiness(Long projectId, Long workPackageId) {
 		Project project = accessGuard.requireManagedProject(projectId);
 		WorkPackage workPackage = workPackageRepository.findById(workPackageId)
@@ -95,7 +97,8 @@ public class AcceptanceCertificateServiceImpl implements AcceptanceCertificateSe
 				.orElseThrow(() -> notFound("Khong tim thay hang muc thuoc du an"));
 		List<WorkPackage> packages = workPackageRepository.findByProjectIdOrderBySortOrderAscIdAsc(projectId);
 		Set<Long> scope = completionValidator.subtreeIds(workPackage.getId(), packages);
-		List<Task> tasks = tasksIn(projectId, scope);
+		List<Task> projectTasks = taskRepository.findByProjectIdOrderByIdAsc(projectId);
+		List<Task> tasks = projectTasks.stream().filter(task -> scope.contains(task.getWorkPackageId())).toList();
 		List<Task> unfinished = completionValidator.unfinished(tasks);
 		Optional<AcceptanceCertificate> existing = overlapping(workPackage, packages, scope).stream().findFirst();
 
@@ -113,7 +116,8 @@ public class AcceptanceCertificateServiceImpl implements AcceptanceCertificateSe
 				deliverables,
 				existing.map(AcceptanceCertificate::getId).orElse(null),
 				existing.map(AcceptanceCertificate::getCertificateCode).orElse(null),
-				existing.map(AcceptanceCertificate::getStatus).orElse(null));
+				existing.map(AcceptanceCertificate::getStatus).orElse(null),
+				ready ? valueEstimator.estimate(project, tasks, projectTasks.size()) : null);
 	}
 
 	@Override
@@ -245,7 +249,7 @@ public class AcceptanceCertificateServiceImpl implements AcceptanceCertificateSe
 	private void applyContent(AcceptanceCertificate certificate, WorkPackage workPackage, String title,
 			BigDecimal acceptedValue, String note) {
 		String trimmedTitle = blankToNull(title);
-		certificate.setTitle(trimmedTitle != null ? trimmedTitle : "Nghiem thu hang muc " + workPackage.getName());
+		certificate.setTitle(trimmedTitle != null ? trimmedTitle : "Nghiệm thu hạng mục " + workPackage.getName());
 		certificate.setAcceptedValue(acceptedValue.setScale(2, RoundingMode.HALF_UP));
 		certificate.setNote(blankToNull(note));
 	}
