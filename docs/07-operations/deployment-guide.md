@@ -56,6 +56,46 @@ Local DB + Feature ──────► develop ──────► main ─�
    ```
 4. Deploy xong, lấy URL frontend — quay lại bước 2 điền `FRONTEND_BASE_URL` và `CORS_ALLOWED_ORIGINS` đúng URL này trên backend, **Save and rebuild** lại backend.
 
+## 3b. Phương án Railway: backend + MySQL cùng một nơi (thay backend Render + Aiven)
+
+Lý do: backend Render đặt ở Oregon (Mỹ) còn MySQL Aiven ở Bangalore (Ấn Độ) — mỗi truy vấn đi vòng Thái Bình
+Dương (~0,24 s/lượt), đo thực tế 2,5–4 s mỗi API có đụng DB, đăng nhập ~8 s; gói Free của Render còn ngủ sau 15
+phút và khởi động lại mất 3+ phút. Railway đặt backend và MySQL cùng vùng **Southeast Asia (Singapore)**, nối
+qua mạng nội bộ, không ngủ. Frontend **vẫn để trên Render Static Site** (miễn phí, không ngủ) — chỉ đổi
+`VITE_API_BASE_URL`.
+
+Chi phí: tài khoản mới vào gói Trial, **không cần thẻ**, được 5 USD dùng trong 30 ngày (tối đa 1 GB RAM mỗi
+service). Backend + MySQL tốn khoảng 8–10 USD/tháng (ước tính) nên 5 USD đủ khoảng 2 tuần; hết tiền thì Railway
+dừng dịch vụ (không xóa volume DB) — muốn chạy tiếp phải lên Hobby (5 USD/tháng, cần thẻ). Đăng nhập Railway
+bằng **GitHub** để được Trial đầy đủ (không bị giới hạn mạng ra ngoài).
+
+1. **MySQL:** New Project → **Database → MySQL**. Vào service MySQL → **Settings → Region** chọn Southeast Asia
+   (Singapore) ngay khi còn trống dữ liệu.
+2. **Backend:** trong cùng project → **New → GitHub Repo** → `service-operations`. Settings của service:
+   - **Root Directory:** `/backend` — Railway tự dùng `backend/Dockerfile` (bản sao của `docker/backend/Dockerfile`,
+     vì Railway chỉ tải các tệp trong Root Directory).
+   - **Branch:** `main`. **Region:** Southeast Asia (Singapore).
+3. **Variables** của backend (`${{MySQL.X}}` là biến tham chiếu sang service tên `MySQL` — đổi tên nếu service DB
+   tên khác):
+   ```
+   SPRING_PROFILES_ACTIVE = dev
+   DB_URL = jdbc:mysql://${{MySQL.MYSQLHOST}}:${{MySQL.MYSQLPORT}}/${{MySQL.MYSQLDATABASE}}?allowPublicKeyRetrieval=true
+   DB_USERNAME = ${{MySQL.MYSQLUSER}}
+   DB_PASSWORD = ${{MySQL.MYSQLPASSWORD}}
+   JWT_SECRET = <chuỗi ngẫu nhiên dài — chép từ Render hoặc tạo mới>
+   JWT_EXPIRATION = 86400000
+   FRONTEND_BASE_URL = https://service-operations-frontend.onrender.com
+   CORS_ALLOWED_ORIGINS = https://service-operations-frontend.onrender.com
+   TZ = Asia/Ho_Chi_Minh
+   ```
+   `TZ` để "hôm nay" và giờ tạo bản ghi theo giờ Việt Nam (máy chủ mặc định UTC, lệch 7 tiếng).
+4. **Networking → Generate Domain** cho backend → được `https://<ten>.up.railway.app`.
+5. **Deploy Logs:** Flyway áp `V1`…`V92` + seed `R__*` lên DB trống, dòng cuối `Started ServiceOperationsApplication`.
+6. **Frontend (Render Static Site) → Environment:** `VITE_API_BASE_URL = https://<ten>.up.railway.app/api/v1` →
+   Save → **Manual Deploy → Clear build cache & deploy** (biến `VITE_*` được gắn lúc build).
+7. Kiểm tra đăng nhập trên frontend xong thì **Suspend** backend Render cũ để khỏi nhầm (nó vẫn tự deploy mỗi
+   lần có commit lên `main`).
+
 ## 4. Dev vẫn test local thoải mái
 
 - Chạy stack local bằng `scripts/dev-up.sh` hoặc `docker compose up` (dùng `docker-compose.yml` + Dockerfile ở gốc, chạy được độc lập với Render).
