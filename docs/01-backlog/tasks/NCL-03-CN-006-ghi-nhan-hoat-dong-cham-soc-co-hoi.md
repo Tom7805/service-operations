@@ -1,6 +1,6 @@
 # `NCL-03-CN-006-CV-01` — Phân tích nghiệp vụ: Ghi nhận hoạt động chăm sóc cơ hội
 
-> Task này là bước `BE-BA` của user story [`NCL-03-CN-006`](../De_tai_1_Van_Hanh_Dich_Vu_Backlog_v2.md)
+> Task này là bước `BE-BA` của user story `NCL-03-CN-006`
 > — *"Là nhân viên kinh doanh, tôi muốn ghi lại các lần gặp và gọi khách hàng, để đồng nghiệp tiếp
 > nhận không phải bắt đầu lại từ đầu."*
 > Đầu ra của tài liệu này được bàn giao trực tiếp cho `NCL-03-CN-006-CV-03` (xử lý phía máy chủ) —

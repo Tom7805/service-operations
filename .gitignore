@@ -97,8 +97,5 @@ docs/03-database/*.sql.bak
 .claude/
 .agents/
 skills-lock.json
-# Ket qua chup man hinh / comp cua impeccable la san pham trung gian, khong commit.
-# Rieng .impeccable/config.json la cau hinh CHUNG cua nhom (ignoreValues detector) nen van commit.
-.impeccable/review/
-.impeccable/mocks/
-.impeccable/config.local.json
+# Cau hinh va san pham trung gian cua cong cu thiet ke impeccable (chi dung cuc bo), khong commit.
+.impeccable/

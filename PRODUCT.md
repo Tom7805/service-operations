@@ -11,8 +11,7 @@ web
 Nhân viên nội bộ của một công ty dịch vụ, dùng hệ thống song song ở hai bối cảnh ngang nhau (xác nhận với người dùng):
 văn phòng (desktop) và hiện trường (điện thoại). Các vai trò xác nhận qua code/session này gồm: quản trị viên (VT-07,
 quản lý tài khoản, phân quyền, 2FA), và các vai trò nghiệp vụ theo module (kinh doanh/khách hàng, dự án, chấm công,
-chi phí, hóa đơn...). *[Suy luận từ README + mã nguồn: tên vai trò cụ thể theo từng phòng ban chưa được xác nhận —
-docs/00-overview/user-roles.md tồn tại nhưng đang trống.]*
+chi phí, hóa đơn...). *[Suy luận từ README + mã nguồn.]*
 
 ## Product Purpose
 
@@ -35,8 +34,8 @@ và một cổng khách hàng riêng. *[Nguồn: README.md dòng mở đầu —
 - Frontend: React 18 + TypeScript + Vite; CSS thuần tự viết tay tại `frontend/src/assets/styles/index.css`
   (README liệt kê Tailwind CSS nhưng mã nguồn hiện tại của các trang đã xem trong phiên này dùng class CSS tự viết,
   không thấy dùng Tailwind utility class — *cần xác nhận lại nếu có mâu thuẫn khi rà từng trang*).
-- Không có DESIGN.md hay hệ thống token màu/typography chính thức nào tồn tại trước đó
-  (`docs/06-ui/design-tokens.md` có trong repo nhưng đang trống) — đây là lý do cần thiết lập DESIGN.md mới.
+- Không có DESIGN.md hay hệ thống token màu/typography chính thức nào tồn tại trước đó — đây là lý do cần thiết
+  lập DESIGN.md mới.
 - Ngôn ngữ giao diện: tiếng Việt.
 
 ## Brand Commitments
@@ -46,8 +45,7 @@ giúp hệ thống chuyên nghiệp hơn — chỉ cần giữ nguyên toàn b�
 
 ## Evidence on Hand
 
-Không có tài liệu thương hiệu, ảnh chụp màn hình chính thức, hay bộ nhận diện có sẵn trong repo tại thời điểm này
-(các file docs/00-overview, docs/06-ui liên quan đang trống). Các quyết định thị giác trong đợt cải cách này sẽ dựa
+Không có tài liệu thương hiệu, ảnh chụp màn hình chính thức, hay bộ nhận diện có sẵn trong repo tại thời điểm này. Các quyết định thị giác trong đợt cải cách này sẽ dựa
 trên việc đọc trực tiếp mã nguồn từng trang.
 
 ## Product Principles

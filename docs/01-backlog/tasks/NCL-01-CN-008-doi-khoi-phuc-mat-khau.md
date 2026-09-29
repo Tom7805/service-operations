@@ -1,6 +1,6 @@
 # `NCL-01-CN-008-CV-01` — Phân tích nghiệp vụ: Đổi và khôi phục mật khẩu
 
-> Task này là bước `BE-BA` của user story [`NCL-01-CN-008`](../De_tai_1_Van_Hanh_Dich_Vu_Backlog_v2.md)
+> Task này là bước `BE-BA` của user story `NCL-01-CN-008`
 > — *"Là nhân viên công ty, tôi muốn tự đổi hoặc khôi phục mật khẩu, để không phải nhờ quản trị viên mỗi lần quên."*
 > Đầu ra của tài liệu này được bàn giao trực tiếp cho `NCL-01-CN-008-CV-03` (xử lý phía máy chủ) —
 > xem hiện thực tại `backend/src/main/java/com/serviceops/modules/identity/auth/service/PasswordServiceImpl.java`.
