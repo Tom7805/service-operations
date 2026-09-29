@@ -67,10 +67,8 @@ public class OpportunityServiceImpl implements OpportunityService {
 				.stream()
 				.collect(Collectors.toMap(Customer::getId, Customer::getName, (a, b) -> a));
 
-		// So ngay o giai doan hien tai — de danh sach cho biet mot co hoi da "dung" bao
-		// lau va con bao xa la den nguong canh bao "qua han xu ly" cua Bao cao duong
-		// ong (truoc day chi thay canh bao SAU KHI da qua han, khong co cach nao xem
-		// truoc con so nay o dau ca).
+		// So ngay o giai doan hien tai, de danh sach cho biet mot co hoi da "dung" bao
+		// lau va con bao xa la den nguong canh bao "qua han xu ly" cua Bao cao duong ong.
 		Map<Long, Long> daysInStageById = stageDurationCalculator
 				.daysInCurrentStageByOpportunity(opportunities, LocalDateTime.now());
 
@@ -99,9 +97,8 @@ public class OpportunityServiceImpl implements OpportunityService {
 					"Gia tri du kien phai la so duong");
 		}
 
-		// Chan tao trung ten cho cung mot khach hang — tranh tao lap lai nhieu
-		// ban ghi giong het nhau (da tung xay ra voi du lieu that trong he
-		// thong, gay dem trung va sai lech so lieu du bao doanh thu).
+		// Chan tao trung ten cho cung mot khach hang, tranh dem trung va sai lech
+		// so lieu du bao doanh thu.
 		if (opportunityRepository.existsByCustomerIdAndNameIgnoreCase(customer.getId(), name)) {
 			throw new BusinessRuleException(ErrorCode.DUPLICATE_DATA,
 					"Khach hang nay da co co hoi trung ten \"" + name + "\". Vui long doi ten khac de phan biet.");
@@ -115,9 +112,7 @@ public class OpportunityServiceImpl implements OpportunityService {
 		// Nguoi phu trach: mac dinh la nguoi tao neu khong duoc chi dinh.
 		opportunity.setOwnerId(request.ownerId() != null
 				? request.ownerId() : currentUserScopeProvider.currentUserId());
-		// QTN-06 / TC-01: co hoi duoc tao o giai doan dau tien, kem dung xac suat cua giai
-		// doan do (truoc day thieu dong nay nen probability = null, giao dien hien "% xac
-		// suat" thay vi "10% xac suat").
+		// QTN-06 / TC-01: co hoi duoc tao o giai doan dau tien, kem dung xac suat cua giai doan do.
 		opportunity.setStage(stageTransitionValidator.initialStage());
 		opportunity.setProbability(stageTransitionValidator.initialProbability());
 		opportunity.setStatus(OpportunityStatus.OPEN);

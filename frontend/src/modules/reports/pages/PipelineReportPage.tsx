@@ -8,9 +8,7 @@ import { ICONS } from '../../../components/common/icons';
 interface PipelineReportPageProps {
   currentUserRoles?: string[];
   currentUserName?: string;
-  /** Mở cơ hội đọng lâu ngay tại "Cơ hội bán hàng" để xử lý (chuyển giai đoạn,
-   *  chốt kết quả...) — trước đây báo cáo chỉ in ra "ID: 2001, 2002" trần trụi,
-   *  không có cách nào bấm vào để thao tác tiếp. */
+  /** Mở cơ hội đọng lâu ngay tại "Cơ hội bán hàng" để xử lý (chuyển giai đoạn, chốt kết quả...). */
   onViewOpportunity?: (opportunityId: number, opportunityName: string) => void;
 }
 

@@ -46,8 +46,7 @@ export const DATA_TYPE_LABELS: Record<SensitiveDataTypeCode, string> = {
   MARGIN: 'Biên lợi nhuận',
 };
 
-/** Nhật ký thao tác nghiệp vụ tổng hợp (Tài khoản, Phân quyền, 2FA...) — thay cho các ô "nhật ký"
- * nhúng tạm thời, chỉ lưu trên trình duyệt, đã dùng trước đây ở từng trang. */
+/** Nhật ký thao tác nghiệp vụ tổng hợp (Tài khoản, Phân quyền, 2FA...). */
 export type AuditTargetType = 'USER' | 'ROLE_SCOPE' | 'TWO_FACTOR' | 'DEPARTMENT' | 'CUSTOMER' | 'MASKING' | 'GENERAL';
 
 export interface AuditLogEntry {

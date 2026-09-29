@@ -13,8 +13,7 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 /**
- * Một bản ghi nhật ký thao tác nghiệp vụ tổng hợp — thay cho các ô "nhật ký" giả lập, chỉ tồn tại
- * trên trình duyệt (mất khi tải lại trang) đã dùng trước đây ở các trang Tài khoản, Phân quyền...
+ * Một bản ghi nhật ký thao tác nghiệp vụ tổng hợp.
  *
  * <p>Không dùng FK cứng sang {@code users} để bảo toàn lịch sử khi tài khoản người thực hiện bị xóa
  * (giống quy ước ở {@link com.serviceops.common.audit.entity.SensitiveDataAccessLog}).</p>

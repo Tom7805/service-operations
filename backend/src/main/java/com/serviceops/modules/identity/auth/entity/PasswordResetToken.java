@@ -44,9 +44,8 @@ public class PasswordResetToken extends BaseEntity {
     /**
      * So lan nhap SAI ma khoi phuc. Qua {@link #MAX_ATTEMPTS} lan thi ma chet.
      *
-     * <p>Bat buoc phai co ke tu khi chuyen sang ma 6 so: khong gian chi 1.000.000
-     * kha nang nen khong dem so lan sai thi do het bang tay cung duoc. Token dai
-     * truoc day khong can dem vi 2^256 la khong the do.</p>
+     * <p>Bat buoc phai dem vi ma khoi phuc chi co 6 so (khong gian 1.000.000
+     * kha nang), khac voi token dai (2^256) la khong the do brute-force.</p>
      */
     @Column(name = "attempts", nullable = false)
     private int attempts = 0;

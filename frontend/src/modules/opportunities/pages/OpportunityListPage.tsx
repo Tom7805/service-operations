@@ -19,9 +19,7 @@ interface OpportunityListPageProps {
   currentUserRoles?: string[];
   currentUserName?: string;
   initialOpportunities?: Opportunity[];
-  /** Mở màn "Ghi nhận hoạt động chăm sóc cơ hội" cho đúng cơ hội đang chọn —
-   *  trước đây màn đó chỉ vào được bằng cách tự gõ tay mã số cơ hội, không ai
-   *  đoán được mã số nếu không tra database. */
+  /** Mở màn "Ghi nhận hoạt động chăm sóc cơ hội" cho đúng cơ hội đang chọn. */
   onOpenActivities?: (opportunityId: number, opportunityName: string) => void;
   /** ID cơ hội cần tự động mở lên khi trang vừa tải xong — dùng khi được điều
    *  hướng từ nơi khác (ví dụ bấm một cơ hội "đọng lâu" ở Báo cáo đường ống). */

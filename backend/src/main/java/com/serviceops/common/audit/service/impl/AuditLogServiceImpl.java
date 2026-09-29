@@ -24,10 +24,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Ghi và tra cứu nhật ký thao tác nghiệp vụ tổng hợp. Thay cho các danh sách "nhật ký" giả lập chỉ
- * tồn tại tạm thời trên trình duyệt ở từng trang trước đây (Tài khoản, Phân quyền...).
- */
+/** Ghi và tra cứu nhật ký thao tác nghiệp vụ tổng hợp. */
 @Service
 @RequiredArgsConstructor
 public class AuditLogServiceImpl implements AuditLogService {

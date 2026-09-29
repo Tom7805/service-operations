@@ -136,11 +136,8 @@ p, .page-subtitle, .field-hint, .role-matrix-desc { text-wrap: pretty; }
   position: absolute; left: 12px; top: 12px; z-index: 999;
   padding: 10px 18px; border-radius: var(--radius-md); background: var(--ink-strong); color: #fff;
   font-size: 14.5px; font-weight: 700; text-decoration: none;
-  /* Trước đây giấu bằng `top: -60px` rồi chuyển động `top` khi focus. `top` là
-     thuộc tính BỐ CỤC: mỗi khung hình bắt trình duyệt tính lại vị trí rồi vẽ lại,
-     thay vì chỉ gộp lớp (AUDIT §5: chỉ hoạt hình `transform` và `opacity`).
-     Dùng `translateY` cho đúng, và đây lại chính là phần tử mà người dùng bàn
-     phím nhìn thấy đầu tiên khi vào trang — nó phải bật ra dứt khoát. */
+  /* Dùng `translateY` thay vì hoạt hình `top`: `top` là thuộc tính bố cục, buộc
+     trình duyệt tính lại vị trí mỗi khung hình thay vì chỉ gộp lớp. */
   transform: translateY(calc(-100% - 16px));
   transition: transform var(--dur-fast) var(--ease-out);
 }
@@ -160,13 +157,11 @@ p, .page-subtitle, .field-hint, .role-matrix-desc { text-wrap: pretty; }
 }
 ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.38); background-clip: content-box; }
 ::-webkit-scrollbar-corner { background: transparent; }
-/* Microsoft Edge tu chen mot nut "hien mat khau" hinh con mat RIENG cua no vao
-   MOI o <input type="password">, dat o dung goc phai — chinh cho ma nut
-   `.field__toggle` tu ve cua he thong cung dat. Ket qua la HAI con mat chong
-   len nhau. Day khong phai loi trong component icon (no chi ve dung MOT icon
-   tuy trang thai) — la mot lop UI rieng cua trinh duyet, chi Edge co, Chrome/
-   Firefox khong co. An han quan the cua Edge di, giu lai dung icon do he thong
-   tu ve vi no doi mau/kich thuoc theo dung bang mau chung. */
+/* Microsoft Edge tu chen mot nut "hien mat khau" hinh con mat rieng cua no vao moi
+   o <input type="password">, dat o dung goc phai trung voi nut `.field__toggle` tu
+   ve cua he thong, gay hai con mat chong len nhau. Chi Edge co lop UI nay (Chrome,
+   Firefox khong co) — an no di, giu icon do he thong tu ve vi no doi mau/kich thuoc
+   theo dung bang mau chung. */
 input[type='password']::-ms-reveal,
 input[type='password']::-ms-clear {
   display: none;
@@ -1335,10 +1330,8 @@ body { background: var(--canvas); }
   width: 34px;
   height: 34px;
   border-radius: var(--radius-md);
-  /* Trước đây là `linear-gradient(135deg, #111111 0%, #111111 100%)` — hai đầu
-     CÙNG MỘT MÀU, tức một nền đặc được viết dưới dạng gradient. Đợt quét màu
-     trước đã thay giá trị màu nhưng để lại vỏ gradient. Nó vẫn bắt trình duyệt
-     dựng một lớp chuyển sắc để vẽ ra đúng một màu phẳng. */
+  /* Dùng màu phẳng, không phải gradient hai đầu cùng màu — tránh bắt trình duyệt
+     dựng một lớp chuyển sắc chỉ để vẽ ra một màu phẳng. */
   background: var(--ink-strong);
   display: flex;
   align-items: center;
@@ -1786,11 +1779,9 @@ body { background: var(--canvas); }
 .contact-table-container { background: #ffffff; border: 1px solid #EAEAEA; border-radius: var(--radius-lg); overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
 .contact-data-table th { background: #F9F9F8; padding: 12px 16px; }
 .contact-data-table td { padding: 14px 16px; }
-/* Hàng "đầu mối chính" trước đây đổ một vệt vàng chuyển sắc suốt cả hàng. Cùng
-   một lỗi với hàng tài khoản bị khóa đã sửa: mảng màu lớn nhất trong bảng, lại
-   mã hóa trùng với pill "Đang là đầu mối chính" ngay trong hàng đó. Bản `:hover`
-   phải dùng `!important` để giành lại quyền chính là dấu hiệu của xung đột này.
-   Giữ hàng trung tính; chính pill làm nhiệm vụ đánh dấu. */
+/* Hàng "đầu mối chính" giữ trung tính, không tô màu cả hàng: mã hóa màu trùng với
+   pill "Đang là đầu mối chính" trong cùng hàng sẽ dư thừa; pill đã đảm nhiệm việc
+   đánh dấu. */
 
 /* Pill trạng thái chuẩn: cặp pastel PHẲNG, không gradient, không đổ bóng, độ đậm
    nằm trong thang (600 chứ không phải 800). Bản cũ có cả ba thứ bị cấm cùng lúc. */

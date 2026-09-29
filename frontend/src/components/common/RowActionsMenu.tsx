@@ -38,9 +38,8 @@ const GAP = 4; // khoảng cách panel ↔ nút ⋮
  * Panel được render bằng React portal thẳng vào <body> và định vị `position: fixed`
  * theo toạ độ nút ⋮ lúc mở. Nhờ vậy nó KHÔNG bị `overflow: hidden` của thẻ bảng
  * (dùng để bo góc) cắt cụt, cũng không bị "kẹt" trong ngữ cảnh xếp chồng / containing
- * block do animation/transform của khối cha tạo ra — đây là lý do trước đây panel
- * mở ở dòng cuối bảng bị che mất gần hết. Panel tự chọn bung lên/xuống theo khoảng
- * trống khung nhìn và có `max-height` + cuộn trong nếu quá cao.
+ * block do animation/transform của khối cha tạo ra. Panel tự chọn bung lên/xuống theo
+ * khoảng trống khung nhìn và có `max-height` + cuộn trong nếu quá cao.
  */
 export const RowActionsMenu: React.FC<RowActionsMenuProps> = ({ actions, ariaLabel = 'Thao tác' }) => {
   const [open, setOpen] = useState(false);
