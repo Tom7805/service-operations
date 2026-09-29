@@ -16,7 +16,6 @@ import {
 import {
   generateTemporaryPassword,
   passwordRules,
-  suggestUsername,
   validatePortalAccountForm,
   type PortalAccountFormErrors,
 } from '../validators/portalAccountValidators';
@@ -99,7 +98,6 @@ export default function PortalAccountGrantModal({
   const [candidatesError, setCandidatesError] = useState<string | null>(null);
   const [contactId, setContactId] = useState<number | null>(null);
   const [username, setUsername] = useState('');
-  const [usernameTouched, setUsernameTouched] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -158,7 +156,6 @@ export default function PortalAccountGrantModal({
     setCandidatesError(null);
     setContactId(null);
     setUsername('');
-    setUsernameTouched(false);
     setPassword('');
     setConfirmPassword('');
     setShowPassword(false);
@@ -170,12 +167,6 @@ export default function PortalAccountGrantModal({
     setCustomerId(initialCustomerId ?? null);
     if (initialCustomerId != null) void loadCandidates(initialCustomerId);
   }, [isOpen, initialCustomerId, loadCandidates]);
-
-  // Gợi ý tên đăng nhập theo người liên hệ đang chọn, trừ khi quản trị viên đã tự sửa.
-  useEffect(() => {
-    if (!contact || usernameTouched) return;
-    setUsername(suggestUsername(contact.email, contact.fullName));
-  }, [contact, usernameTouched]);
 
   const handleClose = () => {
     if (submitting) return;
@@ -195,7 +186,6 @@ export default function PortalAccountGrantModal({
     setCustomerId(id);
     setCandidates([]);
     setContactId(null);
-    setUsernameTouched(false);
     setUsername('');
     clear('contactId');
     if (id != null) void loadCandidates(id);
@@ -204,7 +194,6 @@ export default function PortalAccountGrantModal({
   const selectContact = (c: PortalContactCandidateRes) => {
     if (c.portalAccountId != null || submitting) return;
     setContactId(c.contactId);
-    setUsernameTouched(false);
     clear('contactId');
     clear('username');
   };
@@ -352,7 +341,6 @@ export default function PortalAccountGrantModal({
                     setPassword('');
                     setConfirmPassword('');
                     setUsername('');
-                    setUsernameTouched(false);
                     setCustomerId(cid);
                     void loadCandidates(cid);
                   }}
@@ -491,7 +479,7 @@ export default function PortalAccountGrantModal({
                                   <span className={`badge ${c.portalStatus === 'LOCKED' ? 'badge--red' : 'badge--green'}`}>
                                     {statusLabel(c.portalStatus)}
                                   </span>
-                                  <span className="cell-muted" style={{ fontSize: '12px' }}>@{c.portalUsername}</span>
+                                  <span className="cell-muted" style={{ fontSize: '12.5px' }}>@{c.portalUsername}</span>
                                 </>
                               ) : (
                                 <span className="badge badge--gray">Chưa có tài khoản</span>
@@ -527,7 +515,6 @@ export default function PortalAccountGrantModal({
                         value={username}
                         onChange={(e) => {
                           setUsername(e.target.value);
-                          setUsernameTouched(true);
                           clear('username');
                         }}
                         disabled={submitting || !contact}
