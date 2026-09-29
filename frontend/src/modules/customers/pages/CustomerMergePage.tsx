@@ -40,10 +40,13 @@ function CustomerSearchPicker({
   id,
   onSelect,
   disabled,
+  excludeId,
 }: {
   id: string;
   onSelect: (customer: Customer) => void;
   disabled?: boolean;
+  /** Loại khách hàng đã được chọn ở ô đối diện khỏi gợi ý — tránh chọn cùng một hồ sơ cho cả hai vai trò. */
+  excludeId?: number | null;
 }) {
   const [keyword, setKeyword] = useState('');
   const [results, setResults] = useState<Customer[]>([]);
@@ -63,7 +66,9 @@ function CustomerSearchPicker({
       setIsSearching(true);
       try {
         const data = await fetchCustomers(trimmed);
-        setResults(data.filter((c) => c.status !== 'MERGED').slice(0, 8));
+        setResults(
+          data.filter((c) => c.status !== 'MERGED' && c.id !== excludeId).slice(0, 8)
+        );
         setIsOpen(true);
       } catch {
         setResults([]);
@@ -74,7 +79,7 @@ function CustomerSearchPicker({
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [keyword]);
+  }, [keyword, excludeId]);
 
   return (
     <div className="customer-search-picker" style={{ position: 'relative', marginBottom: '8px' }}>
@@ -370,6 +375,7 @@ export default function CustomerMergePage({
                 id="merge-target-search"
                 disabled={isPreviewing || isMerging}
                 onSelect={(customer) => setTargetIdInput(String(customer.id))}
+                excludeId={sourceIdInput ? Number(sourceIdInput) : null}
               />
               <span className="field-hint">Sẽ nhận toàn bộ dữ liệu liên quan của hồ sơ bên cạnh.</span>
 
@@ -404,6 +410,7 @@ export default function CustomerMergePage({
                 id="merge-source-search"
                 disabled={isPreviewing || isMerging}
                 onSelect={(customer) => setSourceIdInput(String(customer.id))}
+                excludeId={targetIdInput ? Number(targetIdInput) : null}
               />
               <span className="field-hint">Sẽ chuyển sang trạng thái "Đã gộp" sau khi xác nhận.</span>
 
