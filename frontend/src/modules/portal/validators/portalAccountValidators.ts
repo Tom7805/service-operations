@@ -75,31 +75,6 @@ export function validateStatusReason(reason: string): string | undefined {
   return reason.trim().length > PORTAL_REASON_MAX ? `Lý do tối đa ${PORTAL_REASON_MAX} ký tự` : undefined;
 }
 
-/**
- * Gợi ý tên đăng nhập từ email người liên hệ (phần trước @) hoặc họ tên, bỏ dấu tiếng Việt và ký tự không hợp lệ.
- * Chỉ là gợi ý — Quản trị viên sửa được; trùng tên vẫn do backend chặn (409).
- */
-export function suggestUsername(email: string | null | undefined, fullName: string | null | undefined): string {
-  const normalize = (source: string) =>
-    source
-      .trim()
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
-      .replace(/đ/g, 'd')
-      .replace(/Đ/g, 'D')
-      .toLowerCase()
-      .replace(/\s+/g, '.')
-      .replace(/[^a-z0-9._@-]/g, '')
-      .replace(/\.{2,}/g, '.')
-      .replace(/^\.+|\.+$/g, '')
-      .slice(0, PORTAL_USERNAME_MAX);
-  const fromEmail = normalize((email ?? '').split('@')[0] ?? '');
-  // Phần trước @ quá ngắn (vd "b@...") thì không đạt độ dài tối thiểu — dùng họ tên thay thế.
-  if (fromEmail.length >= PORTAL_USERNAME_MIN) return fromEmail;
-  const fromName = normalize(fullName ?? '');
-  return fromName.length >= fromEmail.length ? fromName : fromEmail;
-}
-
 /** Sinh mật khẩu tạm 12 ký tự luôn đạt luật (có chữ hoa, chữ thường, chữ số), bỏ các ký tự dễ nhầm (0/O, 1/l/I). */
 export function generateTemporaryPassword(random: () => number = Math.random): string {
   const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
