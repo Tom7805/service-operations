@@ -408,7 +408,7 @@ trung tính, và mở đầu bằng **vòng 0.5px** thay cho viền 1px.
 - **Nút phụ / ô làm mới** (`0 1px 2px` mực 4%).
 - **Focus** (`--shadow-focus`): vòng 3px `accent-ring`.
 
-Công thức chính xác nằm trong `.impeccable/design.json`.
+Giá trị chính xác nằm trong các biến `--shadow-*` của `frontend/src/assets/styles/index.css`.
 
 ### Vật liệu mờ — chỉ trên lớp chức năng
 | Bề mặt | Xử lý |
