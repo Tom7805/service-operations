@@ -1,6 +1,6 @@
 # `NCL-03-CN-007-CV-01` — Phân tích nghiệp vụ: Báo cáo đường ống bán hàng theo giai đoạn
 
-> Task này là bước `BE-BA` của user story [`NCL-03-CN-007`](../De_tai_1_Van_Hanh_Dich_Vu_Backlog_v2.md)
+> Task này là bước `BE-BA` của user story `NCL-03-CN-007`
 > — *"Là ban giám đốc, tôi muốn xem số lượng và giá trị cơ hội ở từng giai đoạn, để biết đường ống có
 > đủ dày hay không."*
 > Đầu ra của tài liệu này được bàn giao trực tiếp cho `NCL-03-CN-007-CV-03` (xử lý phía máy chủ) —
