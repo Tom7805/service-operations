@@ -5045,6 +5045,13 @@ select.form-input:disabled, select.form-select:disabled, select.filter-select:di
 /* Nút tìm nhanh dạng icon chỉ hiện khi gợi ý phím tắt bị ẩn (màn hẹp). */
 .cmdk-mobile { display: none; }
 
+/* Trang Gộp khách hàng trùng: `.user-table-card` bo góc bằng overflow:hidden, nhưng danh sách gợi ý
+   của ô tìm kiếm khách hàng (position:absolute, có thể cao hơn phần còn trống của thẻ) bị cắt cụt
+   theo đúng viền thẻ đó thay vì đè lên phần nội dung bên dưới. Chỉ mở overflow cho riêng thẻ này
+   (không đụng tới .user-table-card dùng chung ở các trang khác) và đưa danh sách gợi ý lên trên cùng. */
+.customer-table-card { overflow: visible; }
+.customer-search-picker__list { z-index: 30; box-shadow: 0 12px 28px -8px rgb(var(--shadow-rgb) / 0.28); }
+
 /* ---------- 15. Màn hẹp ---------- */
 @media (max-width: 900px) {
   .side-nav { background: var(--frame) !important; padding: 8px 10px; }
