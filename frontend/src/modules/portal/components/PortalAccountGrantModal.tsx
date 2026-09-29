@@ -16,7 +16,6 @@ import {
 import {
   generateTemporaryPassword,
   passwordRules,
-  suggestUsername,
   validatePortalAccountForm,
   type PortalAccountFormErrors,
 } from '../validators/portalAccountValidators';
@@ -99,10 +98,11 @@ export default function PortalAccountGrantModal({
   const [candidatesError, setCandidatesError] = useState<string | null>(null);
   const [contactId, setContactId] = useState<number | null>(null);
   const [username, setUsername] = useState('');
-  const [usernameTouched, setUsernameTouched] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  // Ô nhập lại có nút con mắt riêng: người nhập so từng ô với nhau mà không phải hiện cả hai.
+  const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors] = useState<PortalAccountFormErrors>({});
   const [saveError, setSaveError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -156,10 +156,10 @@ export default function PortalAccountGrantModal({
     setCandidatesError(null);
     setContactId(null);
     setUsername('');
-    setUsernameTouched(false);
     setPassword('');
     setConfirmPassword('');
     setShowPassword(false);
+    setShowConfirm(false);
     setErrors({});
     setSaveError(null);
     setCreated(null);
@@ -167,12 +167,6 @@ export default function PortalAccountGrantModal({
     setCustomerId(initialCustomerId ?? null);
     if (initialCustomerId != null) void loadCandidates(initialCustomerId);
   }, [isOpen, initialCustomerId, loadCandidates]);
-
-  // Gợi ý tên đăng nhập theo người liên hệ đang chọn, trừ khi quản trị viên đã tự sửa.
-  useEffect(() => {
-    if (!contact || usernameTouched) return;
-    setUsername(suggestUsername(contact.email, contact.fullName));
-  }, [contact, usernameTouched]);
 
   const handleClose = () => {
     if (submitting) return;
@@ -192,7 +186,6 @@ export default function PortalAccountGrantModal({
     setCustomerId(id);
     setCandidates([]);
     setContactId(null);
-    setUsernameTouched(false);
     setUsername('');
     clear('contactId');
     if (id != null) void loadCandidates(id);
@@ -201,7 +194,6 @@ export default function PortalAccountGrantModal({
   const selectContact = (c: PortalContactCandidateRes) => {
     if (c.portalAccountId != null || submitting) return;
     setContactId(c.contactId);
-    setUsernameTouched(false);
     clear('contactId');
     clear('username');
   };
@@ -211,6 +203,7 @@ export default function PortalAccountGrantModal({
     setPassword(generated);
     setConfirmPassword(generated);
     setShowPassword(true);
+    setShowConfirm(true);
     clear('password');
     clear('confirmPassword');
   };
@@ -348,7 +341,6 @@ export default function PortalAccountGrantModal({
                     setPassword('');
                     setConfirmPassword('');
                     setUsername('');
-                    setUsernameTouched(false);
                     setCustomerId(cid);
                     void loadCandidates(cid);
                   }}
@@ -487,7 +479,7 @@ export default function PortalAccountGrantModal({
                                   <span className={`badge ${c.portalStatus === 'LOCKED' ? 'badge--red' : 'badge--green'}`}>
                                     {statusLabel(c.portalStatus)}
                                   </span>
-                                  <span className="cell-muted" style={{ fontSize: '12px' }}>@{c.portalUsername}</span>
+                                  <span className="cell-muted" style={{ fontSize: '12.5px' }}>@{c.portalUsername}</span>
                                 </>
                               ) : (
                                 <span className="badge badge--gray">Chưa có tài khoản</span>
@@ -523,7 +515,6 @@ export default function PortalAccountGrantModal({
                         value={username}
                         onChange={(e) => {
                           setUsername(e.target.value);
-                          setUsernameTouched(true);
                           clear('username');
                         }}
                         disabled={submitting || !contact}
@@ -580,20 +571,33 @@ export default function PortalAccountGrantModal({
                     </div>
                     <div className="form-field">
                       <label className="form-label required" htmlFor="portal-grant-confirm">Nhập lại mật khẩu</label>
-                      <input
-                        id="portal-grant-confirm"
-                        type={showPassword ? 'text' : 'password'}
-                        className={`form-input ${errors.confirmPassword ? 'form-input--error' : ''}`}
-                        maxLength={PORTAL_PASSWORD_MAX}
-                        value={confirmPassword}
-                        onChange={(e) => {
-                          setConfirmPassword(e.target.value);
-                          clear('confirmPassword');
-                        }}
-                        disabled={submitting || !contact}
-                        autoComplete="new-password"
-                        data-testid="portal-grant-confirm"
-                      />
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          id="portal-grant-confirm"
+                          type={showConfirm ? 'text' : 'password'}
+                          className={`form-input ${errors.confirmPassword ? 'form-input--error' : ''}`}
+                          maxLength={PORTAL_PASSWORD_MAX}
+                          value={confirmPassword}
+                          onChange={(e) => {
+                            setConfirmPassword(e.target.value);
+                            clear('confirmPassword');
+                          }}
+                          disabled={submitting || !contact}
+                          autoComplete="new-password"
+                          style={{ paddingRight: '40px' }}
+                          data-testid="portal-grant-confirm"
+                        />
+                        <button
+                          type="button"
+                          className="portal-password-toggle"
+                          onClick={() => setShowConfirm((v) => !v)}
+                          aria-label={showConfirm ? 'Ẩn mật khẩu nhập lại' : 'Hiện mật khẩu nhập lại'}
+                          disabled={!contact}
+                          data-testid="portal-grant-confirm-toggle"
+                        >
+                          {showConfirm ? ICONS.eyeOff : ICONS.eye}
+                        </button>
+                      </div>
                       {errors.confirmPassword && <span className="field-error">{errors.confirmPassword}</span>}
                     </div>
                   </div>

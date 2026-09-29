@@ -140,8 +140,8 @@ describe('NCL-13-CN-001 — Cấp tài khoản cổng cho khách hàng', () => {
     expect(within(primary).getByRole('radio')).toBeChecked();
     expect(within(within(modal).getByTestId('portal-grant-contact-12')).getByRole('radio')).toBeDisabled();
 
-    // Tên đăng nhập gợi ý: phần trước @ của email quá ngắn ("b") nên lấy từ họ tên.
-    expect(within(modal).getByTestId('portal-grant-username')).toHaveValue('tran.van.b');
+    // Không tự điền tên đăng nhập — quản trị viên tự đặt.
+    expect(within(modal).getByTestId('portal-grant-username')).toHaveValue('');
     fireEvent.change(within(modal).getByTestId('portal-grant-username'), { target: { value: 'tranvanb' } });
     fireEvent.change(within(modal).getByTestId('portal-grant-password'), { target: { value: 'Matkhau123' } });
     fireEvent.change(within(modal).getByTestId('portal-grant-confirm'), { target: { value: 'Matkhau123' } });
@@ -195,6 +195,25 @@ describe('NCL-13-CN-001 — Cấp tài khoản cổng cho khách hàng', () => {
     expect(within(modal).getByTestId('portal-grant-confirm')).toHaveValue(pwd);
   });
 
+  it('ô "Nhập lại mật khẩu" có nút con mắt riêng, hiện/ẩn độc lập với ô mật khẩu tạm', async () => {
+    await renderAdmin();
+    fireEvent.click(screen.getByTestId('portal-account-open-grant'));
+    const modal = await screen.findByTestId('portal-grant-modal');
+    fireEvent.change(within(modal).getByTestId('portal-grant-customer'), { target: { value: '1001' } });
+    await within(modal).findByTestId('portal-grant-contact-11');
+
+    const password = within(modal).getByTestId('portal-grant-password');
+    const confirm = within(modal).getByTestId('portal-grant-confirm');
+    expect(confirm).toHaveAttribute('type', 'password');
+
+    fireEvent.click(within(modal).getByRole('button', { name: 'Hiện mật khẩu nhập lại' }));
+    expect(confirm).toHaveAttribute('type', 'text');
+    expect(password).toHaveAttribute('type', 'password');
+
+    fireEvent.click(within(modal).getByRole('button', { name: 'Ẩn mật khẩu nhập lại' }));
+    expect(confirm).toHaveAttribute('type', 'password');
+  });
+
   it('TC-01: trùng tên đăng nhập (409) báo ngay dưới ô tên đăng nhập', async () => {
     api.createPortalAccount.mockRejectedValue(
       new PortalAccountApiError('DUPLICATE_DATA', 'Ten dang nhap b da ton tai', 409)
@@ -204,6 +223,7 @@ describe('NCL-13-CN-001 — Cấp tài khoản cổng cho khách hàng', () => {
     const modal = await screen.findByTestId('portal-grant-modal');
     fireEvent.change(within(modal).getByTestId('portal-grant-customer'), { target: { value: '1001' } });
     await within(modal).findByTestId('portal-grant-contact-11');
+    fireEvent.change(within(modal).getByTestId('portal-grant-username'), { target: { value: 'b.tran' } });
     fireEvent.change(within(modal).getByTestId('portal-grant-password'), { target: { value: 'Matkhau123' } });
     fireEvent.change(within(modal).getByTestId('portal-grant-confirm'), { target: { value: 'Matkhau123' } });
     fireEvent.click(within(modal).getByTestId('portal-grant-submit'));

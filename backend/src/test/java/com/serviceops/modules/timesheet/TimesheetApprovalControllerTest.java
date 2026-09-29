@@ -5,6 +5,7 @@ import com.serviceops.common.exception.BusinessRuleException;
 import com.serviceops.common.exception.ErrorCode;
 import com.serviceops.config.SecurityConfig;
 import com.serviceops.modules.timesheet.controller.TimesheetApprovalController;
+import com.serviceops.modules.timesheet.dto.response.AdjustmentHistoryRes;
 import com.serviceops.modules.timesheet.dto.response.PendingTimesheetRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetApprovalHistoryRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetApprovalRes;
@@ -91,6 +92,32 @@ class TimesheetApprovalControllerTest {
 				.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
 
 		verify(accessDeniedAuditRecorder).record(eq("GET"), contains("/timesheets/pending"));
+	}
+
+	// ==================== Lich su dieu chinh gio cong (NCL-06-CN-005) ====================
+
+	@Test
+	@WithMockUser(authorities = "ROLE_VT-02")
+	void allowsProjectManagerToViewAdjustmentHistory() throws Exception {
+		when(timesheetAdjustmentService.findMyAdjustmentHistory()).thenReturn(List.of(
+				new AdjustmentHistoryRes(2L, 2L, "Thiet ke san pham", 3L, "Khao sat yeu cau", 14L,
+						LocalDate.of(2026, 9, 29), new BigDecimal("3"), new BigDecimal("6"), 3L, 6L, 7L,
+						"Cham cong van tay", "pm.lead", LocalDateTime.of(2026, 9, 29, 15, 47))));
+
+		mockMvc.perform(get("/timesheets/adjustment-history"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data[0].taskName").value("Khao sat yeu cau"))
+				.andExpect(jsonPath("$.data[0].correctedHours").value(6));
+	}
+
+	@Test
+	@WithMockUser(authorities = "ROLE_VT-03")
+	void deniesAdjustmentHistoryForOtherRolesAndLogsDeniedAccess() throws Exception {
+		mockMvc.perform(get("/timesheets/adjustment-history"))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+
+		verify(accessDeniedAuditRecorder).record(eq("GET"), contains("/timesheets/adjustment-history"));
 	}
 
 	// ==================== Lich su duyet/tu choi (NCL-06-CN-003/CN-004) ====================

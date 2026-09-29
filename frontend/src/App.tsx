@@ -294,9 +294,12 @@ export default function App() {
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
+  // Luôn xóa cả trạng thái: URL có thể đã sạch (PortalApp xóa hash bằng replaceState, không phát hashchange)
+  // trong khi portalHashValue vẫn giữ đường dẫn cổng cũ.
   const leavePortalHash = () => {
-    if (!isPortalHash(window.location.hash)) return;
-    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    if (isPortalHash(window.location.hash)) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
     setPortalHashValue('');
   };
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -418,6 +421,9 @@ export default function App() {
     localStorage.removeItem('token');
     localStorage.removeItem('session');
     localStorage.removeItem(LAST_ACTIVITY_KEY);
+    // Khách hàng đăng xuất rồi tài khoản nội bộ đăng nhập trên cùng tab: không được thừa hưởng trang cổng của
+    // phiên trước, kẻo bị coi là "nội bộ mở link cổng" (TC-04) và hiện trang từ chối.
+    leavePortalHash();
     setSession(null);
   }
 

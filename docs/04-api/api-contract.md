@@ -4329,7 +4329,41 @@ nguyên dòng gốc** — cả ba dòng đều tra cứu lại được.
 Lịch sử điều chỉnh của một công việc, mới nhất trước — cùng cấu trúc `AdjustmentTraceRes` như trên, trả
 mảng `data`.
 
-**Response lỗi (áp dụng cho cả hai endpoint):**
+#### `GET /timesheets/adjustment-history`
+
+Nút **Lịch sử điều chỉnh** của màn *Duyệt giờ công › Điều chỉnh*: mọi lần điều chỉnh thuộc **các dự án PM hiện tại
+quản lý** (kể cả dự án đã đóng — chỉ đọc), mới nhất trước. Dòng gốc đã điều chỉnh rời khỏi
+`GET /timesheets/adjustable-entries` nhưng vẫn tra lại được ở đây. Chỉ `VT-02`; vai trò khác `403` và được ghi nhật
+ký từ chối truy cập.
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "adjustmentId": 2,
+      "projectId": 2,
+      "projectName": "Thiết kế sản phẩm thanh lý",
+      "taskId": 3,
+      "taskName": "Khảo sát yêu cầu",
+      "userId": 14,
+      "workDate": "2026-09-29",
+      "originalHours": 3.00,
+      "correctedHours": 6.00,
+      "originalEntryId": 3,
+      "reversalEntryId": 6,
+      "correctedEntryId": 7,
+      "reason": "Giờ đã ghi nhận theo chấm công vân tay",
+      "adjustedBy": "pm.lead",
+      "adjustedAt": "2026-09-29T15:47:19"
+    }
+  ]
+}
+```
+
+PM chưa quản lý dự án nào hoặc chưa có lần điều chỉnh nào thì `data = []`.
+
+**Response lỗi (áp dụng cho hai endpoint ghi/đọc theo công việc ở trên):**
 
 | HTTP | `errorCode` | Khi nào xảy ra |
 |---|---|---|
@@ -6367,13 +6401,39 @@ Xem trước trước khi bấm lập phiếu — dùng để liệt kê công v
     ],
     "activeCertificateId": null,
     "activeCertificateCode": null,
-    "activeCertificateStatus": null
+    "activeCertificateStatus": null,
+    "valueSuggestion": null
   }
 }
 ```
 
 `ready` = dự án đang chạy **và** hạng mục có ≥ 1 công việc **và** không còn công việc dang dở **và** nhánh cây chưa
 có phiếu (`activeCertificate*` khác `null` là phiếu đang chặn).
+
+`valueSuggestion` — giá trị nghiệm thu hệ thống tự tính từ công việc của nhánh hạng mục, để form điền sẵn (người lập
+vẫn sửa được; `POST` không ép giá trị phiếu bằng số này). Chỉ có khi `ready = true`, còn lại `null`:
+
+| Loại hợp đồng | `method` | `suggestedValue` |
+|---|---|---|
+| `TIME_AND_MATERIAL` | `HOURLY` | Tổng doanh thu các dòng giờ công **đã duyệt, tính phí** của công việc trong nhánh (giờ × đơn giá ngày / 8) — cùng công thức màn Doanh thu (NCL-09-CN-002). |
+| `FIXED_PRICE` | `PERCENTAGE_OF_COMPLETION` | Giá trị hợp đồng chia đều cho `projectTaskCount` công việc của dự án (làm tròn đồng), nhân số công việc của nhánh. |
+| `MAINTENANCE`, `MILESTONE`, dự án không gắn hợp đồng | — | `valueSuggestion = null`, người lập tự nhập. |
+
+```json
+"valueSuggestion": {
+  "method": "HOURLY",
+  "suggestedValue": 1800000.00,
+  "projectTaskCount": 2,
+  "missingRateEntryCount": 0,
+  "tasks": [
+    { "taskId": 1, "taskName": "Khảo sát nghiệp vụ", "billableHours": 8.00, "value": 1800000.00 }
+  ]
+}
+```
+
+`missingRateEntryCount` = số dòng giờ công chưa tra được đơn giá, **chưa** tính vào `suggestedValue`.
+`billableHours` là `null` với `PERCENTAGE_OF_COMPLETION`. Mỗi lần có gợi ý, backend ghi một lượt **xem doanh thu**
+vào nhật ký truy cập dữ liệu nhạy cảm (QTN-03).
 
 | HTTP | `errorCode` | Khi nào xảy ra |
 |---|---|---|
@@ -6396,7 +6456,7 @@ có phiếu (`activeCertificate*` khác `null` là phiếu đang chặn).
 | Trường | Kiểu | Bắt buộc | Ghi chú |
 |---|---|---|---|
 | `workPackageId` | number | có | Hạng mục thuộc dự án. |
-| `title` | string | không | ≤ 255 ký tự; bỏ trống → `"Nghiem thu hang muc <tên hạng mục>"`. |
+| `title` | string | không | ≤ 255 ký tự; bỏ trống → `"Nghiệm thu hạng mục <tên hạng mục>"`. |
 | `acceptedValue` | number | có | Giá trị nghiệm thu, ≥ 0, tối đa 2 chữ số thập phân. |
 | `note` | string | không | ≤ 1000 ký tự. |
 

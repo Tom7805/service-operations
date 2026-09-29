@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   generateTemporaryPassword,
-  suggestUsername,
   validatePassword,
   validatePortalAccountForm,
   validateStatusReason,
@@ -44,14 +43,6 @@ describe('portalAccountValidators (NCL-13-CN-001)', () => {
   it('lý do đổi trạng thái tối đa 500 ký tự', () => {
     expect(validateStatusReason('a'.repeat(500))).toBeUndefined();
     expect(validateStatusReason('a'.repeat(501))).toMatch(/500/);
-  });
-
-  it('gợi ý tên đăng nhập từ email hoặc họ tên, bỏ dấu và ký tự không hợp lệ', () => {
-    expect(suggestUsername('nhi@abc.example', 'Nguyễn Thị Nhi')).toBe('nhi');
-    expect(suggestUsername(null, 'Nguyễn Thị Đào')).toBe('nguyen.thi.dao');
-    expect(suggestUsername('', '  Trần   Văn B ')).toBe('tran.van.b');
-    expect(suggestUsername('b@abc.example', 'Trần Văn B')).toBe('tran.van.b');
-    expect(validateUsername(suggestUsername(null, 'Lê Văn Cường'))).toBeUndefined();
   });
 
   it('mật khẩu tạm sinh ra luôn đạt luật', () => {
