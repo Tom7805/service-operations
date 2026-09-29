@@ -195,6 +195,25 @@ describe('NCL-13-CN-001 — Cấp tài khoản cổng cho khách hàng', () => {
     expect(within(modal).getByTestId('portal-grant-confirm')).toHaveValue(pwd);
   });
 
+  it('ô "Nhập lại mật khẩu" có nút con mắt riêng, hiện/ẩn độc lập với ô mật khẩu tạm', async () => {
+    await renderAdmin();
+    fireEvent.click(screen.getByTestId('portal-account-open-grant'));
+    const modal = await screen.findByTestId('portal-grant-modal');
+    fireEvent.change(within(modal).getByTestId('portal-grant-customer'), { target: { value: '1001' } });
+    await within(modal).findByTestId('portal-grant-contact-11');
+
+    const password = within(modal).getByTestId('portal-grant-password');
+    const confirm = within(modal).getByTestId('portal-grant-confirm');
+    expect(confirm).toHaveAttribute('type', 'password');
+
+    fireEvent.click(within(modal).getByRole('button', { name: 'Hiện mật khẩu nhập lại' }));
+    expect(confirm).toHaveAttribute('type', 'text');
+    expect(password).toHaveAttribute('type', 'password');
+
+    fireEvent.click(within(modal).getByRole('button', { name: 'Ẩn mật khẩu nhập lại' }));
+    expect(confirm).toHaveAttribute('type', 'password');
+  });
+
   it('TC-01: trùng tên đăng nhập (409) báo ngay dưới ô tên đăng nhập', async () => {
     api.createPortalAccount.mockRejectedValue(
       new PortalAccountApiError('DUPLICATE_DATA', 'Ten dang nhap b da ton tai', 409)
