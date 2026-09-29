@@ -4329,7 +4329,41 @@ nguyên dòng gốc** — cả ba dòng đều tra cứu lại được.
 Lịch sử điều chỉnh của một công việc, mới nhất trước — cùng cấu trúc `AdjustmentTraceRes` như trên, trả
 mảng `data`.
 
-**Response lỗi (áp dụng cho cả hai endpoint):**
+#### `GET /timesheets/adjustment-history`
+
+Nút **Lịch sử điều chỉnh** của màn *Duyệt giờ công › Điều chỉnh*: mọi lần điều chỉnh thuộc **các dự án PM hiện tại
+quản lý** (kể cả dự án đã đóng — chỉ đọc), mới nhất trước. Dòng gốc đã điều chỉnh rời khỏi
+`GET /timesheets/adjustable-entries` nhưng vẫn tra lại được ở đây. Chỉ `VT-02`; vai trò khác `403` và được ghi nhật
+ký từ chối truy cập.
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "adjustmentId": 2,
+      "projectId": 2,
+      "projectName": "Thiết kế sản phẩm thanh lý",
+      "taskId": 3,
+      "taskName": "Khảo sát yêu cầu",
+      "userId": 14,
+      "workDate": "2026-09-29",
+      "originalHours": 3.00,
+      "correctedHours": 6.00,
+      "originalEntryId": 3,
+      "reversalEntryId": 6,
+      "correctedEntryId": 7,
+      "reason": "Giờ đã ghi nhận theo chấm công vân tay",
+      "adjustedBy": "pm.lead",
+      "adjustedAt": "2026-09-29T15:47:19"
+    }
+  ]
+}
+```
+
+PM chưa quản lý dự án nào hoặc chưa có lần điều chỉnh nào thì `data = []`.
+
+**Response lỗi (áp dụng cho hai endpoint ghi/đọc theo công việc ở trên):**
 
 | HTTP | `errorCode` | Khi nào xảy ra |
 |---|---|---|

@@ -2,10 +2,17 @@ import { useEffect, useMemo, useState } from 'react';
 import { ICONS } from '../../../components/common/icons';
 import { roleLabels } from '../../../utils/roleLabel';
 import AdjustmentModal from '../components/AdjustmentModal';
-import { getAdjustableEntries, getAdjustmentHistory, TimesheetsApiError } from '../api/timesheetsApi';
+import {
+  getAdjustableEntries,
+  getAdjustmentHistory,
+  getMyAdjustmentHistory,
+  TimesheetsApiError,
+} from '../api/timesheetsApi';
 import { getActiveUsersLookup } from '../../users/api/usersApi';
-import type { AdjustableEntryRes, AdjustmentTraceRes } from '../types/timesheetTypes';
+import type { AdjustableEntryRes, AdjustmentHistoryRes, AdjustmentTraceRes } from '../types/timesheetTypes';
 import PageHeader from '../../../components/common/PageHeader';
+import ModalPortal from '../../../components/common/ModalPortal';
+import { useBackdropClick } from '../../../hooks/useBackdropClick';
 
 export interface TimesheetAdjustmentPageProps {
   currentUserRoles?: string[];
@@ -63,6 +70,14 @@ export default function TimesheetAdjustmentPage({
   const [history, setHistory] = useState<AdjustmentTraceRes[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
+
+  // Nút "Lịch sử điều chỉnh": mọi lần điều chỉnh thuộc dự án PM quản lý, đọc từ máy chủ mỗi lần mở — dòng đã
+  // điều chỉnh rời khỏi bảng trên nên không còn nút "Lịch sử" theo dòng để tra lại.
+  const [allHistoryOpen, setAllHistoryOpen] = useState(false);
+  const [allHistory, setAllHistory] = useState<AdjustmentHistoryRes[]>([]);
+  const [allHistoryLoading, setAllHistoryLoading] = useState(false);
+  const [allHistoryError, setAllHistoryError] = useState<string | null>(null);
+  const allHistoryBackdrop = useBackdropClick(() => setAllHistoryOpen(false));
 
   const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -132,6 +147,26 @@ export default function TimesheetAdjustmentPage({
     }
   };
 
+  const loadAllHistory = async () => {
+    setAllHistoryLoading(true);
+    setAllHistoryError(null);
+    try {
+      setAllHistory(await getMyAdjustmentHistory());
+    } catch (err) {
+      setAllHistory([]);
+      setAllHistoryError(
+        err instanceof TimesheetsApiError || err instanceof Error ? err.message : 'Không thể tải lịch sử điều chỉnh.'
+      );
+    } finally {
+      setAllHistoryLoading(false);
+    }
+  };
+
+  const openAllHistory = () => {
+    setAllHistoryOpen(true);
+    void loadAllHistory();
+  };
+
   const handleAdjusted = (trace: AdjustmentTraceRes) => {
     setModalOpen(false);
     showToast(
@@ -180,7 +215,19 @@ export default function TimesheetAdjustmentPage({
         </div>
       )}
 
-      <PageHeader title="Điều chỉnh giờ công" />
+      <PageHeader
+        title="Điều chỉnh giờ công"
+        actions={
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={openAllHistory}
+            data-testid="btn-adjustment-history"
+          >
+            <span className="icon-xs">{ICONS.history}</span> Lịch sử điều chỉnh
+          </button>
+        }
+      />
 
       <div className="user-table-card">
         <div className="user-table-toolbar">
@@ -264,7 +311,7 @@ export default function TimesheetAdjustmentPage({
                     <td>{employeeLabel(entry.userId)}</td>
                     <td title={`ID dòng giờ công: ${entry.entryId}`}>
                       {new Date(entry.workDate).toLocaleDateString('vi-VN')}
-                      <div className="cell-muted" style={{ fontSize: '11px' }}>ID: {entry.entryId}</div>
+                      <div className="cell-muted" style={{ fontSize: '12.5px' }}>ID: {entry.entryId}</div>
                     </td>
                     <td>
                       <strong>{formatHours(entry.hours)} giờ</strong>
@@ -375,6 +422,103 @@ export default function TimesheetAdjustmentPage({
             Hiển thị <strong>{history.length}</strong> lần điều chỉnh
           </div>
         </div>
+      )}
+
+      {allHistoryOpen && (
+        <ModalPortal>
+          <div
+            className="modal-backdrop"
+            onMouseDown={allHistoryBackdrop.onMouseDown}
+            onClick={allHistoryBackdrop.onClick}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="adjustment-history-title"
+          >
+            <div className="modal-card" style={{ width: 'min(100%, 1040px)' }} data-testid="adjustment-history-modal">
+              <div className="modal-header">
+                <div className="modal-header__title-wrap">
+                  <h3 className="modal-title" id="adjustment-history-title">
+                    <span className="modal-title__icon">{ICONS.history}</span>
+                    Lịch sử điều chỉnh giờ công
+                  </h3>
+                  <p className="field-hint">Mọi lần điều chỉnh thuộc các dự án bạn quản lý, mới nhất trước.</p>
+                </div>
+                <button type="button" className="modal-close" onClick={() => setAllHistoryOpen(false)} aria-label="Đóng">
+                  {ICONS.close}
+                </button>
+              </div>
+              <div className="modal-body">
+                {allHistoryError && (
+                  <div className="alert alert--error mb-4" role="alert">
+                    <span className="alert__icon">{ICONS.alertTriangle}</span>
+                    <span>{allHistoryError}</span>
+                    <button type="button" className="btn-link text-white ml-auto" onClick={() => void loadAllHistory()}>
+                      Thử lại
+                    </button>
+                  </div>
+                )}
+                <div className="table-responsive">
+                  <table className="user-data-table">
+                    <thead>
+                      <tr>
+                        <th>Thời điểm</th>
+                        <th>Dự án / Công việc</th>
+                        <th>Nhân sự</th>
+                        <th>Số giờ</th>
+                        <th>Lý do</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allHistoryLoading ? (
+                        <tr>
+                          <td colSpan={5} style={{ textAlign: 'center', padding: '40px' }}>
+                            Đang tải lịch sử điều chỉnh…
+                          </td>
+                        </tr>
+                      ) : allHistory.length === 0 ? (
+                        <tr>
+                          <td colSpan={5}>
+                            <div className="table-empty-state">
+                              <span className="empty-icon">{ICONS.history}</span>
+                              <h3>Chưa có lần điều chỉnh nào</h3>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        allHistory.map((item) => (
+                          <tr key={item.adjustmentId} data-testid={`adjustment-history-row-${item.adjustmentId}`}>
+                            <td style={{ whiteSpace: 'nowrap' }}>
+                              {new Date(item.adjustedAt).toLocaleString('vi-VN')}
+                              <div className="field-hint">bởi {item.adjustedBy ?? '—'}</div>
+                            </td>
+                            <td>
+                              {item.projectName}
+                              <div className="field-hint">{item.taskName}</div>
+                            </td>
+                            <td>
+                              {employeeLabel(item.userId)}
+                              <div className="field-hint">
+                                Ngày công {new Date(item.workDate).toLocaleDateString('vi-VN')}
+                              </div>
+                            </td>
+                            <td
+                              style={{ whiteSpace: 'nowrap' }}
+                              title={`Dòng gốc #${item.originalEntryId} · dòng đảo #${item.reversalEntryId} · dòng sửa #${item.correctedEntryId}`}
+                            >
+                              {formatHours(item.originalHours ?? undefined)} →{' '}
+                              <strong>{formatHours(item.correctedHours ?? undefined)} giờ</strong>
+                            </td>
+                            <td style={{ minWidth: '220px' }}>{item.reason}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ModalPortal>
       )}
 
       {modalOpen && selectedEntry && (

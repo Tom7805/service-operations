@@ -209,6 +209,28 @@ export interface AdjustableEntryRes {
   note: string | null;
 }
 
+/**
+ * Một lần điều chỉnh giờ công trong "Lịch sử điều chỉnh" của PM (NCL-06-CN-005) — gom mọi công việc của các dự
+ * án PM quản lý. Khớp AdjustmentHistoryRes — `GET /timesheets/adjustment-history`, mới nhất trước.
+ */
+export interface AdjustmentHistoryRes {
+  adjustmentId: number;
+  projectId: number;
+  projectName: string;
+  taskId: number;
+  taskName: string;
+  userId: number;
+  workDate: string; // YYYY-MM-DD
+  originalHours: number | null;
+  correctedHours: number | null;
+  originalEntryId: number;
+  reversalEntryId: number;
+  correctedEntryId: number;
+  reason: string;
+  adjustedBy: string | null;
+  adjustedAt: string;
+}
+
 /** Trạng thái kỳ chấm công theo tháng (NCL-06-CN-006). */
 export type PeriodStatus = 'OPEN' | 'LOCKED';
 

@@ -2,6 +2,7 @@ package com.serviceops.modules.timesheet.service;
 
 import com.serviceops.modules.timesheet.dto.request.TimeEntryAdjustmentReq;
 import com.serviceops.modules.timesheet.dto.response.AdjustableEntryRes;
+import com.serviceops.modules.timesheet.dto.response.AdjustmentHistoryRes;
 import com.serviceops.modules.timesheet.dto.response.AdjustmentTraceRes;
 
 import java.util.List;
@@ -30,4 +31,10 @@ public interface TimesheetAdjustmentService {
 	 * biet truoc Project ID/Task ID/Entry ID.
 	 */
 	List<AdjustableEntryRes> findAdjustableEntries();
+
+	/**
+	 * Lich su moi lan dieu chinh gio cong thuoc cac du an PM hien tai quan ly (ke ca du an da dong, chi
+	 * doc), moi nhat truoc — de PM tra lai sau khi dong goc da roi khoi danh sach "co the dieu chinh".
+	 */
+	List<AdjustmentHistoryRes> findMyAdjustmentHistory();
 }
