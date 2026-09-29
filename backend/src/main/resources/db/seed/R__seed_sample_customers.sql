@@ -28,15 +28,15 @@
 INSERT INTO customers (id, code, name, tax_code, phone, industry, company_size, priority, address, created_by, owner_id, created_at)
 SELECT c.id, c.code, c.name, c.tax_code, c.phone, c.industry, c.company_size, c.priority, c.address, c.owner_username, u.id, c.created_at
 FROM (
-              SELECT 1001 AS id, 'KH-100001' AS code, 'Công ty CP Giải Pháp Số Việt' AS name,
-                     '0101234561' AS tax_code, '0912345671' AS phone,
+              SELECT 1001 AS id, 'KH-100001' AS code, 'Công ty CP Phần mềm Minh Phát' AS name,
+                     '0109876541' AS tax_code, '0903456781' AS phone,
                      'Công nghệ thông tin' AS industry, 'Vừa' AS company_size, 'Cao' AS priority,
-                     'Số 12 Láng Hạ, Đống Đa, Hà Nội' AS address,
+                     'Tầng 8, số 18 Duy Tân, Cầu Giấy, Hà Nội' AS address,
                      'sale01' AS owner_username, '2025-11-03 09:15:00' AS created_at
-    UNION ALL SELECT 1002, 'KH-100002', 'Công ty TNHH Thương Mại Miền Bắc',
-                     '0101234562', '0987654322',
-                     'Bán lẻ & phân phối', 'Nhỏ', 'Trung bình',
-                     '45 Trần Duy Hưng, Cầu Giấy, Hà Nội',
+    UNION ALL SELECT 1002, 'KH-100002', 'Công ty TNHH Dược phẩm Bình An',
+                     '0109876542', '0983456782',
+                     'Y tế & dược phẩm', 'Nhỏ', 'Trung bình',
+                     'Số 25 Nguyễn Văn Cừ, Long Biên, Hà Nội',
                      'sale01', '2025-11-10 14:30:00'
     UNION ALL SELECT 1003, 'KH-100003', 'Công ty CP Đầu Tư Xây Dựng An Phát',
                      '0101234563-001', '0977123456',

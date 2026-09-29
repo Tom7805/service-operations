@@ -43,8 +43,8 @@ DELETE FROM opportunities WHERE id IN (2003, 2004, 2005, 2006, 2007, 2008, 2009,
 INSERT INTO opportunities (id, name, customer_id, expected_value, expected_close_date, stage, status, probability, created_by, created_at, owner_id)
 SELECT o.id, o.name, o.customer_id, o.expected_value, o.expected_close_date, o.stage, o.status, o.probability, o.created_by, o.created_at, u.id
 FROM (
-              SELECT 2001 AS id, 'Triển khai hệ thống CRM cho Công ty CP Giải Pháp Số Việt' AS name, 1001 AS customer_id, 500000000 AS expected_value, '2026-06-30' AS expected_close_date, 'APPROACH' AS stage, 'OPEN' AS status, 10 AS probability, 'sale01' AS created_by, '2026-01-05 09:00:00' AS created_at
-    UNION ALL SELECT 2002, 'Nâng cấp hạ tầng mạng cho Công ty TNHH Thương Mại Miền Bắc', 1002, 120000000, '2026-11-30', 'APPROACH', 'OPEN', 10, 'sale01', '2026-01-10 10:30:00'
+              SELECT 2001 AS id, 'Triển khai hệ thống CRM cho Phần mềm Minh Phát' AS name, 1001 AS customer_id, 500000000 AS expected_value, '2026-12-15' AS expected_close_date, 'APPROACH' AS stage, 'OPEN' AS status, 10 AS probability, 'sale01' AS created_by, '2026-01-05 09:00:00' AS created_at
+    UNION ALL SELECT 2002, 'Phần mềm quản lý kho thuốc cho Dược phẩm Bình An', 1002, 120000000, '2026-11-30', 'APPROACH', 'OPEN', 10, 'sale01', '2026-01-10 10:30:00'
 ) o
 JOIN users u ON u.username = o.created_by
 ON DUPLICATE KEY UPDATE
@@ -65,7 +65,7 @@ VALUES
     (3002, 2001, 'MEETING', '2026-01-12 09:30:00', 'sale01, anh Minh (khách hàng), anh Tuấn (khách hàng)',
      'Họp demo trực tiếp tại văn phòng khách hàng, hẹn gửi báo giá trước 20/01.', 'sale01', '2026-01-12 11:00:00'),
     (3003, 2002, 'EMAIL', '2026-01-11 08:15:00', 'sale01',
-     'Gửi thư khảo sát hiện trạng hạ tầng mạng, hẹn lịch khảo sát trực tiếp tuần sau.', 'sale01', '2026-01-11 08:20:00')
+     'Gửi thư khảo sát quy trình nhập xuất kho thuốc, hẹn lịch khảo sát trực tiếp tuần sau.', 'sale01', '2026-01-11 08:20:00')
 ON DUPLICATE KEY UPDATE
     activity_type = VALUES(activity_type),
     occurred_at   = VALUES(occurred_at),
