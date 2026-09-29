@@ -103,6 +103,8 @@ export default function PortalAccountGrantModal({
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  // Ô nhập lại có nút con mắt riêng: người nhập so từng ô với nhau mà không phải hiện cả hai.
+  const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors] = useState<PortalAccountFormErrors>({});
   const [saveError, setSaveError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -160,6 +162,7 @@ export default function PortalAccountGrantModal({
     setPassword('');
     setConfirmPassword('');
     setShowPassword(false);
+    setShowConfirm(false);
     setErrors({});
     setSaveError(null);
     setCreated(null);
@@ -211,6 +214,7 @@ export default function PortalAccountGrantModal({
     setPassword(generated);
     setConfirmPassword(generated);
     setShowPassword(true);
+    setShowConfirm(true);
     clear('password');
     clear('confirmPassword');
   };
@@ -580,20 +584,33 @@ export default function PortalAccountGrantModal({
                     </div>
                     <div className="form-field">
                       <label className="form-label required" htmlFor="portal-grant-confirm">Nhập lại mật khẩu</label>
-                      <input
-                        id="portal-grant-confirm"
-                        type={showPassword ? 'text' : 'password'}
-                        className={`form-input ${errors.confirmPassword ? 'form-input--error' : ''}`}
-                        maxLength={PORTAL_PASSWORD_MAX}
-                        value={confirmPassword}
-                        onChange={(e) => {
-                          setConfirmPassword(e.target.value);
-                          clear('confirmPassword');
-                        }}
-                        disabled={submitting || !contact}
-                        autoComplete="new-password"
-                        data-testid="portal-grant-confirm"
-                      />
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          id="portal-grant-confirm"
+                          type={showConfirm ? 'text' : 'password'}
+                          className={`form-input ${errors.confirmPassword ? 'form-input--error' : ''}`}
+                          maxLength={PORTAL_PASSWORD_MAX}
+                          value={confirmPassword}
+                          onChange={(e) => {
+                            setConfirmPassword(e.target.value);
+                            clear('confirmPassword');
+                          }}
+                          disabled={submitting || !contact}
+                          autoComplete="new-password"
+                          style={{ paddingRight: '40px' }}
+                          data-testid="portal-grant-confirm"
+                        />
+                        <button
+                          type="button"
+                          className="portal-password-toggle"
+                          onClick={() => setShowConfirm((v) => !v)}
+                          aria-label={showConfirm ? 'Ẩn mật khẩu nhập lại' : 'Hiện mật khẩu nhập lại'}
+                          disabled={!contact}
+                          data-testid="portal-grant-confirm-toggle"
+                        >
+                          {showConfirm ? ICONS.eyeOff : ICONS.eye}
+                        </button>
+                      </div>
                       {errors.confirmPassword && <span className="field-error">{errors.confirmPassword}</span>}
                     </div>
                   </div>
