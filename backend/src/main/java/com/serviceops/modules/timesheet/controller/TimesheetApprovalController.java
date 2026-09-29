@@ -4,6 +4,7 @@ import com.serviceops.common.api.BaseRes;
 import com.serviceops.modules.timesheet.dto.request.TimesheetApproveReq;
 import com.serviceops.modules.timesheet.dto.request.TimesheetRejectReq;
 import com.serviceops.modules.timesheet.dto.response.AdjustableEntryRes;
+import com.serviceops.modules.timesheet.dto.response.AdjustmentHistoryRes;
 import com.serviceops.modules.timesheet.dto.response.PendingTimesheetRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetApprovalHistoryRes;
 import com.serviceops.modules.timesheet.dto.response.TimesheetApprovalRes;
@@ -54,6 +55,16 @@ public class TimesheetApprovalController {
 	@PreAuthorize("hasRole('VT-02')")
 	public BaseRes<List<AdjustableEntryRes>> findAdjustableEntries() {
 		return BaseRes.ok(timesheetAdjustmentService.findAdjustableEntries());
+	}
+
+	/**
+	 * NCL-06-CN-005: lich su moi lan dieu chinh gio cong thuoc cac du an cua PM hien tai, moi nhat truoc —
+	 * nut "Lich su dieu chinh" cua man Dieu chinh; dong da dieu chinh roi khoi danh sach tren van tra lai duoc.
+	 */
+	@GetMapping("/timesheets/adjustment-history")
+	@PreAuthorize("hasRole('VT-02')")
+	public BaseRes<List<AdjustmentHistoryRes>> findAdjustmentHistory() {
+		return BaseRes.ok(timesheetAdjustmentService.findMyAdjustmentHistory());
 	}
 
 	/**

@@ -1,5 +1,6 @@
 import type {
   AdjustableEntryRes,
+  AdjustmentHistoryRes,
   AdjustmentTraceRes,
   PendingTimesheetRes,
   PeriodLockReq,
@@ -252,6 +253,17 @@ export async function adjustTimeEntry(
  */
 export async function getAdjustmentHistory(projectId: number, taskId: number): Promise<AdjustmentTraceRes[]> {
   return requestBackend<AdjustmentTraceRes[]>(`${API_BASE_URL}/projects/${projectId}/tasks/${taskId}/adjustments`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * NCL-06-CN-005: lịch sử mọi lần điều chỉnh giờ công thuộc các dự án PM hiện tại quản lý, mới nhất trước — nút
+ * "Lịch sử điều chỉnh"; dòng đã điều chỉnh rời khỏi danh sách "có thể điều chỉnh" vẫn tra lại được ở đây.
+ * GET /timesheets/adjustment-history
+ */
+export async function getMyAdjustmentHistory(): Promise<AdjustmentHistoryRes[]> {
+  return requestBackend<AdjustmentHistoryRes[]>(`${API_BASE_URL}/timesheets/adjustment-history`, {
     method: 'GET',
   });
 }
