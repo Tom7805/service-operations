@@ -21,6 +21,7 @@ vi.mock('../api/timesheetsApi', () => {
   return {
     getAdjustableEntries: vi.fn(),
     getAdjustmentHistory: vi.fn(),
+    getMyAdjustmentHistory: vi.fn(),
     adjustTimeEntry: vi.fn(),
     TimesheetsApiError: MockTimesheetsApiError,
   };
@@ -175,5 +176,60 @@ describe('TimesheetAdjustmentPage (NCL-06-CN-005)', () => {
     );
     expect(await screen.findByText(/Đã điều chỉnh dòng #30 thành công/i)).toBeInTheDocument();
     expect(screen.queryByTestId('adjustable-entry-row-30')).not.toBeInTheDocument();
+  });
+
+  it('nút "Lịch sử điều chỉnh" ở đầu trang mở mọi lần điều chỉnh từ máy chủ — kể cả dòng đã rời bảng trên', async () => {
+    vi.mocked(timesheetsApi.getAdjustableEntries).mockResolvedValue([]);
+    vi.mocked(timesheetsApi.getMyAdjustmentHistory).mockResolvedValue([
+      {
+        adjustmentId: 7,
+        projectId: 2,
+        projectName: 'Thiết kế sản phẩm thanh lý',
+        taskId: 3,
+        taskName: 'Khảo sát yêu cầu',
+        userId: 7,
+        workDate: '2026-09-29',
+        originalHours: 3,
+        correctedHours: 6,
+        originalEntryId: 3,
+        reversalEntryId: 6,
+        correctedEntryId: 7,
+        reason: 'Giờ đã ghi nhận theo chấm công vân tay',
+        adjustedBy: 'pm.lead',
+        adjustedAt: '2026-09-29T15:47:19',
+      },
+    ]);
+
+    render(<TimesheetAdjustmentPage currentUserRoles={['VT-02']} />);
+    await screen.findByText(/Không có dòng giờ công nào cần điều chỉnh/i);
+    expect(timesheetsApi.getMyAdjustmentHistory).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId('btn-adjustment-history'));
+
+    const row = await screen.findByTestId('adjustment-history-row-7');
+    expect(timesheetsApi.getMyAdjustmentHistory).toHaveBeenCalledTimes(1);
+    expect(row).toHaveTextContent('Thiết kế sản phẩm thanh lý');
+    expect(row).toHaveTextContent('Khảo sát yêu cầu');
+    expect(row).toHaveTextContent('Trịnh Thị Thu');
+    expect(row).toHaveTextContent('3 → 6 giờ');
+    expect(row).toHaveTextContent('Giờ đã ghi nhận theo chấm công vân tay');
+    expect(row).toHaveTextContent('pm.lead');
+
+    // Đóng rồi mở lại vẫn xem được — tải lại từ máy chủ, không phụ thuộc phiên hiện tại.
+    fireEvent.click(screen.getByRole('button', { name: 'Đóng' }));
+    expect(screen.queryByTestId('adjustment-history-modal')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('btn-adjustment-history'));
+    expect(await screen.findByTestId('adjustment-history-row-7')).toBeInTheDocument();
+    expect(timesheetsApi.getMyAdjustmentHistory).toHaveBeenCalledTimes(2);
+  });
+
+  it('lịch sử điều chỉnh trống thì báo chưa có lần điều chỉnh nào', async () => {
+    vi.mocked(timesheetsApi.getAdjustableEntries).mockResolvedValue([]);
+    vi.mocked(timesheetsApi.getMyAdjustmentHistory).mockResolvedValue([]);
+
+    render(<TimesheetAdjustmentPage currentUserRoles={['VT-02']} />);
+    fireEvent.click(await screen.findByTestId('btn-adjustment-history'));
+
+    expect(await screen.findByText('Chưa có lần điều chỉnh nào')).toBeInTheDocument();
   });
 });

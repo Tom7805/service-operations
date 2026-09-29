@@ -11,6 +11,7 @@ import com.serviceops.modules.project.repository.ProjectRepository;
 import com.serviceops.modules.project.repository.TaskRepository;
 import com.serviceops.modules.timesheet.dto.request.TimeEntryAdjustmentReq;
 import com.serviceops.modules.timesheet.dto.response.AdjustableEntryRes;
+import com.serviceops.modules.timesheet.dto.response.AdjustmentHistoryRes;
 import com.serviceops.modules.timesheet.dto.response.AdjustmentTraceRes;
 import com.serviceops.modules.timesheet.entity.TimeEntry;
 import com.serviceops.modules.timesheet.entity.TimeEntryAdjustment;
@@ -317,5 +318,74 @@ class TimesheetAdjustmentServiceTest {
 		assertEquals(new BigDecimal("8"), history.get(0).originalEntry().hours());
 		assertEquals(new BigDecimal("-8"), history.get(0).reversalEntry().hours());
 		assertEquals(new BigDecimal("6"), history.get(0).correctedEntry().hours());
+	}
+
+	/**
+	 * Nut "Lich su dieu chinh": gom moi lan dieu chinh cua cac du an PM quan ly, KE CA du an da dong,
+	 * kem ten du an/cong viec va so gio truoc/sau — giu thu tu moi nhat truoc cua repository.
+	 */
+	@Test
+	void findMyAdjustmentHistoryListsAdjustmentsOfAllManagedProjects() {
+		project.setName("Cong thong tin");
+		Project closedProject = new Project();
+		closedProject.setId(2L);
+		closedProject.setProjectManagerId(PM_ID);
+		closedProject.setStatus(ProjectStatus.CLOSED);
+		closedProject.setName("Du an da dong");
+		Task closedTask = new Task();
+		closedTask.setId(21L);
+		closedTask.setProjectId(2L);
+		closedTask.setName("Kiem thu");
+
+		when(projectRepository.findByProjectManagerId(PM_ID)).thenReturn(List.of(project, closedProject));
+		when(taskRepository.findByProjectIdOrderByIdAsc(PROJECT_ID)).thenReturn(List.of(task));
+		when(taskRepository.findByProjectIdOrderByIdAsc(2L)).thenReturn(List.of(closedTask));
+		when(adjustmentRepository.findByTaskIdInOrderByAdjustedAtDescIdDesc(any()))
+				.thenReturn(List.of(adjustment(600L, 21L, 110L, 112L, "Cham cong van tay"),
+						adjustment(500L, TASK_ID, ENTRY_ID, 102L, "Ghi nham gio")));
+		when(timeEntryRepository.findAllById(anyList())).thenReturn(List.of(original,
+				entryWithHours(102L, "6"), entryWithHours(110L, "3"), entryWithHours(112L, "6")));
+
+		List<AdjustmentHistoryRes> history = service.findMyAdjustmentHistory();
+
+		assertEquals(2, history.size());
+		AdjustmentHistoryRes latest = history.get(0);
+		assertEquals(600L, latest.adjustmentId());
+		assertEquals("Du an da dong", latest.projectName());
+		assertEquals("Kiem thu", latest.taskName());
+		assertEquals(new BigDecimal("3"), latest.originalHours());
+		assertEquals(new BigDecimal("6"), latest.correctedHours());
+		assertEquals("Cham cong van tay", latest.reason());
+		assertEquals("Cong thong tin", history.get(1).projectName());
+		assertEquals(new BigDecimal("8"), history.get(1).originalHours());
+	}
+
+	@Test
+	void findMyAdjustmentHistoryIsEmptyWhenManagerHasNoProjects() {
+		when(projectRepository.findByProjectManagerId(PM_ID)).thenReturn(List.of());
+
+		assertTrue(service.findMyAdjustmentHistory().isEmpty());
+		verify(adjustmentRepository, never()).findByTaskIdInOrderByAdjustedAtDescIdDesc(any());
+	}
+
+	private TimeEntryAdjustment adjustment(Long id, Long taskId, Long originalId, Long correctedId, String reason) {
+		TimeEntryAdjustment adjustment = new TimeEntryAdjustment();
+		adjustment.setId(id);
+		adjustment.setTaskId(taskId);
+		adjustment.setUserId(MEMBER_ID);
+		adjustment.setWorkDate(WORK_DATE);
+		adjustment.setOriginalEntryId(originalId);
+		adjustment.setReversalEntryId(originalId + 1);
+		adjustment.setCorrectedEntryId(correctedId);
+		adjustment.setReason(reason);
+		adjustment.setAdjustedBy("pm.lead");
+		return adjustment;
+	}
+
+	private TimeEntry entryWithHours(Long id, String hours) {
+		TimeEntry entry = new TimeEntry();
+		entry.setId(id);
+		entry.setHours(new BigDecimal(hours));
+		return entry;
 	}
 }

@@ -11,6 +11,7 @@ import com.serviceops.modules.project.repository.ProjectRepository;
 import com.serviceops.modules.project.repository.TaskRepository;
 import com.serviceops.modules.timesheet.dto.request.TimeEntryAdjustmentReq;
 import com.serviceops.modules.timesheet.dto.response.AdjustableEntryRes;
+import com.serviceops.modules.timesheet.dto.response.AdjustmentHistoryRes;
 import com.serviceops.modules.timesheet.dto.response.AdjustmentTraceRes;
 import com.serviceops.modules.timesheet.entity.TimeEntry;
 import com.serviceops.modules.timesheet.entity.TimeEntryAdjustment;
@@ -33,6 +34,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -200,6 +202,51 @@ public class TimesheetAdjustmentServiceImpl implements TimesheetAdjustmentServic
 					return new AdjustableEntryRes(entry.getId(), project.getId(), project.getName(), task.getId(),
 							task.getName(), entry.getUserId(), entry.getWorkDate(), entry.getHours(),
 							entry.getNote());
+				})
+				.toList();
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<AdjustmentHistoryRes> findMyAdjustmentHistory() {
+		Long pmId = requireCurrentManager();
+		// Ke ca du an da dong: lich su la ho so chi doc, van phai tra lai duoc (QTN-13).
+		Map<Long, Project> projectById = projectRepository.findByProjectManagerId(pmId).stream()
+				.collect(Collectors.toMap(Project::getId, Function.identity()));
+		if (projectById.isEmpty()) {
+			return List.of();
+		}
+		Map<Long, Task> taskById = new HashMap<>();
+		for (Long projectId : projectById.keySet()) {
+			taskRepository.findByProjectIdOrderByIdAsc(projectId).forEach(task -> taskById.put(task.getId(), task));
+		}
+		if (taskById.isEmpty()) {
+			return List.of();
+		}
+		List<TimeEntryAdjustment> adjustments =
+				adjustmentRepository.findByTaskIdInOrderByAdjustedAtDescIdDesc(taskById.keySet());
+		if (adjustments.isEmpty()) {
+			return List.of();
+		}
+		// Nap mot lan so gio cua dong goc va dong sua cho ca danh sach, khong truy van tung dong.
+		List<Long> entryIds = new ArrayList<>();
+		adjustments.forEach(adjustment -> {
+			entryIds.add(adjustment.getOriginalEntryId());
+			entryIds.add(adjustment.getCorrectedEntryId());
+		});
+		Map<Long, BigDecimal> hoursByEntry = new HashMap<>();
+		timeEntryRepository.findAllById(entryIds).forEach(entry -> hoursByEntry.put(entry.getId(), entry.getHours()));
+
+		return adjustments.stream()
+				.map(adjustment -> {
+					Task task = taskById.get(adjustment.getTaskId());
+					Project project = projectById.get(task.getProjectId());
+					return new AdjustmentHistoryRes(adjustment.getId(), project.getId(), project.getName(), task.getId(),
+							task.getName(), adjustment.getUserId(), adjustment.getWorkDate(),
+							hoursByEntry.get(adjustment.getOriginalEntryId()),
+							hoursByEntry.get(adjustment.getCorrectedEntryId()), adjustment.getOriginalEntryId(),
+							adjustment.getReversalEntryId(), adjustment.getCorrectedEntryId(), adjustment.getReason(),
+							adjustment.getAdjustedBy(), adjustment.getAdjustedAt());
 				})
 				.toList();
 	}
