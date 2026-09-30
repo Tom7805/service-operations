@@ -19,5 +19,11 @@
 --  nguyen trong DB cua ho. Giu file + doi noi dung thanh DELETE la cach duy
 --  nhat dam bao MOI NGUOI keo code ve deu tu dong don sach, khong phai chay
 --  tay script rieng.
+--
+--  Dieu kien created_at: cung ly do nhu R__seed_sample_opportunities.sql —
+--  tranh xoa nham co hoi that do nguoi dung tao ma AUTO_INCREMENT cap trung
+--  id 2101..2108 tren DB tao moi.
 -- ----------------------------------------------------------------------------
-DELETE FROM opportunities WHERE id IN (2101, 2102, 2103, 2104, 2105, 2106, 2107, 2108);
+DELETE FROM opportunities
+WHERE id IN (2101, 2102, 2103, 2104, 2105, 2106, 2107, 2108)
+  AND created_at < '2026-09-22 00:00:00';
