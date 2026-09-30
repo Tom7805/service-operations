@@ -25,8 +25,17 @@
 --  opportunity_stage_history gan voi cac id nay tu xoa theo (ON DELETE CASCADE,
 --  xem V37/V40) — da kiem tra khong co quotes/contracts nao gan voi cac id
 --  nay nen xoa an toan, khong vuong khoa ngoai.
+--
+--  CHI XOA BAN GHI TAO TRUOC 2026-09-22: tren DB tao moi sau ngay do, seed
+--  chi chen 2001/2002 nen AUTO_INCREMENT tiep tuc tu 2003 — co hoi nguoi
+--  dung tu tao tren giao dien se TRUNG id voi danh sach duoi. Khong co dieu
+--  kien ngay, lan seed chay lai ke tiep se xoa mat du lieu that do (hoac vo
+--  khoa ngoai neu da co hop dong -> Flyway dung, backend khong khoi dong
+--  duoc). Moi co hoi mau cu deu co created_at truoc 2026-09-22.
 -- ----------------------------------------------------------------------------
-DELETE FROM opportunities WHERE id IN (2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014);
+DELETE FROM opportunities
+WHERE id IN (2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014)
+  AND created_at < '2026-09-22 00:00:00';
 
 -- ----------------------------------------------------------------------------
 --  2 CO HOI CON LAI — moi co hoi mot khach hang, ca hai deu la khach hang that
